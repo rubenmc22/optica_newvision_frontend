@@ -1,0 +1,89 @@
+@use '@angular/material' as mat;
+@include mat.core();
+
+// Define las paletas de colores utilizando las funciones correctas
+$primary-palette: mat.m2-define-palette(mat.$m2-yellow-palette, A400, A100, A700);
+$accent-palette: mat.m2-define-palette(mat.$m2-orange-palette);
+$warn-palette: mat.m2-define-palette(mat.$m2-red-palette);
+
+// Define el tema personalizado
+$myapp-theme: mat.m2-define-light-theme((color: (primary: $primary-palette,
+        accent: $accent-palette,
+        warn: $warn-palette,
+      )));
+
+// Aplica el tema a la aplicación
+@include mat.all-component-themes($myapp-theme);
+
+// Exportar los colores principales de la paleta
+$primary: mat.m2-get-color-from-palette($primary-palette, 'default');
+$accent: mat.m2-get-color-from-palette($accent-palette, 'default');
+$warn: mat.m2-get-color-from-palette($warn-palette, 'default');
+
+/* Variables para colores y estilos comunes */
+:root {
+  --border-color: #F2C230;
+  --label-color: #F2C230;
+  --label-background: rgba(40, 40, 40, 0.9);
+  --border-radius: 4px;
+  --transition: border-color 0.2s ease-in-out;
+}
+
+/* Estilos comunes para campos de texto en formularios de login y registro */
+.login-form-field .mat-mdc-notched-outline,
+.register-form-field .mat-mdc-notched-outline,
+.forgot-password-form-field .mat-mdc-notched-outline
+.login-form-field .mdc-notched-outline__leading,
+.login-form-field .mdc-notched-outline__trailing,
+.register-form-field .mdc-notched-outline__leading,
+.register-form-field .mdc-notched-outline__trailing,
+.forgot-password-form-field .mdc-notched-outline__leading,
+.forgot-password-form-field .mdc-notched-outline__trailing,
+.login-form-field .mdc-notched-outline__notch,
+.register-form-field .mdc-notched-outline__notch,
+.forgot-password-form-field .mdc-notched-outline__notch,
+.forgot-password-form-field .mdc-notched-outline__notch {
+  border-color: var(--border-color) !important;
+  /* Borde amarillo con importancia */
+}
+
+/* Estilos para las etiquetas flotantes */
+.login-form-field .mat-mdc-floating-label,
+.register-form-field .mat-mdc-floating-label,
+.forgot-password-form-field .mat-mdc-floating-label {
+  color: var(--label-color) !important;
+  /* Color de etiqueta amarillo con importancia */
+  background-color: var(--label-background);
+  /* Fondo para ocultar el borde detrás del label */
+  padding: 0 4px;
+  /* Añadir padding para mejorar la apariencia */
+}
+
+/* Ocultar la línea no deseada */
+.mdc-notched-outline__leading {
+  display: none !important;
+  /* Ocultar línea con importancia */
+}
+
+/* Estilos para el contenedor del campo de texto */
+.mat-mdc-text-field-wrapper {
+  border-radius: var(--border-radius);
+  padding-left: 10px;
+  /* Añadir padding para evitar superposición de texto */
+  transition: var(--transition);
+  /* Añadir transición suave */
+  border: none;
+}
+
+/* Estilos para el campo de texto cuando está en foco */
+.mat-mdc-text-field-wrapper:focus-within,
+.mat-mdc-text-field-wrapper .mat-mdc-form-field-infix:focus-within {
+  border-color: var(--border-color);
+  /* Mantener borde amarillo cuando está en focus */
+}
+
+/* Asegurar que el infix no tenga bordes */
+.mat-mdc-form-field-infix {
+  border: none;
+  /* Asegúrate de que esta propiedad no esté causando el problema */
+}

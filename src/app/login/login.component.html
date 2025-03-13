@@ -1,0 +1,44 @@
+<div class="login-container">
+  <div class="login-background">
+    <img class="login-background-image" src="/assets/sports-background.jpeg" alt="Fondo de Deportes">
+  </div>
+  <div class="login-logo-container">
+    <img class="login-logo" src="assets/apolloLogo.png" alt="APOLLO GROUP Logo" />
+    <div class="login-logo-text">
+      <div class="login-logo-title">APOLLO GROUP</div>
+      <div class="login-logo-subtitle">Academia deportiva</div>
+    </div>
+  </div>
+  <div class="login-card-container">
+    <div class="login-side-text">
+        <div class="login-side-text-guatire">GUATIRE</div>
+      <div class="login-side-text-sport">SPORT</div>
+      <div class="login-side-buttons">
+        <button class="btn btn-primary" routerLink="/register">REGISTRATE</button>
+        <button class="btn btn-accent">ZONA INFORMATIVA</button>
+      </div>
+    </div>
+    <div class="login-card">
+        <div class="login-title">Inicie Sesión</div>
+        <form>
+          <mat-form-field class="login-form-field" appearance="outline">
+            <mat-label>Cédula</mat-label>
+            <input matInput placeholder="" class="mat-mdc-input-element" />
+          </mat-form-field>
+          <mat-form-field class="login-form-field" appearance="outline">
+            <mat-label>Contraseña</mat-label>
+            <input matInput type="password" placeholder="" class="mat-mdc-input-element" />
+          </mat-form-field>
+          <div class="login-switch">
+            <mat-slide-toggle>
+              <span class="mdc-label">Recuérdame</span>
+            </mat-slide-toggle>
+          </div>
+          <button class="login-button login-button-primary" mat-raised-button>Entrar</button>
+          <button class="login-button login-button-accent" routerLink="/forgot-password" mat-button>¿Olvidó su contraseña?</button>
+        </form>
+      </div>
+      
+      
+  </div>
+</div>

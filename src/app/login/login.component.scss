@@ -1,0 +1,398 @@
+@use '../../custom-theme.scss' as theme;
+
+.login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    position: relative;
+    padding: 20px;
+    background: none;
+}
+
+.login-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100hv;
+    z-index: -1;
+}
+
+.login-background-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+}
+
+.login-logo-container {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    top: -40px;
+    left: 40px;
+}
+
+.login-logo {
+    width: 150px;
+    margin-left: 10px;
+}
+
+.login-logo-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-left: -20px;
+}
+
+.login-logo-title {
+    font-size: 35px;
+    font-weight: bold;
+    color: white;
+}
+
+.login-logo-subtitle {
+    font-size: 15px;
+    color: white;
+}
+
+.login-card-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    justify-content: flex-start;
+    margin-top: 80px;
+}
+
+.login-side-text {
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    flex-direction: column;
+    font-weight: bold;
+    text-align: left;
+    padding-left: 20px;
+}
+
+.login-side-text-sport {
+    font-size: 85px;
+    color: #F2C230;
+}
+
+.login-side-text-guatire {
+    font-size: 85px;
+    color: white;
+    margin-top: 5px;
+}
+
+.login-side-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    color: white;
+}
+
+.btn-primary {
+    background-color: #F2C230;
+    color: black;
+}
+
+.btn-accent {
+    background-color: transparent;
+    border: 2px solid #F2C230;
+    color: #F2C230;
+}
+
+.login-card {
+    flex: 1;
+    max-width: 400px;
+    padding: 30px;
+    background-color: rgba(40, 40, 40, 0.9);
+    color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    text-align: center;
+    margin-left: auto;
+}
+
+.login-title {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #F2C230;
+}
+
+.login-form-field {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.mat-mdc-form-field {
+    width: 100%;
+}
+
+.mat-mdc-input-element {
+    color: #F2C230;
+    /* Cambiar el color del texto dentro de los campos de entrada */
+    color: white !important;
+    border-radius: 5px;
+}
+
+.login-button {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.login-button-primary {
+    background-color: #F2C230 !important;
+    color: black !important;
+}
+
+.login-button-accent {
+    background-color: transparent;
+
+    color: white !important;
+}
+
+.login-switch {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 20px;
+
+    .mat-mdc-slide-toggle-bar {
+        background-color: #F2C230 !important; // Fondo del switch en amarillo
+    }
+
+    .mat-mdc-slide-toggle-thumb {
+        background-color: white !important; // Color del pulgar del switch en blanco
+    }
+
+    .mdc-label {
+        margin-left: 10px;
+        color: white;
+
+    }
+}
+
+//110%
+@media (max-width: 1250px) {
+    .login-logo-container {
+        left: -20px;
+    }
+
+    .login-card {
+        margin-bottom: 15px;
+        margin-top: -20px;
+        height: 90%;
+    }
+
+}
+
+//125%
+@media (max-width: 1095px) {
+
+    .login-card {
+        margin-bottom: 15px;
+        margin-top: -50px;
+        height: 90%;
+    }
+
+    .login-switch {
+        margin-left: 28px;
+    }
+
+    .mat-mdc-form-field {
+        width: 85%;
+    }
+
+    .login-side-text {}
+
+    .login-logo-container {
+        left: -20px;
+    }
+
+    .login-side-text-guatire {
+        font-size: 70px !important;
+    }
+
+    .login-side-text-sport {
+        font-size: 70px;
+
+    }
+
+}
+
+
+//150%
+@media (max-width: 920px) {
+
+    .login-card {
+        margin-bottom: 50px;
+        max-width: 340px;
+        padding: 10px;
+        // margin-top: -100px;
+    }
+
+    .login-card-container {
+        margin-top: 46px;
+    }
+
+    .login-title {
+        font-size: 18px;
+        padding: 15px;
+    }
+
+    .mat-mdc-form-field {
+        width: 85%;
+    }
+
+    .login-side-text {
+        margin-top: -100px;
+    }
+
+    .login-logo-container {
+        left: -20px;
+    }
+
+    .login-side-text-guatire {
+        font-size: 55px !important;
+    }
+
+    .login-side-text-sport {
+        font-size: 55px;
+
+    }
+}
+
+//175%
+@media (max-width: 790px) {
+
+
+    .login-card {
+        .login-title {
+            font-size: 18px; // Tamaño de letra más pequeño para el título
+        }
+
+        /*  .mat-mdc-input-element {
+          font-size: 8px;  // Tamaño de letra más pequeño para los campos de entrada
+        }*/
+
+        .mdc-label {
+            font-size: 10px; // Tamaño de letra más pequeño para el label del switch
+        }
+
+        /*  .mdc-floating-label {
+          font-size: 8px !important;  // Tamaño de letra más pequeño para los labels dentro de mat-form-field
+        }*/
+
+        button {
+            font-size: 10px; // Tamaño de letra más pequeño para los botones
+        }
+
+        ::ng-deep .mat-mdc-form-field .mat-mdc-input-element {
+            font-size: 8px !important; // Tamaño de letra para los campos de entrada
+        }
+
+        ::ng-deep .mat-mdc-form-field .mdc-floating-label {
+            font-size: 8px !important; // Tamaño de letra para los labels de entrada
+        }
+    }
+
+
+    .login-container {
+        height: 100vh;
+    }
+
+    .login-card-container {
+        margin-top: 30px;
+        height: 100vh;
+    }
+
+    .login-title {
+        font-size: 18px;
+        padding: 15px;
+    }
+
+    .mat-mdc-form-field {
+        width: 85%;
+    }
+
+    .login-side-text {
+        display: none;
+    }
+
+    .login-logo-container {
+        left: -20px;
+    }
+
+    .login-logo-container {
+        top: 20px;
+        /* Centra verticalmente */
+        /* Centra horizontalmente */
+        transform: translate(30%, 0%);
+        /* Ajusta la posición */
+
+        flex-direction: column;
+        /* Muestra texto debajo del logo */
+        align-items: center;
+        /* Centra el contenido */
+    }
+
+    .login-logo-text {
+        margin-left: 0;
+        /* Resetea el margen */
+        text-align: center;
+        /* Centra el texto */
+        margin-top: -55px;
+    }
+
+    .login-side-text-guatire,
+    .login-side-text-sport {
+        display: none;
+    }
+}
+
+//200%
+@media (max-width: 700px) {}
+
+//250%
+@media (max-width: 640px) {
+    .login-logo-container {
+        top: 20px;
+        /* Centra verticalmente */
+        left: 50%;
+        /* Centra horizontalmente */
+        transform: translate(-50%, -50%);
+        /* Ajusta la posición */
+
+        flex-direction: column;
+        /* Muestra texto debajo del logo */
+        align-items: center;
+        /* Centra el contenido */
+    }
+
+    .login-logo-text {
+        margin-left: 0;
+        /* Resetea el margen */
+        text-align: center;
+        /* Centra el texto */
+    }
+
+    .login-side-text-guatire,
+    .login-side-text-sport {
+        display: none;
+    }
+}

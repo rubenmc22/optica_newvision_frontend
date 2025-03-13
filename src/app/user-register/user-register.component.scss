@@ -1,0 +1,170 @@
+@use '../../custom-theme.scss' as theme;
+
+.register-container {
+  // display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 10px;
+  margin-top: -200px;
+}
+
+.register-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  z-index: -1;
+}
+
+.register-background-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.register-logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  // margin-bottom: 20px;
+}
+
+.register-logo {
+  width: 250px;
+  height: auto;
+  margin-top: 100px;
+}
+
+.register-logo-text {
+  text-align: center;
+  margin-top: -95px;
+}
+
+.register-logo-title {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.register-logo-subtitle {
+  font-size: 16px;
+  color: gray;
+}
+
+.register-card-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.back-button {
+  color: #F2C230 !important;
+  margin-left: -10px;
+}
+
+.register-card {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(40, 40, 40, 0.9);
+  background-color: rgba(40, 40, 40, 0.9);
+  max-width: 1000px;
+  width: 100%;
+}
+
+.register-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  justify-content: space-between;
+  /* Aseguramos el espacio adecuado */
+}
+
+.register-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #F2C230 !important;
+  flex: 1;
+  text-align: center;
+  /* Centramos el título */
+}
+
+.register-form {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.register-section {
+  flex: 1;
+  min-width: 300px;
+  margin-right: 20px;
+}
+
+.register-form-field {
+  flex: 1 1 calc(50% - 20px);
+  margin-bottom: 20px;
+  margin-right: 20px;
+}
+
+.register-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.register-button {
+  margin-top: 20px;
+  width: calc(100% - 20px);
+  margin-right: 20px;
+}
+
+.register-button-primary {
+  background-color: #F2C230 !important;
+  color: white;
+}
+
+.mat-mdc-input-element {
+  color: #fff !important;
+  /* Color del texto blanco al escribir */
+  caret-color: #fff !important;
+  /* Color del cursor blanco */
+}
+
+.register-switch {
+  .isMinorOrNot {
+    color: white !important;
+  }
+}
+
+.register-logo-title {
+  font-size: 35px;
+  font-weight: bold;
+  color: white;
+}
+
+.register-logo-subtitle {
+  font-size: 15px;
+  color: white;
+}
+
+/* Media query para pantallas pequeñas */
+@media (max-width: 768px) {
+  .register-form {
+    flex-direction: column;
+  }
+
+  .register-form-field {
+    width: 100%;
+    margin-right: 0;
+  }
+
+  .register-button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,80 @@
+<div class="register-container">
+  <div class="register-background">
+    <img class="register-background-image" src="/assets/sports-background.jpeg" alt="Fondo de Deportes">
+  </div>
+  <div class="register-logo-container">
+    <img class="register-logo" src="assets/apolloLogo.png" alt="APOLLO GROUP Logo" />
+    <div class="register-logo-text">
+      <div class="register-logo-title">APOLLO GROUP</div>
+      <div class="register-logo-subtitle">Academia deportiva</div>
+    </div>
+  </div>
+  <div class="register-card-container">
+    <div class="register-card">
+      <div class="register-header">
+        <button class="back-button" mat-icon-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <div class="register-title">Registrarse</div>
+      </div>
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+        <div class="register-section">
+          <div class="register-switch">
+            <mat-slide-toggle formControlName="isMinor"><span class="isMinorOrNot">¿Eres menor de edad?</span></mat-slide-toggle>
+          </div> <br><br>
+
+          <!-- Primera fila -->
+          <div class="register-row">
+            <mat-form-field class="register-form-field" appearance="outline">
+              <mat-label>{{ registerForm.get('isMinor')?.value ? 'Cédula del representante' : 'Cédula del atleta' }}</mat-label>
+              <input matInput [formControlName]="registerForm.get('isMinor')?.value ? 'representativeId' : 'athleteId'">
+            </mat-form-field>
+
+            <mat-form-field class="register-form-field" appearance="outline">
+              <mat-label>{{ registerForm.get('isMinor')?.value ? 'Nombre y Apellido del representante' : 'Nombre y Apellido del atleta' }}</mat-label>
+              <input matInput [formControlName]="registerForm.get('isMinor')?.value ? 'representativeName' : 'athleteName'">
+            </mat-form-field>
+
+            <mat-form-field class="register-form-field" appearance="outline">
+              <mat-label>{{ registerForm.get('isMinor')?.value ? 'Correo del representante' : 'Correo del atleta' }}</mat-label>
+              <input matInput [formControlName]="registerForm.get('isMinor')?.value ? 'representativeEmail' : 'athleteEmail'">
+            </mat-form-field>
+          </div>
+
+          <!-- Segunda fila -->
+          <div class="register-row">
+            <ng-container *ngIf="registerForm.get('isMinor')?.value">
+              <mat-form-field class="register-form-field" appearance="outline">
+                <mat-label>Nombre y Apellido del atleta</mat-label>
+                <input matInput formControlName="athleteName">
+              </mat-form-field>
+            </ng-container>
+
+            <mat-form-field class="register-form-field" appearance="outline">
+              <mat-label>Fecha de Nacimiento</mat-label>
+              <input matInput formControlName="athleteDob" type="date">
+            </mat-form-field>
+            <mat-form-field class="register-form-field" appearance="outline">
+              <mat-label>Edad</mat-label>
+              <input matInput formControlName="athleteAge" type="number">
+            </mat-form-field>
+          </div>
+
+          <!-- Tercera fila -->
+          <div class="register-row">
+            <mat-form-field class="register-form-field" appearance="outline">
+              <mat-label>Contraseña</mat-label>
+              <input matInput type="password" formControlName="password">
+            </mat-form-field>
+            <mat-form-field class="register-form-field" appearance="outline">
+              <mat-label>Confirmar Contraseña</mat-label>
+              <input matInput type="password" formControlName="confirmPassword">
+            </mat-form-field>
+          </div>
+        </div>
+
+        <button class="register-button register-button-primary" mat-raised-button>Registrarse</button>
+      </form>
+    </div>
+  </div>
+</div>
