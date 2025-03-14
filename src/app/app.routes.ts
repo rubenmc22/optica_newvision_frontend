@@ -1,14 +1,24 @@
+import { NgModule } from '@angular/core';
+import { RouterModule, Routes } from '@angular/router';
 import { UserRegisterComponent } from './user-register/user-register.component';
-import { Routes } from '@angular/router';
 import { LoginComponent } from './login/login.component';
 import { ForgotPasswordComponent } from './forgot-password/forgot-password.component';
+import { DashboardComponent } from './dashboard/dashboard.component';
+import { PostloginTemplateComponent } from './postlogin-template/postlogin-template.component';
 
-//import { HomeComponent } from './home/home.component';
-//import { AboutComponent } from './about/about.component';
-
-export const routes: Routes = [
+const appRoutes: Routes = [  // Cambiamos el nombre a appRoutes
     { path: '', component: LoginComponent },
     { path: 'register', component: UserRegisterComponent },
     { path: 'forgot-password', component: ForgotPasswordComponent },
+    {
+        path: '',
+        component: PostloginTemplateComponent,
+        children: [
+            { path: 'dashboard', component: DashboardComponent }
+        ]
+    },
     { path: '**', redirectTo: '' }
 ];
+
+// Exportamos appRoutes para que pueda ser usado en otros módulos
+export { appRoutes };

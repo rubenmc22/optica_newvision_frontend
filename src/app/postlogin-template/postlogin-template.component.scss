@@ -1,0 +1,44 @@
+/* Estilos para el layout post-login */
+.content {
+    margin-left: 280px; /* Ajustar el margen izquierdo para que el contenido no quede debajo del sidebar */
+    padding: 20px;
+  }
+  
+  @media (max-width: 768px) {
+    .content {
+      margin-left: 0; /* Eliminamos el margen izquierdo en pantallas pequeñas */
+      padding: 10px; /* Reducimos el padding en pantallas pequeñas */
+    }
+  }
+  
+  .bg-dark {
+    background-color: #343a40 !important;
+  }
+  
+  .link-light {
+    color: #f8f9fa !important;
+  }
+  
+  .btn-toggle {
+    color: #f8f9fa !important;
+    background-color: transparent !important;
+    width: 100%;
+    text-align: left;
+    padding: 10px;
+  }
+  
+  .btn-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .btn-toggle-nav a {
+    display: block;
+    color: #f8f9fa !important;
+    text-decoration: none;
+    padding: 5px 10px;
+  }
+  
+  .btn-toggle-nav a:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  

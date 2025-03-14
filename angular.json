@@ -27,26 +27,40 @@
             "inlineStyleLanguage": "scss",
             "assets": [
               "src/favicon.ico",
-              "src/assets"
+              "src/assets",
+              "src/assets/images",
+              "src/assets/fonts"
             ],
             "styles": [
+              "node_modules/bootstrap/dist/css/bootstrap.min.css",
+              "node_modules/bootstrap-icons/font/bootstrap-icons.css",
+              "src/assets/adminlte/plugins/fontawesome-free/css/all.min.css",
+              "src/assets/adminlte/plugins/overlayScrollbars/css/OverlayScrollbars.min.css",
+              "src/assets/adminlte/dist/css/adminlte.min.css",
               "src/custom-theme.scss",
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [
+              "node_modules/jquery/dist/jquery.min.js",
+              "node_modules/bootstrap/dist/js/bootstrap.bundle.min.js",
+              "src/assets/adminlte/plugins/jquery/jquery.min.js",
+              "src/assets/adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js",
+              "src/assets/adminlte/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js",
+              "src/assets/adminlte/dist/js/adminlte.min.js"
+            ]
           },
           "configurations": {
             "production": {
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1MB", 
-                  "maximumError": "2MB"    
+                  "maximumWarning": "1MB",
+                  "maximumError": "2MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "100kB", 
-                  "maximumError": "150kB"   
+                  "maximumWarning": "100kB",
+                  "maximumError": "150kB"
                 }
               ],
               "outputHashing": "all"
