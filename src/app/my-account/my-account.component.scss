@@ -1,0 +1,191 @@
+.card {
+    margin: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: #262524;
+    /* Fondo negro */
+    color: #FFD700;
+    /* Texto amarillo */
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    /* Sombra */
+}
+
+.card-header {
+    text-align: center;
+    font-size: 1.2rem;
+    background-color: #FFD700 !important;
+    /* Fondo amarillo */
+    color: #262524 !important;
+    /* Texto negro */
+    font-weight: bold;
+    border-bottom: 2px solid #262524;
+    /* Línea divisoria negra */
+}
+
+.card-title {
+    font-weight: bold;
+    color: #262524;
+}
+
+.card-body {
+    background-color: #262524;
+    /* Fondo negro */
+    color: #FFD700;
+    /* Texto amarillo */
+    padding: 1.5rem;
+}
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+/* Estilo de los inputs */
+input.form-control,
+textarea.form-control,
+select.form-control {
+    background-color: #262524;
+    /* Fondo negro */
+    color: #FFFFFF;
+    /* Texto blanco */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    /* Borde blanco con opacidad */
+    border-radius: 5px;
+    /* Bordes redondeados */
+}
+
+input.form-control::placeholder {
+    color: #FFD700;
+    /* Texto placeholder amarillo */
+    opacity: 0.8;
+}
+
+input.form-control:focus {
+    background-color: #2e2d2c;
+    /* Fondo más claro al enfocar */
+    color: #FFFFFF;
+    /* Texto blanco */
+    border-color: rgba(255, 255, 255, 0.5);
+    /* Borde más visible al enfocar */
+    outline: none;
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+    /* Sombra ligera */
+}
+
+/* Botón de guardar */
+button.btn-success {
+    background-color: #FFD700;
+    color: #262524;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+button.btn-success:hover {
+    background-color: #e6c200;
+    color: #000000;
+    box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
+    /* Sombra al pasar el mouse */
+    transform: scale(1.05);
+    /* Efecto de agrandamiento */
+}
+
+button.btn-success:active {
+    background-color: #cba800;
+    transform: scale(0.98);
+    /* Efecto de clic */
+}
+
+/* Widget de imagen */
+.image-widget {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.d-flex {
+    display: flex;
+    justify-content: center; /* Centrar horizontalmente */
+    align-items: center; /* Centrar verticalmente */
+    margin-left: 120px; /* Desplazamiento horizontal hacia la derecha */
+}
+.athlete-photo {
+    width: 150px;
+    /* Mantener tamaño de la imagen */
+    height: 150px;
+    object-fit: cover;
+    /* Mantiene las proporciones */
+    border-radius: 50%;
+    /* Hace la imagen circular */
+    border: 2px solid #FFD700;
+    /* Borde amarillo */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    /* Sombra elegante */
+}
+
+button.btn-outline-primary {
+    background-color: #FFD700;
+    /* Fondo amarillo */
+    color: #262524;
+    /* Texto negro */
+    font-weight: bold;
+    border-radius: 5px;
+    /* Bordes redondeados */
+    padding: 6px 12px;
+    /* Tamaño reducido del botón */
+    font-size: 0.875rem;
+    /* Fuente más pequeña */
+    transition: all 0.3s ease;
+    /* Transición suave */
+    margin-left: 10px;
+    /* Espacio entre la imagen y el botón */
+}
+
+button.btn-outline-primary:hover {
+    background-color: #e6c200;
+    /* Fondo amarillo más oscuro */
+    color: #000000;
+    box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
+    /* Sombra ligera */
+}
+
+button.btn-outline-primary:active {
+    background-color: #cba800;
+    transform: scale(0.98);
+    /* Efecto de clic */
+}
+
+/* Responsividad para móviles */
+@media (max-width: 576px) {
+    .form-row .form-group {
+        flex: 0 0 100%;
+        /* Usar todo el ancho en pantallas pequeñas */
+        max-width: 100%;
+    }
+
+    .image-widget {
+        flex-direction: column;
+        margin-bottom: 1rem;
+        /* Espaciado ajustado */
+    }
+
+    .athlete-photo {
+        width: 120px;
+        /* Ajustar el tamaño en móviles */
+        height: 120px;
+    }
+
+    button.btn-success {
+        padding: 8px 16px;
+        /* Botón más compacto */
+    }
+}

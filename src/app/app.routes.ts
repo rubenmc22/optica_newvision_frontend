@@ -4,7 +4,9 @@ import { UserRegisterComponent } from './user-register/user-register.component';
 import { LoginComponent } from './login/login.component';
 import { ForgotPasswordComponent } from './forgot-password/forgot-password.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
+import { MyAccountComponent } from './my-account/my-account.component';
 import { PostloginTemplateComponent } from './postlogin-template/postlogin-template.component';
+import { PersonalInformationComponent } from './personal-information/personal-information.component';
 
 const appRoutes: Routes = [  // Cambiamos el nombre a appRoutes
     { path: '', component: LoginComponent },
@@ -14,7 +16,9 @@ const appRoutes: Routes = [  // Cambiamos el nombre a appRoutes
         path: '',
         component: PostloginTemplateComponent,
         children: [
-            { path: 'dashboard', component: DashboardComponent }
+            { path: 'dashboard', component: DashboardComponent },
+            { path: 'my-account', component: MyAccountComponent },
+            { path: 'personal-information', component: PersonalInformationComponent }, // Nueva ruta
         ]
     },
     { path: '**', redirectTo: '' }

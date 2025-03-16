@@ -1,0 +1,133 @@
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-10">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title">Mi Cuenta</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-4 text-center">
+                        <div class="d-flex justify-content-center align-items-center">
+                            <!-- Imagen del atleta -->
+                            <img [src]="user.photo || 'assets/default-photo.png'" alt="Foto del atleta"
+                                class="img-thumbnail athlete-photo">
+
+                            <!-- Botón Cambiar Foto -->
+                            <button type="button" class="btn btn-outline-primary btn-sm ml-3"
+                                (click)="triggerFileSelector()">
+                                Cambiar Foto
+                            </button>
+                            <input type="file" id="photoInput" class="d-none" (change)="onPhotoSelected($event)">
+                        </div>
+                    </div>
+
+
+                    <form #accountForm="ngForm">
+                        <!-- Nombre completo -->
+                        <div class="form-group">
+                            <label for="nombreCompleto">Nombre completo</label>
+                            <div class="input-group">
+                                <input type="text" id="nombreCompleto" class="form-control"
+                                    [(ngModel)]="user.nombreCompleto" name="nombreCompleto"
+                                    [readonly]="!edit['nombreCompleto']" (blur)="toggleEdit('nombreCompleto', false)">
+                                <div class="input-group-append">
+                                    <button type="button" class="btn btn-outline-secondary"
+                                        (click)="toggleEdit('nombreCompleto', true)">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fecha de nacimiento y Edad (misma fila) -->
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="fechaNacimiento">Fecha de nacimiento</label>
+                                <input type="date" id="fechaNacimiento" class="form-control"
+                                    [(ngModel)]="user.fechaNacimiento" name="fechaNacimiento">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="edad">Edad</label>
+                                <input type="text" id="edad" class="form-control" [(ngModel)]="user.edad" name="edad"
+                                    disabled>
+                            </div>
+                        </div>
+
+                        <!-- Cédula y Correo Electrónico (misma fila) -->
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="cedula">Cédula</label>
+                                <input type="text" id="cedula" class="form-control" [(ngModel)]="user.cedula"
+                                    name="cedula" disabled>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="correo">Correo Electrónico</label>
+                                <div class="input-group">
+                                    <input type="email" id="correo" class="form-control" [(ngModel)]="user.correo"
+                                        name="correo" [readonly]="!edit['correo']" (blur)="toggleEdit('correo', false)">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary"
+                                            (click)="toggleEdit('correo', true)">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contraseña y Confirmación de Contraseña (misma fila) -->
+                        <!-- Contraseña y Confirmación de Contraseña (misma fila) -->
+                        <div class="form-row">
+                            <!-- Contraseña -->
+                            <div class="form-group col-md-6">
+                                <label for="contrasena">Contraseña</label>
+                                <div class="input-group">
+                                    <input [type]="showPassword ? 'text' : 'password'" id="contrasena"
+                                        class="form-control" [(ngModel)]="user.contrasena" name="contrasena"
+                                        [readonly]="!edit['contrasena']" (blur)="toggleEdit('contrasena', false)"
+                                        (input)="validatePasswords()">
+                                    <div class="input-group-append">
+                                        <!-- Botón combinado -->
+                                        <button type="button" class="btn btn-outline-secondary"
+                                            (click)="edit['contrasena'] ? togglePasswordVisibility() : toggleEdit('contrasena', true)">
+                                            <i
+                                                [ngClass]="edit['contrasena'] ? (showPassword ? 'fas fa-eye-slash' : 'fas fa-eye') : 'fas fa-pencil-alt'"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+
+
+                            <!-- Confirmar Contraseña -->
+                            <div class="form-group col-md-6">
+                                <label for="confirmarContrasena">Confirmar Contraseña</label>
+                                <div class="input-group">
+                                    <input [type]="showConfirmPassword ? 'text' : 'password'" id="confirmarContrasena"
+                                        class="form-control" [(ngModel)]="confirmarContrasena"
+                                        name="confirmarContrasena" (input)="validatePasswords()">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary"
+                                            (click)="toggleConfirmPasswordVisibility()">
+                                            <i [ngClass]="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small *ngIf="!passwordsMatch && confirmarContrasena" class="text-danger">
+                                    Las contraseñas no coinciden.
+                                </small>
+                            </div>
+                        </div><br>
+
+
+                        <!-- Botón Guardar -->
+                        <div class="form-group text-right">
+                            <button type="button" class="btn btn-success" [disabled]="!passwordsMatch"
+                                (click)="saveUserInfo()">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

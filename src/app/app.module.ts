@@ -1,4 +1,5 @@
 import { NgModule } from '@angular/core';
+import { FormsModule } from '@angular/forms'; 
 import { BrowserModule } from '@angular/platform-browser';
 import { ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -10,7 +11,9 @@ import { MaterialModule } from './material.module';
 import { appRoutes  } from './app.routes';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
-import { PostloginTemplateComponent } from './postlogin-template/postlogin-template.component'; // Importa el componente de layout post-login
+import { PostloginTemplateComponent } from './postlogin-template/postlogin-template.component'; 
+import { MyAccountComponent } from './my-account/my-account.component';
+import { PersonalInformationComponent } from './personal-information/personal-information.component'; 
 
 @NgModule({
   declarations: [
@@ -20,12 +23,15 @@ import { PostloginTemplateComponent } from './postlogin-template/postlogin-templ
     ForgotPasswordComponent,
     SidebarComponent,
     DashboardComponent,
+    MyAccountComponent,
+    PersonalInformationComponent,
     PostloginTemplateComponent // Declara el componente de layout post-login
   ],
   imports: [
     BrowserModule,
     ReactiveFormsModule,
     MaterialModule,
+    FormsModule,
     RouterModule.forRoot(appRoutes )
   ],
   providers: [],

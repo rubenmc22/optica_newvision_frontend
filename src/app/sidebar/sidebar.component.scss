@@ -1,0 +1,111 @@
+.fa-rotate-custom {
+    transform: rotate(0deg); /* Posición inicial: flecha apuntando a la izquierda */
+    transition: transform 0.3s ease; /* Movimiento suave */
+  }
+  
+  .fa-rotate-custom-open {
+    transform: rotate(-90deg); /* Flecha girada hacia abajo pasando por el lado izquierdo */
+    transition: transform 0.3s ease;
+  }
+  
+
+  .content-wrapper {
+    background-image: url('/assets/sports-background.jpeg'); /* Ajusta la ruta a tu imagen */
+    background-size: cover; /* Asegúrate de que cubra toda el área */
+    background-repeat: no-repeat; /* Evita que se repita */
+    background-attachment: fixed; /* Mantén la imagen fija al hacer scroll */
+    background-position: center; /* Centra la imagen */
+    min-height: 100vh; /* Asegura que siempre ocupe al menos el alto de la pantalla */
+    padding: 1rem; /* Mantén un margen interno cómodo */
+  }
+
+/*======================== SIDEBAR ========================*/
+.main-sidebar {
+    background-color: #262524 !important; /* Fondo negro */
+    color: #FFD700; /* Texto amarillo */
+  }
+  
+  /* Links en el Sidebar */
+  .main-sidebar .nav-sidebar > .nav-item > .nav-link {
+    color: #FFD700 !important; /* Color de texto amarillo */
+    
+  }
+  
+  .main-sidebar .nav-sidebar > .nav-item > .nav-link:hover {
+    background-color: #FFD700 !important; /* Fondo amarillo en hover */
+    color: #000000 !important; /* Texto negro en hover */
+  }
+  
+  /* Títulos del Sidebar */
+  .main-sidebar .sidebar .nav-header {
+    color: #FFD700; /* Amarillo */
+    font-weight: bold;
+    text-transform: uppercase; /* Opcional: Mejora la legibilidad */
+  }
+  
+  /* Ítem Activo */
+  .main-sidebar .nav-sidebar > .nav-item > .nav-link.active {
+    background-color: #FFD700 !important; /* Amarillo brillante */
+    color: #000000 !important; /* Texto negro */
+  }
+  
+  /* Imagen o Logo del Sidebar */
+  .brand-link {
+    background-color: #262524 !important; /* Fondo negro */
+    color: #FFD700 !important; /* Texto amarillo */
+  }
+  
+ /* .brand-link:hover {
+    background-color: #FFD700 !important; 
+    color: #262524 !important; 
+  }*/
+  
+  /* Sombra (Opcional) */
+  .main-sidebar {
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5); /* Añade separación visual */
+  }
+
+ 
+/*======================== NAVBAR ========================*/
+.main-header {
+    background-color: #262524 !important; /* Fondo negro */
+    border-bottom: 2px solid #FFD700; /* Borde amarillo en la parte inferior */
+    color: #FFD700; /* Texto amarillo */
+  }
+  
+  /* Links dentro del Navbar */
+  .main-header .nav-link {
+    color: #FFD700 !important; /* Texto amarillo */
+    font-weight: bold;
+  }
+  
+  .main-header .nav-link:hover {
+    background-color: #FFD700 !important; /* Fondo amarillo en hover */
+    color: #262524 !important; /* Texto negro en hover */
+  }
+  
+  /* Íconos del Navbar */
+  .main-header .fas {
+    color: #FFD700 !important; /* Íconos amarillos */
+  }
+
+/*======================== FOOTER ========================*/
+.main-footer {
+    background-color: #262524 !important; /* Fondo negro */
+    color: #FFD700; /* Texto amarillo */
+    border-top: 2px solid #FFD700; /* Borde amarillo en la parte superior */
+  }
+  
+  /* Links en el Footer */
+  .main-footer a {
+    color: #FFD700; /* Amarillo para los enlaces */
+    font-weight: bold;
+  }
+  
+  .main-footer a:hover {
+    color: #262524; /* Texto negro en hover */
+    background-color: #FFD700; /* Fondo amarillo en hover */
+  }
+  
+  
+  
