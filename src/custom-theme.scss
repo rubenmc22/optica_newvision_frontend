@@ -21,9 +21,14 @@ $accent: mat.m2-get-color-from-palette($accent-palette, 'default');
 $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
 
 /* Variables para colores y estilos comunes */
+/* Variables globales en :root para estilos personalizados */
 :root {
-  --border-color: #F2C230;
-  --label-color: #F2C230;
+  --primary-color: #FFD700; /* Puedes reutilizar esto desde la paleta */
+  --secondary-color: #262524;
+  --formInput-color: #1a1a1a;
+  --text-color: white;
+  --border-color: var(--primary-color); /* Reutilización */
+  --label-color: var(--primary-color);
   --label-background: rgba(40, 40, 40, 0.9);
   --border-radius: 4px;
   --transition: border-color 0.2s ease-in-out;

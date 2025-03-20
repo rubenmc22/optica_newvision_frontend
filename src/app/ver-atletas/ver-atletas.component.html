@@ -3,8 +3,9 @@
     <div class="card-header filtros-header">
         <div class="row align-items-center">
             <div class="col-8 d-flex align-items-center">
-                <label for="busqueda" class="form-label me-3 filtros-label" style="font-size:18px; margin-top: 8px;">Buscar un
-                    Atleta:</label>
+                <label for="busqueda" class="form-label me-3 filtros-label" style="font-size:18px; margin-top: 8px;">
+                    Buscar un Atleta:
+                </label>
                 <input type="text" id="busqueda" class="form-control w-50 filtros-input"
                     placeholder="Nombre, Cédula o Correo" [(ngModel)]="filtros.busqueda" (input)="aplicarFiltros()"
                     maxlength="50" />
@@ -18,7 +19,8 @@
             <!-- Deporte -->
             <div class="col-12 col-md-2">
                 <label for="deporte" class="form-label filtros-label">Deporte</label>
-                <select id="deporte" class="form-select filtros-select" (focus)="onFocus()" (blur)="onBlur()" (change)="onSportDropdownChange($event)">
+                <select id="deporte" class="form-select filtros-select" (focus)="onFocus()" (blur)="onBlur()"
+                    (change)="onSportDropdownChange($event)">
                     <option value="">Todos</option>
                     <option *ngFor="let deporte of availableSports" [value]="deporte.id">
                         {{ deporte.name }}
@@ -97,11 +99,7 @@
                                 <i [class]="ordenAscendente ? 'bi bi-arrow-up' : 'bi bi-arrow-down'"></i>
                             </span>
                         </th>
-                        <th (click)="ordenarTabla('correo')">Correo
-                            <span *ngIf="ordenActual === 'correo'">
-                                <i [class]="ordenAscendente ? 'bi bi-arrow-up' : 'bi bi-arrow-down'"></i>
-                            </span>
-                        </th>
+                        <th>Ficha Técnica</th>
                     </tr>
                 </thead>
                 <tbody *ngIf="atletasPaginados.length; else noResults">
@@ -112,7 +110,11 @@
                         <td>{{ atleta.genero }}</td>
                         <td>{{ atleta.deporte }}</td>
                         <td>{{ atleta.posicion }}</td>
-                        <td>{{ atleta.correo }}</td>
+                        <td>
+                            <a [routerLink]="['/ficha-tecnica', atleta.cedula]" class="text-primary">
+                                Ver ficha técnica
+                            </a>
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -122,19 +124,28 @@
             <p class="text-center mt-3 no-results-message">No se encontraron resultados</p>
         </ng-template>
 
-        <!-- Paginación -->
-        <nav *ngIf="totalPaginas > 1" class="mt-3">
-            <ul class="pagination justify-content-center">
-                <li class="page-item" [class.disabled]="paginaActual === 1">
-                    <button class="page-link" (click)="cambiarPagina(-1)">Anterior</button>
-                </li>
-                <li class="page-item">
-                    <span class="page-link">{{ paginaActual }}</span>
-                </li>
-                <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
-                    <button class="page-link" (click)="cambiarPagina(1)">Siguiente</button>
-                </li>
-            </ul>
+        <nav *ngIf="totalPaginas > 1" class="mt-3 d-flex justify-content-between align-items-center">
+            <!-- Paginación centrada -->
+            <div class="d-flex justify-content-center flex-grow-1">
+                <ul class="pagination m-0">
+                    <li class="page-item" [class.disabled]="paginaActual === 1">
+                        <button class="page-link" (click)="cambiarPagina(-1)">Anterior</button>
+                    </li>
+                    <li class="page-item">
+                        <span class="page-link">{{ paginaActual }} de {{ totalPaginas }}</span>
+                    </li>
+                    <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+                        <button class="page-link" (click)="cambiarPagina(1)">Siguiente</button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Total de atletas alineado a la derecha -->
+            <div class="text-end ms-3">
+                Total de Atletas: <strong>{{ totalRegistros }}</strong>
+            </div>
         </nav>
+
+
+
     </div>
-</div>

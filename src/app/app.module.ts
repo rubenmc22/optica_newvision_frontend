@@ -13,7 +13,7 @@ import { SidebarComponent } from './sidebar/sidebar.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { PostloginTemplateComponent } from './postlogin-template/postlogin-template.component'; 
 import { MyAccountComponent } from './my-account/my-account.component';
-import { PersonalInformationComponent } from './personal-information/personal-information.component'; 
+import { FichaTecnicaComponent } from './ficha-tecnica/ficha-tecnica.component'; 
 import { VerAtletasComponent } from './ver-atletas/ver-atletas.component'; 
 import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component'; 
 
@@ -27,7 +27,7 @@ import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
     SidebarComponent,
     DashboardComponent,
     MyAccountComponent,
-    PersonalInformationComponent,
+    FichaTecnicaComponent,
     VerAtletasComponent,
     CrearAtletasComponent,
     PostloginTemplateComponent // Declara el componente de layout post-login

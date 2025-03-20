@@ -49,12 +49,12 @@
 .login-logo-title {
     font-size: 35px;
     font-weight: bold;
-    color: white;
+    color: var(--text-color);
 }
 
 .login-logo-subtitle {
     font-size: 15px;
-    color: white;
+    color: var(--text-color);
 }
 
 .login-card-container {
@@ -79,12 +79,12 @@
 
 .login-side-text-sport {
     font-size: 85px;
-    color: #F2C230;
+    color: var(--primary-color);
 }
 
 .login-side-text-guatire {
     font-size: 85px;
-    color: white;
+    color: var(--text-color);
     margin-top: 5px;
 }
 
@@ -101,18 +101,18 @@
     cursor: pointer;
     border: none;
     border-radius: 5px;
-    color: white;
+    color: var(--text-color);
 }
 
 .btn-primary {
-    background-color: #F2C230;
+    background-color: var(--primary-color);
     color: black;
 }
 
 .btn-accent {
     background-color: transparent;
-    border: 2px solid #F2C230;
-    color: #F2C230;
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
 }
 
 .login-card {
@@ -120,7 +120,7 @@
     max-width: 400px;
     padding: 30px;
     background-color: rgba(40, 40, 40, 0.9);
-    color: white;
+    color: var(--text-color);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     border-radius: 12px;
     text-align: center;
@@ -131,7 +131,7 @@
     font-size: 28px;
     font-weight: bold;
     margin-bottom: 20px;
-    color: #F2C230;
+    color: var(--primary-color);
 }
 
 .login-form-field {
@@ -144,9 +144,9 @@
 }
 
 .mat-mdc-input-element {
-    color: #F2C230;
+    color: var(--primary-color);
     /* Cambiar el color del texto dentro de los campos de entrada */
-    color: white !important;
+    color: var(--text-color) !important;
     border-radius: 5px;
 }
 
@@ -156,14 +156,14 @@
 }
 
 .login-button-primary {
-    background-color: #F2C230 !important;
+    background-color: var(--primary-color) !important;
     color: black !important;
 }
 
 .login-button-accent {
     background-color: transparent;
 
-    color: white !important;
+    color: var(--text-color) !important;
 }
 
 .login-switch {
@@ -173,16 +173,16 @@
     margin-bottom: 20px;
 
     .mat-mdc-slide-toggle-bar {
-        background-color: #F2C230 !important; // Fondo del switch en amarillo
+        background-color: var(--primary-color) !important; // Fondo del switch en amarillo
     }
 
     .mat-mdc-slide-toggle-thumb {
-        background-color: white !important; // Color del pulgar del switch en blanco
+        background-color: var(--text-color) !important; // Color del pulgar del switch en blanco
     }
 
     .mdc-label {
         margin-left: 10px;
-        color: white;
+        color: var(--text-color);
 
     }
 }

@@ -1,10 +1,7 @@
-.register-card {
-    // background-color: #262524; /* Fondo oscuro */
-    //  padding: 20px;
-}
+@use '../../custom-theme.scss' as theme;
 
 .card-body {
-    background-color: #262524 !important;
+    background-color: var(--secondary-color) !important;
     /* Fondo oscuro */
     padding: 20px;
 }
@@ -12,46 +9,40 @@
 .card {
     border-radius: 10px;
     background-color: #000000;
-    /* Fondo negro de la tarjeta */
-    color: white;
+    color: var(--text-color);
 }
-
-/*.card-header {
-    font-size: 1.5rem;
-    font-weight: bold;
-}*/
 
 .card-header {
     text-align: center;
     font-size: 1.2rem;
-    background-color: #F2C230 !important;
-    color: #262524 !important;
+    background-color: var(--primary-color) !important;
+    color: var(--secondary-color) !important;
     font-weight: bold;
-    border-bottom: 2px solid #262524;
+    border-bottom: 2px solid var(--secondary-color);
 
     .card-title {
         font-weight: bold;
-        color: #262524;
+        color: var(--secondary-color);
     }
 }
 
 .form-check-input {
-    background-color: red;
+    //background-color: red;
 }
 
 .form-label {
     font-weight: bold;
-    color: #F2C230;
+    color: var(--primary-color) !important ;
     /* Texto amarillo */
 }
 
 .form-control,
 .form-select {
     border-radius: 5px;
-    background-color: #1a1a1a;
+    background-color: var(--formInput-color);
     /* Fondo oscuro del input */
-    color: white;
-    //  border: 1px solid #F2C230; /* Borde amarillo */
+    color: var(--text-color);
+    //  border: 1px solid var(--primary-color); /* Borde amarillo */
     border: none;
 }
 
@@ -63,7 +54,7 @@
 }
 
 .btn-yellow {
-    background-color: #F2C230;
+    background-color: var(--primary-color);
     border: none;
     font-weight: bold;
     color: #000000;
@@ -78,12 +69,12 @@
 
 .form-check-label {
     margin-left: 8px;
-    color: #F2C230;
+    color: var(--primary-color) !important;
 }
 
 /* Switch dinámico: Amarillo cuando está activo, Blanco cuando no */
 .form-check-input {
-    background-color: white;
+    background-color: var(--text-color);
     border-radius: 20px;
     outline: none;
     transition: background-color 0.3s ease;
@@ -97,11 +88,11 @@
     }
   
     &:checked {
-      background-color: #F2C230;
+      background-color: var(--primary-color);
   
       &::before {
         left: 28px;
-        background-color: white;
+        background-color: var(--text-color);
       }
     }
   

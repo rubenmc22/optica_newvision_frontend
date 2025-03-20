@@ -32,7 +32,7 @@
 }
 
 .back-button {
-  background-color: #F2C230;
+  background-color: var(--primary-color);
 }
 
 /* Estilo del logo */
@@ -51,7 +51,7 @@
     font-size: 28px;
     /* Tamaño del texto principal */
     font-weight: bold;
-    color: white;
+    color: var(--text-color);
     /* Color blanco para "APOLLO GROUP" */
   }
 
@@ -74,7 +74,7 @@
   z-index: 1;
 
   .register-card {
-    background-color: #262524;
+    background-color: var(--secondary-color);
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     padding: 30px;
@@ -90,7 +90,7 @@
       .register-title {
         font-size: 24px;
         font-weight: bold;
-        color: #F2C230 !important;
+        color: var(--primary-color) !important;
         flex: 1;
         margin-left: 15px;
       }
@@ -118,8 +118,8 @@
       }
 
       .register-button-primary {
-        background-color: #F2C230 !important;
-        color: white;
+        background-color: var(--primary-color) !important;
+        color: var(--text-color);
       }
     }
   }
@@ -129,9 +129,9 @@
 .form-control,
 .form-select {
   border-radius: 5px;
-  background-color: #1a1a1a;
+  background-color: var(--formInput-color);
   /* Fondo oscuro del input */
-  color: white;
+  color: var(--text-color);
   border: none;
 }
 
@@ -143,7 +143,7 @@
 }
 
 .btn-yellow {
-  background-color: #F2C230;
+  background-color: var(--primary-color);
   border: none;
   font-weight: bold;
   color: #000000;
@@ -159,18 +159,18 @@
 /* Etiquetas */
 .form-label {
   font-weight: bold;
-  color: #F2C230;
+  color: var(--primary-color);
   /* Texto amarillo */
 }
 
 .form-check-label {
   margin-left: 8px;
-  color: #F2C230;
+  color: var(--primary-color);
 }
 
 /* Tarjetas adicionales */
 .card-body {
-  background-color: #262524 !important;
+  background-color: var(--secondary-color) !important;
   /* Fondo oscuro */
   padding: 10px;
   margin-top: -25px;
@@ -179,7 +179,7 @@
 .card-header {
   background-color: #000000;
   /* Fondo negro */
-  color: #F2C230;
+  color: var(--primary-color);
   /* Texto amarillo */
   font-size: 1.5rem;
   font-weight: bold;
@@ -187,7 +187,7 @@
 
 /* Switch dinámico: Amarillo cuando está activo, Blanco cuando no */
 .form-check-input {
-  background-color: white;
+  background-color: var(--text-color);
   border-radius: 20px;
   outline: none;
   transition: background-color 0.3s ease;
@@ -201,11 +201,11 @@
   }
 
   &:checked {
-    background-color: #F2C230;
+    background-color: var(--primary-color);
 
     &::before {
       left: 28px;
-      background-color: white;
+      background-color: var(--text-color);
     }
   }
 

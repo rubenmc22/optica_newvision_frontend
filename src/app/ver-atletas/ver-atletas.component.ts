@@ -116,8 +116,13 @@ export class VerAtletasComponent {
   paginaActual: number = 1;
   tamanioPagina: number = 5;
 
+  // Total de registros (filtrados)
+  get totalRegistros(): number {
+    return this.atletasFiltrados.length;
+  }
+
   get totalPaginas(): number {
-    return Math.ceil(this.atletasFiltrados.length / this.tamanioPagina);
+    return Math.ceil(this.totalRegistros / this.tamanioPagina);
   }
 
   get atletasPaginados(): any[] {
@@ -141,7 +146,6 @@ export class VerAtletasComponent {
     5: ['Corredor', 'Lanzador', 'Saltador']
   };
 
-  // Métodos principales
   onSportDropdownChange(event: Event): void {
     const selectedValue = (event.target as HTMLSelectElement).value;
 
@@ -165,9 +169,9 @@ export class VerAtletasComponent {
   aplicarFiltros(): void {
     const normalizarTexto = (texto: string): string =>
       texto
-        .normalize('NFD') // Normaliza caracteres con tilde/acento
-        .replace(/[\u0300-\u036f]/g, '') // Elimina marcas diacríticas (acentos)
-        .toLowerCase(); // Convierte todo a minúsculas
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
 
     const edadMinValida = this.filtros.edadMin ? Number(this.filtros.edadMin) || 0 : 0;
     const edadMaxValida = this.filtros.edadMax ? Number(this.filtros.edadMax) || 999 : 999;
@@ -202,17 +206,15 @@ export class VerAtletasComponent {
   validarSoloNumeros(event: Event): void {
     const input = event.target as HTMLInputElement;
 
-    // Conserva los números válidos que ingreses
     input.value = input.value.replace(/[^0-9]/g, '');
 
-    // Actualiza los filtros
     if (input.id === 'edadMin') {
       this.filtros.edadMin = input.value || null;
     } else if (input.id === 'edadMax') {
       this.filtros.edadMax = input.value || null;
     }
 
-    this.aplicarFiltros(); // Aplica los filtros en tiempo real
+    this.aplicarFiltros();
   }
 
   cambiarPagina(direccion: number): void {
@@ -222,16 +224,15 @@ export class VerAtletasComponent {
     }
   }
 
-  // Ordenación por columnas
-  ordenActual: string = ''; // Almacena la columna activa
-  ordenAscendente: boolean = true; // Define el orden inicial
+  ordenActual: string = '';
+  ordenAscendente: boolean = true;
 
   ordenarTabla(campo: keyof typeof this.atletas[0]): void {
     if (this.ordenActual === campo) {
-      this.ordenAscendente = !this.ordenAscendente; // Cambia el orden
+      this.ordenAscendente = !this.ordenAscendente;
     } else {
       this.ordenActual = campo;
-      this.ordenAscendente = true; // Reinicia al orden ascendente
+      this.ordenAscendente = true;
     }
 
     this.atletasFiltrados.sort((a, b) => {
@@ -251,8 +252,8 @@ export class VerAtletasComponent {
   onFocus(): void {
     const selectElement = document.getElementById('deporte');
     if (selectElement) {
-      selectElement.style.boxShadow = '0 0 5px #F2C230'; // Sombra amarilla
-  
+      selectElement.style.boxShadow = '0 0 5px var(--primary-color)'; // Sombra amarilla
+
     }
   }
 

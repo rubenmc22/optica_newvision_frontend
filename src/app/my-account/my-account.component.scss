@@ -1,10 +1,12 @@
+@use '../../custom-theme.scss' as theme;
+
 .card {
     margin: 1rem;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    background-color: #262524;
+    background-color: var(--secondary-color);
     /* Fondo negro */
-    color: #FFD700;
+    color: var(--primary-color);
     /* Texto amarillo */
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -14,24 +16,24 @@
 .card-header {
     text-align: center;
     font-size: 1.2rem;
-    background-color: #FFD700 !important;
+    background-color: var(--primary-color) !important;
     /* Fondo amarillo */
-    color: #262524 !important;
+    color: var(--formInput-color)!important;
     /* Texto negro */
     font-weight: bold;
-    border-bottom: 2px solid #262524;
+    border-bottom: 2px solid var(--secondary-color);
     /* Línea divisoria negra */
 }
 
 .card-title {
     font-weight: bold;
-    color: #262524;
+    color: var(--secondary-color);
 }
 
 .card-body {
-    background-color: #262524;
+    background-color: var(--secondary-color);
     /* Fondo negro */
-    color: #FFD700;
+    color: var(--primary-color);
     /* Texto amarillo */
     padding: 1.5rem;
 }
@@ -41,9 +43,9 @@
     text-align: center;
     font-size: 1.5rem;
     font-weight: bold;
-    background: linear-gradient(90deg, #FFD700, #FFA500);
+    background: linear-gradient(90deg, var(--primary-color), #FFA500);
     /* Gradiente de amarillo a naranja */
-    color: #262524;
+    color: var(--secondary-color);
     /* Texto negro */
     padding: 1rem;
     border-radius: 10px 10px 0 0;
@@ -54,9 +56,9 @@
 
 /* Estilo para las pestañas */
 .nav-tabs {
-    border-bottom: 2px solid #FFD700;
+    border-bottom: 2px solid var(--primary-color);
     /* Línea divisoria amarilla */
-    background-color: #262524;
+    background-color: var(--secondary-color);
     /* Fondo negro para las pestañas */
     border-radius: 10px 10px 0 0;
     /* Bordes superiores redondeados */
@@ -69,7 +71,7 @@
 }
 
 .nav-tabs .nav-link {
-    color: #FFD700;
+    color: var(--primary-color);
     /* Color amarillo para pestañas */
     font-weight: bold;
     transition: all 0.3s ease;
@@ -81,9 +83,9 @@
 }
 
 .nav-tabs .nav-link.active {
-    color: #262524;
+    color: var(--secondary-color);
     /* Texto negro */
-    background-color: #FFD700;
+    background-color: var(--primary-color);
     /* Fondo amarillo */
     border-bottom: 3px solid #FFA500;
     /* Línea subrayada naranja */
@@ -99,7 +101,7 @@
 /* Sombra en el contenido de las pestañas */
 .tab-content {
     padding: 1rem;
-    background-color: #262524;
+    background-color: var(--secondary-color);
     border-radius: 0 0 10px 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
@@ -108,7 +110,7 @@
 input.form-control,
 textarea.form-control,
 select.form-control {
-    background-color: #262524;
+    background-color: var(--secondary-color);
     /* Fondo negro */
     color: #FFFFFF;
     /* Texto blanco */
@@ -119,15 +121,15 @@ select.form-control {
 }
 
 input.form-control::placeholder {
-    color: #FFD700;
+    color: var(--primary-color);
     /* Texto placeholder amarillo */
     opacity: 0.8;
 }
 
 /* Botón de guardar */
 button.btn-success {
-    background-color: #FFD700;
-    color: #262524;
+    background-color: var(--primary-color);
+    color: var(--secondary-color);
     border: none;
     border-radius: 5px;
     padding: 10px 20px;
@@ -154,7 +156,7 @@ button.btn-success:active {
 }
 
 .modal-header {
-    background-color: #FFD700;
+    background-color: var(--primary-color);
     color: black;
 
     .modal-title {
@@ -164,8 +166,8 @@ button.btn-success:active {
 
 .modal-footer,
 .modal-body {
-    background-color: #262524;
-    color: white;
+    background-color: var(--secondary-color);
+    color: var(--text-color);
 }
 
 

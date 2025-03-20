@@ -21,43 +21,43 @@
 
 /*======================== SIDEBAR ========================*/
 .main-sidebar {
-    background-color: #262524 !important; /* Fondo negro */
-    color: #FFD700; /* Texto amarillo */
+    background-color: var(--secondary-color) !important; /* Fondo negro */
+    color: var(--primary-color); /* Texto amarillo */
   }
   
   /* Links en el Sidebar */
   .main-sidebar .nav-sidebar > .nav-item > .nav-link {
-    color: #FFD700 !important; /* Color de texto amarillo */
+    color: var(--primary-color) !important; /* Color de texto amarillo */
     
   }
   
   .main-sidebar .nav-sidebar > .nav-item > .nav-link:hover {
-    background-color: #FFD700 !important; /* Fondo amarillo en hover */
+    background-color: var(--primary-color) !important; /* Fondo amarillo en hover */
     color: #000000 !important; /* Texto negro en hover */
   }
   
   /* Títulos del Sidebar */
   .main-sidebar .sidebar .nav-header {
-    color: #FFD700; /* Amarillo */
+    color: var(--primary-color); /* Amarillo */
     font-weight: bold;
     text-transform: uppercase; /* Opcional: Mejora la legibilidad */
   }
   
   /* Ítem Activo */
   .main-sidebar .nav-sidebar > .nav-item > .nav-link.active {
-    background-color: #FFD700 !important; /* Amarillo brillante */
+    background-color: var(--primary-color) !important; /* Amarillo brillante */
     color: #000000 !important; /* Texto negro */
   }
   
   /* Imagen o Logo del Sidebar */
   .brand-link {
-    background-color: #262524 !important; /* Fondo negro */
-    color: #FFD700 !important; /* Texto amarillo */
+    background-color: var(--secondary-color) !important; /* Fondo negro */
+    color: var(--primary-color) !important; /* Texto amarillo */
   }
   
  /* .brand-link:hover {
-    background-color: #FFD700 !important; 
-    color: #262524 !important; 
+    background-color: var(--primary-color) !important; 
+    color: var(--secondary-color) !important; 
   }*/
   
   /* Sombra (Opcional) */
@@ -68,43 +68,43 @@
  
 /*======================== NAVBAR ========================*/
 .main-header {
-    background-color: #262524 !important; /* Fondo negro */
-    border-bottom: 2px solid #FFD700; /* Borde amarillo en la parte inferior */
-    color: #FFD700; /* Texto amarillo */
+    background-color: var(--secondary-color) !important; /* Fondo negro */
+    border-bottom: 2px solid var(--primary-color); /* Borde amarillo en la parte inferior */
+    color: var(--primary-color); /* Texto amarillo */
   }
   
   /* Links dentro del Navbar */
   .main-header .nav-link {
-    color: #FFD700 !important; /* Texto amarillo */
+    color: var(--primary-color) !important; /* Texto amarillo */
     font-weight: bold;
   }
   
   .main-header .nav-link:hover {
-    background-color: #FFD700 !important; /* Fondo amarillo en hover */
-    color: #262524 !important; /* Texto negro en hover */
+    background-color: var(--primary-color) !important; /* Fondo amarillo en hover */
+    color: var(--secondary-color) !important; /* Texto negro en hover */
   }
   
   /* Íconos del Navbar */
   .main-header .fas {
-    color: #FFD700 !important; /* Íconos amarillos */
+    color: var(--primary-color) !important; /* Íconos amarillos */
   }
 
 /*======================== FOOTER ========================*/
 .main-footer {
-    background-color: #262524 !important; /* Fondo negro */
-    color: #FFD700; /* Texto amarillo */
-    border-top: 2px solid #FFD700; /* Borde amarillo en la parte superior */
+    background-color: var(--secondary-color) !important; /* Fondo negro */
+    color: var(--primary-color); /* Texto amarillo */
+    border-top: 2px solid var(--primary-color); /* Borde amarillo en la parte superior */
   }
   
   /* Links en el Footer */
   .main-footer a {
-    color: #FFD700; /* Amarillo para los enlaces */
+    color: var(--primary-color); /* Amarillo para los enlaces */
     font-weight: bold;
   }
   
   .main-footer a:hover {
-    color: #262524; /* Texto negro en hover */
-    background-color: #FFD700; /* Fondo amarillo en hover */
+    color: var(--secondary-color); /* Texto negro en hover */
+    background-color: var(--primary-color); /* Fondo amarillo en hover */
   }
   
   

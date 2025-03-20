@@ -1,12 +1,12 @@
 import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-personal-information',
+  selector: 'app-ficha-tecnica',
   standalone: false,
-  templateUrl: './personal-information.component.html',
-  styleUrls: ['./personal-information.component.scss']
+  templateUrl: './ficha-tecnica.component.html',
+  styleUrls: ['./ficha-tecnica.component.scss']
 })
-export class PersonalInformationComponent {
+export class FichaTecnicaComponent {
   // Datos del usuario
   user: {
     photo: string;

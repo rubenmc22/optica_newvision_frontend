@@ -1,6 +1,6 @@
 /*.card {
-    background-color: #262524 !important;
-    color: white;
+    background-color: var(--secondary-color) !important;
+    color: var(--text-color);
     border-radius: 12px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     margin-top: 20px;
@@ -9,41 +9,41 @@
 
 .form-control {
     background-color: #1e1e1e;
-    color: white;
+    color: var(--text-color);
 }
 
 .form-select {
     background-color: #1e1e1e;
-    color: white;
+    color: var(--text-color);
 }
 .form-select:focus {
-    border: #F2C230;
+    border: var(--primary-color);
 }
 */
 
 
 .filtros-header {
-    background-color: #262524 !important;
+    background-color: var(--secondary-color) !important;
     /* Color amarillo destacado */
     padding: 10px 15px;
    border-radius:none;
-    color: white;
+    color: var(--text-color);
 }
 
 .filtros-label {
     font-size: 14px;
     font-weight: bold;
-    color: #F2C230;
+    color: var(--primary-color);
 }
 
 .filtros-input {
     border: none;
     background-color: #1e1e1e;
-    color: white;
+    color: var(--text-color);
 }
 
 .filtros-btn {
-    background-color: #F2C230;
+    background-color: var(--primary-color);
     border: none;
     color: black;
     font-weight: bold;
@@ -59,12 +59,12 @@
 .filtros-select {
     border: none;
     background-color: #1e1e1e;
-    color: white;
+    color: var(--text-color);
 }
 .filtros-select:focus {
     border: none;
   //background-color: #FFD966;
-    color: white;
+    color: var(--text-color);
 }
 /* Personalizar los <option> cuando están seleccionados */
 .option {
@@ -75,23 +75,23 @@
 }
 
 .option:hover, option:focus {
-    background-color: #F2C230; /* Fondo amarillo al pasar el mouse o al enfocarlo */
+    background-color: var(--primary-color); /* Fondo amarillo al pasar el mouse o al enfocarlo */
     color: black; /* Texto negro para contraste */
 }
 .filtros-body {
-    background-color: #262524 !important;
-    color: white;
+    background-color: var(--secondary-color) !important;
+    color: var(--text-color);
     padding: 15px;
 
 }
 
 .table {
-    color: white;
-    border-color: #F2C230;
+    color: var(--text-color);
+    border-color: var(--primary-color);
 }
 
 .table th {
-    background-color: #F2C230;
+    background-color: var(--primary-color);
     color: black;
     font-weight: bold;
     text-align: center;
@@ -106,40 +106,40 @@
 /* Botones de la tabla */
 .pagination .page-link {
     background-color: transparent;
-    border: 2px solid #F2C230;
-    color: white;
+    border: 2px solid var(--primary-color);
+    color: var(--text-color);
 }
 
 .pagination .page-item.active .page-link {
-    background-color: #F2C230;
-    border-color: #F2C230;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
     color: black;
 }
 
 
 /* General para la tabla */
 .table {
-    color: white;
+    color: var(--text-color);
     /* Texto blanco para las celdas */
-    border-color: #F2C230;
+    border-color: var(--primary-color);
     /* Borde amarillo */
     background-color: rgba(40, 40, 40, 0.9);
     /* Fondo oscuro */
 }
 
 .table th {
-    background-color: #F2C230;
+    background-color: var(--primary-color);
     /* Fondo amarillo en los encabezados */
     color: black;
     /* Texto negro para contraste */
     font-weight: bold;
     text-align: center;
-    border: 1px solid #F2C230;
+    border: 1px solid var(--primary-color);
     /* Borde amarillo */
 }
 
 .table td {
-    border: 1px solid #F2C230;
+    border: 1px solid var(--primary-color);
     /* Borde amarillo entre filas */
     text-align: center;
     /* Centrado */
@@ -156,19 +156,19 @@
 .pagination .page-link {
     background-color: transparent;
     /* Fondo transparente */
-    border: 2px solid #F2C230;
+    border: 2px solid var(--primary-color);
     /* Borde amarillo */
-    color: white;
+    color: var(--text-color);
     /* Texto blanco */
     transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 
 .pagination .page-item.active .page-link {
-    background-color: #F2C230;
+    background-color: var(--primary-color);
     /* Fondo amarillo para la página activa */
     color: black;
     /* Texto negro para contraste */
-    border-color: #F2C230;
+    border-color: var(--primary-color);
 }
 
 .pagination .page-link:hover {
@@ -182,7 +182,7 @@
 .no-results-message {
     text-align: center;
     font-size: 18px;
-    color: #F2C230;
+    color: var(--primary-color);
     /* Color amarillo para destacar */
     font-weight: bold;
     margin-top: 20px;
