@@ -115,7 +115,7 @@
           <ul class="nav nav-pills nav-sidebar flex-column" data-accordion="false">
             <!-- Dashboard -->
             <li class="nav-item">
-              <a [routerLink]="'/dashboard'" class="nav-link" >
+              <a [routerLink]="'/dashboard'" class="nav-link">
                 <i class="nav-icon fas fa-tachometer-alt"></i>
                 <p>
                   Dashboard
@@ -152,13 +152,37 @@
                 </li>
               </ul>
             </li>
+            <!-- Atletas -->
+            <li class="nav-item">
+              <a href="#" class="nav-link" (click)="toggleSubmenu($event)">
+                <i class="nav-icon fas fa-football-ball"></i>
+                <p>
+                  Atletas
+                  <i class="right fas fa-angle-left"></i>
+                </p>
+              </a>
+              <ul class="nav nav-treeview">
+                <li class="nav-item">
+                  <a  [routerLink]="'/crear-atletas'" class="nav-link">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Agregar Atletas</p>
+                  </a>
+                </li>
+                <li class="nav-item">
+                  <a [routerLink]="'/ver-atletas'" class="nav-link">
+                    <i class="far fa-circle nav-icon"></i>
+                    <p>Ver Atletas</p>
+                  </a>
+                </li>
+              </ul>
+            </li>
             <li class="nav-item"> <a href="#" class="nav-link" (click)="toggleSubmenu($event)"> <i
                   class="nav-icon fas fa-tachometer-alt"></i>
                 <p> Mi Perfil <i class="right fas fa-angle-left"></i> </p>
               </a>
               <ul class="nav nav-treeview" style="display: none;">
                 <li class="nav-item"> <a [routerLink]="'/my-account'" class="nav-link">Gestionar mi Cuenta</a> </li>
-                <li class="nav-item"> <a [routerLink]="'/personal-information'" class="nav-link">Información Personal</a> </li>
+                <li class="nav-item"> <a [routerLink]="'/personal-information'" class="nav-link">Ficha Técnica</a> </li>
                 <li class="nav-item"> <a href="#" class="nav-link">Mis estadisticas / habilidades</a> </li>
               </ul>
             </li>

@@ -1,131 +1,210 @@
 <div class="container-fluid">
     <div class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-10">
+        <div class="col-12 col-md-8 col-lg-9">
             <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="card-title">Mi Cuenta</h3>
-                </div>
-                <div class="card-body">
-                    <div class="form-group mb-4 text-center">
-                        <div class="d-flex justify-content-center align-items-center">
-                            <!-- Imagen del atleta -->
-                            <img [src]="user.photo || 'assets/default-photo.png'" alt="Foto del atleta"
-                                class="img-thumbnail athlete-photo">
+                <!-- Pestañas de Navegación -->
+                <ul class="nav nav-tabs nav-justified" id="myAccountTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="edit-personal-info-tab" data-bs-toggle="tab"
+                            href="#editPersonalInfo" role="tab" aria-controls="editPersonalInfo" aria-selected="true"
+                            (click)="switchTab('personalInfo')">
+                            <i class="fas fa-user-edit"></i> Editar Información Personal
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="edit-password-tab" data-bs-toggle="tab" href="#editPassword" role="tab"
+                            aria-controls="editPassword" aria-selected="false" (click)="switchTab('password')">
+                            <i class="fas fa-key"></i> Editar Contraseña
+                        </a>
+                    </li>
+                </ul>
 
-                            <!-- Botón Cambiar Foto -->
-                            <button type="button" class="btn btn-outline-primary btn-sm ml-3"
-                                (click)="triggerFileSelector()">
-                                Cambiar Foto
-                            </button>
-                            <input type="file" id="photoInput" class="d-none" (change)="onPhotoSelected($event)">
-                        </div>
+                <!-- Contenido de las Pestañas -->
+                <div class="tab-content mt-4" id="myAccountTabContent">
+                    <!-- Tab: Editar Información Personal -->
+                    <div class="tab-pane fade show active" id="editPersonalInfo" role="tabpanel"
+                        aria-labelledby="edit-personal-info-tab">
+                        <form #personalInfoForm="ngForm">
+                            <div class="form-row">
+                              <!-- Campo: Nombre Completo -->
+                              <div class="form-group col-md-6">
+                                <label for="nombreCompleto">Nombre Completo</label>
+                                <input
+                                  type="text"
+                                  id="nombreCompleto"
+                                  class="form-control"
+                                  [(ngModel)]="user.nombreCompleto"
+                                  name="nombreCompleto"
+                                  pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$"
+                                  #nombreCompleto="ngModel"
+                                  required
+                                  (input)="detectChanges()"
+                                />
+                                <small
+                                  *ngIf="nombreCompleto.invalid && nombreCompleto.touched"
+                                  class="text-danger"
+                                >
+                                  Solo se permiten letras y espacios.
+                                </small>
+                              </div>
+                          
+                              <!-- Campo: Correo Electrónico -->
+                              <div class="form-group col-md-6">
+                                <label for="correo">Correo Electrónico</label>
+                                <input
+                                  type="email"
+                                  id="correo"
+                                  class="form-control"
+                                  [(ngModel)]="user.correo"
+                                  name="correo"
+                                  email
+                                  #correo="ngModel"
+                                  required
+                                  (input)="detectChanges()"
+                                />
+                                <small *ngIf="correo.invalid && correo.touched" class="text-danger">
+                                  Introduzca un correo electrónico válido.
+                                </small>
+                              </div>
+                            </div>
+                          
+                            <div class="form-row">
+                              <!-- Campo: Fecha de Nacimiento -->
+                              <div class="form-group col-md-6">
+                                <label for="fechaNacimiento">Fecha de Nacimiento</label>
+                                <input
+                                  type="date"
+                                  id="fechaNacimiento"
+                                  class="form-control"
+                                  [(ngModel)]="user.fechaNacimiento"
+                                  name="fechaNacimiento"
+                                  required
+                                  (input)="detectChanges()"
+                                />
+                              </div>
+                          
+                              <!-- Campo: Teléfono -->
+                              <div class="form-group col-md-6">
+                                <label for="telefono">Teléfono</label>
+                                <input
+                                  type="tel"
+                                  id="telefono"
+                                  class="form-control"
+                                  [(ngModel)]="user.telefono"
+                                  name="telefono"
+                                  pattern="^[0-9]{10}$"
+                                  #telefono="ngModel"
+                                  required
+                                  (input)="detectChanges()"
+                                />
+                                <small *ngIf="telefono.invalid && telefono.touched" class="text-danger">
+                                  Introduzca un número de teléfono válido (10 dígitos).
+                                </small>
+                              </div>
+                            </div>
+                          
+                            <div class="text-right">
+                              <button
+                                type="button"
+                                class="btn btn-success"
+                                [disabled]="!isFormEdited || !isPersonalInfoValid()"
+                                (click)="openModal('personalInfoModal')"
+                              >
+                                Guardar Cambios
+                              </button>
+                            </div>
+                          </form>
+                          
                     </div>
 
-
-                    <form #accountForm="ngForm">
-                        <!-- Nombre completo -->
-                        <div class="form-group">
-                            <label for="nombreCompleto">Nombre completo</label>
-                            <div class="input-group">
-                                <input type="text" id="nombreCompleto" class="form-control"
-                                    [(ngModel)]="user.nombreCompleto" name="nombreCompleto"
-                                    [readonly]="!edit['nombreCompleto']" (blur)="toggleEdit('nombreCompleto', false)">
-                                <div class="input-group-append">
-                                    <button type="button" class="btn btn-outline-secondary"
-                                        (click)="toggleEdit('nombreCompleto', true)">
-                                        <i class="fas fa-pencil-alt"></i>
-                                    </button>
+                    <!-- Tab: Editar Contraseña -->
+                    <div class="tab-pane fade" id="editPassword" role="tabpanel" aria-labelledby="edit-password-tab">
+                        <form #passwordForm="ngForm">
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label for="contrasena">Nueva Contraseña</label>
+                                    <input type="password" id="contrasena" class="form-control"
+                                        [(ngModel)]="user.contrasena" name="contrasena" (input)="validatePasswords()"
+                                        minlength="8" required />
+                                    <small *ngIf="!passwordValid && user.contrasena" class="text-danger">
+                                        La contraseña debe tener al menos 8 caracteres.
+                                    </small>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Fecha de nacimiento y Edad (misma fila) -->
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label for="fechaNacimiento">Fecha de nacimiento</label>
-                                <input type="date" id="fechaNacimiento" class="form-control"
-                                    [(ngModel)]="user.fechaNacimiento" name="fechaNacimiento">
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label for="edad">Edad</label>
-                                <input type="text" id="edad" class="form-control" [(ngModel)]="user.edad" name="edad"
-                                    disabled>
-                            </div>
-                        </div>
-
-                        <!-- Cédula y Correo Electrónico (misma fila) -->
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label for="cedula">Cédula</label>
-                                <input type="text" id="cedula" class="form-control" [(ngModel)]="user.cedula"
-                                    name="cedula" disabled>
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label for="correo">Correo Electrónico</label>
-                                <div class="input-group">
-                                    <input type="email" id="correo" class="form-control" [(ngModel)]="user.correo"
-                                        name="correo" [readonly]="!edit['correo']" (blur)="toggleEdit('correo', false)">
-                                    <div class="input-group-append">
-                                        <button type="button" class="btn btn-outline-secondary"
-                                            (click)="toggleEdit('correo', true)">
-                                            <i class="fas fa-pencil-alt"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Contraseña y Confirmación de Contraseña (misma fila) -->
-                        <!-- Contraseña y Confirmación de Contraseña (misma fila) -->
-                        <div class="form-row">
-                            <!-- Contraseña -->
-                            <div class="form-group col-md-6">
-                                <label for="contrasena">Contraseña</label>
-                                <div class="input-group">
-                                    <input [type]="showPassword ? 'text' : 'password'" id="contrasena"
-                                        class="form-control" [(ngModel)]="user.contrasena" name="contrasena"
-                                        [readonly]="!edit['contrasena']" (blur)="toggleEdit('contrasena', false)"
-                                        (input)="validatePasswords()">
-                                    <div class="input-group-append">
-                                        <!-- Botón combinado -->
-                                        <button type="button" class="btn btn-outline-secondary"
-                                            (click)="edit['contrasena'] ? togglePasswordVisibility() : toggleEdit('contrasena', true)">
-                                            <i
-                                                [ngClass]="edit['contrasena'] ? (showPassword ? 'fas fa-eye-slash' : 'fas fa-eye') : 'fas fa-pencil-alt'"></i>
-                                        </button>
-                                    </div>
+                                <div class="form-group col-md-6">
+                                    <label for="confirmarContrasena">Confirmar Contraseña</label>
+                                    <input type="password" id="confirmarContrasena" class="form-control"
+                                        [(ngModel)]="confirmarContrasena" name="confirmarContrasena"
+                                        (input)="validatePasswords()" required />
+                                    <small *ngIf="!passwordsMatch && confirmarContrasena" class="text-danger">
+                                        Las contraseñas no coinciden.
+                                    </small>
                                 </div>
                             </div>
 
-
-
-                            <!-- Confirmar Contraseña -->
-                            <div class="form-group col-md-6">
-                                <label for="confirmarContrasena">Confirmar Contraseña</label>
-                                <div class="input-group">
-                                    <input [type]="showConfirmPassword ? 'text' : 'password'" id="confirmarContrasena"
-                                        class="form-control" [(ngModel)]="confirmarContrasena"
-                                        name="confirmarContrasena" (input)="validatePasswords()">
-                                    <div class="input-group-append">
-                                        <button type="button" class="btn btn-outline-secondary"
-                                            (click)="toggleConfirmPasswordVisibility()">
-                                            <i [ngClass]="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <small *ngIf="!passwordsMatch && confirmarContrasena" class="text-danger">
-                                    Las contraseñas no coinciden.
-                                </small>
+                            <div class="text-right">
+                                <button type="button" class="btn btn-success" [disabled]="!formValid"
+                                    (click)="openModal('otpModal')">
+                                    Cambiar Contraseña
+                                </button>
                             </div>
-                        </div><br>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Modal para Confirmación de Información Personal -->
+    <div class="modal fade" id="personalInfoModal" tabindex="-1" aria-labelledby="personalInfoModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="personalInfoModalLabel">
+                        Confirmar Información Personal
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    ¿La información ingresada es correcta? Presione confirmar para proceder.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" (click)="savePersonalInfo()" data-bs-dismiss="modal">
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                        <!-- Botón Guardar -->
-                        <div class="form-group text-right">
-                            <button type="button" class="btn btn-success" [disabled]="!passwordsMatch"
-                                (click)="saveUserInfo()">Guardar</button>
-                        </div>
-                    </form>
+    <!-- Modal para Confirmación de OTP -->
+    <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="otpModalLabel">
+                        Código OTP Requerido
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Hemos enviado un código OTP de 6 dígitos al correo electrónico registrado.
+                    Por favor, ingréselo a continuación:
+                    <div class="form-group mt-3">
+                        <input type="text" maxlength="6" class="form-control text-center" [(ngModel)]="otpCode"
+                            name="otpCode" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" (click)="verifyOtp()" data-bs-dismiss="modal">
+                        Guardar
+                    </button>
                 </div>
             </div>
         </div>

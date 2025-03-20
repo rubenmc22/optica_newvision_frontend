@@ -1,0 +1,189 @@
+/*.card {
+    background-color: #262524 !important;
+    color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    margin-top: 20px;
+    padding: 15px;
+}
+
+.form-control {
+    background-color: #1e1e1e;
+    color: white;
+}
+
+.form-select {
+    background-color: #1e1e1e;
+    color: white;
+}
+.form-select:focus {
+    border: #F2C230;
+}
+*/
+
+
+.filtros-header {
+    background-color: #262524 !important;
+    /* Color amarillo destacado */
+    padding: 10px 15px;
+   border-radius:none;
+    color: white;
+}
+
+.filtros-label {
+    font-size: 14px;
+    font-weight: bold;
+    color: #F2C230;
+}
+
+.filtros-input {
+    border: none;
+    background-color: #1e1e1e;
+    color: white;
+}
+
+.filtros-btn {
+    background-color: #F2C230;
+    border: none;
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s ease-in-out;
+}
+
+.filtros-btn:hover {
+    background-color: #FFD966;
+    /* Color más claro para hover */
+}
+
+.filtros-select {
+    border: none;
+    background-color: #1e1e1e;
+    color: white;
+}
+.filtros-select:focus {
+    border: none;
+  //background-color: #FFD966;
+    color: white;
+}
+/* Personalizar los <option> cuando están seleccionados */
+.option {
+    background-color: rgba(40, 40, 40, 0.9); /* Fondo oscuro */
+    color: red; /* Texto blanco */
+    padding: 5px;
+    border: none;
+}
+
+.option:hover, option:focus {
+    background-color: #F2C230; /* Fondo amarillo al pasar el mouse o al enfocarlo */
+    color: black; /* Texto negro para contraste */
+}
+.filtros-body {
+    background-color: #262524 !important;
+    color: white;
+    padding: 15px;
+
+}
+
+.table {
+    color: white;
+    border-color: #F2C230;
+}
+
+.table th {
+    background-color: #F2C230;
+    color: black;
+    font-weight: bold;
+    text-align: center;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(242, 194, 48, 0.2);
+    /* Fondo amarillo tenue */
+    cursor: pointer;
+}
+
+/* Botones de la tabla */
+.pagination .page-link {
+    background-color: transparent;
+    border: 2px solid #F2C230;
+    color: white;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #F2C230;
+    border-color: #F2C230;
+    color: black;
+}
+
+
+/* General para la tabla */
+.table {
+    color: white;
+    /* Texto blanco para las celdas */
+    border-color: #F2C230;
+    /* Borde amarillo */
+    background-color: rgba(40, 40, 40, 0.9);
+    /* Fondo oscuro */
+}
+
+.table th {
+    background-color: #F2C230;
+    /* Fondo amarillo en los encabezados */
+    color: black;
+    /* Texto negro para contraste */
+    font-weight: bold;
+    text-align: center;
+    border: 1px solid #F2C230;
+    /* Borde amarillo */
+}
+
+.table td {
+    border: 1px solid #F2C230;
+    /* Borde amarillo entre filas */
+    text-align: center;
+    /* Centrado */
+}
+
+/* Hover en las filas */
+.table tbody tr:hover {
+    background-color: rgba(242, 194, 48, 0.2);
+    /* Fondo amarillo suave al hacer hover */
+    cursor: pointer;
+}
+
+/* Botones de paginación */
+.pagination .page-link {
+    background-color: transparent;
+    /* Fondo transparente */
+    border: 2px solid #F2C230;
+    /* Borde amarillo */
+    color: white;
+    /* Texto blanco */
+    transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #F2C230;
+    /* Fondo amarillo para la página activa */
+    color: black;
+    /* Texto negro para contraste */
+    border-color: #F2C230;
+}
+
+.pagination .page-link:hover {
+    background-color: #FFD966;
+    /* Amarillo más claro al pasar el mouse */
+    color: black;
+    /* Cambia el texto a negro en hover */
+}
+
+/* Mensaje si no hay resultados */
+.no-results-message {
+    text-align: center;
+    font-size: 18px;
+    color: #F2C230;
+    /* Color amarillo para destacar */
+    font-weight: bold;
+    margin-top: 20px;
+}

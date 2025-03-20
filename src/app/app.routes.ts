@@ -7,6 +7,8 @@ import { DashboardComponent } from './dashboard/dashboard.component';
 import { MyAccountComponent } from './my-account/my-account.component';
 import { PostloginTemplateComponent } from './postlogin-template/postlogin-template.component';
 import { PersonalInformationComponent } from './personal-information/personal-information.component';
+import { VerAtletasComponent } from './ver-atletas/ver-atletas.component';
+import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
 
 const appRoutes: Routes = [  // Cambiamos el nombre a appRoutes
     { path: '', component: LoginComponent },
@@ -18,7 +20,9 @@ const appRoutes: Routes = [  // Cambiamos el nombre a appRoutes
         children: [
             { path: 'dashboard', component: DashboardComponent },
             { path: 'my-account', component: MyAccountComponent },
-            { path: 'personal-information', component: PersonalInformationComponent }, // Nueva ruta
+            { path: 'personal-information', component: PersonalInformationComponent }, 
+            { path: 'ver-atletas', component: VerAtletasComponent }, 
+            { path: 'crear-atletas', component: CrearAtletasComponent }, // Nueva ruta
         ]
     },
     { path: '**', redirectTo: '' }

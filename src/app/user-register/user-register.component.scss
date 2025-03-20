@@ -1,170 +1,238 @@
-@use '../../custom-theme.scss' as theme;
-
-.register-container {
-  // display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  padding: 10px;
-  margin-top: -200px;
-}
-
+/* Fondo */
 .register-background {
-  position: absolute;
+  position: fixed;
+  /* Ocupa toda la pantalla independientemente del scroll */
   top: 0;
   left: 0;
-  width: 100%;
-  height: auto;
+  width: 100vw;
+  /* Asegura el ancho completo de la ventana */
+  height: 100vh;
+  /* Asegura el alto completo de la ventana */
   z-index: -1;
-}
 
-.register-background-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.register-logo-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  // margin-bottom: 20px;
-}
-
-.register-logo {
-  width: 250px;
-  height: auto;
-  margin-top: 100px;
-}
-
-.register-logo-text {
-  text-align: center;
-  margin-top: -95px;
-}
-
-.register-logo-title {
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.register-logo-subtitle {
-  font-size: 16px;
-  color: gray;
-}
-
-.register-card-container {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  padding: 20px;
-  margin-top: 20px;
-}
-
-.back-button {
-  color: #F2C230 !important;
-  margin-left: -10px;
-}
-
-.register-card {
-  display: flex;
-  flex-direction: column;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(40, 40, 40, 0.9);
-  background-color: rgba(40, 40, 40, 0.9);
-  max-width: 1000px;
-  width: 100%;
-}
-
-.register-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-  justify-content: space-between;
-  /* Aseguramos el espacio adecuado */
-}
-
-.register-title {
-  font-size: 24px;
-  font-weight: bold;
-  color: #F2C230 !important;
-  flex: 1;
-  text-align: center;
-  /* Centramos el título */
-}
-
-.register-form {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.register-section {
-  flex: 1;
-  min-width: 300px;
-  margin-right: 20px;
-}
-
-.register-form-field {
-  flex: 1 1 calc(50% - 20px);
-  margin-bottom: 20px;
-  margin-right: 20px;
-}
-
-.register-row {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.register-button {
-  margin-top: 20px;
-  width: calc(100% - 20px);
-  margin-right: 20px;
-}
-
-.register-button-primary {
-  background-color: #F2C230 !important;
-  color: white;
-}
-
-.mat-mdc-input-element {
-  color: #fff !important;
-  /* Color del texto blanco al escribir */
-  caret-color: #fff !important;
-  /* Color del cursor blanco */
-}
-
-.register-switch {
-  .isMinorOrNot {
-    color: white !important;
+  .register-background-image {
+    width: 100%;
+    /* Cubre el ancho completo */
+    height: 100%;
+    /* Cubre la altura completa */
+    object-fit: cover;
+    /* Rellena el área sin distorsión */
+    object-position: center;
+    /* Centra la imagen */
   }
 }
 
-.register-logo-title {
-  font-size: 35px;
-  font-weight: bold;
-  color: white;
+/* Contenedor del logo y texto */
+.register-logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: -110px;
+  margin-top: -85px;
 }
 
-.register-logo-subtitle {
-  font-size: 15px;
+.back-button {
+  background-color: #F2C230;
+}
+
+/* Estilo del logo */
+.register-logo {
+  width: 250px;
+  height: auto;
+  margin-right: -60px;
+}
+
+/* Contenedor de texto */
+.register-logo-text {
+  text-align: left;
+  /* Alinea el texto a la izquierda */
+
+  .register-logo-title {
+    font-size: 28px;
+    /* Tamaño del texto principal */
+    font-weight: bold;
+    color: white;
+    /* Color blanco para "APOLLO GROUP" */
+  }
+
+  .register-logo-subtitle {
+    font-size: 16px;
+    /* Tamaño del subtítulo */
+    color: #FFD966;
+    /* Color amarillo claro */
+    margin-top: 5px;
+    /* Espaciado entre el título y el subtítulo */
+  }
+}
+
+/* Tarjeta de registro */
+.register-card-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1;
+
+  .register-card {
+    background-color: #262524;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    padding: 30px;
+    max-width: 800px;
+    width: 100%;
+
+    .register-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+
+      .register-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #F2C230 !important;
+        flex: 1;
+        margin-left: 15px;
+      }
+    }
+
+    .register-form {
+      display: flex;
+      flex-wrap: wrap;
+
+      .register-row {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        margin-bottom: 20px;
+      }
+
+      .register-form-field {
+        flex: 1 1 calc(50% - 20px);
+        margin-bottom: 20px;
+      }
+
+      .register-button {
+        margin-top: 20px;
+        width: 100%;
+      }
+
+      .register-button-primary {
+        background-color: #F2C230 !important;
+        color: white;
+      }
+    }
+  }
+}
+
+/* Botones y entradas */
+.form-control,
+.form-select {
+  border-radius: 5px;
+  background-color: #1a1a1a;
+  /* Fondo oscuro del input */
   color: white;
+  border: none;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #FFD966;
+  /* Borde amarillo claro */
+  box-shadow: 0px 0px 5px #FFD966;
+}
+
+.btn-yellow {
+  background-color: #F2C230;
+  border: none;
+  font-weight: bold;
+  color: #000000;
+  padding: 12px;
+  transition: background-color 0.3s;
+
+  &:hover {
+    background-color: #FFD966;
+    /* Color al pasar el ratón */
+  }
+}
+
+/* Etiquetas */
+.form-label {
+  font-weight: bold;
+  color: #F2C230;
+  /* Texto amarillo */
+}
+
+.form-check-label {
+  margin-left: 8px;
+  color: #F2C230;
+}
+
+/* Tarjetas adicionales */
+.card-body {
+  background-color: #262524 !important;
+  /* Fondo oscuro */
+  padding: 10px;
+  margin-top: -25px;
+}
+
+.card-header {
+  background-color: #000000;
+  /* Fondo negro */
+  color: #F2C230;
+  /* Texto amarillo */
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+/* Switch dinámico: Amarillo cuando está activo, Blanco cuando no */
+.form-check-input {
+  background-color: white;
+  border-radius: 20px;
+  outline: none;
+  transition: background-color 0.3s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    background-color: #f2f2f2;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+  }
+
+  &:checked {
+    background-color: #F2C230;
+
+    &::before {
+      left: 28px;
+      background-color: white;
+    }
+  }
+
+  &:focus {
+    border: none !important;
+    box-shadow: none !important;
+  }
 }
 
 /* Media query para pantallas pequeñas */
 @media (max-width: 768px) {
-  .register-form {
+  .register-logo-container {
     flex-direction: column;
+    /* Cambia la disposición a vertical */
+    margin-bottom: 20px;
   }
 
-  .register-form-field {
-    width: 100%;
+  .register-logo {
+    width: 100px;
+    /* Escala del logo para dispositivos pequeños */
     margin-right: 0;
+    margin-bottom: 10px;
   }
 
-  .register-button {
-    width: 100%;
+  .register-card {
+    max-width: 100%;
+    /* La tarjeta ocupa todo el ancho */
+    padding: 20px;
   }
 }

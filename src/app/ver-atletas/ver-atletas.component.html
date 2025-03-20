@@ -1,0 +1,140 @@
+<div class="card filtros-container">
+    <!-- Filtro de búsqueda general (Cédula/Nombre/Correo) -->
+    <div class="card-header filtros-header">
+        <div class="row align-items-center">
+            <div class="col-8 d-flex align-items-center">
+                <label for="busqueda" class="form-label me-3 filtros-label" style="font-size:18px; margin-top: 8px;">Buscar un
+                    Atleta:</label>
+                <input type="text" id="busqueda" class="form-control w-50 filtros-input"
+                    placeholder="Nombre, Cédula o Correo" [(ngModel)]="filtros.busqueda" (input)="aplicarFiltros()"
+                    maxlength="50" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros avanzados (Deporte, Posición, Género, Edad) -->
+    <div class="card-body filtros-body">
+        <div class="row align-items-end g-3">
+            <!-- Deporte -->
+            <div class="col-12 col-md-2">
+                <label for="deporte" class="form-label filtros-label">Deporte</label>
+                <select id="deporte" class="form-select filtros-select" (focus)="onFocus()" (blur)="onBlur()" (change)="onSportDropdownChange($event)">
+                    <option value="">Todos</option>
+                    <option *ngFor="let deporte of availableSports" [value]="deporte.id">
+                        {{ deporte.name }}
+                    </option>
+                </select>
+            </div>
+
+            <!-- Posición -->
+            <div class="col-12 col-md-2">
+                <label for="posicion" class="form-label filtros-label">Posición</label>
+                <select id="posicion" class="form-select filtros-select" [(ngModel)]="filtros.posicion"
+                    (change)="aplicarFiltros()" [disabled]="!posicionesFiltradas.length">
+                    <option value="">Todas</option>
+                    <option *ngFor="let posicion of posicionesFiltradas">{{ posicion }}</option>
+                </select>
+            </div>
+
+            <!-- Género -->
+            <div class="col-12 col-md-2">
+                <label for="genero" class="form-label filtros-label">Género</label>
+                <select id="genero" class="form-select filtros-select" [(ngModel)]="filtros.genero"
+                    (change)="aplicarFiltros()">
+                    <option value="">Todos</option>
+                    <option value="Hombre">Hombre</option>
+                    <option value="Mujer">Mujer</option>
+                </select>
+            </div>
+
+            <!-- Edad mínima -->
+            <div class="col-6 col-md-2">
+                <label for="edadMin" class="form-label filtros-label">Edad Mínima</label>
+                <input type="text" id="edadMin" class="form-control filtros-input" [(ngModel)]="filtros.edadMin"
+                    (input)="validarSoloNumeros($event)" placeholder="Ej: 20" />
+            </div>
+
+            <!-- Edad máxima -->
+            <div class="col-6 col-md-2">
+                <label for="edadMax" class="form-label filtros-label">Edad Máxima</label>
+                <input type="text" id="edadMax" class="form-control filtros-input" [(ngModel)]="filtros.edadMax"
+                    (input)="validarSoloNumeros($event)" placeholder="Ej: 30" />
+            </div>
+        </div>
+
+        <!-- Tabla de resultados -->
+        <div class="table-responsive mt-3">
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th (click)="ordenarTabla('cedula')">Cédula
+                            <span *ngIf="ordenActual === 'cedula'">
+                                <i [class]="ordenAscendente ? 'bi bi-arrow-up' : 'bi bi-arrow-down'"></i>
+                            </span>
+                        </th>
+                        <th (click)="ordenarTabla('nombre')">Nombre
+                            <span *ngIf="ordenActual === 'nombre'">
+                                <i [class]="ordenAscendente ? 'bi bi-arrow-up' : 'bi bi-arrow-down'"></i>
+                            </span>
+                        </th>
+                        <th (click)="ordenarTabla('edad')">Edad
+                            <span *ngIf="ordenActual === 'edad'">
+                                <i [class]="ordenAscendente ? 'bi bi-arrow-up' : 'bi bi-arrow-down'"></i>
+                            </span>
+                        </th>
+                        <th (click)="ordenarTabla('genero')">Género
+                            <span *ngIf="ordenActual === 'genero'">
+                                <i [class]="ordenAscendente ? 'bi bi-arrow-up' : 'bi bi-arrow-down'"></i>
+                            </span>
+                        </th>
+                        <th (click)="ordenarTabla('deporte')">Deporte
+                            <span *ngIf="ordenActual === 'deporte'">
+                                <i [class]="ordenAscendente ? 'bi bi-arrow-up' : 'bi bi-arrow-down'"></i>
+                            </span>
+                        </th>
+                        <th (click)="ordenarTabla('posicion')">Posición
+                            <span *ngIf="ordenActual === 'posicion'">
+                                <i [class]="ordenAscendente ? 'bi bi-arrow-up' : 'bi bi-arrow-down'"></i>
+                            </span>
+                        </th>
+                        <th (click)="ordenarTabla('correo')">Correo
+                            <span *ngIf="ordenActual === 'correo'">
+                                <i [class]="ordenAscendente ? 'bi bi-arrow-up' : 'bi bi-arrow-down'"></i>
+                            </span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody *ngIf="atletasPaginados.length; else noResults">
+                    <tr *ngFor="let atleta of atletasPaginados">
+                        <td>{{ atleta.cedula }}</td>
+                        <td>{{ atleta.nombre }}</td>
+                        <td>{{ atleta.edad }}</td>
+                        <td>{{ atleta.genero }}</td>
+                        <td>{{ atleta.deporte }}</td>
+                        <td>{{ atleta.posicion }}</td>
+                        <td>{{ atleta.correo }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- Mensaje si no hay resultados -->
+        <ng-template #noResults>
+            <p class="text-center mt-3 no-results-message">No se encontraron resultados</p>
+        </ng-template>
+
+        <!-- Paginación -->
+        <nav *ngIf="totalPaginas > 1" class="mt-3">
+            <ul class="pagination justify-content-center">
+                <li class="page-item" [class.disabled]="paginaActual === 1">
+                    <button class="page-link" (click)="cambiarPagina(-1)">Anterior</button>
+                </li>
+                <li class="page-item">
+                    <span class="page-link">{{ paginaActual }}</span>
+                </li>
+                <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+                    <button class="page-link" (click)="cambiarPagina(1)">Siguiente</button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>

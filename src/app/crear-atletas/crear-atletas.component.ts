@@ -3,26 +3,24 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Location } from '@angular/common';
 
 @Component({
-  selector: 'app-user-register',
+  selector: 'app-crear-atletas',
   standalone: false,
-  templateUrl: './user-register.component.html',
-  styleUrls: ['./user-register.component.scss']
+  templateUrl: './crear-atletas.component.html',
+  styleUrls: ['./crear-atletas.component.scss']
 })
-export class UserRegisterComponent implements OnInit {
-  registerForm: FormGroup;
+export class CrearAtletasComponent implements OnInit {
+  crearAtletaForm: FormGroup;
 
   constructor(private fb: FormBuilder, private location: Location) {
-    this.registerForm = this.fb.group({
+    this.crearAtletaForm = this.fb.group({
       isMinor: [false], // Switch para menor o mayor de edad
       representativeName: [''], // Nombre del representante
       representativeId: [''], // Cédula del representante
-      representativePhone: ['', Validators.required], // Teléfono del representante
       representativeEmail: [''], // Correo del representante
       password: ['', Validators.required], // Contraseña
       confirmPassword: ['', Validators.required], // Confirmación de contraseña
       athleteName: ['', Validators.required], // Nombre del atleta
       athleteId: [''], // Cédula del atleta
-      athletePhone: ['', Validators.required], // Teléfono del atleta
       athleteEmail: [''], // Correo del atleta
       athleteDob: ['', Validators.required], // Fecha de Nacimiento
       athleteAge: ['', [Validators.required, Validators.min(10)]], // Edad
@@ -32,16 +30,16 @@ export class UserRegisterComponent implements OnInit {
   }
 
   ngOnInit() {
-    // Escucha los cambios en el estado de isMinor
-    this.registerForm.get('isMinor')?.valueChanges.subscribe(isMinor => {
+    // Escucha los cambios en el estado de isMinor (menor o mayor de edad)
+    this.crearAtletaForm.get('isMinor')?.valueChanges.subscribe(isMinor => {
       if (isMinor) {
-        // Activar validadores para Representante
-        this.setValidators(['representativeName', 'representativeId', 'representativePhone'], Validators.required);
-        this.clearValidators('athleteId', 'athletePhone', 'athleteEmail', 'athleteDob');
+        // Si es menor de edad, activa los validadores del representante y desactiva los del atleta
+        this.setValidators(['representativeName', 'representativeId', 'representativeEmail'], Validators.required);
+        this.clearValidators('athleteId', 'athleteEmail');
       } else {
-        // Activar validadores para Atleta
-        this.setValidators(['athleteId', 'athletePhone', 'athleteEmail', 'athleteDob'], Validators.required);
-        this.clearValidators('representativeName', 'representativeId', 'representativePhone');
+        // Si es mayor de edad, activa los validadores del atleta y desactiva los del representante
+        this.setValidators(['athleteId', 'athleteEmail'], Validators.required);
+        this.clearValidators('representativeName', 'representativeId', 'representativeEmail');
       }
     });
   }
@@ -49,25 +47,25 @@ export class UserRegisterComponent implements OnInit {
   // Método para configurar los validadores dinámicamente
   setValidators(fields: string[], validator: any) {
     fields.forEach(field => {
-      this.registerForm.get(field)?.setValidators(validator);
-      this.registerForm.get(field)?.updateValueAndValidity();
+      this.crearAtletaForm.get(field)?.setValidators(validator);
+      this.crearAtletaForm.get(field)?.updateValueAndValidity();
     });
   }
 
   // Método para limpiar los validadores dinámicamente
   clearValidators(...fields: string[]) {
     fields.forEach(field => {
-      this.registerForm.get(field)?.clearValidators();
-      this.registerForm.get(field)?.updateValueAndValidity();
+      this.crearAtletaForm.get(field)?.clearValidators();
+      this.crearAtletaForm.get(field)?.updateValueAndValidity();
     });
   }
 
   // Maneja la acción del formulario al enviarse
   onSubmit() {
-    if (this.registerForm.valid) {
-      console.log('Formulario válido:', this.registerForm.value);
+    if (this.crearAtletaForm.valid) {
+      console.log('Formulario válido:', this.crearAtletaForm.value);
       // Lógica adicional, como enviar los datos al servidor
-      this.registerForm.reset(); // Limpia el formulario después de enviarlo
+      this.crearAtletaForm.reset(); // Limpia el formulario después de enviarlo
     } else {
       console.error('Formulario inválido');
     }

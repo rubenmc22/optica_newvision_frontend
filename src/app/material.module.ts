@@ -7,7 +7,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon'; 
-
+import { MatSelectModule } from '@angular/material/select';
+import { MatRadioModule } from '@angular/material/radio';
 
 @NgModule({
     exports: [
@@ -18,7 +19,9 @@ import { MatIconModule } from '@angular/material/icon';
         MatButtonModule,
         MatSlideToggleModule,
         ReactiveFormsModule,
-        MatIconModule
+        MatIconModule,
+        MatSelectModule,
+        MatRadioModule
     ]
 })
 export class MaterialModule { }

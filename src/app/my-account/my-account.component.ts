@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import * as bootstrap from 'bootstrap';
 
 @Component({
   selector: 'app-my-account',
@@ -7,73 +8,159 @@ import { Component } from '@angular/core';
   styleUrls: ['./my-account.component.scss']
 })
 export class MyAccountComponent {
-  user = {
-    nombreCompleto: 'Juan Pérez',
-    fechaNacimiento: '1995-11-10',
-    edad: 29,
+  // Datos originales del usuario (para detección de cambios)
+  originalUser = {
+    nombreCompleto: 'Ruben',
+    fechaNacimiento: '10/11/1995',
     cedula: '12345678',
-    correo: 'juan.perez@example.com',
-    contrasena: '',
-    photo: ''
+    correo: 'rubemm18@gmail.com',
+    telefono: '584123920817',
+    genero: 'Hombre'
   };
 
+  // Datos actuales del usuario (editables)
+  user = { ...this.originalUser, contrasena: '' };
+
+  // Confirmar Contraseña y OTP
   confirmarContrasena = '';
-  passwordsMatch = true;
+  otpCode = '';
 
-  // Controladores para mostrar/ocultar contraseñas
-  showPassword = false;
-  showConfirmPassword = false; // Propiedad añadida para el campo de confirmación
+  // Indicadores de validación
+  nombreValido = true;
+  correoValido = true;
+  telefonoValido = true;
+  passwordsMatch = false;
+  passwordValid = false;
+  formValid = false; // Habilitado si las contraseñas son válidas
+  isFormEdited = false; // Botón habilitado si se detectan cambios
 
-  edit: { [key: string]: boolean } = {
-    nombreCompleto: false,
-    correo: false,
-    contrasena: false
-  };
+  // Pestaña activa
+  activeTab: string = 'personalInfo';
 
-  toggleEdit(field: string, state: boolean): void {
-    if (field in this.edit) {
-      this.edit[field] = state;
+  // Métodos relacionados con pestañas
+  switchTab(tab: string): void {
+    this.activeTab = tab;
+    if (tab === 'password') {
+      this.resetPasswordFields();
     }
   }
 
-  togglePasswordVisibility(): void {
-    this.showPassword = !this.showPassword;
+  // Detecta si algún campo fue editado
+  detectChanges(): void {
+    this.isFormEdited =
+      this.user.nombreCompleto !== this.originalUser.nombreCompleto ||
+      this.user.correo !== this.originalUser.correo ||
+      this.user.fechaNacimiento !== this.originalUser.fechaNacimiento ||
+      this.user.telefono !== this.originalUser.telefono ||
+      this.user.genero !== this.originalUser.genero;
   }
 
-  toggleConfirmPasswordVisibility(): void {
-    this.showConfirmPassword = !this.showConfirmPassword; // Alterna visibilidad de la confirmación
+  // Validaciones individuales
+  validateNombre(): void {
+    const regex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/; // Solo letras y espacios
+    this.nombreValido = regex.test(this.user.nombreCompleto.trim());
   }
 
+  validateCorreo(): void {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Formato de email válido
+    this.correoValido = regex.test(this.user.correo.trim());
+  }
+
+  validateTelefono(): void {
+    const regex = /^[0-9]{12}$/; // Solo números de 12 dígitos
+    this.telefonoValido = regex.test(this.user.telefono.trim());
+  }
+
+  // Validaciones generales del formulario de información personal
+  isPersonalInfoValid(): boolean {
+    this.validateNombre();
+    this.validateCorreo();
+    this.validateTelefono();
+    return this.nombreValido && this.correoValido && this.telefonoValido;
+  }
+
+  // Validar contraseñas
   validatePasswords(): void {
-    this.passwordsMatch = this.user.contrasena === this.confirmarContrasena;
+    this.passwordValid =
+      typeof this.user.contrasena === 'string' &&
+      this.user.contrasena.length >= 8; // Longitud mínima de 8 caracteres
+    this.passwordsMatch =
+      this.user.contrasena === this.confirmarContrasena; // Coincidencia
+    this.formValid = this.passwordValid && this.passwordsMatch; // Ambos deben ser válidos
   }
 
-  saveUserInfo(): void {
-    if (this.passwordsMatch) {
-      console.log('Datos guardados:', this.user);
-      alert('Cambios guardados exitosamente.');
+  // Restablecer campos de contraseña
+  resetPasswordFields(): void {
+    this.user.contrasena = '';
+    this.confirmarContrasena = '';
+    this.passwordsMatch = false;
+    this.passwordValid = false;
+    this.formValid = false;
+  }
+
+  // Abrir un modal dinámico
+  openModal(modalId: string): void {
+    const modalElement = document.getElementById(modalId);
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  // Guardar información personal
+  savePersonalInfo(): void {
+    if (this.isPersonalInfoValid() && this.isFormEdited) {
+      fetch('https://api.example.com/personal-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombreCompleto: this.user.nombreCompleto,
+          correo: this.user.correo,
+          telefono: this.user.telefono,
+          genero: this.user.genero,
+          fechaNacimiento: this.user.fechaNacimiento
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Información personal guardada:', data);
+          alert('Información personal guardada correctamente.');
+          this.originalUser = { ...this.user }; // Actualiza los valores originales
+          this.isFormEdited = false; // Reinicia el estado de edición
+        })
+        .catch(error => {
+          console.error('Error al guardar información personal:', error);
+          alert('Hubo un error al guardar la información.');
+        });
     } else {
-      alert('Las contraseñas no coinciden. Por favor verifica los campos.');
+      alert('Por favor, corrige los errores o realiza algún cambio antes de continuar.');
     }
   }
 
-  // Método para disparar el selector de archivos
-  triggerFileSelector(): void {
-    const fileInput = document.getElementById('photoInput') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.click();
-    }
-  }
-
-  // Método para manejar el archivo seleccionado
-  onPhotoSelected(event: Event): void {
-    const fileInput = event.target as HTMLInputElement;
-    if (fileInput?.files && fileInput.files[0]) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        this.user.photo = reader.result as string; // Convierte la imagen en base64
-      };
-      reader.readAsDataURL(fileInput.files[0]);
+  // Verificar OTP y guardar nueva contraseña
+  verifyOtp(): void {
+    if (this.otpCode.length === 6) {
+      fetch('https://api.example.com/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: this.user.correo,
+          newPassword: this.user.contrasena,
+          otp: this.otpCode
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Contraseña cambiada:', data);
+          alert('Contraseña actualizada exitosamente.');
+          this.resetPasswordFields(); // Limpia los campos de contraseña
+        })
+        .catch(error => {
+          console.error('Error al cambiar la contraseña:', error);
+          alert('Hubo un error al actualizar la contraseña.');
+        });
+    } else {
+      alert('Por favor, ingresa un código OTP válido.');
     }
   }
 }

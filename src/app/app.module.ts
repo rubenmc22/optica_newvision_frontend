@@ -14,6 +14,9 @@ import { DashboardComponent } from './dashboard/dashboard.component';
 import { PostloginTemplateComponent } from './postlogin-template/postlogin-template.component'; 
 import { MyAccountComponent } from './my-account/my-account.component';
 import { PersonalInformationComponent } from './personal-information/personal-information.component'; 
+import { VerAtletasComponent } from './ver-atletas/ver-atletas.component'; 
+import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component'; 
+
 
 @NgModule({
   declarations: [
@@ -25,6 +28,8 @@ import { PersonalInformationComponent } from './personal-information/personal-in
     DashboardComponent,
     MyAccountComponent,
     PersonalInformationComponent,
+    VerAtletasComponent,
+    CrearAtletasComponent,
     PostloginTemplateComponent // Declara el componente de layout post-login
   ],
   imports: [

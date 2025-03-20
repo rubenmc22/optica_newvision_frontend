@@ -1,19 +1,126 @@
-<div class="personal-information-container">
-    <h1>Información Personal</h1>
-    <form>
-      <div class="form-group">
-        <label for="name">Nombre:</label>
-        <input type="text" id="name" class="form-control" placeholder="Ingresa tu nombre completo">
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-11">
+      <div class="card">
+        <div class="card-body">
+          <!-- Sección Superior: Foto e Información Personal -->
+          <div class="row align-items-center">
+            <div class="col-auto">
+              <img [src]="user['photo'] || 'assets/default-photo.png'" alt="Foto del atleta" class="athlete-photo">
+            </div>
+            <div class="col" style="margin-left: 10px;">
+              <div class="personal-info">
+                <p><span class="info-label">Atleta:</span> {{ user['name'] || 'Cargando...' }}</p>
+                <p><span class="info-label">Fecha de Nacimiento:</span> {{ user['birthDate'] || 'Cargando...' }}</p>
+                <p><span class="info-label">Edad:</span> {{ user['age'] || 'Cargando...' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <hr />
+
+          <!-- Información Adicional con diseño responsivo -->
+          <div class="info-row">
+            <div class="info-field">
+              <span class="info-label me-2">Nacionalidad:</span>
+              <span class="info-value" *ngIf="!edit['nationality']">{{ getFieldValue('nationality') || '...' }}</span>
+              <input *ngIf="edit['nationality']" [(ngModel)]="additionalFields[0].value" placeholder="Ej: Venezuela"
+                class="form-control" />
+              <button class="btn btn-outline-secondary btn-sm ms-2" (click)="toggleEdit('nationality')">
+                <i [class]="'fas ' + (edit['nationality'] ? 'fa-save' : 'fa-pencil-alt')"></i>
+              </button>
+            </div>
+            <div class="info-field">
+              <span class="info-label me-2">Peso:</span>
+              <span class="info-value" *ngIf="!edit['weight']">{{ getFieldValue('weight') || '...' }}</span>
+              <input *ngIf="edit['weight']" [(ngModel)]="additionalFields[1].value" placeholder="Ej: 80kg"
+                class="form-control" />
+              <button class="btn btn-outline-secondary btn-sm ms-2" (click)="toggleEdit('weight')">
+                <i [class]="'fas ' + (edit['weight'] ? 'fa-save' : 'fa-pencil-alt')"></i>
+              </button>
+            </div>
+            <div class="info-field">
+              <span class="info-label me-2">Altura:</span>
+              <span class="info-value" *ngIf="!edit['height']">{{ getFieldValue('height') || '...' }}</span>
+              <input *ngIf="edit['height']" [(ngModel)]="additionalFields[2].value" placeholder="Ej: 170cm"
+                class="form-control" />
+              <button class="btn btn-outline-secondary btn-sm ms-2" (click)="toggleEdit('height')">
+                <i [class]="'fas ' + (edit['height'] ? 'fa-save' : 'fa-pencil-alt')"></i>
+              </button>
+            </div>
+          </div>
+
+          <hr />
+          <!-- Selector Compacto de Deportes -->
+          <div class="row g-3 mt-3">
+            <!-- Dropdown para seleccionar un deporte -->
+            <div class="col-12 col-md-6">
+              <select class="form-select" [(ngModel)]="selectedSport" (change)="onSportSelect(selectedSport)"
+                aria-label="Selecciona un deporte">
+                <option [ngValue]="null" disabled selected>Seleccione un deporte</option>
+                <option *ngFor="let sport of availableSports" [ngValue]="sport">
+                  {{ sport.name }}
+                </option>
+              </select>
+            </div>
+            <!-- Dropdown dinámico para posiciones -->
+            <div class="col-12 col-md-6">
+              <select class="form-select" [(ngModel)]="selectedPosition" (change)="onPositionSelect(selectedPosition)"
+                aria-label="Selecciona una posición" [disabled]="!positions.length">
+                <option value="" disabled selected>Indique posición de juego</option>
+                <option *ngFor="let position of positions" [value]="position">
+                  {{ position }}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <hr />
+
+          <!-- Lista de Deportes Seleccionados -->
+          <div class="mt-4" *ngIf="user.sports.length > 0">
+            <div class="selected-sports-list d-flex flex-wrap">
+              <div class="sport-item d-flex align-items-center" *ngFor="let sport of user.sports">
+                <span class="sport-name">
+                  {{ sport.name }} <span class="text-muted">({{ sport.position }})</span>
+                </span>
+                <button type="button" class="remove-btn" (click)="removeSport(sport.id)">
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label for="email">Correo Electrónico:</label>
-        <input type="email" id="email" class="form-control" placeholder="Ingresa tu correo">
+
+
+      <!-- Navegación por Deportes -->
+      <div class="row justify-content-center mt-5" *ngIf="user.sports.length > 0">
+        <div class="col-12 col-md-10 col-lg-12">
+          <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item" *ngFor="let sport of user.sports; let i = index">
+              <button class="nav-link" [class.active]="i === activeTab" (click)="switchTab(i)" role="tab">
+                {{ sport.name }}
+              </button>
+            </li>
+          </ul>
+
+          <!-- Contenido de las Estadísticas -->
+          <div class="tab-content mt-3">
+            <div class="tab-pane show active">
+              <!-- Asegúrate de mostrar solo las estadísticas del deporte activo -->
+              <div class="d-flex align-items-center">
+                <h4 class="mb-0">Estadísticas de {{ user.sports[activeTab].name }}</h4>
+                <span class="text-muted ms-2">({{ user.sports[activeTab].position }})</span>
+              </div>
+              <div class="stats-grid mt-3">
+                <div class="stat-field" *ngFor="let stat of user.sports[activeTab]?.stats || []">
+                  <span class="stat-label">{{ stat.label }}:</span>
+                  <span class="stat-value">{{ stat.value }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
-      <div class="form-group">
-        <label for="phone">Teléfono:</label>
-        <input type="tel" id="phone" class="form-control" placeholder="Ingresa tu número de teléfono">
-      </div>
-      <button type="submit" class="btn btn-primary">Guardar</button>
-    </form>
-  </div>
-  

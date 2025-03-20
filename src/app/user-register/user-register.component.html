@@ -1,7 +1,10 @@
 <div class="register-container">
+  <!-- Fondo -->
   <div class="register-background">
     <img class="register-background-image" src="/assets/sports-background.jpeg" alt="Fondo de Deportes">
   </div>
+
+  <!-- Contenedor del Logo -->
   <div class="register-logo-container">
     <img class="register-logo" src="assets/apolloLogo.png" alt="APOLLO GROUP Logo" />
     <div class="register-logo-text">
@@ -9,72 +12,108 @@
       <div class="register-logo-subtitle">Academia deportiva</div>
     </div>
   </div>
+
+  <!-- Contenedor de la Tarjeta -->
   <div class="register-card-container">
     <div class="register-card">
+      <!-- Cabecera de la Tarjeta -->
       <div class="register-header">
         <button class="back-button" mat-icon-button (click)="goBack()">
           <mat-icon>arrow_back</mat-icon>
         </button>
         <div class="register-title">Registrarse</div>
       </div>
-      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
-        <div class="register-section">
-          <div class="register-switch">
-            <mat-slide-toggle formControlName="isMinor"><span class="isMinorOrNot">¿Eres menor de edad?</span></mat-slide-toggle>
-          </div> <br><br>
 
-          <!-- Primera fila -->
-          <div class="register-row">
-            <mat-form-field class="register-form-field" appearance="outline">
-              <mat-label>{{ registerForm.get('isMinor')?.value ? 'Cédula del representante' : 'Cédula del atleta' }}</mat-label>
-              <input matInput [formControlName]="registerForm.get('isMinor')?.value ? 'representativeId' : 'athleteId'">
-            </mat-form-field>
-
-            <mat-form-field class="register-form-field" appearance="outline">
-              <mat-label>{{ registerForm.get('isMinor')?.value ? 'Nombre y Apellido del representante' : 'Nombre y Apellido del atleta' }}</mat-label>
-              <input matInput [formControlName]="registerForm.get('isMinor')?.value ? 'representativeName' : 'athleteName'">
-            </mat-form-field>
-
-            <mat-form-field class="register-form-field" appearance="outline">
-              <mat-label>{{ registerForm.get('isMinor')?.value ? 'Correo del representante' : 'Correo del atleta' }}</mat-label>
-              <input matInput [formControlName]="registerForm.get('isMinor')?.value ? 'representativeEmail' : 'athleteEmail'">
-            </mat-form-field>
+      <!-- Cuerpo de la Tarjeta -->
+      <div class="card-body text-white">
+        <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+          <!-- Switch para Representante o Atleta -->
+          <div class="mb-4 text-center">
+            <div class="form-check form-switch">
+              <input type="checkbox" class="form-check-input" formControlName="isMinor" id="isMinorSwitch">
+              <label class="form-check-label text-yellow" for="isMinorSwitch">
+                ¿Eres el Representante de un Atleta?
+              </label>
+            </div>
           </div>
 
-          <!-- Segunda fila -->
-          <div class="register-row">
-            <ng-container *ngIf="registerForm.get('isMinor')?.value">
-              <mat-form-field class="register-form-field" appearance="outline">
-                <mat-label>Nombre y Apellido del atleta</mat-label>
-                <input matInput formControlName="athleteName">
-              </mat-form-field>
-            </ng-container>
-
-            <mat-form-field class="register-form-field" appearance="outline">
-              <mat-label>Fecha de Nacimiento</mat-label>
-              <input matInput formControlName="athleteDob" type="date">
-            </mat-form-field>
-            <mat-form-field class="register-form-field" appearance="outline">
-              <mat-label>Edad</mat-label>
-              <input matInput formControlName="athleteAge" type="number">
-            </mat-form-field>
+          <!-- Nombre en la Primera Fila -->
+          <div class="row g-1">
+            <div class="col-md-12">
+              <label class="form-label text-yellow">
+                {{ registerForm.get('isMinor')?.value
+                ? 'Nombre y Apellido del Representante'
+                : 'Nombre y Apellido del Atleta' }}
+              </label>
+              <input type="text" class="form-control" [formControlName]="registerForm.get('isMinor')?.value 
+                                  ? 'representativeName' : 'athleteName'" placeholder="Ingrese el nombre completo">
+            </div>
           </div>
 
-          <!-- Tercera fila -->
-          <div class="register-row">
-            <mat-form-field class="register-form-field" appearance="outline">
-              <mat-label>Contraseña</mat-label>
-              <input matInput type="password" formControlName="password">
-            </mat-form-field>
-            <mat-form-field class="register-form-field" appearance="outline">
-              <mat-label>Confirmar Contraseña</mat-label>
-              <input matInput type="password" formControlName="confirmPassword">
-            </mat-form-field>
+          <!-- Cédula y Teléfono en la Segunda Fila -->
+          <div class="row g-1 mt-3">
+            <div class="col-md-6">
+              <label class="form-label text-yellow">
+                {{ registerForm.get('isMinor')?.value
+                ? 'Cédula del Representante'
+                : 'Cédula del Atleta' }}
+              </label>
+              <input type="text" class="form-control" [formControlName]="registerForm.get('isMinor')?.value 
+                                  ? 'representativeId' : 'athleteId'" placeholder="Ingrese la cédula">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label text-yellow">
+                {{ registerForm.get('isMinor')?.value
+                ? 'Teléfono del Representante'
+                : 'Teléfono del Atleta' }}
+              </label>
+              <input type="tel" class="form-control" [formControlName]="registerForm.get('isMinor')?.value 
+                                  ? 'representativePhone' : 'athletePhone'" placeholder="Ingrese el número de teléfono">
+            </div>
           </div>
-        </div>
 
-        <button class="register-button register-button-primary" mat-raised-button>Registrarse</button>
-      </form>
+          <!-- Fecha de Nacimiento y Género - Visibilidad Controlada -->
+          <div class="row g-1 mt-3" *ngIf="!registerForm.get('isMinor')?.value">
+            <div class="col-md-6">
+              <label class="form-label text-yellow">Fecha de Nacimiento</label>
+              <input type="date" class="form-control" formControlName="athleteDob">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label text-yellow">Género</label>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" id="hombre" value="Hombre" formControlName="genero">
+                  <label class="form-check-label text-yellow" for="hombre">Hombre</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" id="mujer" value="Mujer" formControlName="genero">
+                  <label class="form-check-label text-yellow" for="mujer">Mujer</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contraseña y Confirmar Contraseña -->
+          <div class="row g-1 mt-3">
+            <div class="col-md-6">
+              <label class="form-label text-yellow">Contraseña</label>
+              <input type="password" class="form-control" formControlName="password" placeholder="Contraseña">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label text-yellow">Confirmar Contraseña</label>
+              <input type="password" class="form-control" formControlName="confirmPassword"
+                placeholder="Confirme la contraseña">
+            </div>
+          </div>
+
+          <!-- Botón de Registro -->
+          <div class="mt-4 text-center">
+            <button type="submit" class="btn btn-yellow w-100" [disabled]="registerForm.invalid">
+              Registrarse
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </div>

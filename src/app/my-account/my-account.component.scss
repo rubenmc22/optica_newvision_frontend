@@ -8,7 +8,7 @@
     /* Texto amarillo */
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    /* Sombra */
+    /* Sombra elegante */
 }
 
 .card-header {
@@ -36,13 +36,72 @@
     padding: 1.5rem;
 }
 
-.form-row {
-    display: flex;
-    flex-wrap: wrap;
+/* Header Mejorado */
+.card-header {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    background: linear-gradient(90deg, #FFD700, #FFA500);
+    /* Gradiente de amarillo a naranja */
+    color: #262524;
+    /* Texto negro */
+    padding: 1rem;
+    border-radius: 10px 10px 0 0;
+    /* Bordes superiores redondeados */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    /* Sombra elegante */
 }
 
-.form-group {
-    margin-bottom: 1rem;
+/* Estilo para las pestañas */
+.nav-tabs {
+    border-bottom: 2px solid #FFD700;
+    /* Línea divisoria amarilla */
+    background-color: #262524;
+    /* Fondo negro para las pestañas */
+    border-radius: 10px 10px 0 0;
+    /* Bordes superiores redondeados */
+}
+
+.nav-tabs .nav-item {
+    flex: 1;
+    /* Las pestañas ocupan el mismo espacio */
+    text-align: center;
+}
+
+.nav-tabs .nav-link {
+    color: #FFD700;
+    /* Color amarillo para pestañas */
+    font-weight: bold;
+    transition: all 0.3s ease;
+    background-color: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    /* Sin línea al inicio */
+    padding: 0.8rem;
+}
+
+.nav-tabs .nav-link.active {
+    color: #262524;
+    /* Texto negro */
+    background-color: #FFD700;
+    /* Fondo amarillo */
+    border-bottom: 3px solid #FFA500;
+    /* Línea subrayada naranja */
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+    /* Sombra para la pestaña activa */
+}
+
+.nav-tabs .nav-link:hover {
+    //color: black;
+    /* Naranja al pasar el ratón */
+}
+
+/* Sombra en el contenido de las pestañas */
+.tab-content {
+    padding: 1rem;
+    background-color: #262524;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Estilo de los inputs */
@@ -65,18 +124,6 @@ input.form-control::placeholder {
     opacity: 0.8;
 }
 
-input.form-control:focus {
-    background-color: #2e2d2c;
-    /* Fondo más claro al enfocar */
-    color: #FFFFFF;
-    /* Texto blanco */
-    border-color: rgba(255, 255, 255, 0.5);
-    /* Borde más visible al enfocar */
-    outline: none;
-    box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
-    /* Sombra ligera */
-}
-
 /* Botón de guardar */
 button.btn-success {
     background-color: #FFD700;
@@ -92,6 +139,7 @@ button.btn-success {
 
 button.btn-success:hover {
     background-color: #e6c200;
+    /* Fondo amarillo más oscuro */
     color: #000000;
     box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
     /* Sombra al pasar el mouse */
@@ -105,83 +153,33 @@ button.btn-success:active {
     /* Efecto de clic */
 }
 
-/* Widget de imagen */
-.image-widget {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.d-flex {
-    display: flex;
-    justify-content: center; /* Centrar horizontalmente */
-    align-items: center; /* Centrar verticalmente */
-    margin-left: 120px; /* Desplazamiento horizontal hacia la derecha */
-}
-.athlete-photo {
-    width: 150px;
-    /* Mantener tamaño de la imagen */
-    height: 150px;
-    object-fit: cover;
-    /* Mantiene las proporciones */
-    border-radius: 50%;
-    /* Hace la imagen circular */
-    border: 2px solid #FFD700;
-    /* Borde amarillo */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    /* Sombra elegante */
-}
-
-button.btn-outline-primary {
+.modal-header {
     background-color: #FFD700;
-    /* Fondo amarillo */
-    color: #262524;
-    /* Texto negro */
-    font-weight: bold;
-    border-radius: 5px;
-    /* Bordes redondeados */
-    padding: 6px 12px;
-    /* Tamaño reducido del botón */
-    font-size: 0.875rem;
-    /* Fuente más pequeña */
-    transition: all 0.3s ease;
-    /* Transición suave */
-    margin-left: 10px;
-    /* Espacio entre la imagen y el botón */
+    color: black;
+
+    .modal-title {
+        font-weight: bold;
+    }
 }
 
-button.btn-outline-primary:hover {
-    background-color: #e6c200;
-    /* Fondo amarillo más oscuro */
-    color: #000000;
-    box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
-    /* Sombra ligera */
+.modal-footer,
+.modal-body {
+    background-color: #262524;
+    color: white;
 }
 
-button.btn-outline-primary:active {
-    background-color: #cba800;
-    transform: scale(0.98);
-    /* Efecto de clic */
-}
 
 /* Responsividad para móviles */
 @media (max-width: 576px) {
+    .nav-tabs .nav-link {
+        font-size: 0.875rem;
+        /* Tamaño de fuente más pequeño en móviles */
+    }
+
     .form-row .form-group {
         flex: 0 0 100%;
         /* Usar todo el ancho en pantallas pequeñas */
         max-width: 100%;
-    }
-
-    .image-widget {
-        flex-direction: column;
-        margin-bottom: 1rem;
-        /* Espaciado ajustado */
-    }
-
-    .athlete-photo {
-        width: 120px;
-        /* Ajustar el tamaño en móviles */
-        height: 120px;
     }
 
     button.btn-success {
