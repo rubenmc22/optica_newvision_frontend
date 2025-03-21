@@ -1,32 +1,8 @@
-/*.card {
-    background-color: var(--secondary-color) !important;
-    color: var(--text-color);
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    margin-top: 20px;
-    padding: 15px;
-}
-
-.form-control {
-    background-color: #1e1e1e;
-    color: var(--text-color);
-}
-
-.form-select {
-    background-color: #1e1e1e;
-    color: var(--text-color);
-}
-.form-select:focus {
-    border: var(--primary-color);
-}
-*/
-
-
 .filtros-header {
     background-color: var(--secondary-color) !important;
     /* Color amarillo destacado */
     padding: 10px 15px;
-   border-radius:none;
+    border-radius: none;
     color: var(--text-color);
 }
 
@@ -61,46 +37,36 @@
     background-color: #1e1e1e;
     color: var(--text-color);
 }
+
 .filtros-select:focus {
     border: none;
-  //background-color: #FFD966;
+    //background-color: #FFD966;
     color: var(--text-color);
 }
+
 /* Personalizar los <option> cuando están seleccionados */
 .option {
-    background-color: rgba(40, 40, 40, 0.9); /* Fondo oscuro */
-    color: red; /* Texto blanco */
+    background-color: rgba(40, 40, 40, 0.9);
+    /* Fondo oscuro */
+    color: red;
+    /* Texto blanco */
     padding: 5px;
     border: none;
 }
 
-.option:hover, option:focus {
-    background-color: var(--primary-color); /* Fondo amarillo al pasar el mouse o al enfocarlo */
-    color: black; /* Texto negro para contraste */
+.option:hover,
+option:focus {
+    background-color: var(--primary-color);
+    /* Fondo amarillo al pasar el mouse o al enfocarlo */
+    color: black;
+    /* Texto negro para contraste */
 }
+
 .filtros-body {
     background-color: var(--secondary-color) !important;
     color: var(--text-color);
     padding: 15px;
 
-}
-
-.table {
-    color: var(--text-color);
-    border-color: var(--primary-color);
-}
-
-.table th {
-    background-color: var(--primary-color);
-    color: black;
-    font-weight: bold;
-    text-align: center;
-}
-
-.table tbody tr:hover {
-    background-color: rgba(242, 194, 48, 0.2);
-    /* Fondo amarillo tenue */
-    cursor: pointer;
 }
 
 /* Botones de la tabla */
@@ -118,37 +84,46 @@
 
 
 /* General para la tabla */
-.table {
+.custom-table {
     color: var(--text-color);
     /* Texto blanco para las celdas */
     border-color: var(--primary-color);
     /* Borde amarillo */
     background-color: rgba(40, 40, 40, 0.9);
     /* Fondo oscuro */
+
+    a.text-primary {
+        color: var(--primary-color) !important;
+
+        &:hover {
+            color: var(--text-color) !important;
+        }
+    }
 }
 
-.table th {
-    background-color: var(--primary-color);
-    /* Fondo amarillo en los encabezados */
+.custom-table th {
+    background-color: var(--primary-color) !important;
     color: black;
-    /* Texto negro para contraste */
     font-weight: bold;
     text-align: center;
     border: 1px solid var(--primary-color);
-    /* Borde amarillo */
 }
 
 .table td {
-    border: 1px solid var(--primary-color);
-    /* Borde amarillo entre filas */
+    background-color: var(--secondary-color) !important;
+    border: 1px solid var(--secondary-color);
+    color: #9c9c9c;
     text-align: center;
-    /* Centrado */
+
+    &:hover {
+        color: var(--text-color) !important;
+    }
+
 }
 
 /* Hover en las filas */
 .table tbody tr:hover {
     background-color: rgba(242, 194, 48, 0.2);
-    /* Fondo amarillo suave al hacer hover */
     cursor: pointer;
 }
 

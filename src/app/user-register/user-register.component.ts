@@ -12,41 +12,43 @@ export class UserRegisterComponent implements OnInit {
   registerForm: FormGroup;
 
   constructor(private fb: FormBuilder, private location: Location) {
+    // Creación del formulario con validaciones iniciales
     this.registerForm = this.fb.group({
-      isMinor: [false], // Switch para menor o mayor de edad
-      representativeName: [''], // Nombre del representante
-      representativeId: [''], // Cédula del representante
-      representativePhone: ['', Validators.required], // Teléfono del representante
-      representativeEmail: [''], // Correo del representante
-      password: ['', Validators.required], // Contraseña
+      isMinor: [false], // Determina si es representante
+      representativeName: ['', [Validators.pattern('^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]*$')]], // Nombre del representante
+      representativeId: ['', [Validators.pattern('^[0-9]{1,8}$')]], // Cédula del representante
+      representativePhone: ['', [Validators.pattern('^[0-9]{1,12}$')]], // Teléfono del representante
+      representativeEmail: ['', [Validators.pattern('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$')]], // Correo del representante
+      athleteName: ['', [Validators.required, Validators.pattern('^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]*$')]], // Nombre del atleta
+      athleteId: ['', [Validators.required, Validators.pattern('^[0-9]{1,8}$')]], // Cédula del atleta
+      athletePhone: ['', [Validators.required, Validators.pattern('^[0-9]{1,12}$')]], // Teléfono del atleta
+      athleteEmail: ['', [Validators.required, Validators.pattern('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$')]], // Correo del atleta
+      athleteDob: ['', Validators.required], // Fecha de nacimiento del atleta
+      genero: ['', Validators.required], // Género del atleta
+      password: [
+        '',
+        [Validators.required, Validators.pattern('^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*?&]{8,}$')] // Contraseña válida
+      ],
       confirmPassword: ['', Validators.required], // Confirmación de contraseña
-      athleteName: ['', Validators.required], // Nombre del atleta
-      athleteId: [''], // Cédula del atleta
-      athletePhone: ['', Validators.required], // Teléfono del atleta
-      athleteEmail: [''], // Correo del atleta
-      athleteDob: ['', Validators.required], // Fecha de Nacimiento
-      athleteAge: ['', [Validators.required, Validators.min(10)]], // Edad
-      genero: ['', Validators.required], // Género
-      deporte: ['', Validators.required] // Deporte
-    });
+    }, { validator: this.passwordMatchValidator });
   }
 
   ngOnInit() {
-    // Escucha los cambios en el estado de isMinor
+    // Escucha los cambios en el estado de isMinor (si es representante o atleta)
     this.registerForm.get('isMinor')?.valueChanges.subscribe(isMinor => {
       if (isMinor) {
-        // Activar validadores para Representante
-        this.setValidators(['representativeName', 'representativeId', 'representativePhone'], Validators.required);
-        this.clearValidators('athleteId', 'athletePhone', 'athleteEmail', 'athleteDob');
+        // Validaciones para representante
+        this.setValidators(['representativeName', 'representativeId', 'representativePhone', 'representativeEmail'], Validators.required);
+        this.clearValidators('athleteName', 'athleteId', 'athletePhone', 'athleteEmail', 'athleteDob', 'genero');
       } else {
-        // Activar validadores para Atleta
-        this.setValidators(['athleteId', 'athletePhone', 'athleteEmail', 'athleteDob'], Validators.required);
-        this.clearValidators('representativeName', 'representativeId', 'representativePhone');
+        // Validaciones para atleta
+        this.setValidators(['athleteName', 'athleteId', 'athletePhone', 'athleteEmail', 'athleteDob', 'genero'], Validators.required);
+        this.clearValidators('representativeName', 'representativeId', 'representativePhone', 'representativeEmail');
       }
     });
   }
 
-  // Método para configurar los validadores dinámicamente
+  // Método para configurar validadores dinámicamente
   setValidators(fields: string[], validator: any) {
     fields.forEach(field => {
       this.registerForm.get(field)?.setValidators(validator);
@@ -54,7 +56,7 @@ export class UserRegisterComponent implements OnInit {
     });
   }
 
-  // Método para limpiar los validadores dinámicamente
+  // Método para limpiar los validadores de campos
   clearValidators(...fields: string[]) {
     fields.forEach(field => {
       this.registerForm.get(field)?.clearValidators();
@@ -62,18 +64,31 @@ export class UserRegisterComponent implements OnInit {
     });
   }
 
-  // Maneja la acción del formulario al enviarse
+  // Validación personalizada para confirmar que las contraseñas coincidan
+  passwordMatchValidator(form: FormGroup): null | { passwordsMismatch: true } {
+    const password = form.get('password')?.value || '';
+    const confirmPassword = form.get('confirmPassword')?.value || '';
+    return password === confirmPassword ? null : { passwordsMismatch: true };
+  }
+
+  // Verifica si un campo tiene errores
+  isInvalidField(fieldName: string): boolean {
+    const field = this.registerForm.get(fieldName);
+    return !!field && field.invalid && field.dirty && field.value !== ''; // No muestra error si está vacío
+  }
+
+  // Enviar el formulario
   onSubmit() {
     if (this.registerForm.valid) {
       console.log('Formulario válido:', this.registerForm.value);
-      // Lógica adicional, como enviar los datos al servidor
+      // Lógica para procesar los datos, como enviarlos al servidor
       this.registerForm.reset(); // Limpia el formulario después de enviarlo
     } else {
       console.error('Formulario inválido');
     }
   }
 
-  // Navegar hacia atrás
+  // Regresar a la vista anterior
   goBack() {
     this.location.back();
   }

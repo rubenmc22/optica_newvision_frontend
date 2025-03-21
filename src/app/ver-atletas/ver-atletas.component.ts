@@ -169,9 +169,9 @@ export class VerAtletasComponent {
   aplicarFiltros(): void {
     const normalizarTexto = (texto: string): string =>
       texto
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase();
+        .normalize('NFD') // Normaliza caracteres con tilde/acento
+        .replace(/[\u0300-\u036f]/g, '') // Elimina marcas diacríticas (acentos)
+        .toLowerCase(); // Convierte todo a minúsculas
 
     const edadMinValida = this.filtros.edadMin ? Number(this.filtros.edadMin) || 0 : 0;
     const edadMaxValida = this.filtros.edadMax ? Number(this.filtros.edadMax) || 999 : 999;
@@ -201,7 +201,11 @@ export class VerAtletasComponent {
         busquedaValida
       );
     });
+
+    // Reinicia a la primera página después de filtrar
+    this.paginaActual = 1;
   }
+
 
   validarSoloNumeros(event: Event): void {
     const input = event.target as HTMLInputElement;

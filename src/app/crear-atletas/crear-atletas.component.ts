@@ -13,65 +13,69 @@ export class CrearAtletasComponent implements OnInit {
 
   constructor(private fb: FormBuilder, private location: Location) {
     this.crearAtletaForm = this.fb.group({
-      isMinor: [false], // Switch para menor o mayor de edad
-      representativeName: [''], // Nombre del representante
-      representativeId: [''], // Cédula del representante
-      representativeEmail: [''], // Correo del representante
-      password: ['', Validators.required], // Contraseña
+      nombre: [
+        '',
+        [Validators.required, Validators.pattern('^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]*$')] // Solo caracteres alfabéticos
+      ],
+      cedula: [
+        '',
+        [Validators.required, Validators.pattern('^[0-9]{1,8}$')] // Cédula numérica, máximo 8 dígitos
+      ],
+      telefono: [
+        '',
+        [Validators.required, Validators.pattern('^[0-9]{1,12}$')] // Teléfono numérico, máximo 12 caracteres
+      ],
+      email: [
+        '',
+        [Validators.required, Validators.pattern('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$')] //Correo electrónico válido
+      ],
+      athleteDob: ['', Validators.required], // Fecha de nacimiento obligatoria
+      genero: [
+        '',
+        [Validators.required] // Género obligatorio (Hombre o Mujer)
+      ],
+      password: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern('^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*?&]{8,}$') // Contraseña con letras y números, símbolos opcionales
+        ]
+      ],
       confirmPassword: ['', Validators.required], // Confirmación de contraseña
-      athleteName: ['', Validators.required], // Nombre del atleta
-      athleteId: [''], // Cédula del atleta
-      athleteEmail: [''], // Correo del atleta
-      athleteDob: ['', Validators.required], // Fecha de Nacimiento
-      athleteAge: ['', [Validators.required, Validators.min(10)]], // Edad
-      genero: ['', Validators.required], // Género
-      deporte: ['', Validators.required] // Deporte
-    });
+    }, { validator: this.passwordMatchValidator });
   }
 
   ngOnInit() {
-    // Escucha los cambios en el estado de isMinor (menor o mayor de edad)
-    this.crearAtletaForm.get('isMinor')?.valueChanges.subscribe(isMinor => {
-      if (isMinor) {
-        // Si es menor de edad, activa los validadores del representante y desactiva los del atleta
-        this.setValidators(['representativeName', 'representativeId', 'representativeEmail'], Validators.required);
-        this.clearValidators('athleteId', 'athleteEmail');
-      } else {
-        // Si es mayor de edad, activa los validadores del atleta y desactiva los del representante
-        this.setValidators(['athleteId', 'athleteEmail'], Validators.required);
-        this.clearValidators('representativeName', 'representativeId', 'representativeEmail');
-      }
-    });
+    // Verifica que el formulario esté correctamente inicializado
+    console.log('Formulario inicializado:', this.crearAtletaForm.value);
   }
 
-  // Método para configurar los validadores dinámicamente
-  setValidators(fields: string[], validator: any) {
-    fields.forEach(field => {
-      this.crearAtletaForm.get(field)?.setValidators(validator);
-      this.crearAtletaForm.get(field)?.updateValueAndValidity();
-    });
+  // Valida si las contraseñas coinciden
+  passwordMatchValidator(form: FormGroup): null | { passwordsMismatch: true } {
+    const password = form.get('password')?.value || '';
+    const confirmPassword = form.get('confirmPassword')?.value || '';
+    return password === confirmPassword ? null : { passwordsMismatch: true };
   }
 
-  // Método para limpiar los validadores dinámicamente
-  clearValidators(...fields: string[]) {
-    fields.forEach(field => {
-      this.crearAtletaForm.get(field)?.clearValidators();
-      this.crearAtletaForm.get(field)?.updateValueAndValidity();
-    });
+  // Verifica si un campo tiene errores o está vacío
+  isInvalidField(fieldName: string): boolean {
+    const field = this.crearAtletaForm.get(fieldName);
+    return !!field && field.invalid && field.dirty && field.value !== ''; // No muestra error si está vacío
   }
 
-  // Maneja la acción del formulario al enviarse
+
+  // Envía el formulario al servidor o lo procesa
   onSubmit() {
     if (this.crearAtletaForm.valid) {
       console.log('Formulario válido:', this.crearAtletaForm.value);
-      // Lógica adicional, como enviar los datos al servidor
-      this.crearAtletaForm.reset(); // Limpia el formulario después de enviarlo
+      // Lógica adicional para enviar los datos
+      this.crearAtletaForm.reset(); // Limpia el formulario después del envío
     } else {
       console.error('Formulario inválido');
     }
   }
 
-  // Navegar hacia atrás
+  // Navega hacia atrás en la vista
   goBack() {
     this.location.back();
   }

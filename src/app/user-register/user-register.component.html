@@ -37,9 +37,9 @@
             </div>
           </div>
 
-          <!-- Nombre en la Primera Fila -->
-          <div class="row g-1">
-            <div class="col-md-12">
+          <!-- Primera Fila: Nombre y Cédula -->
+          <div class="row mb-3">
+            <div class="col-md-6">
               <label class="form-label text-yellow">
                 {{ registerForm.get('isMinor')?.value
                 ? 'Nombre y Apellido del Representante'
@@ -47,11 +47,11 @@
               </label>
               <input type="text" class="form-control" [formControlName]="registerForm.get('isMinor')?.value 
                                   ? 'representativeName' : 'athleteName'" placeholder="Ingrese el nombre completo">
+              <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativeName' : 'athleteName')"
+                class="text-danger small mt-1">
+                El nombre y apellido solo pueden contener caracteres alfabéticos.
+              </div>
             </div>
-          </div>
-
-          <!-- Cédula y Teléfono en la Segunda Fila -->
-          <div class="row g-1 mt-3">
             <div class="col-md-6">
               <label class="form-label text-yellow">
                 {{ registerForm.get('isMinor')?.value
@@ -60,7 +60,15 @@
               </label>
               <input type="text" class="form-control" [formControlName]="registerForm.get('isMinor')?.value 
                                   ? 'representativeId' : 'athleteId'" placeholder="Ingrese la cédula">
+              <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativeId' : 'athleteId')"
+                class="text-danger small mt-1">
+                La cédula debe ser numérica y contener un máximo de 8 dígitos.
+              </div>
             </div>
+          </div>
+
+          <!-- Segunda Fila: Teléfono y Correo Electrónico -->
+          <div class="row mb-3">
             <div class="col-md-6">
               <label class="form-label text-yellow">
                 {{ registerForm.get('isMinor')?.value
@@ -68,16 +76,40 @@
                 : 'Teléfono del Atleta' }}
               </label>
               <input type="tel" class="form-control" [formControlName]="registerForm.get('isMinor')?.value 
-                                  ? 'representativePhone' : 'athletePhone'" placeholder="Ingrese el número de teléfono">
+                                  ? 'representativePhone' : 'athletePhone'"
+                placeholder="Ingrese el número de teléfono">
+              <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativePhone' : 'athletePhone')"
+                class="text-danger small mt-1">
+                El teléfono debe ser numérico y contener un máximo de 12 caracteres.
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label text-yellow">
+                {{ registerForm.get('isMinor')?.value
+                ? 'Correo del Representante'
+                : 'Correo del Atleta' }}
+              </label>
+              <input type="email" class="form-control" [formControlName]="registerForm.get('isMinor')?.value 
+                                  ? 'representativeEmail' : 'athleteEmail'"
+                placeholder="Ingrese el correo electrónico">
+              <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativeEmail' : 'athleteEmail')"
+                class="text-danger small mt-1">
+                Por favor, ingrese un correo electrónico válido.
+              </div>
             </div>
           </div>
 
-          <!-- Fecha de Nacimiento y Género - Visibilidad Controlada -->
-          <div class="row g-1 mt-3" *ngIf="!registerForm.get('isMinor')?.value">
+          <!-- Tercera Fila: Fecha de Nacimiento y Género -->
+          <div class="row mb-3" *ngIf="!registerForm.get('isMinor')?.value">
             <div class="col-md-6">
               <label class="form-label text-yellow">Fecha de Nacimiento</label>
               <input type="date" class="form-control" formControlName="athleteDob">
+              <div *ngIf="isInvalidField('athleteDob')" class="text-danger small mt-1">
+                Por favor, seleccione una fecha de nacimiento válida.
+              </div>
             </div>
+
             <div class="col-md-6">
               <label class="form-label text-yellow">Género</label>
               <div class="d-flex gap-3">
@@ -90,19 +122,30 @@
                   <label class="form-check-label text-yellow" for="mujer">Mujer</label>
                 </div>
               </div>
+              <div *ngIf="isInvalidField('genero')" class="text-danger small mt-1">
+                Por favor, seleccione un género.
+              </div>
             </div>
           </div>
 
-          <!-- Contraseña y Confirmar Contraseña -->
-          <div class="row g-1 mt-3">
+          <!-- Cuarta Fila: Contraseña y Confirmación -->
+          <div class="row mb-3">
             <div class="col-md-6">
               <label class="form-label text-yellow">Contraseña</label>
               <input type="password" class="form-control" formControlName="password" placeholder="Contraseña">
+              <div *ngIf="isInvalidField('password')" class="text-danger small mt-1">
+                La contraseña debe tener al menos 8 caracteres, incluir letras, números y símbolos opcionales.
+              </div>
             </div>
+
             <div class="col-md-6">
               <label class="form-label text-yellow">Confirmar Contraseña</label>
               <input type="password" class="form-control" formControlName="confirmPassword"
                 placeholder="Confirme la contraseña">
+              <div *ngIf="isInvalidField('confirmPassword') || registerForm.errors?.['passwordsMismatch']"
+                class="text-danger small mt-1">
+                Las contraseñas deben coincidir.
+              </div>
             </div>
           </div>
 

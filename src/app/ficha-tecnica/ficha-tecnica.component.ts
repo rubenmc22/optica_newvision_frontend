@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-ficha-tecnica',
@@ -6,8 +6,8 @@ import { Component } from '@angular/core';
   templateUrl: './ficha-tecnica.component.html',
   styleUrls: ['./ficha-tecnica.component.scss']
 })
-export class FichaTecnicaComponent {
-  // Datos del usuario
+export class FichaTecnicaComponent implements OnInit {
+  // Datos del usuario en sesión
   user: {
     photo: string;
     name: string;
@@ -17,14 +17,26 @@ export class FichaTecnicaComponent {
     weight: string;
     sports: { id: number; name: string; position: string; stats: { label: string; value: number }[] }[];
   } = {
-    photo: '',
-    name: 'Juan Pérez',
-    age: '29',
-    birthDate: this.formatDate('1995-11-10'),
-    height: '180 cm',
-    weight: '75 kg',
-    sports: []
+      photo: '',
+      name: 'Juan Pérez',
+      age: '29',
+      birthDate: this.formatDate('1995-11-10'),
+      height: '180 cm',
+      weight: '75 kg',
+      sports: []
+    };
+
+  // Propiedad para los datos del usuario en sesión
+  userSesion = {
+    id: '12345', // ID del usuario
+    nombre: 'Juan Pérez', // Nombre del usuario
+    rol: 'representante' // Rol del usuario: 'admin', 'representante', o 'atleta'
   };
+  // Atleta actualmente seleccionado (agregado para resolver el error)
+  atletaActual: any = null;
+  // Propiedades para buscar atletas
+  busqueda: string = ''; // Filtro de búsqueda (nombre o cédula)
+  atletaSeleccionado: number | null = null; // ID del atleta seleccionado
 
   // Mock de deportes disponibles con ID numérico
   availableSports = [
@@ -53,8 +65,8 @@ export class FichaTecnicaComponent {
   // Campos adicionales del usuario
   additionalFields = [
     { key: 'nationality', label: 'Nacionalidad', value: '', placeholder: 'Ej: Venezuela' },
-    { key: 'weight', label: 'Peso', value: '', placeholder: 'Ej: 80kg' },
-    { key: 'height', label: 'Altura', value: '', placeholder: 'Ej: 170cm' }
+    { key: 'weight', label: 'Peso', value: '80', placeholder: 'Ej: 80kg' },
+    { key: 'height', label: 'Altura', value: '170', placeholder: 'Ej: 170cm' }
   ];
 
   // Estados de edición para los campos adicionales
@@ -63,6 +75,74 @@ export class FichaTecnicaComponent {
   // Deporte y posición seleccionados
   selectedSport: { id: number; name: string; stats: { label: string; value: number }[] } | null = null;
   selectedPosition: string = '';
+
+  // Datos simulados de atletas
+  atletas = [
+    { id: 1, nombre: 'Juan Pérez', cedula: '24367965', edad: 29, deporte: 'Fútbol', posicion: 'Delantero' },
+    { id: 2, nombre: 'Ana López', cedula: '24367966', edad: 26, deporte: 'Voleibol', posicion: 'Armador' },
+    { id: 3, nombre: 'Luis Morales', cedula: '45367967', edad: 24, deporte: 'Baloncesto', posicion: 'Base' }
+  ];
+
+  // **Nueva propiedad**: Atletas asociados al representante
+  atletasRepresentante = [
+    {
+      id: 1,
+      nombre: 'Juan Pérez',
+      cedula: '24367965',
+      edad: 29,
+      deporte: 'Fútbol',
+      posicion: 'Delantero',
+      photo: '',
+      height: '180 cm',
+      weight: '75 kg',
+      nationality: 'Venezolana',
+      birthDate: this.formatDate('1995-11-10')
+    },
+    {
+      id: 3,
+      nombre: 'Luis Morales',
+      cedula: '45367967',
+      edad: 24,
+      deporte: 'Baloncesto',
+      posicion: 'Base',
+      photo: '',
+      height: '175 cm',
+      weight: '70 kg',
+      nationality: 'Chilena',
+      birthDate: this.formatDate('1998-05-15')
+    }
+  ];
+  
+  
+
+  // Inicialización del componente
+  ngOnInit(): void {
+    if (this.userSesion.rol === 'representante') {
+      // Asegura que siempre haya un atleta seleccionado al inicio
+      this.atletaActual = this.atletasRepresentante[0] || null;
+    }
+  }
+  // Método para filtrar atletas (admin)
+  filtrarAtletas(): void {
+    if (this.userSesion.rol === 'admin') {
+      const term = this.busqueda.trim().toLowerCase();
+      this.atletaActual = this.atletas.find(atleta =>
+        atleta.nombre.toLowerCase().includes(term) || atleta.cedula.includes(term)
+      );
+      console.log(`Resultado de búsqueda: ${this.atletaActual ? this.atletaActual.nombre : 'No encontrado'}`);
+    }
+  }
+  // Implementación de cargarFichaTecnica
+  cargarFichaTecnica(atletaId: number | null): void {
+    if (atletaId !== null) {
+      // Busca el atleta en la lista de representantes
+      this.atletaActual = this.atletasRepresentante.find(atleta => atleta.id === atletaId) || null;
+      console.log('Atleta seleccionado:', this.atletaActual); // Verifica que se seleccionó correctamente
+    } else {
+      console.error('El ID del atleta es nulo.');
+    }
+  }
+  
 
   // Alternar edición de campos adicionales
   toggleEdit(field: string): void {

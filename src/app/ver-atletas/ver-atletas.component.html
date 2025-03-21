@@ -66,7 +66,7 @@
 
         <!-- Tabla de resultados -->
         <div class="table-responsive mt-3">
-            <table class="table table-bordered table-striped">
+            <table class="table table-bordered table-striped custom-table">
                 <thead>
                     <tr>
                         <th (click)="ordenarTabla('cedula')">Cédula
@@ -119,6 +119,7 @@
                 </tbody>
             </table>
         </div>
+
         <!-- Mensaje si no hay resultados -->
         <ng-template #noResults>
             <p class="text-center mt-3 no-results-message">No se encontraron resultados</p>
@@ -145,7 +146,5 @@
                 Total de Atletas: <strong>{{ totalRegistros }}</strong>
             </div>
         </nav>
-
-
-
     </div>
+</div>
