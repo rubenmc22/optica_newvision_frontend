@@ -53,11 +53,14 @@
         </div>
 
 
-        <!-- Opción "Recuérdame" -->
-        <div class="mb-3 form-check">
-          <input type="checkbox" class="form-check-input" id="rememberMe" />
-          <label class="form-check-label" for="rememberMe">Recuérdame</label>
+
+        <div class="form-check mb-4 form-switch">
+          <input type="checkbox" class="form-check-input" >
+          <label class="form-check-label text-yellow" >
+            Recuérdame
+          </label>
         </div>
+
 
         <!-- Botón de Entrar -->
         <button type="submit" class="btn btn-primary w-100" [disabled]="loginForm.invalid">

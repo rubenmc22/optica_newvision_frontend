@@ -234,6 +234,51 @@
 
 }
 
+.form-check-label {
+    margin-left: 8px;
+    color: var(--text-color) !important;
+}
+
+.mb-4 {
+    text-align: left;
+    margin-left: 20px;
+
+    @media (max-width: 1024px) {
+        margin-left: 10px;
+    }
+}
+
+.form-check-input {
+    background-color: var(--text-color);
+    border-radius: 20px;
+    outline: none;
+    transition: background-color 0.3s ease;
+    //padding-left: 20px !important;
+
+    &::before {
+        content: '';
+        position: absolute;
+        background-color: #f2f2f2;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+
+    &:checked {
+        background-color: var(--primary-color);
+
+        &::before {
+            //  left: 28px;
+            background-color: var(--text-color);
+        }
+    }
+
+    &:focus {
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+
+
 /* Estilos para los mensajes de error */
 .form-text.text-danger {
     font-size: 0.875rem; // Tamaño de fuente más pequeño

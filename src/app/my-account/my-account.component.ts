@@ -1,5 +1,8 @@
 import { Component } from '@angular/core';
 import * as bootstrap from 'bootstrap';
+import { SwalService } from '../services/swal/swal.service'; // Importa el servicio de SweetAlert2
+import { GeneralFunctionsService } from '../services/general-functions/general-functions.service';
+import { Router } from '@angular/router'; // Importa el Router para la navegación
 
 @Component({
   selector: 'app-my-account',
@@ -15,7 +18,8 @@ export class MyAccountComponent {
     cedula: '12345678',
     correo: 'rubemm18@gmail.com',
     telefono: '584123920817',
-    genero: 'Hombre'
+    genero: 'Hombre',
+    avatarUrl: null as string | null // Asegura que avatarUrl sea de tipo string | null
   };
 
   // Datos actuales del usuario (editables)
@@ -37,6 +41,15 @@ export class MyAccountComponent {
   // Pestaña activa
   activeTab: string = 'personalInfo';
 
+  // URL de la imagen del avatar
+  avatarUrl: string | null = null;
+
+  constructor(
+    private swalService: SwalService, // Inyecta el servicio de SweetAlert2
+    private generalFunctions: GeneralFunctionsService, // Inyecta el servicio
+    private router: Router // Inyecta el Router para la navegación
+  ) { }
+
   // Métodos relacionados con pestañas
   switchTab(tab: string): void {
     this.activeTab = tab;
@@ -52,7 +65,8 @@ export class MyAccountComponent {
       this.user.correo !== this.originalUser.correo ||
       this.user.fechaNacimiento !== this.originalUser.fechaNacimiento ||
       this.user.telefono !== this.originalUser.telefono ||
-      this.user.genero !== this.originalUser.genero;
+      this.user.genero !== this.originalUser.genero ||
+      this.avatarUrl !== this.originalUser.avatarUrl; // Considera la imagen cargada
   }
 
   // Validaciones individuales
@@ -118,22 +132,28 @@ export class MyAccountComponent {
           correo: this.user.correo,
           telefono: this.user.telefono,
           genero: this.user.genero,
-          fechaNacimiento: this.user.fechaNacimiento
+          fechaNacimiento: this.user.fechaNacimiento,
+          avatarUrl: this.avatarUrl // Incluye la imagen en la solicitud
         })
       })
         .then(response => response.json())
         .then(data => {
           console.log('Información personal guardada:', data);
-          alert('Información personal guardada correctamente.');
-          this.originalUser = { ...this.user }; // Actualiza los valores originales
+          this.swalService.showSuccess('¡Modificación de Datos!', 'Información personal guardada.')
+            .then(() => {
+              this.router.navigate(['/dashboard']); // Redirigir al dashboard
+            });
+          this.originalUser = { ...this.user, avatarUrl: this.avatarUrl }; // Actualiza los valores originales
           this.isFormEdited = false; // Reinicia el estado de edición
         })
         .catch(error => {
           console.error('Error al guardar información personal:', error);
-          alert('Hubo un error al guardar la información.');
+          // alert('Hubo un error al guardar la información.');
+          this.swalService.showError('¡Modificación de Datos!', 'Hubo un error al guardar la información.');
         });
     } else {
-      alert('Por favor, corrige los errores o realiza algún cambio antes de continuar.');
+      // alert('Por favor, corrige los errores o realiza algún cambio antes de continuar.');
+      this.swalService.showWarning('Formulario inválido', 'Por favor, corrige los errores o realiza algún cambio antes de continuar.');
     }
   }
 
@@ -161,6 +181,19 @@ export class MyAccountComponent {
         });
     } else {
       alert('Por favor, ingresa un código OTP válido.');
+    }
+  }
+
+  // Método para manejar la selección de archivos (carga de imagen)
+  onFileSelected(event: any): void {
+    const file = event.target.files[0]; // Obtiene el archivo seleccionado
+    if (file) {
+      const reader = new FileReader(); // Crea un FileReader para leer el archivo
+      reader.onload = (e: any) => {
+        this.avatarUrl = e.target.result; // Asigna la URL de la imagen al avatarUrl
+        this.detectChanges(); // Detecta cambios después de cargar la imagen
+      };
+      reader.readAsDataURL(file); // Lee el archivo como una URL de datos
     }
   }
 }

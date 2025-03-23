@@ -24,6 +24,25 @@
                     <!-- Tab: Editar Información Personal -->
                     <div class="tab-pane fade show active" id="editPersonalInfo" role="tabpanel"
                         aria-labelledby="edit-personal-info-tab">
+                        <!-- Widget de Imagen -->
+                        <div class="text-center mb-4">
+                            <div class="avatar-widget">
+                                <!-- Imagen del Avatar -->
+                                <img [src]="avatarUrl || 'assets/default-photo.png'" alt="Avatar del Usuario"
+                                    class="avatar-img">
+
+                                <!-- Overlay para Cargar Imagen (siempre presente, pero oculto cuando hay imagen) -->
+                                <div class="avatar-overlay" [ngClass]="{'show-on-hover': avatarUrl}">
+                                    <label for="avatarUpload">
+                                        <i class="fas fa-camera"></i>
+                                    </label>
+                                    <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
+                                        (change)="onFileSelected($event)">
+                                </div>
+                            </div>
+                        </div><br>
+
+                        <!-- Formulario de Información Personal -->
                         <form #personalInfoForm="ngForm">
                             <div class="form-row">
                                 <!-- Campo: Nombre Completo -->
@@ -62,10 +81,10 @@
                                 <div class="form-group col-md-6">
                                     <label for="telefono">Teléfono</label>
                                     <input type="tel" id="telefono" class="form-control" [(ngModel)]="user.telefono"
-                                        name="telefono" pattern="^[0-9]{10}$" #telefono="ngModel" required
+                                        name="telefono" pattern="^[0-9]{12}$" #telefono="ngModel" required
                                         (input)="detectChanges()" />
                                     <small *ngIf="telefono.invalid && telefono.touched" class="text-danger">
-                                        Introduzca un número de teléfono válido (10 dígitos).
+                                        Introduzca un número de teléfono válido (12 dígitos).
                                     </small>
                                 </div>
                             </div>
@@ -78,8 +97,8 @@
                                 </button>
                             </div>
                         </form>
-
                     </div>
+
 
                     <!-- Tab: Editar Contraseña -->
                     <div class="tab-pane fade" id="editPassword" role="tabpanel" aria-labelledby="edit-password-tab">
