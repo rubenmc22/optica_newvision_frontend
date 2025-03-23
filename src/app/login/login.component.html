@@ -11,7 +11,7 @@
   </div>
   <div class="login-card-container">
     <div class="login-side-text">
-        <div class="login-side-text-guatire">GUATIRE</div>
+      <div class="login-side-text-guatire">GUATIRE</div>
       <div class="login-side-text-sport">SPORT</div>
       <div class="login-side-buttons">
         <button class="btn btn-primary" routerLink="/register">REGISTRATE</button>
@@ -19,26 +19,55 @@
       </div>
     </div>
     <div class="login-card">
-        <div class="login-title">Inicie Sesión</div>
-        <form>
-          <mat-form-field class="login-form-field" appearance="outline">
-            <mat-label>Cédula</mat-label>
-            <input matInput placeholder="" class="mat-mdc-input-element" />
-          </mat-form-field>
-          <mat-form-field class="login-form-field" appearance="outline">
-            <mat-label>Contraseña</mat-label>
-            <input matInput type="password" placeholder="" class="mat-mdc-input-element" />
-          </mat-form-field>
-          <div class="login-switch">
-            <mat-slide-toggle>
-              <span class="mdc-label">Recuérdame</span>
-            </mat-slide-toggle>
+      <div class="login-title">Inicie Sesión</div>
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        <!-- Campo Cédula -->
+        <!-- Campo Cédula -->
+        <div class="mb-3">
+          <label for="cedula" class="form-label">Cédula</label>
+          <input type="text" class="form-control" id="cedula" formControlName="cedula"
+            placeholder="Ingrese su cédula" />
+          <div *ngIf="isInvalidField('cedula')" class="form-text text-danger">
+            <span *ngIf="loginForm.get('cedula')?.hasError('required')">
+              La cédula es requerida.
+            </span>
+            <span *ngIf="loginForm.get('cedula')?.hasError('pattern')">
+              La cédula debe ser un número de hasta 8 dígitos.
+            </span>
           </div>
-          <button class="login-button login-button-primary" mat-raised-button>Entrar</button>
-          <button class="login-button login-button-accent" routerLink="/forgot-password" mat-button>¿Olvidó su contraseña?</button>
-        </form>
-      </div>
-      
-      
+        </div>
+
+        <!-- Campo Contraseña -->
+        <div class="mb-3">
+          <label for="password" class="form-label">Contraseña</label>
+          <input type="password" class="form-control" id="password" formControlName="password"
+            placeholder="Ingrese su contraseña" />
+          <div *ngIf="isInvalidField('password')" class="form-text text-danger">
+            <span *ngIf="loginForm.get('password')?.hasError('required')">
+              La contraseña es requerida.
+            </span>
+            <span *ngIf="loginForm.get('password')?.hasError('minlength')">
+              La contraseña debe tener al menos 6 caracteres.
+            </span>
+          </div>
+        </div>
+
+
+        <!-- Opción "Recuérdame" -->
+        <div class="mb-3 form-check">
+          <input type="checkbox" class="form-check-input" id="rememberMe" />
+          <label class="form-check-label" for="rememberMe">Recuérdame</label>
+        </div>
+
+        <!-- Botón de Entrar -->
+        <button type="submit" class="btn btn-primary w-100" [disabled]="loginForm.invalid">
+          Entrar
+        </button>
+
+        <!-- Botón de "¿Olvidó su contraseña?" -->
+        <button type="button" class="btn btn-link w-100 mt-2" routerLink="/forgot-password">
+          ¿Olvidó su contraseña?
+        </button>
+      </form>
+    </div>
   </div>
-</div>

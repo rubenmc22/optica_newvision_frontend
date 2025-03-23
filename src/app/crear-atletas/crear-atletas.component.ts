@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Location } from '@angular/common';
+import { GeneralFunctionsService } from '../services/general-functions/general-functions.service';
 
 @Component({
   selector: 'app-crear-atletas',
@@ -11,7 +12,11 @@ import { Location } from '@angular/common';
 export class CrearAtletasComponent implements OnInit {
   crearAtletaForm: FormGroup;
 
-  constructor(private fb: FormBuilder, private location: Location) {
+  constructor(
+    private fb: FormBuilder,
+    private location: Location,
+    private generalFunctions: GeneralFunctionsService // Inyecta el servicio
+  ) {
     this.crearAtletaForm = this.fb.group({
       nombre: [
         '',
@@ -43,6 +48,7 @@ export class CrearAtletasComponent implements OnInit {
       ],
       confirmPassword: ['', Validators.required], // Confirmación de contraseña
     }, { validator: this.passwordMatchValidator });
+
   }
 
   ngOnInit() {
@@ -59,8 +65,7 @@ export class CrearAtletasComponent implements OnInit {
 
   // Verifica si un campo tiene errores o está vacío
   isInvalidField(fieldName: string): boolean {
-    const field = this.crearAtletaForm.get(fieldName);
-    return !!field && field.invalid && field.dirty && field.value !== ''; // No muestra error si está vacío
+    return this.generalFunctions.isInvalidField(this.crearAtletaForm, fieldName);
   }
 
 

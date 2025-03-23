@@ -45,8 +45,7 @@
                 ? 'Nombre y Apellido del Representante'
                 : 'Nombre y Apellido del Atleta' }}
               </label>
-              <input type="text" class="form-control" [formControlName]="registerForm.get('isMinor')?.value 
-                                  ? 'representativeName' : 'athleteName'" placeholder="Ingrese el nombre completo">
+              <input type="text" class="form-control" [formControl]="nameControl" placeholder="Ingrese el nombre completo">
               <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativeName' : 'athleteName')"
                 class="text-danger small mt-1">
                 El nombre y apellido solo pueden contener caracteres alfabéticos.
@@ -58,8 +57,7 @@
                 ? 'Cédula del Representante'
                 : 'Cédula del Atleta' }}
               </label>
-              <input type="text" class="form-control" [formControlName]="registerForm.get('isMinor')?.value 
-                                  ? 'representativeId' : 'athleteId'" placeholder="Ingrese la cédula">
+              <input type="text" class="form-control" [formControl]="idControl" placeholder="Ingrese la cédula">
               <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativeId' : 'athleteId')"
                 class="text-danger small mt-1">
                 La cédula debe ser numérica y contener un máximo de 8 dígitos.
@@ -75,9 +73,7 @@
                 ? 'Teléfono del Representante'
                 : 'Teléfono del Atleta' }}
               </label>
-              <input type="tel" class="form-control" [formControlName]="registerForm.get('isMinor')?.value 
-                                  ? 'representativePhone' : 'athletePhone'"
-                placeholder="Ingrese el número de teléfono">
+              <input type="tel" class="form-control" [formControl]="phoneControl" placeholder="Ingrese el número de teléfono">
               <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativePhone' : 'athletePhone')"
                 class="text-danger small mt-1">
                 El teléfono debe ser numérico y contener un máximo de 12 caracteres.
@@ -90,9 +86,7 @@
                 ? 'Correo del Representante'
                 : 'Correo del Atleta' }}
               </label>
-              <input type="email" class="form-control" [formControlName]="registerForm.get('isMinor')?.value 
-                                  ? 'representativeEmail' : 'athleteEmail'"
-                placeholder="Ingrese el correo electrónico">
+              <input type="email" class="form-control" [formControl]="emailControl" placeholder="Ingrese el correo electrónico">
               <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativeEmail' : 'athleteEmail')"
                 class="text-danger small mt-1">
                 Por favor, ingrese un correo electrónico válido.

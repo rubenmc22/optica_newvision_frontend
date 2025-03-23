@@ -4,18 +4,18 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    height: 100%;
+    height: 100vh; // Usar viewport height para ocupar toda la pantalla
     position: relative;
     padding: 20px;
     background: none;
 }
 
 .login-background {
-    position: absolute;
+    position: fixed; // Fija la imagen en la pantalla
     top: 0;
     left: 0;
     width: 100%;
-    height: 100hv;
+    height: 100vh; // Ocupa el 100% del viewport height
     z-index: -1;
 }
 
@@ -30,31 +30,120 @@
     display: flex;
     align-items: center;
     position: absolute;
-    top: -40px;
-    left: 40px;
+    top: -75px;
+    left: 0px;
+    z-index: 1;
+
+    @media (max-width: 1228.80px) {
+        top: -65px;
+    }
+
+    @media (max-width: 1024px) {
+        top: -65px;
+    }
+
+    @media (max-width: 877.71px) {
+        top: -55px;
+        left: 30px;
+    }
+
+    @media (max-width: 768px) {
+        top: -50px;
+        left: 47.5%;
+        transform: translateX(-50%);
+        flex-direction: column;
+        align-items: center;
+    }
+
+    @media (max-width: 320px) {
+        top: -50px;
+        left: 49%;
+        transform: translateX(-50%);
+        flex-direction: column;
+        align-items: center;
+    }
 }
 
 .login-logo {
-    width: 150px;
+    width: 230px;
     margin-left: 10px;
+
+
+    @media (max-width: 1228.80px) {
+        width: 200px;
+    }
+
+    @media (max-width: 1024px) {}
+
+    @media (max-width: 877.71px) {
+        width: 150px;
+    }
+
+    @media (max-width: 790px) {
+        margin-left: 0;
+    }
 }
 
 .login-logo-text {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    margin-left: -20px;
+    margin-left: -60px;
+
+    @media (max-width: 1228.80px) {
+        margin-left: -45px;
+    }
+
+    @media (max-width: 1024px) {
+        margin-left: -45px;
+    }
+
+    @media (max-width: 877.71px) {
+        margin-left: -40px !important;
+    }
+
+    @media (max-width: 768px) {
+        display: none;
+    }
+
+
 }
 
 .login-logo-title {
     font-size: 35px;
     font-weight: bold;
-    color: var(--text-color);
+    color: var(--text-color) !important;
+
+
+    @media (max-width: 1228.80px) {
+        font-size: 27px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 1024px) {
+        font-size: 21px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 920px) {
+        font-size: 15px;
+    }
 }
 
 .login-logo-subtitle {
     font-size: 15px;
-    color: var(--text-color);
+    color: var(--text-color) !important;
+
+    @media (max-width: 1228.80px) {
+        font-size: 14px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 1024px) {
+        font-size: 12px; // Aplica un margen izquierdo solo en este rango
+    }
+
+
+    @media (max-width: 920px) {
+        font-size: 9px;
+    }
 }
 
 .login-card-container {
@@ -63,7 +152,29 @@
     width: 100%;
     max-width: 1200px;
     justify-content: flex-start;
-    margin-top: 80px;
+    margin-top: 140px;
+
+    @media (max-width: 1228.80px) {
+        margin-top: 60px;
+    }
+
+    @media (max-width: 1024px) {
+        margin-top: 60px;
+    }
+
+    @media (max-width: 877.71px) {
+        margin-top: 20px !important;
+        margin-left: -30px !important;
+    }
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        margin-top: 50px !important;
+    }
+
+    @media (max-width: 320px) {
+        margin-left: 0px !important;
+    }
 }
 
 .login-side-text {
@@ -74,18 +185,101 @@
     flex-direction: column;
     font-weight: bold;
     text-align: left;
-    padding-left: 20px;
+    padding-left: 5px;
+
+    @media (max-width: 1396.36px) {
+        margin-left: 70px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 1228.80px) {
+        margin-left: 140px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 790px) {
+        display: none; // Ocultar en pantallas pequeñas
+    }
+}
+
+/* Estilos para las etiquetas (labels) */
+.form-label {
+    display: block; // Asegura que el label ocupe toda la línea
+    text-align: left; // Alinea el texto a la izquierda
+    margin-bottom: 0.5rem; // Espacio entre el label y el campo de entrada
+    font-weight: bold;
+    color: var(--primary-color) !important;
+}
+
+/* Estilos para los campos de entrada */
+.form-control {
+    border-radius: 5px;
+    background-color: var(--formInput-color);
+    /* Fondo oscuro del input */
+    color: var(--text-color);
+    //  border: 1px solid var(--primary-color); /* Borde amarillo */
+    border: none;
+
+    &:focus {
+        border-color: #FFD966;
+        /* Borde amarillo más claro al enfocar */
+        box-shadow: 0px 0px 5px #FFD966;
+    }
+
+    @media (max-width: 1024px) {
+        font-size: 14px;
+    }
+
+    @media (max-width: 877.71px) {
+        font-size: 13px;
+    }
+
+}
+
+/* Estilos para los mensajes de error */
+.form-text.text-danger {
+    font-size: 0.875rem; // Tamaño de fuente más pequeño
+    margin-top: 0.25rem; // Espacio entre el campo y el mensaje de error
+    text-align: left; // Alinea el mensaje de error a la izquierda
 }
 
 .login-side-text-sport {
-    font-size: 85px;
+    font-size: 90px;
     color: var(--primary-color);
+
+    @media (max-width: 1228.80px) {
+        font-size: 65px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 1024px) {
+        font-size: 55px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 920px) {
+        font-size: 55px;
+    }
+
+    @media (max-width: 877.71px) {
+        font-size: 48px;
+    }
 }
 
 .login-side-text-guatire {
-    font-size: 85px;
-    color: var(--text-color);
+    font-size: 90px;
+    color: var(--text-color) !important;
     margin-top: 5px;
+
+    @media (max-width: 1228.80px) {
+        font-size: 65px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 1024px) {
+        font-size: 55px;
+        ; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 877.71px) {
+        font-size: 48px;
+    }
+
 }
 
 .login-side-buttons {
@@ -93,6 +287,13 @@
     flex-direction: row;
     gap: 10px;
     margin-top: 20px;
+
+
+
+    @media (max-width: 790px) {
+        flex-direction: column;
+        align-items: center;
+    }
 }
 
 .btn {
@@ -101,30 +302,86 @@
     cursor: pointer;
     border: none;
     border-radius: 5px;
-    color: var(--text-color);
+    color: var(--text-color) !important;
+
+    @media (max-width: 790px) {
+        width: 100%;
+        max-width: 200px;
+    }
 }
 
 .btn-primary {
     background-color: var(--primary-color);
-    color: black;
+    color: var(--formInput-color) !important;
+    font-size: 18px;
+
+    @media (max-width: 1228.80px) {
+        font-size: 14px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 1024px) {
+        font-size: 10px !important; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 877.71px) {
+        font-size: 8px !important;
+    }
 }
 
 .btn-accent {
     background-color: transparent;
     border: 2px solid var(--primary-color);
     color: var(--primary-color);
+    font-size: 18px;
+
+    @media (max-width: 1228.80px) {
+        font-size: 14px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 1024px) {
+        font-size: 10px !important; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 877.71px) {
+        font-size: 8px !important;
+    }
 }
 
 .login-card {
     flex: 1;
     max-width: 400px;
     padding: 30px;
-    background-color: rgba(40, 40, 40, 0.9);
-    color: var(--text-color);
+    background-color: var(--secondary-color) !important;
+    color: var(--text-color) !important;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     border-radius: 12px;
     text-align: center;
     margin-left: auto;
+
+
+    @media (max-width: 1228.80px) {
+        //font-size: 14px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 1024px) {
+        max-width: 350px; // Reducir el ancho máximo
+        padding: 20px; // Reducir el padding
+        max-height: 370px; // Reducir la altura máxima
+        font-size: 12px; // Reducir el tamaño de la fuente si es necesario
+    }
+
+    @media (max-width: 877.71px) {
+        max-width: 325px; // Reducir el ancho máximo
+        padding: 20px; // Reducir el padding
+        max-height: 355px; // Reducir la altura máxima
+        font-size: 11px; // Reducir el tamaño de la fuente si es necesario
+    }
+
+    @media (max-width: 790px) {
+        margin-left: 0;
+        margin-top: 20px;
+        max-width: 100%;
+    }
 }
 
 .login-title {
@@ -132,6 +389,19 @@
     font-weight: bold;
     margin-bottom: 20px;
     color: var(--primary-color);
+
+    @media (max-width: 920px) {
+        font-size: 24px;
+    }
+
+    @media (max-width: 790px) {
+        font-size: 20px;
+    }
+
+    @media (max-width: 877.71px) {
+        font-size: 19px;
+    }
+
 }
 
 .login-form-field {
@@ -141,11 +411,13 @@
 
 .mat-mdc-form-field {
     width: 100%;
+
+    @media (max-width: 790px) {
+        width: 90%;
+    }
 }
 
 .mat-mdc-input-element {
-    color: var(--primary-color);
-    /* Cambiar el color del texto dentro de los campos de entrada */
     color: var(--text-color) !important;
     border-radius: 5px;
 }
@@ -162,7 +434,6 @@
 
 .login-button-accent {
     background-color: transparent;
-
     color: var(--text-color) !important;
 }
 
@@ -173,226 +444,20 @@
     margin-bottom: 20px;
 
     .mat-mdc-slide-toggle-bar {
-        background-color: var(--primary-color) !important; // Fondo del switch en amarillo
+        background-color: var(--primary-color) !important;
     }
 
     .mat-mdc-slide-toggle-thumb {
-        background-color: var(--text-color) !important; // Color del pulgar del switch en blanco
+        background-color: var(--text-color) !important;
     }
 
     .mdc-label {
         margin-left: 10px;
-        color: var(--text-color);
-
+        color: var(--text-color) !important;
     }
 }
 
-//110%
-@media (max-width: 1250px) {
-    .login-logo-container {
-        left: -20px;
-    }
-
-    .login-card {
-        margin-bottom: 15px;
-        margin-top: -20px;
-        height: 90%;
-    }
-
-}
-
-//125%
-@media (max-width: 1095px) {
-
-    .login-card {
-        margin-bottom: 15px;
-        margin-top: -50px;
-        height: 90%;
-    }
-
-    .login-switch {
-        margin-left: 28px;
-    }
-
-    .mat-mdc-form-field {
-        width: 85%;
-    }
-
-    .login-side-text {}
-
-    .login-logo-container {
-        left: -20px;
-    }
-
-    .login-side-text-guatire {
-        font-size: 70px !important;
-    }
-
-    .login-side-text-sport {
-        font-size: 70px;
-
-    }
-
-}
-
-
-//150%
-@media (max-width: 920px) {
-
-    .login-card {
-        margin-bottom: 50px;
-        max-width: 340px;
-        padding: 10px;
-        // margin-top: -100px;
-    }
-
-    .login-card-container {
-        margin-top: 46px;
-    }
-
-    .login-title {
-        font-size: 18px;
-        padding: 15px;
-    }
-
-    .mat-mdc-form-field {
-        width: 85%;
-    }
-
-    .login-side-text {
-        margin-top: -100px;
-    }
-
-    .login-logo-container {
-        left: -20px;
-    }
-
-    .login-side-text-guatire {
-        font-size: 55px !important;
-    }
-
-    .login-side-text-sport {
-        font-size: 55px;
-
-    }
-}
-
-//175%
-@media (max-width: 790px) {
-
-
-    .login-card {
-        .login-title {
-            font-size: 18px; // Tamaño de letra más pequeño para el título
-        }
-
-        /*  .mat-mdc-input-element {
-          font-size: 8px;  // Tamaño de letra más pequeño para los campos de entrada
-        }*/
-
-        .mdc-label {
-            font-size: 10px; // Tamaño de letra más pequeño para el label del switch
-        }
-
-        /*  .mdc-floating-label {
-          font-size: 8px !important;  // Tamaño de letra más pequeño para los labels dentro de mat-form-field
-        }*/
-
-        button {
-            font-size: 10px; // Tamaño de letra más pequeño para los botones
-        }
-
-        ::ng-deep .mat-mdc-form-field .mat-mdc-input-element {
-            font-size: 8px !important; // Tamaño de letra para los campos de entrada
-        }
-
-        ::ng-deep .mat-mdc-form-field .mdc-floating-label {
-            font-size: 8px !important; // Tamaño de letra para los labels de entrada
-        }
-    }
-
-
-    .login-container {
-        height: 100vh;
-    }
-
-    .login-card-container {
-        margin-top: 30px;
-        height: 100vh;
-    }
-
-    .login-title {
-        font-size: 18px;
-        padding: 15px;
-    }
-
-    .mat-mdc-form-field {
-        width: 85%;
-    }
-
-    .login-side-text {
-        display: none;
-    }
-
-    .login-logo-container {
-        left: -20px;
-    }
-
-    .login-logo-container {
-        top: 20px;
-        /* Centra verticalmente */
-        /* Centra horizontalmente */
-        transform: translate(30%, 0%);
-        /* Ajusta la posición */
-
-        flex-direction: column;
-        /* Muestra texto debajo del logo */
-        align-items: center;
-        /* Centra el contenido */
-    }
-
-    .login-logo-text {
-        margin-left: 0;
-        /* Resetea el margen */
-        text-align: center;
-        /* Centra el texto */
-        margin-top: -55px;
-    }
-
-    .login-side-text-guatire,
-    .login-side-text-sport {
-        display: none;
-    }
-}
-
-//200%
-@media (max-width: 700px) {}
-
-//250%
-@media (max-width: 640px) {
-    .login-logo-container {
-        top: 20px;
-        /* Centra verticalmente */
-        left: 50%;
-        /* Centra horizontalmente */
-        transform: translate(-50%, -50%);
-        /* Ajusta la posición */
-
-        flex-direction: column;
-        /* Muestra texto debajo del logo */
-        align-items: center;
-        /* Centra el contenido */
-    }
-
-    .login-logo-text {
-        margin-left: 0;
-        /* Resetea el margen */
-        text-align: center;
-        /* Centra el texto */
-    }
-
-    .login-side-text-guatire,
-    .login-side-text-sport {
-        display: none;
-    }
+.login-form-field mat-error {
+    font-size: 14px !important;
+    margin-left: -20px;
 }
