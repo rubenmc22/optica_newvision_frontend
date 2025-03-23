@@ -57,34 +57,6 @@
             </form>
           </div>
         </li>
-
-        <!-- Notifications Dropdown Menu -->
-        <li class="nav-item dropdown">
-          <a class="nav-link" data-toggle="dropdown" href="#">
-            <i class="far fa-bell"></i>
-            <span class="badge badge-warning navbar-badge">15</span>
-          </a>
-          <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-            <span class="dropdown-item dropdown-header">15 Notifications</span>
-            <div class="dropdown-divider"></div>
-            <a href="#" class="dropdown-item">
-              <i class="fas fa-envelope mr-2"></i> 4 new messages
-              <span class="float-right text-muted text-sm">3 mins</span>
-            </a>
-            <div class="dropdown-divider"></div>
-            <a href="#" class="dropdown-item dropdown-footer">See All Notifications</a>
-          </div>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" data-widget="fullscreen" href="#" role="button">
-            <i class="fas fa-expand-arrows-alt"></i>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" data-widget="control-sidebar" data-slide="true" href="#" role="button">
-            <i class="fas fa-th-large"></i>
-          </a>
-        </li>
       </ul>
     </nav>
     <!-- /.navbar -->
@@ -92,10 +64,10 @@
     <!-- Main Sidebar Container -->
     <aside class="main-sidebar main-sidebar-custom sidebar-dark-primary elevation-4">
       <!-- Brand Logo -->
-      <a href="../../index3.html" class="brand-link">
+      <a href="#" class="brand-link">
         <img src="./../../assets/apolloLogo.png" alt="Apollo Group Logo" class="brand-image img-circle elevation-3"
           style="opacity: .8">
-        <span class="brand-text font-weight-bold">Apollo Group</span> <!-- Negrita para destacar -->
+        <span class="brand-text font-weight-bold">Apollo Group</span>
       </a>
 
       <!-- Sidebar -->
@@ -106,154 +78,89 @@
             <img src="./../../assets/default-photo.png" class="img-circle elevation-2" alt="User Image">
           </div>
           <div class="info">
-            <a href="#" class="d-block text-warning">Admin</a> <!-- Clase 'text-warning' para amarillo -->
+            <a href="#" class="d-block text-warning">Rol: {{ userRole }}</a>
           </div>
         </div>
 
         <!-- Sidebar Menu -->
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-accordion="false">
-            <!-- Dashboard -->
-            <li class="nav-item">
-              <a [routerLink]="'/dashboard'" class="nav-link">
-                <i class="nav-icon fas fa-tachometer-alt"></i>
-                <p>
-                  Dashboard
-                </p>
+            <li *ngFor="let menu of filteredMenu" class="nav-item">
+              <!-- Menú sin submenú -->
+              <a *ngIf="!menu.submenu" [routerLink]="menu.routerLink" class="nav-link"
+                [matTooltip]="menu.underConstruction ? 'Módulo en desarrollo 🚧' : null" matTooltipPosition="right"
+                [matTooltipDisabled]="!menu.underConstruction" (click)="onMenuClick($event, menu)">
+                <i *ngIf="menu.icon" [class]="menu.icon"></i>
+                <p>{{ menu.label }}</p>
               </a>
-            </li>
-            <!-- Deportes -->
-            <li class="nav-item">
-              <a href="#" class="nav-link" (click)="toggleSubmenu($event)">
-                <i class="nav-icon fas fa-football-ball"></i>
+
+              <!-- Menú con submenú -->
+              <a *ngIf="menu.submenu && !menu.underConstruction" href="#" class="nav-link"
+                (click)="toggleSubmenu($event)">
+                <i [class]="menu.icon"></i>
                 <p>
-                  Deportes
+                  {{ menu.label }}
                   <i class="right fas fa-angle-left"></i>
                 </p>
               </a>
-              <ul class="nav nav-treeview">
-                <li class="nav-item">
-                  <a href="#" class="nav-link">
+
+              <!-- Menú con submenú en desarrollo -->
+              <span *ngIf="menu.submenu && menu.underConstruction" class="nav-link"
+                [matTooltip]="'Módulo en desarrollo 🚧'" matTooltipPosition="right">
+                <i [class]="menu.icon"></i>
+                <p>{{ menu.label }}</p>
+              </span>
+
+              <!-- Submenú (solo se muestra si no está en desarrollo) -->
+              <ul *ngIf="menu.submenu && !menu.underConstruction" class="nav nav-treeview">
+                <li *ngFor="let sub of menu.submenu" class="nav-item">
+                  <a [routerLink]="sub.routerLink" class="nav-link"
+                    [matTooltip]="sub.underConstruction ? 'Módulo en desarrollo 🚧' : null" matTooltipPosition="right"
+                    [matTooltipDisabled]="!sub.underConstruction" (click)="onMenuClick($event, sub)">
                     <i class="far fa-circle nav-icon"></i>
-                    <p>Voleibol</p>
+                    <p>{{ sub.label }}</p>
                   </a>
                 </li>
-                <li class="nav-item">
-                  <a href="#" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Beisbol</p>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a href="#" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Futbol</p>
-                  </a>
-                </li>
-              </ul>
-            </li>
-            <!-- Atletas -->
-            <li class="nav-item">
-              <a href="#" class="nav-link" (click)="toggleSubmenu($event)">
-                <i class="nav-icon fas fa-football-ball"></i>
-                <p>
-                  Atletas
-                  <i class="right fas fa-angle-left"></i>
-                </p>
-              </a>
-              <ul class="nav nav-treeview">
-                <li class="nav-item">
-                  <a  [routerLink]="'/crear-atletas'" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Agregar Atletas</p>
-                  </a>
-                </li>
-                <li class="nav-item">
-                  <a [routerLink]="'/ver-atletas'" class="nav-link">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>Ver Atletas</p>
-                  </a>
-                </li>
-              </ul>
-            </li>
-            <li class="nav-item"> <a href="#" class="nav-link" (click)="toggleSubmenu($event)"> <i
-                  class="nav-icon fas fa-tachometer-alt"></i>
-                <p> Mi Perfil <i class="right fas fa-angle-left"></i> </p>
-              </a>
-              <ul class="nav nav-treeview" style="display: none;">
-                <li class="nav-item"> <a [routerLink]="'/my-account'" class="nav-link">Gestionar mi Cuenta</a> </li>
-                <li class="nav-item"> <a [routerLink]="'/ficha-tecnica'" class="nav-link">Ficha Técnica</a> </li>
-                <li class="nav-item"> <a href="#" class="nav-link">Mis estadisticas / habilidades</a> </li>
               </ul>
             </li>
           </ul>
+
+
         </nav>
       </div>
-
 
       <div class="sidebar-custom">
         <a href="#" class="btn btn-secondary hide-on-collapse pos-right"
           style="background-color: var(--primary-color); color: #000000;">Cerrar sesión</a>
       </div>
-      <!-- <a href="#" class="btn btn-link"><i class="fas fa-cogs"></i></a> -->
     </aside>
-    <!-- Content Wrapper. Contains page content 
-    <div class="content-wrapper">
-    Content Header (Page header) 
-      <section class="content-header">
-        <div class="container-fluid">
-          <div class="row mb-2">
-            <div class="col-sm-6">
-              <h1>Fixed Layout</h1>
-            </div>
-            <div class="col-sm-6">
-              <ol class="breadcrumb float-sm-right">
-                <li class="breadcrumb-item"><a href="#">Home</a></li>
-                <li class="breadcrumb-item"><a href="#">Layout</a></li>
-                <li class="breadcrumb-item active">Fixed Layout</li>
-              </ol>
-            </div>
-          </div>
-        </div> /.container-fluid 
-      </section> -->
 
-    <!-- Main content -->
+    <!-- Content Wrapper -->
     <section class="content-wrapper">
-
       <div class="container-fluid">
         <router-outlet></router-outlet>
       </div>
     </section>
     <!-- /.content -->
+
+    <footer class="main-footer">
+      <div class="float-right d-none d-sm-block">
+        <b>Versión</b> 1.0
+      </div>
+      <strong>Copyright &copy; 2025 | Apollo Group - Academia Deportiva.</strong> All rights reserved.
+    </footer>
+
+    <!-- Control Sidebar -->
+    <aside class="control-sidebar control-sidebar-dark"></aside>
+    <!-- /.control-sidebar -->
   </div>
-  <!-- /.content-wrapper -->
-
-  <!-- Content Wrapper. -->
-  <footer class="main-footer">
-    <div class="float-right d-none d-sm-block">
-      <b>Versión</b> 1.0
-    </div>
-    <strong>Copyright &copy; 2025 | Apollo Group - Academia Deportiva. </strong> All rights reserved.
-  </footer>
-
-  <!-- Control Sidebar -->
-  <aside class="control-sidebar control-sidebar-dark">
-    <!-- Control sidebar content goes here -->
-  </aside>
-  <!-- /.control-sidebar -->
-
   <!-- ./wrapper -->
 
-  <!-- jQuery -->
+  <!-- Scripts -->
   <script src="../../assets/adminlte/plugins/jquery/jquery.min.js"></script>
-  <!-- Bootstrap 4 -->
   <script src="../../assets/adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-  <!-- overlayScrollbars -->
   <script src="../../assets/adminlte/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
-  <!-- AdminLTE App -->
   <script src="../../assets/adminlte/dist/js/adminlte.min.js"></script>
-  <!-- AdminLTE for demo purposes -->
-  <script src="../../assets/adminlte/dist/js/demo.js"></script>
 </body>
 
 </html>
