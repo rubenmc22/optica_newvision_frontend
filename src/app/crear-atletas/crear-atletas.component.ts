@@ -39,16 +39,7 @@ export class CrearAtletasComponent implements OnInit {
         '',
         [Validators.required] // Género obligatorio (Hombre o Mujer)
       ],
-      password: [
-        '',
-        [
-          Validators.required,
-          Validators.pattern('^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*?&]{8,}$') // Contraseña con letras y números, símbolos opcionales
-        ]
-      ],
-      confirmPassword: ['', Validators.required], // Confirmación de contraseña
-    }, { validator: this.passwordMatchValidator });
-
+    });
   }
 
   ngOnInit() {
@@ -56,18 +47,10 @@ export class CrearAtletasComponent implements OnInit {
     console.log('Formulario inicializado:', this.crearAtletaForm.value);
   }
 
-  // Valida si las contraseñas coinciden
-  passwordMatchValidator(form: FormGroup): null | { passwordsMismatch: true } {
-    const password = form.get('password')?.value || '';
-    const confirmPassword = form.get('confirmPassword')?.value || '';
-    return password === confirmPassword ? null : { passwordsMismatch: true };
-  }
-
   // Verifica si un campo tiene errores o está vacío
   isInvalidField(fieldName: string): boolean {
     return this.generalFunctions.isInvalidField(this.crearAtletaForm, fieldName);
   }
-
 
   // Envía el formulario al servidor o lo procesa
   onSubmit() {

@@ -167,29 +167,39 @@ export class UserRegisterComponent implements OnInit {
   // Enviar el formulario
   onSubmit() {
     if (this.registerForm.valid) {
-      // Clona el valor del formulario para no modificar el original
       const formData = { ...this.registerForm.value };
+      const isMinor = formData.isMinor;
 
-      // Si es menor de edad (isMinor = true), limpia los campos del atleta
-      if (formData.isMinor) {
+      // Convertir género a los valores esperados por el backend
+      if (formData.genero === 'Mujer') {
+        formData.genero = 'F';
+      } else if (formData.genero === 'Hombre') {
+        formData.genero = 'M';
+      }
+
+      // Determinar la URL del endpoint según el tipo de usuario
+      const endpointUrl = isMinor
+        ? "http://localhost:3200/api/auth/register-representative"
+        : "http://localhost:3200/api/auth/register-athlete";
+
+      // Ajustar el objeto formData antes del envío
+      if (isMinor) {
         formData.athleteName = '';
         formData.athleteId = '';
         formData.athletePhone = '';
         formData.athleteEmail = '';
         formData.athleteDob = '';
         formData.genero = '';
-      }
-      // Si es mayor de edad (isMinor = false), limpia los campos del representante
-      else {
+      } else {
         formData.representativeName = '';
         formData.representativeId = '';
         formData.representativePhone = '';
         formData.representativeEmail = '';
       }
 
+     
       console.log('Datos del formulario antes del envío:', JSON.stringify(formData));
-      const endpointUrl = "http://tu-backend-endpoint.com/register";
-      return;
+
       fetch(endpointUrl, {
         method: 'POST',
         headers: {
@@ -199,28 +209,37 @@ export class UserRegisterComponent implements OnInit {
       })
         .then(response => {
           if (!response.ok) {
-            throw new Error(`Error en la solicitud: ${response.statusText}`);
+            return response.json().then(err => {
+              throw new Error(err.message || `Error en la solicitud: ${response.statusText}`);
+            });
           }
           return response.json();
         })
         .then(data => {
           console.log('Respuesta del servidor:', data);
-          // Mostrar alerta de éxito y redirigir al login
           this.swalService.showSuccess('¡Registro exitoso!', 'El registro se ha completado correctamente.')
             .then(() => {
-              this.router.navigate(['/login']); // Redirigir al login
+              this.router.navigate(['/login']);
             });
-          this.registerForm.reset(); // Reiniciar el formulario
+          this.registerForm.reset();
         })
         .catch(error => {
           console.error('Hubo un problema con la solicitud:', error);
-          // Mostrar alerta de error
-          this.swalService.showError('Error en el registro', 'Hubo un problema al registrar. Por favor, inténtalo nuevamente.');
+          this.swalService.showError(
+            'Error en el registro',
+            error.message || 'Hubo un problema al registrar. Por favor, inténtalo nuevamente.'
+          );
         });
     } else {
       console.error('Formulario inválido');
-      // Mostrar alerta de formulario inválido
-      this.swalService.showWarning('Formulario inválido', 'Por favor, completa todos los campos correctamente antes de enviar.');
+      this.swalService.showWarning(
+        'Formulario inválido',
+        'Por favor, completa todos los campos obligatorios correctamente.'
+      );
+      // Marcar todos los campos como touched para mostrar errores
+      Object.values(this.registerForm.controls).forEach(control => {
+        control.markAsTouched();
+      });
     }
   }
 

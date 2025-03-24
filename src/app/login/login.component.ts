@@ -43,7 +43,7 @@ export class LoginComponent {
       const formData = this.loginForm.value; // Obtiene los valores del formulario
 
       console.log('Datos del formulario antes del envío:', JSON.stringify(formData));
-      const endpointUrl = "http://tu-backend-endpoint.com/login"; // URL del endpoint de login
+      const endpointUrl = "http://localhost:3200/api/auth/login"; // URL del endpoint de login
 
       fetch(endpointUrl, {
         method: 'POST',

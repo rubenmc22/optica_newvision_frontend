@@ -9,7 +9,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 })
 export class SidebarComponent implements OnInit {
 
-  @Input() userRole: string = 'atleta'; // Recibe el rol del usuario dinámicamente
+  @Input() userRole: string = 'admin'; // Recibe el rol del usuario dinámicamente
 
   // Definición dinámica de los menús y submenús según el rol
   menuItems = [
@@ -36,7 +36,7 @@ export class SidebarComponent implements OnInit {
       submenu: [
         { label: 'Agregar Atletas', routerLink: '/crear-atletas', roles: ['admin', 'representante'] },
         { label: 'Ver Atletas', routerLink: '/ver-atletas', roles: ['admin'] },
-        { label: 'Ficha Técnica', routerLink: '', roles: ['admin', 'representante'], underConstruction: true }
+        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['admin', 'representante'], underConstruction: false }
       ],
       roles: ['admin', 'representante']
     },
@@ -45,7 +45,7 @@ export class SidebarComponent implements OnInit {
       icon: 'fas fa-user',
       submenu: [
         { label: 'Gestionar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'representante', 'atleta'] },
-        { label: 'Ficha Técnica', routerLink: '', roles: ['atleta'], underConstruction: true },
+        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['atleta'], underConstruction: false },
         { label: 'Mis estadísticas / habilidades', routerLink: '/estadisticas', roles: ['admin', 'representante', 'atleta'] }
       ],
       roles: ['admin', 'representante', 'atleta']
@@ -76,9 +76,9 @@ export class SidebarComponent implements OnInit {
           if (!fichaTecnicaExists) {
             menu.submenu.push({
               label: 'Ficha Técnica',
-              routerLink: '',
+              routerLink: '/ficha-tecnica',
               roles: ['admin', 'representante'],
-              underConstruction: true
+              underConstruction: false
             });
           }
         }
