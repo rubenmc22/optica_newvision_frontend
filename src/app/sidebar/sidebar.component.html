@@ -130,9 +130,10 @@
       </div>
 
       <div class="sidebar-custom">
-        <a href="#" class="btn btn-secondary hide-on-collapse pos-right"
+        <a data-bs-toggle="modal" data-bs-target="#logoutModal" class="btn btn-secondary hide-on-collapse pos-right"
           style="background-color: var(--primary-color); color: #000000;">Cerrar sesión</a>
       </div>
+
     </aside>
 
     <!-- Content Wrapper -->
@@ -161,6 +162,31 @@
   <script src="../../assets/adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script src="../../assets/adminlte/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
   <script src="../../assets/adminlte/dist/js/adminlte.min.js"></script>
+
+  <!-- Modal para Cierre de Sesión -->
+  <!-- Modal para Cierre de Sesión -->
+  <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"> <!-- Clase para centrar el modal verticalmente -->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="logoutModalLabel">Cerrar Sesión</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center"> <!-- Centrado horizontalmente -->
+          <p style="font-size: 18px; margin: 0; line-height: 1.5;">
+            ¿Estás seguro de que deseas cerrar la sesión?
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-success" (click)="confirmLogout()" data-bs-dismiss="modal">Cerrar
+            Sesión</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
 </body>
 
 </html>

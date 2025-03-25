@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import * as bootstrap from 'bootstrap';
-import { SwalService } from '../services/swal/swal.service'; // Importa el servicio de SweetAlert2
-import { GeneralFunctionsService } from '../services/general-functions/general-functions.service';
+import { SwalService } from '../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
+import { GeneralFunctionsService } from '../core/services/general-functions/general-functions.service';
 import { Router } from '@angular/router'; // Importa el Router para la navegación
 
 @Component({

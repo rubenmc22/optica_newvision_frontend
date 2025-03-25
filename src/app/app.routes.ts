@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, inject } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { UserRegisterComponent } from './user-register/user-register.component';
 import { LoginComponent } from './login/login.component';
@@ -9,24 +9,68 @@ import { PostloginTemplateComponent } from './postlogin-template/postlogin-templ
 import { FichaTecnicaComponent } from './ficha-tecnica/ficha-tecnica.component';
 import { VerAtletasComponent } from './ver-atletas/ver-atletas.component';
 import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
+import { authGuard } from './core/services/auth/auth.guard';
+import { AuthService } from './core/services/auth/auth.service';
 
-const appRoutes: Routes = [  // Cambiamos el nombre a appRoutes
-    { path: '', component: LoginComponent },
-    { path: 'register', component: UserRegisterComponent },
-    { path: 'forgot-password', component: ForgotPasswordComponent },
-    {
-        path: '',
-        component: PostloginTemplateComponent,
-        children: [
-            { path: 'dashboard', component: DashboardComponent },
-            { path: 'my-account', component: MyAccountComponent },
-            { path: 'ficha-tecnica', component: FichaTecnicaComponent }, 
-            { path: 'ver-atletas', component: VerAtletasComponent }, 
-            { path: 'crear-atletas', component: CrearAtletasComponent }, // Nueva ruta
-        ]
-    },
-    { path: '**', redirectTo: '' }
+// Función para limpiar sesión al acceder a rutas públicas
+const clearAuthSession = () => {
+  const authService = inject(AuthService);
+  authService.clearAuth();
+  return true;
+};
+
+export const appRoutes: Routes = [
+  // Rutas públicas (con limpieza de sesión)
+  {
+    path: 'login',
+    component: LoginComponent,
+    canActivate: [clearAuthSession],
+    title: 'Inicio de sesión'
+  },
+  {
+    path: 'register',
+    component: UserRegisterComponent,
+    canActivate: [clearAuthSession],
+    title: 'Registro de usuario'
+  },
+  {
+    path: 'forgot-password',
+    component: ForgotPasswordComponent,
+    canActivate: [clearAuthSession],
+    title: 'Recuperar contraseña'
+  },
+
+  // Redirección de ruta raíz
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+
+  // Área protegida
+  {
+    path: '',
+    component: PostloginTemplateComponent,
+    canActivate: [authGuard], // Protección global para rutas hijas
+    children: [
+      { path: 'dashboard', component: DashboardComponent, title: 'Dashboard' },
+      { path: 'my-account', component: MyAccountComponent, title: 'Mi cuenta' },
+      { path: 'ficha-tecnica', component: FichaTecnicaComponent, title: 'Ficha técnica' },
+      { path: 'ver-atletas', component: VerAtletasComponent, title: 'Ver atletas' },
+      { path: 'crear-atletas', component: CrearAtletasComponent, title: 'Crear atleta' },
+
+      // Redirección dentro del área protegida
+      { path: '', redirectTo: 'dashboard', pathMatch: 'prefix' }
+    ]
+  },
+
+  // Ruta comodín (404)
+  { path: '**', redirectTo: 'login', pathMatch: 'full' }
 ];
 
-// Exportamos appRoutes para que pueda ser usado en otros módulos
-export { appRoutes };
+@NgModule({
+  imports: [RouterModule.forRoot(appRoutes, {
+    onSameUrlNavigation: 'reload',
+    bindToComponentInputs: true, // Habilita binding de parámetros a inputs
+    scrollPositionRestoration: 'top', // Mejor experiencia de navegación
+    anchorScrolling: 'enabled' // Permite scroll a anclas
+  })],
+  exports: [RouterModule]
+})
+export class AppRoutingModule { }

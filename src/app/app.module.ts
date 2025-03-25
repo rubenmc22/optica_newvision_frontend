@@ -1,14 +1,14 @@
 import { NgModule } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
-import { ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http'; // Cambio clave aquí
+
+// Componentes
 import { AppComponent } from './app.component';
 import { UserRegisterComponent } from './user-register/user-register.component';
 import { LoginComponent } from './login/login.component';
 import { ForgotPasswordComponent } from './forgot-password/forgot-password.component';
-import { MaterialModule } from './material.module';
-import { appRoutes } from './app.routes';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { PostloginTemplateComponent } from './postlogin-template/postlogin-template.component';
@@ -17,6 +17,10 @@ import { FichaTecnicaComponent } from './ficha-tecnica/ficha-tecnica.component';
 import { VerAtletasComponent } from './ver-atletas/ver-atletas.component';
 import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
 
+// Módulos y servicios
+import { MaterialModule } from './material.module';
+import { appRoutes } from './app.routes';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
 
 @NgModule({
   declarations: [
@@ -26,21 +30,28 @@ import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
     ForgotPasswordComponent,
     SidebarComponent,
     DashboardComponent,
+    PostloginTemplateComponent,
     MyAccountComponent,
     FichaTecnicaComponent,
     VerAtletasComponent,
-    CrearAtletasComponent,
-    PostloginTemplateComponent// Declara el componente de layout post-login
-    
+    CrearAtletasComponent
   ],
   imports: [
     BrowserModule,
     ReactiveFormsModule,
     MaterialModule,
     FormsModule,
-    RouterModule.forRoot(appRoutes)
+    RouterModule.forRoot(appRoutes, {
+      onSameUrlNavigation: 'reload',
+      bindToComponentInputs: true // Nueva feature de Angular 16+
+    })
   ],
-  providers: [],
+  providers: [
+    // Configuración moderna de HttpClient con interceptores funcionales
+    provideHttpClient(
+      withInterceptors([authInterceptor]) // Registro directo del interceptor
+    )
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

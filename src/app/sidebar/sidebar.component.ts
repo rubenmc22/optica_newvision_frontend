@@ -1,5 +1,10 @@
 import { Component, ElementRef, OnInit, Input, ChangeDetectorRef } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { AuthService } from '../core/services/auth/auth.service'; // Servicio de autenticación
+import { Router } from '@angular/router'; // Router para navegación
+import Swal from 'sweetalert2';
+import { SwalService } from '../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
+//import { SwalService } from '../services/swal/swal.service'; // Servicio de SweetAlert2
 
 @Component({
   selector: 'app-sidebar',
@@ -8,6 +13,13 @@ import { MatSnackBar } from '@angular/material/snack-bar';
   styleUrls: ['./sidebar.component.scss']
 })
 export class SidebarComponent implements OnInit {
+
+
+  constructor(
+    private swalService: SwalService, // Inyecta el servicio de SweetAlert2
+    private router: Router, // Inyecta el Router para la navegación
+    private authService: AuthService // Servicio de autenticación
+  ) { }
 
   @Input() userRole: string = 'admin'; // Recibe el rol del usuario dinámicamente
 
@@ -61,8 +73,6 @@ export class SidebarComponent implements OnInit {
     icon?: string;
     underConstruction?: boolean;
   }[] = [];
-
-  constructor(private el: ElementRef, private snackBar: MatSnackBar, private cdr: ChangeDetectorRef) { }
 
   ngOnInit(): void {
     console.log('Preparando menú dinámico.');
@@ -130,4 +140,13 @@ export class SidebarComponent implements OnInit {
       return;
     }
   }
+
+  confirmLogout(): void {
+    this.authService.logout(); // Llamar al método de logout
+    this.swalService.showSuccess('Sesión cerrada', 'Tu sesión se ha cerrado exitosamente.')
+      .then(() => {
+        this.router.navigate(['/login']); // Redirigir al login
+      });
+  }
+  
 }
