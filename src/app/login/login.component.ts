@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms'; // Importa FormBuilder y Validators
-import { Router } from '@angular/router'; // Importa el Router para la navegación
-import { SwalService } from '../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { SwalService } from '../core/services/swal/swal.service';
 import { GeneralFunctionsService } from '../core/services/general-functions/general-functions.service';
 import { AuthService } from '../core/services/auth/auth.service';
+import { finalize } from 'rxjs/operators';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-login',
@@ -11,37 +13,35 @@ import { AuthService } from '../core/services/auth/auth.service';
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
-export class LoginComponent {
-  loginForm: FormGroup; // Define el formulario reactivo
+export class LoginComponent implements OnInit {
+  loginForm: FormGroup;
+  loading = false; // Variable para controlar el estado de carga
 
   constructor(
-    private fb: FormBuilder, // Inyecta FormBuilder para crear el formulario
-    private router: Router, // Inyecta el Router para la navegación
-    private swalService: SwalService, // Inyecta el servicio de SweetAlert2
-    private generalFunctions: GeneralFunctionsService, // Inyecta el servicio
-    private authService: AuthService // Inyecta el servicio
+    private fb: FormBuilder,
+    private router: Router,
+    private swalService: SwalService,
+    private generalFunctions: GeneralFunctionsService,
+    private authService: AuthService
   ) {
-    // Inicializa el formulario con validaciones
     this.loginForm = this.fb.group({
       cedula: [
         '',
-        [Validators.required, Validators.pattern('^[0-9]{1,8}$')] // Cédula numérica, máximo 8 dígitos
+        [Validators.required, Validators.pattern('^[0-9]{1,8}$')]
       ],
       password: [
         '',
-        [Validators.required, Validators.minLength(6)] // Contraseña con mínimo 6 caracteres
+        [Validators.required, Validators.minLength(6)]
       ]
     });
   }
 
-  // Verifica si un campo tiene errores
-  isInvalidField(fieldName: string): boolean {
-    return this.generalFunctions.isInvalidField(this.loginForm, fieldName);
+  ngOnInit(): void {
+    this.authService.clearAuth();
   }
 
-  ngOnInit(): void {
-    // Limpiar autenticación siempre al cargar el login
-    this.authService.clearAuth();
+  isInvalidField(fieldName: string): boolean {
+    return this.generalFunctions.isInvalidField(this.loginForm, fieldName);
   }
 
   onSubmit() {
@@ -50,13 +50,24 @@ export class LoginComponent {
       return;
     }
 
-    this.authService.login(this.loginForm.value.cedula, this.loginForm.value.password)
-      .then(() => {
-        this.router.navigateByUrl('/dashboard', { replaceUrl: true });
-      })
-      .catch(error => {
-        this.swalService.showError('Error', error.message);
-      });
-  }
+    this.loading = true; // Activar estado de carga
 
+    this.authService.login(
+      this.loginForm.value.cedula,
+      this.loginForm.value.password
+    ).pipe(
+      finalize(() => this.loading = false) // Desactivar carga al finalizar
+    ).subscribe({
+      next: () => {
+        this.router.navigate(['/dashboard'], { replaceUrl: true });
+      },
+      error: (err: HttpErrorResponse) => {
+        const message = err.error?.message === 'Credenciales inválidas.'
+          ? 'Estimado usuario, las credenciales ingresadas son inválidas.'
+          : err.error?.message || 'Error durante el login';
+
+        this.swalService.showError('Error', message);
+      }
+    });
+  }
 }
