@@ -27,12 +27,12 @@
                         <!-- Widget de Imagen -->
                         <div class="text-center mb-4">
                             <div class="avatar-widget">
-                                <!-- Imagen del Avatar -->
-                                <img [src]="avatarUrl || 'assets/default-photo.png'" alt="Avatar del Usuario"
-                                    class="avatar-img">
+                                <!-- Usa avatarPreview cuando exista, sino user.avatarUrl o imagen por defecto -->
+                                <img [src]="avatarPreview || user.avatarUrl || 'assets/default-photo.png'"
+                                    alt="Avatar del Usuario" class="avatar-img">
 
-                                <!-- Overlay para Cargar Imagen (siempre presente, pero oculto cuando hay imagen) -->
-                                <div class="avatar-overlay" [ngClass]="{'show-on-hover': avatarUrl}">
+                                <div class="avatar-overlay"
+                                    [ngClass]="{'show-on-hover': avatarPreview || user.avatarUrl}">
                                     <label for="avatarUpload">
                                         <i class="fas fa-camera"></i>
                                     </label>
@@ -48,11 +48,10 @@
                                 <!-- Campo: Nombre Completo -->
                                 <div class="form-group col-md-6">
                                     <label for="nombreCompleto">Nombre Completo</label>
-                                    <input type="text" id="nombreCompleto" class="form-control"
-                                        [(ngModel)]="user.nombreCompleto" name="nombreCompleto"
-                                        pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" #nombreCompleto="ngModel" required
-                                        (input)="detectChanges()" />
-                                    <small *ngIf="nombreCompleto.invalid && nombreCompleto.touched" class="text-danger">
+                                    <input type="text" id="nombre" class="form-control" [(ngModel)]="user.nombre"
+                                        name="nombreCompleto" pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" #nombre="ngModel"
+                                        required (input)="detectChanges()" />
+                                    <small *ngIf="nombre.invalid && nombre.touched" class="text-danger">
                                         Solo se permiten letras y espacios.
                                     </small>
                                 </div>
@@ -106,10 +105,9 @@
                             <div class="form-row">
                                 <div class="form-group col-md-6">
                                     <label for="contrasena">Nueva Contraseña</label>
-                                    <input type="password" id="contrasena" class="form-control"
-                                        [(ngModel)]="user.contrasena" name="contrasena" (input)="validatePasswords()"
-                                        minlength="8" required />
-                                    <small *ngIf="!passwordValid && user.contrasena" class="text-danger">
+                                    <input type="password" id="contrasena" class="form-control" [(ngModel)]="contrasena"
+                                        name="contrasena" (input)="validatePasswords()" minlength="8" required />
+                                    <small *ngIf="!passwordValid && contrasena" class="text-danger">
                                         La contraseña debe tener al menos 8 caracteres.
                                     </small>
                                 </div>

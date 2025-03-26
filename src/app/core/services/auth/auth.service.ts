@@ -31,7 +31,7 @@ export class AuthService {
    */
   setStorageType(useSessionStorage: boolean): void {
     this.storage = useSessionStorage ? sessionStorage : localStorage;
-    console.log(`Almacenamiento configurado a: ${useSessionStorage ? 'sessionStorage' : 'localStorage'}`);
+   // console.log(`Almacenamiento configurado a: ${useSessionStorage ? 'sessionStorage' : 'localStorage'}`);
   }
 
   /**
@@ -40,7 +40,7 @@ export class AuthService {
   clearAuth(): void {
     this.storage.removeItem(this.TOKEN_KEY);
     this.storage.removeItem(this.USER_KEY);
-    console.log('Datos de autenticación limpiados');
+   // console.log('Datos de autenticación limpiados');
   }
 
   /**
@@ -95,9 +95,28 @@ export class AuthService {
     }
 
     this.storage.setItem(this.USER_KEY, JSON.stringify(userData));
-    console.log('Datos de usuario actualizados:', userData);
+    //console.log('Datos de usuario actualizados:', userData);
   }
 
+  // Para subir la imagen
+  uploadAvatar(formData: FormData): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/upload-avatar`, formData, {
+      // No establecer Content-Type, el navegador lo hará automáticamente
+    });
+  }
+
+  // Para enviar los datos del usuario
+  editUser(userData: any): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/account/edit-profile`, userData, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+
+  getFullUserData(): User | null {
+    return this.currentUserValue;
+  }
   /**
    * Proceso de login
    * @param cedula Número de cédula
@@ -158,7 +177,7 @@ export class AuthService {
 
     this.storage.setItem(this.TOKEN_KEY, token);
     this.storage.setItem(this.USER_KEY, JSON.stringify(user));
-    console.log('Autenticación establecida para usuario:', user.email);
+   // console.log('Autenticación establecida para usuario:', user.email);
   }
 
   /**

@@ -1,12 +1,31 @@
-import { Component } from '@angular/core';
-import * as bootstrap from 'bootstrap';
-import { SwalService } from '../core/services/swal/swal.service';
-import { GeneralFunctionsService } from '../core/services/general-functions/general-functions.service';
+import { Component, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { SwalService } from '../core/services/swal/swal.service';
 import { AuthService } from '../core/services/auth/auth.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs/operators';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import * as bootstrap from 'bootstrap';
+import { ChangeDetectorRef } from '@angular/core';
+
+interface UserProfile {
+  nombre: string;  // Mantenemos 'nombre' para coincidir con el template
+  correo: string;
+  fechaNacimiento: string;
+  telefono: string;
+  avatarUrl?: string | null;
+}
+
+interface ApiUser {
+  id?: string;       // Hacer opcional
+  cedula?: string;   // Hacer opcional
+  correo?: string;
+  nombre?: string;
+  telefono?: string;
+  email?: string;
+}
+
 
 @Component({
   selector: 'app-my-account',
@@ -14,54 +33,111 @@ import { MatSnackBar } from '@angular/material/snack-bar';
   templateUrl: './my-account.component.html',
   styleUrls: ['./my-account.component.scss']
 })
-export class MyAccountComponent {
-  // Datos originales del usuario
-  originalUser = {
-    nombreCompleto: 'Ruben',
-    fechaNacimiento: '10/11/1995',
-    cedula: '12345678',
-    correo: 'rubemm18@gmail.com',
-    telefono: '584123920817',
-    genero: 'Hombre',
-    avatarUrl: null as string | null
+export class MyAccountComponent implements OnInit {
+  user: UserProfile = {
+    nombre: '',
+    correo: '',
+    fechaNacimiento: '',
+    telefono: '',
+    avatarUrl: null
   };
 
-  // Datos actuales del usuario
-  user = { ...this.originalUser, contrasena: '' };
-  confirmarContrasena = '';
-  otpCode = '';
 
-  // Indicadores de validación
-  nombreValido = true;
-  correoValido = true;
-  telefonoValido = true;
-  passwordsMatch = false;
-  passwordValid = false;
-  formValid = false;
+  originalUser: UserProfile = { ...this.user };
+  activeTab: string = 'personalInfo';
   isFormEdited = false;
 
-  // Pestaña activa
-  activeTab: string = 'personalInfo';
+  // Password change
+  contrasena = '';
+  confirmarContrasena = '';
+  otpCode = '';
+  passwordValid = false;
+  passwordsMatch = false;
+  formValid = false;
 
-  // URL de la imagen del avatar
-  avatarUrl: string | null = null;
-
-  // Estados para el flujo OTP
+  // Loading states
   isSendingOtp = false;
   isVerifyingOtp = false;
   isChangingPassword = false;
-  otpVerified = false;
-  currentStep: 'sendOtp' | 'verifyOtp' | 'changePassword' = 'sendOtp';
+  isSavingProfile = false;
+
+  // Avatar
+  avatarPreview: string | ArrayBuffer | null = null;
+  selectedFile: File | null = null;
 
   constructor(
-    private swalService: SwalService,
-    private generalFunctions: GeneralFunctionsService,
+    private fb: FormBuilder,
     private router: Router,
+    private swalService: SwalService,
     private authService: AuthService,
     private snackBar: MatSnackBar,
-  ) { }
+    private cdRef: ChangeDetectorRef,
+  ) {
+    // Initialize with current session data
+    /* const currentUser = this.authService.getCurrentUser();
+     this.user = this.mapToUserProfile(currentUser);
+     this.originalUser = { ...this.user };*/
+    this.loadUserData();
+  }
 
-  // Métodos de navegación
+  ngOnInit(): void {
+    this.setupFieldChangeListeners();
+  }
+
+  /**============ EDITAR INFORMACION PERSONAL ============*/
+  private loadUserData(): void {
+    try {
+      const currentUser: ApiUser = this.authService.getCurrentUser() || {};
+
+      this.user = {
+        nombre: currentUser.nombre?.trim() || '',
+        correo: currentUser.correo?.trim() || currentUser.email?.trim() || '',
+        telefono: currentUser.telefono?.trim() || '',
+        fechaNacimiento: '', // Valor por defecto
+        avatarUrl: null
+      };
+
+      this.originalUser = { ...this.user };
+
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      this.user = this.getDefaultUserProfile();
+      this.originalUser = { ...this.user };
+    }
+  }
+
+
+  private getDefaultUserProfile(): UserProfile {
+    return {
+      nombre: '',
+      correo: '',
+      telefono: '',
+      fechaNacimiento: '',
+      avatarUrl: null
+    };
+  }
+
+
+  private setupFieldChangeListeners(): void {
+    setTimeout(() => {
+      const form = document.getElementById('editPersonalInfo');
+      if (form) {
+        const inputs = form.querySelectorAll('input, select');
+
+        inputs.forEach(input => {
+          input.addEventListener('input', () => {
+            this.detectChanges();
+            this.cdRef.detectChanges(); // Necesitarás import ChangeDetectorRef
+          });
+          input.addEventListener('change', () => {
+            this.detectChanges();
+            this.cdRef.detectChanges();
+          });
+        });
+      }
+    });
+  }
+
   switchTab(tab: string): void {
     this.activeTab = tab;
     if (tab === 'password') {
@@ -69,270 +145,229 @@ export class MyAccountComponent {
     }
   }
 
-  // Métodos de detección de cambios
   detectChanges(): void {
     this.isFormEdited =
-      this.user.nombreCompleto !== this.originalUser.nombreCompleto ||
+      this.user.nombre !== this.originalUser.nombre ||
       this.user.correo !== this.originalUser.correo ||
       this.user.fechaNacimiento !== this.originalUser.fechaNacimiento ||
       this.user.telefono !== this.originalUser.telefono ||
-      this.user.genero !== this.originalUser.genero ||
-      this.avatarUrl !== this.originalUser.avatarUrl;
-  }
-
-  // Métodos de validación
-  validateNombre(): void {
-    const regex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
-    this.nombreValido = regex.test(this.user.nombreCompleto.trim());
-  }
-
-  validateCorreo(): void {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    this.correoValido = regex.test(this.user.correo.trim());
-  }
-
-  validateTelefono(): void {
-    const regex = /^[0-9]{12}$/;
-    this.telefonoValido = regex.test(this.user.telefono.trim());
+      this.selectedFile !== null;
   }
 
   isPersonalInfoValid(): boolean {
-    this.validateNombre();
-    this.validateCorreo();
-    this.validateTelefono();
-    return this.nombreValido && this.correoValido && this.telefonoValido;
+    const isValid =
+      !!this.user.nombre &&
+      !!this.user.correo &&
+      !!this.user.telefono &&
+      /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(this.user.nombre) &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.user.correo) &&
+      /^[0-9]{10,12}$/.test(this.user.telefono); // Ajusté a 10-12 dígitos
+
+    // console.log('Validación:', isValid);
+    return isValid;
   }
 
-  validatePasswords(): void {
-    this.passwordValid =
-      typeof this.user.contrasena === 'string' &&
-      this.user.contrasena.length >= 8;
-    this.passwordsMatch =
-      this.user.contrasena === this.confirmarContrasena;
-    this.formValid = this.passwordValid && this.passwordsMatch;
-  }
-
-  // Métodos de reset
-  resetPasswordFields(): void {
-    this.user.contrasena = '';
-    this.confirmarContrasena = '';
-    this.passwordsMatch = false;
-    this.passwordValid = false;
-    this.formValid = false;
-    this.otpCode = '';
-    this.otpVerified = false;
-    this.currentStep = 'sendOtp';
-  }
-
-  // Métodos de UI
-  openModal(modalId: string): void {
-    const modalElement = document.getElementById(modalId);
-    if (modalElement) {
-      const modal = new bootstrap.Modal(modalElement);
-
-      // Evento que se dispara cuando el modal se muestra completamente
-      /*   modalElement.addEventListener('shown.bs.modal', () => {
-           if (modalId === 'otpModal') {
-             this.initiatePasswordChange();
-           }
-         });*/
-
-      modal.show();
-    }
-  }
-
-  // Métodos para manejo de archivos
-  onFileSelected(event: any): void {
-    const file = event.target.files[0];
-    if (file) {
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    
+    if (input.files && input.files[0]) {
+      this.selectedFile = input.files[0];
       const reader = new FileReader();
-      reader.onload = (e: any) => {
-        this.avatarUrl = e.target.result;
-        this.detectChanges();
+  
+      reader.onload = (e: ProgressEvent<FileReader>) => {
+        if (e.target?.result) {
+          this.avatarPreview = e.target.result as string;
+          this.detectChanges();
+          this.cdRef.detectChanges(); // Necesitas importar ChangeDetectorRef
+        }
       };
-      reader.readAsDataURL(file);
+  
+      reader.onerror = (error) => {
+        console.error('Error reading file:', error);
+        this.swalService.showError('Error', 'No se pudo cargar la imagen');
+      };
+  
+      reader.readAsDataURL(this.selectedFile);
     }
   }
 
-  // Métodos para información personal
-  savePersonalInfo(): void {
-    if (this.isPersonalInfoValid() && this.isFormEdited) {
-      fetch('https://api.example.com/personal-info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombreCompleto: this.user.nombreCompleto,
-          correo: this.user.correo,
-          telefono: this.user.telefono,
-          genero: this.user.genero,
-          fechaNacimiento: this.user.fechaNacimiento,
-          avatarUrl: this.avatarUrl
-        })
-      })
-        .then(response => response.json())
-        .then(data => {
-          console.log('Información personal guardada:', data);
-          this.swalService.showSuccess('¡Modificación de Datos!', 'Información personal guardada.')
-            .then(() => {
-              this.router.navigate(['/dashboard']);
-            });
-          this.originalUser = { ...this.user, avatarUrl: this.avatarUrl };
-          this.isFormEdited = false;
-        })
-        .catch(error => {
-          console.error('Error al guardar información personal:', error);
-          this.swalService.showError('¡Modificación de Datos!', 'Hubo un error al guardar la información.');
-        });
-    } else {
-      this.swalService.showWarning('Formulario inválido', 'Por favor, corrige los errores o realiza algún cambio antes de continuar.');
-    }
+
+savePersonalInfo(): void {
+  if (!this.isPersonalInfoValid()) {
+    return;
   }
 
-  // Método actualizado para enviar OTP
+  this.isSavingProfile = true;
+
+  // Verificación segura del archivo seleccionado
+  if (this.selectedFile instanceof File) {
+    this.uploadImage(this.selectedFile).then((imageUrl) => {
+      // Actualizar la URL del avatar antes de enviar los datos
+      this.user.avatarUrl = imageUrl;
+      this.sendUserData();
+    }).catch((error) => {
+      this.isSavingProfile = false;
+      this.swalService.showError('Error', 'No se pudo subir la imagen');
+      console.error('Error uploading image:', error);
+    });
+  } else {
+    // Si no hay imagen, enviar directamente los datos
+    this.sendUserData();
+  }
+}
+
+private uploadImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file, file.name);
+
+  return this.authService.uploadAvatar(formData).toPromise()
+    .then((response: any) => {
+      if (!response?.imageUrl) {
+        throw new Error('No image URL in response');
+      }
+      return response.imageUrl;
+    });
+}
+
+  private sendUserData(): void {
+    const userData = {
+      nombre: this.user.nombre,
+      correo: this.user.correo,
+      telefono: this.user.telefono,
+      fechaNacimiento: this.user.fechaNacimiento,
+      avatarUrl: this.user.avatarUrl // Incluir la URL de la imagen si existe
+    };
+
+    this.authService.editUser(userData).pipe(
+      finalize(() => this.isSavingProfile = false)
+    ).subscribe({
+      next: (response) => this.handleSuccess(response),
+      error: (error) => this.handleError(error)
+    });
+  }
+
+  private handleSuccess(response: any): void {
+    this.swalService.showSuccess('Éxito', 'Perfil actualizado correctamente')
+      .then(() => {
+        if (response.avatarUrl) {
+          this.user.avatarUrl = response.avatarUrl;
+          this.avatarPreview = response.avatarUrl;
+        }
+        this.originalUser = { ...this.user };
+        this.isFormEdited = false;
+        this.selectedFile = null;
+      });
+  }
+
+  private handleError(error: HttpErrorResponse): void {
+    const errorMsg = error.error?.message || 'Error al actualizar el perfil';
+    this.swalService.showError('Error', errorMsg);
+  }
+
+
+
+  /**============ CAMBIO DE CONTRASENA ============*/
+  validatePasswords(): boolean {
+    this.passwordValid = this.contrasena.length >= 8;
+    this.passwordsMatch = this.contrasena === this.confirmarContrasena;
+    this.formValid = this.passwordValid && this.passwordsMatch;
+    return this.formValid;
+  }
+
   initiatePasswordChange(): void {
-    this.validatePasswords();
-
-    if (!this.formValid) {
-      this.swalService.showWarning('Validación', 'Por favor complete correctamente los campos de contraseña');
-      return;
-    }
-
-    const userEmail = this.authService.getCurrentUser()?.email;
-    if (!userEmail) {
-      this.swalService.showError('Error', 'No se pudo obtener la información del usuario');
+    if (!this.validatePasswords()) {
       return;
     }
 
     this.isSendingOtp = true;
+    const userEmail = this.user.correo;
 
-    this.authService.sendPasswordChangeOtp(userEmail).subscribe({
-      next: (response: any) => {
-        this.isSendingOtp = false;
-        console.log('Respuesta del servidor:', response);
-
-        // Verificación más robusta de la respuesta
-        if (response && response.message === 'ok') {
-          //   this.swalService.showSuccess('Éxito', `Se ha enviado un código OTP a ${userEmail}`);
-          this.snackBar.open(`Estimado usuario, se ha enviado un código OTP a ${userEmail}`, 'Cerrar', {
-            duration: 5000
+    this.authService.sendPasswordChangeOtp(userEmail).pipe(
+      finalize(() => this.isSendingOtp = false)
+    ).subscribe({
+      next: (response) => {
+        if (response.message === 'ok') {
+          this.snackBar.open(`Se ha enviado un código OTP a ${userEmail}`, 'Cerrar', {
+            duration: 5000,
+            verticalPosition: 'top',
+            panelClass: ['success-snackbar']
           });
           this.openModal('otpModal');
-          this.currentStep = 'verifyOtp';
-        } else {
-          // Manejo de respuestas inesperadas del servidor
-          const errorMsg = 'La respuesta del servidor no fue la esperada';
-          this.swalService.showError('Error', errorMsg);
-          console.warn('Respuesta inesperada:', response);
         }
       },
       error: (error: HttpErrorResponse) => {
-        this.isSendingOtp = false;
-        console.error('Error en la petición:', error);
-
-        // Manejo detallado de errores HTTP
-        let errorMessage = 'No se pudo enviar el OTP. Intenta nuevamente.';
-
-        if (error.status === 0) {
-          errorMessage = 'Error de conexión. Verifica tu internet.';
-        } else if (error.status === 404) {
-          errorMessage = 'El servicio no está disponible.';
-        } else if (error.error?.message) {
-          errorMessage = error.error.message;
-        }
-
-        this.swalService.showError('Error', errorMessage);
+        const errorMsg = error.error?.message || 'No se pudo enviar el OTP';
+        this.swalService.showError('Error', errorMsg);
       }
     });
   }
 
   verifyOtp(): void {
     if (!this.otpCode || this.otpCode.length !== 6) {
-      this.swalService.showWarning('Validación', 'Por favor ingrese un código OTP válido de 6 dígitos');
+      this.swalService.showWarning('Validación', 'Ingrese un código OTP válido de 6 dígitos');
       return;
     }
 
     this.isVerifyingOtp = true;
 
-    this.authService.verifyPasswordChangeOtp(this.otpCode).subscribe({
-      next: (data) => {
-        this.isVerifyingOtp = false;
-        if (data && data.message === 'ok') {
-          this.otpVerified = true;
-          this.currentStep = 'changePassword';
-          //this.swalService.showSuccess('Éxito', 'Código OTP verificado correctamente');
+    this.authService.verifyPasswordChangeOtp(this.otpCode).pipe(
+      finalize(() => this.isVerifyingOtp = false)
+    ).subscribe({
+      next: (response) => {
+        if (response.message) {
           this.confirmPasswordChange();
         } else {
           this.swalService.showError('Error', 'Código OTP inválido');
         }
       },
       error: (error) => {
-        this.isVerifyingOtp = false;
-        this.swalService.showError('Error', 'Error al verificar el OTP');
-        console.error('Error verifying OTP:', error);
+        const errorMsg = error.error?.message || 'Error al verificar el OTP';
+        this.swalService.showError('Error', errorMsg);
       }
     });
   }
 
-  // En my-account.component.ts
   confirmPasswordChange(): void {
-    if (!this.otpVerified) {
-      this.swalService.showWarning('Validación', 'Debes verificar el OTP primero');
-      return;
-    }
-
-    const userEmail = this.authService.getCurrentUser()?.email;
-    if (!userEmail) {
-      this.swalService.showError('Error', 'No se pudo obtener el email del usuario');
-      return;
-    }
-
-    if (!this.user.contrasena || this.user.contrasena.length < 8) {
-      this.swalService.showWarning('Validación', 'La contraseña debe tener al menos 8 caracteres');
-      return;
-    }
-
-    if (this.user.contrasena !== this.confirmarContrasena) {
-      this.swalService.showWarning('Validación', 'Las contraseñas no coinciden');
-      return;
-    }
-
     this.isChangingPassword = true;
 
     this.authService.changePassword(
-      userEmail,
-      this.user.contrasena,
+      this.user.correo,
+      this.contrasena,
       this.otpCode
     ).pipe(
       finalize(() => this.isChangingPassword = false)
     ).subscribe({
-      next: (response: any) => {
-        if (response.message) {
-          // Usamos then() en lugar de await
-          this.swalService.showSuccess('Éxito', 'Contraseña cambiada correctamente')
-            .then(() => {
-              this.resetPasswordFields();
-              this.router.navigate(['/dashboard'], { replaceUrl: true });
-            });
-        } else {
-          this.swalService.showError('Error', 'Error al cambiar la contraseña');
-        }
+      next: () => {
+        this.swalService.showSuccess('Éxito', 'Contraseña cambiada correctamente')
+          .then(() => {
+            this.resetPasswordFields();
+            this.router.navigate(['/dashboard'], { replaceUrl: true });
+          });
       },
       error: (error: HttpErrorResponse) => {
-        console.error('Error cambiando contraseña:', error);
-
+        const errorMsg = error.error?.message || 'Error al cambiar la contraseña';
         if (error.status === 401) {
-          this.swalService.showError('Error', 'Tu sesión ha expirado')
-            .then(() => {
-              this.authService.logout();
-              this.router.navigate(['/login']);
-            });
-        } else {
-          const errorMsg = error.error?.message || 'Error al cambiar la contraseña';
-          this.swalService.showError('Error', errorMsg);
+          this.authService.logout();
+          this.router.navigate(['/login']);
         }
+        this.swalService.showError('Error', errorMsg);
       }
     });
   }
 
+  private resetPasswordFields(): void {
+    this.contrasena = '';
+    this.confirmarContrasena = '';
+    this.otpCode = '';
+    this.passwordValid = false;
+    this.passwordsMatch = false;
+    this.formValid = false;
+  }
 
+  openModal(modalId: string): void {
+    const modalElement = document.getElementById(modalId);
+    if (modalElement) {
+      new bootstrap.Modal(modalElement).show();
+    }
+  }
 }
