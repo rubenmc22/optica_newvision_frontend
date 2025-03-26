@@ -1,0 +1,41 @@
+@use '../../../../custom-theme.scss' as theme;
+
+/* swal.service.scss */
+.custom-popup-class {
+    background-color: var(--secondary-color);
+    border-radius: 10px;
+    padding: 20px;
+  
+    .custom-title-class {
+      color: var(--primary-color);
+      font-size: 24px;
+      font-weight: bold;
+    }
+  
+    .custom-content-class {
+      color: var(--text-color);
+      font-size: 16px;
+    }
+  
+    .custom-confirm-button-class {
+      background-color: var(--primary-color) !important;
+      border: none !important;
+      padding: 10px 20px !important;
+      color: var(--secondary-color);
+      border-radius: 5px;
+
+      &:hover {
+        background-color: #e6c200 !important; /* Color primario oscurecido manualmente */
+        color: #3a3a3a !important; /* Color secundario aclarado manualmente */
+        cursor: pointer; /* Cambia el cursor a una mano */
+      }
+    }
+  
+    .custom-cancel-button-class {
+      background-color: #f44336 !important;
+      border: none !important;
+      padding: 10px 20px !important;
+      color: white;
+      border-radius: 5px;
+    }
+  }
