@@ -1,40 +1,10 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, Input, ChangeDetectorRef } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { AuthService } from '../core/services/auth/auth.service';
-import { Router } from '@angular/router';
-import { SwalService } from '../core/services/swal/swal.service';
-
-interface ApiUser {
-  id?: string;
-  cedula?: string;
-  correo?: string;
-  nombre?: string;
-  telefono?: string;
-  email?: string;
-}
-
-interface Rol {
-  _id: string;
-  key: string;
-  name: string;
-}
-
-interface MenuItem {
-  label: string;
-  icon?: string;
-  routerLink?: string;
-  submenu?: SubMenuItem[];
-  roles: string[];
-  underConstruction?: boolean;
-  isOpen?: boolean;
-}
-
-interface SubMenuItem {
-  label: string;
-  routerLink: string;
-  roles: string[];
-  underConstruction?: boolean;
-}
+import { AuthService } from '../core/services/auth/auth.service'; // Servicio de autenticación
+import { Router } from '@angular/router'; // Router para navegación
+import Swal from 'sweetalert2';
+import { SwalService } from '../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
+//import { SwalService } from '../services/swal/swal.service'; // Servicio de SweetAlert2
 
 @Component({
   selector: 'app-sidebar',
@@ -42,21 +12,22 @@ interface SubMenuItem {
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss']
 })
-
 export class SidebarComponent implements OnInit {
+
   @Input() userRoleKey: string = '';
   @Input() userRoleName: string = '';
   @Input() userName: string = '';
-  filteredMenu: MenuItem[] = [];
 
   constructor(
-    private swalService: SwalService,
-    private router: Router,
-    private authService: AuthService,
-    private snackBar: MatSnackBar
+    private swalService: SwalService, // Inyecta el servicio de SweetAlert2
+    private router: Router, // Inyecta el Router para la navegación
+    private authService: AuthService // Servicio de autenticación
   ) { }
 
-  private menuItems: MenuItem[] = [
+  @Input() userRole: string = 'admin'; // Recibe el rol del usuario dinámicamente
+
+  // Definición dinámica de los menús y submenús según el rol
+  menuItems = [
     {
       label: 'Dashboard',
       icon: 'fas fa-tachometer-alt',
@@ -72,7 +43,7 @@ export class SidebarComponent implements OnInit {
         { label: 'Fútbol', routerLink: '/deportes/futbol', roles: ['admin', 'representante', 'atleta'] }
       ],
       roles: ['admin', 'representante', 'atleta'],
-      underConstruction: true
+      underConstruction: true // Marca el menú de Deportes como en desarrollo
     },
     {
       label: 'Atletas',
@@ -80,7 +51,7 @@ export class SidebarComponent implements OnInit {
       submenu: [
         { label: 'Agregar Atletas', routerLink: '/crear-atletas', roles: ['admin', 'representante'] },
         { label: 'Ver Atletas', routerLink: '/ver-atletas', roles: ['admin'] },
-        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['admin', 'representante'] }
+        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['admin', 'representante'], underConstruction: false }
       ],
       roles: ['admin', 'representante']
     },
@@ -89,15 +60,29 @@ export class SidebarComponent implements OnInit {
       icon: 'fas fa-user',
       submenu: [
         { label: 'Gestionar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'representante', 'atleta'] },
-        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['atleta'] },
+        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['atleta'], underConstruction: false },
         { label: 'Mis estadísticas / habilidades', routerLink: '/estadisticas', roles: ['admin', 'representante', 'atleta'] }
       ],
       roles: ['admin', 'representante', 'atleta']
     }
   ];
 
+  // Menú filtrado dinámicamente
+  filteredMenu: {
+    label: string;
+    routerLink?: string;
+    submenu?: { label: string; routerLink: string; roles: string[]; underConstruction?: boolean }[];
+    roles: string[];
+    icon?: string;
+    underConstruction?: boolean;
+  }[] = [];
+
   ngOnInit(): void {
+    console.log('Preparando menú dinámico.');
+
     this.initializeMenu();
+
+  
   }
 
   private initializeMenu(): void {
@@ -107,68 +92,63 @@ export class SidebarComponent implements OnInit {
     this.userRoleKey = currentRol?.key || '';
     this.userRoleName = currentRol?.name || '';
     this.userName = currentName?.nombre || '';
-
+    
     this.filteredMenu = this.menuItems
-      .filter(menu => this.hasPermission(menu.roles))
-      .map(menu => {
-        // Si el usuario no es atleta, mueve "Ficha Técnica" al menú de Atletas
-        if (menu.label === 'Atletas' && this.userRoleKey !== 'atleta' && menu.submenu) {
-          const fichaTecnicaExists = menu.submenu.some(sub => sub.label === 'Ficha Técnica');
-          if (!fichaTecnicaExists) {
-            menu.submenu.push({
-              label: 'Ficha Técnica',
-              routerLink: '/ficha-tecnica',
-              roles: ['admin', 'representante'],
-              underConstruction: false
-            });
-          }
+    .map(menu => {
+      // Si el usuario no es atleta, mueve "Ficha Técnica" al menú de Atletas
+      if (menu.label === 'Atletas' && this.userRole !== 'atleta' && menu.submenu) {
+        // Asegurar que no exista duplicación
+        const fichaTecnicaExists = menu.submenu.some(sub => sub.label === 'Ficha Técnica');
+        if (!fichaTecnicaExists) {
+          menu.submenu.push({
+            label: 'Ficha Técnica',
+            routerLink: '/ficha-tecnica',
+            roles: ['admin', 'representante'],
+            underConstruction: false
+          });
         }
+      }
 
-        return {
-          ...menu,
-          isOpen: false,
-          submenu: menu.submenu?.filter(sub => this.hasPermission(sub.roles))
-        };
-      })
-      .filter(menu => menu.roles.includes(this.userRoleKey) || (menu.submenu && menu.submenu.length > 0));
+      // Filtrar submenús visibles para el rol
+      if (menu.submenu) {
+        const filteredSubmenu = menu.submenu.filter(sub => sub.roles.includes(this.userRole));
+        return { ...menu, submenu: filteredSubmenu };
+      }
+
+      return menu;
+    })
+    .filter(menu => menu.roles.includes(this.userRole) || (menu.submenu && menu.submenu.length > 0)); // Filtrar menús
   }
 
-  toggleMenu(menu: MenuItem): void {
-    // Cierra otros menús abiertos primero
-    this.filteredMenu.forEach(m => {
-      if (m !== menu) m.isOpen = false;
-    });
 
-    // Alterna el estado del menú actual
-    menu.isOpen = !menu.isOpen;
-  }
+  toggleSubmenu(event: Event): void {
+    event.preventDefault();
 
-  handleMenuClick(event: Event, menuItem: MenuItem): void {
-    if (menuItem.underConstruction) {
-      event.preventDefault();
-      this.showUnderConstructionMessage(menuItem.label);
-      return;
+    const target = event.currentTarget as HTMLElement;
+    const submenu = target.nextElementSibling as HTMLElement | null;
+    const icon = target.querySelector('.fas.fa-angle-left') as HTMLElement | null;
+
+    if (submenu) {
+      const isOpen = submenu.classList.contains('menu-open');
+
+      if (isOpen) {
+        submenu.classList.remove('menu-open');
+        submenu.style.display = 'none';
+        if (icon) {
+          icon.classList.remove('fa-rotate-custom-open');
+          icon.classList.add('fa-rotate-custom');
+        }
+      } else {
+        submenu.classList.add('menu-open');
+        submenu.style.display = 'block';
+        if (icon) {
+          icon.classList.remove('fa-rotate-custom');
+          icon.classList.add('fa-rotate-custom-open');
+        }
+      }
     }
-
-    if (menuItem.submenu) {
-      event.preventDefault();
-      this.toggleMenu(menuItem);
-      return;
-    }
-
-    // Si no tiene submenú, el routerLink manejará la navegación
   }
 
-  private hasPermission(requiredRoles: string[]): boolean {
-    return requiredRoles.includes(this.userRoleKey);
-  }
-
-  private showUnderConstructionMessage(menuLabel: string): void {
-    this.snackBar.open(`El módulo ${menuLabel} está en desarrollo`, 'Cerrar', {
-      duration: 3000,
-      panelClass: ['info-snackbar']
-    });
-  }
   onMenuClick(event: Event, menuItem: any): void {
     if (menuItem.underConstruction || !menuItem.routerLink) {
       event.preventDefault(); // Evita la navegación
@@ -176,6 +156,7 @@ export class SidebarComponent implements OnInit {
       return;
     }
   }
+
   confirmLogout(): void {
     this.authService.logout(); // Llamar al método de logout
     this.swalService.showSuccess('Sesión cerrada', 'Tu sesión se ha cerrado exitosamente.')
@@ -183,4 +164,5 @@ export class SidebarComponent implements OnInit {
         this.router.navigate(['/login']); // Redirigir al login
       });
   }
+
 }

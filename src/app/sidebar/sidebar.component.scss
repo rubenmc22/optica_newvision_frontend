@@ -1,73 +1,90 @@
-@use '../../custom-theme.scss' as theme;
-
-/* ======================== ROTATION ANIMATION ======================== */
-.nav-item.has-treeview .nav-link .right.fas.fa-angle-left {
+.fa-rotate-custom {
   transform: rotate(0deg);
+  /* Posición inicial: flecha apuntando a la izquierda */
+  transition: transform 0.3s ease;
+  /* Movimiento suave */
+}
+
+.fa-rotate-custom-open {
+  transform: rotate(-90deg);
+  /* Flecha girada hacia abajo pasando por el lado izquierdo */
   transition: transform 0.3s ease;
 }
 
-.nav-item.has-treeview.menu-open .nav-link .right.fas.fa-angle-left {
-  transform: rotate(-90deg);
-}
 
-/* ======================== CONTENT WRAPPER ======================== */
 .content-wrapper {
   background-image: url('/assets/sports-background.jpeg');
+  /* Ajusta la ruta a tu imagen */
   background-size: cover;
+  /* Asegúrate de que cubra toda el área */
   background-repeat: no-repeat;
+  /* Evita que se repita */
   background-attachment: fixed;
+  /* Mantén la imagen fija al hacer scroll */
   background-position: center;
+  /* Centra la imagen */
   min-height: 100vh;
+  /* Asegura que siempre ocupe al menos el alto de la pantalla */
   padding: 1rem;
+  /* Mantén un margen interno cómodo */
 }
 
-/* ======================== SIDEBAR ======================== */
+/*======================== SIDEBAR ========================*/
 .main-sidebar {
   background-color: var(--secondary-color) !important;
+  /* Fondo negro */
   color: var(--primary-color);
+  /* Texto amarillo */
 }
 
-/* Sidebar links */
+/* Links en el Sidebar */
 .main-sidebar .nav-sidebar>.nav-item>.nav-link {
   color: var(--primary-color) !important;
+  /* Color de texto amarillo */
+
 }
 
 .main-sidebar .nav-sidebar>.nav-item>.nav-link:hover {
   background-color: var(--primary-color) !important;
+  /* Fondo amarillo en hover */
   color: #000000 !important;
+  /* Texto negro en hover */
 }
 
-/* Sidebar titles */
+/* Títulos del Sidebar */
 .main-sidebar .sidebar .nav-header {
   color: var(--primary-color);
+  /* Amarillo */
   font-weight: bold;
   text-transform: uppercase;
+  /* Opcional: Mejora la legibilidad */
 }
 
-/* Active item */
+/* Ítem Activo */
 .main-sidebar .nav-sidebar>.nav-item>.nav-link.active {
   background-color: var(--primary-color) !important;
+  /* Amarillo brillante */
   color: #000000 !important;
+  /* Texto negro */
 }
 
-/* Submenu items */
-.nav-treeview .nav-link {
-  padding-left: 2rem !important;
-}
-
-.nav-treeview .nav-link .nav-icon {
-  margin-left: -0.5rem;
-}
-
-/* Brand/Logo */
+/* Imagen o Logo del Sidebar */
 .brand-link {
   background-color: var(--secondary-color) !important;
+  /* Fondo negro */
   color: var(--primary-color) !important;
+  /* Texto amarillo */
 }
 
-/* Sidebar shadow */
+/* .brand-link:hover {
+    background-color: var(--primary-color) !important; 
+    color: var(--secondary-color) !important; 
+  }*/
+
+/* Sombra (Opcional) */
 .main-sidebar {
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+  /* Añade separación visual */
 }
 
 .user-panel {
@@ -88,7 +105,7 @@
     }
 
     .user-role {
-      color:  var(--formInput-color) !important;
+      color: var(--formInput-color) !important;
       /* Color negro */
       font-size: 18px;
       font-weight: bold;
@@ -105,57 +122,75 @@
     border-radius: 50%;
     border: none;
   }
+
+  .image{
+    margin-top: 8px !important;
+  }
 }
 
-/* ======================== NAVBAR ======================== */
+
+/*======================== NAVBAR ========================*/
 .main-header {
   background-color: var(--secondary-color) !important;
+  /* Fondo negro */
   border-bottom: 2px solid var(--primary-color);
+  /* Borde amarillo en la parte inferior */
   color: var(--primary-color);
+  /* Texto amarillo */
 }
 
-/* Navbar links */
+/* Links dentro del Navbar */
 .main-header .nav-link {
   color: var(--primary-color) !important;
+  /* Texto amarillo */
   font-weight: bold;
 }
 
 .main-header .nav-link:hover {
   background-color: var(--primary-color) !important;
+  /* Fondo amarillo en hover */
   color: var(--secondary-color) !important;
+  /* Texto negro en hover */
 }
 
-/* Navbar icons */
+/* Íconos del Navbar */
 .main-header .fas {
   color: var(--primary-color) !important;
+  /* Íconos amarillos */
 }
 
-/* ======================== FOOTER ======================== */
+/*======================== FOOTER ========================*/
 .main-footer {
   background-color: var(--secondary-color) !important;
+  /* Fondo negro */
   color: var(--primary-color);
+  /* Texto amarillo */
   border-top: 2px solid var(--primary-color);
+  /* Borde amarillo en la parte superior */
 }
 
-/* Footer links */
+/* Links en el Footer */
 .main-footer a {
   color: var(--primary-color);
+  /* Amarillo para los enlaces */
   font-weight: bold;
 }
 
 .main-footer a:hover {
   color: var(--secondary-color);
+  /* Texto negro en hover */
   background-color: var(--primary-color);
+  /* Fondo amarillo en hover */
 }
 
-/* ======================== MODAL ======================== */
+/*======================== MODAL ========================*/
 .modal-header {
   background-color: var(--primary-color);
   color: black;
-}
 
-.modal-header .modal-title {
-  font-weight: bold;
+  .modal-title {
+    font-weight: bold;
+  }
 }
 
 .modal-footer,
@@ -168,16 +203,19 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  /* Centra verticalmente */
   height: 100%;
+  /* Asegura que ocupe toda la altura del modal */
 }
 
 .modal-body {
   text-align: center;
   height: 80px;
   align-content: center;
+  /* Centra horizontalmente el contenido */
 }
 
-/* Save button */
+/* Botón de guardar */
 button.btn-success {
   background-color: var(--primary-color);
   color: var(--secondary-color);
@@ -192,57 +230,16 @@ button.btn-success {
 
 button.btn-success:hover {
   background-color: #e6c200;
+  /* Fondo amarillo más oscuro */
   color: #000000;
   box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
+  /* Sombra al pasar el mouse */
   transform: scale(1.05);
+  /* Efecto de agrandamiento */
 }
 
 button.btn-success:active {
   background-color: #cba800;
   transform: scale(0.98);
-}
-
-/* ======================== SUBMENU STYLES ======================== */
-.nav-treeview {
-  display: none;
-  padding-left: 20px;
-}
-
-.nav-item.has-treeview.menu-open>.nav-treeview {
-  display: block;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.nav-link {
-  cursor: pointer;
-}
-
-.disabled {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.right.fas.fa-angle-left {
-  transition: transform 0.3s ease;
-}
-
-.rotated {
-  transform: rotate(-90deg);
-}
-
-.badge-warning {
-  background-color: var(--primary-color);
-  color: var(--secondary-color);
+  /* Efecto de clic */
 }
