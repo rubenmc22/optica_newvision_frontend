@@ -10,7 +10,7 @@ import * as bootstrap from 'bootstrap';
 import { ChangeDetectorRef } from '@angular/core';
 
 interface UserProfile {
-  nombre: string;  // Mantenemos 'nombre' para coincidir con el template
+  nombre: string;  
   correo: string;
   fechaNacimiento: string;
   telefono: string;
@@ -41,7 +41,6 @@ export class MyAccountComponent implements OnInit {
     telefono: '',
     avatarUrl: null
   };
-
 
   originalUser: UserProfile = { ...this.user };
   activeTab: string = 'personalInfo';
@@ -247,12 +246,13 @@ private uploadImage(file: File): Promise<string> {
   }
 
   private handleSuccess(response: any): void {
-    this.swalService.showSuccess('Éxito', 'Perfil actualizado correctamente')
+    this.swalService.showSuccess('Éxito', 'Perfil actualizado correctamente. El cambio se vera reflado cuando inicie sesion nuevamente.')
       .then(() => {
         if (response.avatarUrl) {
           this.user.avatarUrl = response.avatarUrl;
           this.avatarPreview = response.avatarUrl;
         }
+        this.router.navigate(['/dashboard'], { replaceUrl: true });
         this.originalUser = { ...this.user };
         this.isFormEdited = false;
         this.selectedFile = null;

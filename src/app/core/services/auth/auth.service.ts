@@ -1,153 +1,207 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { SwalService } from '../swal/swal.service';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { environment } from '../environment';
-import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { Observable, BehaviorSubject, throwError } from 'rxjs';
+import { catchError, tap, map } from 'rxjs/operators';
 
 interface User {
-  email: string;
+  id: string;
   cedula: string;
-  nombre?: string;
-  [key: string]: any; // Para propiedades adicionales
+  correo: string;
+  nombre: string;
+  telefono: string;
+  email: string;
+}
+
+interface Rol {
+  _id: string;
+  key: string;
+  name: string;
+}
+
+interface AuthData {
+  token: string;
+  user: User;
+  rol: Rol;
+}
+
+interface AuthResponse {
+  message: string;
+  token: string;
+  user: {
+    id: string;
+    cedula: string;
+    correo: string;
+    nombre: string;
+    telefono: string;
+  };
+  rol: {
+    _id: string;
+    key: string;
+    name: string;
+  };
 }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly TOKEN_KEY = 'authToken';
-  private readonly USER_KEY = 'userData';
-  private storage: Storage = sessionStorage; // Por defecto sessionStorage
+  private readonly AUTH_DATA_KEY = 'authData';
+  private storage: Storage = sessionStorage;
+  private currentUserSubject = new BehaviorSubject<AuthData | null>(null);
+  public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(
     private router: Router,
     private swalService: SwalService,
     private http: HttpClient
-  ) { }
+  ) {
+    // Initialize with stored data
+    const storedData = this.storage.getItem(this.AUTH_DATA_KEY);
+    if (storedData) {
+      this.currentUserSubject.next(JSON.parse(storedData));
+    }
+  }
 
-  /**
-   * Configura el tipo de almacenamiento a usar
-   * @param useSessionStorage true para sessionStorage, false para localStorage
-   */
   setStorageType(useSessionStorage: boolean): void {
     this.storage = useSessionStorage ? sessionStorage : localStorage;
-   // console.log(`Almacenamiento configurado a: ${useSessionStorage ? 'sessionStorage' : 'localStorage'}`);
   }
 
-  /**
-   * Limpia toda la información de autenticación
-   */
   clearAuth(): void {
     this.storage.removeItem(this.TOKEN_KEY);
-    this.storage.removeItem(this.USER_KEY);
-   // console.log('Datos de autenticación limpiados');
+    this.storage.removeItem(this.AUTH_DATA_KEY);
+    this.currentUserSubject.next(null);
   }
 
-  /**
-   * Obtiene los datos del usuario actual
-   */
-  get currentUserValue(): User | null {
-    const userData = this.storage.getItem(this.USER_KEY);
-    if (!userData) {
-      console.warn('No se encontraron datos de usuario en el almacenamiento');
-      return null;
-    }
-
-    try {
-      const user = JSON.parse(userData) as User;
-      if (!user.email) {
-        console.error('El objeto de usuario no contiene email:', user);
-      }
-      return user;
-    } catch (error) {
-      console.error('Error al parsear datos de usuario:', error);
-      return null;
-    }
+  get currentUserValue(): AuthData | null {
+    return this.currentUserSubject.value;
   }
 
-  /**
-   * Obtiene el usuario actual (alias de currentUserValue)
-   */
   getCurrentUser(): User | null {
-    return this.currentUserValue;
+    return this.currentUserValue?.user || null;
   }
 
-  /**
-   * Obtiene el email del usuario actual
-   */
   getCurrentUserEmail(): string | null {
-    const user = this.currentUserValue;
-    if (!user) {
-      console.warn('Intento de obtener email sin usuario autenticado');
-      return null;
-    }
-    return user.email;
+    return this.currentUserValue?.user.email || null;
   }
 
-  /**
-   * Actualiza los datos del usuario en el almacenamiento
-   * @param userData Datos del usuario a actualizar
-   */
-  updateUserData(userData: User): void {
-    if (!userData || !userData.email) {
-      console.error('Datos de usuario inválidos para actualización:', userData);
-      return;
-    }
-
-    this.storage.setItem(this.USER_KEY, JSON.stringify(userData));
-    //console.log('Datos de usuario actualizados:', userData);
+  getCurrentRol(): Rol | null {
+    return this.currentUserValue?.rol || null;
   }
 
-  // Para subir la imagen
-  uploadAvatar(formData: FormData): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/upload-avatar`, formData, {
-      // No establecer Content-Type, el navegador lo hará automáticamente
-    });
-  }
+  updateUserData(updatedUser: Partial<User>): void {
+    const currentData = this.currentUserValue;
+    if (!currentData) return;
 
-  // Para enviar los datos del usuario
-  editUser(userData: any): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/account/edit-profile`, userData, {
-      headers: {
-        'Content-Type': 'application/json'
+    const newData = {
+      ...currentData,
+      user: {
+        ...currentData.user,
+        ...updatedUser
       }
-    });
+    };
+
+    this.storage.setItem(this.AUTH_DATA_KEY, JSON.stringify(newData));
+    this.currentUserSubject.next(newData);
   }
 
-  getFullUserData(): User | null {
-    return this.currentUserValue;
-  }
-  /**
-   * Proceso de login
-   * @param cedula Número de cédula
-   * @param password Contraseña
-   */
-  login(cedula: string, password: string): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/auth/login`, { cedula, password }).pipe(
-      tap((data: any) => {
+  login(cedula: string, password: string): Observable<AuthData> {
+    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/login`, { cedula, password }).pipe(
+      map((data: AuthResponse) => {
         if (!data.user?.correo) {
           throw new Error('El servidor no devolvió un correo de usuario');
         }
 
-        const internalUser: User = {
-          ...data.user,
-          email: data.user.correo
+        const authData: AuthData = {
+          token: data.token,
+          user: {
+            ...data.user,
+            email: data.user.correo
+          },
+          rol: data.rol
         };
 
-        this.setAuth(data.token, internalUser);
+        return authData;
+      }),
+      tap((authData: AuthData) => {
+        this.setAuth(authData);
         this.swalService.showSuccess('¡Éxito!', 'Bienvenido, ha iniciado sesión correctamente');
       }),
       catchError((error: HttpErrorResponse) => {
         const errorMsg = error.error?.message || 'Error en el inicio de sesión';
-        console.log('ERROR', errorMsg);
+        console.error('Error en login:', errorMsg);
         this.swalService.showError('Error', errorMsg);
         return throwError(() => error);
       })
     );
   }
 
-  // auth.service.ts
+  private setAuth(authData: AuthData): void {
+    this.storage.setItem(this.TOKEN_KEY, authData.token);
+    this.storage.setItem(this.AUTH_DATA_KEY, JSON.stringify(authData));
+    this.currentUserSubject.next(authData);
+  }
 
+  getToken(): string | null {
+    return this.storage.getItem(this.TOKEN_KEY);
+  }
+
+  isAuthenticated(): boolean {
+    const token = this.getToken();
+    if (!token) return false;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const isExpired = payload.exp <= Date.now() / 1000;
+
+      if (isExpired) {
+        this.clearAuth();
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error al verificar token:', error);
+      return false;
+    }
+  }
+
+  logout(): void {
+    this.clearAuth();
+    this.router.navigate(['/login'], { replaceUrl: true });
+  }
+
+  // Métodos para gestión de avatar y perfil
+  uploadAvatar(formData: FormData): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/upload-avatar`, formData);
+  }
+
+  editUser(userData: Partial<User>): Observable<AuthData> {
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    
+    return this.http.put<AuthResponse>(
+      `${environment.apiUrl}/account/edit-profile`, 
+      userData, 
+      { headers }
+    ).pipe(
+      map(response => {
+        const authData: AuthData = {
+          token: this.getToken() || '',
+          user: {
+            ...response.user,
+            email: response.user.correo
+          },
+          rol: response.rol || this.currentUserValue?.rol as Rol
+        };
+        
+        this.setAuth(authData);
+        return authData;
+      })
+    );
+  }
+
+  // Métodos para cambio de contraseña
   sendPasswordChangeOtp(email: string): Observable<any> {
     return this.http.post(`${environment.apiUrl}/account/change-password--send-otp`, { email });
   }
@@ -162,65 +216,5 @@ export class AuthService {
       newPassword,
       otp
     });
-  }
-
-  /**
-   * Establece los datos de autenticación
-   * @param token Token JWT
-   * @param user Datos del usuario
-   */
-  private setAuth(token: string, user: User): void {
-    if (!token || !user?.email) {
-      console.error('Datos inválidos para setAuth:', { token, user });
-      throw new Error('Datos de autenticación inválidos');
-    }
-
-    this.storage.setItem(this.TOKEN_KEY, token);
-    this.storage.setItem(this.USER_KEY, JSON.stringify(user));
-   // console.log('Autenticación establecida para usuario:', user.email);
-  }
-
-  /**
-   * Obtiene el token almacenado
-   */
-  getToken(): string | null {
-    // console.warn('Dentro de getToken');
-    const token = this.storage.getItem(this.TOKEN_KEY);
-    if (!token) {
-      console.warn('No se encontró token en el almacenamiento');
-    }
-    return token;
-  }
-
-  /**
-   * Verifica si el usuario está autenticado
-   */
-  isAuthenticated(): boolean {
-    const token = this.getToken();
-    if (!token) return false;
-
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const isExpired = payload.exp <= Date.now() / 1000;
-
-      if (isExpired) {
-        console.warn('Token JWT expirado');
-        this.clearAuth();
-      }
-
-      return !isExpired;
-    } catch (error) {
-      console.error('Error al verificar token:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Cierra la sesión y redirige al login
-   */
-  logout(): void {
-    console.log('Cerrando sesión para usuario:', this.currentUserValue?.email);
-    this.clearAuth();
-    this.router.navigate(['/login'], { replaceUrl: true });
   }
 }

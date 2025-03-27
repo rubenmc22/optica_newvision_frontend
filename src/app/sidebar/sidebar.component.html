@@ -14,6 +14,10 @@
   <link rel="stylesheet" href="../../assets/adminlte/plugins/overlayScrollbars/css/OverlayScrollbars.min.css">
   <!-- Theme style -->
   <link rel="stylesheet" href="../../assets/adminlte/dist/css/adminlte.min.css">
+  <!-- Custom styles -->
+  <style>
+
+  </style>
 </head>
 
 <body class="hold-transition sidebar-mini layout-fixed">
@@ -26,12 +30,12 @@
         <li class="nav-item">
           <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
         </li>
-        <li class="nav-item d-none d-sm-inline-block">
+        <!-- <li class="nav-item d-none d-sm-inline-block">
           <a href="#" class="nav-link">Home</a>
         </li>
         <li class="nav-item d-none d-sm-inline-block">
           <a href="#" class="nav-link">Contact</a>
-        </li>
+        </li>-->
       </ul>
 
       <!-- Right navbar links -->
@@ -72,60 +76,57 @@
 
       <!-- Sidebar -->
       <div class="sidebar">
-        <!-- Sidebar user -->
+        <!-- Sidebar user panel -->
         <div class="user-panel mt-3 pb-3 mb-3 d-flex">
           <div class="image">
-            <img src="./../../assets/default-photo.png" class="img-circle elevation-2" alt="User Image">
+            <img src="./../../assets/default-photo.png" class="profile-img" alt="User Image">
           </div>
           <div class="info">
-            <a href="#" class="d-block text-warning">Rol: {{ userRole }}</a>
+            <div class="user-name">{{ userName }}</div>
+            <div class="user-role">({{ userRoleName }})</div>
           </div>
         </div>
 
         <!-- Sidebar Menu -->
         <nav class="mt-2">
-          <ul class="nav nav-pills nav-sidebar flex-column" data-accordion="false">
-            <li *ngFor="let menu of filteredMenu" class="nav-item">
-              <!-- Menú sin submenú -->
-              <a *ngIf="!menu.submenu" [routerLink]="menu.routerLink" class="nav-link"
-                [matTooltip]="menu.underConstruction ? 'Módulo en desarrollo 🚧' : null" matTooltipPosition="right"
-                [matTooltipDisabled]="!menu.underConstruction" (click)="onMenuClick($event, menu)">
-                <i *ngIf="menu.icon" [class]="menu.icon"></i>
-                <p>{{ menu.label }}</p>
-              </a>
+          <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+            <ng-container *ngFor="let menu of filteredMenu">
+              <!-- Menú simple (sin submenú) -->
+              <li *ngIf="!menu.submenu" class="nav-item">
+                <a [routerLink]="menu.routerLink" class="nav-link" [class.disabled]="menu.underConstruction"
+                  (click)="onMenuClick($event, menu)">
+                  <i *ngIf="menu.icon" [class]="menu.icon"></i>
+                  <p>{{ menu.label }}</p>
+                  <span *ngIf="menu.underConstruction" class="right badge badge-warning">🚧</span>
+                </a>
+              </li>
 
               <!-- Menú con submenú -->
-              <a *ngIf="menu.submenu && !menu.underConstruction" href="#" class="nav-link"
-                (click)="toggleSubmenu($event)">
-                <i [class]="menu.icon"></i>
-                <p>
-                  {{ menu.label }}
-                  <i class="right fas fa-angle-left"></i>
-                </p>
-              </a>
+              <li *ngIf="menu.submenu" class="nav-item has-treeview" [class.menu-open]="menu.isOpen">
+                <a href="#" class="nav-link" [class.disabled]="menu.underConstruction"
+                  (click)="onMenuClick($event, menu)">
+                  <i [class]="menu.icon"></i>
+                  <p>
+                    {{ menu.label }}
+                    <i class="right fas fa-angle-left" [class.rotated]="menu.isOpen"></i>
+                    <span *ngIf="menu.underConstruction" class="right badge badge-warning">🚧</span>
+                  </p>
+                </a>
 
-              <!-- Menú con submenú en desarrollo -->
-              <span *ngIf="menu.submenu && menu.underConstruction" class="nav-link"
-                [matTooltip]="'Módulo en desarrollo 🚧'" matTooltipPosition="right">
-                <i [class]="menu.icon"></i>
-                <p>{{ menu.label }}</p>
-              </span>
-
-              <!-- Submenú (solo se muestra si no está en desarrollo) -->
-              <ul *ngIf="menu.submenu && !menu.underConstruction" class="nav nav-treeview">
-                <li *ngFor="let sub of menu.submenu" class="nav-item">
-                  <a [routerLink]="sub.routerLink" class="nav-link"
-                    [matTooltip]="sub.underConstruction ? 'Módulo en desarrollo 🚧' : null" matTooltipPosition="right"
-                    [matTooltipDisabled]="!sub.underConstruction" (click)="onMenuClick($event, sub)">
-                    <i class="far fa-circle nav-icon"></i>
-                    <p>{{ sub.label }}</p>
-                  </a>
-                </li>
-              </ul>
-            </li>
+                <!-- Submenú -->
+                <ul class="nav nav-treeview">
+                  <li *ngFor="let sub of menu.submenu" class="nav-item">
+                    <a [routerLink]="sub.routerLink" class="nav-link" [class.disabled]="sub.underConstruction"
+                      (click)="onMenuClick($event, sub)">
+                      <i class="far fa-circle nav-icon"></i>
+                      <p>{{ sub.label }}</p>
+                      <span *ngIf="sub.underConstruction" class="right badge badge-warning">🚧</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+            </ng-container>
           </ul>
-
-
         </nav>
       </div>
 
@@ -137,12 +138,13 @@
     </aside>
 
     <!-- Content Wrapper -->
-    <section class="content-wrapper">
-      <div class="container-fluid">
-        <router-outlet></router-outlet>
-      </div>
-    </section>
-    <!-- /.content -->
+    <div class="content-wrapper">
+      <section class="content">
+        <div class="container-fluid">
+          <router-outlet></router-outlet>
+        </div>
+      </section>
+    </div>
 
     <footer class="main-footer">
       <div class="float-right d-none d-sm-block">
@@ -150,12 +152,7 @@
       </div>
       <strong>Copyright &copy; 2025 | Apollo Group - Academia Deportiva.</strong> All rights reserved.
     </footer>
-
-    <!-- Control Sidebar -->
-    <aside class="control-sidebar control-sidebar-dark"></aside>
-    <!-- /.control-sidebar -->
   </div>
-  <!-- ./wrapper -->
 
   <!-- Scripts -->
   <script src="../../assets/adminlte/plugins/jquery/jquery.min.js"></script>
@@ -163,7 +160,6 @@
   <script src="../../assets/adminlte/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
   <script src="../../assets/adminlte/dist/js/adminlte.min.js"></script>
 
-  <!-- Modal para Cierre de Sesión -->
   <!-- Modal para Cierre de Sesión -->
   <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered"> <!-- Clase para centrar el modal verticalmente -->
@@ -185,8 +181,6 @@
       </div>
     </div>
   </div>
-
-
 </body>
 
 </html>
