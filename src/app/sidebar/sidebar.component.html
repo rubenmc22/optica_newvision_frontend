@@ -26,12 +26,12 @@
         <li class="nav-item">
           <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
         </li>
-        <li class="nav-item d-none d-sm-inline-block">
+      <!--  <li class="nav-item d-none d-sm-inline-block">
           <a href="#" class="nav-link">Home</a>
         </li>
         <li class="nav-item d-none d-sm-inline-block">
           <a href="#" class="nav-link">Contact</a>
-        </li>
+        </li>-->
       </ul>
 
       <!-- Right navbar links -->
@@ -88,18 +88,18 @@
           <ul class="nav nav-pills nav-sidebar flex-column" data-accordion="false">
             <li *ngFor="let menu of filteredMenu" class="nav-item">
               <!-- Menú sin submenú -->
-              <a *ngIf="!menu.submenu" [routerLink]="menu.routerLink" class="nav-link"
+              <a *ngIf="!menu.submenu"    [routerLink]="menu.underConstruction ? null : menu.routerLink" class="nav-link" 
                 [matTooltip]="menu.underConstruction ? 'Módulo en desarrollo �' : null" matTooltipPosition="right"
                 [matTooltipDisabled]="!menu.underConstruction" (click)="onMenuClick($event, menu)">
-                <i *ngIf="menu.icon" [class]="menu.icon"></i>
-                <p>{{ menu.label }} <span *ngIf="menu.underConstruction" class="right badge badge-warning">🚧</span></p>
+                <i *ngIf="menu.icon" [class]="menu.icon" ></i>
+                <p [ngStyle]="{'margin-left': getMarginForModule(menu.label)}">{{ menu.label }}  <span *ngIf="menu.underConstruction" class="right badge badge-warning">🚧</span></p>
               </a>
 
               <!-- Menú con submenú -->
-              <a *ngIf="menu.submenu && !menu.underConstruction" href="#" class="nav-link"
+              <a *ngIf="menu.submenu && !menu.underConstruction" class="nav-link"
                 (click)="toggleSubmenu($event)">
                 <i [class]="menu.icon"></i>
-                <p>
+                <p [ngStyle]="{'margin-left': getMarginForModule(menu.label)}">
                   {{ menu.label }}
                   <i class="right fas fa-angle-left"></i>
                 </p>
@@ -107,15 +107,15 @@
 
               <!-- Menú con submenú en desarrollo -->
               <span *ngIf="menu.submenu && menu.underConstruction" class="nav-link"
-                [matTooltip]="'Módulo en desarrollo 🚧'" matTooltipPosition="right">
+                [matTooltip]="'Módulo en desarrollo 🚧'" matTooltipPosition="right"    [routerLink]="menu.underConstruction ? null : menu.routerLink">
                 <i [class]="menu.icon"></i>
-                <p>{{ menu.label }}<span *ngIf="menu.underConstruction" class="right badge badge-warning">🚧</span></p>
+                <p [ngStyle]="{'margin-left': getMarginForModule(menu.label)}">{{ menu.label }}<span *ngIf="menu.underConstruction" class="right badge badge-warning">🚧</span></p>
               </span>
 
               <!-- Submenú (solo se muestra si no está en desarrollo) -->
               <ul *ngIf="menu.submenu && !menu.underConstruction" class="nav nav-treeview">
                 <li *ngFor="let sub of menu.submenu" class="nav-item">
-                  <a [routerLink]="sub.routerLink" class="nav-link"
+                  <a [routerLink]="sub.underConstruction ? null : sub.routerLink" class="nav-link"
                     [matTooltip]="sub.underConstruction ? 'Módulo en desarrollo 🚧' : null" matTooltipPosition="right"
                     [matTooltipDisabled]="!sub.underConstruction" (click)="onMenuClick($event, sub)">
                     <i class="far fa-circle nav-icon"></i>
@@ -125,7 +125,6 @@
               </ul>
             </li>
           </ul>
-
 
         </nav>
       </div>

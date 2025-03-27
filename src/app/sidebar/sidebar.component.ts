@@ -51,7 +51,7 @@ export class SidebarComponent implements OnInit {
       submenu: [
         { label: 'Agregar Atletas', routerLink: '/crear-atletas', roles: ['admin', 'representante'] },
         { label: 'Ver Atletas', routerLink: '/ver-atletas', roles: ['admin'] },
-        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['admin', 'representante'], underConstruction: false }
+        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['admin', 'representante'], underConstruction: true }
       ],
       roles: ['admin', 'representante']
     },
@@ -60,7 +60,7 @@ export class SidebarComponent implements OnInit {
       icon: 'fas fa-user',
       submenu: [
         { label: 'Gestionar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'representante', 'atleta'] },
-        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['atleta'], underConstruction: false },
+        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['atleta'], underConstruction: true },
         { label: 'Mis estadísticas / habilidades', routerLink: '/estadisticas', roles: ['admin', 'representante', 'atleta'] }
       ],
       roles: ['admin', 'representante', 'atleta']
@@ -78,11 +78,7 @@ export class SidebarComponent implements OnInit {
   }[] = [];
 
   ngOnInit(): void {
-    console.log('Preparando menú dinámico.');
-
     this.initializeMenu();
-
-  
   }
 
   private initializeMenu(): void {
@@ -92,38 +88,37 @@ export class SidebarComponent implements OnInit {
     this.userRoleKey = currentRol?.key || '';
     this.userRoleName = currentRol?.name || '';
     this.userName = currentName?.nombre || '';
-    
+
     this.filteredMenu = this.menuItems
-    .map(menu => {
-      // Si el usuario no es atleta, mueve "Ficha Técnica" al menú de Atletas
-      if (menu.label === 'Atletas' && this.userRole !== 'atleta' && menu.submenu) {
-        // Asegurar que no exista duplicación
-        const fichaTecnicaExists = menu.submenu.some(sub => sub.label === 'Ficha Técnica');
-        if (!fichaTecnicaExists) {
-          menu.submenu.push({
-            label: 'Ficha Técnica',
-            routerLink: '/ficha-tecnica',
-            roles: ['admin', 'representante'],
-            underConstruction: false
-          });
+      .map(menu => {
+        // Si el usuario no es atleta, mueve "Ficha Técnica" al menú de Atletas
+        if (menu.label === 'Atletas' && this.userRole !== 'atleta' && menu.submenu) {
+          // Asegurar que no exista duplicación
+          const fichaTecnicaExists = menu.submenu.some(sub => sub.label === 'Ficha Técnica');
+          if (!fichaTecnicaExists) {
+            menu.submenu.push({
+              label: 'Ficha Técnica',
+              routerLink: '/ficha-tecnica',
+              roles: ['admin', 'representante'],
+              underConstruction: false
+            });
+          }
         }
-      }
 
-      // Filtrar submenús visibles para el rol
-      if (menu.submenu) {
-        const filteredSubmenu = menu.submenu.filter(sub => sub.roles.includes(this.userRole));
-        return { ...menu, submenu: filteredSubmenu };
-      }
+        // Filtrar submenús visibles para el rol
+        if (menu.submenu) {
+          const filteredSubmenu = menu.submenu.filter(sub => sub.roles.includes(this.userRole));
+          return { ...menu, submenu: filteredSubmenu };
+        }
 
-      return menu;
-    })
-    .filter(menu => menu.roles.includes(this.userRole) || (menu.submenu && menu.submenu.length > 0)); // Filtrar menús
+        return menu;
+      })
+      .filter(menu => menu.roles.includes(this.userRole) || (menu.submenu && menu.submenu.length > 0)); // Filtrar menús
   }
 
 
   toggleSubmenu(event: Event): void {
     event.preventDefault();
-
     const target = event.currentTarget as HTMLElement;
     const submenu = target.nextElementSibling as HTMLElement | null;
     const icon = target.querySelector('.fas.fa-angle-left') as HTMLElement | null;
@@ -149,12 +144,16 @@ export class SidebarComponent implements OnInit {
     }
   }
 
-  onMenuClick(event: Event, menuItem: any): void {
-    if (menuItem.underConstruction || !menuItem.routerLink) {
-      event.preventDefault(); // Evita la navegación
-      console.log('Módulo en desarrollo:', menuItem.label);
+  onMenuClick(event: Event, menuItem: any) {
+    console.log('menuItem', menuItem);
+    if (menuItem?.underConstruction) {
+      console.log('menuItem?.underConstruction', menuItem?.underConstruction);
+      event.preventDefault();  // Detiene el routerLink
+      event.stopImmediatePropagation();  // Evita otros listeners
+
       return;
     }
+
   }
 
   confirmLogout(): void {
@@ -163,6 +162,17 @@ export class SidebarComponent implements OnInit {
       .then(() => {
         this.router.navigate(['/login']); // Redirigir al login
       });
+  }
+
+  getMarginForModule(moduleName: string): string {
+    const margins: { [key: string]: string } = {
+      'Dashboard': '8px',    // Margen estándar
+      'Deportes': '10px',    // Más margen por jerarquía o diseño
+      'Atletas': '5px',     // Margen intermedio
+      'Mi Perfil': '10px',   // Más espacio para destacar
+    };
+
+    return margins[moduleName] || '8px'; // Valor por defecto si no hay coincidencia
   }
 
 }
