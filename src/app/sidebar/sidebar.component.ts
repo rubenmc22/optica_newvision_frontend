@@ -2,7 +2,6 @@ import { Component, ElementRef, OnInit, Input, ChangeDetectorRef } from '@angula
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../core/services/auth/auth.service'; // Servicio de autenticación
 import { Router } from '@angular/router'; // Router para navegación
-import Swal from 'sweetalert2';
 import { SwalService } from '../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
 //import { SwalService } from '../services/swal/swal.service'; // Servicio de SweetAlert2
 
@@ -24,7 +23,6 @@ export class SidebarComponent implements OnInit {
     private authService: AuthService // Servicio de autenticación
   ) { }
 
-  @Input() userRole: string = 'admin'; // Recibe el rol del usuario dinámicamente
 
   // Definición dinámica de los menús y submenús según el rol
   menuItems = [
@@ -83,7 +81,7 @@ export class SidebarComponent implements OnInit {
 
   private initializeMenu(): void {
     const currentRol = this.authService.getCurrentRol();
-    console.log('currentRol', currentRol);
+  //  console.log('currentRol', currentRol);
     const currentName = this.authService.getCurrentUser();
     this.userRoleKey = currentRol?.key || '';
     this.userRoleName = currentRol?.name || '';
@@ -92,7 +90,7 @@ export class SidebarComponent implements OnInit {
     this.filteredMenu = this.menuItems
       .map(menu => {
         // Si el usuario no es atleta, mueve "Ficha Técnica" al menú de Atletas
-        if (menu.label === 'Atletas' && this.userRole !== 'atleta' && menu.submenu) {
+        if (menu.label === 'Atletas' && this.userRoleKey !== 'atleta' && menu.submenu) {
           // Asegurar que no exista duplicación
           const fichaTecnicaExists = menu.submenu.some(sub => sub.label === 'Ficha Técnica');
           if (!fichaTecnicaExists) {
@@ -107,13 +105,13 @@ export class SidebarComponent implements OnInit {
 
         // Filtrar submenús visibles para el rol
         if (menu.submenu) {
-          const filteredSubmenu = menu.submenu.filter(sub => sub.roles.includes(this.userRole));
+          const filteredSubmenu = menu.submenu.filter(sub => sub.roles.includes(this.userRoleKey));
           return { ...menu, submenu: filteredSubmenu };
         }
 
         return menu;
       })
-      .filter(menu => menu.roles.includes(this.userRole) || (menu.submenu && menu.submenu.length > 0)); // Filtrar menús
+      .filter(menu => menu.roles.includes(this.userRoleKey) || (menu.submenu && menu.submenu.length > 0)); // Filtrar menús
   }
 
 
@@ -145,7 +143,7 @@ export class SidebarComponent implements OnInit {
   }
 
   onMenuClick(event: Event, menuItem: any) {
-    console.log('menuItem', menuItem);
+  //  console.log('menuItem', menuItem);
     if (menuItem?.underConstruction) {
       console.log('menuItem?.underConstruction', menuItem?.underConstruction);
       event.preventDefault();  // Detiene el routerLink

@@ -69,7 +69,7 @@
 
                             <div class="form-row">
                                 <!-- Campo: Fecha de Nacimiento -->
-                                <div class="form-group col-md-6">
+                                <div class="form-group col-md-6" [hidden]="!esAtleta">
                                     <label for="fechaNacimiento">Fecha de Nacimiento</label>
                                     <input type="date" id="fechaNacimiento" class="form-control"
                                         [(ngModel)]="user.fechaNacimiento" name="fechaNacimiento" required
@@ -161,14 +161,12 @@
         </div>
     </div>
 
-    <!-- Modal para Confirmación de OTP -->
-    <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true">
+    <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true"
+        data-bs-backdrop="static">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="otpModalLabel">
-                        Código OTP Requerido
-                    </h5>
+                    <h5 class="modal-title" id="otpModalLabel">Código OTP Requerido</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -176,15 +174,14 @@
                     Por favor, ingréselo a continuación:
                     <div class="form-group mt-3">
                         <input type="text" maxlength="6" class="form-control text-center" [(ngModel)]="otpCode"
-                            name="otpCode" />
+                            name="otpCode" (keypress)="validateNumberInput($event)" placeholder="000000" />
                     </div>
+                    <div *ngIf="otpError" class="text-danger mt-2">{{otpError}}</div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        Cancelar
-                    </button>
-                    <button type="button" class="btn btn-success" (click)="verifyOtp()" data-bs-dismiss="modal">
-                        Guardar
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" (click)="verifyOtp()" [disabled]="isVerifyingOtp">
+                        {{isVerifyingOtp ? 'Verificando...' : 'Validar'}}
                     </button>
                 </div>
             </div>

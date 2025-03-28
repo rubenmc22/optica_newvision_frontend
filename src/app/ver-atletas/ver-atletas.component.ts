@@ -1,4 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { AtletasService } from '../core/services/atletas/atletas.service';
+import { Router } from '@angular/router'; // Router para navegación
+import { SwalService } from '../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
 
 @Component({
   selector: 'app-ver-atletas',
@@ -6,99 +9,42 @@ import { Component } from '@angular/core';
   templateUrl: './ver-atletas.component.html',
   styleUrls: ['./ver-atletas.component.scss']
 })
-export class VerAtletasComponent {
-  atletas = [
-    {
-      cedula: '24367965',
-      nombre: 'Ruben Dario Martinez Castro',
-      edad: 29,
-      genero: 'Hombre',
-      deporte: 'Voleibol',
-      posicion: 'Armador',
-      correo: 'rubemm18@gmail.com'
-    },
-    {
-      cedula: '24367966',
-      nombre: 'Jesus Eduardo Martinez Castro',
-      edad: 26,
-      genero: 'Hombre',
-      deporte: 'Futbol',
-      posicion: 'Delantero',
-      correo: 'jesusmc18@gmail.com'
-    },
-    {
-      cedula: '45367967',
-      nombre: 'María Fernanda López',
-      edad: 24,
-      genero: 'Mujer',
-      deporte: 'Baloncesto',
-      posicion: 'Base',
-      correo: 'mariafl@gmail.com'
-    },
-    {
-      cedula: '56789012',
-      nombre: 'Ana Beatriz Pérez',
-      edad: 22,
-      genero: 'Mujer',
-      deporte: 'Natación',
-      posicion: 'Espalda',
-      correo: 'anaperez@gmail.com'
-    },
-    {
-      cedula: '34567890',
-      nombre: 'Carlos Alberto Jiménez',
-      edad: 33,
-      genero: 'Hombre',
-      deporte: 'Atletismo',
-      posicion: 'Corredor',
-      correo: 'carlosj@gmail.com'
-    },
-    {
-      cedula: '87654321',
-      nombre: 'Luis Miguel Rodríguez',
-      edad: 27,
-      genero: 'Hombre',
-      deporte: 'Baloncesto',
-      posicion: 'Escolta',
-      correo: 'luisr@gmail.com'
-    },
-    {
-      cedula: '11223344',
-      nombre: 'Lucía Fernández',
-      edad: 19,
-      genero: 'Mujer',
-      deporte: 'Fútbol',
-      posicion: 'Defensa',
-      correo: 'luciaf@gmail.com'
-    },
-    {
-      cedula: '22334455',
-      nombre: 'Andrea Morales',
-      edad: 30,
-      genero: 'Mujer',
-      deporte: 'Voleibol',
-      posicion: 'Punta',
-      correo: 'andream@gmail.com'
-    },
-    {
-      cedula: '33445566',
-      nombre: 'José Ramírez',
-      edad: 21,
-      genero: 'Hombre',
-      deporte: 'Futbol',
-      posicion: 'Portero',
-      correo: 'joser@gmail.com'
-    },
-    {
-      cedula: '44556677',
-      nombre: 'Valeria Torres',
-      edad: 25,
-      genero: 'Mujer',
-      deporte: 'Natación',
-      posicion: 'Mariposa',
-      correo: 'valeriat@gmail.com'
-    }
-  ];
+export class VerAtletasComponent implements OnInit {
+
+  atletas: any[] = [];
+  atletasFiltrados: any[] = [];
+  cargando = true;
+  errorMessage = '';
+
+  constructor(
+    private swalService: SwalService, // Inyecta el servicio de SweetAlert2
+    private router: Router, // Inyecta el Router para la navegación
+    private atletasService: AtletasService // Servicio de autenticación
+  ) { }
+
+  ngOnInit(): void {
+    this.cargarAtletas();
+  }
+
+  cargarAtletas(): void {
+    this.cargando = true;
+    this.errorMessage = '';
+
+    this.atletasService.getAllAtletas().subscribe({
+      next: (atletas) => {
+        this.atletas = atletas;
+        console.log('atletas', atletas);
+        this.aplicarFiltros(); // Aplica filtros iniciales
+        this.cargando = false;
+      },
+      error: (error) => {
+        console.error('Error al cargar atletas:', error);
+        this.errorMessage = 'Error al cargar la lista de atletas';
+        this.cargando = false;
+        this.swalService.showError('Error', 'No se pudo cargar la lista de atletas');
+      }
+    });
+  }
 
   filtros = {
     deporte: null as { id: number; name: string } | null,
@@ -110,7 +56,7 @@ export class VerAtletasComponent {
   };
 
   posicionesFiltradas: string[] = [];
-  atletasFiltrados = [...this.atletas];
+  // atletasFiltrados = [...this.atletas];
 
   // Paginación
   paginaActual: number = 1;
@@ -184,7 +130,8 @@ export class VerAtletasComponent {
         !this.filtros.posicion ||
         normalizarTexto(atleta.posicion) === normalizarTexto(this.filtros.posicion);
       const generoValido =
-        !this.filtros.genero || atleta.genero === this.filtros.genero;
+        !this.filtros.genero ||
+        atleta.generoTexto.toLowerCase() === this.filtros.genero.toLowerCase();
       const edadValida =
         atleta.edad >= edadMinValida && atleta.edad <= edadMaxValida;
       const busquedaValida =
@@ -232,16 +179,11 @@ export class VerAtletasComponent {
   ordenAscendente: boolean = true;
 
   ordenarTabla(campo: keyof typeof this.atletas[0]): void {
-    if (this.ordenActual === campo) {
-      this.ordenAscendente = !this.ordenAscendente;
-    } else {
-      this.ordenActual = campo;
-      this.ordenAscendente = true;
-    }
+    const esString = (val: any): val is string => typeof val === 'string';
 
     this.atletasFiltrados.sort((a, b) => {
-      const valorA = a[campo]?.toString().toLowerCase() || '';
-      const valorB = b[campo]?.toString().toLowerCase() || '';
+      const valorA = esString(a[campo]) ? a[campo].toLowerCase() : String(a[campo]);
+      const valorB = esString(b[campo]) ? b[campo].toLowerCase() : String(b[campo]);
 
       if (valorA < valorB) {
         return this.ordenAscendente ? -1 : 1;

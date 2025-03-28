@@ -1,20 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SwalService } from '../core/services/swal/swal.service';
 import { AuthService } from '../core/services/auth/auth.service';
+import { ChangePasswordService } from '../core/services/changePassword/change-password.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs/operators';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import * as bootstrap from 'bootstrap';
-import { ChangeDetectorRef } from '@angular/core';
 
 interface UserProfile {
-  nombre: string;  
+  nombre: string;
   correo: string;
-  fechaNacimiento: string;
+  fechaNacimiento: string | null; // <-- Acepta string o null
   telefono: string;
   avatarUrl?: string | null;
+  rol?: string; // <-- Añade esta línea
 }
 
 interface ApiUser {
@@ -24,6 +25,7 @@ interface ApiUser {
   nombre?: string;
   telefono?: string;
   email?: string;
+  rol?: string; // <-- Añade esta línea
 }
 
 
@@ -33,13 +35,20 @@ interface ApiUser {
   templateUrl: './my-account.component.html',
   styleUrls: ['./my-account.component.scss']
 })
+
 export class MyAccountComponent implements OnInit {
+
+  esAtleta: boolean = false;
+  otpError: string = '';
+  isVerifyingOtp: boolean = false;
+
   user: UserProfile = {
     nombre: '',
     correo: '',
     fechaNacimiento: '',
     telefono: '',
-    avatarUrl: null
+    avatarUrl: null,
+    rol: ''
   };
 
   originalUser: UserProfile = { ...this.user };
@@ -56,7 +65,7 @@ export class MyAccountComponent implements OnInit {
 
   // Loading states
   isSendingOtp = false;
-  isVerifyingOtp = false;
+  // isVerifyingOtp = false;
   isChangingPassword = false;
   isSavingProfile = false;
 
@@ -69,6 +78,7 @@ export class MyAccountComponent implements OnInit {
     private router: Router,
     private swalService: SwalService,
     private authService: AuthService,
+    private changePasswordService: ChangePasswordService,
     private snackBar: MatSnackBar,
     private cdRef: ChangeDetectorRef,
   ) {
@@ -81,6 +91,21 @@ export class MyAccountComponent implements OnInit {
 
   ngOnInit(): void {
     this.setupFieldChangeListeners();
+    this.verificarRol();
+  }
+
+  private verificarRol(): void {
+    const currentRol = this.authService.getCurrentRol();
+    console.log('currentRol', currentRol);
+    this.esAtleta = currentRol?.key === 'atleta';
+    console.log('this.esAtleta', this.esAtleta);
+
+    // Si no es atleta, limpiamos la fecha de nacimiento
+    if (!this.esAtleta) {
+      this.user.fechaNacimiento = '';
+      this.originalUser.fechaNacimiento = '';
+    }
+    this.cdRef.detectChanges(); // Forza la detección de cambios
   }
 
   /**============ EDITAR INFORMACION PERSONAL ============*/
@@ -162,17 +187,20 @@ export class MyAccountComponent implements OnInit {
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.user.correo) &&
       /^[0-9]{10,12}$/.test(this.user.telefono); // Ajusté a 10-12 dígitos
 
-    // console.log('Validación:', isValid);
+    // Solo validamos fecha si es atleta y el campo está visible
+    if (this.esAtleta) {
+      return isValid && !!this.user.fechaNacimiento;
+    }
     return isValid;
   }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    
+
     if (input.files && input.files[0]) {
       this.selectedFile = input.files[0];
       const reader = new FileReader();
-  
+
       reader.onload = (e: ProgressEvent<FileReader>) => {
         if (e.target?.result) {
           this.avatarPreview = e.target.result as string;
@@ -180,68 +208,93 @@ export class MyAccountComponent implements OnInit {
           this.cdRef.detectChanges(); // Necesitas importar ChangeDetectorRef
         }
       };
-  
+
       reader.onerror = (error) => {
         console.error('Error reading file:', error);
         this.swalService.showError('Error', 'No se pudo cargar la imagen');
       };
-  
+
       reader.readAsDataURL(this.selectedFile);
     }
   }
 
 
-savePersonalInfo(): void {
-  if (!this.isPersonalInfoValid()) {
-    return;
-  }
+  savePersonalInfo(): void {
+    if (!this.isPersonalInfoValid()) {
+      return;
+    }
 
-  this.isSavingProfile = true;
+    this.isSavingProfile = true;
 
-  // Verificación segura del archivo seleccionado
-  if (this.selectedFile instanceof File) {
-    this.uploadImage(this.selectedFile).then((imageUrl) => {
-      // Actualizar la URL del avatar antes de enviar los datos
-      this.user.avatarUrl = imageUrl;
+    // Verificación segura del archivo seleccionado
+    if (this.selectedFile instanceof File) {
+      this.uploadImage(this.selectedFile).then((imageUrl) => {
+        // Actualizar la URL del avatar antes de enviar los datos
+        this.user.avatarUrl = imageUrl;
+        this.sendUserData();
+      }).catch((error) => {
+        this.isSavingProfile = false;
+        this.swalService.showError('Error', 'No se pudo subir la imagen');
+        console.error('Error uploading image:', error);
+      });
+    } else {
+      // Si no hay imagen, enviar directamente los datos
       this.sendUserData();
-    }).catch((error) => {
-      this.isSavingProfile = false;
-      this.swalService.showError('Error', 'No se pudo subir la imagen');
-      console.error('Error uploading image:', error);
-    });
-  } else {
-    // Si no hay imagen, enviar directamente los datos
-    this.sendUserData();
+    }
   }
-}
 
-private uploadImage(file: File): Promise<string> {
-  const formData = new FormData();
-  formData.append('file', file, file.name);
+  private uploadImage(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
 
-  return this.authService.uploadAvatar(formData).toPromise()
-    .then((response: any) => {
-      if (!response?.imageUrl) {
-        throw new Error('No image URL in response');
-      }
-      return response.imageUrl;
-    });
-}
+    return this.authService.uploadAvatar(formData).toPromise()
+      .then((response: any) => {
+        if (!response?.imageUrl) {
+          throw new Error('No image URL in response');
+        }
+        return response.imageUrl;
+      });
+  }
 
   private sendUserData(): void {
     const userData = {
       nombre: this.user.nombre,
-      correo: this.user.correo,
+      correo: this.user.correo,  // Opcional (puede ser null/undefined)
       telefono: this.user.telefono,
-      fechaNacimiento: this.user.fechaNacimiento,
-      avatarUrl: this.user.avatarUrl // Incluir la URL de la imagen si existe
+      avatarUrl: this.user.avatarUrl,
+      ...(this.esAtleta && this.user.fechaNacimiento && {
+        fechaNacimiento: this.user.fechaNacimiento
+      })
     };
 
-    this.authService.editUser(userData).pipe(
+    console.log('Enviando datos:', userData);
+
+    this.isSavingProfile = true;
+
+    this.changePasswordService.editUser(userData).pipe(
       finalize(() => this.isSavingProfile = false)
     ).subscribe({
-      next: (response) => this.handleSuccess(response),
-      error: (error) => this.handleError(error)
+      next: (response) => {
+        console.log('Respuesta completa:', response);
+
+        // Verificación más flexible del éxito
+        if (response && (response.message === 'ok')) {
+          this.handleSuccess(response);
+        } else {
+          // Si llega aquí, la respuesta no tiene el formato esperado
+          console.warn('Respuesta inesperada:', response);
+          const customError = new HttpErrorResponse({
+            error: { message: 'Estimado cliente, estamos presentando un error inesperado, intente nuevamente.' },
+            status: 200,
+            statusText: 'OK'
+          });
+          this.handleError(customError);
+        }
+      },
+      error: (error) => {
+        console.error('Error real en la petición:', error);
+        this.handleError(error);
+      }
     });
   }
 
@@ -267,6 +320,22 @@ private uploadImage(file: File): Promise<string> {
 
 
   /**============ CAMBIO DE CONTRASENA ============*/
+  validateNumberInput(event: KeyboardEvent): boolean {
+    const charCode = event.key.charCodeAt(0);
+    // Permitir solo números (0-9) y teclas de control
+    const isNumber = charCode >= 48 && charCode <= 57;
+    const isControlKey = [
+      8,  // backspace
+      9,  // tab
+      13, // enter
+      37, // left arrow
+      39, // right arrow
+      46  // delete
+    ].includes(event.keyCode);
+
+    return isNumber || isControlKey;
+  }
+
   validatePasswords(): boolean {
     this.passwordValid = this.contrasena.length >= 8;
     this.passwordsMatch = this.contrasena === this.confirmarContrasena;
@@ -282,7 +351,7 @@ private uploadImage(file: File): Promise<string> {
     this.isSendingOtp = true;
     const userEmail = this.user.correo;
 
-    this.authService.sendPasswordChangeOtp(userEmail).pipe(
+    this.changePasswordService.sendPasswordChangeOtp(userEmail).pipe(
       finalize(() => this.isSendingOtp = false)
     ).subscribe({
       next: (response) => {
@@ -302,27 +371,41 @@ private uploadImage(file: File): Promise<string> {
     });
   }
 
+
+  // Función modificada verifyOtp
   verifyOtp(): void {
-    if (!this.otpCode || this.otpCode.length !== 6) {
-      this.swalService.showWarning('Validación', 'Ingrese un código OTP válido de 6 dígitos');
+    this.otpError = '';
+
+    // Validación básica
+    if (!this.otpCode || this.otpCode.length !== 6 || !/^\d+$/.test(this.otpCode)) {
+      this.otpError = 'Ingrese un código OTP válido de 6 dígitos numéricos';
+      this.otpCode = ''; // Limpiar campo
       return;
     }
 
     this.isVerifyingOtp = true;
 
-    this.authService.verifyPasswordChangeOtp(this.otpCode).pipe(
+    this.changePasswordService.verifyPasswordChangeOtp(this.otpCode).pipe(
       finalize(() => this.isVerifyingOtp = false)
     ).subscribe({
       next: (response) => {
         if (response.message) {
+          // Solo cerrar modal si es exitoso
+          const modalElement = document.getElementById('otpModal');
+          if (modalElement) {
+              const modal = bootstrap.Modal.getInstance(modalElement);
+              modal?.hide();
+          }
+        
           this.confirmPasswordChange();
         } else {
-          this.swalService.showError('Error', 'Código OTP inválido');
+          this.otpError = 'Código OTP incorrecto. Intente nuevamente.';
+          this.otpCode = ''; // Limpiar campo
         }
       },
       error: (error) => {
-        const errorMsg = error.error?.message || 'Error al verificar el OTP';
-        this.swalService.showError('Error', errorMsg);
+        this.otpError = error.error?.message || 'Error al verificar el OTP';
+        this.otpCode = ''; // Limpiar campo
       }
     });
   }
@@ -330,7 +413,7 @@ private uploadImage(file: File): Promise<string> {
   confirmPasswordChange(): void {
     this.isChangingPassword = true;
 
-    this.authService.changePassword(
+    this.changePasswordService.changePassword(
       this.user.correo,
       this.contrasena,
       this.otpCode

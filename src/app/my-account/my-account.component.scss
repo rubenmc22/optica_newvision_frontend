@@ -217,6 +217,16 @@ button.btn-success:active {
     color: var(--text-color);
 }
 
+input[type="text"].otp-input {
+    letter-spacing: 0.5em;
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+.text-danger {
+    font-size: 0.9rem;
+}
 
 /* Responsividad para móviles */
 @media (max-width: 576px) {

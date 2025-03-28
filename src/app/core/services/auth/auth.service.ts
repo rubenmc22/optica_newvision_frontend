@@ -5,44 +5,8 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { environment } from '../environment';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
+import { User, Rol, AuthData, AuthResponse } from '../../../Interfaces/models-interface';
 
-interface User {
-  id: string;
-  cedula: string;
-  correo: string;
-  nombre: string;
-  telefono: string;
-  email: string;
-}
-
-interface Rol {
-  _id: string;
-  key: string;
-  name: string;
-}
-
-interface AuthData {
-  token: string;
-  user: User;
-  rol: Rol;
-}
-
-interface AuthResponse {
-  message: string;
-  token: string;
-  user: {
-    id: string;
-    cedula: string;
-    correo: string;
-    nombre: string;
-    telefono: string;
-  };
-  rol: {
-    _id: string;
-    key: string;
-    name: string;
-  };
-}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -76,6 +40,10 @@ export class AuthService {
 
   get currentUserValue(): AuthData | null {
     return this.currentUserSubject.value;
+  }
+
+  getToken(): string | null {
+    return this.storage.getItem(this.TOKEN_KEY);
   }
 
   getCurrentUser(): User | null {
@@ -137,14 +105,10 @@ export class AuthService {
     );
   }
 
-  private setAuth(authData: AuthData): void {
+  public setAuth(authData: AuthData): void {
     this.storage.setItem(this.TOKEN_KEY, authData.token);
     this.storage.setItem(this.AUTH_DATA_KEY, JSON.stringify(authData));
     this.currentUserSubject.next(authData);
-  }
-
-  getToken(): string | null {
-    return this.storage.getItem(this.TOKEN_KEY);
   }
 
   isAuthenticated(): boolean {
@@ -177,44 +141,4 @@ export class AuthService {
     return this.http.post(`${environment.apiUrl}/upload-avatar`, formData);
   }
 
-  editUser(userData: Partial<User>): Observable<AuthData> {
-    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    
-    return this.http.put<AuthResponse>(
-      `${environment.apiUrl}/account/edit-profile`, 
-      userData, 
-      { headers }
-    ).pipe(
-      map(response => {
-        const authData: AuthData = {
-          token: this.getToken() || '',
-          user: {
-            ...response.user,
-            email: response.user.correo
-          },
-          rol: response.rol || this.currentUserValue?.rol as Rol
-        };
-        
-        this.setAuth(authData);
-        return authData;
-      })
-    );
-  }
-
-  // Métodos para cambio de contraseña
-  sendPasswordChangeOtp(email: string): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/account/change-password--send-otp`, { email });
-  }
-
-  verifyPasswordChangeOtp(otp: string): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/account/change-password--verify-otp`, { otp });
-  }
-
-  changePassword(email: string, newPassword: string, otp: string): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/account/change-password--change-password`, {
-      email,
-      newPassword,
-      otp
-    });
-  }
 }
