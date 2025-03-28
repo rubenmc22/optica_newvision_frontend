@@ -1,4 +1,4 @@
-@use 'custom-theme' as *;
+@use './custom-theme.scss' as *;
 /* src/styles.scss */
 @use 'app/core/services/swal/swal.service.scss' as swal;
 

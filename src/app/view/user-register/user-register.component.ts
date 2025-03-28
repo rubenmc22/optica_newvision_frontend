@@ -2,8 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router'; // Importa el Router
-import { SwalService } from '../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
-import { GeneralFunctionsService } from '../core/services/general-functions/general-functions.service';
+import { SwalService } from '../../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
+import { GeneralFunctionsService } from '../../core/services/general-functions/general-functions.service';
 
 @Component({
   selector: 'app-user-register',

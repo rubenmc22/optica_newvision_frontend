@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { AtletasService } from '../core/services/atletas/atletas.service';
+import { AtletasService } from '../../core/services/atletas/atletas.service';
 import { Router } from '@angular/router'; // Router para navegación
-import { SwalService } from '../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
+import { SwalService } from '../../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
 
 @Component({
   selector: 'app-ver-atletas',

@@ -1,10 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Location } from '@angular/common';
-import { GeneralFunctionsService } from '../core/services/general-functions/general-functions.service';
-import { SwalService } from '../core/services/swal/swal.service'; // Servicio de SweetAlert2
+import { GeneralFunctionsService } from '../../core/services/general-functions/general-functions.service';
+import { SwalService } from '../../core/services/swal/swal.service'; // Servicio de SweetAlert2
 import { Router } from '@angular/router'; // Router para navegación
-import { AuthService } from '../core/services/auth/auth.service'; // Servicio de autenticación
+import { AuthService } from '../../core/services/auth/auth.service'; // Servicio de autenticación
 
 @Component({
   selector: 'app-crear-atletas',

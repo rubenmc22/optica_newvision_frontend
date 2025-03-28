@@ -23,7 +23,11 @@
     "lib": [
       "es2022",
       "dom"
-    ]
+    ],
+    "baseUrl": "./",   // Se agregó esta línea
+    "paths": {
+      "@view/*": ["src/app/view/*"]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

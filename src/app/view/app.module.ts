@@ -5,7 +5,7 @@ import { RouterModule } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http'; // Cambio clave aquí
 
 // Componentes
-import { AppComponent } from './app.component';
+import { AppComponent } from '../app.component';
 import { UserRegisterComponent } from './user-register/user-register.component';
 import { LoginComponent } from './login/login.component';
 import { ForgotPasswordComponent } from './forgot-password/forgot-password.component';
@@ -18,9 +18,9 @@ import { VerAtletasComponent } from './ver-atletas/ver-atletas.component';
 import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
 
 // Módulos y servicios
-import { MaterialModule } from './material.module';
-import { appRoutes } from './app.routes';
-import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { MaterialModule } from '../material.module';
+import { appRoutes } from '../app.routes';
+import { authInterceptor } from '../core/interceptors/auth.interceptor';
 
 @NgModule({
   declarations: [

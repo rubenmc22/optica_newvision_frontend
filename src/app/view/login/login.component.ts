@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { SwalService } from '../core/services/swal/swal.service';
-import { GeneralFunctionsService } from '../core/services/general-functions/general-functions.service';
-import { AuthService } from '../core/services/auth/auth.service';
+import { SwalService } from '../../core/services/swal/swal.service';
+import { GeneralFunctionsService } from '../../core/services/general-functions/general-functions.service';
+import { AuthService } from '../../core/services/auth/auth.service';
 import { finalize } from 'rxjs/operators';
 import { HttpErrorResponse } from '@angular/common/http';
 

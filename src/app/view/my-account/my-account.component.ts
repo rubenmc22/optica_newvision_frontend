@@ -1,9 +1,9 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { SwalService } from '../core/services/swal/swal.service';
-import { AuthService } from '../core/services/auth/auth.service';
-import { ChangePasswordService } from '../core/services/changePassword/change-password.service';
+import { SwalService } from '../../core/services/swal/swal.service';
+import { AuthService } from '../../core/services/auth/auth.service';
+import { ChangePasswordService } from '../../core/services/changePassword/change-password.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs/operators';
 import { MatSnackBar } from '@angular/material/snack-bar';

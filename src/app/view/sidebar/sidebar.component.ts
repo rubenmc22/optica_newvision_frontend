@@ -1,9 +1,7 @@
-import { Component, ElementRef, OnInit, Input, ChangeDetectorRef } from '@angular/core';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { AuthService } from '../core/services/auth/auth.service'; // Servicio de autenticación
+import { Component, OnInit, Input } from '@angular/core';
+import { AuthService } from '../../core/services/auth/auth.service'; // Servicio de autenticación
 import { Router } from '@angular/router'; // Router para navegación
-import { SwalService } from '../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
-//import { SwalService } from '../services/swal/swal.service'; // Servicio de SweetAlert2
+import { SwalService } from '../../core/services/swal/swal.service';
 
 @Component({
   selector: 'app-sidebar',

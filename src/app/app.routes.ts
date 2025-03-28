@@ -1,14 +1,14 @@
 import { NgModule, inject } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { UserRegisterComponent } from './user-register/user-register.component';
-import { LoginComponent } from './login/login.component';
-import { ForgotPasswordComponent } from './forgot-password/forgot-password.component';
-import { DashboardComponent } from './dashboard/dashboard.component';
-import { MyAccountComponent } from './my-account/my-account.component';
-import { PostloginTemplateComponent } from './postlogin-template/postlogin-template.component';
-import { FichaTecnicaComponent } from './ficha-tecnica/ficha-tecnica.component';
-import { VerAtletasComponent } from './ver-atletas/ver-atletas.component';
-import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
+import { UserRegisterComponent } from './view/user-register/user-register.component';
+import { LoginComponent } from './view/login/login.component';
+import { ForgotPasswordComponent } from './view/forgot-password/forgot-password.component';
+import { DashboardComponent } from './view/dashboard/dashboard.component';
+import { MyAccountComponent } from './view/my-account/my-account.component';
+import { PostloginTemplateComponent } from './view/postlogin-template/postlogin-template.component';
+import { FichaTecnicaComponent } from './view/ficha-tecnica/ficha-tecnica.component';
+import { VerAtletasComponent } from './view/ver-atletas/ver-atletas.component';
+import { CrearAtletasComponent } from './view/crear-atletas/crear-atletas.component';
 import { authGuard } from './core/services/auth/auth.guard';
 import { AuthService } from './core/services/auth/auth.service';
 
