@@ -4,6 +4,7 @@ import { Location } from '@angular/common';
 import { Router } from '@angular/router'; // Importa el Router
 import { SwalService } from '../../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
 import { GeneralFunctionsService } from '../../core/services/general-functions/general-functions.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-user-register',
@@ -179,8 +180,8 @@ export class UserRegisterComponent implements OnInit {
 
       // Determinar la URL del endpoint según el tipo de usuario
       const endpointUrl = isMinor
-        ? "http://localhost:3200/api/auth/register-representative"
-        : "http://localhost:3200/api/auth/register-athlete";
+        ? `${environment.apiUrl}/auth/register-representative`
+        : `${environment.apiUrl}/auth/register-athlete`;
 
       // Ajustar el objeto formData antes del envío
       if (isMinor) {
@@ -197,7 +198,7 @@ export class UserRegisterComponent implements OnInit {
         formData.representativeEmail = '';
       }
 
-     
+
       console.log('Datos del formulario antes del envío:', JSON.stringify(formData));
 
       fetch(endpointUrl, {

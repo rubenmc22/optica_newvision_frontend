@@ -74,7 +74,6 @@ export class MyAccountComponent implements OnInit {
   selectedFile: File | null = null;
 
   constructor(
-    private fb: FormBuilder,
     private router: Router,
     private swalService: SwalService,
     private authService: AuthService,

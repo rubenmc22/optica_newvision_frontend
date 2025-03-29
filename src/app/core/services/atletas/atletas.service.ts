@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators'; // Importa el operador map
-import { environment } from '../../services/environment';
+import { environment } from '../../../../environments/environment';
 import { Atleta, ApiResponse } from '../../../Interfaces/models-interface';
 
 

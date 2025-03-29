@@ -5,6 +5,7 @@ import { GeneralFunctionsService } from '../../core/services/general-functions/g
 import { SwalService } from '../../core/services/swal/swal.service'; // Servicio de SweetAlert2
 import { Router } from '@angular/router'; // Router para navegación
 import { AuthService } from '../../core/services/auth/auth.service'; // Servicio de autenticación
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-crear-atletas',
@@ -87,7 +88,7 @@ export class CrearAtletasComponent implements OnInit {
       }
 
       // Enviar datos al servidor
-      fetch('http://localhost:3200/api/atletas/register', { // URL del backend
+      fetch(`${environment.apiUrl}/atletas/register`, { // URL del backend
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
