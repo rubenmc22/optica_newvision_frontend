@@ -1,16 +1,16 @@
 <div class="card filtros-container">
     <!-- Filtro de búsqueda general (Cédula/Nombre/Correo) -->
     <div class="card-header filtros-header">
-        <div class="row align-items-center">
-            <div class="col-8 d-flex align-items-center">
-                <label for="busqueda" class="form-label me-3 filtros-label" style="font-size:18px; margin-top: 8px;">
-                    Buscar un Atleta:
-                </label>
-                <input type="text" id="busqueda" class="form-control w-50 filtros-input"
-                    placeholder="Nombre, Cédula o Correo" [(ngModel)]="filtros.busqueda" (input)="aplicarFiltros()"
-                    maxlength="50" />
-            </div>
-        </div>
+        <div class="col-8 d-flex align-items-center">
+            <label for="busqueda" class="form-label me-3 filtros-label" style="font-size:18px; margin-top: 8px;">
+              Buscar un Atleta:
+            </label>
+            <input type="text" id="busqueda" class="form-control w-50 filtros-input"
+              placeholder="Nombre, Cédula o Correo" 
+              [(ngModel)]="filtros.busqueda" 
+              (ngModelChange)="aplicarFiltros()"
+              maxlength="50" />
+          </div>
     </div>
 
     <!-- Filtros avanzados (Deporte, Posición, Género, Edad) -->
@@ -104,12 +104,26 @@
                 </thead>
                 <tbody *ngIf="atletasPaginados.length; else noResults">
                     <tr *ngFor="let atleta of atletasPaginados">
-                        <td>{{ atleta.cedula }}</td>
-                        <td>{{ atleta.nombre }}</td>
+                        <!-- Columna Cédula con manejo especial -->
+                        <td>
+                            <span *ngIf="atleta.cedula; else sinCedula">{{ atleta.cedula }}</span>
+                            <ng-template #sinCedula>
+                                <span class="text-muted" [title]="'Registrado por representante'">N/A (Representante)</span>
+                            </ng-template>
+                        </td>
+
+                        <!-- Columna Nombre con icono de advertencia -->
+                        <td>
+                            {{ atleta.nombre }}
+                            <i *ngIf="tieneCamposObligatoriosIncompletos(atleta)"
+                                class="bi bi-exclamation-triangle-fill text-warning ms-2"
+                                [title]="getTooltipCamposFaltantes(atleta)"></i>
+                        </td>
+
                         <td>{{ atleta.edad }}</td>
-                        <td>{{ atleta.generoText }}</td>
-                        <td>{{ atleta.deporte }}</td>
-                        <td>{{ atleta.posicion }}</td>
+                        <td>{{ atleta.generoTexto }}</td>
+                        <td>{{ atleta.deporte || 'No especificado' }}</td>
+                        <td>{{ atleta.posicion || 'No especificado' }}</td>
                         <td>
                             <a [routerLink]="['/ficha-tecnica', atleta.cedula]" class="text-primary">
                                 Ver ficha técnica

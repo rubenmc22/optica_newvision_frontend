@@ -6,6 +6,29 @@
     color: var(--text-color);
 }
 
+/* Estilo para el icono de advertencia */
+.bi-exclamation-triangle-fill {
+    cursor: help;
+    /* Cambia el cursor a "help" para indicar que hay información adicional */
+    transition: transform 0.2s;
+
+    &:hover {
+        transform: scale(1.2);
+    }
+}
+
+/* Estilo para el texto de cédula no disponible */
+.text-muted {
+    font-style: italic;
+    opacity: 0.7;
+}
+
+/* Resaltar filas con datos incompletos */
+tr:has(.bi-exclamation-triangle-fill) {
+    background-color: rgba(255, 193, 7, 0.1);
+    /* Fondo amarillo muy suave */
+}
+
 .filtros-label {
     font-size: 14px;
     font-weight: bold;

@@ -38,3 +38,29 @@ export interface User {
       name: string;
     };
   }
+
+  export interface Atleta {
+    _id: string;
+    user_id: string;
+    nombre: string;
+    fecha_nacimiento: string;
+    genero: 'M' | 'F';
+    cedula?: string; // Opcional porque puede venir de representante
+    altura?: number | null;
+    peso?: number | null;
+    nacionalidad?: string | null;
+    deporte?: string | null; // Añadimos deporte como opcional
+    posicion?: string | null; // Añadimos posición como opcional
+    createdAt: string;
+    updatedAt: string;
+    __v: number;
+    edad: number;
+    generoTexto: string;
+  }
+
+  export interface ApiResponse {
+    message: string;
+    atletas: Atleta[];
+  }
+  
+  

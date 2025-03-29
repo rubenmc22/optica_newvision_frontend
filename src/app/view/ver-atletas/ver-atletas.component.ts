@@ -32,9 +32,17 @@ export class VerAtletasComponent implements OnInit {
 
     this.atletasService.getAllAtletas().subscribe({
       next: (atletas) => {
-        this.atletas = atletas;
-        console.log('atletas', atletas);
-        this.aplicarFiltros(); // Aplica filtros iniciales
+        // Procesar datos para asegurar valores por defecto
+        this.atletas = atletas.map(atleta => ({
+          ...atleta,
+          deporte: atleta.deporte || null,
+          posicion: atleta.posicion || null,
+          edad: atleta.edad || 0,
+          generoTexto: atleta.genero === 'M' ? 'Masculino' : 'Femenino'
+        }));
+
+        console.log('Atletas cargados:', this.atletas);
+        this.aplicarFiltros();
         this.cargando = false;
       },
       error: (error) => {
@@ -92,6 +100,36 @@ export class VerAtletasComponent implements OnInit {
     5: ['Corredor', 'Lanzador', 'Saltador']
   };
 
+  // Método para verificar si un atleta tiene datos incompletos
+  tieneDatosIncompletos(atleta: any): boolean {
+    return !atleta.cedula || !atleta.fecha_nacimiento || !atleta.altura ||
+      !atleta.peso || !atleta.nacionalidad || !atleta.deporte ||
+      !atleta.posicion;
+  }
+
+  // Método específico para campos obligatorios (excepto cédula)
+  tieneCamposObligatoriosIncompletos(atleta: any): boolean {
+    return !atleta.fecha_nacimiento || !atleta.altura ||
+      !atleta.peso || !atleta.nacionalidad || !atleta.deporte ||
+      !atleta.posicion;
+  }
+
+  // Método para obtener tooltip con campos faltantes
+  getTooltipCamposFaltantes(atleta: any): string {
+    const camposFaltantes = [];
+
+    if (!atleta.fecha_nacimiento) camposFaltantes.push('Fecha de Nacimiento');
+    // if (!atleta.altura) camposFaltantes.push('Altura');
+    // if (!atleta.peso) camposFaltantes.push('Peso');
+    //if (!atleta.nacionalidad) camposFaltantes.push('Nacionalidad');
+    if (!atleta.deporte) camposFaltantes.push('Deporte');
+    if (!atleta.posicion) camposFaltantes.push('Posición');
+
+    return camposFaltantes.length > 0
+      ? 'El Atleta no se ha registrado completamente, faltan registrar los siguientes campos: ' + camposFaltantes.join(', ')
+      : 'Registro completo';
+  }
+
   onSportDropdownChange(event: Event): void {
     const selectedValue = (event.target as HTMLSelectElement).value;
 
@@ -113,43 +151,47 @@ export class VerAtletasComponent implements OnInit {
   }
 
   aplicarFiltros(): void {
-    const normalizarTexto = (texto: string): string =>
-      texto
-        .normalize('NFD') // Normaliza caracteres con tilde/acento
-        .replace(/[\u0300-\u036f]/g, '') // Elimina marcas diacríticas (acentos)
-        .toLowerCase(); // Convierte todo a minúsculas
+    // Función para normalizar texto (remover acentos y convertir a minúsculas)
+    const normalizarTexto = (texto: string): string => {
+      if (!texto) return '';
+      return texto
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    };
 
-    const edadMinValida = this.filtros.edadMin ? Number(this.filtros.edadMin) || 0 : 0;
-    const edadMaxValida = this.filtros.edadMax ? Number(this.filtros.edadMax) || 999 : 999;
+    // Convertir valores numéricos
+    const edadMin = this.filtros.edadMin ? +this.filtros.edadMin : 0;
+    const edadMax = this.filtros.edadMax ? +this.filtros.edadMax : 999;
 
     this.atletasFiltrados = this.atletas.filter(atleta => {
-      const deporteValido =
-        !this.filtros.deporte ||
-        normalizarTexto(atleta.deporte) === normalizarTexto(this.filtros.deporte?.name || '');
-      const posicionValida =
-        !this.filtros.posicion ||
-        normalizarTexto(atleta.posicion) === normalizarTexto(this.filtros.posicion);
-      const generoValido =
-        !this.filtros.genero ||
-        atleta.generoTexto.toLowerCase() === this.filtros.genero.toLowerCase();
-      const edadValida =
-        atleta.edad >= edadMinValida && atleta.edad <= edadMaxValida;
-      const busquedaValida =
-        !this.filtros.busqueda ||
-        normalizarTexto(atleta.nombre).includes(normalizarTexto(this.filtros.busqueda)) ||
-        normalizarTexto(atleta.cedula).includes(normalizarTexto(this.filtros.busqueda)) ||
-        normalizarTexto(atleta.correo).includes(normalizarTexto(this.filtros.busqueda));
+      // Normalizar el término de búsqueda
+      const terminoBusqueda = normalizarTexto(this.filtros.busqueda);
 
-      return (
-        deporteValido &&
-        posicionValida &&
-        generoValido &&
-        edadValida &&
-        busquedaValida
-      );
+      // Verificar coincidencia en nombre, cédula o correo
+      const coincideBusqueda = !terminoBusqueda ||
+        normalizarTexto(atleta.nombre).includes(terminoBusqueda) ||
+        (atleta.cedula && normalizarTexto(atleta.cedula).includes(terminoBusqueda)) ||
+        (atleta.correo && normalizarTexto(atleta.correo).includes(terminoBusqueda));
+
+      // Verificar otros filtros
+      const coincideDeporte = !this.filtros.deporte ||
+        normalizarTexto(atleta.deporte) === normalizarTexto(this.filtros.deporte.name);
+
+      const coincidePosicion = !this.filtros.posicion ||
+        normalizarTexto(atleta.posicion) === normalizarTexto(this.filtros.posicion);
+
+      const coincideGenero = !this.filtros.genero ||
+        normalizarTexto(atleta.generoTexto) === normalizarTexto(this.filtros.genero);
+
+      const coincideEdad = atleta.edad == null ||
+        (atleta.edad >= edadMin && atleta.edad <= edadMax);
+
+      return coincideBusqueda && coincideDeporte && coincidePosicion &&
+        coincideGenero && coincideEdad;
     });
 
-    // Reinicia a la primera página después de filtrar
+    // Reiniciar paginación
     this.paginaActual = 1;
   }
 

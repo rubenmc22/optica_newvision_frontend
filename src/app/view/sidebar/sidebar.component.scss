@@ -101,6 +101,10 @@
       font-size: 1.2rem;
       line-height: 1.2;
       margin-bottom: 2px;
+      white-space: normal;
+      /* Permite saltos de línea */
+      word-wrap: break-word;
+      /* Fuerza el salto si es necesario */
       /* Espacio entre nombre y rol */
     }
 
@@ -123,7 +127,7 @@
     border: none;
   }
 
-  .image{
+  .image {
     margin-top: 8px !important;
   }
 }

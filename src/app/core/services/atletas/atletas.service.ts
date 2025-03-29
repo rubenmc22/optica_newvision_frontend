@@ -4,27 +4,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators'; // Importa el operador map
 import { environment } from '../../services/environment';
-
-
-interface Atleta {
-  _id: string;
-  user_id: string;
-  nombre: string;
-  fecha_nacimiento: string;
-  cedula?: string;
-  altura?: number | null;
-  peso?: number | null;
-  nacionalidad?: string | null;
-  genero: 'M' | 'F';
-  createdAt: string;
-  updatedAt: string;
-  __v: number;
-}
-
-interface ApiResponse {
-  message: string;
-  atletas: Atleta[];
-}
+import { Atleta, ApiResponse } from '../../../Interfaces/models-interface';
 
 
 @Injectable({
