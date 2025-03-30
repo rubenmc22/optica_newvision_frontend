@@ -47,21 +47,25 @@
         left: 30px;
     }
 
-    @media (max-width: 768px) {
-        top: -50px;
-        left: 47.5%;
-        transform: translateX(-50%);
-        flex-direction: column;
-        align-items: center;
+    @media (max-width: 790px) {
+        /* top: 20px; */
+        left: 0%;
+        transform: translateY(0%);
+        min-height: 60px;
     }
 
-    @media (max-width: 320px) {
-        top: -50px;
-        left: 49%;
-        transform: translateX(-50%);
-        flex-direction: column;
-        align-items: center;
+    @media (max-width: 620px) {
+        transform: translateY(10%);
     }
+
+    @media (max-width: 500px) {
+        top: 0px;
+        left: 0%;
+        transform: translateY(-25%);
+        min-height: 60px;
+    }
+
+    @media (max-width: 400px) {}
 }
 
 .login-logo {
@@ -80,7 +84,15 @@
     }
 
     @media (max-width: 790px) {
-        margin-left: 0;
+        // width: 150px;
+    }
+
+    @media (max-width: 620px) {
+        width: 115px;
+    }
+
+    @media (max-width: 380px) {
+        margin-left: -25px !important;
     }
 }
 
@@ -102,8 +114,12 @@
         margin-left: -40px !important;
     }
 
-    @media (max-width: 768px) {
-        display: none;
+    @media (max-width: 790px) {
+        margin-left: -65px;
+    }
+
+    @media (max-width: 620px) {
+        // margin-left: -33px !important;
     }
 
 
@@ -126,6 +142,14 @@
     @media (max-width: 920px) {
         font-size: 15px;
     }
+
+    @media (max-width: 790px) {
+        font-size: 18px;
+    }
+
+    @media (max-width: 620px) {
+        font-size: 14px;
+    }
 }
 
 .login-logo-subtitle {
@@ -143,6 +167,14 @@
 
     @media (max-width: 920px) {
         font-size: 9px;
+    }
+
+    @media (max-width: 790px) {
+        font-size: 12px;
+    }
+
+    @media (max-width: 620px) {
+        font-size: 8px;
     }
 }
 
@@ -163,13 +195,13 @@
     }
 
     @media (max-width: 877.71px) {
-        margin-top: 20px !important;
+        margin-top: 30px !important;
         margin-left: -30px !important;
     }
 
-    @media (max-width: 768px) {
-        flex-direction: column;
-        margin-top: 50px !important;
+    @media (max-width: 790px) {
+        margin-top: 30px !important;
+        margin-left: -30px !important;
     }
 
     @media (max-width: 320px) {
@@ -196,8 +228,14 @@
     }
 
     @media (max-width: 790px) {
-        display: none; // Ocultar en pantallas pequeñas
+        margin-left: 100px;
     }
+
+    @media (max-width: 620px) {
+        margin-top: -75px;
+    }
+
+
 }
 
 /* Estilos para las etiquetas (labels) */
@@ -235,8 +273,15 @@
 }
 
 .form-check-label {
-    margin-left: 8px;
+  //  margin-left: 8px;
     color: var(--text-color) !important;
+
+    @media (max-width: 500px) {
+        color: var(--text-color) !important;
+        margin-left: 15px;
+        margin-top: 6px;
+        font-size: 15px;
+    }
 }
 
 .mb-4 {
@@ -305,6 +350,18 @@
     @media (max-width: 877.71px) {
         font-size: 48px;
     }
+
+    @media (max-width: 620px) {
+        //250%
+        font-size: 35px;
+        margin-left: -30px;
+    }
+
+    @media (max-width: 500px) {
+        //250%
+        display: none;
+    }
+
 }
 
 .login-side-text-guatire {
@@ -325,6 +382,17 @@
         font-size: 48px;
     }
 
+    @media (max-width: 620px) {
+        //250%
+        font-size: 35px;
+        margin-left: -30px;
+    }
+
+    @media (max-width: 500px) {
+        //250%
+        display: none;
+    }
+
 }
 
 .login-side-buttons {
@@ -334,8 +402,11 @@
     margin-top: 20px;
 
 
+    @media (max-width: 620px) {
+        margin-left: -30px;
+    }
 
-    @media (max-width: 790px) {
+    @media (max-width: 500px) {
         flex-direction: column;
         align-items: center;
     }
@@ -351,7 +422,7 @@
 
     @media (max-width: 790px) {
         width: 100%;
-        max-width: 200px;
+        // max-width: 200px;
     }
 }
 
@@ -369,7 +440,37 @@
     }
 
     @media (max-width: 877.71px) {
-        font-size: 8px !important;
+        font-size: 10px !important;
+    }
+
+    @media (max-width: 620px) {
+        width: 100px !important;
+        font-size: 7px !important;
+    }
+}
+
+.btn-ingresar {
+    background-color: var(--primary-color);
+    color: var(--formInput-color) !important;
+    font-size: 18px;
+
+    @media (max-width: 1228.80px) {
+        font-size: 14px; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 1024px) {
+        font-size: 10px !important; // Aplica un margen izquierdo solo en este rango
+    }
+
+    @media (max-width: 877.71px) {
+        font-size: 12px !important;
+        margin-top: -10px;
+    }
+
+    @media (max-width: 620px) {
+        font-size: 12px !important;
+        margin-top: -10px;
+        width: 100% !important;
     }
 }
 
@@ -388,7 +489,12 @@
     }
 
     @media (max-width: 877.71px) {
-        font-size: 8px !important;
+        font-size: 10px !important;
+    }
+
+    @media (max-width: 620px) {
+        width: 100px !important;
+        font-size: 7px !important;
     }
 }
 
@@ -416,16 +522,29 @@
     }
 
     @media (max-width: 877.71px) {
-        max-width: 325px; // Reducir el ancho máximo
+        /*   max-width: 325px; // Reducir el ancho máximo
         padding: 20px; // Reducir el padding
         max-height: 355px; // Reducir la altura máxima
-        font-size: 11px; // Reducir el tamaño de la fuente si es necesario
+        font-size: 11px; // Reducir el tamaño de la fuente si es necesario*/
     }
 
     @media (max-width: 790px) {
+        max-width: 325px; // Reducir el ancho máximo
+        padding: 20px; // Reducir el padding
+        max-height: 328px; // Reducir la altura máxima
+        font-size: 11px; // Reducir el tamaño de la fuente si es necesario
+    }
+
+    @media (max-width: 500px) {
         margin-left: 0;
         margin-top: 20px;
         max-width: 100%;
+    }
+}
+
+.ng-untouched {
+    @media (max-width: 790px) {
+        margin-top: -5px !important;
     }
 }
 
@@ -440,12 +559,16 @@
     }
 
     @media (max-width: 790px) {
-        font-size: 20px;
+        font-size: 16px;
     }
 
-    @media (max-width: 877.71px) {
-        font-size: 19px;
+
+    @media (max-width: 500px) {
+        font-size: 24px;
     }
+
+
+
 
 }
 
@@ -505,4 +628,229 @@
 .login-form-field mat-error {
     font-size: 14px !important;
     margin-left: -20px;
+}
+
+@media (max-width: 500px) {
+
+    /* Reset de estilos que podrían estar interfiriendo */
+    .login-container {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        padding: 15px !important;
+        min-height: 100vh !important;
+        height: auto !important;
+        position: static !important;
+        background: none !important;
+        overflow-x: hidden !important;
+    }
+
+    .login-background,
+    .login-background-image {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: -1 !important;
+    }
+
+    /* Logo superior - reset completo */
+    .login-logo-container {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        width: 70%;
+        margin: 0 auto 25px;
+        gap: 15px;
+        padding: 0 20px;
+        margin-top: 10px !important;
+        margin-left: 50px !important;
+    }
+
+    /* Imagen del logo - alineada a la izquierda del texto */
+    .login-logo {
+        width: 185px;
+        /* Reducido para mejor proporción */
+        margin: 0;
+        /* Reset de márgenes */
+        height: auto;
+    }
+
+    /* Texto del logo - alineado a la derecha de la imagen */
+    .login-logo-text {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        /* Alineación izquierda del texto */
+        margin: 0;
+        /* Reset de márgenes */
+        padding: 0;
+        //text-align: left;
+        margin-left: -60px !important;
+    }
+
+    .login-logo-title {
+        font-size: 18px;
+        /* Tamaño ajustado */
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .login-logo-subtitle {
+        font-size: 12px;
+        /* Tamaño ajustado */
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    /* Card de login - reset completo */
+    .login-card-container {
+        position: static !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        transform: none !important;
+        margin-top: 110px !important;
+    }
+
+
+    .login-card {
+        position: static !important;
+        width: 90% !important;
+        max-width: 380px !important;
+        margin: 0 auto !important;
+        padding: 30px 25px !important;
+        /* Aumenté padding vertical */
+        min-height: 440px !important;
+        /* Altura mínima aumentada */
+        transform: none !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        border-radius: 12px !important;
+        background: var(--secondary-color) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        /* Distribuye el espacio */
+
+        .login-title {
+            font-size: 22px !important;
+            text-align: center !important;
+            margin-bottom: 25px !important;
+            /* Aumenté margen inferior */
+            color: var(--primary-color) !important;
+        }
+
+        .form-label {
+            font-size: 14px !important;
+            margin-bottom: 10px !important;
+            /* Aumenté margen inferior */
+        }
+
+        .form-control {
+            width: 100% !important;
+            padding: 14px 15px !important;
+            /* Aumenté padding vertical */
+            font-size: 15px !important;
+            margin-bottom: 18px !important;
+            /* Aumenté margen inferior */
+            height: 48px !important;
+            /* Altura fija para inputs */
+        }
+
+        .form-check {
+            display: flex !important;
+            align-items: center !important;
+            margin: 20px 0 !important;
+            margin-left: 10px !important;
+            /* Aumenté margen vertical */
+
+            .form-check-input {
+                width: 35px !important;
+                height: 20px !important;
+                margin-right: 6px !important;
+            }
+        }
+
+        .btn-ingresar {
+            width: 100% !important;
+            padding: 16px !important;
+            /* Aumenté padding */
+            font-size: 16px !important;
+            margin-top: 15px !important;
+            /* Aumenté margen superior */
+            height: 50px !important;
+            /* Altura fija para botón */
+        }
+    }
+
+
+    /* Sección inferior - reset completo */
+    .login-side-text {
+        order: 2;
+        width: 90%;
+        max-width: 380px;
+        margin: 25px auto 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 40px;
+
+        .login-side-text-guatire,
+        .login-side-text-sport {
+            display: none !important;
+        }
+
+        .login-side-buttons {
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+            gap: 12px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+
+            .btn {
+                width: 100% !important;
+                padding: 12px !important;
+                font-size: 15px !important;
+                margin: 0 !important;
+
+
+            }
+        }
+    }
+
+    /* Enlace olvidó contraseña */
+    .btn-link {
+        display: block !important;
+        width: 100% !important;
+        text-align: center !important;
+        margin: 15px 0 0 0 !important;
+        padding: 0 !important;
+        font-size: 14px !important;
+        color: var(--primary-color) !important;
+    }
+}
+
+@media (max-width: 400px) {
+
+    .login-logo-container {
+        width: 80% !important;
+        margin-left: 20px !important;
+    }
+}
+
+@media (max-width: 320px) {
+
+    .login-logo-container {
+        width: 90% !important;
+        margin-left: 0px !important;
+    }
 }
