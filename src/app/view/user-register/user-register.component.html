@@ -51,13 +51,13 @@
                 El nombre y apellido solo pueden contener caracteres alfabéticos.
               </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6" id="cedula-input">
               <label class="form-label text-yellow">
                 {{ registerForm.get('isMinor')?.value
                 ? 'Cédula del Representante'
                 : 'Cédula del Atleta' }}
               </label>
-              <input type="text" class="form-control" [formControl]="idControl" placeholder="Ingrese la cédula">
+              <input type="text" class="form-control"  [formControl]="idControl" placeholder="Ingrese la cédula">
               <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativeId' : 'athleteId')"
                 class="text-danger small mt-1">
                 La cédula debe ser numérica y contener un máximo de 8 dígitos.
@@ -104,7 +104,7 @@
               </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-6" id="genero-radio">
               <label class="form-label text-yellow">Género</label>
               <div class="d-flex gap-3">
                 <div class="form-check">
@@ -132,7 +132,7 @@
               </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-6" id="confirm-password">
               <label class="form-label text-yellow">Confirmar Contraseña</label>
               <input type="password" class="form-control" formControlName="confirmPassword"
                 placeholder="Confirme la contraseña">
