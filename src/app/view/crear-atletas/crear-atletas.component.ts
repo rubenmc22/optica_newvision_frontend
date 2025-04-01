@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Location } from '@angular/common';
-import { GeneralFunctionsService } from '../../core/services/general-functions/general-functions.service';
+import { GeneralFunctions } from '../../general-functions/general-functions';
 import { SwalService } from '../../core/services/swal/swal.service'; // Servicio de SweetAlert2
 import { Router } from '@angular/router'; // Router para navegación
 import { AuthService } from '../../core/services/auth/auth.service'; // Servicio de autenticación
@@ -18,11 +18,11 @@ export class CrearAtletasComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private router: Router, // Inyecta el Router para la navegación
+    private router: Router, 
     private location: Location,
-    private generalFunctions: GeneralFunctionsService, // Inyecta el servicio
-    private swalService: SwalService, // Servicio de SweetAlert2
-    private authService: AuthService // Servicio de autenticación
+    private generalFunctions: GeneralFunctions, 
+    private swalService: SwalService,
+    private authService: AuthService 
   ) {
     this.crearAtletaForm = this.fb.group({
       nombre: [

@@ -3,7 +3,7 @@ import { FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms'
 import { Location } from '@angular/common';
 import { Router } from '@angular/router'; // Importa el Router
 import { SwalService } from '../../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
-import { GeneralFunctionsService } from '../../core/services/general-functions/general-functions.service';
+import { GeneralFunctions } from '../../general-functions/general-functions';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -26,7 +26,7 @@ export class UserRegisterComponent implements OnInit {
     private location: Location,
     private router: Router, // Inyecta el Router
     private swalService: SwalService, // Inyecta el servicio de SweetAlert2
-    private generalFunctions: GeneralFunctionsService // Inyecta el servicio
+    private generalFunctions: GeneralFunctions // Inyecta el servicio
   ) {
     // Inicialización del formulario sin validaciones requeridas inicialmente
     this.registerForm = this.fb.group({

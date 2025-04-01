@@ -8,7 +8,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  console.log('Interceptando request a:', req.url); // Debug 1
+  //console.log('Interceptando request a:', req.url); // Debug 1
 
   // Lista de endpoints públicos que no requieren token
   const PUBLIC_ENDPOINTS = [
@@ -25,12 +25,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   );
 
   if (isPublicRequest) {
-    console.log('[Interceptor] Ruta pública, omitiendo token:', req.url);
+  //  console.log('[Interceptor] Ruta pública, omitiendo token:', req.url);
     return next(req);
   }
 
   const token = authService.getToken();
-  console.log('Token obtenido:', token); // Debug 2
+  //console.log('Token obtenido:', token); // Debug 2
   
   if (!token) {
     console.error('[Interceptor] No hay token disponible para ruta protegida:', req.url);
@@ -50,7 +50,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     }
   });
 
-  console.log('[Interceptor] Token añadido a la solicitud:', req.url);
+  //console.log('[Interceptor] Token añadido a la solicitud:', req.url);
   
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {

@@ -23,11 +23,13 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
 /* Variables para colores y estilos comunes */
 /* Variables globales en :root para estilos personalizados */
 :root {
-  --primary-color: #FFD700; /* Puedes reutilizar esto desde la paleta */
+  --primary-color: #FFD700;
+  /* Puedes reutilizar esto desde la paleta */
   --secondary-color: #262524;
   --formInput-color: #1a1a1a;
   --text-color: white;
-  --border-color: var(--primary-color); /* Reutilización */
+  --border-color: var(--primary-color);
+  /* Reutilización */
   --label-color: var(--primary-color);
   --label-background: rgba(40, 40, 40, 0.9);
   --border-radius: 4px;
@@ -37,8 +39,7 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
 /* Estilos comunes para campos de texto en formularios de login y registro */
 .login-form-field .mat-mdc-notched-outline,
 .register-form-field .mat-mdc-notched-outline,
-.forgot-password-form-field .mat-mdc-notched-outline
-.login-form-field .mdc-notched-outline__leading,
+.forgot-password-form-field .mat-mdc-notched-outline .login-form-field .mdc-notched-outline__leading,
 .login-form-field .mdc-notched-outline__trailing,
 .register-form-field .mdc-notched-outline__leading,
 .register-form-field .mdc-notched-outline__trailing,
@@ -91,4 +92,23 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
 .mat-mdc-form-field-infix {
   border: none;
   /* Asegúrate de que esta propiedad no esté causando el problema */
+}
+
+/* ESTILOS PARA EL CAMPO DE EMAIL */
+.forgot-password-form-field {
+
+  .mdc-text-field__input {
+
+    /* Placeholder INVISIBLE por defecto */
+    &::placeholder {
+      opacity: 0 !important;
+      transition: opacity 0.2s ease;
+    }
+
+    /* Placeholder VISIBLE solo con foco */
+    &:focus::placeholder {
+      opacity: 1 !important;
+      color: rgba(255, 255, 255, 0.8) !important;
+    }
+  }
 }

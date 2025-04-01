@@ -5,7 +5,8 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
-import { SwalService } from '../../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
+import { SwalService } from '../../core/services/swal/swal.service';
+import { GeneralFunctions } from '../../general-functions/general-functions';
 
 @Component({
   selector: 'app-forgot-password',
@@ -23,50 +24,78 @@ export class ForgotPasswordComponent implements OnInit {
     private http: HttpClient,
     private snackBar: MatSnackBar,
     private router: Router,
-    private swalService: SwalService
+    private swalService: SwalService,
+    private generalFunctions: GeneralFunctions,
   ) {
     this.forgotPasswordForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]]
+      email: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$')
+        ]
+      ]
     });
+
+    this.forgotPasswordForm.get('email')?.valueChanges.subscribe(() => {
+      this.forgotPasswordForm.get('email')?.markAsTouched();
+    });
+  }
+
+
+  isInvalidField(field: string): boolean {
+    const control = this.forgotPasswordForm.get(field);
+    return control ? control.invalid && control.value !== '' : false;
   }
 
   ngOnInit() { }
 
+  get email() {
+    return this.forgotPasswordForm.get('email');
+  }
+
   onSubmit() {
-    if (this.forgotPasswordForm.valid) {
-      this.isLoading = true;
-      const email = this.forgotPasswordForm.value.email;
-
-      this.http.post(`${environment.apiUrl}/auth/forgot-password`, { email })
-        .subscribe({
-          next: (response) => {
-            this.isLoading = false;
-            /* this.snackBar.open('Se ha enviado un correo con instrucciones para restablecer tu contraseña', 'Cerrar', {
-               duration: 5000
-             });*/
-            this.swalService.showSuccess('¡Éxito!', 'Se ha enviado un correo con instrucciones para restablecer tu contraseña')
-              .then(() => {
-                this.router.navigate(['/login']); // Redirigir al inicio de sesión
-              });
-
-          },
-          error: (error) => {
-            this.isLoading = false;
-
-            const errorMessage = error.error?.message
-              ? error.error.message === 'El correo no esta registrado.'
-                ? 'No existe una cuenta asociada a este correo electrónico'
-                : error.error.message
-              : error.status === 404
-                ? 'No existe una cuenta asociada a este correo electrónico'
-                : 'Ocurrió un error al procesar tu solicitud';
-
-            this.swalService.showError('Error', errorMessage);
-          }
-        });
-    } else {
+    if (this.forgotPasswordForm.invalid) {
       this.forgotPasswordForm.markAllAsTouched();
+      return;
     }
+  
+    this.isLoading = true;
+    const { email } = this.forgotPasswordForm.value;
+  
+    this.http.post(`${environment.apiUrl}/auth/forgot-password`, { email })
+      .subscribe({
+        next: () => this.handleSuccess(),
+        error: (error) => this.handleError(error)
+      });
+  }
+  
+  private handleSuccess() {
+    this.isLoading = false;
+    this.swalService.showSuccess(
+      '¡Éxito!', 
+      'Se ha enviado un correo con instrucciones para restablecer tu contraseña'
+    ).then(() => {
+      this.router.navigate(['/login']);
+    });
+  }
+  
+  private handleError(error: any) {
+    this.isLoading = false;
+    const errorMessage = this.getErrorMessage(error);
+    this.swalService.showError('Error', errorMessage);
+  }
+  
+  private getErrorMessage(error: any): string {
+    if (error.error?.message) {
+      return error.error.message === 'El correo no esta registrado.' 
+        ? 'No existe una cuenta asociada a este correo electrónico'
+        : error.error.message;
+    }
+    
+    return error.status === 404
+      ? 'No existe una cuenta asociada a este correo electrónico'
+      : 'Ocurrió un error al procesar tu solicitud';
   }
 
   goBack() {
