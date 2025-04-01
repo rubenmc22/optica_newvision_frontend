@@ -264,4 +264,79 @@
   #email-input {
     margin-top: 15px !important;
   }
+
+  .register-logo-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 80%;
+    margin-left: 15px !important;
+    margin-top: -30px;
+  }
+
+  .register-logo {
+    width: 185px;
+    margin: 0;
+    height: auto;
+  }
+
+  .register-logo-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 0;
+    padding: 0;
+    margin-left: -45px !important;
+  }
+
+  .register-logo-title {
+    font-size: 18px;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .register-logo-subtitle {
+    font-size: 12px;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .register-card-container {
+    margin-top: -100px;
+  }
+}
+
+@media (max-width: 400px) {
+  .register-logo-container {
+    margin-left: -50px !important;
+    width: 110% !important;
+  }
+
+  .register-logo-text {
+    .register-logo-title {
+      font-size: 20px;
+    }
+
+    .register-logo-subtitle {
+      font-size: 15px;
+    }
+  }
+}
+
+@media (max-width: 300px) {
+  .register-logo-container {
+    margin-left: -30px !important;
+    width: 100% !important;
+  }
+
+  .register-logo-text {
+    .register-logo-title {
+      font-size: 20px;
+    }
+
+    .register-logo-subtitle {
+      font-size: 15px;
+    }
+  }
 }
