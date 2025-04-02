@@ -27,12 +27,11 @@
                         <!-- Widget de Imagen -->
                         <div class="text-center mb-4">
                             <div class="avatar-widget">
-                                <!-- Usa avatarPreview cuando exista, sino user.avatarUrl o imagen por defecto -->
-                                <img [src]="avatarPreview || user.avatarUrl || 'assets/default-photo.png'"
-                                    alt="Avatar del Usuario" class="avatar-img">
+                                <img [src]="getProfileImage()" alt="Avatar del Usuario" class="avatar-img"
+                                    (error)="handleImageError($event)"> <!-- Cambia onerror por (error) -->
 
                                 <div class="avatar-overlay"
-                                    [ngClass]="{'show-on-hover': avatarPreview || user.avatarUrl}">
+                                    [ngClass]="{'show-on-hover': avatarPreview || user.ruta_imagen}">
                                     <label for="avatarUpload">
                                         <i class="fas fa-camera"></i>
                                     </label>

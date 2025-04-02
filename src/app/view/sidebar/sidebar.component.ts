@@ -2,6 +2,10 @@ import { Component, OnInit, Input } from '@angular/core';
 import { AuthService } from '../../core/services/auth/auth.service'; // Servicio de autenticación
 import { Router } from '@angular/router'; // Router para navegación
 import { SwalService } from '../../core/services/swal/swal.service';
+import { SharedUserService } from '../../core/services/sharedUser/shared-user.service';
+import { environment } from '../../../environments/environment';
+import { User} from '../../Interfaces/models-interface';
+
 
 @Component({
   selector: 'app-sidebar',
@@ -14,11 +18,13 @@ export class SidebarComponent implements OnInit {
   @Input() userRoleKey: string = '';
   @Input() userRoleName: string = '';
   @Input() userName: string = '';
+  profileImage: string = 'assets/default-photo.png';
 
   constructor(
     private swalService: SwalService, // Inyecta el servicio de SweetAlert2
     private router: Router, // Inyecta el Router para la navegación
-    private authService: AuthService // Servicio de autenticación
+    private authService: AuthService, // Servicio de autenticación
+    private sharedUserService: SharedUserService,
   ) { }
 
 
@@ -75,6 +81,37 @@ export class SidebarComponent implements OnInit {
 
   ngOnInit(): void {
     this.initializeMenu();
+    this.initializeUserData();
+  }
+
+  private initializeUserData(): void {
+    const currentUser = this.authService.getCurrentUser();
+    const currentRole = this.authService.getCurrentRol();
+    
+    if (currentUser) {
+      this.userName = currentUser.nombre || '';
+      this.userRoleName = currentRole?.name || '';
+      
+      // Verificación segura de ruta_imagen
+      if ('ruta_imagen' in currentUser) {
+        this.profileImage = this.sharedUserService.getFullImageUrl(currentUser.ruta_imagen!);
+      }
+    }
+  
+    // Suscripción a cambios
+    this.sharedUserService.currentUserProfile$.subscribe((profile: User) => {
+      if (profile) {
+        this.userName = profile.nombre || this.userName;
+        if (profile.ruta_imagen) {
+          this.profileImage = this.sharedUserService.getFullImageUrl(profile.ruta_imagen);
+        }
+      }
+    });
+  }
+
+  handleImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.src = 'assets/default-photo.png';
   }
 
   private initializeMenu(): void {

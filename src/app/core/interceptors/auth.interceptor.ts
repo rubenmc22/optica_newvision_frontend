@@ -8,8 +8,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  //console.log('Interceptando request a:', req.url); // Debug 1
-
   // Lista de endpoints públicos que no requieren token
   const PUBLIC_ENDPOINTS = [
     '/auth/login',
@@ -25,15 +23,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   );
 
   if (isPublicRequest) {
-  //  console.log('[Interceptor] Ruta pública, omitiendo token:', req.url);
     return next(req);
   }
 
   const token = authService.getToken();
-  //console.log('Token obtenido:', token); // Debug 2
   
   if (!token) {
-    console.error('[Interceptor] No hay token disponible para ruta protegida:', req.url);
     authService.logout();
     router.navigate(['/login'], { 
       queryParams: { sessionExpired: true },
@@ -43,15 +38,25 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   // Clonar la solicitud con el token
-  const authReq = req.clone({
-    setHeaders: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-  });
+  let authReq = req.clone();
 
-  //console.log('[Interceptor] Token añadido a la solicitud:', req.url);
-  
+  // Solo añadir Content-Type para JSON, no para FormData
+  if (!(req.body instanceof FormData)) {
+    authReq = req.clone({
+      setHeaders: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+  } else {
+    // Para FormData, solo añadir el token
+    authReq = req.clone({
+      setHeaders: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+  }
+
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
       console.error('[Interceptor] Error en la solicitud:', error);

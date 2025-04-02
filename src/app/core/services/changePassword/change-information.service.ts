@@ -5,7 +5,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { environment } from '../../../../environments/environment';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
-import { AuthService } from '../../services/auth/auth.service';
+import { AuthService } from '../auth/auth.service';
 import { User, Rol, AuthData, AuthResponse } from '../../../Interfaces/models-interface';
 
 
@@ -14,7 +14,7 @@ import { User, Rol, AuthData, AuthResponse } from '../../../Interfaces/models-in
 @Injectable({
   providedIn: 'root'
 })
-export class ChangePasswordService {
+export class ChangeInformationService {
 
   constructor(
     private router: Router,
@@ -58,6 +58,16 @@ export class ChangePasswordService {
         console.error('Error in editUser:', error);
         return throwError(() => error);
       })
+    );
+  }
+
+  //Carda de imagen
+  // change-information.service.ts
+  uploadProfileImage(formData: FormData): Observable<{message: string, image_url: string}> {
+    return this.http.post<{message: string, image_url: string}>(
+     `${environment.apiUrl}/account/upload-profile-image`,
+      formData
+      // ¡No agregues headers manualmente! Multer necesita el boundary automático
     );
   }
 

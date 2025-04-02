@@ -3,29 +3,34 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SwalService } from '../../core/services/swal/swal.service';
 import { AuthService } from '../../core/services/auth/auth.service';
-import { ChangePasswordService } from '../../core/services/changePassword/change-password.service';
+import { ChangeInformationService } from '../../core/services/changePassword/change-information.service';
+import { SharedUserService } from '../../core/services/sharedUser/shared-user.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs/operators';
+import { lastValueFrom } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { environment } from '../../../environments/environment';
 import * as bootstrap from 'bootstrap';
 
 interface UserProfile {
   nombre: string;
   correo: string;
-  fechaNacimiento: string | null; // <-- Acepta string o null
+  fechaNacimiento: string | null;
   telefono: string;
-  avatarUrl?: string | null;
-  rol?: string; // <-- Añade esta línea
+  avatarUrl?: string | null;  // Puede ser string, null o undefined
+  rol?: string;
+  ruta_imagen?: string | null;  // Mismo tipo que avatarUrl
 }
 
 interface ApiUser {
-  id?: string;       // Hacer opcional
-  cedula?: string;   // Hacer opcional
+  id?: string;
+  cedula?: string;
   correo?: string;
   nombre?: string;
   telefono?: string;
   email?: string;
-  rol?: string; // <-- Añade esta línea
+  rol?: string;
+  ruta_imagen?: string | null;  // Añade el mismo tipo
 }
 
 
@@ -48,7 +53,8 @@ export class MyAccountComponent implements OnInit {
     fechaNacimiento: '',
     telefono: '',
     avatarUrl: null,
-    rol: ''
+    rol: '',
+    ruta_imagen: ''
   };
 
   originalUser: UserProfile = { ...this.user };
@@ -77,7 +83,8 @@ export class MyAccountComponent implements OnInit {
     private router: Router,
     private swalService: SwalService,
     private authService: AuthService,
-    private changePasswordService: ChangePasswordService,
+    private changeInformationService: ChangeInformationService,
+    private sharedUserService: SharedUserService,
     private snackBar: MatSnackBar,
     private cdRef: ChangeDetectorRef,
   ) {
@@ -95,9 +102,7 @@ export class MyAccountComponent implements OnInit {
 
   private verificarRol(): void {
     const currentRol = this.authService.getCurrentRol();
-    console.log('currentRol', currentRol);
     this.esAtleta = currentRol?.key === 'atleta';
-    console.log('this.esAtleta', this.esAtleta);
 
     // Si no es atleta, limpiamos la fecha de nacimiento
     if (!this.esAtleta) {
@@ -117,16 +122,45 @@ export class MyAccountComponent implements OnInit {
         correo: currentUser.correo?.trim() || currentUser.email?.trim() || '',
         telefono: currentUser.telefono?.trim() || '',
         fechaNacimiento: '', // Valor por defecto
-        avatarUrl: null
+        avatarUrl: null,
+        ruta_imagen: currentUser.ruta_imagen || null  // Carga la ruta de la imagen
       };
+      console.log('this.user ', this.user);
+
 
       this.originalUser = { ...this.user };
-
+      this.sharedUserService.updateUserProfile(this.user);
     } catch (error) {
       console.error('Error loading user data:', error);
       this.user = this.getDefaultUserProfile();
       this.originalUser = { ...this.user };
     }
+  }
+
+  getProfileImage(): string {
+    // 1. Si hay vista previa de nueva imagen
+    if (this.avatarPreview) {
+      return this.avatarPreview as string;
+    }
+
+    // 2. Si hay ruta de imagen existente
+    if (this.user.ruta_imagen) {
+      // Si la ruta ya es una URL completa (http:// o https://)
+      if (this.user.ruta_imagen.startsWith('http')) {
+        return this.user.ruta_imagen;
+      }
+
+      // Si comienza con /public (ruta relativa al servidor)
+      if (this.user.ruta_imagen.startsWith('/public')) {
+        return `${environment.baseUrl}${this.user.ruta_imagen}`;
+      }
+
+      // Para cualquier otro formato de ruta
+      return `${environment.baseUrl}/public/profile-images/${this.user.ruta_imagen}`;
+    }
+
+    // 3. Imagen por defecto si no hay ninguna
+    return 'assets/default-photo.png';
   }
 
 
@@ -196,69 +230,104 @@ export class MyAccountComponent implements OnInit {
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
 
-    if (input.files && input.files[0]) {
-      this.selectedFile = input.files[0];
+    if (input.files?.length) {
+      const file = input.files[0];
+
+      // Validación rápida en el frontend
+      if (!file.type.startsWith('image/')) {
+        this.swalService.showError('Error', 'Solo se permiten imágenes');
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        this.swalService.showError('Error', 'La imagen es demasiado grande (máx. 5MB)');
+        return;
+      }
+
+      this.selectedFile = file;
       const reader = new FileReader();
 
-      reader.onload = (e: ProgressEvent<FileReader>) => {
-        if (e.target?.result) {
-          this.avatarPreview = e.target.result as string;
-          this.detectChanges();
-          this.cdRef.detectChanges(); // Necesitas importar ChangeDetectorRef
-        }
+      reader.onload = (e) => {
+        this.avatarPreview = e.target?.result as string;
+        this.detectChanges();
+        this.cdRef.detectChanges();
       };
 
-      reader.onerror = (error) => {
-        console.error('Error reading file:', error);
-        this.swalService.showError('Error', 'No se pudo cargar la imagen');
+      reader.onerror = () => {
+        this.swalService.showError('Error', 'Error al leer el archivo');
       };
 
-      reader.readAsDataURL(this.selectedFile);
+      reader.readAsDataURL(file);
     }
   }
 
-
-  savePersonalInfo(): void {
+  async savePersonalInfo(): Promise<void> {
     if (!this.isPersonalInfoValid()) {
       return;
     }
 
     this.isSavingProfile = true;
 
-    // Verificación segura del archivo seleccionado
-    if (this.selectedFile instanceof File) {
-      this.uploadImage(this.selectedFile).then((imageUrl) => {
-        // Actualizar la URL del avatar antes de enviar los datos
-        this.user.avatarUrl = imageUrl;
-        this.sendUserData();
-      }).catch((error) => {
-        this.isSavingProfile = false;
-        this.swalService.showError('Error', 'No se pudo subir la imagen');
-        console.error('Error uploading image:', error);
-      });
-    } else {
-      // Si no hay imagen, enviar directamente los datos
-      this.sendUserData();
+    try {
+      if (this.selectedFile) {
+        this.user.avatarUrl = await this.uploadImage(this.selectedFile);
+      }
+
+      await this.sendUserData();
+
+      this.selectedFile = null;
+      this.isFormEdited = false;
+      this.originalUser = { ...this.user };
+
+      this.swalService.showSuccess('Éxito', 'Perfil actualizado correctamente');
+    } catch (error) {
+      console.error('Error guardando información:', error);
+
+      let errorMessage = 'Error al guardar los cambios';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+
+      this.swalService.showError('Error', errorMessage);
+    } finally {
+      this.isSavingProfile = false;
     }
   }
 
-  private uploadImage(file: File): Promise<string> {
+  private async uploadImage(file: File): Promise<string> {
     const formData = new FormData();
-    formData.append('file', file, file.name);
+    formData.append('profileImage', file); // Nombre debe coincidir con Multer
 
-    return this.authService.uploadAvatar(formData).toPromise()
-      .then((response: any) => {
-        if (!response?.imageUrl) {
-          throw new Error('No image URL in response');
-        }
-        return response.imageUrl;
-      });
+    try {
+      const response = await lastValueFrom(
+        this.changeInformationService.uploadProfileImage(formData)
+      );
+
+      if (!response?.image_url) {
+        throw new Error('No se recibió URL de imagen');
+      }
+
+      // Actualiza ambas propiedades para consistencia
+      this.user.ruta_imagen = response.image_url;
+      this.user.avatarUrl = response.image_url;
+
+      // Fuerza la detección de cambios
+      this.cdRef.detectChanges();
+      this.sharedUserService.updateUserProfile(this.user);
+      
+      return response.image_url;
+    } catch (error) {
+      console.error('Error subiendo imagen:', error);
+      throw error;
+    }
   }
 
-  private sendUserData(): void {
+  private async sendUserData(): Promise<void> {
     const userData = {
       nombre: this.user.nombre,
-      correo: this.user.correo,  // Opcional (puede ser null/undefined)
+      correo: this.user.correo,
       telefono: this.user.telefono,
       avatarUrl: this.user.avatarUrl,
       ...(this.esAtleta && this.user.fechaNacimiento && {
@@ -266,35 +335,22 @@ export class MyAccountComponent implements OnInit {
       })
     };
 
-    console.log('Enviando datos:', userData);
+    try {
+      const response = await this.changeInformationService.editUser(userData).toPromise();
 
-    this.isSavingProfile = true;
-
-    this.changePasswordService.editUser(userData).pipe(
-      finalize(() => this.isSavingProfile = false)
-    ).subscribe({
-      next: (response) => {
-        console.log('Respuesta completa:', response);
-
-        // Verificación más flexible del éxito
-        if (response && (response.message === 'ok')) {
-          this.handleSuccess(response);
-        } else {
-          // Si llega aquí, la respuesta no tiene el formato esperado
-          console.warn('Respuesta inesperada:', response);
-          const customError = new HttpErrorResponse({
-            error: { message: 'Estimado cliente, estamos presentando un error inesperado, intente nuevamente.' },
-            status: 200,
-            statusText: 'OK'
-          });
-          this.handleError(customError);
-        }
-      },
-      error: (error) => {
-        console.error('Error real en la petición:', error);
-        this.handleError(error);
+      if (!response || response.message !== 'ok') {
+        throw new Error(response?.message || 'Respuesta inesperada del servidor');
       }
-    });
+    } catch (error) {
+      console.error('Error actualizando datos:', error);
+      throw error; // Re-lanzamos el error para manejarlo en savePersonalInfo
+    }
+  }
+
+  handleImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.src = 'assets/default-photo.png';
+    console.warn('Error al cargar la imagen', this.user.ruta_imagen);
   }
 
   private handleSuccess(response: any): void {
@@ -350,7 +406,7 @@ export class MyAccountComponent implements OnInit {
     this.isSendingOtp = true;
     const userEmail = this.user.correo;
 
-    this.changePasswordService.sendPasswordChangeOtp(userEmail).pipe(
+    this.changeInformationService.sendPasswordChangeOtp(userEmail).pipe(
       finalize(() => this.isSendingOtp = false)
     ).subscribe({
       next: (response) => {
@@ -384,7 +440,7 @@ export class MyAccountComponent implements OnInit {
 
     this.isVerifyingOtp = true;
 
-    this.changePasswordService.verifyPasswordChangeOtp(this.otpCode).pipe(
+    this.changeInformationService.verifyPasswordChangeOtp(this.otpCode).pipe(
       finalize(() => this.isVerifyingOtp = false)
     ).subscribe({
       next: (response) => {
@@ -392,10 +448,10 @@ export class MyAccountComponent implements OnInit {
           // Solo cerrar modal si es exitoso
           const modalElement = document.getElementById('otpModal');
           if (modalElement) {
-              const modal = bootstrap.Modal.getInstance(modalElement);
-              modal?.hide();
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            modal?.hide();
           }
-        
+
           this.confirmPasswordChange();
         } else {
           this.otpError = 'Código OTP incorrecto. Intente nuevamente.';
@@ -412,7 +468,7 @@ export class MyAccountComponent implements OnInit {
   confirmPasswordChange(): void {
     this.isChangingPassword = true;
 
-    this.changePasswordService.changePassword(
+    this.changeInformationService.changePassword(
       this.user.correo,
       this.contrasena,
       this.otpCode

@@ -81,6 +81,7 @@ export class AuthService {
           throw new Error('El servidor no devolvió un correo de usuario');
         }
 
+        console.log('data', data);
         const authData: AuthData = {
           token: data.token,
           user: {
@@ -137,8 +138,8 @@ export class AuthService {
   }
 
   // Métodos para gestión de avatar y perfil
-  uploadAvatar(formData: FormData): Observable<any> {
+  /*uploadAvatar(formData: FormData): Observable<any> {
     return this.http.post(`${environment.apiUrl}/upload-avatar`, formData);
-  }
+  }*/
 
 }
