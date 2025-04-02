@@ -1,5 +1,4 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SwalService } from '../../core/services/swal/swal.service';
 import { AuthService } from '../../core/services/auth/auth.service';
@@ -17,9 +16,9 @@ interface UserProfile {
   correo: string;
   fechaNacimiento: string | null;
   telefono: string;
-  avatarUrl?: string | null;  // Puede ser string, null o undefined
+  avatarUrl?: string | null;
   rol?: string;
-  ruta_imagen?: string | null;  // Mismo tipo que avatarUrl
+  ruta_imagen?: string | null;
 }
 
 interface ApiUser {
@@ -30,9 +29,8 @@ interface ApiUser {
   telefono?: string;
   email?: string;
   rol?: string;
-  ruta_imagen?: string | null;  // Añade el mismo tipo
+  ruta_imagen?: string | null;
 }
-
 
 @Component({
   selector: 'app-my-account',
@@ -40,9 +38,7 @@ interface ApiUser {
   templateUrl: './my-account.component.html',
   styleUrls: ['./my-account.component.scss']
 })
-
 export class MyAccountComponent implements OnInit {
-
   esAtleta: boolean = false;
   otpError: string = '';
   isVerifyingOtp: boolean = false;
@@ -71,7 +67,6 @@ export class MyAccountComponent implements OnInit {
 
   // Loading states
   isSendingOtp = false;
-  // isVerifyingOtp = false;
   isChangingPassword = false;
   isSavingProfile = false;
 
@@ -88,10 +83,6 @@ export class MyAccountComponent implements OnInit {
     private snackBar: MatSnackBar,
     private cdRef: ChangeDetectorRef,
   ) {
-    // Initialize with current session data
-    /* const currentUser = this.authService.getCurrentUser();
-     this.user = this.mapToUserProfile(currentUser);
-     this.originalUser = { ...this.user };*/
     this.loadUserData();
   }
 
@@ -104,15 +95,13 @@ export class MyAccountComponent implements OnInit {
     const currentRol = this.authService.getCurrentRol();
     this.esAtleta = currentRol?.key === 'atleta';
 
-    // Si no es atleta, limpiamos la fecha de nacimiento
     if (!this.esAtleta) {
       this.user.fechaNacimiento = '';
       this.originalUser.fechaNacimiento = '';
     }
-    this.cdRef.detectChanges(); // Forza la detección de cambios
+    this.cdRef.detectChanges();
   }
 
-  /**============ EDITAR INFORMACION PERSONAL ============*/
   private loadUserData(): void {
     try {
       const currentUser: ApiUser = this.authService.getCurrentUser() || {};
@@ -121,12 +110,10 @@ export class MyAccountComponent implements OnInit {
         nombre: currentUser.nombre?.trim() || '',
         correo: currentUser.correo?.trim() || currentUser.email?.trim() || '',
         telefono: currentUser.telefono?.trim() || '',
-        fechaNacimiento: '', // Valor por defecto
+        fechaNacimiento: '',
         avatarUrl: null,
-        ruta_imagen: currentUser.ruta_imagen || null  // Carga la ruta de la imagen
+        ruta_imagen: currentUser.ruta_imagen || null
       };
-      console.log('this.user ', this.user);
-
 
       this.originalUser = { ...this.user };
       this.sharedUserService.updateUserProfile(this.user);
@@ -138,31 +125,24 @@ export class MyAccountComponent implements OnInit {
   }
 
   getProfileImage(): string {
-    // 1. Si hay vista previa de nueva imagen
     if (this.avatarPreview) {
       return this.avatarPreview as string;
     }
 
-    // 2. Si hay ruta de imagen existente
     if (this.user.ruta_imagen) {
-      // Si la ruta ya es una URL completa (http:// o https://)
       if (this.user.ruta_imagen.startsWith('http')) {
         return this.user.ruta_imagen;
       }
 
-      // Si comienza con /public (ruta relativa al servidor)
       if (this.user.ruta_imagen.startsWith('/public')) {
         return `${environment.baseUrl}${this.user.ruta_imagen}`;
       }
 
-      // Para cualquier otro formato de ruta
       return `${environment.baseUrl}/public/profile-images/${this.user.ruta_imagen}`;
     }
 
-    // 3. Imagen por defecto si no hay ninguna
     return 'assets/default-photo.png';
   }
-
 
   private getDefaultUserProfile(): UserProfile {
     return {
@@ -174,17 +154,15 @@ export class MyAccountComponent implements OnInit {
     };
   }
 
-
   private setupFieldChangeListeners(): void {
     setTimeout(() => {
       const form = document.getElementById('editPersonalInfo');
       if (form) {
         const inputs = form.querySelectorAll('input, select');
-
         inputs.forEach(input => {
           input.addEventListener('input', () => {
             this.detectChanges();
-            this.cdRef.detectChanges(); // Necesitarás import ChangeDetectorRef
+            this.cdRef.detectChanges();
           });
           input.addEventListener('change', () => {
             this.detectChanges();
@@ -218,9 +196,8 @@ export class MyAccountComponent implements OnInit {
       !!this.user.telefono &&
       /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(this.user.nombre) &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.user.correo) &&
-      /^[0-9]{10,12}$/.test(this.user.telefono); // Ajusté a 10-12 dígitos
+      /^[0-9]{10,12}$/.test(this.user.telefono);
 
-    // Solo validamos fecha si es atleta y el campo está visible
     if (this.esAtleta) {
       return isValid && !!this.user.fechaNacimiento;
     }
@@ -233,7 +210,6 @@ export class MyAccountComponent implements OnInit {
     if (input.files?.length) {
       const file = input.files[0];
 
-      // Validación rápida en el frontend
       if (!file.type.startsWith('image/')) {
         this.swalService.showError('Error', 'Solo se permiten imágenes');
         return;
@@ -298,22 +274,24 @@ export class MyAccountComponent implements OnInit {
 
   private async uploadImage(file: File): Promise<string> {
     const formData = new FormData();
-    formData.append('profileImage', file); // Nombre debe coincidir con Multer
-
+    formData.append('profileImage', file);
+  
     try {
       const response = await lastValueFrom(
         this.changeInformationService.uploadProfileImage(formData)
       );
-
+  
       if (!response?.image_url) {
         throw new Error('No se recibió URL de imagen');
       }
-
-      // Actualiza ambas propiedades para consistencia
+  
+      // Actualiza en todos los servicios y estados
       this.user.ruta_imagen = response.image_url;
       this.user.avatarUrl = response.image_url;
-
-      // Fuerza la detección de cambios
+      
+      // Actualiza en AuthService y UserStateService
+      this.authService.updateProfileImage(response.image_url);
+      
       this.cdRef.detectChanges();
       this.sharedUserService.updateUserProfile(this.user);
       
@@ -343,7 +321,7 @@ export class MyAccountComponent implements OnInit {
       }
     } catch (error) {
       console.error('Error actualizando datos:', error);
-      throw error; // Re-lanzamos el error para manejarlo en savePersonalInfo
+      throw error;
     }
   }
 
@@ -372,21 +350,10 @@ export class MyAccountComponent implements OnInit {
     this.swalService.showError('Error', errorMsg);
   }
 
-
-
-  /**============ CAMBIO DE CONTRASENA ============*/
   validateNumberInput(event: KeyboardEvent): boolean {
     const charCode = event.key.charCodeAt(0);
-    // Permitir solo números (0-9) y teclas de control
     const isNumber = charCode >= 48 && charCode <= 57;
-    const isControlKey = [
-      8,  // backspace
-      9,  // tab
-      13, // enter
-      37, // left arrow
-      39, // right arrow
-      46  // delete
-    ].includes(event.keyCode);
+    const isControlKey = [8, 9, 13, 37, 39, 46].includes(event.keyCode);
 
     return isNumber || isControlKey;
   }
@@ -426,15 +393,12 @@ export class MyAccountComponent implements OnInit {
     });
   }
 
-
-  // Función modificada verifyOtp
   verifyOtp(): void {
     this.otpError = '';
 
-    // Validación básica
     if (!this.otpCode || this.otpCode.length !== 6 || !/^\d+$/.test(this.otpCode)) {
       this.otpError = 'Ingrese un código OTP válido de 6 dígitos numéricos';
-      this.otpCode = ''; // Limpiar campo
+      this.otpCode = '';
       return;
     }
 
@@ -445,7 +409,6 @@ export class MyAccountComponent implements OnInit {
     ).subscribe({
       next: (response) => {
         if (response.message) {
-          // Solo cerrar modal si es exitoso
           const modalElement = document.getElementById('otpModal');
           if (modalElement) {
             const modal = bootstrap.Modal.getInstance(modalElement);
@@ -455,12 +418,12 @@ export class MyAccountComponent implements OnInit {
           this.confirmPasswordChange();
         } else {
           this.otpError = 'Código OTP incorrecto. Intente nuevamente.';
-          this.otpCode = ''; // Limpiar campo
+          this.otpCode = '';
         }
       },
       error: (error) => {
         this.otpError = error.error?.message || 'Error al verificar el OTP';
-        this.otpCode = ''; // Limpiar campo
+        this.otpCode = '';
       }
     });
   }

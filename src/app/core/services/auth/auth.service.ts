@@ -6,6 +6,7 @@ import { environment } from '../../../../environments/environment';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 import { User, Rol, AuthData, AuthResponse } from '../../../Interfaces/models-interface';
+import { UserStateService } from './../userState/user-state-service';
 
 
 @Injectable({ providedIn: 'root' })
@@ -19,7 +20,8 @@ export class AuthService {
   constructor(
     private router: Router,
     private swalService: SwalService,
-    private http: HttpClient
+    private http: HttpClient,
+    private userState: UserStateService
   ) {
     // Initialize with stored data
     const storedData = this.storage.getItem(this.AUTH_DATA_KEY);
@@ -137,9 +139,28 @@ export class AuthService {
     this.router.navigate(['/login'], { replaceUrl: true });
   }
 
-  // Métodos para gestión de avatar y perfil
-  /*uploadAvatar(formData: FormData): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/upload-avatar`, formData);
-  }*/
+  // Solo añadiremos este nuevo método
+  refreshUserData(updatedData: Partial<User>): void {
+    const currentAuthData = this.currentUserValue;
+    if (!currentAuthData) return;
+
+    // Actualiza solo los campos proporcionados
+    const updatedUser = { ...currentAuthData.user, ...updatedData };
+    const newAuthData = { ...currentAuthData, user: updatedUser };
+
+    // Actualiza el almacenamiento y el subject
+    this.storage.setItem(this.AUTH_DATA_KEY, JSON.stringify(newAuthData));
+    this.currentUserSubject.next(newAuthData);
+  }
+
+  // Método adicional para actualizar solo la imagen
+  updateProfileImage(imageUrl: string): void {
+    const currentUser = this.getCurrentUser();
+    if (currentUser) {
+      currentUser.ruta_imagen = imageUrl;
+      this.refreshUserData({ ruta_imagen: imageUrl });
+      this.userState.updateUser({ ruta_imagen: imageUrl });
+    }
+  }
 
 }
