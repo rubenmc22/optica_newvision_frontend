@@ -4,20 +4,19 @@ import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
+
 export class SharedUserService {
   private userProfile = new BehaviorSubject<any>(null);
-  
-  // Expón el observable
   currentUserProfile$ = this.userProfile.asObservable();
 
-  // Actualiza el perfil del usuario
   updateUserProfile(profile: any) {
     this.userProfile.next(profile);
   }
 
-  // Obtiene la URL completa de la imagen
-  getFullImageUrl(ruta: string): string {
+  getFullImageUrl(ruta: string | null): string {
     if (!ruta) return 'assets/default-photo.png';
-    return ruta.startsWith('http') ? ruta : `${environment.baseUrl}${ruta}`;
+    if (ruta.startsWith('http')) return ruta;
+    if (ruta.startsWith('/public')) return `${environment.baseUrl}${ruta}`;
+    return `${environment.baseUrl}/public/profile-images/${ruta}`;
   }
 }

@@ -144,23 +144,16 @@ export class AuthService {
     const currentAuthData = this.currentUserValue;
     if (!currentAuthData) return;
 
-    // Actualiza solo los campos proporcionados
     const updatedUser = { ...currentAuthData.user, ...updatedData };
     const newAuthData = { ...currentAuthData, user: updatedUser };
 
-    // Actualiza el almacenamiento y el subject
     this.storage.setItem(this.AUTH_DATA_KEY, JSON.stringify(newAuthData));
     this.currentUserSubject.next(newAuthData);
+    this.userState.updateUser(updatedData);
   }
 
-  // Método adicional para actualizar solo la imagen
   updateProfileImage(imageUrl: string): void {
-    const currentUser = this.getCurrentUser();
-    if (currentUser) {
-      currentUser.ruta_imagen = imageUrl;
-      this.refreshUserData({ ruta_imagen: imageUrl });
-      this.userState.updateUser({ ruta_imagen: imageUrl });
-    }
+    this.refreshUserData({ ruta_imagen: imageUrl });
   }
 
 }

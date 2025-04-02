@@ -241,31 +241,33 @@ export class MyAccountComponent implements OnInit {
     if (!this.isPersonalInfoValid()) {
       return;
     }
-
+  
     this.isSavingProfile = true;
-
+  
     try {
       if (this.selectedFile) {
         this.user.avatarUrl = await this.uploadImage(this.selectedFile);
       }
-
+  
       await this.sendUserData();
-
+  
+      // Actualiza el nombre en el AuthService y SharedUserService
+      this.authService.refreshUserData({ nombre: this.user.nombre });
+      this.sharedUserService.updateUserProfile(this.user);
+  
       this.selectedFile = null;
       this.isFormEdited = false;
       this.originalUser = { ...this.user };
-
+  
       this.swalService.showSuccess('Éxito', 'Perfil actualizado correctamente');
     } catch (error) {
       console.error('Error guardando información:', error);
-
       let errorMessage = 'Error al guardar los cambios';
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
-
       this.swalService.showError('Error', errorMessage);
     } finally {
       this.isSavingProfile = false;

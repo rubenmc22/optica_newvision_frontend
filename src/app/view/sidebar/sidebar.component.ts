@@ -83,13 +83,22 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private setupSubscriptions(): void {
     // Suscripción a cambios en el perfil compartido
     const userProfileSub = this.sharedUserService.currentUserProfile$.subscribe((profile: User) => {
-      this.updateUserProfile(profile);
+      if (profile) {
+        this.userName = profile.nombre || this.userName;
+        if (profile.ruta_imagen) {
+          this.profileImage = this.sharedUserService.getFullImageUrl(profile.ruta_imagen);
+        }
+      }
     });
 
     // Suscripción a cambios en el AuthService
     const authUserSub = this.authService.currentUser$.subscribe(authData => {
       if (authData?.user) {
-        this.updateUserProfile(authData.user);
+        this.userName = authData.user.nombre || this.userName;
+        this.userRoleName = authData.rol?.name || '';
+        if (authData.user.ruta_imagen) {
+          this.profileImage = this.sharedUserService.getFullImageUrl(authData.user.ruta_imagen);
+        }
       }
     });
 
@@ -99,7 +108,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private updateUserProfile(user: User): void {
     if (user) {
       this.userName = user.nombre || this.userName;
-      
+
       // Actualiza la imagen solo si hay un cambio real
       if (user.ruta_imagen && user.ruta_imagen !== this.profileImage) {
         this.profileImage = this.sharedUserService.getFullImageUrl(user.ruta_imagen);
@@ -112,11 +121,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private initializeUserData(): void {
     const currentUser = this.authService.getCurrentUser();
     const currentRole = this.authService.getCurrentRol();
-    
+
     if (currentUser) {
       this.userName = currentUser.nombre || '';
       this.userRoleName = currentRole?.name || '';
-      
+
       if (currentUser.ruta_imagen) {
         this.profileImage = this.sharedUserService.getFullImageUrl(currentUser.ruta_imagen);
       }
@@ -131,7 +140,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private initializeMenu(): void {
     const currentRol = this.authService.getCurrentRol();
     const currentName = this.authService.getCurrentUser();
-    
+
     this.userRoleKey = currentRol?.key || '';
     this.userRoleName = currentRol?.name || '';
     this.userName = currentName?.nombre || '';
