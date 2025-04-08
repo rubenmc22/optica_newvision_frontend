@@ -60,7 +60,7 @@ export class CrearAtletasComponent implements OnInit {
       return; // Detener el flujo en caso de sesión inválida
     }
 
-    console.log('Formulario inicializado:', this.crearAtletaForm.value);
+    //console.log('Formulario inicializado:', this.crearAtletaForm.value);
   }
 
   isInvalidField(fieldName: string): boolean {
@@ -73,11 +73,11 @@ export class CrearAtletasComponent implements OnInit {
 
       // Transformar datos antes del envío
       formData.genero = formData.genero === 'Mujer' ? 'F' : 'M';
-      console.log('Datos del formulario antes del envío:', formData);
+      //console.log('Datos del formulario antes del envío:', formData);
 
       // Obtener el token desde sessionStorage
       const token = sessionStorage.getItem('authToken');
-      console.log('token:', formData);
+      //console.log('token:', formData);
       if (!token) {
         console.error('No se encontró un token de autorización.');
 
@@ -106,7 +106,7 @@ export class CrearAtletasComponent implements OnInit {
           return response.json();
         })
         .then(data => {
-          console.log('Respuesta del servidor:', data);
+          //console.log('Respuesta del servidor:', data);
 
           // Mostrar mensaje de éxito y redirigir al dashboard
           this.swalService.showSuccess('¡Registro exitoso!', 'Se ha registrado al Atleta correctamente.')

@@ -138,9 +138,10 @@
   background-color: var(--primary-color);
   border: none;
   font-weight: bold;
-  color: #000000;
+  color: var(--secondary-color) !important;
   padding: 12px;
   transition: background-color 0.3s;
+  font-size: 18px;
 
   &:hover {
     background-color: #FFD966;
@@ -204,7 +205,6 @@
 
   }
 
-
   &::before {
     content: '';
     position: absolute;
@@ -226,6 +226,29 @@
     border: none !important;
     box-shadow: none !important;
   }
+}
+
+.form-check-input:checked {
+  background-color: #ffc107; /* Amarillo para coincidir con tu tema */
+  border-color: #ffc107;
+}
+
+.form-check-label a {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.custom-confirm-button-class, .custom-cancel-button-class {
+  margin: 0 5px; /* Reduce el espacio horizontal entre los botones */
+}
+
+.custom-cancel-button-class {
+  background-color: black; /* Fondo negro */
+  color: white; /* Texto blanco */
+  border: none; /* Sin bordes */
+  padding: 8px 15px; /* Ajusta el tamaño del botón */
+  border-radius: 5px; /* Bordes redondeados */
+  cursor: pointer; /* Cursor en forma de mano */
 }
 
 /* Media query para pantallas pequeñas */

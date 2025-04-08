@@ -129,7 +129,7 @@ export class FichaTecnicaComponent implements OnInit {
       this.atletaActual = this.atletas.find(atleta =>
         atleta.nombre.toLowerCase().includes(term) || atleta.cedula.includes(term)
       );
-      console.log(`Resultado de búsqueda: ${this.atletaActual ? this.atletaActual.nombre : 'No encontrado'}`);
+      //console.log(`Resultado de búsqueda: ${this.atletaActual ? this.atletaActual.nombre : 'No encontrado'}`);
     }
   }
   // Implementación de cargarFichaTecnica
@@ -137,7 +137,7 @@ export class FichaTecnicaComponent implements OnInit {
     if (atletaId !== null) {
       // Busca el atleta en la lista de representantes
       this.atletaActual = this.atletasRepresentante.find(atleta => atleta.id === atletaId) || null;
-      console.log('Atleta seleccionado:', this.atletaActual); // Verifica que se seleccionó correctamente
+      //console.log('Atleta seleccionado:', this.atletaActual); // Verifica que se seleccionó correctamente
     } else {
       console.error('El ID del atleta es nulo.');
     }
@@ -150,7 +150,7 @@ export class FichaTecnicaComponent implements OnInit {
       this.edit[field] = true; // Activa el modo de edición
     } else {
       this.edit[field] = false; // Desactiva el modo de edición
-      console.log(`Guardando campo ${field}:`, this.getFieldValue(field));
+      //console.log(`Guardando campo ${field}:`, this.getFieldValue(field));
     }
   }
 
@@ -183,7 +183,7 @@ export class FichaTecnicaComponent implements OnInit {
           position,
           stats: this.generateStats(this.selectedSport.name)
         });
-        console.log(`Deporte agregado automáticamente: ${this.selectedSport.name} - Posición: ${position}`);
+        //console.log(`Deporte agregado automáticamente: ${this.selectedSport.name} - Posición: ${position}`);
       }
       // Reiniciar los campos después de agregar
       this.selectedSport = null;
@@ -195,7 +195,7 @@ export class FichaTecnicaComponent implements OnInit {
   // Cambiar entre pestañas (deportes)
   switchTab(index: number): void {
     this.activeTab = index;
-    console.log(`Pestaña activa cambiada: Deporte - ${this.user.sports[index]?.name}`);
+    //console.log(`Pestaña activa cambiada: Deporte - ${this.user.sports[index]?.name}`);
   }
 
   // Generar estadísticas iniciales para un deporte
@@ -211,7 +211,7 @@ export class FichaTecnicaComponent implements OnInit {
   // Eliminar un deporte seleccionado
   removeSport(sportId: number): void {
     this.user.sports = this.user.sports.filter(s => s.id !== sportId);
-    console.log(`Deporte eliminado: ID - ${sportId}`);
+    //console.log(`Deporte eliminado: ID - ${sportId}`);
   }
 
   // Formatear fecha

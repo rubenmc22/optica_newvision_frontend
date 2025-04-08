@@ -24,7 +24,7 @@ export class AtletasService {
         if (!response || !Array.isArray(response.atletas)) {
           throw new Error('Formato de respuesta inválido');
         }
-        console.log('response', response);
+        //console.log('response', response);
         return response.atletas.map(atleta => ({
           ...atleta,
           edad: this.calcularEdad(atleta.fecha_nacimiento),

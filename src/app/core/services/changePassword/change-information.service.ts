@@ -9,12 +9,12 @@ import { AuthService } from '../auth/auth.service';
 import { User, Rol, AuthData, AuthResponse } from '../../../Interfaces/models-interface';
 
 
-
-
 @Injectable({
   providedIn: 'root'
 })
 export class ChangeInformationService {
+  private userProfile = new BehaviorSubject<any>(null);
+  currentUserProfile = this.userProfile.asObservable();
 
   constructor(
     private router: Router,

@@ -5,6 +5,8 @@ import { Router } from '@angular/router'; // Importa el Router
 import { SwalService } from '../../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
 import { GeneralFunctions } from '../../general-functions/general-functions';
 import { environment } from '../../../environments/environment';
+import { HttpClient } from '@angular/common/http';
+
 
 @Component({
   selector: 'app-user-register',
@@ -26,7 +28,8 @@ export class UserRegisterComponent implements OnInit {
     private location: Location,
     private router: Router, // Inyecta el Router
     private swalService: SwalService, // Inyecta el servicio de SweetAlert2
-    private generalFunctions: GeneralFunctions // Inyecta el servicio
+    private generalFunctions: GeneralFunctions, // Inyecta el servicio
+    private http: HttpClient  // Inyecta el servicio
   ) {
     // Inicialización del formulario sin validaciones requeridas inicialmente
     this.registerForm = this.fb.group({
@@ -45,8 +48,9 @@ export class UserRegisterComponent implements OnInit {
         '',
         [Validators.required, Validators.pattern('^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d@$!%*?&]{8,}$')] // Contraseña válida
       ],
-      confirmPassword: ['', Validators.required] // Confirmación de contraseña
-    }, { validator: this.passwordMatchValidator });
+      confirmPassword: ['', Validators.required], // Confirmación de contraseña
+    },
+      { validator: this.passwordMatchValidator });
 
     // Inicializar los controles dinámicos
     this.nameControl = this.registerForm.get('athleteName') as FormControl;
@@ -56,6 +60,7 @@ export class UserRegisterComponent implements OnInit {
   }
 
   ngOnInit() {
+    // this.showTermsAndRegister();
     // Escucha los cambios en el estado de isMinor para activar las validaciones correctas
     this.registerForm.get('isMinor')?.valueChanges.subscribe(isMinor => {
       if (isMinor) {
@@ -165,73 +170,11 @@ export class UserRegisterComponent implements OnInit {
   isInvalidField(fieldName: string): boolean {
     return this.generalFunctions.isInvalidField(this.registerForm, fieldName);
   }
-  // Enviar el formulario
+
+  // En onSubmit(), cambia la lógica para:
   onSubmit() {
-    if (this.registerForm.valid) {
-      const formData = { ...this.registerForm.value };
-      const isMinor = formData.isMinor;
-
-      // Convertir género a los valores esperados por el backend
-      if (formData.genero === 'Mujer') {
-        formData.genero = 'F';
-      } else if (formData.genero === 'Hombre') {
-        formData.genero = 'M';
-      }
-
-      // Determinar la URL del endpoint según el tipo de usuario
-      const endpointUrl = isMinor
-        ? `${environment.apiUrl}/auth/register-representative`
-        : `${environment.apiUrl}/auth/register-athlete`;
-
-      // Ajustar el objeto formData antes del envío
-      if (isMinor) {
-        formData.athleteName = '';
-        formData.athleteId = '';
-        formData.athletePhone = '';
-        formData.athleteEmail = '';
-        formData.athleteDob = '';
-        formData.genero = '';
-      } else {
-        formData.representativeName = '';
-        formData.representativeId = '';
-        formData.representativePhone = '';
-        formData.representativeEmail = '';
-      }
-
-
-      console.log('Datos del formulario antes del envío:', JSON.stringify(formData));
-
-      fetch(endpointUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      })
-        .then(response => {
-          if (!response.ok) {
-            return response.json().then(err => {
-              throw new Error(err.message || `Error en la solicitud: ${response.statusText}`);
-            });
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log('Respuesta del servidor:', data);
-          this.swalService.showSuccess('¡Registro exitoso!', 'El registro se ha completado correctamente.')
-            .then(() => {
-              this.router.navigate(['/login']);
-            });
-          this.registerForm.reset();
-        })
-        .catch(error => {
-          console.error('Hubo un problema con la solicitud:', error);
-          this.swalService.showError(
-            'Error en el registro',
-            error.message || 'Hubo un problema al registrar. Por favor, inténtalo nuevamente.'
-          );
-        });
-    } else {
+    // Primero validamos el formulario sin los términos
+    if (this.registerForm.invalid) {
       console.error('Formulario inválido');
       this.swalService.showWarning(
         'Formulario inválido',
@@ -241,11 +184,123 @@ export class UserRegisterComponent implements OnInit {
       Object.values(this.registerForm.controls).forEach(control => {
         control.markAsTouched();
       });
+      return;
     }
+
+    // Si el formulario es válido, mostramos los términos
+    this.showTermsAndRegister();
   }
+
+  private showTermsAndRegister() {
+    const termsText = `
+    <div style="text-align: left; max-height: 60vh; overflow-y: auto; padding: 0 10px;">
+      <h4 style="color: #ffc107; margin-bottom: 15px;">TÉRMINOS Y CONDICIONES DE APOLLO GROUP</h4>
+      
+      <p style="margin-bottom: 10px;">
+        Al registrarse en nuestra plataforma deportiva, cada miembro acepta:
+      </p>
+      
+      <ul style="padding-left: 20px; margin-bottom: 15px;">
+        <li>Cumplir con las disposiciones establecidas para su correcto uso</li>
+        <li>Proporcionar información veraz y actualizada</li>
+        <li>Autorizar el tratamiento de sus datos personales exclusivamente para fines relacionados con la operación y el desarrollo de la plataforma o actividad deportiva</li>
+      </ul>
+      
+      <p>
+        Garantizando así una experiencia organizada, segura y beneficiosa para toda la comunidad deportiva.
+      </p>
+    </div>
+  `;
+
+    this.swalService.showConfirm(
+      'Términos y Condiciones',
+      termsText,
+      'Aceptar TyC',
+      'Denegar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        // Si acepta los términos, procedemos con el registro
+        this.registerUser();
+      } else {
+        console.log('El usuario canceló la operación.');
+      }
+    });
+
+  }
+
+  private registerUser() {
+    // Mostrar loading
+    this.swalService.showApolloLoading();
+
+    const formData = {
+      ...this.registerForm.value,
+      acceptedTerms: true
+    };
+
+    console.log('Datos del formulario:', formData);
+
+    const isMinor = formData.isMinor;
+
+    // Convertir género a los valores esperados por el backend
+    if (formData.genero === 'Mujer') {
+      formData.genero = 'F';
+    } else if (formData.genero === 'Hombre') {
+      formData.genero = 'M';
+    }
+
+    const endpointUrl = isMinor
+      ? `${environment.apiUrl}/auth/register-representative`
+      : `${environment.apiUrl}/auth/register-athlete`;
+
+    // Ajustar el objeto formData antes del envío
+    if (isMinor) {
+      formData.athleteName = '';
+      formData.athleteId = '';
+      formData.athletePhone = '';
+      formData.athleteEmail = '';
+      formData.athleteDob = '';
+      formData.genero = '';
+    } else {
+      formData.representativeName = '';
+      formData.representativeId = '';
+      formData.representativePhone = '';
+      formData.representativeEmail = '';
+    }
+
+    // Hacer la solicitud HTTP
+    const startTime = Date.now();
+    this.http.post(endpointUrl, formData).subscribe({
+      next: (data: any) => {
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(3000 - elapsedTime, 0);
+
+        setTimeout(() => {
+          this.swalService.closeLoading();
+          this.swalService.showSuccess(
+            '¡Registro exitoso!',
+            'Los términos y condiciones han sido aceptados correctamente, y el proceso de registro se ha completado con éxito.'
+          ).then(() => {
+            this.router.navigate(['/login']);
+          });
+          this.registerForm.reset();
+        }, remainingTime);
+      },
+      error: (error: any) => {
+        this.swalService.closeLoading();
+        console.error('Error en el registro:', error);
+        this.swalService.showError(
+          'Error en el registro',
+          error.message || 'Hubo un problema al registrar. Por favor, inténtalo nuevamente.'
+        );
+      }
+    });
+  }
+
+
 
   // Regresar a la vista anterior
   goBack() {
     this.location.back();
   }
+
 }

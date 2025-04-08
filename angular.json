@@ -36,7 +36,8 @@
               "src/assets/adminlte/plugins/overlayScrollbars/css/OverlayScrollbars.min.css",
               "src/assets/adminlte/dist/css/adminlte.min.css",
               "src/custom-theme.scss",
-              "src/styles.scss"
+              "src/styles.scss",
+              "src/app/core/services/swal/swal.service.scss"
             ],
             "scripts": [
               "node_modules/jquery/dist/jquery.min.js",
@@ -145,7 +146,8 @@
             ],
             "styles": [
               "@angular/material/prebuilt-themes/azure-blue.css",
-              "src/styles.scss"
+              "src/styles.scss",
+              "src/app/core/services/swal/swal.service.scss"
             ],
             "scripts": []
           }

@@ -41,7 +41,7 @@ export class VerAtletasComponent implements OnInit {
           generoTexto: atleta.genero === 'M' ? 'Masculino' : 'Femenino'
         }));
 
-        console.log('Atletas cargados:', this.atletas);
+        //console.log('Atletas cargados:', this.atletas);
         this.aplicarFiltros();
         this.cargando = false;
       },
