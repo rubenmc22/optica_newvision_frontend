@@ -96,7 +96,7 @@ export class AuthService {
       }),
       tap((authData: AuthData) => {
         this.setAuth(authData);
-        console.log('authData', authData);
+        //console.log('authData', authData);
       }),
       catchError((error: HttpErrorResponse) => {
         const errorMsg = error.error?.message || 'Error en el inicio de sesión';

@@ -40,7 +40,7 @@ export class InactivityService implements OnDestroy {
     }
 
     private handleInactivity(): void {
-        console.log('Inactividad detectada. Mostrando alerta...');
+     //   console.log('Inactividad detectada. Mostrando alerta...');
         this.swalService.showInactivityWarning(
             'Inactividad detectada',
             '¿Deseas continuar con tu sesión?'
