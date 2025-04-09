@@ -94,6 +94,75 @@ export class SwalService {
     });
   }
 
+  showInactivityWarning(
+    title: string,
+    text: string,
+    timerDuration: number = 60000 // 1 minuto por defecto
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      let timerInterval: number;
+      let confirmed = false;
+  
+      Swal.fire({
+        title: title,
+        html: `<p class="custom-content-class">
+                 ${text}<br><br>
+                 <strong id="countdown">${timerDuration / 1000}</strong> segundos restantes
+               </p>`,
+        iconHtml: '<i class="bi bi-exclamation-triangle-fill  text-warning"></i>', // Usando un icono personalizado acorde
+        showCancelButton: true,
+        confirmButtonText: 'Mantener sesión',
+        cancelButtonText: 'Cerrar sesión',
+        customClass: {
+          popup: 'custom-popup-class', // Fondo consistente
+          title: 'custom-title-class', // Título ajustado
+          confirmButton: 'custom-confirm-button-class', // Botón confirmar
+          cancelButton: 'custom-cancel-button-class' // Botón cancelar
+        },
+        allowOutsideClick: false,
+        timer: timerDuration,
+        timerProgressBar: true,
+        didOpen: () => {
+          const timer = Swal.getPopup()?.querySelector('#countdown');
+          timerInterval = window.setInterval(() => {
+            const remaining = Swal.getTimerLeft() as number;
+            if (timer) {
+              timer.textContent = `${Math.round(remaining / 1000)}`;
+            }
+          }, 1000);
+        },
+        willClose: () => {
+          clearInterval(timerInterval);
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          confirmed = true;
+          resolve(true); // Usuario eligió mantener sesión
+        } else if (result.isDismissed && result.dismiss === Swal.DismissReason.cancel) {
+          confirmed = true;
+          resolve(false); // Usuario eligió cerrar sesión
+        }
+  
+        // Si se cierra por timer
+        if (!confirmed && Swal.isVisible()) {
+          Swal.fire({
+            title: 'Sesión cerrada',
+            html: '<p class="custom-content-class">Has sido desconectado por inactividad</p>',
+            icon: 'info',
+            customClass: {
+              popup: 'custom-popup-class', // Fondo consistente
+              title: 'custom-title-class' // Título acorde
+            },
+            timer: 3000,
+            showConfirmButton: false
+          });
+          resolve(false);
+        }
+      });
+    });
+  }
+  
+
   /**
    * Muestra una alerta de confirmación.
    * @param title Título de la alerta.

@@ -50,8 +50,8 @@ export const appRoutes: Routes = [
     component: PostloginTemplateComponent,
     canActivate: [authGuard], // Protección global para rutas hijas
     children: [
-      { 
-        path: 'accept-tyc', 
+      {
+        path: 'accept-tyc',
         component: AcceptTycComponent,
         title: 'Aceptar Términos y Condiciones'
       },

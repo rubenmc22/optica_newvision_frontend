@@ -83,8 +83,10 @@
 }
 
 .apollo-loading-logo {
-  width: 300px; /* Reduje el tamaño para mejor proporción */
-  height: auto; /* Mantiene aspect ratio */
+  width: 300px;
+  /* Reduje el tamaño para mejor proporción */
+  height: auto;
+  /* Mantiene aspect ratio */
   filter: drop-shadow(0 0 12px rgba(255, 193, 7, 0.7));
   margin-bottom: 20px;
   animation: pulse 1.5s infinite alternate;
@@ -98,7 +100,8 @@
   margin: 0 auto;
   position: relative;
   overflow: hidden;
-  top: -50px; /* Eliminé el negativo que causaba desalineación */
+  top: -50px;
+  /* Eliminé el negativo que causaba desalineación */
 
   &::after {
     content: '';
@@ -125,22 +128,41 @@
 /* ANIMACIONES */
 /* ==================== */
 @keyframes loading {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
 }
 
 @keyframes pulse {
-  0% { transform: scale(0.95); opacity: 0.9; }
-  100% { transform: scale(1.05); opacity: 1; }
+  0% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* ==================== */
@@ -158,10 +180,84 @@
   &.transparent-popup {
     background: transparent !important;
     box-shadow: none !important;
-    
+
     .swal2-content {
       padding: 0 !important;
       margin: 0 !important;
     }
   }
+}
+
+/* ======================== */
+/* ALERTA DE INACTIVIDAD */
+/* ======================== */
+.custom-popup-class {
+  background-color: var(--secondary-color);
+  /* Fondo consistente */
+  border-radius: 10px;
+  padding: 20px;
+
+  .custom-title-class {
+    color: var(--primary-color);
+    /* Amarillo llamativo */
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    /* Centra el título */
+  }
+
+  .custom-content-class {
+    color: var(--text-color);
+    /* Texto claro */
+    font-size: 16px;
+    text-align: center;
+  }
+
+  .custom-confirm-button-class {
+    //  background-color: #FFC107 !important;
+    background-color: var(--primary-color) !important;
+    border: none !important;
+    padding: 10px 20px;
+    color: #3a3a3a !important;
+    border: none !important;
+    font-weight: bold;
+    transition: all 0.3s ease-in-out;
+
+    &:hover {
+      background-color: #FFDD57 !important;
+      color: #000000 !important;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+  }
+
+  .custom-cancel-button-class {
+    background-color: #3a3a3a !important;
+    /* Fondo gris oscuro */
+    border: none !important;
+    padding: 10px 20px !important;
+    color: white;
+    border-radius: 5px;
+    transition: all 0.3s ease-in-out;
+
+    &:hover {
+     // background-color: var(--formInput-color) !important;
+      /* Alternativa a gris más claro */
+    //  color: black !important;
+      cursor: pointer;
+    }
+  }
+}
+
+.custom-confirm-button-class,
+.custom-cancel-button-class {
+  margin: 0 5px;
+  /* Espaciado entre botones */
+}
+
+#countdown {
+  color: #ff5555;
+  /* Rojo llamativo */
+  font-size: 1.5em;
+  /* Más grande para destacar */
+  font-weight: bold;
 }
