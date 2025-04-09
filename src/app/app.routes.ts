@@ -11,6 +11,7 @@ import { VerAtletasComponent } from './view/ver-atletas/ver-atletas.component';
 import { CrearAtletasComponent } from './view/crear-atletas/crear-atletas.component';
 import { authGuard } from './core/services/auth/auth.guard';
 import { AuthService } from './core/services/auth/auth.service';
+import { AcceptTycComponent } from './view/accept-tyc-component/accept-tyc-component.component';
 
 // Función para limpiar sesión al acceder a rutas públicas
 const clearAuthSession = () => {
@@ -49,6 +50,11 @@ export const appRoutes: Routes = [
     component: PostloginTemplateComponent,
     canActivate: [authGuard], // Protección global para rutas hijas
     children: [
+      { 
+        path: 'accept-tyc', 
+        component: AcceptTycComponent,
+        title: 'Aceptar Términos y Condiciones'
+      },
       { path: 'dashboard', component: DashboardComponent, title: 'Dashboard' },
       { path: 'my-account', component: MyAccountComponent, title: 'Mi cuenta' },
       { path: 'ficha-tecnica', component: FichaTecnicaComponent, title: 'Ficha técnica' },

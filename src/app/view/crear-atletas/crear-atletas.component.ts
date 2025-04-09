@@ -18,11 +18,11 @@ export class CrearAtletasComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private router: Router, 
+    private router: Router,
     private location: Location,
-    private generalFunctions: GeneralFunctions, 
+    private generalFunctions: GeneralFunctions,
     private swalService: SwalService,
-    private authService: AuthService 
+    private authService: AuthService
   ) {
     this.crearAtletaForm = this.fb.group({
       nombre: [
@@ -69,7 +69,12 @@ export class CrearAtletasComponent implements OnInit {
 
   onSubmit() {
     if (this.crearAtletaForm.valid) {
-      let formData = { ...this.crearAtletaForm.value };
+      let formData = {
+        ...this.crearAtletaForm.value,
+        acceptedTerms: true
+      };
+
+      console.log('formData', formData);
 
       // Transformar datos antes del envío
       formData.genero = formData.genero === 'Mujer' ? 'F' : 'M';

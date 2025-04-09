@@ -1,7 +1,7 @@
 // atletas.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError  } from 'rxjs';
 import { map, catchError } from 'rxjs/operators'; // Importa el operador map
 import { environment } from '../../../../environments/environment';
 import { Atleta, ApiResponse } from '../../../Interfaces/models-interface';
@@ -50,4 +50,20 @@ export class AtletasService {
 
     return edad;
   }
+
+  /**
+   * Elimina un atleta por su ID
+   * @param id ID del atleta a eliminar
+   */
+  eliminarAtleta(id: number): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/atletas/delete/${id}`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  private handleError(error: any) {
+    console.error('Ocurrió un error:', error);
+    return throwError(() => new Error('Error al procesar la solicitud'));
+  }
+
 }

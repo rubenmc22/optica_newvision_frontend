@@ -96,7 +96,7 @@ export class AuthService {
       }),
       tap((authData: AuthData) => {
         this.setAuth(authData);
-        this.swalService.showSuccess('¡Éxito!', 'Bienvenido, ha iniciado sesión correctamente');
+        console.log('authData', authData);
       }),
       catchError((error: HttpErrorResponse) => {
         const errorMsg = error.error?.message || 'Error en el inicio de sesión';
@@ -107,6 +107,56 @@ export class AuthService {
     );
   }
 
+  hasAcceptedTyC(): boolean {
+    return this.currentUserValue?.user?.tyc_aceptado === 1;
+  }
+  private getNormalizedTycValue(): boolean {
+    const tycValue = this.currentUserValue?.user?.tyc_aceptado;
+
+    if (tycValue === undefined || tycValue === null) {
+      return false;
+    }
+
+    return typeof tycValue === 'number'
+      ? tycValue === 1
+      : tycValue;
+  }
+
+  // Nuevo método para actualizar la aceptación de TyC
+  acceptTermsAndConditions(): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/auth/accept-tyc`, { acceptedTerms: true }).pipe(
+      tap(() => {
+        const currentData = this.currentUserValue;
+        if (currentData) {
+          const updatedData = {
+            ...currentData,
+            user: {
+              ...currentData.user,
+              tyc_aceptado: 1
+            }
+          };
+          this.setAuth(updatedData);
+        }
+      })
+    );
+  }
+
+  refreshUserInfo(): Observable<User> {
+    return this.http.get<User>(`${environment.apiUrl}/auth/user-info`).pipe(
+      tap(user => {
+        const currentData = this.currentUserValue;
+        if (currentData) {
+          this.setAuth({
+            ...currentData,
+            user: {
+              ...currentData.user,
+              ...user
+            }
+          });
+        }
+      })
+    );
+  }
   public setAuth(authData: AuthData): void {
     this.storage.setItem(this.TOKEN_KEY, authData.token);
     this.storage.setItem(this.AUTH_DATA_KEY, JSON.stringify(authData));

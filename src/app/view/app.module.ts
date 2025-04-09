@@ -16,6 +16,7 @@ import { MyAccountComponent } from './my-account/my-account.component';
 import { FichaTecnicaComponent } from './ficha-tecnica/ficha-tecnica.component';
 import { VerAtletasComponent } from './ver-atletas/ver-atletas.component';
 import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
+import { AcceptTycComponent } from './accept-tyc-component/accept-tyc-component.component';
 
 // Módulos y servicios
 import { MaterialModule } from '../material.module';
@@ -34,7 +35,8 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
     MyAccountComponent,
     FichaTecnicaComponent,
     VerAtletasComponent,
-    CrearAtletasComponent
+    CrearAtletasComponent,
+    AcceptTycComponent
   ],
   imports: [
     BrowserModule,

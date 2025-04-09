@@ -9,6 +9,7 @@ export interface User {
   email?: string;
   rol?: string;
   ruta_imagen?: string | null;
+  tyc_aceptado?: boolean | number;
 }
 
 export interface Rol {
@@ -63,5 +64,9 @@ export interface Atleta {
 export interface ApiResponse {
   message: string;
   atletas: Atleta[];
+}
+
+export interface TycCheck {
+  hasAcceptedTyC: boolean | number;
 }
 

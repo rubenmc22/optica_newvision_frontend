@@ -112,8 +112,8 @@ export class UserRegisterComponent implements OnInit {
 
     // Aplicar validaciones para atleta
     this.setValidators('athleteName', [Validators.required, Validators.pattern('^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]*$')]);
-    this.setValidators('athleteId', [Validators.required, Validators.pattern('^[0-9]{1,8}$')]);
-    this.setValidators('athletePhone', [Validators.required, Validators.pattern('^[0-9]{1,12}$')]);
+    this.setValidators('athleteId', [Validators.pattern('^[0-9]{1,8}$')]);
+    this.setValidators('athletePhone', [Validators.pattern('^[0-9]{1,12}$')]);
     this.setValidators('athleteEmail', [
       Validators.required,
       Validators.pattern('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$')

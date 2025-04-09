@@ -252,4 +252,72 @@ export class VerAtletasComponent implements OnInit {
     }
   }
 
+  // Método para limpiar todos los filtros
+  limpiarFiltros(): void {
+    this.filtros = {
+      deporte: null,
+      posicion: '',
+      genero: '',
+      edadMin: null,
+      edadMax: null,
+      busqueda: ''
+    };
+    this.posicionesFiltradas = [];
+    this.aplicarFiltros();
+  }
+
+  // Método para confirmar eliminación
+  confirmarEliminacion(atleta: any): void {
+    this.swalService.showConfirm(
+      'Confirmar eliminación',
+      `¿Estás seguro que deseas eliminar al atleta ${atleta.nombre}?`,
+      'Eliminar',
+      'Cancelar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.eliminarAtleta(atleta.id);
+      }
+    });
+  }
+
+  // Método para eliminar atleta
+  eliminarAtleta(id: number): void {
+    console.log(id);
+    this.cargando = true; // Activar estado de carga
+
+    this.atletasService.eliminarAtleta(id).subscribe({
+      next: () => {
+        this.swalService.showSuccess('Éxito', 'Atleta eliminado correctamente');
+
+        // Actualizar la lista local de manera óptima
+        this.atletas = this.atletas.filter(a => a.id !== id);
+        this.aplicarFiltros();
+      },
+      error: (error) => {
+        console.error('Error al eliminar atleta:', error);
+        this.manejarErrorEliminacion(error);
+      },
+      complete: () => {
+        this.cargando = false; // Desactivar estado de carga
+      }
+    });
+  }
+
+  // Método para manejar errores de eliminación
+  private manejarErrorEliminacion(error: any): void {
+    let errorMessage = 'Ocurrió un error al eliminar el atleta';
+
+    if (error.status === 401) {
+      errorMessage = 'Sesión expirada. Por favor inicie sesión nuevamente.';
+    } else if (error.status === 403) {
+      errorMessage = 'No tienes permisos para realizar esta acción';
+    } else if (error.status === 404) {
+      errorMessage = 'El atleta no fue encontrado';
+    } else if (error.status === 500) {
+      errorMessage = 'Error en el servidor al procesar la solicitud';
+    }
+
+    this.swalService.showError('Error', errorMessage);
+  }
+
 }
