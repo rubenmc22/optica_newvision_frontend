@@ -185,3 +185,53 @@ option:focus {
     font-weight: bold;
     margin-top: 20px;
 }
+
+/* Estilo para el botón de limpiar filtros */
+.btn-outline-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-color: none;
+    background-color: transparent;
+    color: var(--primary-color);
+    padding: 6px 10px;
+    font-size: 14px;
+    border-radius: 5px;
+    margin-left: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--primary-color);
+    /* Fondo amarillo al hacer hover */
+    color: black;
+    /* Texto negro para mejor contraste */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+    /* Añade sombra al hacer hover */
+}
+
+.bi-x-circle {
+    margin-right: 8px;
+    /* Aumenta la separación de la X con el texto */
+    font-size: 16px;
+    /* Tamaño del icono */
+}
+
+/* Estilo para el botón de eliminar */
+.btn-outline-danger {
+    transition: all 0.2s ease;
+
+    &:hover {
+        transform: scale(1.1);
+    }
+}
+
+/* Asegurar que la columna de acciones no sea demasiado ancha */
+.custom-table th:nth-last-child(1),
+.custom-table td:nth-last-child(1) {
+    width: 80px;
+    text-align: center;
+}

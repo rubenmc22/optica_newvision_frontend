@@ -7,6 +7,6 @@ import { Component } from '@angular/core';
   styleUrls: ['./app.component.scss']
 })
 
-export class AppComponent {
-  title = 'apollogroup';
+export class AppComponent  {
+  title = 'optica_newvision_frontend';
 }

@@ -1,5 +1,5 @@
 {
-  "name": "apollogroup",
+  "name": "optica_newvision_frontend",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -7,7 +7,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:apollogroup": "node dist/apollogroup/server/server.mjs"
+    "serve:ssr:optica_newvision_frontend": "node dist/optica_newvision_frontend/server/server.mjs"
   },
   "private": true,
   "dependencies": {
@@ -25,12 +25,12 @@
     "@angular/ssr": "^19.2.1",
     "@types/angular": "^1.8.9",
     "admin-lte": "^4.0.0-beta3",
-    "apollogroup": "file:",
     "bootstrap": "^5.3.3",
     "bootstrap-icons": "^1.11.3",
     "express": "^4.18.2",
     "jquery": "^3.7.1",
     "jwt-decode": "^4.0.0",
+    "optica_newvision_frontend": "file:",
     "rxjs": "~7.8.0",
     "sass": "^1.85.1",
     "sweetalert2": "^11.17.2",

@@ -4,7 +4,7 @@ import { Injectable } from '@angular/core';
     providedIn: 'root' // Hace que el servicio esté disponible en toda la aplicación
 })
 
-export class GeneralFunctionsService {
+export class GeneralFunctions {
 
     constructor() { }
 
@@ -37,9 +37,24 @@ export class GeneralFunctionsService {
      * @returns `true` si es un correo válido, `false` en caso contrario.
      */
     isValidEmail(email: string): boolean {
+        
         const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         return emailPattern.test(email);
     }
+
+   /* static isValidEmail(control: AbstractControl): { [key: string]: boolean } | null {
+        if (!control.value) {
+          return { required: true };
+        }
+        
+        // Validación de formato básico
+        const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!regex.test(control.value)) {
+          return { invalidEmail: true };
+        }
+        
+        return null;
+      }*/
 
     /**
      * Muestra un mensaje de error genérico.

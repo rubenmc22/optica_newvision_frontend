@@ -10,6 +10,9 @@
               [(ngModel)]="filtros.busqueda" 
               (ngModelChange)="aplicarFiltros()"
               maxlength="50" />
+            <button class="btn btn-outline-secondary ms-2" (click)="limpiarFiltros()">
+              <i class="bi bi-x-circle"></i> Limpiar filtros
+            </button>
           </div>
     </div>
 
@@ -100,6 +103,7 @@
                             </span>
                         </th>
                         <th>Ficha Técnica</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody *ngIf="atletasPaginados.length; else noResults">
@@ -128,6 +132,11 @@
                             <a [routerLink]="['/ficha-tecnica', atleta.cedula]" class="text-primary">
                                 Ver ficha técnica
                             </a>
+                        </td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" (click)="confirmarEliminacion(atleta)">
+                                <i class="bi bi-trash"></i>
+                            </button>
                         </td>
                     </tr>
                 </tbody>

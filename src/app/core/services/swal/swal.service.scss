@@ -1,41 +1,240 @@
-@use '../../../../custom-theme.scss' as theme;
-
-/* swal.service.scss */
+/* ==================== */
+/* ESTILOS PARA POPUP CON FONDO DIFUMINADO */
+/* ==================== */
 .custom-popup-class {
-    background-color: var(--secondary-color);
-    border-radius: 10px;
-    padding: 20px;
-  
-    .custom-title-class {
-      color: var(--primary-color);
-      font-size: 24px;
-      font-weight: bold;
-    }
-  
-    .custom-content-class {
-      color: var(--text-color);
-      font-size: 16px;
-    }
-  
-    .custom-confirm-button-class {
-      background-color: var(--primary-color) !important;
-      border: none !important;
-      padding: 10px 20px !important;
-      color: var(--secondary-color);
-      border-radius: 5px;
+  position: relative;
+  border-radius: 16px !important;
+  padding: 30px !important;
+  overflow: hidden !important;
+  max-width: 420px !important;
+  width: 90vw !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15) !important;
+  /* Fondo temporal para debug */
+  background: rgba(0, 0, 0, 0.3) !important;
 
-      &:hover {
-        background-color: #e6c200 !important; /* Color primario oscurecido manualmente */
-        color: #3a3a3a !important; /* Color secundario aclarado manualmente */
-        cursor: pointer; /* Cambia el cursor a una mano */
-      }
-    }
-  
-    .custom-cancel-button-class {
-      background-color: #f44336 !important;
-      border: none !important;
-      padding: 10px 20px !important;
-      color: white;
-      border-radius: 5px;
+  /* Fondo difuminado - Versión corregida */
+  &::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: url('../../../../assets/fondo/IMG_9789.JPG') center/cover no-repeat;
+    background-attachment: fixed;
+    filter: blur(4px) brightness(0.9);
+    z-index: -2;
+  }
+
+  /* Overlay para mejorar legibilidad */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: -1;
+  }
+
+  /* Contenido */
+  .popup-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Título */
+  .custom-title-class {
+    color: white !important;
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    margin: 0 auto 25px auto !important;
+    text-align: center !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    position: relative !important;
+    
+    &:after {
+      content: '';
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50%;
+      height: 3px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.2) 100%);
     }
   }
+
+  /* Mensaje */
+  .custom-content-class {
+    color: white !important;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+    text-align: center !important;
+    margin-bottom: 30px !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  }
+
+  /* Botón principal */
+  .custom-confirm-button-class {
+    background: linear-gradient(135deg, rgba(0,120,215,0.9) 0%, rgba(0,78,140,0.9) 100%) !important;
+    color: white !important;
+    font-weight: 600 !important;
+    padding: 14px !important;
+    border-radius: 8px !important;
+    border: none !important;
+    width: 100% !important;
+    font-size: 16px !important;
+    margin: 15px 0 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(4px);
+
+    &:hover {
+      transform: translateY(-2px) !important;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
+    }
+  }
+
+  /* Botón secundario */
+  .custom-cancel-button-class {
+    background: rgba(58, 58, 58, 0.9) !important;
+    color: white !important;
+    border: none !important;
+    padding: 12px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    margin: 10px 0 !important;
+    transition: all 0.3s ease !important;
+    backdrop-filter: blur(4px);
+
+    &:hover {
+      background: rgba(74, 74, 74, 0.9) !important;
+      transform: translateY(-2px) !important;
+    }
+  }
+}
+
+/* ==================== */
+/* VERSIÓN PARA ERRORES */
+/* ==================== */
+.error-popup {
+  .custom-title-class {
+    color: #ffcdd2 !important;
+    
+    &:after {
+      background: linear-gradient(90deg, rgba(255,205,210,0.8) 0%, rgba(255,205,210,0.2) 100%);
+    }
+  }
+  
+  .custom-confirm-button-class {
+    background: linear-gradient(135deg, rgba(198,40,40,0.9) 0%, rgba(142,0,0,0.9) 100%) !important;
+    
+    &:hover {
+      background: linear-gradient(135deg, rgba(198,40,40,1) 0%, rgba(142,0,0,1) 100%) !important;
+    }
+  }
+}
+
+/* ==================== */
+/* ESTILOS PARA LOADING */
+/* ==================== */
+.transparent-popup {
+  background: transparent !important;
+  box-shadow: none !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+}
+
+.apollo-loading-container {
+  text-align: center;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.apollo-loading-logo {
+  width: 300px;
+  height: auto;
+  filter: drop-shadow(0 0 12px rgba(255, 193, 7, 0.7));
+  margin-bottom: 20px;
+  animation: pulse 1.5s infinite alternate;
+}
+
+.apollo-loading-bar {
+  width: 200px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    height: 100%;
+    width: 50%;
+    background: var(--primary-color, #0078d7);
+    animation: loading 1.5s ease-in-out infinite;
+  }
+}
+
+.apollo-loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 193, 7, 0.2);
+  border-top-color: var(--primary-color, #0078d7);
+  border-radius: 50%;
+  margin: 20px auto;
+  animation: spin 1s linear infinite;
+}
+
+/* ==================== */
+/* ANIMACIONES */
+/* ==================== */
+@keyframes loading {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.95); opacity: 0.9; }
+  100% { transform: scale(1.05); opacity: 1; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==================== */
+/* CLASES GLOBALES SWAL2 */
+/* ==================== */
+.swal2-show {
+  animation: fadeIn 0.3s ease-out !important;
+}
+
+.swal2-backdrop {
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* ======================== */
+/* ALERTA DE INACTIVIDAD */
+/* ======================== */
+#countdown {
+  color: var(--countdown-color, #ff5555);
+  font-size: 1.5em;
+  font-weight: bold;
+}

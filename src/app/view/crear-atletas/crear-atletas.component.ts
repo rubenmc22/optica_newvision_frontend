@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Location } from '@angular/common';
-import { GeneralFunctionsService } from '../../core/services/general-functions/general-functions.service';
+import { GeneralFunctions } from '../../general-functions/general-functions';
 import { SwalService } from '../../core/services/swal/swal.service'; // Servicio de SweetAlert2
 import { Router } from '@angular/router'; // Router para navegación
 import { AuthService } from '../../core/services/auth/auth.service'; // Servicio de autenticación
@@ -18,11 +18,11 @@ export class CrearAtletasComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private router: Router, // Inyecta el Router para la navegación
+    private router: Router,
     private location: Location,
-    private generalFunctions: GeneralFunctionsService, // Inyecta el servicio
-    private swalService: SwalService, // Servicio de SweetAlert2
-    private authService: AuthService // Servicio de autenticación
+    private generalFunctions: GeneralFunctions,
+    private swalService: SwalService,
+    private authService: AuthService
   ) {
     this.crearAtletaForm = this.fb.group({
       nombre: [
@@ -60,7 +60,7 @@ export class CrearAtletasComponent implements OnInit {
       return; // Detener el flujo en caso de sesión inválida
     }
 
-    console.log('Formulario inicializado:', this.crearAtletaForm.value);
+    //console.log('Formulario inicializado:', this.crearAtletaForm.value);
   }
 
   isInvalidField(fieldName: string): boolean {
@@ -69,15 +69,20 @@ export class CrearAtletasComponent implements OnInit {
 
   onSubmit() {
     if (this.crearAtletaForm.valid) {
-      let formData = { ...this.crearAtletaForm.value };
+      let formData = {
+        ...this.crearAtletaForm.value,
+        acceptedTerms: true
+      };
+
+      console.log('formData', formData);
 
       // Transformar datos antes del envío
       formData.genero = formData.genero === 'Mujer' ? 'F' : 'M';
-      console.log('Datos del formulario antes del envío:', formData);
+      //console.log('Datos del formulario antes del envío:', formData);
 
       // Obtener el token desde sessionStorage
       const token = sessionStorage.getItem('authToken');
-      console.log('token:', formData);
+      //console.log('token:', formData);
       if (!token) {
         console.error('No se encontró un token de autorización.');
 
@@ -106,7 +111,7 @@ export class CrearAtletasComponent implements OnInit {
           return response.json();
         })
         .then(data => {
-          console.log('Respuesta del servidor:', data);
+          //console.log('Respuesta del servidor:', data);
 
           // Mostrar mensaje de éxito y redirigir al dashboard
           this.swalService.showSuccess('¡Registro exitoso!', 'Se ha registrado al Atleta correctamente.')

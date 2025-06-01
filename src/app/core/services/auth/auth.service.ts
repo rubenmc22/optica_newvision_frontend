@@ -6,6 +6,7 @@ import { environment } from '../../../../environments/environment';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 import { User, Rol, AuthData, AuthResponse } from '../../../Interfaces/models-interface';
+import { UserStateService } from './../userState/user-state-service';
 
 
 @Injectable({ providedIn: 'root' })
@@ -19,7 +20,8 @@ export class AuthService {
   constructor(
     private router: Router,
     private swalService: SwalService,
-    private http: HttpClient
+    private http: HttpClient,
+    private userState: UserStateService
   ) {
     // Initialize with stored data
     const storedData = this.storage.getItem(this.AUTH_DATA_KEY);
@@ -94,7 +96,7 @@ export class AuthService {
       }),
       tap((authData: AuthData) => {
         this.setAuth(authData);
-        this.swalService.showSuccess('¡Éxito!', 'Bienvenido, ha iniciado sesión correctamente');
+        //console.log('authData', authData);
       }),
       catchError((error: HttpErrorResponse) => {
         const errorMsg = error.error?.message || 'Error en el inicio de sesión';
@@ -105,6 +107,56 @@ export class AuthService {
     );
   }
 
+  hasAcceptedTyC(): boolean {
+    return this.currentUserValue?.user?.tyc_aceptado === 1;
+  }
+  private getNormalizedTycValue(): boolean {
+    const tycValue = this.currentUserValue?.user?.tyc_aceptado;
+
+    if (tycValue === undefined || tycValue === null) {
+      return false;
+    }
+
+    return typeof tycValue === 'number'
+      ? tycValue === 1
+      : tycValue;
+  }
+
+  // Nuevo método para actualizar la aceptación de TyC
+  acceptTermsAndConditions(): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/auth/accept-tyc`, { acceptedTerms: true }).pipe(
+      tap(() => {
+        const currentData = this.currentUserValue;
+        if (currentData) {
+          const updatedData = {
+            ...currentData,
+            user: {
+              ...currentData.user,
+              tyc_aceptado: 1
+            }
+          };
+          this.setAuth(updatedData);
+        }
+      })
+    );
+  }
+
+  refreshUserInfo(): Observable<User> {
+    return this.http.get<User>(`${environment.apiUrl}/auth/user-info`).pipe(
+      tap(user => {
+        const currentData = this.currentUserValue;
+        if (currentData) {
+          this.setAuth({
+            ...currentData,
+            user: {
+              ...currentData.user,
+              ...user
+            }
+          });
+        }
+      })
+    );
+  }
   public setAuth(authData: AuthData): void {
     this.storage.setItem(this.TOKEN_KEY, authData.token);
     this.storage.setItem(this.AUTH_DATA_KEY, JSON.stringify(authData));
@@ -136,9 +188,21 @@ export class AuthService {
     this.router.navigate(['/login'], { replaceUrl: true });
   }
 
-  // Métodos para gestión de avatar y perfil
-  uploadAvatar(formData: FormData): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/upload-avatar`, formData);
+  // Solo añadiremos este nuevo método
+  refreshUserData(updatedData: Partial<User>): void {
+    const currentAuthData = this.currentUserValue;
+    if (!currentAuthData) return;
+
+    const updatedUser = { ...currentAuthData.user, ...updatedData };
+    const newAuthData = { ...currentAuthData, user: updatedUser };
+
+    this.storage.setItem(this.AUTH_DATA_KEY, JSON.stringify(newAuthData));
+    this.currentUserSubject.next(newAuthData);
+    this.userState.updateUser(updatedData);
+  }
+
+  updateProfileImage(imageUrl: string): void {
+    this.refreshUserData({ ruta_imagen: imageUrl });
   }
 
 }

@@ -23,22 +23,34 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
 /* Variables para colores y estilos comunes */
 /* Variables globales en :root para estilos personalizados */
 :root {
-  --primary-color: #FFD700; /* Puedes reutilizar esto desde la paleta */
-  --secondary-color: #262524;
-  --formInput-color: #1a1a1a;
-  --text-color: white;
-  --border-color: var(--primary-color); /* Reutilización */
-  --label-color: var(--primary-color);
-  --label-background: rgba(40, 40, 40, 0.9);
-  --border-radius: 4px;
-  --transition: border-color 0.2s ease-in-out;
+ // Colores principales
+ --primary-color: #3a7bd5;
+ --primary-color-dark: #005a9e;
+ --primary-color-light: #5d9cff;
+ --primary-color-rgb: 58, 123, 213;
+ 
+ // Colores secundarios
+ --secondary-color: #262524;
+ --secondary-color-light: #3d3d3d;
+ 
+ // Colores de UI
+ --card-color: #f0f0f5;
+ --formInput-color: #1a1a1a;
+ --text-color: white;
+ --border-color: var(--primary-color);
+
+ --success-color: #38a169;
+
+ // Variables de diseño
+ --border-radius: 4px;
+ --transition: all 0.3s ease;
+ --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Estilos comunes para campos de texto en formularios de login y registro */
 .login-form-field .mat-mdc-notched-outline,
 .register-form-field .mat-mdc-notched-outline,
-.forgot-password-form-field .mat-mdc-notched-outline
-.login-form-field .mdc-notched-outline__leading,
+.forgot-password-form-field .mat-mdc-notched-outline .login-form-field .mdc-notched-outline__leading,
 .login-form-field .mdc-notched-outline__trailing,
 .register-form-field .mdc-notched-outline__leading,
 .register-form-field .mdc-notched-outline__trailing,
@@ -56,9 +68,9 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
 .login-form-field .mat-mdc-floating-label,
 .register-form-field .mat-mdc-floating-label,
 .forgot-password-form-field .mat-mdc-floating-label {
-  color: var(--label-color) !important;
+  color: var(--primary-color) !important;
   /* Color de etiqueta amarillo con importancia */
-  background-color: var(--label-background);
+  background-color: transparent !important;
   /* Fondo para ocultar el borde detrás del label */
   padding: 0 4px;
   /* Añadir padding para mejorar la apariencia */
@@ -91,4 +103,32 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
 .mat-mdc-form-field-infix {
   border: none;
   /* Asegúrate de que esta propiedad no esté causando el problema */
+}
+
+/* ESTILOS PARA EL CAMPO DE EMAIL */
+.forgot-password-form-field {
+
+  .mdc-text-field__input {
+
+    /* Placeholder INVISIBLE por defecto */
+    &::placeholder {
+      opacity: 0 !important;
+      transition: opacity 0.2s ease;
+    }
+
+    /* Placeholder VISIBLE solo con foco */
+    &:focus::placeholder {
+      opacity: 1 !important;
+      color: var(--secondary-color-color) !important;
+    }
+  }
+}
+
+.forgot-password-section {
+  .mat-mdc-form-field-subscript-wrapper {
+    .mat-mdc-form-field-error-wrapper {
+      padding: 0 !important;
+      left: -5px;
+    }
+  }
 }

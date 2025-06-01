@@ -1,6 +1,5 @@
 export const environment = {
     production: true,
-    apiUrl: 'http://app.apollogroupsport.com/api',
-    // urlFrontend: 'https://tudominio.com'
-    // Aquí puedes añadir más variables específicas para producción
+    apiUrl: 'https://api.optica_newvision_frontendsport.com/api',
+    baseUrl: 'https://api.optica_newvision_frontendsport.com' // Añade esta nueva propiedad
 };

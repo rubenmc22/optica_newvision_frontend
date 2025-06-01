@@ -45,13 +45,14 @@
                 ? 'Nombre y Apellido del Representante'
                 : 'Nombre y Apellido del Atleta' }}
               </label>
-              <input type="text" class="form-control" [formControl]="nameControl" placeholder="Ingrese el nombre completo">
+              <input type="text" class="form-control" [formControl]="nameControl"
+                placeholder="Ingrese el nombre completo">
               <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativeName' : 'athleteName')"
                 class="text-danger small mt-1">
                 El nombre y apellido solo pueden contener caracteres alfabéticos.
               </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6" id="cedula-input">
               <label class="form-label text-yellow">
                 {{ registerForm.get('isMinor')?.value
                 ? 'Cédula del Representante'
@@ -73,20 +74,22 @@
                 ? 'Teléfono del Representante'
                 : 'Teléfono del Atleta' }}
               </label>
-              <input type="tel" class="form-control" [formControl]="phoneControl" placeholder="Ingrese el número de teléfono">
+              <input type="tel" class="form-control" [formControl]="phoneControl"
+                placeholder="Ingrese el número de teléfono">
               <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativePhone' : 'athletePhone')"
                 class="text-danger small mt-1">
                 El teléfono debe ser numérico y contener un máximo de 12 caracteres.
               </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-6" id="email-input">
               <label class="form-label text-yellow">
                 {{ registerForm.get('isMinor')?.value
                 ? 'Correo del Representante'
                 : 'Correo del Atleta' }}
               </label>
-              <input type="email" class="form-control" [formControl]="emailControl" placeholder="Ingrese el correo electrónico">
+              <input type="email" class="form-control" [formControl]="emailControl"
+                placeholder="Ingrese el correo electrónico">
               <div *ngIf="isInvalidField(registerForm.get('isMinor')?.value ? 'representativeEmail' : 'athleteEmail')"
                 class="text-danger small mt-1">
                 Por favor, ingrese un correo electrónico válido.
@@ -104,7 +107,7 @@
               </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-6" id="genero-radio">
               <label class="form-label text-yellow">Género</label>
               <div class="d-flex gap-3">
                 <div class="form-check">
@@ -132,7 +135,7 @@
               </div>
             </div>
 
-            <div class="col-md-6">
+            <div class="col-md-6" id="confirm-password">
               <label class="form-label text-yellow">Confirmar Contraseña</label>
               <input type="password" class="form-control" formControlName="confirmPassword"
                 placeholder="Confirme la contraseña">

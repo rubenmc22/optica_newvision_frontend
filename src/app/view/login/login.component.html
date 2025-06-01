@@ -1,27 +1,15 @@
 <div class="login-container">
   <div class="login-background">
-    <img class="login-background-image" src="/assets/sports-background.jpeg" alt="Fondo de Deportes">
+    <img class="login-background-image" src="/assets/fondo/IMG_9792.JPG" alt="">
   </div>
   <div class="login-logo-container">
-    <img class="login-logo" src="assets/apolloLogo.png" alt="APOLLO GROUP Logo" />
-    <div class="login-logo-text">
-      <div class="login-logo-title">APOLLO GROUP</div>
-      <div class="login-logo-subtitle">Academia deportiva</div>
-    </div>
+    <img class="login-logo" src="assets/logo/logo_1.png" alt="New Visión Logo" />
+  
   </div>
   <div class="login-card-container">
-    <div class="login-side-text">
-      <div class="login-side-text-guatire">GUATIRE</div>
-      <div class="login-side-text-sport">SPORT</div>
-      <div class="login-side-buttons">
-        <button class="btn btn-primary" routerLink="/register">REGISTRATE</button>
-        <button class="btn btn-accent">ZONA INFORMATIVA</button>
-      </div>
-    </div>
     <div class="login-card">
       <div class="login-title">Inicie Sesión</div>
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-        <!-- Campo Cédula -->
         <!-- Campo Cédula -->
         <div class="mb-3">
           <label for="cedula" class="form-label">Cédula</label>
@@ -52,19 +40,21 @@
           </div>
         </div>
 
-
-
         <div class="form-check mb-4 form-switch">
-          <input type="checkbox" class="form-check-input" >
-          <label class="form-check-label text-yellow" >
+          <input type="checkbox" class="form-check-input">
+          <label class="form-check-label text-yellow">
             Recuérdame
           </label>
         </div>
 
 
         <!-- Botón de Entrar -->
-        <button type="submit" class="btn btn-primary w-100" [disabled]="loginForm.invalid">
-          Entrar
+        <button type="submit" class="btn btn-primary w-100 btn-ingresar" [disabled]="loginForm.invalid || isLoading">
+          <span *ngIf="!isLoading">Ingresar</span>
+          <span *ngIf="isLoading">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Ingresando...
+          </span>
         </button>
 
         <!-- Botón de "¿Olvidó su contraseña?" -->

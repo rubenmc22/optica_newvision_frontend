@@ -1,7 +1,11 @@
-import { Component, OnInit, Input } from '@angular/core';
-import { AuthService } from '../../core/services/auth/auth.service'; // Servicio de autenticación
-import { Router } from '@angular/router'; // Router para navegación
+import { Component, OnInit, Input, OnDestroy } from '@angular/core';
+import { AuthService } from '../../core/services/auth/auth.service';
+import { Router } from '@angular/router';
 import { SwalService } from '../../core/services/swal/swal.service';
+import { SharedUserService } from '../../core/services/sharedUser/shared-user.service';
+import { environment } from '../../../environments/environment';
+import { User } from '../../Interfaces/models-interface';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-sidebar',
@@ -9,20 +13,21 @@ import { SwalService } from '../../core/services/swal/swal.service';
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss']
 })
-export class SidebarComponent implements OnInit {
-
+export class SidebarComponent implements OnInit, OnDestroy {
   @Input() userRoleKey: string = '';
   @Input() userRoleName: string = '';
   @Input() userName: string = '';
+  profileImage: string = 'assets/default-photo.png';
+
+  private userSubscriptions: Subscription[] = [];
 
   constructor(
-    private swalService: SwalService, // Inyecta el servicio de SweetAlert2
-    private router: Router, // Inyecta el Router para la navegación
-    private authService: AuthService // Servicio de autenticación
+    private swalService: SwalService,
+    private router: Router,
+    private authService: AuthService,
+    private sharedUserService: SharedUserService,
   ) { }
 
-
-  // Definición dinámica de los menús y submenús según el rol
   menuItems = [
     {
       label: 'Dashboard',
@@ -39,7 +44,7 @@ export class SidebarComponent implements OnInit {
         { label: 'Fútbol', routerLink: '/deportes/futbol', roles: ['admin', 'representante', 'atleta'] }
       ],
       roles: ['admin', 'representante', 'atleta'],
-      underConstruction: true // Marca el menú de Deportes como en desarrollo
+      underConstruction: true
     },
     {
       label: 'Atletas',
@@ -56,40 +61,93 @@ export class SidebarComponent implements OnInit {
       icon: 'fas fa-user',
       submenu: [
         { label: 'Gestionar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'representante', 'atleta'] },
-        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['atleta'], underConstruction: true },
-        { label: 'Mis estadísticas / habilidades', routerLink: '/estadisticas', roles: ['admin', 'representante', 'atleta'] }
+        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['atleta'], underConstruction: true }
+        //  { label: 'Mis estadísticas / habilidades', routerLink: '/estadisticas', roles: ['admin', 'representante', 'atleta'] }
       ],
       roles: ['admin', 'representante', 'atleta']
     }
   ];
 
-  // Menú filtrado dinámicamente
-  filteredMenu: {
-    label: string;
-    routerLink?: string;
-    submenu?: { label: string; routerLink: string; roles: string[]; underConstruction?: boolean }[];
-    roles: string[];
-    icon?: string;
-    underConstruction?: boolean;
-  }[] = [];
+  filteredMenu: any[] = [];
 
   ngOnInit(): void {
     this.initializeMenu();
+    this.initializeUserData();
+    this.setupSubscriptions();
+  }
+
+  ngOnDestroy(): void {
+    this.userSubscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  private setupSubscriptions(): void {
+    // Suscripción a cambios en el perfil compartido
+    const userProfileSub = this.sharedUserService.currentUserProfile$.subscribe((profile: User) => {
+      if (profile) {
+        this.userName = profile.nombre || this.userName;
+        if (profile.ruta_imagen) {
+          this.profileImage = this.sharedUserService.getFullImageUrl(profile.ruta_imagen);
+        }
+      }
+    });
+
+    // Suscripción a cambios en el AuthService
+    const authUserSub = this.authService.currentUser$.subscribe(authData => {
+      if (authData?.user) {
+        this.userName = authData.user.nombre || this.userName;
+        this.userRoleName = authData.rol?.name || '';
+        if (authData.user.ruta_imagen) {
+          this.profileImage = this.sharedUserService.getFullImageUrl(authData.user.ruta_imagen);
+        }
+      }
+    });
+
+    this.userSubscriptions.push(userProfileSub, authUserSub);
+  }
+
+  private updateUserProfile(user: User): void {
+    if (user) {
+      this.userName = user.nombre || this.userName;
+
+      // Actualiza la imagen solo si hay un cambio real
+      if (user.ruta_imagen && user.ruta_imagen !== this.profileImage) {
+        this.profileImage = this.sharedUserService.getFullImageUrl(user.ruta_imagen);
+      } else if (!user.ruta_imagen) {
+        this.profileImage = 'assets/default-photo.png';
+      }
+    }
+  }
+
+  private initializeUserData(): void {
+    const currentUser = this.authService.getCurrentUser();
+    const currentRole = this.authService.getCurrentRol();
+
+    if (currentUser) {
+      this.userName = currentUser.nombre || '';
+      this.userRoleName = currentRole?.name || '';
+
+      if (currentUser.ruta_imagen) {
+        this.profileImage = this.sharedUserService.getFullImageUrl(currentUser.ruta_imagen);
+      }
+    }
+  }
+
+  handleImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.src = 'assets/default-photo.png';
   }
 
   private initializeMenu(): void {
     const currentRol = this.authService.getCurrentRol();
-  //  console.log('currentRol', currentRol);
     const currentName = this.authService.getCurrentUser();
+
     this.userRoleKey = currentRol?.key || '';
     this.userRoleName = currentRol?.name || '';
     this.userName = currentName?.nombre || '';
 
     this.filteredMenu = this.menuItems
       .map(menu => {
-        // Si el usuario no es atleta, mueve "Ficha Técnica" al menú de Atletas
         if (menu.label === 'Atletas' && this.userRoleKey !== 'atleta' && menu.submenu) {
-          // Asegurar que no exista duplicación
           const fichaTecnicaExists = menu.submenu.some(sub => sub.label === 'Ficha Técnica');
           if (!fichaTecnicaExists) {
             menu.submenu.push({
@@ -101,7 +159,6 @@ export class SidebarComponent implements OnInit {
           }
         }
 
-        // Filtrar submenús visibles para el rol
         if (menu.submenu) {
           const filteredSubmenu = menu.submenu.filter(sub => sub.roles.includes(this.userRoleKey));
           return { ...menu, submenu: filteredSubmenu };
@@ -109,9 +166,8 @@ export class SidebarComponent implements OnInit {
 
         return menu;
       })
-      .filter(menu => menu.roles.includes(this.userRoleKey) || (menu.submenu && menu.submenu.length > 0)); // Filtrar menús
+      .filter(menu => menu.roles.includes(this.userRoleKey) || (menu.submenu && menu.submenu.length > 0));
   }
-
 
   toggleSubmenu(event: Event): void {
     event.preventDefault();
@@ -141,34 +197,28 @@ export class SidebarComponent implements OnInit {
   }
 
   onMenuClick(event: Event, menuItem: any) {
-  //  console.log('menuItem', menuItem);
     if (menuItem?.underConstruction) {
-      console.log('menuItem?.underConstruction', menuItem?.underConstruction);
-      event.preventDefault();  // Detiene el routerLink
-      event.stopImmediatePropagation();  // Evita otros listeners
-
+      event.preventDefault();
+      event.stopImmediatePropagation();
       return;
     }
-
   }
 
   confirmLogout(): void {
-    this.authService.logout(); // Llamar al método de logout
+    this.authService.logout();
     this.swalService.showSuccess('Sesión cerrada', 'Tu sesión se ha cerrado exitosamente.')
       .then(() => {
-        this.router.navigate(['/login']); // Redirigir al login
+        this.router.navigate(['/login']);
       });
   }
 
   getMarginForModule(moduleName: string): string {
     const margins: { [key: string]: string } = {
-      'Dashboard': '8px',    // Margen estándar
-      'Deportes': '10px',    // Más margen por jerarquía o diseño
-      'Atletas': '5px',     // Margen intermedio
-      'Mi Perfil': '10px',   // Más espacio para destacar
+      'Dashboard': '8px',
+      'Deportes': '10px',
+      'Atletas': '5px',
+      'Mi Perfil': '10px',
     };
-
-    return margins[moduleName] || '8px'; // Valor por defecto si no hay coincidencia
+    return margins[moduleName] || '8px';
   }
-
 }
