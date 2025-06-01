@@ -4,18 +4,18 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    height: 100vh; // Usar viewport height para ocupar toda la pantalla
+    min-height: 100vh;
     position: relative;
     padding: 20px;
     background: none;
 }
 
 .login-background {
-    position: fixed; // Fija la imagen en la pantalla
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    height: 100vh; // Ocupa el 100% del viewport height
+    height: 100vh;
     z-index: -1;
 }
 
@@ -30,28 +30,36 @@
     display: flex;
     align-items: center;
     position: absolute;
-    top: -75px;
-    left: 0px;
+    top: 51%;
+    left: 38%;
     z-index: 1;
 
+
+    @media (max-width: 1396.36px) {
+        top: 55%;
+        left: 37%;
+    }
+
     @media (max-width: 1228.80px) {
-        top: -65px;
+        top: 62%;
+        left: 34%;
     }
 
     @media (max-width: 1024px) {
-        top: -65px;
+        top: 58%;
+        left: 30%;
     }
 
     @media (max-width: 877.71px) {
-        top: -55px;
-        left: 30px;
+        top: 62%;
+        left: 31%;
     }
 
     @media (max-width: 790px) {
-        /* top: 20px; */
         left: 0%;
         transform: translateY(0%);
         min-height: 60px;
+        display: none;
     }
 
     @media (max-width: 620px) {
@@ -59,40 +67,58 @@
     }
 
     @media (max-width: 500px) {
-        top: 0px;
-        left: 0%;
-        transform: translateY(-25%);
-        min-height: 60px;
+        display: block;
+        width: 100% !important;
+        top: 10%;
+        text-align: center;
     }
 
-    @media (max-width: 400px) {}
+
+    @media (max-width: 400px) {
+        width: 100% !important;
+        top: 11%;
+        text-align: center;
+
+    }
+
+    @media (max-width: 360px) {
+        width: 100% !important;
+        top: 13%;
+        text-align: center;
+    }
 }
 
 .login-logo {
-    width: 230px;
-    margin-left: 10px;
+    width: 300px;
 
+    @media (max-width: 1396.36px) {
+        width: 270px;
+    }
 
     @media (max-width: 1228.80px) {
-        width: 200px;
+        width: 230px;
     }
 
-    @media (max-width: 1024px) {}
+    @media (max-width: 1024px) {
+        width: 215px;
+    }
 
     @media (max-width: 877.71px) {
-        width: 150px;
+        width: 185px;
     }
 
-    @media (max-width: 790px) {
-        // width: 150px;
+    @media (max-width: 768px) {
+        //  width: 115px;
+
     }
 
-    @media (max-width: 620px) {
-        width: 115px;
+    @media (max-width: 500px) {
+        width: 210px;
     }
 
     @media (max-width: 380px) {
-        margin-left: -25px !important;
+        width: 185px;
+        //  margin-left: -25px !important;
     }
 }
 
@@ -117,12 +143,6 @@
     @media (max-width: 790px) {
         margin-left: -65px;
     }
-
-    @media (max-width: 620px) {
-        // margin-left: -33px !important;
-    }
-
-
 }
 
 .login-logo-title {
@@ -130,13 +150,12 @@
     font-weight: bold;
     color: var(--text-color) !important;
 
-
     @media (max-width: 1228.80px) {
-        font-size: 27px; // Aplica un margen izquierdo solo en este rango
+        font-size: 27px;
     }
 
     @media (max-width: 1024px) {
-        font-size: 21px; // Aplica un margen izquierdo solo en este rango
+        font-size: 21px;
     }
 
     @media (max-width: 920px) {
@@ -157,13 +176,12 @@
     color: var(--text-color) !important;
 
     @media (max-width: 1228.80px) {
-        font-size: 14px; // Aplica un margen izquierdo solo en este rango
+        font-size: 14px;
     }
 
     @media (max-width: 1024px) {
-        font-size: 12px; // Aplica un margen izquierdo solo en este rango
+        font-size: 12px;
     }
-
 
     @media (max-width: 920px) {
         font-size: 9px;
@@ -180,85 +198,266 @@
 
 .login-card-container {
     display: flex;
+    justify-content: center;
     align-items: center;
     width: 100%;
-    max-width: 1200px;
-    justify-content: flex-start;
-    margin-top: 140px;
+    min-height: calc(100vh - 160px);
+    padding: 20px;
+    box-sizing: border-box;
+    margin-top: 50px;
 
     @media (max-width: 1228.80px) {
-        margin-top: 60px;
+        margin-top: 0px;
     }
 
     @media (max-width: 1024px) {
-        margin-top: 60px;
+        margin-top: 0px;
     }
 
     @media (max-width: 877.71px) {
-        margin-top: 30px !important;
-        margin-left: -30px !important;
+        margin-top: 0px !important;
     }
 
     @media (max-width: 790px) {
-        margin-top: 30px !important;
-        margin-left: -30px !important;
-    }
-
-    @media (max-width: 320px) {
-        margin-left: 0px !important;
+        margin-top: 0px !important;
     }
 }
 
-.login-side-text {
-    flex: 1;
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
-    flex-direction: column;
+.login-card {
+    max-width: 420px;
+    width: 100%;
+    padding: 35px;
+    background: #f0f0f5;
+    color: #2d2d2d;
+    box-shadow:
+        0 6px 24px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    margin-left: 56%;
+    position: relative;
+    overflow: hidden;
+
+    @media (max-width: 1024px) {
+        padding: 15px 25px;
+    }
+
+    @media (max-width: 877.71px) {
+        padding: 5px 25px;
+    }
+
+    &:before {
+        content: 'NEW VISION 2020';
+        position: absolute;
+        bottom: 100px;
+        right: -60px;
+        font-size: 72px;
+        font-weight: 800;
+        color: rgba(0, 120, 215, 0.03);
+        transform: rotate(-15deg);
+        pointer-events: none;
+    }
+
+    /* Título centrado */
+    .login-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #3a7bd5;
+        margin: 0 auto 25px auto;
+        /* Centrado horizontal */
+        text-align: center;
+        /* Asegura texto centrado */
+        display: block;
+        /* Cambiado a block para centrado */
+        width: 100%;
+        position: relative;
+
+        &:after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50%;
+            height: 3px;
+            background: linear-gradient(90deg, #0078d7 0%, rgba(0, 120, 215, 0.2) 100%);
+        }
+    }
+
+    /* Estilo para "Recuérdame" en azul */
+    .form-check {
+
+        @media (max-width: 877.71px) {
+            margin-left: 20px;
+        }
+
+        .form-check-label {
+            color: var(--primary-color) !important;
+            /* Azul moderno */
+            font-weight: 500;
+        }
+
+        .form-check-input:checked {
+            background-color: #3a7bd5;
+            border-color: #3a7bd5;
+        }
+    }
+
+    /* Resto de estilos (se mantienen igual) */
+    .login-subtitle {
+        font-size: 16px;
+        color: #5a5a5a;
+        margin-bottom: 30px;
+        font-style: italic;
+        text-align: center;
+    }
+
+    .form-control {
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid #e1e1e1;
+        color: #333;
+        transition: all 0.3s ease;
+        padding: 12px 15px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+
+        &:focus {
+            border-color: #0078d7;
+            background: #fff;
+            box-shadow: 0 0 0 2px rgba(0, 120, 215, 0.2);
+            outline: none;
+        }
+    }
+
+    .btn-ingresar {
+        background: linear-gradient(135deg, #0078d7 0%, #004e8c 100%);
+        color: white !important;
+        font-weight: 600;
+        padding: 14px;
+        border-radius: 8px;
+        border: none;
+        width: 100%;
+        font-size: 16px;
+        margin: 15px 0;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 120, 215, 0.2);
+
+        position: relative; // Añade esto para alinear correctamente el spinner
+
+        .spinner-border {
+            width: 1rem;
+            height: 1rem;
+            border-width: 0.15em;
+            border-color: currentColor transparent currentColor currentColor; // Color del spinner
+            margin-right: 8px;
+            vertical-align: middle;
+            display: inline-block; // Asegura que se muestre correctamente
+        }
+    
+        &:disabled {
+            opacity: 0.8;
+            // Añade esto para mantener el gradiente al deshabilitar
+            background: linear-gradient(135deg, #0078d7 0%, #004e8c 100%) !important;
+        }
+
+        @media (max-width: 1024px) {
+            margin: 0px 0;
+        }
+
+        @media (max-width: 877.71px) {
+            margin: 0px 0;
+        }
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+        }
+    }
+
+    .forgot-password {
+        color: #0078d7 !important;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        display: inline-block;
+        margin-top: 10px;
+
+        &:hover {
+            color: #005a9e !important;
+            text-decoration: underline;
+        }
+    }
+
+    .brand-footer {
+        margin-top: 30px;
+        font-size: 14px;
+        color: #7a7a7a;
+
+        .brand-name {
+            font-weight: 700;
+            color: #0078d7;
+        }
+
+        .brand-tagline {
+            font-style: italic;
+            display: block;
+            margin-top: 5px;
+            font-size: 13px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        padding: 25px;
+        margin-left: 0;
+        /* Centrado en móvil */
+
+        &:before {
+            font-size: 52px;
+            right: -40px;
+        }
+
+        .login-title {
+            font-size: 24px;
+        }
+    }
+}
+
+.login-title {
+    font-size: 28px;
     font-weight: bold;
-    text-align: left;
-    padding-left: 5px;
+    margin-bottom: 20px;
+    color: var(--primary-color);
 
-    @media (max-width: 1396.36px) {
-        margin-left: 70px; // Aplica un margen izquierdo solo en este rango
-    }
-
-    @media (max-width: 1228.80px) {
-        margin-left: 140px; // Aplica un margen izquierdo solo en este rango
+    @media (max-width: 920px) {
+        font-size: 24px;
     }
 
     @media (max-width: 790px) {
-        margin-left: 100px;
+        font-size: 16px;
     }
 
-    @media (max-width: 620px) {
-        margin-top: -75px;
+    @media (max-width: 500px) {
+        font-size: 24px;
     }
-
-
 }
 
-/* Estilos para las etiquetas (labels) */
 .form-label {
-    display: block; // Asegura que el label ocupe toda la línea
-    text-align: left; // Alinea el texto a la izquierda
-    margin-bottom: 0.5rem; // Espacio entre el label y el campo de entrada
+    display: block;
+    text-align: left;
+    margin-bottom: 0.5rem;
     font-weight: bold;
     color: var(--primary-color) !important;
 }
 
-/* Estilos para los campos de entrada */
 .form-control {
     border-radius: 5px;
     background-color: var(--formInput-color);
-    /* Fondo oscuro del input */
     color: var(--text-color);
-    //  border: 1px solid var(--primary-color); /* Borde amarillo */
     border: none;
 
     &:focus {
         border-color: #FFD966;
-        /* Borde amarillo más claro al enfocar */
         box-shadow: 0px 0px 5px #FFD966;
     }
 
@@ -269,15 +468,12 @@
     @media (max-width: 877.71px) {
         font-size: 13px;
     }
-
 }
 
 .form-check-label {
-  //  margin-left: 8px;
     color: var(--text-color) !important;
 
     @media (max-width: 500px) {
-        color: var(--text-color) !important;
         margin-left: 15px;
         margin-top: 6px;
         font-size: 15px;
@@ -298,23 +494,9 @@
     border-radius: 20px;
     outline: none;
     transition: background-color 0.3s ease;
-    //padding-left: 20px !important;
-
-    &::before {
-        content: '';
-        position: absolute;
-        background-color: #f2f2f2;
-        border-radius: 50%;
-        transition: all 0.3s ease;
-    }
 
     &:checked {
         background-color: var(--primary-color);
-
-        &::before {
-            //  left: 28px;
-            background-color: var(--text-color);
-        }
     }
 
     &:focus {
@@ -323,534 +505,59 @@
     }
 }
 
-
-/* Estilos para los mensajes de error */
 .form-text.text-danger {
-    font-size: 0.875rem; // Tamaño de fuente más pequeño
-    margin-top: 0.25rem; // Espacio entre el campo y el mensaje de error
-    text-align: left; // Alinea el mensaje de error a la izquierda
-}
-
-.login-side-text-sport {
-    font-size: 90px;
-    color: var(--primary-color);
-
-    @media (max-width: 1228.80px) {
-        font-size: 65px; // Aplica un margen izquierdo solo en este rango
-    }
-
-    @media (max-width: 1024px) {
-        font-size: 55px; // Aplica un margen izquierdo solo en este rango
-    }
-
-    @media (max-width: 920px) {
-        font-size: 55px;
-    }
-
-    @media (max-width: 877.71px) {
-        font-size: 48px;
-    }
-
-    @media (max-width: 620px) {
-        //250%
-        font-size: 35px;
-        margin-left: -30px;
-    }
-
-    @media (max-width: 500px) {
-        //250%
-        display: none;
-    }
-
-}
-
-.login-side-text-guatire {
-    font-size: 90px;
-    color: var(--text-color) !important;
-    margin-top: 5px;
-
-    @media (max-width: 1228.80px) {
-        font-size: 65px; // Aplica un margen izquierdo solo en este rango
-    }
-
-    @media (max-width: 1024px) {
-        font-size: 55px;
-        ; // Aplica un margen izquierdo solo en este rango
-    }
-
-    @media (max-width: 877.71px) {
-        font-size: 48px;
-    }
-
-    @media (max-width: 620px) {
-        //250%
-        font-size: 35px;
-        margin-left: -30px;
-    }
-
-    @media (max-width: 500px) {
-        //250%
-        display: none;
-    }
-
-}
-
-.login-side-buttons {
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
-    margin-top: 20px;
-
-
-    @media (max-width: 620px) {
-        margin-left: -30px;
-    }
-
-    @media (max-width: 500px) {
-        flex-direction: column;
-        align-items: center;
-    }
-}
-
-.btn {
-    padding: 10px 20px;
-    font-size: 14px;
-    cursor: pointer;
-    border: none;
-    border-radius: 5px;
-    color: var(--text-color) !important;
-
-    @media (max-width: 790px) {
-        width: 100%;
-        // max-width: 200px;
-    }
-}
-
-.btn-primary {
-    background-color: var(--primary-color);
-    color: var(--formInput-color) !important;
-    font-size: 18px;
-
-    @media (max-width: 1228.80px) {
-        font-size: 14px; // Aplica un margen izquierdo solo en este rango
-    }
-
-    @media (max-width: 1024px) {
-        font-size: 10px !important; // Aplica un margen izquierdo solo en este rango
-    }
-
-    @media (max-width: 877.71px) {
-        font-size: 10px !important;
-    }
-
-    @media (max-width: 620px) {
-        width: 100px !important;
-        font-size: 7px !important;
-    }
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    text-align: left;
 }
 
 .btn-ingresar {
     background-color: var(--primary-color);
     color: var(--formInput-color) !important;
     font-size: 18px;
+    width: 100%;
 
     @media (max-width: 1228.80px) {
-        font-size: 14px; // Aplica un margen izquierdo solo en este rango
+        font-size: 14px;
     }
 
     @media (max-width: 1024px) {
-        font-size: 10px !important; // Aplica un margen izquierdo solo en este rango
-    }
-
-    @media (max-width: 877.71px) {
-        font-size: 12px !important;
-        margin-top: -10px;
-    }
-
-    @media (max-width: 620px) {
-        font-size: 12px !important;
-        margin-top: -10px;
-        width: 100% !important;
-    }
-}
-
-.btn-accent {
-    background-color: transparent;
-    border: 2px solid var(--primary-color);
-    color: var(--primary-color);
-    font-size: 18px;
-
-    @media (max-width: 1228.80px) {
-        font-size: 14px; // Aplica un margen izquierdo solo en este rango
-    }
-
-    @media (max-width: 1024px) {
-        font-size: 10px !important; // Aplica un margen izquierdo solo en este rango
-    }
-
-    @media (max-width: 877.71px) {
         font-size: 10px !important;
     }
 
-    @media (max-width: 620px) {
-        width: 100px !important;
-        font-size: 7px !important;
-    }
-}
-
-.login-card {
-    flex: 1;
-    max-width: 400px;
-    padding: 30px;
-    background-color: var(--secondary-color) !important;
-    color: var(--text-color) !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    border-radius: 12px;
-    text-align: center;
-    margin-left: auto;
-
-
-    @media (max-width: 1228.80px) {
-        //font-size: 14px; // Aplica un margen izquierdo solo en este rango
-    }
-
-    @media (max-width: 1024px) {
-        max-width: 350px; // Reducir el ancho máximo
-        padding: 20px; // Reducir el padding
-        max-height: 370px; // Reducir la altura máxima
-        font-size: 12px; // Reducir el tamaño de la fuente si es necesario
-    }
-
     @media (max-width: 877.71px) {
-        /*   max-width: 325px; // Reducir el ancho máximo
-        padding: 20px; // Reducir el padding
-        max-height: 355px; // Reducir la altura máxima
-        font-size: 11px; // Reducir el tamaño de la fuente si es necesario*/
+        font-size: 12px !important;
     }
 
-    @media (max-width: 790px) {
-        max-width: 325px; // Reducir el ancho máximo
-        padding: 20px; // Reducir el padding
-        max-height: 328px; // Reducir la altura máxima
-        font-size: 11px; // Reducir el tamaño de la fuente si es necesario
-    }
-
-    @media (max-width: 500px) {
-        margin-left: 0;
-        margin-top: 20px;
-        max-width: 100%;
+    @media (max-width: 620px) {
+        font-size: 12px !important;
     }
 }
 
-.ng-untouched {
-    @media (max-width: 790px) {
-        margin-top: -5px !important;
-    }
-}
-
-.login-title {
-    font-size: 28px;
-    font-weight: bold;
-    margin-bottom: 20px;
-    color: var(--primary-color);
-
-    @media (max-width: 920px) {
-        font-size: 24px;
-    }
-
-    @media (max-width: 790px) {
-        font-size: 16px;
-    }
-
-
-    @media (max-width: 500px) {
-        font-size: 24px;
-    }
-
-
-
-
-}
-
-.login-form-field {
-    width: 100%;
-    margin-bottom: 15px;
-}
-
-.mat-mdc-form-field {
-    width: 100%;
-
-    @media (max-width: 790px) {
-        width: 90%;
-    }
-}
-
-.mat-mdc-input-element {
-    color: var(--text-color) !important;
-    border-radius: 5px;
-}
-
-.login-button {
-    width: 100%;
-    margin-bottom: 15px;
-}
-
-.login-button-primary {
-    background-color: var(--primary-color) !important;
-    color: black !important;
-}
-
-.login-button-accent {
-    background-color: transparent;
-    color: var(--text-color) !important;
-}
-
-.login-switch {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    margin-bottom: 20px;
-
-    .mat-mdc-slide-toggle-bar {
-        background-color: var(--primary-color) !important;
-    }
-
-    .mat-mdc-slide-toggle-thumb {
-        background-color: var(--text-color) !important;
-    }
-
-    .mdc-label {
-        margin-left: 10px;
-        color: var(--text-color) !important;
-    }
-}
-
-.login-form-field mat-error {
-    font-size: 14px !important;
-    margin-left: -20px;
-}
-
+/* Estilos específicos para móviles */
 @media (max-width: 500px) {
-
-    /* Reset de estilos que podrían estar interfiriendo */
     .login-container {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
         padding: 15px !important;
-        min-height: 100vh !important;
-        height: auto !important;
-        position: static !important;
-        background: none !important;
-        overflow-x: hidden !important;
     }
 
-    .login-background,
-    .login-background-image {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        z-index: -1 !important;
-    }
-
-    /* Logo superior - reset completo */
-    .login-logo-container {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        justify-content: center;
-        width: 70%;
-        margin: 0 auto 25px;
-        gap: 15px;
-        padding: 0 20px;
-        margin-top: 10px !important;
-        margin-left: 50px !important;
-    }
-
-    /* Imagen del logo - alineada a la izquierda del texto */
-    .login-logo {
-        width: 185px;
-        /* Reducido para mejor proporción */
-        margin: 0;
-        /* Reset de márgenes */
-        height: auto;
-    }
-
-    /* Texto del logo - alineado a la derecha de la imagen */
-    .login-logo-text {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        /* Alineación izquierda del texto */
-        margin: 0;
-        /* Reset de márgenes */
-        padding: 0;
-        //text-align: left;
-        margin-left: -60px !important;
-    }
-
-    .login-logo-title {
-        font-size: 18px;
-        /* Tamaño ajustado */
-        margin: 0;
-        line-height: 1.2;
-    }
-
-    .login-logo-subtitle {
-        font-size: 12px;
-        /* Tamaño ajustado */
-        margin: 0;
-        line-height: 1.2;
-    }
-
-    /* Card de login - reset completo */
     .login-card-container {
-        position: static !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 auto !important;
-        padding: 0 !important;
-        transform: none !important;
         margin-top: 110px !important;
     }
 
-
     .login-card {
-        position: static !important;
-        width: 90% !important;
-        max-width: 380px !important;
-        margin: 0 auto !important;
         padding: 30px 25px !important;
-        /* Aumenté padding vertical */
         min-height: 440px !important;
-        /* Altura mínima aumentada */
-        transform: none !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-        border-radius: 12px !important;
-        background: var(--secondary-color) !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: space-between !important;
-        /* Distribuye el espacio */
-
-        .login-title {
-            font-size: 22px !important;
-            text-align: center !important;
-            margin-bottom: 25px !important;
-            /* Aumenté margen inferior */
-            color: var(--primary-color) !important;
-        }
-
-        .form-label {
-            font-size: 14px !important;
-            margin-bottom: 10px !important;
-            /* Aumenté margen inferior */
-        }
 
         .form-control {
-            width: 100% !important;
             padding: 14px 15px !important;
-            /* Aumenté padding vertical */
             font-size: 15px !important;
-            margin-bottom: 18px !important;
-            /* Aumenté margen inferior */
             height: 48px !important;
-            /* Altura fija para inputs */
-        }
-
-        .form-check {
-            display: flex !important;
-            align-items: center !important;
-            margin: 20px 0 !important;
-            margin-left: 10px !important;
-            /* Aumenté margen vertical */
-
-            .form-check-input {
-                width: 35px !important;
-                height: 20px !important;
-                margin-right: 6px !important;
-            }
         }
 
         .btn-ingresar {
-            width: 100% !important;
             padding: 16px !important;
-            /* Aumenté padding */
             font-size: 16px !important;
-            margin-top: 15px !important;
-            /* Aumenté margen superior */
             height: 50px !important;
-            /* Altura fija para botón */
         }
-    }
-
-
-    /* Sección inferior - reset completo */
-    .login-side-text {
-        order: 2;
-        width: 90%;
-        max-width: 380px;
-        margin: 25px auto 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-top: 40px;
-
-        .login-side-text-guatire,
-        .login-side-text-sport {
-            display: none !important;
-        }
-
-        .login-side-buttons {
-            display: flex !important;
-            flex-direction: column !important;
-            width: 100% !important;
-            gap: 12px !important;
-            margin: 0 !important;
-            padding: 0 !important;
-
-            .btn {
-                width: 100% !important;
-                padding: 12px !important;
-                font-size: 15px !important;
-                margin: 0 !important;
-
-
-            }
-        }
-    }
-
-    /* Enlace olvidó contraseña */
-    .btn-link {
-        display: block !important;
-        width: 100% !important;
-        text-align: center !important;
-        margin: 15px 0 0 0 !important;
-        padding: 0 !important;
-        font-size: 14px !important;
-        color: var(--primary-color) !important;
-    }
-}
-
-@media (max-width: 400px) {
-
-    .login-logo-container {
-        width: 80% !important;
-        margin-left: 20px !important;
-    }
-}
-
-@media (max-width: 320px) {
-
-    .login-logo-container {
-        width: 90% !important;
-        margin-left: 0px !important;
     }
 }

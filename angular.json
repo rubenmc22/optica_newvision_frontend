@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "apollogroup": {
+    "optica_newvision_frontend": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -17,7 +17,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "outputPath": "dist/apollogroup",
+            "outputPath": "dist/optica_newvision_frontend",
             "index": "src/index.html",
             "main": "src/main.ts",
             "polyfills": "zone.js",
@@ -114,13 +114,13 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "apollogroup:build:production"
+              "buildTarget": "optica_newvision_frontend:build:production"
             },
             "development": {
-              "buildTarget": "apollogroup:build:development"
+              "buildTarget": "optica_newvision_frontend:build:development"
             },
             "staging": {
-              "buildTarget": "apollogroup:build:staging"
+              "buildTarget": "optica_newvision_frontend:build:staging"
             }
           },
           "defaultConfiguration": "development"
@@ -128,7 +128,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "apollogroup:build"
+            "buildTarget": "optica_newvision_frontend:build"
           }
         },
         "test": {

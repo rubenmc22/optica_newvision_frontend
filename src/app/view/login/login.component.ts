@@ -16,7 +16,7 @@ import { AuthData } from '../../Interfaces/models-interface';
 })
 export class LoginComponent implements OnInit {
   loginForm: FormGroup;
-  loading = false; // Variable para controlar el estado de carga
+  isLoading: boolean = false;
 
   constructor(
     private fb: FormBuilder,
@@ -51,22 +51,22 @@ export class LoginComponent implements OnInit {
         return;
     }
 
-    this.loading = true;
+    this.isLoading = true;
 
     this.authService.login(
         this.loginForm.value.cedula,
         this.loginForm.value.password
     ).pipe(
-        finalize(() => this.loading = false)
+        finalize(() => this.isLoading = false)
     ).subscribe({
         next: (authData) => {
             // Verificar DIRECTAMENTE el tyc_aceptado de la respuesta
-            if (authData.user.tyc_aceptado === 0) { // Cambiado a verificación explícita
-                this.showTermsAndContinue(authData);
-            } else {
+       //     if (authData.user.tyc_aceptado === 0) { // Cambiado a verificación explícita
+         //       this.showTermsAndContinue(authData);
+         //   } else {
                 this.router.navigate(['/dashboard'], { replaceUrl: true });
                 this.swalService.showSuccess('¡Éxito!', 'Bienvenido, ha iniciado sesión correctamente');
-            }
+          //  }
         },
         error: (err: HttpErrorResponse) => {
             const message = err.error?.message === 'Credenciales inválidas.'
@@ -106,7 +106,7 @@ export class LoginComponent implements OnInit {
       'Cancelar'
     ).then((result) => {
       if (result.isConfirmed) {
-        this.loading = true;
+        this.isLoading = true;
         this.authService.acceptTermsAndConditions().subscribe({
           next: () => {
             const isFirstAcceptance = !authData.user?.tyc_aceptado;
@@ -143,7 +143,7 @@ export class LoginComponent implements OnInit {
             this.authService.logout();
           },
           complete: () => {
-            this.loading = false;
+            this.isLoading = false;
           }
         });
       } else {

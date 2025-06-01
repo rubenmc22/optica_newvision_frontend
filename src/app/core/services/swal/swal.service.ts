@@ -49,7 +49,7 @@ export class SwalService {
       title: title, // Título de la alerta
       text: text, // Mensaje de la alerta
       confirmButtonText: 'Aceptar', // Texto del botón de confirmación
-      timer: 3000, // Cierra automáticamente la alerta después de 3 segundos
+      timer: 30000000, // Cierra automáticamente la alerta después de 3 segundos
       customClass: {
         popup: 'custom-popup-class',
         title: 'custom-title-class',
