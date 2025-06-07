@@ -5,7 +5,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { environment } from '../../../../environments/environment';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
-import { User, Rol, AuthData, AuthResponse } from '../../../Interfaces/models-interface';
+import { User, Rol, AuthData, AuthResponse, Cargo  } from '../../../Interfaces/models-interface';
 import { UserStateService } from './../userState/user-state-service';
 
 
@@ -59,6 +59,9 @@ export class AuthService {
   getCurrentRol(): Rol | null {
     return this.currentUserValue?.rol || null;
   }
+  getCurrentCargo(): Cargo | null {
+    return this.currentUserValue?.cargo || null;
+  }
 
   updateUserData(updatedUser: Partial<User>): void {
     const currentData = this.currentUserValue;
@@ -82,14 +85,15 @@ export class AuthService {
         if (!data.user?.correo) {
           throw new Error('El servidor no devolvió un correo de usuario');
         }
-
+        console.log('DATA', data);
         const authData: AuthData = {
           token: data.token,
           user: {
             ...data.user,
             email: data.user.correo
           },
-          rol: data.rol
+          rol: data.rol,
+          cargo: data.cargo
         };
 
         return authData;

@@ -1,17 +1,23 @@
 @use '../../../custom-theme.scss' as theme;
 
 .card {
-    margin: 1rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    background-color: var(--secondary-color);
-    /* Fondo negro */
-    color: var(--primary-color);
-    /* Texto amarillo */
+    width: 100%; // Siempre ocupa el ancho completo
+    margin: 1rem auto; // Centra la tarjeta si hay márgenes disponibles
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    /* Sombra elegante */
+    background-color: var(--secondary-color);
+    color: var(--primary-color);
 }
+
+.container-fluid {
+    padding-left: 0;
+    padding-right: 0; // Evita espacios adicionales en los bordes de la pantalla
+}
+
+.row.justify-content-center {
+    width: 100%; // Se asegura de que los elementos dentro ocupen toda la línea
+}
+
 
 .avatar-widget {
     position: relative;
@@ -90,7 +96,7 @@
     text-align: center;
     font-size: 1.5rem;
     font-weight: bold;
-    background: linear-gradient(90deg, var(--primary-color), #FFA500);
+    background: linear-gradient(90deg, var(--primary-color));
     /* Gradiente de amarillo a naranja */
     color: var(--secondary-color);
     /* Texto negro */
@@ -132,9 +138,10 @@
 .nav-tabs .nav-link.active {
     color: var(--secondary-color);
     /* Texto negro */
-    background-color: var(--primary-color);
+    background: var(--degradado-color);
     /* Fondo amarillo */
-    border-bottom: 3px solid #FFA500;
+    border-bottom: 3px solid var(--details-color) !important;
+    ;
     /* Línea subrayada naranja */
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
     /* Sombra para la pestaña activa */
@@ -157,14 +164,25 @@
 input.form-control,
 textarea.form-control,
 select.form-control {
-    background-color: var(--secondary-color);
-    /* Fondo negro */
+    /*    background-color: var(--secondary-color);
     color: #FFFFFF;
-    /* Texto blanco */
     border: 1px solid rgba(255, 255, 255, 0.2);
-    /* Borde blanco con opacidad */
-    border-radius: 5px;
-    /* Bordes redondeados */
+    border-radius: 5px;*/
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid #e1e1e1;
+    color: var(--formInput-color);
+    transition: all 0.3s ease;
+    padding: 5px 15px;
+    //  margin-bottom: 20px;
+    border-radius: 8px;
+
+    &:focus {
+        border-color: var(--primary-color) !important;
+        background: #fff;
+        box-shadow: 0 0 0 2px rgba(0, 120, 215, 0.2);
+        outline: none;
+    }
+
 }
 
 input.form-control::placeholder {
@@ -175,26 +193,38 @@ input.form-control::placeholder {
 
 /* Botón de guardar */
 button.btn-success {
-    background-color: var(--primary-color);
-    color: var(--secondary-color);
-    border: none;
-    border-radius: 5px;
-    padding: 10px 20px;
-    font-size: 1rem;
-    font-weight: bold;
-    cursor: pointer;
+    background: var(--degradado-color);
+    border: var(--degradado-color);
+    border-left: none;
+    color: #fff;
     transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+
+        i {
+            color: #fff; // Icono azul
+        }
+    }
+
+    i {
+        transition: all 0.2s ease;
+    }
 }
 
-button.btn-success:hover {
+.disabled-input {
+    background-color: #e0e0e0 !important;
+    /* Color gris */
+    cursor: not-allowed;
+}
+
+/*button.btn-success:hover {
     background-color: #e6c200;
-    /* Fondo amarillo más oscuro */
     color: #000000;
     box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
-    /* Sombra al pasar el mouse */
     transform: scale(1.05);
-    /* Efecto de agrandamiento */
-}
+}*/
 
 button.btn-success:active {
     background-color: #cba800;
@@ -202,47 +232,140 @@ button.btn-success:active {
     /* Efecto de clic */
 }
 
-.modal-header {
-    background-color: var(--primary-color);
-    color: black;
+.text-danger {}
 
-    .modal-title {
-        font-weight: bold;
+/* Estilos para el modal centrado */
+#personalInfoModal,
+#otpModal {
+    .modal-dialog {
+        &.modal-dialog-centered {
+            min-height: calc(100% - 1rem);
+
+            @media (min-width: 576px) {
+                min-height: calc(100% - 3.5rem);
+                max-width: 500px;
+            }
+        }
+
+        .modal-content {
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            border: none;
+        }
+    }
+
+    .modal-header {
+        background: var(--degradado-color) !important;
+        color: var(--details-color);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 1.2rem;
+
+        .modal-title {
+            font-weight: bold;
+            font-size: 1.25rem;
+        }
+
+        .btn-close {
+            filter: invert(1);
+            opacity: 0.8;
+            transition: opacity 0.2s;
+
+            &:hover {
+                opacity: 1;
+            }
+        }
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        text-align: center;
+        font-size: 1.05rem;
+        line-height: 1.5;
+        background-color: var(--secondary-color);
+        color: var(--formInput-color);
+    }
+
+    .modal-footer {
+        justify-content: center;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 1rem;
+        background-color: var(--secondary-color);
+
+        .btn {
+            min-width: 100px;
+            margin: 0 0.5rem;
+            padding: 0.5rem 1.25rem;
+            font-weight: 500;
+
+            &.btn-success {
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            }
+        }
     }
 }
 
-.modal-footer,
-.modal-body {
-    background-color: var(--secondary-color);
-    color: var(--text-color);
-}
+.btn-outline-secondary {
+    background: var(--degradado-color);
+    border: var(--degradado-color);
+    border-left: none;
+    color: #fff;
+    transition: all 0.3s ease;
 
-input[type="text"].otp-input {
-    letter-spacing: 0.5em;
-    font-size: 1.2rem;
-    font-weight: bold;
-    text-align: center;
-}
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
 
-.text-danger {
-    font-size: 0.9rem;
-}
-
-/* Responsividad para móviles */
-@media (max-width: 576px) {
-    .nav-tabs .nav-link {
-        font-size: 0.875rem;
-        /* Tamaño de fuente más pequeño en móviles */
+        i {
+            color: #fff; // Icono azul
+        }
     }
 
-    .form-row .form-group {
-        flex: 0 0 100%;
-        /* Usar todo el ancho en pantallas pequeñas */
-        max-width: 100%;
+    i {
+        transition: all 0.2s ease;
     }
+}
 
-    button.btn-success {
-        padding: 8px 16px;
-        /* Botón más compacto */
+.form-group {
+    position: relative;
+    // min-height: 70px; // Define una altura mínima para que el mensaje no empuje el contenido
+}
+
+small.text-danger {
+    position: absolute;
+    // bottom: -20px; // Mueve el mensaje debajo del input sin afectar su altura
+    // left: 6px;
+}
+
+#correoError, #correoPhone {
+    position: absolute;
+    bottom: -20px;
+    left: 7px;
+    text-align: left;
+}
+
+
+
+.form-row {
+    margin-bottom: 20px;
+}
+
+/* Ajuste para dispositivos móviles */
+@media (max-width: 575.98px) {
+
+    #personalInfoModal,
+    #otpModal {
+        .modal-dialog {
+            margin: 0.5rem auto;
+        }
+
+        .modal-content {
+            border-radius: 0;
+        }
+
+        .modal-footer {
+            .btn {
+                width: 45%;
+                margin: 0 2.5%;
+            }
+        }
     }
 }

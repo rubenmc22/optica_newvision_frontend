@@ -1,6 +1,6 @@
 <div class="container-fluid">
     <div class="row justify-content-center">
-        <div class="col-12 col-md-8 col-lg-9">
+        <div class="col-12 col-md-10 col-lg-9">
             <div class="card">
                 <!-- Pestañas de Navegación -->
                 <ul class="nav nav-tabs nav-justified" id="myAccountTabs" role="tablist">
@@ -44,9 +44,24 @@
                         <!-- Formulario de Información Personal -->
                         <form #personalInfoForm="ngForm">
                             <div class="form-row">
+                                <!-- Campo: Cédula -->
+                                <div class="form-group col-md-4">
+                                    <label for="cedula">Cédula</label>
+                                    <input type="text" id="cedula" class="form-control" [(ngModel)]="user.cedula"
+                                        name="cedula" disabled [ngClass]="'disabled-input'" />
+                                </div>
+
+                                <!-- Campo: Cargo -->
+                                <div class="form-group col-md-4">
+                                    <label for="cargo">Cargo actual</label>
+                                    <input id="cargo" class="form-control" [(ngModel)]="userCargoSeleccionado"
+                                        name="cargo" disabled [ngClass]="'disabled-input'" />
+                                </div>
+
+
                                 <!-- Campo: Nombre Completo -->
-                                <div class="form-group col-md-6">
-                                    <label for="nombreCompleto">Nombre Completo</label>
+                                <div class="form-group col-md-4">
+                                    <label for="nombreCompleto">Apellido y Nombre</label>
                                     <input type="text" id="nombre" class="form-control" [(ngModel)]="user.nombre"
                                         name="nombreCompleto" pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" #nombre="ngModel"
                                         required (input)="detectChanges()" />
@@ -54,36 +69,36 @@
                                         Solo se permiten letras y espacios.
                                     </small>
                                 </div>
-
-                                <!-- Campo: Correo Electrónico -->
-                                <div class="form-group col-md-6">
-                                    <label for="correo">Correo Electrónico</label>
-                                    <input type="email" id="correo" class="form-control" [(ngModel)]="user.correo"
-                                        name="correo" email #correo="ngModel" required (input)="detectChanges()" />
-                                    <small *ngIf="correo.invalid && correo.touched" class="text-danger">
-                                        Introduzca un correo electrónico válido.
-                                    </small>
-                                </div>
                             </div>
 
                             <div class="form-row">
-                                <!-- Campo: Fecha de Nacimiento -->
-                                <div class="form-group col-md-6" [hidden]="!esAtleta">
-                                    <label for="fechaNacimiento">Fecha de Nacimiento</label>
-                                    <input type="date" id="fechaNacimiento" class="form-control"
-                                        [(ngModel)]="user.fechaNacimiento" name="fechaNacimiento" required
-                                        (input)="detectChanges()" />
+                                <!-- Campo: Correo Electrónico -->
+                                <div class="form-group col-md-4">
+                                    <label for="correo">Correo Electrónico</label>
+                                    <input type="email" id="correo" class="form-control" [(ngModel)]="user.correo"
+                                        name="correo" email #correo="ngModel" required (input)="detectChanges()" />
+                                    <small *ngIf="correo.invalid && correo.touched" class="text-danger" id="correoError">
+                                        Introduzca un correo electrónico válido.
+                                    </small>
                                 </div>
-
                                 <!-- Campo: Teléfono -->
-                                <div class="form-group col-md-6">
+                                <div class="form-group col-md-4">
                                     <label for="telefono">Teléfono</label>
                                     <input type="tel" id="telefono" class="form-control" [(ngModel)]="user.telefono"
-                                        name="telefono" pattern="^[0-9]{12}$" #telefono="ngModel" required
-                                        (input)="detectChanges()" />
-                                    <small *ngIf="telefono.invalid && telefono.touched" class="text-danger">
-                                        Introduzca un número de teléfono válido (12 dígitos).
+                                        name="telefono" (input)="validarTelefono()" (blur)="validarTelefono()"
+                                        placeholder="Ej. 04123920817" />
+
+                                    <small *ngIf="mostrarErrorTelefono" class="text-danger" id="correoPhone">
+                                        Introduzca un número de teléfono válido (11 dígitos).
                                     </small>
+                                </div>
+
+                                <!-- Campo: Fecha de Nacimiento -->
+                                <div class="form-group col-md-4">
+                                    <label for="fechaNacimiento">Fecha de Nacimiento</label>
+                                    <input type="date" id="fechaNacimiento" class="form-control"
+                                        [(ngModel)]="user.fecha_nacimiento" name="fechaNacimiento" required
+                                        (input)="detectChanges()" />
                                 </div>
                             </div>
 
@@ -102,24 +117,41 @@
                     <div class="tab-pane fade" id="editPassword" role="tabpanel" aria-labelledby="edit-password-tab">
                         <form #passwordForm="ngForm">
                             <div class="form-row">
-                                <div class="form-group col-md-6">
+                                <div class="form-group col-md-6 position-relative">
                                     <label for="contrasena">Nueva Contraseña</label>
-                                    <input type="password" id="contrasena" class="form-control" [(ngModel)]="contrasena"
-                                        name="contrasena" (input)="validatePasswords()" minlength="8" required />
+                                    <input [type]="showPassword ? 'text' : 'password'" id="contrasena"
+                                        class="form-control" [(ngModel)]="contrasena" name="contrasena"
+                                        (input)="validatePasswords()" minlength="8"
+                                        placeholder="Ingrese su nueva contraseña" required />
+                                    <button class="btn btn-outline-secondary password-toggle position-absolute"
+                                        type="button" (click)="toggleShowPassword()"
+                                        style="right: 5px; top: 73%; transform: translateY(-50%);">
+                                        <i class="bi" [class.bi-eye]="!showPassword"
+                                            [class.bi-eye-slash]="showPassword"></i>
+                                    </button>
                                     <small *ngIf="!passwordValid && contrasena" class="text-danger">
                                         La contraseña debe tener al menos 8 caracteres.
                                     </small>
                                 </div>
-                                <div class="form-group col-md-6">
+
+                                <div class="form-group col-md-6 position-relative">
                                     <label for="confirmarContrasena">Confirmar Contraseña</label>
-                                    <input type="password" id="confirmarContrasena" class="form-control"
-                                        [(ngModel)]="confirmarContrasena" name="confirmarContrasena"
-                                        (input)="validatePasswords()" required />
+                                    <input [type]="showConfirmPassword ? 'text' : 'password'" id="confirmarContrasena"
+                                        class="form-control" [(ngModel)]="confirmarContrasena"
+                                        name="confirmarContrasena" (input)="validatePasswords()"
+                                        placeholder="Confirme su nueva contraseña" required />
+                                    <button class="btn btn-outline-secondary password-toggle position-absolute"
+                                        type="button" (click)="toggleShowConfirmPassword()"
+                                        style="right: 5px; top: 73%; transform: translateY(-50%);">
+                                        <i class="bi" [class.bi-eye]="!showConfirmPassword"
+                                            [class.bi-eye-slash]="showConfirmPassword"></i>
+                                    </button>
                                     <small *ngIf="!passwordsMatch && confirmarContrasena" class="text-danger">
                                         Las contraseñas no coinciden.
                                     </small>
                                 </div>
                             </div>
+
 
                             <div class="text-right">
                                 <button type="button" class="btn btn-success" [disabled]="!formValid"
@@ -134,10 +166,10 @@
         </div>
     </div>
 
-    <!-- Modal para Confirmación de Información Personal -->
+    <!-- Modal para Confirmación de Información Personal - Versión Centrada -->
     <div class="modal fade" id="personalInfoModal" tabindex="-1" aria-labelledby="personalInfoModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="personalInfoModalLabel">
@@ -162,7 +194,7 @@
 
     <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true"
         data-bs-backdrop="static">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="otpModalLabel">Código OTP Requerido</h5>

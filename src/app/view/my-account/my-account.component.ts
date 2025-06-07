@@ -10,23 +10,28 @@ import { lastValueFrom } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { environment } from '../../../environments/environment';
 import * as bootstrap from 'bootstrap';
+import { GeneralFunctions } from '../../general-functions/general-functions';
 
 interface UserProfile {
   nombre: string;
+  cedula: string;
+  cargo: string;
   correo: string;
-  fechaNacimiento: string | null;
+  fecha_nacimiento: string | null;
   telefono: string;
   avatarUrl?: string | null;
-  rol?: string;
+  rol: string;
   ruta_imagen?: string | null;
 }
 
 interface ApiUser {
   id?: string;
   cedula?: string;
+  cargo?: string;
   correo?: string;
   nombre?: string;
   telefono?: string;
+  fecha_nacimiento?: string | null;
   email?: string;
   rol?: string;
   ruta_imagen?: string | null;
@@ -39,14 +44,20 @@ interface ApiUser {
   styleUrls: ['./my-account.component.scss']
 })
 export class MyAccountComponent implements OnInit {
-  esAtleta: boolean = false;
   otpError: string = '';
   isVerifyingOtp: boolean = false;
+  mostrarErrorTelefono = false; // Definir la propiedad en la clase
+  currentRol: { key: string; name: string } | null = null; //Obtener Rol sesion
+  currentCargo: { key: string; name: string } | null = null; //Obtener Cargo sesion
+  showPassword: boolean = false; // Nueva propiedad para controlar visibilidad
+  showConfirmPassword = false;
 
   user: UserProfile = {
     nombre: '',
+    cedula: '',
     correo: '',
-    fechaNacimiento: '',
+    cargo: '',
+    fecha_nacimiento: '',
     telefono: '',
     avatarUrl: null,
     rol: '',
@@ -74,6 +85,17 @@ export class MyAccountComponent implements OnInit {
   avatarPreview: string | ArrayBuffer | null = null;
   selectedFile: File | null = null;
 
+  cargosDisponibles = [
+    { key: 'asesor_optico_1', name: 'Asesor Óptico 1' },
+    { key: 'asesor_optico_2', name: 'Asesor Óptico 2' },
+    { key: 'gerente', name: 'Gerente' },
+    { key: 'administrador', name: 'Administrador' },
+    { key: 'optometrista', name: 'Optometrista' },
+    { key: 'oftalmologo', name: 'Oftalmólogo' }
+  ];
+
+  userCargoSeleccionado = this.cargosDisponibles[0].key; // Para seleccionar un valor por defecto
+
   constructor(
     private router: Router,
     private swalService: SwalService,
@@ -82,25 +104,19 @@ export class MyAccountComponent implements OnInit {
     private sharedUserService: SharedUserService,
     private snackBar: MatSnackBar,
     private cdRef: ChangeDetectorRef,
+    private generalFunctions: GeneralFunctions
   ) {
-    this.loadUserData();
+
   }
 
   ngOnInit(): void {
     this.setupFieldChangeListeners();
-    this.verificarRol();
+    this.currentRol = this.authService.getCurrentRol() || { key: '', name: '' }; // Obtener el rol sesion
+    this.currentCargo = this.authService.getCurrentCargo() || { key: '', name: '' }; // Obtener el cargo sesion
+    this.loadUserData();
   }
 
-  private verificarRol(): void {
-    const currentRol = this.authService.getCurrentRol();
-    this.esAtleta = currentRol?.key === 'atleta';
 
-    if (!this.esAtleta) {
-      this.user.fechaNacimiento = '';
-      this.originalUser.fechaNacimiento = '';
-    }
-    this.cdRef.detectChanges();
-  }
 
   private loadUserData(): void {
     try {
@@ -108,21 +124,28 @@ export class MyAccountComponent implements OnInit {
 
       this.user = {
         nombre: currentUser.nombre?.trim() || '',
+        cedula: currentUser.cedula?.trim() || '',
+        cargo: this.currentCargo?.key ?? '',
         correo: currentUser.correo?.trim() || currentUser.email?.trim() || '',
         telefono: currentUser.telefono?.trim() || '',
-        fechaNacimiento: '',
+        fecha_nacimiento: currentUser.fecha_nacimiento || null,
         avatarUrl: null,
-        ruta_imagen: currentUser.ruta_imagen || null
+        ruta_imagen: currentUser.ruta_imagen || null,
+        rol: this.currentRol?.key ?? ''
       };
 
       this.originalUser = { ...this.user };
       this.sharedUserService.updateUserProfile(this.user);
+
+      // Aquí asignamos el valor de `userCargoSeleccionado` basado en el backend
+      this.userCargoSeleccionado = this.currentCargo?.key || '';
     } catch (error) {
       console.error('Error loading user data:', error);
       this.user = this.getDefaultUserProfile();
       this.originalUser = { ...this.user };
     }
   }
+
 
   getProfileImage(): string {
     if (this.avatarPreview) {
@@ -147,10 +170,13 @@ export class MyAccountComponent implements OnInit {
   private getDefaultUserProfile(): UserProfile {
     return {
       nombre: '',
+      cargo: '',
+      cedula: '',
       correo: '',
       telefono: '',
-      fechaNacimiento: '',
-      avatarUrl: null
+      fecha_nacimiento: '',
+      avatarUrl: null,
+      rol: ''
     };
   }
 
@@ -183,25 +209,33 @@ export class MyAccountComponent implements OnInit {
   detectChanges(): void {
     this.isFormEdited =
       this.user.nombre !== this.originalUser.nombre ||
+      this.user.cedula !== this.originalUser.cedula ||
+      this.user.cargo !== this.originalUser.cargo ||
       this.user.correo !== this.originalUser.correo ||
-      this.user.fechaNacimiento !== this.originalUser.fechaNacimiento ||
+      this.user.fecha_nacimiento !== this.originalUser.fecha_nacimiento ||
       this.user.telefono !== this.originalUser.telefono ||
       this.selectedFile !== null;
   }
 
-  isPersonalInfoValid(): boolean {
-    const isValid =
-      !!this.user.nombre &&
-      !!this.user.correo &&
-      !!this.user.telefono &&
-      /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(this.user.nombre) &&
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.user.correo) &&
-      /^[0-9]{10,12}$/.test(this.user.telefono);
+  validarTelefono(): void {
+    this.user.telefono = this.generalFunctions.validarSoloNumeros(this.user.telefono); // Limpia caracteres no numéricos
+    this.mostrarErrorTelefono = !this.generalFunctions.isValidPhone(this.user.telefono);
+  }
 
-    if (this.esAtleta) {
-      return isValid && !!this.user.fechaNacimiento;
-    }
-    return isValid;
+  isPersonalInfoValid(): boolean {
+    const nombreValido = !!this.user.nombre && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(this.user.nombre);
+    const correoValido = this.generalFunctions.isValidEmail(this.user.correo);
+    const telefonoValido = this.generalFunctions.isValidPhone(this.user.telefono);
+
+    return nombreValido && correoValido && telefonoValido;
+  }
+
+  toggleShowPassword(): void {
+    this.showPassword = !this.showPassword;
+  }
+
+  toggleShowConfirmPassword(): void {
+    this.showConfirmPassword = !this.showConfirmPassword;
   }
 
   onFileSelected(event: Event): void {
@@ -241,24 +275,26 @@ export class MyAccountComponent implements OnInit {
     if (!this.isPersonalInfoValid()) {
       return;
     }
-  
+
     this.isSavingProfile = true;
-  
+
     try {
       if (this.selectedFile) {
         this.user.avatarUrl = await this.uploadImage(this.selectedFile);
       }
-  
+
       await this.sendUserData();
-  
+
       // Actualiza el nombre en el AuthService y SharedUserService
+      console.log('this.user', this.user);
       this.authService.refreshUserData({ nombre: this.user.nombre });
       this.sharedUserService.updateUserProfile(this.user);
-  
+
       this.selectedFile = null;
       this.isFormEdited = false;
       this.originalUser = { ...this.user };
-  
+      console.log('originalUser', this.originalUser);
+
       this.swalService.showSuccess('Éxito', 'Perfil actualizado correctamente');
     } catch (error) {
       console.error('Error guardando información:', error);
@@ -277,26 +313,26 @@ export class MyAccountComponent implements OnInit {
   private async uploadImage(file: File): Promise<string> {
     const formData = new FormData();
     formData.append('profileImage', file);
-  
+
     try {
       const response = await lastValueFrom(
         this.changeInformationService.uploadProfileImage(formData)
       );
-  
+
       if (!response?.image_url) {
         throw new Error('No se recibió URL de imagen');
       }
-  
+
       // Actualiza en todos los servicios y estados
       this.user.ruta_imagen = response.image_url;
       this.user.avatarUrl = response.image_url;
-      
+
       // Actualiza en AuthService y UserStateService
       this.authService.updateProfileImage(response.image_url);
-      
+
       this.cdRef.detectChanges();
       this.sharedUserService.updateUserProfile(this.user);
-      
+
       return response.image_url;
     } catch (error) {
       console.error('Error subiendo imagen:', error);
@@ -305,14 +341,15 @@ export class MyAccountComponent implements OnInit {
   }
 
   private async sendUserData(): Promise<void> {
+    console.log('this.user 2:', this.user);
     const userData = {
       nombre: this.user.nombre,
+      cedula: this.user.cedula,
       correo: this.user.correo,
       telefono: this.user.telefono,
       avatarUrl: this.user.avatarUrl,
-      ...(this.esAtleta && this.user.fechaNacimiento && {
-        fechaNacimiento: this.user.fechaNacimiento
-      })
+      cargo: this.user.cargo,
+      fecha_nacimiento: this.user.fecha_nacimiento,
     };
 
     try {

@@ -6,7 +6,7 @@ import { ForgotPasswordComponent } from './view/forgot-password/forgot-password.
 import { DashboardComponent } from './view/dashboard/dashboard.component';
 import { MyAccountComponent } from './view/my-account/my-account.component';
 import { PostloginTemplateComponent } from './view/postlogin-template/postlogin-template.component';
-import { FichaTecnicaComponent } from './view/ficha-tecnica/ficha-tecnica.component';
+import { EmpleadosComponent } from './view/empleados/empleados.component';
 import { VerAtletasComponent } from './view/ver-atletas/ver-atletas.component';
 import { CrearAtletasComponent } from './view/crear-atletas/crear-atletas.component';
 import { authGuard } from './core/services/auth/auth.guard';
@@ -73,9 +73,9 @@ export const appRoutes: Routes = [
         title: getFullTitle('Mi cuenta')
       },
       {
-        path: 'ficha-tecnica',
-        component: FichaTecnicaComponent,
-        title: getFullTitle('Ficha técnica')
+        path: 'usuarios-empleados',
+        component: EmpleadosComponent,
+        title: getFullTitle('Empleados')
       },
       {
         path: 'ver-atletas',

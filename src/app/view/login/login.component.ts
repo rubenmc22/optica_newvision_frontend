@@ -17,6 +17,7 @@ import { AuthData } from '../../Interfaces/models-interface';
 export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   isLoading: boolean = false;
+  showPassword: boolean = false; // Nueva propiedad para controlar visibilidad
 
   constructor(
     private fb: FormBuilder,
@@ -33,12 +34,27 @@ export class LoginComponent implements OnInit {
       password: [
         '',
         [Validators.required, Validators.minLength(6)]
-      ]
+      ],
+      rememberMe: [false] // Agregar esta línea
     });
   }
 
   ngOnInit(): void {
     this.authService.clearAuth();
+    this.loadSavedCredentials();
+  }
+
+  private loadSavedCredentials(): void {
+    const savedCedula = localStorage.getItem('cedula');
+    const savedPassword = localStorage.getItem('password');
+
+    if (savedCedula && savedPassword) {
+      this.loginForm.patchValue({
+        cedula: savedCedula,
+        password: savedPassword,
+        rememberMe: true
+      });
+    }
   }
 
   isInvalidField(fieldName: string): boolean {
@@ -47,36 +63,45 @@ export class LoginComponent implements OnInit {
 
   onSubmit() {
     if (this.loginForm.invalid) {
-        this.loginForm.markAllAsTouched();
-        return;
+      this.loginForm.markAllAsTouched();
+      return;
     }
 
     this.isLoading = true;
 
     this.authService.login(
-        this.loginForm.value.cedula,
-        this.loginForm.value.password
+      this.loginForm.value.cedula,
+      this.loginForm.value.password
     ).pipe(
-        finalize(() => this.isLoading = false)
+      finalize(() => this.isLoading = false)
     ).subscribe({
-        next: (authData) => {
-            // Verificar DIRECTAMENTE el tyc_aceptado de la respuesta
-       //     if (authData.user.tyc_aceptado === 0) { // Cambiado a verificación explícita
-         //       this.showTermsAndContinue(authData);
-         //   } else {
-                this.router.navigate(['/dashboard'], { replaceUrl: true });
-                this.swalService.showSuccess('¡Éxito!', 'Bienvenido, ha iniciado sesión correctamente');
-          //  }
-        },
-        error: (err: HttpErrorResponse) => {
-            const message = err.error?.message === 'Credenciales inválidas.'
-                ? 'Estimado usuario, las credenciales ingresadas son inválidas.'
-                : err.error?.message || 'Error durante el login';
-
-            this.swalService.showError('Error', message);
+      next: (authData) => {
+        // Si el usuario activó "Recuérdame", guardamos los datos en localStorage
+        if (this.loginForm.value.rememberMe) {
+          localStorage.setItem('cedula', this.loginForm.value.cedula);
+          localStorage.setItem('password', this.loginForm.value.password);
+        } else {
+          localStorage.removeItem('cedula');
+          localStorage.removeItem('password');
         }
+
+        // Verificar DIRECTAMENTE el tyc_aceptado de la respuesta
+        //     if (authData.user.tyc_aceptado === 0) { // Cambiado a verificación explícita
+        //       this.showTermsAndContinue(authData);
+        //   } else {
+        this.router.navigate(['/dashboard'], { replaceUrl: true });
+        this.swalService.showSuccess('¡Éxito!', 'Bienvenido, ha iniciado sesión correctamente');
+        //  }
+      },
+      error: (err: HttpErrorResponse) => {
+        const message = err.error?.message === 'Credenciales inválidas.'
+          ? 'Estimado usuario, las credenciales ingresadas son inválidas.'
+          : err.error?.message || 'Error durante el login';
+
+        this.swalService.showError('Error', message);
+      }
     });
-}
+  }
 
   private showTermsAndContinue(authData: AuthData) {
     const termsText = `
@@ -156,7 +181,9 @@ export class LoginComponent implements OnInit {
     });
   }
 
-
+  toggleShowPassword(): void {
+    this.showPassword = !this.showPassword;
+  }
 
 
 }

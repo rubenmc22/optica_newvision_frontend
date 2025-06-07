@@ -23,28 +23,31 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
 /* Variables para colores y estilos comunes */
 /* Variables globales en :root para estilos personalizados */
 :root {
- // Colores principales
- --primary-color: #3a7bd5;
- --primary-color-dark: #005a9e;
- --primary-color-light: #5d9cff;
- --primary-color-rgb: 58, 123, 213;
- 
- // Colores secundarios
- --secondary-color: #262524;
- --secondary-color-light: #3d3d3d;
- 
- // Colores de UI
- --card-color: #f0f0f5;
- --formInput-color: #1a1a1a;
- --text-color: white;
- --border-color: var(--primary-color);
+  // Colores principales
+  --primary-color: #3a7bd5;
+  --primary-color-dark: #005a9e;
+  --primary-color-light: #5d9cff;
+  --primary-color-rgb: 58, 123, 213;
+  --degradado-color: linear-gradient(135deg, var(--primary-color) 0%, #3E7CB1 100%);
 
- --success-color: #38a169;
+  // Colores secundarios
+  //--secondary-color-light: #eae9e9;
+  // --secondary-color: #eae9e9;
+  --secondary-color-light: #d1d1d6;
+  --secondary-color: #f0f0f5;
 
- // Variables de diseño
- --border-radius: 4px;
- --transition: all 0.3s ease;
- --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  // Colores de UI
+  --card-color: #f0f0f5;
+  --formInput-color: #333;
+  --text-color: white;
+  --border-color: var(--primary-color);
+  --details-color: #FFC107;
+  --success-color: #38a169;
+
+  // Variables de diseño
+  --border-radius: 4px;
+  --transition: all 0.3s ease;
+  --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Estilos comunes para campos de texto en formularios de login y registro */
@@ -119,7 +122,7 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
     /* Placeholder VISIBLE solo con foco */
     &:focus::placeholder {
       opacity: 1 !important;
-      color: var(--secondary-color-color) !important;
+      //  color: var(--secondary-color-color) !important;
     }
   }
 }

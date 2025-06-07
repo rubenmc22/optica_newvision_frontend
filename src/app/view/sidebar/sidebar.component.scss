@@ -13,7 +13,7 @@
 
 
 .content-wrapper {
-  background-image: url('/assets/sports-background.jpeg');
+  background-image: url('/assets/fondo/imagen_2.webp');
   /* Ajusta la ruta a tu imagen */
   background-size: cover;
   /* Asegúrate de que cubra toda el área */
@@ -29,52 +29,78 @@
   /* Mantén un margen interno cómodo */
 }
 
+.brand-text {
+  font-family: 'Edu QLD Hand', cursive !important;
+  font-size: 24px;
+  font-weight: bold;
+  text-transform: none;
+  letter-spacing: 1.2px;
+  color: var( --details-color);
+  transition: color 0.3s ease, transform 0.3s ease;
+  text-align: center;
+  align-items: center;
+}
+
+.brand-text:hover {
+ // color: #0078d7;
+  /* Azul vibrante */
+  transform: scale(1.05);
+}
+
+.brand-image {
+  border-radius: 50%;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+}
+
+.brand-image:hover {
+  transform: rotate(5deg) scale(1.1);
+  /* Efecto de ligera inclinación */
+}
+
 /*======================== SIDEBAR ========================*/
 .main-sidebar {
-  background-color: var(--secondary-color) !important;
+  background: var(--degradado-color) !important;
   /* Fondo negro */
-  color: var(--primary-color);
-  /* Texto amarillo */
+  color: var(--secondary-color);
+  font-weight: bold;
 }
 
 /* Links en el Sidebar */
 .main-sidebar .nav-sidebar>.nav-item>.nav-link {
-  color: var(--primary-color) !important;
-  /* Color de texto amarillo */
+  color: var( --secondary-color) !important;
+  /* Color de texto azul oscuro */
 
 }
 
 .main-sidebar .nav-sidebar>.nav-item>.nav-link:hover {
-  background-color: var(--primary-color) !important;
-  /* Fondo amarillo en hover */
-  color: #000000 !important;
-  /* Texto negro en hover */
+  background: var(--degradado-color) !important;
+  /* Fondo azul en hover */
+  color: var(--details-color) !important
+    /* Texto negro en hover */
 }
 
 /* Títulos del Sidebar */
-.main-sidebar .sidebar .nav-header {
-  color: var(--primary-color);
-  /* Amarillo */
-  font-weight: bold;
+/*.main-sidebar .sidebar .nav-header {
+  color: var(--secondary-color) !important;
+  // font-weight: bold;
   text-transform: uppercase;
-  /* Opcional: Mejora la legibilidad */
-}
+}*/
 
 /* Ítem Activo */
 .main-sidebar .nav-sidebar>.nav-item>.nav-link.active {
-  background-color: var(--primary-color) !important;
+  background-color: red !important;
   /* Amarillo brillante */
   color: #000000 !important;
   /* Texto negro */
 }
 
 /* Imagen o Logo del Sidebar */
-.brand-link {
-  background-color: var(--secondary-color) !important;
-  /* Fondo negro */
-  color: var(--primary-color) !important;
-  /* Texto amarillo */
-}
+/*.brand-link {
+  background: var( --degradado-color) !important;
+  color: var( --secondary-color) !important;
+
+}*/
 
 /* .brand-link:hover {
     background-color: var(--primary-color) !important; 
@@ -96,7 +122,7 @@
 
     .user-name {
       font-weight: 500;
-      color: #ffc107;
+      color: var(--secondary-color) !important;
       /* Color amarillo */
       font-size: 1.2rem;
       line-height: 1.2;
@@ -109,7 +135,7 @@
     }
 
     .user-role {
-      color: var(--formInput-color) !important;
+      color: var(--details-color) !important;
       /* Color negro */
       font-size: 18px;
       font-weight: bold;
@@ -135,7 +161,7 @@
 
 /*======================== NAVBAR ========================*/
 .main-header {
-  background-color: var(--secondary-color) !important;
+  background: var(--degradado-color) !important;
   /* Fondo negro */
   border-bottom: 2px solid var(--primary-color);
   /* Borde amarillo en la parte inferior */
@@ -143,23 +169,25 @@
   /* Texto amarillo */
 }
 
-/* Links dentro del Navbar */
-.main-header .nav-link {
-  color: var(--primary-color) !important;
-  /* Texto amarillo */
-  font-weight: bold;
+
+
+.nav-link {
+  color: var( --details-color) !important;
+  font-weight: lighter;
 }
 
-.main-header .nav-link:hover {
-  background-color: var(--primary-color) !important;
+.nav-link:hover {
+  // background: var(--degradado-color) !important;
   /* Fondo amarillo en hover */
-  color: var(--secondary-color) !important;
+  //  color: var(--secondary-color) !important;
   /* Texto negro en hover */
 }
 
+
+
 /* Íconos del Navbar */
 .main-header .fas {
-  color: var(--primary-color) !important;
+  color: var(--details-color) !important;
   /* Íconos amarillos */
 }
 
@@ -167,7 +195,7 @@
 .main-footer {
   background-color: var(--secondary-color) !important;
   /* Fondo negro */
-  color: var(--primary-color);
+  color: var(--primary-color) !important;
   /* Texto amarillo */
   border-top: 2px solid var(--primary-color);
   /* Borde amarillo en la parte superior */
@@ -189,7 +217,7 @@
 
 /*======================== MODAL ========================*/
 .modal-header {
-  background-color: var(--primary-color);
+  background-color: var(--primary-color) !important;
   color: black;
 
   .modal-title {

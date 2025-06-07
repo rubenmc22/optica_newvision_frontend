@@ -33,38 +33,65 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Dashboard',
       icon: 'fas fa-tachometer-alt',
       routerLink: '/dashboard',
-      roles: ['admin', 'representante', 'atleta']
+      roles: ['admin', 'gerente', 'asesor']
     },
     {
-      label: 'Deportes',
+      label: 'Pacientes',
       icon: 'fas fa-football-ball',
       submenu: [
-        { label: 'Voleibol', routerLink: '/deportes/voleibol', roles: ['admin', 'representante', 'atleta'] },
-        { label: 'Béisbol', routerLink: '/deportes/beisbol', roles: ['admin', 'representante', 'atleta'] },
-        { label: 'Fútbol', routerLink: '/deportes/futbol', roles: ['admin', 'representante', 'atleta'] }
+        { label: 'Ver pacientes', routerLink: '/deportes/voleibol', roles: ['admin', 'gerente', 'asesor'] },
+        { label: 'Historias Medicas', routerLink: '/deportes/beisbol', roles: ['admin', 'gerente', 'asesor'] },
+
       ],
-      roles: ['admin', 'representante', 'atleta'],
-      underConstruction: true
+      roles: ['admin', 'gerente', 'asesor'],
+    //  underConstruction: true
     },
     {
-      label: 'Atletas',
+      label: 'Productos',
       icon: 'fas fa-users',
-      submenu: [
-        { label: 'Agregar Atletas', routerLink: '/crear-atletas', roles: ['admin', 'representante'] },
-        { label: 'Ver Atletas', routerLink: '/ver-atletas', roles: ['admin'] },
-        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['admin', 'representante'], underConstruction: true }
-      ],
-      roles: ['admin', 'representante']
+      routerLink: '/productos',
+      roles: ['admin', 'gerente', 'asesor']
+      /* submenu: [
+         { label: 'Agregar Atletas', routerLink: '/crear-atletas', roles: ['admin', 'gerente'] },
+         { label: 'Ver Atletas', routerLink: '/ver-atletas', roles: ['admin'] },
+         { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['admin', 'gerente'], underConstruction: true }
+       ],*/
     },
     {
-      label: 'Mi Perfil',
+      label: 'Ventas',
+      icon: 'fas fa-football-ball',
+      submenu: [
+        { label: 'Historial de ventas.', routerLink: '/Ventas/voleibol', roles: ['admin', 'gerente', 'asesor'] },
+        { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor'] },
+        { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] },
+
+      ],
+      roles: ['admin', 'gerente', 'asesor'],
+    //  underConstruction: true
+    },
+    {
+      label: 'Ordenes de Trabajo',
+      icon: 'fas fa-football-ball',
+      routerLink: '/ordenes-de-trabajo',
+      roles: ['admin', 'gerente', 'asesor'],
+     /* submenu: [
+        { label: 'Ordenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor'] },
+        { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor'] },
+        { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] },
+
+      ],*/
+
+    //  underConstruction: true
+    },
+    {
+      label: 'Administración',
       icon: 'fas fa-user',
       submenu: [
-        { label: 'Gestionar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'representante', 'atleta'] },
-        { label: 'Ficha Técnica', routerLink: '/ficha-tecnica', roles: ['atleta'], underConstruction: true }
-        //  { label: 'Mis estadísticas / habilidades', routerLink: '/estadisticas', roles: ['admin', 'representante', 'atleta'] }
+        { label: 'Gestionar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'representante', 'asesor'] },
+        { label: 'Gestión de Empleados', routerLink: '/usuarios-empleados', roles: ['admin'], underConstruction: false },
+        { label: 'Tipo de cambio', routerLink: '/Tipo-de-cambio', roles: ['admin', 'representante', 'asesor'] }
       ],
-      roles: ['admin', 'representante', 'atleta']
+      roles: ['admin', 'representante', 'asesor']
     }
   ];
 

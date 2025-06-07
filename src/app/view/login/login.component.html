@@ -4,7 +4,7 @@
   </div>
   <div class="login-logo-container">
     <img class="login-logo" src="assets/logo/logo_1.png" alt="New Visión Logo" />
-  
+
   </div>
   <div class="login-card-container">
     <div class="login-card">
@@ -28,8 +28,13 @@
         <!-- Campo Contraseña -->
         <div class="mb-3">
           <label for="password" class="form-label">Contraseña</label>
-          <input type="password" class="form-control" id="password" formControlName="password"
-            placeholder="Ingrese su contraseña" />
+          <div class="input-group password-input-group">
+            <input [type]="showPassword ? 'text' : 'password'" class="form-control password-input" id="password"
+              formControlName="password" placeholder="Ingrese su contraseña" />
+            <button class="btn btn-outline-secondary password-toggle" type="button" (click)="toggleShowPassword()">
+              <i class="bi" [class.bi-eye]="!showPassword" [class.bi-eye-slash]="showPassword"></i>
+            </button>
+          </div>
           <div *ngIf="isInvalidField('password')" class="form-text text-danger">
             <span *ngIf="loginForm.get('password')?.hasError('required')">
               La contraseña es requerida.
@@ -41,11 +46,12 @@
         </div>
 
         <div class="form-check mb-4 form-switch">
-          <input type="checkbox" class="form-check-input">
-          <label class="form-check-label text-yellow">
+          <input type="checkbox" class="form-check-input" id="rememberMe" formControlName="rememberMe">
+          <label class="form-check-label" for="rememberMe">
             Recuérdame
           </label>
         </div>
+        
 
 
         <!-- Botón de Entrar -->

@@ -6,7 +6,7 @@ import { environment } from '../../../../environments/environment';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
-import { User, Rol, AuthData, AuthResponse } from '../../../Interfaces/models-interface';
+import { User, Rol, AuthData, AuthResponse, Cargo } from '../../../Interfaces/models-interface';
 
 
 @Injectable({
@@ -47,7 +47,8 @@ export class ChangeInformationService {
               ...response.user,
               email: response.user.correo
             },
-            rol: response.rol || this.authService.currentUserValue?.rol as Rol
+            rol: response.rol || this.authService.currentUserValue?.rol as Rol,
+            cargo: response.cargo || this.authService.currentUserValue?.cargo as Cargo,
           };
           this.authService.setAuth(authData);
         }
