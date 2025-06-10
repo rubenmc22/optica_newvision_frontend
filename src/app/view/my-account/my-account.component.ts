@@ -12,6 +12,9 @@ import { environment } from '../../../environments/environment';
 import * as bootstrap from 'bootstrap';
 import { GeneralFunctions } from '../../general-functions/general-functions';
 
+// ============================================================
+// Interfaces para tipado de datos
+// ============================================================
 interface UserProfile {
   nombre: string;
   cedula: string;
@@ -44,14 +47,19 @@ interface ApiUser {
   styleUrls: ['./my-account.component.scss']
 })
 export class MyAccountComponent implements OnInit {
-  otpError: string = '';
-  isVerifyingOtp: boolean = false;
-  mostrarErrorTelefono = false; // Definir la propiedad en la clase
-  currentRol: { key: string; name: string } | null = null; //Obtener Rol sesion
-  currentCargo: { key: string; name: string } | null = null; //Obtener Cargo sesion
-  showPassword: boolean = false; // Nueva propiedad para controlar visibilidad
-  showConfirmPassword = false;
+  // ============================================================
+  // Propiedades generales del componente
+  // ============================================================
+  activeTab: string = 'personalInfo';
+  isFormEdited = false;
+  currentRol: { key: string; name: string } | null = null;
+  currentCargo: { key: string; name: string } | null = null;
+  userCargoSeleccionado: string = '';
+  otpFlow: 'password' | 'uniquePassword' = 'password';
 
+  // ============================================================
+  // Propiedades relacionadas con la edición de perfil
+  // ============================================================
   user: UserProfile = {
     nombre: '',
     cedula: '',
@@ -63,38 +71,35 @@ export class MyAccountComponent implements OnInit {
     rol: '',
     ruta_imagen: ''
   };
-
   originalUser: UserProfile = { ...this.user };
-  activeTab: string = 'personalInfo';
-  isFormEdited = false;
+  avatarPreview: string | ArrayBuffer | null = null;
+  selectedFile: File | null = null;
+  isSavingProfile = false;
+  mostrarErrorTelefono = false;
 
-  // Password change
+  // ============================================================
+  // Propiedades relacionadas con cambio de contraseña de acceso
+  // ============================================================
   contrasena = '';
   confirmarContrasena = '';
   otpCode = '';
   passwordValid = false;
   passwordsMatch = false;
   formValid = false;
-
-  // Loading states
+  showPassword = false;
+  showConfirmPassword = false;
   isSendingOtp = false;
   isChangingPassword = false;
-  isSavingProfile = false;
+  isVerifyingOtp = false;
+  otpError: string = '';
 
-  // Avatar
-  avatarPreview: string | ArrayBuffer | null = null;
-  selectedFile: File | null = null;
-
-  cargosDisponibles = [
-    { key: 'asesor_optico_1', name: 'Asesor Óptico 1' },
-    { key: 'asesor_optico_2', name: 'Asesor Óptico 2' },
-    { key: 'gerente', name: 'Gerente' },
-    { key: 'administrador', name: 'Administrador' },
-    { key: 'optometrista', name: 'Optometrista' },
-    { key: 'oftalmologo', name: 'Oftalmólogo' }
-  ];
-
-  userCargoSeleccionado = this.cargosDisponibles[0].key; // Para seleccionar un valor por defecto
+  // ============================================================
+  // Propiedades relacionadas con contraseña única
+  // ============================================================
+  uniquePassword = '';
+  showUniquePassword = false;
+  uniquePasswordValid = false;
+  existingUniquePassword = false;
 
   constructor(
     private router: Router,
@@ -105,19 +110,21 @@ export class MyAccountComponent implements OnInit {
     private snackBar: MatSnackBar,
     private cdRef: ChangeDetectorRef,
     private generalFunctions: GeneralFunctions
-  ) {
+  ) {}
 
-  }
-
+  // ============================================================
+  // Métodos del ciclo de vida de Angular
+  // ============================================================
   ngOnInit(): void {
     this.setupFieldChangeListeners();
-    this.currentRol = this.authService.getCurrentRol() || { key: '', name: '' }; // Obtener el rol sesion
-    this.currentCargo = this.authService.getCurrentCargo() || { key: '', name: '' }; // Obtener el cargo sesion
+    this.currentRol = this.authService.getCurrentRol() || { key: '', name: '' };
+    this.currentCargo = this.authService.getCurrentCargo() || { key: '', name: '' };
     this.loadUserData();
   }
 
-
-
+  // ============================================================
+  // Métodos generales y de utilidad
+  // ============================================================
   private loadUserData(): void {
     try {
       const currentUser: ApiUser = this.authService.getCurrentUser() || {};
@@ -136,35 +143,12 @@ export class MyAccountComponent implements OnInit {
 
       this.originalUser = { ...this.user };
       this.sharedUserService.updateUserProfile(this.user);
-
-      // Aquí asignamos el valor de `userCargoSeleccionado` basado en el backend
       this.userCargoSeleccionado = this.currentCargo?.key || '';
     } catch (error) {
       console.error('Error loading user data:', error);
       this.user = this.getDefaultUserProfile();
       this.originalUser = { ...this.user };
     }
-  }
-
-
-  getProfileImage(): string {
-    if (this.avatarPreview) {
-      return this.avatarPreview as string;
-    }
-
-    if (this.user.ruta_imagen) {
-      if (this.user.ruta_imagen.startsWith('http')) {
-        return this.user.ruta_imagen;
-      }
-
-      if (this.user.ruta_imagen.startsWith('/public')) {
-        return `${environment.baseUrl}${this.user.ruta_imagen}`;
-      }
-
-      return `${environment.baseUrl}/public/profile-images/${this.user.ruta_imagen}`;
-    }
-
-    return 'assets/default-photo.png';
   }
 
   private getDefaultUserProfile(): UserProfile {
@@ -217,8 +201,52 @@ export class MyAccountComponent implements OnInit {
       this.selectedFile !== null;
   }
 
+  getProfileImage(): string {
+    if (this.avatarPreview) {
+      return this.avatarPreview as string;
+    }
+
+    if (this.user.ruta_imagen) {
+      if (this.user.ruta_imagen.startsWith('http')) {
+        return this.user.ruta_imagen;
+      }
+
+      if (this.user.ruta_imagen.startsWith('/public')) {
+        return `${environment.baseUrl}${this.user.ruta_imagen}`;
+      }
+
+      return `${environment.baseUrl}/public/profile-images/${this.user.ruta_imagen}`;
+    }
+
+    return 'assets/default-photo.png';
+  }
+
+  handleImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.src = 'assets/default-photo.png';
+    console.warn('Error al cargar la imagen', this.user.ruta_imagen);
+  }
+
+  validateNumberInput(event: KeyboardEvent): boolean {
+    const charCode = event.key.charCodeAt(0);
+    const isNumber = charCode >= 48 && charCode <= 57;
+    const isControlKey = [8, 9, 13, 37, 39, 46].includes(event.keyCode);
+
+    return isNumber || isControlKey;
+  }
+
+  openModal(modalId: string): void {
+    const modalElement = document.getElementById(modalId);
+    if (modalElement) {
+      new bootstrap.Modal(modalElement).show();
+    }
+  }
+
+  // ============================================================
+  // Métodos para la edición de perfil
+  // ============================================================
   validarTelefono(): void {
-    this.user.telefono = this.generalFunctions.validarSoloNumeros(this.user.telefono); // Limpia caracteres no numéricos
+    this.user.telefono = this.generalFunctions.validarSoloNumeros(this.user.telefono);
     this.mostrarErrorTelefono = !this.generalFunctions.isValidPhone(this.user.telefono);
   }
 
@@ -228,14 +256,6 @@ export class MyAccountComponent implements OnInit {
     const telefonoValido = this.generalFunctions.isValidPhone(this.user.telefono);
 
     return nombreValido && correoValido && telefonoValido;
-  }
-
-  toggleShowPassword(): void {
-    this.showPassword = !this.showPassword;
-  }
-
-  toggleShowConfirmPassword(): void {
-    this.showConfirmPassword = !this.showConfirmPassword;
   }
 
   onFileSelected(event: Event): void {
@@ -285,15 +305,12 @@ export class MyAccountComponent implements OnInit {
 
       await this.sendUserData();
 
-      // Actualiza el nombre en el AuthService y SharedUserService
-      console.log('this.user', this.user);
       this.authService.refreshUserData({ nombre: this.user.nombre });
       this.sharedUserService.updateUserProfile(this.user);
 
       this.selectedFile = null;
       this.isFormEdited = false;
       this.originalUser = { ...this.user };
-      console.log('originalUser', this.originalUser);
 
       this.swalService.showSuccess('Éxito', 'Perfil actualizado correctamente');
     } catch (error) {
@@ -323,13 +340,9 @@ export class MyAccountComponent implements OnInit {
         throw new Error('No se recibió URL de imagen');
       }
 
-      // Actualiza en todos los servicios y estados
       this.user.ruta_imagen = response.image_url;
       this.user.avatarUrl = response.image_url;
-
-      // Actualiza en AuthService y UserStateService
       this.authService.updateProfileImage(response.image_url);
-
       this.cdRef.detectChanges();
       this.sharedUserService.updateUserProfile(this.user);
 
@@ -341,7 +354,6 @@ export class MyAccountComponent implements OnInit {
   }
 
   private async sendUserData(): Promise<void> {
-    console.log('this.user 2:', this.user);
     const userData = {
       nombre: this.user.nombre,
       cedula: this.user.cedula,
@@ -364,37 +376,15 @@ export class MyAccountComponent implements OnInit {
     }
   }
 
-  handleImageError(event: Event): void {
-    const img = event.target as HTMLImageElement;
-    img.src = 'assets/default-photo.png';
-    console.warn('Error al cargar la imagen', this.user.ruta_imagen);
+  // ============================================================
+  // Métodos para cambio de contraseña de acceso
+  // ============================================================
+  toggleShowPassword(): void {
+    this.showPassword = !this.showPassword;
   }
 
-  private handleSuccess(response: any): void {
-    this.swalService.showSuccess('Éxito', 'Perfil actualizado correctamente. El cambio se vera reflado cuando inicie sesion nuevamente.')
-      .then(() => {
-        if (response.avatarUrl) {
-          this.user.avatarUrl = response.avatarUrl;
-          this.avatarPreview = response.avatarUrl;
-        }
-        this.router.navigate(['/dashboard'], { replaceUrl: true });
-        this.originalUser = { ...this.user };
-        this.isFormEdited = false;
-        this.selectedFile = null;
-      });
-  }
-
-  private handleError(error: HttpErrorResponse): void {
-    const errorMsg = error.error?.message || 'Error al actualizar el perfil';
-    this.swalService.showError('Error', errorMsg);
-  }
-
-  validateNumberInput(event: KeyboardEvent): boolean {
-    const charCode = event.key.charCodeAt(0);
-    const isNumber = charCode >= 48 && charCode <= 57;
-    const isControlKey = [8, 9, 13, 37, 39, 46].includes(event.keyCode);
-
-    return isNumber || isControlKey;
+  toggleShowConfirmPassword(): void {
+    this.showConfirmPassword = !this.showConfirmPassword;
   }
 
   validatePasswords(): boolean {
@@ -409,6 +399,12 @@ export class MyAccountComponent implements OnInit {
       return;
     }
 
+    this.snackBar.open('Se enviará un código OTP para confirmar el cambio.', 'Cerrar', {
+      duration: 5000,
+      panelClass: ['info-snackbar']
+    });
+
+    this.otpFlow = 'password';
     this.isSendingOtp = true;
     const userEmail = this.user.correo;
 
@@ -432,7 +428,7 @@ export class MyAccountComponent implements OnInit {
     });
   }
 
-  verifyOtp(): void {
+  verifyOtp(flow: 'password' | 'uniquePassword'): void {
     this.otpError = '';
 
     if (!this.otpCode || this.otpCode.length !== 6 || !/^\d+$/.test(this.otpCode)) {
@@ -454,7 +450,11 @@ export class MyAccountComponent implements OnInit {
             modal?.hide();
           }
 
-          this.confirmPasswordChange();
+          if (this.otpFlow === 'password') {
+            this.confirmPasswordChange();
+          } else if (this.otpFlow === 'uniquePassword') {
+            this.saveUniquePasswordToDatabase();
+          }
         } else {
           this.otpError = 'Código OTP incorrecto. Intente nuevamente.';
           this.otpCode = '';
@@ -504,10 +504,61 @@ export class MyAccountComponent implements OnInit {
     this.formValid = false;
   }
 
-  openModal(modalId: string): void {
-    const modalElement = document.getElementById(modalId);
-    if (modalElement) {
-      new bootstrap.Modal(modalElement).show();
+  // ============================================================
+  // Métodos para cambio de contraseña única
+  // ============================================================
+  toggleShowUniquePassword(): void {
+    this.showUniquePassword = !this.showUniquePassword;
+  }
+
+  validateUniquePassword(): void {
+    const regex = /^[a-zA-Z0-9!@#$%^&*()-_+=]{6,20}$/;
+    this.uniquePasswordValid = regex.test(this.uniquePassword);
+  }
+
+  initiateUniquePasswordChange(): void {
+    if (!this.uniquePasswordValid) {
+      return;
     }
+
+    this.otpFlow = 'uniquePassword';
+    this.openModal('uniquePasswordModal');
+  }
+
+  confirmUniquePasswordChangeRequest(): void {
+    this.snackBar.open('Se enviará un código OTP para confirmar el cambio.', 'Cerrar', {
+      duration: 5000,
+      panelClass: ['info-snackbar']
+    });
+
+    this.isVerifyingOtp = true;
+    this.changeInformationService.sendPasswordChangeOtp(this.user.correo).pipe(
+      finalize(() => this.isVerifyingOtp = false)
+    ).subscribe({
+      next: () => {
+        this.openModal('otpModal');
+      },
+      error: (error: HttpErrorResponse) => {
+        this.swalService.showError('Error', error.error?.message || 'No se pudo enviar el OTP.');
+      }
+    });
+  }
+
+  saveUniquePasswordToDatabase(): void {
+    this.changeInformationService.changeUniquePassword(this.user.correo, this.uniquePassword, this.otpCode).pipe(
+      finalize(() => this.isChangingPassword = false)
+    ).subscribe({
+      next: () => {
+        this.swalService.showSuccess('Éxito', 'Contraseña única guardada correctamente.')
+          .then(() => {
+            this.uniquePassword = '';
+            this.existingUniquePassword = true;
+          });
+      },
+      error: (error: HttpErrorResponse) => {
+        const errorMsg = error.error?.message || 'Error al cambiar la contraseña única';
+        this.swalService.showError('Error', errorMsg);
+      }
+    });
   }
 }

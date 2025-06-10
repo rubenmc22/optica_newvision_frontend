@@ -17,6 +17,7 @@ import { EmpleadosComponent } from './empleados/empleados.component';
 import { VerAtletasComponent } from './ver-atletas/ver-atletas.component';
 import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
 import { AcceptTycComponent } from './accept-tyc-component/accept-tyc-component.component';
+import { DynamicModalComponent } from './../shared/dynamic-modal/dynamic-modal.component'
 
 // Módulos y servicios
 import { MaterialModule } from '../material.module';
@@ -36,7 +37,8 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
     EmpleadosComponent,
     VerAtletasComponent,
     CrearAtletasComponent,
-    AcceptTycComponent
+    AcceptTycComponent,
+    DynamicModalComponent
   ],
   imports: [
     BrowserModule,
@@ -48,12 +50,15 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
       bindToComponentInputs: true // Nueva feature de Angular 16+
     })
   ],
+  exports: [
+    DynamicModalComponent // ✅ Ahora puede ser usado en otros módulos
+  ],
   providers: [
     // Configuración moderna de HttpClient con interceptores funcionales
     provideHttpClient(
       withInterceptors([authInterceptor]) // Registro directo del interceptor
     )
   ],
-  bootstrap: [AppComponent]
+  bootstrap: [AppComponent], 
 })
 export class AppModule { }

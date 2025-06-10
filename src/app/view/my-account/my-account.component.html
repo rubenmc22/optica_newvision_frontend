@@ -17,6 +17,13 @@
                             <i class="fas fa-key"></i> Editar Contraseña
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="edit-unique-password-tab" data-bs-toggle="tab"
+                            href="#editUniquePassword" role="tab" aria-controls="editUniquePassword"
+                            aria-selected="false" (click)="switchTab('uniquePassword')">
+                            <i class="fas fa-lock"></i> Contraseña Única
+                        </a>
+                    </li>
                 </ul>
 
                 <!-- Contenido de las Pestañas -->
@@ -77,7 +84,8 @@
                                     <label for="correo">Correo Electrónico</label>
                                     <input type="email" id="correo" class="form-control" [(ngModel)]="user.correo"
                                         name="correo" email #correo="ngModel" required (input)="detectChanges()" />
-                                    <small *ngIf="correo.invalid && correo.touched" class="text-danger" id="correoError">
+                                    <small *ngIf="correo.invalid && correo.touched" class="text-danger"
+                                        id="correoError">
                                         Introduzca un correo electrónico válido.
                                     </small>
                                 </div>
@@ -161,61 +169,124 @@
                             </div>
                         </form>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Modal para Confirmación de Información Personal - Versión Centrada -->
-    <div class="modal fade" id="personalInfoModal" tabindex="-1" aria-labelledby="personalInfoModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="personalInfoModalLabel">
-                        Confirmar Información Personal
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    ¿La información ingresada es correcta? Presione confirmar para proceder.
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        Cancelar
-                    </button>
-                    <button type="button" class="btn btn-success" (click)="savePersonalInfo()" data-bs-dismiss="modal">
-                        Confirmar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+                    <!-- Sección de Contraseña Única -->
+                    <div class="tab-pane fade" id="editUniquePassword" role="tabpanel"
+                        aria-labelledby="edit-unique-password-tab">
+                        <form #uniquePasswordForm="ngForm">
+                            <div class="form-group position-relative">
+                                <label for="uniquePassword">
+                                    Contraseña Única
+                                    <span *ngIf="!existingUniquePassword" class="text-warning">(No hay una contraseña
+                                        única creada en este momento)</span>
+                                </label>
+                                <input [type]="showUniquePassword ? 'text' : 'password'" id="uniquePassword"
+                                    class="form-control" [(ngModel)]="uniquePassword" name="uniquePassword"
+                                    (input)="validateUniquePassword()" minlength="6" maxlength="20"
+                                    placeholder="Ingrese su contraseña única" required />
+                                <button class="btn btn-outline-secondary password-toggle position-absolute"
+                                    type="button" (click)="toggleShowUniquePassword()"
+                                    style="right: 0px; top: 72%; transform: translateY(-50%);">
+                                    <i class="bi" [class.bi-eye]="!showUniquePassword"
+                                        [class.bi-eye-slash]="showUniquePassword"></i>
+                                </button>
+                                <small *ngIf="!uniquePasswordValid && uniquePassword" class="text-danger">
+                                    La contraseña debe tener entre 6 y 20 caracteres, incluyendo números y caractéres especiales.
+                                </small>
 
-    <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true"
-        data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="otpModalLabel">Código OTP Requerido</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Hemos enviado un código OTP de 6 dígitos al correo electrónico registrado.
-                    Por favor, ingréselo a continuación:
-                    <div class="form-group mt-3">
-                        <input type="text" maxlength="6" class="form-control text-center" [(ngModel)]="otpCode"
-                            name="otpCode" (keypress)="validateNumberInput($event)" placeholder="000000" />
+                            </div>
+
+                            <div class="text-right">
+                                <button type="button" class="btn btn-success" [disabled]="!uniquePasswordValid"
+                                    (click)="initiateUniquePasswordChange()">
+                                    {{ existingUniquePassword ? 'Modificar Contraseña' : 'Guardar Contraseña' }}
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                    <div *ngIf="otpError" class="text-danger mt-2">{{otpError}}</div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-success" (click)="verifyOtp()" [disabled]="isVerifyingOtp">
-                        {{isVerifyingOtp ? 'Verificando...' : 'Validar'}}
-                    </button>
+
                 </div>
             </div>
         </div>
+
+        <!-- Modal para Confirmación de Información Personal - Versión Centrada -->
+        <div class="modal fade" id="personalInfoModal" tabindex="-1" aria-labelledby="personalInfoModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="personalInfoModalLabel">
+                            Confirmar Información Personal
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        ¿La información ingresada es correcta? Presione confirmar para proceder.
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+                        <button type="button" class="btn btn-success" (click)="savePersonalInfo()"
+                            data-bs-dismiss="modal">
+                            Confirmar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal verificacion OTP -->
+        <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true"
+            data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="otpModalLabel">Código OTP Requerido</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Hemos enviado un código OTP de 6 dígitos al correo electrónico registrado.
+                        Por favor, ingréselo a continuación:
+                        <div class="form-group mt-3">
+                            <input type="text" maxlength="6" class="form-control text-center" [(ngModel)]="otpCode"
+                                name="otpCode" (keypress)="validateNumberInput($event)" placeholder="000000" />
+                        </div>
+                        <div *ngIf="otpError" class="text-danger mt-2">{{otpError}}</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-success" (click)="verifyOtp(otpFlow)"
+                            [disabled]="isVerifyingOtp">
+                            {{ isVerifyingOtp ? 'Verificando...' : 'Validar' }}
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Confirmación para Contraseña Única -->
+        <div class="modal fade" id="uniquePasswordModal" tabindex="-1" aria-labelledby="confirmationModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="confirmationModalLabel">Confirmación de Cambio</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        ¿Está seguro de que desea cambiar la contraseña única? Esto requiere validación con OTP.
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-success" (click)="confirmUniquePasswordChangeRequest()"
+                            data-bs-dismiss="modal">
+                            Confirmar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
-</div>

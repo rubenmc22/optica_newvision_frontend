@@ -236,7 +236,7 @@ button.btn-success:active {
 
 /* Estilos para el modal centrado */
 #personalInfoModal,
-#otpModal {
+#otpModal, #uniquePasswordModal {
     .modal-dialog {
         &.modal-dialog-centered {
             min-height: calc(100% - 1rem);
@@ -285,7 +285,7 @@ button.btn-success:active {
     }
 
     .modal-footer {
-        justify-content: center;
+    //    justify-content: center;
         border-top: 1px solid rgba(0, 0, 0, 0.1);
         padding: 1rem;
         background-color: var(--secondary-color);
@@ -352,7 +352,7 @@ small.text-danger {
 @media (max-width: 575.98px) {
 
     #personalInfoModal,
-    #otpModal {
+    #otpModal, #uniquePasswordModal {
         .modal-dialog {
             margin: 0.5rem auto;
         }

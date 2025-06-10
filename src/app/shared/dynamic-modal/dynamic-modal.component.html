@@ -1,0 +1,48 @@
+<div class="modal fade" id="dynamicModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">{{ modalTitle }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form [formGroup]="modalForm">
+                    <div class="row g-3">
+                        <ng-container *ngFor="let field of modalFields">
+                            <div class="col-md-{{ field.cols || 6 }}">
+                                <label class="form-label">
+                                    {{ field.label }}
+                                    <span *ngIf="field.required" class="text-danger">*</span> <!-- ✅ Asterisco rojo solo si el campo es obligatorio -->
+                                </label>
+                                <input *ngIf="field.type === 'text'" type="text" class="form-control"
+                                    [formControlName]="field.name">
+                                <input *ngIf="field.type === 'number'" type="number" class="form-control"
+                                    [formControlName]="field.name">
+
+                                <select *ngIf="field.type === 'select'" class="form-select"
+                                    [formControlName]="field.name">
+                                    <option *ngFor="let option of field.options" [value]="option">{{ option }}</option>
+                                </select>
+
+                                <div *ngIf="modalForm.get(field.name)?.invalid && modalForm.get(field.name)?.touched"
+                                    class="text-danger">
+                                    {{ field.errorMessage }}
+                                </div>
+                            </div>
+                        </ng-container>
+                    </div>
+
+                    <!-- ✅ Texto informativo al final, controlado por `showRequiredMessage` desde EmpleadosComponent -->
+                    <div *ngIf="showRequiredMessage" class="text-danger mt-3" id="infoText">
+                        <small>* Los campos marcados en rojo son obligatorios.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" [disabled]="modalForm.invalid"
+                    (click)="confirm()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>

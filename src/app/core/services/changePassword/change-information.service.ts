@@ -8,7 +8,6 @@ import { catchError, tap, map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
 import { User, Rol, AuthData, AuthResponse, Cargo } from '../../../Interfaces/models-interface';
 
-
 @Injectable({
   providedIn: 'root'
 })
@@ -21,11 +20,9 @@ export class ChangeInformationService {
     private swalService: SwalService,
     private authService: AuthService,
     private http: HttpClient
-  ) { }
+  ) {}
 
-
-
-  // Cambiar el return type y manejar ambos casos
+  // Editar perfil de usuario
   editUser(userData: Partial<User>): Observable<AuthResponse> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
 
@@ -35,25 +32,19 @@ export class ChangeInformationService {
       { headers }
     ).pipe(
       map(response => {
-        // Type guard para verificar si es la respuesta completa
-        const isFullResponse = (res: any): res is AuthResponse => {
-          return res.user !== undefined && res.token !== undefined;
-        };
+        const isFullResponse = (res: any): res is AuthResponse => res.user !== undefined && res.token !== undefined;
 
         if (isFullResponse(response)) {
           const authData: AuthData = {
             token: response.token || this.authService.getToken() || '',
-            user: {
-              ...response.user,
-              email: response.user.correo
-            },
+            user: { ...response.user, email: response.user.correo },
             rol: response.rol || this.authService.currentUserValue?.rol as Rol,
             cargo: response.cargo || this.authService.currentUserValue?.cargo as Cargo,
           };
           this.authService.setAuth(authData);
         }
 
-        return response; // Devuelve la respuesta original
+        return response;
       }),
       catchError(error => {
         console.error('Error in editUser:', error);
@@ -62,17 +53,39 @@ export class ChangeInformationService {
     );
   }
 
-  //Carda de imagen
-  // change-information.service.ts
-  uploadProfileImage(formData: FormData): Observable<{message: string, image_url: string}> {
-    return this.http.post<{message: string, image_url: string}>(
-     `${environment.apiUrl}/account/upload-profile-image`,
-      formData
-      // ¡No agregues headers manualmente! Multer necesita el boundary automático
+  // Enviar OTP para cambio de contraseña única
+  sendUniquePasswordOtp(email: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/account/send-unique-password-otp`, { email }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error al enviar OTP para contraseña única:', error);
+        return throwError(() => error);
+      })
     );
   }
 
-  // Métodos para cambio de contraseña
+  // Guardar la contraseña única tras la validación del OTP
+  changeUniquePassword(email: string, uniquePassword: string, otp: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/account/change-unique-password`, {
+      email,
+      uniquePassword,
+      otp
+    }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error al cambiar la contraseña única:', error);
+        return throwError(() => error);
+      })
+    );
+  }
+
+  // Carga de imagen de perfil
+  uploadProfileImage(formData: FormData): Observable<{ message: string, image_url: string }> {
+    return this.http.post<{ message: string, image_url: string }>(
+      `${environment.apiUrl}/account/upload-profile-image`,
+      formData
+    );
+  }
+
+  // Métodos para cambio de contraseña de acceso
   sendPasswordChangeOtp(email: string): Observable<any> {
     return this.http.post(`${environment.apiUrl}/account/change-password--send-otp`, { email });
   }
@@ -86,6 +99,11 @@ export class ChangeInformationService {
       email,
       newPassword,
       otp
-    });
+    }).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error al cambiar la contraseña:', error);
+        return throwError(() => error);
+      })
+    );
   }
 }

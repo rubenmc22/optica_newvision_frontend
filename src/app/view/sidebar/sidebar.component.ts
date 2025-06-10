@@ -87,11 +87,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Administración',
       icon: 'fas fa-user',
       submenu: [
-        { label: 'Gestionar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'representante', 'asesor'] },
-        { label: 'Gestión de Empleados', routerLink: '/usuarios-empleados', roles: ['admin'], underConstruction: false },
-        { label: 'Tipo de cambio', routerLink: '/Tipo-de-cambio', roles: ['admin', 'representante', 'asesor'] }
+        { label: 'Configurar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'gerente', 'asesor'] },
+        { label: 'Gestionar usuarios', routerLink: '/usuarios-empleados', roles: ['admin'], underConstruction: false },
+        { label: 'Tipo de cambio', routerLink: '/Tipo-de-cambio', roles: ['admin', 'gerente', 'asesor'] }
       ],
-      roles: ['admin', 'representante', 'asesor']
+      roles: ['admin', 'gerente', 'asesor']
     }
   ];
 
