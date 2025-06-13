@@ -30,6 +30,13 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
   --primary-color-rgb: 58, 123, 213;
   --degradado-color: linear-gradient(135deg, var(--primary-color) 0%, #3E7CB1 100%);
 
+  /* Degradados suaves alternativos */
+  --degradado-light: linear-gradient(135deg, #8ab5f0 0%, #a8c8f5 100%);
+  --degradado-pastel: linear-gradient(135deg, #d6e6fc 0%, #e3eefd 100%);
+
+  --placeholder-color: #94a3b8;
+  --placeholder-focus: #cbd5e1;
+
   // Colores secundarios
   //--secondary-color-light: #eae9e9;
   // --secondary-color: #eae9e9;

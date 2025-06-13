@@ -1,163 +1,164 @@
 @use '../../../custom-theme.scss' as theme;
 
-/* Estilos SCSS */
-.employee-management-container {
-  padding: 2rem;
-  background-color: #f8f9fa;
-  border-radius: 0.5rem;
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+/* 🌟 Tabla con scroll interno */
+.table-responsive {
+  max-height: 400px;
+  overflow-y: auto; // ✅ Scroll interno SIN afectar el navegador
+  border: 1px solid var(--secondary-color-light);
+}
 
-  h2 {
-    color: #2c3e50;
-    font-weight: 600;
-  }
+//Input filtro busqueda
+.user-management-filter {
+  background: transparent;
+  padding: 30px !important;
+  border: none;
+  background: var(--degradado-pastel) !important;
+}
 
-  .btn-primary{
-     background: var(--degradado-color);
-    border: var(--degradado-color);
-    border-left: none;
-    color: #fff;
-    transition: all 0.3s ease;
+.search-container {
+  transition: all 0.3s ease;
+  border: 1px solid #e0e0e0;
+  width: 37%;
+}
 
-    &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+.search-container:focus-within {
+  border-color: #3a7bd5 !important;
+  box-shadow: 0 0 0 3px rgba(58, 123, 213, 0.1);
+}
 
-        i {
-            color: #fff; // Icono azul
-        }
-    }
+.btn-primary {
+  background: var(--degradado-color);
+  border: var(--degradado-color);
+  border-left: none;
+  color: #fff;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+    color: var(--details-color);
 
     i {
-        transition: all 0.2s ease;
+      color: var(--details-color);
     }
   }
 
-  .title {
-    color: var(--details-color) !important;
+  i {
+    transition: all 0.2s ease;
+  }
+}
+
+.filter-group {
+  display: flex;
+  // align-items: center;
+  margin-top: -15px !important;
+  // gap: 0.5rem;
+}
+
+.input-group-borderless .form-control,
+.input-group-borderless .input-group-text {
+  background-color: transparent !important;
+}
+
+//nuevos
+.form-select-sm {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
+.input-group-borderless .form-control,
+.input-group-borderless .input-group-text {
+  background-color: transparent !important;
+}
+
+.table th {
+  font-weight: bold;
+  color: var(--details-color);
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  text-transform: uppercase;
+  font-size: 0.90rem;
+  letter-spacing: 0.05em;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+}
+
+.filter-label {
+  color: var(--primary-color) !important;
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin-left: 3px;
+}
+
+.text-secondary {
+  color: var(--details-color) !important;
+  font-weight: bold;
+}
+
+input[type="text"]::placeholder {
+  color: var(--primary-color) !important;
+  opacity: 1 !important;
+}
+
+input[type="text"]:focus::placeholder {
+  color: var(--placeholder-color) !important;
+}
+
+.mb-0 {
+  color: var(--primary-color);
+  font-weight: bold;
+
+  &:hover {
+    transform: translateY(-2px);
+   // box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+    color: var(--primary-color) !important;
   }
 
-  .table {
-    margin-top: 1.5rem;
-
-    th {
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 0.85rem;
-      letter-spacing: 0.5px;
-    }
-
-    td {
-      vertical-align: middle;
-    }
-  }
-
-  #addEmployeeModal {
-    .modal-content {
-      border: none;
-      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-
-      .modal-header {
-        padding: 1.25rem 1.5rem;
-      }
-
-      .modal-body {
-        padding: 1.5rem;
-
-        .form-label {
-          font-weight: 500;
-          margin-bottom: 0.5rem;
-        }
-      }
-
-      .modal-footer {
-        padding: 1rem 1.5rem;
-        border-top: 1px solid #dee2e6;
-      }
-    }
-  }
-
-  .modal-backdrop {
-    z-index: 1040 !important;
-    /* 🔹 Asegura que el modal esté por encima */
-    opacity: 0.3 !important;
-    /* 🔹 Reduce la opacidad para verificar el problema */
-  }
-
-  #addEmployeeModal {
-    z-index: 1055 !important;
-    /* 🔹 Asegura que el modal sea accesible */
-  }
-
-  .modal-content {
-    z-index: 1055 !important;
-    /* 🔹 Asegura que el modal sea accesible */
-  }
-
-  /*
-  TABLA 
-  */
-
-  .table-responsive {
-  //  border: 2px solid var(--border-color); /* ✅ Borde acorde al diseño */
-    border-radius: 8px; /* ✅ Bordes redondeados */
-    overflow: hidden;
 }
 
-/* ✅ Encabezado con degradado */
-.table thead {
-    background: var(--degradado-color) !important;
-    color: var(--text-color);
-    font-weight: bold;
+.table-light {
+  text-align: center;
 }
 
-/* ✅ Alterna colores en las filas */
-.table-striped tbody tr:nth-of-type(odd) {
-    background-color: var(--secondary-color-light);
+/* En tu archivo SCSS */
+.form-control-sm,
+.form-select-sm {
+  display: inline-block;
+  width: auto;
+  min-width: 120px;
 }
 
-.table-striped tbody tr:nth-of-type(even) {
-    background-color: var(--secondary-color);
+.table td {
+  vertical-align: middle;
+  text-align: center;
 }
 
-/* ✅ Estilos de botones en tabla */
-.btn-outline-info {
-    border-color: var(--primary-color-light);
-    color: var(--primary-color-light);
-}
-
-.btn-outline-info:hover {
-    background-color: var(--primary-color-light);
-    color: white;
-}
-
-.btn-outline-success {
-    border-color: var(--success-color);
-    color: var(--success-color);
-}
-
-.btn-outline-success:hover {
-    background-color: var(--success-color);
-    color: white;
-}
-
-.btn-outline-danger {
-    border-color: var(--details-color);
-    color: var(--details-color);
-}
-
-.btn-outline-danger:hover {
-    background-color: var(--details-color);
-    color: white;
-}
-
+.input-cedula {
+  width: 50px !important;
+  max-width: 80px;
+  text-align: center;
 
   @media (max-width: 768px) {
-    padding: 1rem;
+    width: 100px !important;
 
-    .table-responsive {
-      margin: 0 -1rem;
-      width: calc(100% + 2rem);
-    }
   }
+}
+
+.document-cedula {
+  display: inline-block;
+  width: 90px;
+  text-align: center;
+
+  @media (max-width: 768px) {
+    width: 100px !important;
+
+  }
+}
+
+.input-nombre {
+  text-align: center;
 }

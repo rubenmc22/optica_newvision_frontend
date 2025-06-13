@@ -8,18 +8,33 @@ import { Modal } from 'bootstrap';
 export class ModalService {
   constructor() { }
 
-  openGlobalModal(title: string, message: string, confirmText: string, cancelText: string): void {
-    const modalElement = document.getElementById('globalModal');
-    if (modalElement) {
-      // Pasar valores dinámicamente al modal
-      modalElement.querySelector('.modal-title')!.textContent = title;
-      modalElement.querySelector('.modal-body')!.textContent = message;
-      modalElement.querySelector('.btn-confirm')!.textContent = confirmText;
-      modalElement.querySelector('.btn-cancel')!.textContent = cancelText;
+  openGlobalModal(title: string, message: string, confirmText: string, cancelText: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const modalElement = document.getElementById('globalModal');
+      if (modalElement) {
+        modalElement.querySelector('.modal-title')!.textContent = title;
+        modalElement.querySelector('.modal-body')!.textContent = message;
+        modalElement.querySelector('.btn-confirm')!.textContent = confirmText;
+        modalElement.querySelector('.btn-cancel')!.textContent = cancelText;
 
-      new Modal(modalElement).show();
-    }
+        const modalInstance = new Modal(modalElement);
+        modalInstance.show();
+
+        modalElement.querySelector('.btn-confirm')?.addEventListener('click', () => {
+          resolve(true);
+          modalInstance.hide();
+        });
+
+        modalElement.querySelector('.btn-cancel')?.addEventListener('click', () => {
+          resolve(false);
+          modalInstance.hide();
+        });
+      } else {
+        resolve(false); // Si el modal no existe, retornar falso por defecto
+      }
+    });
   }
+
 
   closeGlobalModal(): void {
     const modalElement = document.getElementById('globalModal');

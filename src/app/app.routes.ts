@@ -7,7 +7,6 @@ import { DashboardComponent } from './view/dashboard/dashboard.component';
 import { MyAccountComponent } from './view/my-account/my-account.component';
 import { PostloginTemplateComponent } from './view/postlogin-template/postlogin-template.component';
 import { EmpleadosComponent } from './view/empleados/empleados.component';
-import { VerAtletasComponent } from './view/ver-atletas/ver-atletas.component';
 import { CrearAtletasComponent } from './view/crear-atletas/crear-atletas.component';
 import { authGuard } from './core/services/auth/auth.guard';
 import { AuthService } from './core/services/auth/auth.service';
@@ -76,11 +75,6 @@ export const appRoutes: Routes = [
         path: 'usuarios-empleados',
         component: EmpleadosComponent,
         title: getFullTitle('Empleados')
-      },
-      {
-        path: 'ver-atletas',
-        component: VerAtletasComponent,
-        title: getFullTitle('Ver atletas')
       },
       {
         path: 'crear-atletas',

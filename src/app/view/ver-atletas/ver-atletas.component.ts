@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
-import { AtletasService } from '../../core/services/atletas/atletas.service';
+/*import { Component, OnInit } from '@angular/core';
+import { AtletasService } from '../../core/services/empleados/atletas.service';
 import { Router } from '@angular/router'; // Router para navegación
 import { SwalService } from '../../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
 
@@ -320,4 +320,4 @@ export class VerAtletasComponent implements OnInit {
     this.swalService.showError('Error', errorMessage);
   }
 
-}
+}*/

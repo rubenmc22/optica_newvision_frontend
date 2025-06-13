@@ -1,5 +1,6 @@
 import { Component, Input, OnChanges, SimpleChanges, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import * as bootstrap from 'bootstrap';
 
 @Component({
@@ -12,10 +13,11 @@ export class DynamicModalComponent implements OnInit, OnChanges {
   @Input() modalTitle = '';
   @Input() modalFields: any[] = [];
   @Input() showRequiredMessage: boolean = true; // ✅ Ahora podemos activar/desactivar el mensaje
+   @Input() onSubmit!: (data: any) => void; // ✅ Nueva función de salida
 
   modalForm!: FormGroup;
 
-  constructor(private fb: FormBuilder) { }
+  constructor(private fb: FormBuilder, private http: HttpClient) { }
 
   ngOnInit(): void {
     this.createForm();
@@ -54,7 +56,10 @@ export class DynamicModalComponent implements OnInit, OnChanges {
 
   confirm(): void {
     if (this.modalForm.valid) {
-      console.log('Datos guardados:', this.modalForm.value);
+      console.log('RDMC Dentro de this.modalForm.valid', this.modalForm.valid);
+      if (this.onSubmit) {
+        this.onSubmit(this.modalForm.value); // ✅ Envía los datos al padre
+      }
       this.closeModal();
     } else {
       Object.values(this.modalForm.controls).forEach(control => control.markAsTouched());

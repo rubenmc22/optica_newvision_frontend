@@ -3,6 +3,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http'; // Cambio clave aquí
+import { ScrollingModule } from '@angular/cdk/scrolling'; // ✅ Importa el módulo necesario
 
 // Componentes
 import { AppComponent } from '../app.component';
@@ -14,7 +15,6 @@ import { DashboardComponent } from './dashboard/dashboard.component';
 import { PostloginTemplateComponent } from './postlogin-template/postlogin-template.component';
 import { MyAccountComponent } from './my-account/my-account.component';
 import { EmpleadosComponent } from './empleados/empleados.component';
-import { VerAtletasComponent } from './ver-atletas/ver-atletas.component';
 import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
 import { AcceptTycComponent } from './accept-tyc-component/accept-tyc-component.component';
 import { DynamicModalComponent } from './../shared/dynamic-modal/dynamic-modal.component'
@@ -35,7 +35,6 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
     PostloginTemplateComponent,
     MyAccountComponent,
     EmpleadosComponent,
-    VerAtletasComponent,
     CrearAtletasComponent,
     AcceptTycComponent,
     DynamicModalComponent
@@ -45,6 +44,7 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
     ReactiveFormsModule,
     MaterialModule,
     FormsModule,
+    ScrollingModule, // ✅ Agregarlo aquí
     RouterModule.forRoot(appRoutes, {
       onSameUrlNavigation: 'reload',
       bindToComponentInputs: true // Nueva feature de Angular 16+
@@ -59,6 +59,6 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
       withInterceptors([authInterceptor]) // Registro directo del interceptor
     )
   ],
-  bootstrap: [AppComponent], 
+  bootstrap: [AppComponent],
 })
 export class AppModule { }

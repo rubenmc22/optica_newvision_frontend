@@ -1,7 +1,7 @@
 // atletas.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of, throwError  } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators'; // Importa el operador map
 import { environment } from '../../../../environments/environment';
 import { Atleta, ApiResponse } from '../../../Interfaces/models-interface';
@@ -11,14 +11,14 @@ import { Atleta, ApiResponse } from '../../../Interfaces/models-interface';
   providedIn: 'root'
 })
 
-export class AtletasService {
-  private apiUrl = `${environment.apiUrl}/atletas/get`;
+export class EmpleadosService {
+  private apiUrl = `${environment.apiUrl}/usuarios/get`;
 
   constructor(private http: HttpClient) { }
   /**
    * Obtiene todos los atletas sin filtros (para filtrar en frontend)
    */
-  getAllAtletas(): Observable<Atleta[]> {
+  /*getAllEmpleados(): Observable<Atleta[]> {
     return this.http.get<ApiResponse>(this.apiUrl).pipe(
       map(response => {
         if (!response || !Array.isArray(response.atletas)) {
@@ -26,13 +26,41 @@ export class AtletasService {
         }
         //console.log('response', response);
         return response.atletas.map(atleta => ({
-          ...atleta,
-          edad: this.calcularEdad(atleta.fecha_nacimiento),
-          generoTexto: atleta.genero === 'M' ? 'Masculino' : 'Femenino'
+          ...atleta
         }));
       }),
       catchError(error => {
         console.error('Error al obtener atletas:', error);
+        return of([]);
+      })
+    );
+  }*/
+
+  addEmployee(employee: any): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/employees`, employee).pipe(
+      catchError(error => {
+        console.error('Error al agregar empleado:', error);
+        return throwError(() => new Error('Error al agregar empleado'));
+      })
+    );
+  }
+
+  getRoles(): Observable<string[]> {
+    return this.http.get<{ roles: { id: string, nombre: string }[] }>(`${environment.apiUrl}/roles/get`).pipe(
+      map(response => response.roles.map(role => role.nombre)), // ✅ Extrae solo los nombres
+      catchError(error => {
+        console.error('Error al obtener roles:', error);
+        return of([]);
+      })
+    );
+  }
+
+
+  getCargos(): Observable<string[]> {
+    return this.http.get<{ cargos: { id: string, nombre: string }[] }>(`${environment.apiUrl}/cargos/get`).pipe(
+      map(response => response.cargos.map(cargo => cargo.nombre)), // ✅ Extrae solo nombres
+      catchError(error => {
+        console.error('Error al obtener cargos:', error);
         return of([]);
       })
     );
@@ -55,8 +83,8 @@ export class AtletasService {
    * Elimina un atleta por su ID
    * @param id ID del atleta a eliminar
    */
-  eliminarAtleta(id: number): Observable<void> {
-    return this.http.delete<void>(`${environment.apiUrl}/atletas/delete/${id}`).pipe(
+  eliminarEmpleados(id: number): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/${id}`).pipe(
       catchError(this.handleError)
     );
   }
