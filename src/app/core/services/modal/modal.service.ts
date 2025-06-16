@@ -35,6 +35,24 @@ export class ModalService {
     });
   }
 
+  openDetailsModal(employee: any): void {
+    const modalElement = document.getElementById('viewUserModal');
+    if (modalElement) {
+        modalElement.querySelector('.modal-title')!.textContent = 'Detalles del Usuario';
+        modalElement.querySelector('.modal-body')!.innerHTML = `
+            <p><strong>Cédula:</strong> ${employee.cedula}</p>
+            <p><strong>Nombre:</strong> ${employee.nombre}</p>
+            <p><strong>Cargo:</strong> ${employee.cargoNombre}</p>
+            <p><strong>Rol:</strong> ${employee.rolNombre}</p>
+            <p><strong>Email:</strong> ${employee.email}</p>
+            <p><strong>Estado:</strong> ${employee.estado ? 'Activo' : 'Inhabilitado'}</p>
+        `;
+
+        const modalInstance = new Modal(modalElement);
+        modalInstance.show();
+    }
+}
+
 
   closeGlobalModal(): void {
     const modalElement = document.getElementById('globalModal');

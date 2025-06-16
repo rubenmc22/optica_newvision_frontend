@@ -13,7 +13,8 @@ export class DynamicModalComponent implements OnInit, OnChanges {
   @Input() modalTitle = '';
   @Input() modalFields: any[] = [];
   @Input() showRequiredMessage: boolean = true; // ✅ Ahora podemos activar/desactivar el mensaje
-   @Input() onSubmit!: (data: any) => void; // ✅ Nueva función de salida
+  @Input() onSubmit?: (data: any) => void; // ✅ Ahora puede ser opcional
+
 
   modalForm!: FormGroup;
 

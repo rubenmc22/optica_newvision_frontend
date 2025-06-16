@@ -18,7 +18,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   ];
 
   // Verifica si la solicitud es a un endpoint público
-  const isPublicRequest = PUBLIC_ENDPOINTS.some(endpoint => 
+  const isPublicRequest = PUBLIC_ENDPOINTS.some(endpoint =>
     req.url.includes(endpoint)
   );
 
@@ -27,10 +27,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   const token = authService.getToken();
-  
+
   if (!token) {
     authService.logout();
-    router.navigate(['/login'], { 
+    router.navigate(['/login'], {
       queryParams: { sessionExpired: true },
       replaceUrl: true
     });
@@ -42,11 +42,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   // Solo añadir Content-Type para JSON, no para FormData
   if (!(req.body instanceof FormData)) {
+    console.log('[Interceptor] Cuerpo de la solicitud antes de enviar:', req.body);
     authReq = req.clone({
       setHeaders: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
-      }
+      },
+      body: req.body // ✅ Asegura que `req.body` se conserve
     });
   } else {
     // Para FormData, solo añadir el token
@@ -60,15 +62,15 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
       console.error('[Interceptor] Error en la solicitud:', error);
-      
+
       if (error.status === 401) {
         authService.logout();
-        router.navigate(['/login'], { 
+        router.navigate(['/login'], {
           replaceUrl: true,
           queryParams: { sessionExpired: true }
         });
       }
-      
+
       return throwError(() => error);
     })
   );
