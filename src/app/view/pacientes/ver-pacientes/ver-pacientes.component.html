@@ -1,0 +1,48 @@
+<div class="container mt-4">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4>👨‍⚕️ Pacientes</h4>
+            <button class="btn btn-light btn-sm" (click)="openDynamicModal()">➕ Agregar Paciente</button>
+        </div>
+
+        <div class="card-body">
+            <!-- ✅ Tabla de pacientes -->
+            <table class="table table-hover table-bordered">
+                <thead class="bg-secondary text-white">
+                    <tr>
+                        <th>Nombre Completo</th>
+                        <th>Cédula</th>
+                        <th>Edad</th>
+                        <th>Fecha de Registro</th>
+                        <th>Historial Médico</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let paciente of pacientesFiltrados()">
+                        <td>{{ paciente.nombreCompleto }}</td>
+                        <td>{{ paciente.cedula }}</td>
+                        <td>{{ paciente.edad }}</td>
+                        <td>{{ paciente.fechaRegistro }}</td>
+                        <td>
+                            <button class="btn btn-info btn-sm" (click)="verHistorias(paciente.id)">📖 Ver
+                                Historias</button>
+                        </td>
+                        <td>
+                            <button class="btn btn-warning btn-sm" (click)="editarPaciente(paciente.id)">✏
+                                Editar</button>
+                            <button class="btn btn-danger btn-sm" (click)="eliminarPaciente(paciente.id)">🗑
+                                Eliminar</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<!-- Modal de formulario dinámico -->
+<app-dynamic-modal [modalTitle]="'Agregar Nuevo Paciente'" [modalFields]="modalFields" [onSubmit]="addPaciente"
+    [mostrarRedesSociales]="true">
+</app-dynamic-modal>

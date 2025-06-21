@@ -13,17 +13,23 @@
                                 <label class="form-label">
                                     {{ field.label }}
                                     <span *ngIf="field.required" class="text-danger">*</span>
-                                    <!-- ✅ Asterisco rojo solo si el campo es obligatorio -->
                                 </label>
+
                                 <input *ngIf="field.type === 'text'" type="text" class="form-control"
                                     [formControlName]="field.name">
                                 <input *ngIf="field.type === 'number'" type="number" class="form-control"
                                     [formControlName]="field.name">
+                                <input *ngIf="field.type === 'email'" type="email" class="form-control"
+                                    [formControlName]="field.name">
+                                <input *ngIf="field.type === 'date'" type="date" class="form-control"
+                                    [formControlName]="field.name">
+                                <textarea *ngIf="field.type === 'textarea'" class="form-control"
+                                    [formControlName]="field.name"></textarea>
 
                                 <select *ngIf="field.type === 'select'" class="form-select"
                                     [formControlName]="field.name">
-                                    <option *ngFor="let option of field.options" [value]="option.value">{{ option.label }}</option>
-
+                                    <option *ngFor="let option of field.options" [value]="option.value">{{ option.label
+                                        }}</option>
                                 </select>
 
                                 <div *ngIf="modalForm.get(field.name)?.invalid && modalForm.get(field.name)?.touched"
@@ -34,7 +40,54 @@
                         </ng-container>
                     </div>
 
-                    <!-- ✅ Texto informativo al final, controlado por `showRequiredMessage` desde EmpleadosComponent -->
+                    <!-- ✅ Redes sociales solo se muestran si mostrarRedesSociales es true -->
+                    <div *ngIf="mostrarRedesSociales === true" class="mt-4">
+                        <h5>Redes Sociales</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <mat-form-field class="w-50">
+                                <mat-label>Red Social</mat-label>
+                                <mat-select #socialSelect panelClass="cdkOverlayContainer">
+                                    <mat-option *ngFor="let option of socialOptions" [value]="option">{{ option
+                                        }}</mat-option>
+                                </mat-select>
+                            </mat-form-field>
+
+                            <mat-form-field class="w-50">
+                                <mat-label>Usuario</mat-label>
+                                <input matInput #usernameInput placeholder="Ingresar usuario">
+                            </mat-form-field>
+
+                            <button mat-flat-button color="primary"
+                                (click)="addSocial(socialSelect.value, usernameInput.value)">
+                                <mat-icon>add</mat-icon> Añadir
+                            </button>
+                        </div>
+
+                        <!-- ✅ Tabla con redes sociales registradas -->
+                        <table class="table mt-3">
+                            <thead>
+                                <tr>
+                                    <th>Red Social</th>
+                                    <th>Usuario</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let social of modalForm.get('redesSociales')?.value">
+                                    <td><mat-icon>{{ getSocialIcon(social.platform) }}</mat-icon> {{ social.platform }}
+                                    </td>
+                                    <td>{{ social.username }}</td>
+                                    <td>
+                                        <button mat-icon-button color="warn" (click)="removeSocial(social)">
+                                            <mat-icon>delete</mat-icon>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ✅ Texto informativo sobre campos obligatorios -->
                     <div *ngIf="showRequiredMessage" class="text-danger mt-3" id="infoText">
                         <small>* Los campos marcados en rojo son obligatorios.</small>
                     </div>

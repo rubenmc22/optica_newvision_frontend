@@ -12,6 +12,9 @@ import { authGuard } from './core/services/auth/auth.guard';
 import { AuthService } from './core/services/auth/auth.service';
 import { AcceptTycComponent } from './view/accept-tyc-component/accept-tyc-component.component';
 import { Title } from '@angular/platform-browser';
+import { TasaComponent } from './view/tasa-cambiaria/tasa.component';
+import { VerPacientesComponent } from './view/pacientes/ver-pacientes/ver-pacientes.component';
+import { HistoriasMedicasComponent } from './view/pacientes/historias-medicas/historias-medicas.component';
 
 // Nombre de la óptica (constante global)
 const OPTICA_NAME = 'Óptica New Vision';
@@ -77,9 +80,19 @@ export const appRoutes: Routes = [
         title: getFullTitle('Empleados')
       },
       {
-        path: 'crear-atletas',
-        component: CrearAtletasComponent,
-        title: getFullTitle('Crear atleta')
+        path: 'Tipo-de-cambio',
+        component: TasaComponent,
+        title: getFullTitle('Tipo-de-cambio')
+      },
+        {
+        path: 'pacientes',
+        component: VerPacientesComponent,
+        title: getFullTitle('pacientes')
+      },
+        {
+        path: 'historias-medicas',
+        component: HistoriasMedicasComponent,
+        title: getFullTitle('historias-medicas')
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'prefix' }
     ]

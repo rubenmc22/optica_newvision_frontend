@@ -11,7 +11,7 @@ import { Empleado, ApiResponse } from '../../../Interfaces/models-interface';
 })
 
 export class EmpleadosService {
-  private apiUrl = `${environment.apiUrl}/usuarios/get`;
+  private apiUrl = `${environment.apiUrl}/get-usuarios`;
 
   constructor(private http: HttpClient) { }
   /**
@@ -20,27 +20,11 @@ export class EmpleadosService {
   getAllEmpleados(): Observable<Empleado[]> {
     return this.http.get<{ message: string; usuarios: any[] }>(`${this.apiUrl}`).pipe(
       map(response => {
-        console.log('RDMC response:', response); // ✅ Verifica estructura antes de mapear
-
         if (!response || !Array.isArray(response.usuarios)) {
           throw new Error('Formato de respuesta inválido');
         }
 
-        return response.usuarios.map(usuario => ({
-          id: usuario.id,
-          cedula: usuario.cedula,
-          nombre: usuario.nombre,
-          email: usuario.correo ?? 'Sin dato',
-          telefono: usuario.telefono ?? 'Sin dato',
-          fechaNacimiento: usuario.fecha_nacimiento ?? 'Sin dato',
-          avatarUrl: usuario.avatar_url?.trim() ? usuario.avatar_url :
-            usuario.ruta_imagen ? `${environment.baseUrl}${usuario.ruta_imagen}` : 'assets/default-photo.png', // ✅ Usa `ruta_imagen` si `avatar_url` está vacío
-          rolId: usuario.rol.id,
-          rolNombre: usuario.rol.nombre,
-          cargoId: usuario.cargo.id,
-          cargoNombre: usuario.cargo.nombre,
-          estado: usuario.estado ?? true // ✅ Manejo correcto del estado
-        }));
+        return response.usuarios.map(usuario => this.mapUsuarioToEmpleado(usuario));
       }),
       catchError(error => {
         console.error('Error al obtener empleados:', error);
@@ -49,14 +33,46 @@ export class EmpleadosService {
     );
   }
 
+  // empleados.service.ts
+
+  mapUsuarioToEmpleado(usuario: any): Empleado {
+    return {
+      id: usuario.id,
+      cedula: usuario.cedula,
+      nombre: usuario.nombre,
+      email: usuario.correo ?? 'Sin dato',
+      telefono: usuario.telefono ?? 'Sin dato',
+      fechaNacimiento: usuario.fecha_nacimiento ?? 'Sin dato',
+      avatarUrl: usuario.avatar_url?.trim()
+        ? usuario.avatar_url
+        : usuario.ruta_imagen
+          ? `${environment.baseUrl}${usuario.ruta_imagen}`
+          : 'assets/default-photo.png',
+      rolId: usuario.rol?.id ?? '',
+      rolNombre: usuario.rol?.nombre ?? 'Sin rol',
+      cargoId: usuario.cargo?.id ?? '',
+      cargoNombre: usuario.cargo?.nombre ?? 'Sin cargo',
+      estatus: Boolean(usuario.activo),
+      editing: false,
+      modified: false,
+      hasErrors: false,
+      errors: {},
+      loading: false,
+      originalValues: null
+    };
+  }
 
   addEmployees(employee: any): Observable<any> {
-    console.log('JSON que se envía al backend:', JSON.stringify(employee));
-    return this.http.post(`${environment.apiUrl}/usuarios/add`, employee).pipe(
+    return this.http.post(`${environment.apiUrl}/add-usuarios`, employee).pipe(
       catchError(error => {
         console.error('Error al agregar empleado:', error);
-        return throwError(() => new Error('Error al agregar empleado'));
+
+        const backendMessage =
+          error?.error?.message || 'Error desconocido al agregar empleado';
+
+        return throwError(() => new Error(backendMessage));
       })
+
     );
   }
 
@@ -99,7 +115,7 @@ export class EmpleadosService {
    * @param id ID del atleta a eliminar
    */
   eliminarEmpleados(id: number): Observable<void> {
-    return this.http.delete<void>(`${environment.apiUrl}/usuarios/delete/${id}`).pipe(
+    return this.http.delete<void>(`${environment.apiUrl}/delete-usuarios/${id}`).pipe(
       catchError(this.handleError)
     );
   }
@@ -109,14 +125,14 @@ export class EmpleadosService {
     return throwError(() => new Error('Error al procesar la solicitud'));
   }
 
-  actualizarEstado(id: string, estado: boolean): Observable<void> {
-    return this.http.put<void>(`${environment.apiUrl}/usuarios/${id}/estado`, { estado }).pipe(
+  actualizarEstado(id: string, estatus: boolean): Observable<void> {
+    return this.http.put<void>(`${environment.apiUrl}/activar-usuarios/${id}`, { estatus }).pipe(
       catchError(this.handleError)
     );
   }
 
   actualizarEmpleado(employee: Empleado): Observable<void> {
-    return this.http.put<void>(`${environment.apiUrl}/usuarios/update/${employee.cedula}`, employee).pipe(
+    return this.http.put<void>(`${environment.apiUrl}/update-usuarios/${employee.cedula}`, employee).pipe(
       catchError(this.handleError)
     );
   }

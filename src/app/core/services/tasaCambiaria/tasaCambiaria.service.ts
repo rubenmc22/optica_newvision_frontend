@@ -1,0 +1,44 @@
+// atletas.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, of, throwError } from 'rxjs';
+import { map, catchError } from 'rxjs/operators'; // Importa el operador map
+import { environment } from '../../../../environments/environment';
+//import { Empleado, ApiResponse } from '../../../Interfaces/models-interface';
+
+@Injectable({
+  providedIn: 'root'
+})
+
+export class TasaCambiariaService {
+
+  constructor(private http: HttpClient) { }
+
+
+  getTasaActual(): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/tasas/`);
+  }
+
+  setTasaManual(id: string, valor: number, metodo: string, fecha: string): Observable<any> {
+    return this.http.put(`${environment.apiUrl}/tasas-update/${id}`, { valor, metodo, fecha });
+  }
+
+
+  getHistorialTasas(anio?: number, mes?: number, dia?: number): Observable<any[]> {
+    let url = `${environment.apiUrl}/historial`;
+
+    const params = [];
+    if (anio) params.push(`anio=${anio}`);
+    if (mes) params.push(`mes=${mes}`);
+    if (dia) params.push(`dia=${dia}`);
+
+    if (params.length > 0) {
+      url += `?${params.join('&')}`; // ✅ Construye la URL con filtros dinámicos
+    }
+
+    return this.http.get<any[]>(url);
+  }
+
+}
+
+

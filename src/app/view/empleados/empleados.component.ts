@@ -5,7 +5,6 @@ import * as bootstrap from 'bootstrap';
 import { Empleado, ApiResponse } from '../../Interfaces/models-interface';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-
 // Servicios
 import { ModalService } from './../../core/services/modal/modal.service';
 import { EmpleadosService } from './../../core/services/empleados/empleados.service';
@@ -23,22 +22,29 @@ import { DynamicModalComponent } from './../../shared/dynamic-modal/dynamic-moda
   encapsulation: ViewEncapsulation.None
 })
 export class EmpleadosComponent implements OnInit {
+  // ==================== VARIABLES DEL COMPONENTE ====================
   @ViewChild(DynamicModalComponent, { static: false }) dynamicModal!: DynamicModalComponent;
 
-  selectedEmployee!: any; // ✅ Ahora `selectedEmployee` está definido
-
-
-  roles: { id: string, nombre: string }[] = [];
-  positions: { id: string, nombre: string }[] = [];
+  // Datos de empleados y listas
+  selectedEmployee!: any;
   employees: any[] = [];
   filteredEmployees: any[] = [];
+  roles: { id: string, nombre: string }[] = [];
+  positions: { id: string, nombre: string }[] = [];
 
+  // Formularios y controles
   employeeForm: FormGroup;
   modalFields: any[] = [];
+
+  // Filtros y búsqueda
   searchQuery: string = '';
   selectedPosition: string | null = null;
   selectedRole: string | null = null;
+
+  // Estado y UI
   avatarPreview: string | ArrayBuffer | null = null;
+  mostrarRedesSociales: boolean = false;
+  isLoading = true;
 
   constructor(
     private fb: FormBuilder,
@@ -47,6 +53,7 @@ export class EmpleadosComponent implements OnInit {
     private swalService: SwalService,
     private snackBar: MatSnackBar,
   ) {
+    // Inicialización del formulario
     this.employeeForm = this.fb.group({
       name: ['', Validators.required],
       document: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
@@ -55,22 +62,31 @@ export class EmpleadosComponent implements OnInit {
     });
   }
 
+  // ==================== CICLO DE VIDA ====================
   ngOnInit(): void {
     this.loadEmployees();
     this.loadRolesAndPositions();
   }
 
-  openViewModal(employee: any): void {
-    this.selectedEmployee = employee;
-    console.log('Dentro de openViewModal:', employee); // ✅ Verificar estructura en consola
-    // ✅ Asegura que el modal se abre correctamente con Bootstrap
-    const modalElement = document.getElementById('userDetailsModal');
-    if (modalElement) {
-      const modalInstance = new bootstrap.Modal(modalElement);
-      modalInstance.show();
-    }
+  // ==================== MÉTODOS DE CARGA DE DATOS ====================
+  /**
+   * Carga la lista de empleados desde el servicio
+   */
+  private loadEmployees(): void {
+    this.isLoading = true;
+    this.empleadosService.getAllEmpleados().subscribe((empleados: Empleado[]) => {
+      this.employees = empleados;
+      this.filteredEmployees = [...this.employees];
+      this.isLoading = false;
+    }, error => {
+      console.error('Error al cargar empleados:', error);
+      this.isLoading = false;
+    });
   }
 
+  /**
+   * Carga los roles y cargos disponibles desde el servicio
+   */
   private loadRolesAndPositions(): void {
     this.empleadosService.getRoles().subscribe({
       next: (roles) => {
@@ -91,78 +107,109 @@ export class EmpleadosComponent implements OnInit {
         this.swalService.showError('Error', 'No se pudieron cargar los cargos');
       }
     });
-
   }
 
-  badgeClass(role: string): string {
-    switch (role) {
-      case 'Administrador': return 'bg-success';
-      case 'Gerente': return 'bg-primary';
-      case 'Asesor Optico': return 'bg-info';
-      default: return 'bg-secondary';
+  // ==================== MÉTODOS DE MODALES ====================
+  /**
+   * Abre el modal para ver detalles de un empleado
+   * @param employee Empleado a mostrar en el modal
+   */
+  openViewModal(employee: any): void {
+    this.selectedEmployee = employee;
+    const modalElement = document.getElementById('userDetailsModal');
+    if (modalElement) {
+      const modalInstance = new bootstrap.Modal(modalElement);
+      modalInstance.show();
     }
   }
 
-  /** Cargar empleados desde la API */
-  private loadEmployees(): void {
-    this.empleadosService.getAllEmpleados().subscribe((empleados: Empleado[]) => {
-      console.log('RDMC empleados cargados:', empleados); // ✅ Verificar estructura en consola
+  /**
+   * Abre el modal dinámico para agregar un nuevo empleado
+   */
+  openDynamicModal(): void {
+    this.dynamicModal.modalTitle = 'Agregar Nuevo Empleado';
+    this.dynamicModal.showRequiredMessage = true;
+    this.dynamicModal.onSubmit = this.addEmployee.bind(this);
+    this.mostrarRedesSociales = false;
 
-      this.employees = empleados; // ✅ Asignación directa sin map()
-      this.filteredEmployees = [...this.employees]; // ✅ Filtrado inicial correcto
-    });
+    this.modalFields = [
+      {
+        name: 'name', label: 'Nombre Completo', type: 'text', required: true, cols: 6,
+        errorMessage: 'Solo se permiten letras', validation: [Validators.required, Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/)]
+      },
+      {
+        name: 'cedula', label: 'Documento de Identidad', type: 'number', required: true, cols: 6,
+        errorMessage: 'Debe ser numérico entre 6 y 9 dígitos', validation: [Validators.required, Validators.pattern(/^\d{6,9}$/)]
+      },
+      {
+        name: 'position', label: 'Cargo', type: 'select',
+        options: this.positions.map(pos => ({ value: pos.id, label: pos.nombre })),
+        required: true, cols: 6, errorMessage: 'Cargo requerido'
+      },
+      {
+        name: 'role', label: 'Rol en Sistema', type: 'select',
+        options: this.roles.map(rol => ({ value: rol.id, label: rol.nombre })),
+        required: true, cols: 6, errorMessage: 'Rol requerido'
+      }
+    ];
+
+    this.dynamicModal.openModal();
   }
 
-  handleImageError(event: Event): void {
-    const img = event.target as HTMLImageElement;
-
-    // ✅ Verifica que el elemento es una imagen antes de modificarlo
-    if (img && img.tagName === 'IMG') {
-      img.src = 'assets/default-photo.png';
-
-      // ✅ Registrar en consola el usuario afectado
-      console.warn(`Error al cargar la imagen para: ${this.selectedEmployee?.nombre ?? 'Usuario desconocido'}`);
-    }
+  /**
+   * Cierra un modal dado su ID
+   * @param id ID del modal a cerrar
+   */
+  private cerrarModal(id: string): void {
+    const el = document.getElementById(id);
+    if (el) bootstrap.Modal.getInstance(el)?.hide();
   }
 
-
-  getProfileImage(): string {
-    if (this.selectedEmployee?.avatarUrl && this.selectedEmployee.avatarUrl.trim() !== '') {
-      return this.selectedEmployee.avatarUrl;
-    }
-
-    return 'assets/default-photo.png'; // ✅ Imagen por defecto si no hay ruta
-  }
-
-
-  /** Agregar un nuevo empleado */
+  // ==================== MÉTODOS DE CRUD EMPLEADOS ====================
+  /**
+   * Agrega un nuevo empleado
+   * @param employee Datos del empleado a agregar
+   */
   addEmployee(employee: any): void {
-    console.log("RDMC employee", employee);
-    const formattedEmployee = {
+    const payload = {
       rolId: employee.role,
       cargoId: employee.position,
       cedula: employee.cedula.toString(),
       nombre: employee.name,
-      email: employee.email || '', // ✅ Agregar si la API lo requiere
-      phone: employee.phone || '' // ✅ Agregar si la API lo requiere
-      //  fechaRegistro: new Date().toISOString().split('T')[0] // Fecha en formato correcto
+      email: employee.email || '',
+      phone: employee.phone || ''
     };
 
-    this.empleadosService.addEmployees(formattedEmployee).subscribe({
-      next: (newEmployee: any) => {
-        console.log('Empleado agregado correctamente:', newEmployee);
-        this.employees.push(newEmployee);
-        this.filterEmployees();
-        this.swalService.showSuccess('¡Registro exitoso!', 'Se ha registrado al Usuario correctamente.');
+    this.empleadosService.addEmployees(payload).subscribe({
+      next: () => {
+        this.empleadosService.getAllEmpleados().subscribe((empleados) => {
+          this.employees = [...empleados]; // 🔄 Reemplazo con spread para minimizar cambio de referencia
+          this.filterEmployees();          // Mantienes filtros activos
+        });
+
+        this.cerrarModal('dynamicModal');
+        this.swalService.showSuccess('¡Registro exitoso!', 'Usuario registrado correctamente.');
       },
       error: (err) => {
-        this.swalService.showError('Error!', 'Hubo un problema al intentar registrar el usuario.');
+        const msg = err.message?.trim() || '';
+
+        if (msg === 'El numero de cedula ya esta registrado.') {
+          this.swalService.showError('Cédula ya registrada', 'Por favor, ingresa una diferente.');
+        } else {
+          this.cerrarModal('dynamicModal');
+          this.swalService.showError('Error inesperado', msg || 'Hubo un problema al registrar el usuario.');
+        }
+
         console.error('Error al agregar empleado:', err);
       }
     });
   }
 
-  /** Eliminar empleado con confirmación */
+
+  /**
+   * Elimina un empleado con confirmación
+   * @param index Índice del empleado a eliminar
+   */
   deleteEmployee(index: number): void {
     const employeeId = this.employees[index].cedula;
 
@@ -186,80 +233,23 @@ export class EmpleadosComponent implements OnInit {
     });
   }
 
-  /** Filtros para búsqueda y selección de empleados */
-  filterEmployees(): void {
-    this.filteredEmployees = this.employees.filter(emp => {
-      const matchesSearch = !this.searchQuery ||
-        emp.nombre.toLowerCase().includes(this.searchQuery.toLowerCase()) || // ✅ Cambiado `name` por `nombre`
-        emp.cedula.toString().includes(this.searchQuery); // ✅ Cambiado `document` por `cedula`
-
-      const matchesPosition = !this.selectedPosition || emp.cargoId === this.selectedPosition; // ✅ `position` → `cargoId`
-      const matchesRole = !this.selectedRole || emp.rolId === this.selectedRole; // ✅ `role` → `rolId`
-
-      return matchesSearch && matchesPosition && matchesRole;
-    });
-
-    console.log('Resultados filtrados:', this.filteredEmployees); // ✅ Verifica que haya datos filtrados
-  }
-
-
-  /** Limpia la barra de búsqueda */
-  clearSearch(): void {
-    this.searchQuery = '';
-    this.filterEmployees();
-  }
-
-  /** Abrir modal dinámico */
-  openDynamicModal(): void {
-    this.dynamicModal.modalTitle = 'Agregar Nuevo Empleado';
-    this.dynamicModal.showRequiredMessage = true;
-    this.dynamicModal.onSubmit = this.addEmployee.bind(this);
-
-    this.modalFields = [
-      {
-        name: 'name', label: 'Nombre Completo', type: 'text', required: true, cols: 6,
-        errorMessage: 'Solo se permiten letras', validation: [Validators.required, Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/)]
-      },
-      {
-        name: 'cedula', label: 'Documento de Identidad', type: 'number', required: true, cols: 6,
-        errorMessage: 'Debe ser numérico entre 6 y 9 dígitos', validation: [Validators.required, Validators.pattern(/^\d{6,9}$/)]
-      },
-      {
-        name: 'position', label: 'Cargo', type: 'select',
-        options: this.positions.map(pos => ({ value: pos.id, label: pos.nombre })), // ✅ Guarda ID, muestra nombre
-        required: true, cols: 6, errorMessage: 'Cargo requerido'
-      },
-      {
-        name: 'role', label: 'Rol en Sistema', type: 'select',
-        options: this.roles.map(rol => ({ value: rol.id, label: rol.nombre })), // ✅ Guarda ID, muestra nombre
-        required: true, cols: 6, errorMessage: 'Rol requerido'
-      }
-    ];
-
-    this.dynamicModal.openModal();
-  }
-
-  /** Cerrar modal dinámico */
-  closeDynamicModal(): void {
-    const modalElement = document.getElementById('dynamicModal');
-    if (modalElement) {
-      const modalInstance = bootstrap.Modal.getInstance(modalElement);
-      modalInstance?.hide();
-    }
-  }
-
-  /** Modo edición de empleado */
+  /**
+   * Activa el modo edición para un empleado
+   * @param index Índice del empleado a editar
+   */
   toggleEdit(index: number): void {
     this.employees.forEach(emp => emp.editing = false);
     this.employees[index].editing = true;
     this.employees[index].originalValues = { ...this.employees[index] };
   }
 
+  /**
+   * Guarda los cambios de un empleado editado
+   * @param index Índice del empleado editado
+   */
   saveEmployeeChanges(index: number): void {
     const emp = this.employees[index];
     let errors: string[] = [];
-
-    console.log('emp', emp);
 
     // Validar cédula solo si ha cambiado
     if (emp.document !== emp.originalValues.document) {
@@ -313,8 +303,10 @@ export class EmpleadosComponent implements OnInit {
     });
   }
 
-
-  /** Cancelar edición de empleado */
+  /**
+   * Cancela la edición de un empleado
+   * @param index Índice del empleado en edición
+   */
   cancelEdit(index: number): void {
     if (this.employees[index].originalValues) {
       Object.assign(this.employees[index], this.employees[index].originalValues);
@@ -323,21 +315,37 @@ export class EmpleadosComponent implements OnInit {
     delete this.employees[index].originalValues;
   }
 
-  /** Validación para números */
-  validateNumber(event: any): boolean {
-    const charCode = (event.which) ? event.which : event.keyCode;
-    return !(charCode > 31 && (charCode < 48 || charCode > 57));
-  }
+  // ==================== MÉTODOS DE FILTRADO ====================
+  /**
+   * Filtra los empleados según los criterios de búsqueda
+   */
+  filterEmployees(): void {
+    this.filteredEmployees = this.employees.filter(emp => {
+      const matchesSearch = !this.searchQuery ||
+        emp.nombre.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        emp.cedula.toString().includes(this.searchQuery);
 
-  toggleStatus(employee: Empleado): void {
-    const newStatus = !employee.estado; // ✅ Invierte el estado actual
+      const matchesPosition = !this.selectedPosition || emp.cargoId === this.selectedPosition;
+      const matchesRole = !this.selectedRole || emp.rolId === this.selectedRole;
 
-    this.empleadosService.actualizarEstado(employee.id, newStatus).subscribe(() => {
-      employee.estado = newStatus; // ✅ Actualiza el estado localmente
-      console.log(`Usuario ${employee.nombre} ahora está ${newStatus ? 'Activo' : 'Inhabilitado'}`);
+      return matchesSearch && matchesPosition && matchesRole;
     });
   }
 
+  /**
+   * Limpia la barra de búsqueda
+   */
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.filterEmployees();
+  }
+
+  // ==================== MÉTODOS DE VALIDACIÓN ====================
+  /**
+   * Valida un campo específico de un empleado
+   * @param employee Empleado a validar
+   * @param field Campo a validar
+   */
   validateField(employee: any, field: string): void {
     if (!employee.errors) {
       employee.errors = {};
@@ -369,6 +377,77 @@ export class EmpleadosComponent implements OnInit {
     employee.hasErrors = Object.values(employee.errors).some(error => error !== '');
   }
 
+  /**
+   * Valida que solo se ingresen números en un campo
+   * @param event Evento del teclado
+   * @returns True si es un número, false si no
+   */
+  validateNumber(event: any): boolean {
+    const charCode = (event.which) ? event.which : event.keyCode;
+    return !(charCode > 31 && (charCode < 48 || charCode > 57));
+  }
 
+  // ==================== MÉTODOS DE ESTADO ====================
+  /**
+   * Cambia el estado de un empleado (activo/inactivo)
+   * @param employee Empleado a modificar
+   */
+  toggleStatus(employee: Empleado): void {
+    const originalStatus = employee.estatus;
+    employee.loading = true;
+
+    this.empleadosService.actualizarEstado(employee.cedula, originalStatus).subscribe({
+      next: () => {
+        employee.loading = false;
+      },
+      error: () => {
+        console.error(`Error al actualizar estado del usuario ${employee.nombre}`);
+        employee.estatus = !originalStatus;
+        employee.loading = false;
+      }
+    });
+  }
+
+  // ==================== MÉTODOS DE UI/HELPERS ====================
+  /**
+   * Obtiene la clase CSS para el badge según el rol
+   * @param role Rol del empleado
+   * @returns Clase CSS correspondiente
+   */
+  badgeClass(role: string): string {
+    switch (role) {
+      case 'Administrador': return 'bg-success';
+      case 'Gerente': return 'bg-primary';
+      case 'Asesor Optico': return 'bg-info';
+      default: return 'bg-secondary';
+    }
+  }
+
+  /**
+   * Maneja errores al cargar imágenes de perfil
+   * @param event Evento de error
+   */
+  handleImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    if (img && img.tagName === 'IMG') {
+      img.src = 'assets/default-photo.png';
+      console.warn(`Error al cargar la imagen para: ${this.selectedEmployee?.nombre ?? 'Usuario desconocido'}`);
+    }
+  }
+
+  /**
+   * Obtiene la URL de la imagen de perfil
+   * @returns URL de la imagen o la imagen por defecto
+   */
+  getProfileImage(): string {
+    if (this.selectedEmployee?.avatarUrl && this.selectedEmployee.avatarUrl.trim() !== '') {
+      return this.selectedEmployee.avatarUrl;
+    }
+    return 'assets/default-photo.png';
+  }
+
+  trackByCedula(index: number, emp: Empleado): string {
+  return emp.cedula;
+}
 
 }

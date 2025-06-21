@@ -10,6 +10,14 @@ input[type="number"] {
     -moz-appearance: textfield;
 }
 
+.cdk-overlay-container {
+    z-index: 9999 !important; // ✅ Mucho más alto que el modal (Bootstrap usa 1050)
+}
+
+.cdk-overlay-pane {
+    z-index: 9999 !important; // ✅ Asegura que el menú quede visible
+}
+
 /* Estilos para el modal centrado */
 #dynamicModal {
     .text-danger {

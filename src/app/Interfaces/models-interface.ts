@@ -65,7 +65,17 @@ export interface Empleado {
   telefono?: string;
   rolId: string;
   cargoId: string;
-  estado: boolean; // ✅ Ahora es un booleano
+  rolNombre: string;
+  cargoNombre: string;
+  estatus: boolean; // ✅ Ahora es un booleano
+  loading?: boolean;
+  fechaNacimiento: string;
+  avatarUrl?: string; // 👈 Añadido para imagen de perfil
+  editing: false;
+  modified: false;
+  hasErrors: false;
+  errors: {};
+  originalValues: null;
 }
 
 

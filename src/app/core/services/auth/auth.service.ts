@@ -85,7 +85,6 @@ export class AuthService {
         if (!data.user?.correo) {
           throw new Error('El servidor no devolvió un correo de usuario');
         }
-        console.log('DATA', data);
         const authData: AuthData = {
           token: data.token,
           user: {

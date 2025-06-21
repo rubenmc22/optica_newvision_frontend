@@ -42,7 +42,6 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   // Solo añadir Content-Type para JSON, no para FormData
   if (!(req.body instanceof FormData)) {
-    console.log('[Interceptor] Cuerpo de la solicitud antes de enviar:', req.body);
     authReq = req.clone({
       setHeaders: {
         Authorization: `Bearer ${token}`,

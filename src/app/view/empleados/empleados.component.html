@@ -54,8 +54,14 @@
 
             <!-- Modal de formulario dinámico -->
             <app-dynamic-modal [modalTitle]="'Agregar Nuevo Empleado'" [modalFields]="modalFields"
-                [onSubmit]="addEmployee">
+                [onSubmit]="addEmployee" [mostrarRedesSociales]="mostrarRedesSociales">
             </app-dynamic-modal>
+
+            <div *ngIf="isLoading" class="text-center my-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </div>
 
             <!-- Tabla de Usuarios -->
             <div class="table-responsive bg-white rounded-3 shadow-sm">
@@ -67,13 +73,13 @@
                             <th>REGISTRO</th> <!-- ✅ Campo añadido -->
                             <th>CARGO</th>
                             <th>ROL SISTEMA</th>
-                            <th>ESTADO</th> <!-- ✅ Manejo de estado -->
+                            <th>estatus</th> <!-- ✅ Manejo de estatus -->
                             <th class="text-end pe-4">ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr *ngFor="let employee of filteredEmployees; let i = index"
-                            [ngClass]="{'table-secondary': !employee.estado}">
+                        <tr *ngFor="let employee of filteredEmployees; let i = index; trackBy: trackByCedula"
+                            [ngClass]="{'table-secondary': !employee.estatus}">
                             <td class="ps-4">
                                 <span *ngIf="!employee.editing">{{ employee.cedula }}</span>
                                 <div class="d-flex flex-column align-items-center">
@@ -114,8 +120,9 @@
                             </td>
                             <td class="text-center">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" [checked]="employee.estado"
-                                        (change)="toggleStatus(employee)">
+                                    <input class="form-check-input" type="checkbox" [(ngModel)]="employee.estatus"
+                                        (ngModelChange)="toggleStatus(employee)" [disabled]="employee.loading">
+
                                     <label class="form-check-label">
                                         Activo
                                     </label>
@@ -128,22 +135,23 @@
                                     <i class="bi bi-eye"></i> <!-- Icono de vista -->
                                 </button>
                                 <button *ngIf="!employee.editing" class="btn btn-sm btn-outline-secondary me-1"
-                                    (click)="toggleEdit(i)" title="Editar" [disabled]="employee.estado === false">
+                                    (click)="toggleEdit(i)" title="Editar" [disabled]="employee.estatus === false">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <button *ngIf="employee.editing" class="btn btn-sm me-1"
                                     (click)="saveEmployeeChanges(i)" title="Guardar"
-                                    [ngClass]="{'btn-secondary': !employee.modified || employee.hasErrors || employee.estado === false, 'btn-success': employee.modified && !employee.hasErrors && employee.estado === true}"
+                                    [ngClass]="{'btn-secondary': !employee.modified || employee.hasErrors || employee.estatus === false, 'btn-success': employee.modified && !employee.hasErrors && employee.estatus === true}"
                                     [disabled]="!employee.modified || employee.hasErrors">
                                     <i class="bi bi-check-lg"></i>
                                 </button>
 
                                 <button *ngIf="employee.editing" class="btn btn-sm btn-outline-danger me-1"
-                                    (click)="cancelEdit(i)" title="Cancelar" [disabled]="employee.estado === false">
+                                    (click)="cancelEdit(i)" title="Cancelar" [disabled]="employee.estatus === false">
                                     <i class="bi bi-x-lg"></i>
                                 </button>
                                 <button *ngIf="!employee.editing" class="btn btn-sm btn-outline-danger"
-                                    (click)="deleteEmployee(i)" title="Eliminar" [disabled]="employee.estado === false">
+                                    (click)="deleteEmployee(i)" title="Eliminar"
+                                    [disabled]="employee.estatus === false">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
@@ -167,7 +175,7 @@
         <div class="modal-content">
             <div class="modal-header bg-primary text-center">
                 <h5 class="modal-title w-100">Detalles del Usuario</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close"></button>
             </div>
             <div class="modal-body">
                 <div class="card text-center p-3">
@@ -179,7 +187,8 @@
                         </div>
                     </div>
 
-                    <h4 class="mt-0 text-dark" style="margin-bottom: 5px !important; font-weight: bold !important;">{{ selectedEmployee?.nombre ?? '---' }}</h4>
+                    <h4 class="mt-0 text-dark" style="margin-bottom: 5px !important; font-weight: bold !important;">{{
+                        selectedEmployee?.nombre ?? '---' }}</h4>
                     <p class="text-muted mb-2">{{ selectedEmployee?.cargoNombre ?? '---' }}</p>
 
                     <!-- Datos organizados en dos columnas con tres filas -->
@@ -188,7 +197,7 @@
                             <p class="text-secondary"><strong>Cédula:</strong></p>
                             <p class="text-dark fw-bold">{{ selectedEmployee?.cedula ?? '---' }}</p>
 
-                               <p class="text-secondary"><strong>Fecha de Nacimiento:</strong></p>
+                            <p class="text-secondary"><strong>Fecha de Nacimiento:</strong></p>
                             <p class="text-dark fw-bold">{{ selectedEmployee?.fechaNacimiento ?? '---' }}</p>
 
                             <p class="text-secondary"><strong>Correo:</strong></p>
@@ -201,7 +210,7 @@
 
                             <p class="text-secondary"><strong>Fecha de Registro:</strong></p>
                             <p class="text-dark fw-bold">{{ selectedEmployee?.fechaRegistro ?? '---' }}</p>
-                            
+
                             <p class="text-secondary"><strong>Teléfono:</strong></p>
                             <p class="text-dark fw-bold">{{ selectedEmployee?.telefono ?? '---' }}</p>
                         </div>

@@ -1,18 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TasaComponent } from './tasa.component';
 
-import { VerAtletasComponent } from './ver-atletas.component';
-
-describe('VerAtletasComponent', () => {
-  let component: VerAtletasComponent;
-  let fixture: ComponentFixture<VerAtletasComponent>;
+describe('TasaComponent', () => {
+  let component: TasaComponent;
+  let fixture: ComponentFixture<TasaComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [VerAtletasComponent]
+      imports: [TasaComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(VerAtletasComponent);
+    fixture = TestBed.createComponent(TasaComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
@@ -17,7 +17,10 @@ import { MyAccountComponent } from './my-account/my-account.component';
 import { EmpleadosComponent } from './empleados/empleados.component';
 import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
 import { AcceptTycComponent } from './accept-tyc-component/accept-tyc-component.component';
-import { DynamicModalComponent } from './../shared/dynamic-modal/dynamic-modal.component'
+import { DynamicModalComponent } from './../shared/dynamic-modal/dynamic-modal.component';
+import { TasaComponent } from './tasa-cambiaria/tasa.component';
+import { VerPacientesComponent } from './pacientes/ver-pacientes/ver-pacientes.component';
+import { HistoriasMedicasComponent } from './pacientes/historias-medicas/historias-medicas.component';
 
 // Módulos y servicios
 import { MaterialModule } from '../material.module';
@@ -37,7 +40,10 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
     EmpleadosComponent,
     CrearAtletasComponent,
     AcceptTycComponent,
-    DynamicModalComponent
+    DynamicModalComponent,
+    TasaComponent,
+    VerPacientesComponent,
+    HistoriasMedicasComponent
   ],
   imports: [
     BrowserModule,
@@ -52,6 +58,7 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
   ],
   exports: [
     DynamicModalComponent // ✅ Ahora puede ser usado en otros módulos
+    
   ],
   providers: [
     // Configuración moderna de HttpClient con interceptores funcionales
@@ -60,5 +67,6 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
     )
   ],
   bootstrap: [AppComponent],
+    schemas: [CUSTOM_ELEMENTS_SCHEMA] // ✅ Permite componentes personalizados como mat-chip-list
 })
 export class AppModule { }
