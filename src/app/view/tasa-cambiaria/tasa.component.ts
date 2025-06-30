@@ -3,6 +3,8 @@ import { TasaCambiariaService } from '../../core/services/tasaCambiaria/tasaCamb
 import { Router } from '@angular/router'; // Router para navegación
 import { SwalService } from '../../core/services/swal/swal.service'; // Importa el servicio de SweetAlert2
 import { FormsModule } from '@angular/forms'; // ✅ Importa FormsModule
+import { Modal } from 'bootstrap';
+
 
 @Component({
   selector: 'app-ver-atletas',
@@ -20,6 +22,9 @@ export class TasaComponent implements OnInit {
   menuAbierto: string | null = null;
   popoverActivo: string | null = null;
   nuevaTasaManual: number = 0;
+  historialTasaSeleccionada: any[] = [];
+  simboloSeleccionado: string = '';
+
 
   constructor(private tasaService: TasaCambiariaService) { }
 
@@ -96,6 +101,38 @@ export class TasaComponent implements OnInit {
   }
 
   verHistorial(moneda: string): void {
-    console.log(`Ver historial para ${moneda}`);
+    const tasaSeleccionada = this.tasas.find(t => t.id === moneda);
+
+    if (!tasaSeleccionada) {
+      console.warn('❌ No se encontró la tasa');
+      return;
+    }
+
+    this.simboloSeleccionado = tasaSeleccionada.simbolo;
+this.modalOpen('modalHistorial');
+   /* this.tasaService.getHistorialTasas().subscribe({
+      next: (datos) => {
+        this.historialTasaSeleccionada = datos.filter(
+          item => item.simbolo === tasaSeleccionada.simbolo
+        );
+        this.modalOpen('modalHistorial');
+      },
+      error: (err) => {
+        console.error('❌ Error al obtener el historial:', err);
+      }
+    });*/
   }
+
+
+  modalOpen(id: string): void {
+    const modalElement = document.getElementById(id);
+    if (!modalElement) return;
+
+    const modalInstance = new Modal(modalElement);
+    modalInstance.show();
+  }
+
 }
+
+
+

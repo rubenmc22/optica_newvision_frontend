@@ -90,7 +90,7 @@ export const appRoutes: Routes = [
         title: getFullTitle('pacientes')
       },
         {
-        path: 'historias-medicas',
+        path: 'pacientes/historias',
         component: HistoriasMedicasComponent,
         title: getFullTitle('historias-medicas')
       },

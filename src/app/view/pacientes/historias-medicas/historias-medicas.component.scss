@@ -1,0 +1,46 @@
+@use '../../../../custom-theme.scss' as theme;
+
+.historia-medica-container {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.paciente-header {
+  z-index: 1020;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.historia-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.historia-card:hover {
+  background-color: #f1f1f1;
+}
+
+.historia-card.active {
+  background-color: #e3f2fd;
+  border-left: 4px solid #0d6efd;
+}
+
+.section-title {
+  color: #0d6efd;
+  border-bottom: 1px dashed #dee2e6;
+  padding-bottom: 0.5rem;
+}
+
+.diagnostico-box, .tratamiento-box, .notas-box {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.historia-content {
+  animation: fadeIn 0.3s ease-out;
+}

@@ -22,10 +22,13 @@
 }
 
 .bi-arrow-repeat {
-  font-size: 1.7rem; /* ✅ Aumenta el tamaño del ícono */
-  position: relative;
-  top: -3px; /* ✅ Lo mueve ligeramente hacia abajo */
+    font-size: 1.7rem;
+    /* ✅ Aumenta el tamaño del ícono */
+    position: relative;
+    top: -3px;
+    /* ✅ Lo mueve ligeramente hacia abajo */
 }
+
 small.text-muted {
     font-size: 12px;
 }
@@ -39,4 +42,52 @@ small.text-muted {
 
 .no-spinner {
     -moz-appearance: textfield;
+}
+
+
+//Modal historial
+.modal-content {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+
+    .modal-header {
+        padding: 1.25rem 1.5rem;
+        background: var(--degradado-color) !important;
+        color: white;
+        font-weight: bold;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        font-size: 1rem;
+
+        .form-label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    .btn {
+        background: var(--degradado-color);
+        border: var(--degradado-color);
+        border-left: none;
+        color: #fff;
+        transition: all 0.3s ease;
+    }
+}
+
+.btn-primary {
+    background: var(--degradado-color);
+    border: var(--degradado-color);
+
+    &:hover {
+        background: var(--primary-color) !important;
+    }
+}
+
+
+
+.modal-backdrop {
+    z-index: 1040 !important;
+    opacity: 0.5 !important; // 🔹 Ajustamos opacidad para mejor visualización
 }
