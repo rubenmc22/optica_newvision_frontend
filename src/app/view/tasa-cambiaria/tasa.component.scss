@@ -91,3 +91,31 @@ small.text-muted {
     z-index: 1040 !important;
     opacity: 0.5 !important; // 🔹 Ajustamos opacidad para mejor visualización
 }
+
+.btn-success.btn-sm:hover {
+  box-shadow: 0 0 8px rgba(0, 128, 0, 0.3);
+  transform: scale(1.02);
+  transition: all 0.2s ease-in-out;
+}
+
+.card-primary {
+    background: var(--degradado-pastel) !important;
+}
+
+.card-header {
+    //  text-align: center;
+    font-size: 1.2rem;
+    background: var(--degradado-color) !important;
+    /* Fondo amarillo */
+    color: var(--details-color) !important;
+    /* Texto negro */
+    font-weight: bold;
+    border-bottom: 2px solid var(--secondary-color);
+    /* Línea divisoria negra */
+}
+
+.btn-light{
+    // background: var(--details-color) !important;
+    // border: var(--details-color) !important;
+     //col;
+}

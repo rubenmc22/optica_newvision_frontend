@@ -1,56 +1,81 @@
 <div class="container mt-4">
-  <h2 class="text-center mb-4">💰 Tasa de Cambio</h2>
+  <div class="card shadow-lg card-primary">
+    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+      <h4 class="mb-0">💰 Tasa de Cambio</h4>
+      <div class="ms-auto">
+        <button class="btn btn-light btn-sm" (click)="actualizarYRecargarTasasDesdeBCV()"> <i
+            class="bi bi-cloud-arrow-down-fill me-2"></i> Actualizar desde BCV
 
-  <div class="row">
-    <div *ngFor="let tasa of tasas" class="col-md-6">
-      <div class="card p-4 shadow-lg position-relative">
-        <div class="d-flex justify-content-between align-items-center">
-          <div class="d-flex align-items-center">
-            <h5 class="fw-bold me-2">
-              {{ metodoTasa[tasa.id] === 'manual' ? '(' + tasa.simbolo + ')' + ' ' + tasa.nombre  :  tasa.nombre + ' Oficial BCV' }}
-            </h5>
+        </button>
+      </div>
 
-            <small *ngIf="metodoTasa[tasa.id] === 'manual'" class="text-muted ms-0 fst-italic" style="margin-top: -6px; font-size: 14px;">(Tasa Manual)</small>
-            <button *ngIf="metodoTasa[tasa.id] === 'bcv' && !autoActualizar[tasa.id]"
-              class="btn p-1 border-0 bg-transparent" (click)="actualizarBCV(tasa.id)">
-              <i class="bi bi-arrow-repeat text-success"></i>
-            </button>
+    </div><br>
+
+
+
+    <div class="card-body row">
+      <div *ngFor="let tasa of tasas" class="col-md-6">
+        <div class="card p-4 shadow-lg position-relative">
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <h5 class="fw-bold me-2">
+                {{ metodoTasa[tasa.id] === 'manual' ? '(' + tasa.simbolo + ')' + ' ' + tasa.nombre : tasa.nombre + '
+                Oficial BCV' }}
+              </h5>
+
+              <small *ngIf="metodoTasa[tasa.id] === 'manual'" class="text-muted ms-0 fst-italic"
+                style="margin-top: -6px; font-size: 14px;">(Tasa Manual)</small>
+              <button *ngIf="metodoTasa[tasa.id] === 'bcv' && !autoActualizar[tasa.id]"
+                class="btn p-1 border-0 bg-transparent" (click)="actualizarTasaDesdeBCV(tasa.id)">
+
+              </button>
+            </div>
+          </div>
+
+          <p class="fs-3 text-success">
+            <ng-container *ngIf="!loadingBCV[tasa.id]; else cargandoBCV">
+              {{ metodoTasa[tasa.id] === 'bcv' ? tasa.valor : tasaManual[tasa.id] || 0 }} {{ tasa.simbolo
+              }}
+            </ng-container>
+            <ng-template #cargandoBCV>
+              ⏳ Actualizando...
+            </ng-template>
+          </p>
+
+
+          <!-- ✅ Muestra referencia BCV solo cuando la tasa es manual -->
+          <div class="text-muted small fst-italic">
+            <span class="d-block">Tasa oficial BCV: {{ valorBCV[tasa.id] || 0 }} {{ tasa.simbolo
+              }}</span>
+
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+              Última actualización: {{ metodoTasa[tasa.id] === 'manual' ? fechaActualizacionManual[tasa.id] :
+              tasa.updated_at | date:'dd/MM/yyyy HH:mm' }}
+            </small>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="autoActualizar[tasa.id]"
+                (change)="activarRastreoBCVConSincronizacion(tasa.id)">
+              <label class="form-check-label">Auto</label>
+            </div>
           </div>
         </div>
-
-        <p class="fs-3 text-success">
-          {{ metodoTasa[tasa.id] === 'bcv' ? tasa.valor : tasaManual[tasa.id] || 0 | number:'1.2-2' }} {{ tasa.simbolo
-          }}
-        </p>
-
-        <!-- ✅ Muestra referencia BCV solo cuando la tasa es manual -->
-        <div *ngIf="metodoTasa[tasa.id] === 'manual'" class="text-muted small fst-italic">
-          <span class="d-block">Tasa oficial BCV: {{ tasa.valor | number:'1.2-2' }} {{ tasa.simbolo }}</span>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center">
-          <small class="text-muted">
-            Última actualización: {{ metodoTasa[tasa.id] === 'manual' ? fechaActualizacionManual[tasa.id] :
-            tasa.updated_at | date:'dd/MM/yyyy HH:mm' }}
-          </small>
-          <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" [(ngModel)]="autoActualizar[tasa.id]"
-              (change)="verificarAutoActualizar(tasa.id)">
-            <label class="form-check-label">Auto</label>
-          </div>
-        </div>
-
         <!-- Botón de configuración -->
-        <button class="btn btn-light position-absolute top-0 end-0 mt-2 me-2" (click)="toggleMenu(tasa.id)">⋮</button>
+        <button class="btn btn-sm position-absolute top-0 end-0 mt-2 me-2"
+          (click)="abrirMenu($event, tasa.id)">☰</button>
+
 
         <!-- Menú de configuración adaptado -->
-        <div *ngIf="menuAbierto === tasa.id" class="position-absolute menu top-0 end-0 mt-5 me-2 shadow bg-white p-2 rounded"
+        <div *ngIf="menuAbierto === tasa.id"
+          class="position-absolute menu top-0 end-0 mt-5 me-2 shadow bg-white p-2 rounded"
           (clickOutside)="cerrarMenu()">
           <button *ngIf="metodoTasa[tasa.id] !== 'manual'" class="btn btn-sm btn-primary w-100 mb-1"
             (click)="abrirPopover(tasa.id)">Ingresar Tasa Manual</button>
           <button class="btn btn-sm btn-secondary w-100 mb-1" (click)="verHistorial(tasa.id)">Ver historial</button>
           <button *ngIf="metodoTasa[tasa.id] === 'manual'" class="btn btn-sm btn-success w-100"
-            (click)="actualizarBCV(tasa.id)">Actualizar a Tasa BCV</button>
+            (click)="actualizarTasaDesdeBCV(tasa.id)">Actualizar a Tasa BCV</button>
         </div>
 
         <!-- ✅ Modal flotante mejorado -->
@@ -69,7 +94,7 @@
 </div>
 
 
-       <!-- Modal historial tasas -->
+<!-- Modal historial tasas -->
 <div class="modal fade" id="modalHistorial" tabindex="-1" aria-labelledby="historialLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content shadow">

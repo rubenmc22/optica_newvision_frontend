@@ -19,23 +19,38 @@ export class TasaCambiariaService {
     return this.http.get<any>(`${environment.apiUrl}/tasas/`);
   }
 
-  setTasaManual(id: string, valor: number, metodo: string, fecha: string): Observable<any> {
+  getTasaActual_id(id: string): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/tasas/${id}`);
+  }
+
+  getTasaAutomaticaBCV(): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/get-tasa-bcv/`);
+  }
+
+  updateTasaManual(id: string, valor: number, metodo: string, fecha: string): Observable<any> {
     return this.http.put(`${environment.apiUrl}/tasas-update/${id}`, { valor, metodo, fecha });
   }
 
+  updateTasaBCV(): Observable<any> {
+    return this.http.put(`${environment.apiUrl}/tasas-update-with-bcv/`, {});
+  }
 
-  getHistorialTasas(anio?: number, mes?: number, dia?: number): Observable<any[]> {
-    let url = `${environment.apiUrl}/historial`;
+  activarRastreoAutoamticoBCV(id: string, rastrear_auto: boolean): Observable<any> {
+    return this.http.put(`${environment.apiUrl}/tasas-rastreo-automatico/${id}`, { rastrear_auto });
+  }
 
-    const params = [];
-    if (anio) params.push(`anio=${anio}`);
-    if (mes) params.push(`mes=${mes}`);
-    if (dia) params.push(`dia=${dia}`);
+  getHistorialTasas(id: string): Observable<any[]> {
+    let url = `${environment.apiUrl}/tasas-history/${id}`;
 
-    if (params.length > 0) {
-      url += `?${params.join('&')}`; // ✅ Construye la URL con filtros dinámicos
-    }
-
+    /* const params = [];
+     if (anio) params.push(`anio=${anio}`);
+     if (mes) params.push(`mes=${mes}`);
+     if (dia) params.push(`dia=${dia}`);
+ 
+     if (params.length > 0) {
+       url += `?${params.join('&')}`; // ✅ Construye la URL con filtros dinámicos
+     }
+ */
     return this.http.get<any[]>(url);
   }
 

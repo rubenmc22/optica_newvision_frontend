@@ -78,8 +78,6 @@ export interface Empleado {
   originalValues: null;
 }
 
-
-
 export interface ApiResponse {
   message: string;
   empleados: Empleado[];
@@ -88,4 +86,15 @@ export interface ApiResponse {
 export interface TycCheck {
   hasAcceptedTyC: boolean | number;
 }
+
+export interface Tasa {
+  id: string;
+  valor: number;
+  updated_at: string;
+  simbolo?: string;
+  nombre?: string;
+  metodo?: string;
+  rastreo_bcv?: boolean;
+}
+
 

@@ -4,6 +4,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http'; // Cambio clave aquí
 import { ScrollingModule } from '@angular/cdk/scrolling'; // ✅ Importa el módulo necesario
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 // Componentes
 import { AppComponent } from '../app.component';
@@ -26,6 +27,7 @@ import { HistoriasMedicasComponent } from './pacientes/historias-medicas/histori
 import { MaterialModule } from '../material.module';
 import { appRoutes } from '../app.routes';
 import { authInterceptor } from '../core/interceptors/auth.interceptor';
+import { ClickOutsideDirective } from '../directives/click-outside.directive';
 
 @NgModule({
   declarations: [
@@ -43,7 +45,9 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
     DynamicModalComponent,
     TasaComponent,
     VerPacientesComponent,
-    HistoriasMedicasComponent
+    HistoriasMedicasComponent,
+    ClickOutsideDirective, // ✅ ahora sí podés declararla acá
+    
   ],
   imports: [
     BrowserModule,
@@ -51,6 +55,7 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
     MaterialModule,
     FormsModule,
     ScrollingModule, // ✅ Agregarlo aquí
+    BrowserAnimationsModule,
     RouterModule.forRoot(appRoutes, {
       onSameUrlNavigation: 'reload',
       bindToComponentInputs: true // Nueva feature de Angular 16+
