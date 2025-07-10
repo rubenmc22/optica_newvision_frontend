@@ -97,4 +97,37 @@ export interface Tasa {
   rastreo_bcv?: boolean;
 }
 
+export interface HistorialTasa {
+  id: number;
+  valor_nuevo: number;
+  tipo_cambio: string;
+  updated_at: string;
+  usuario: {
+    cedula: string;
+    nombre: string;
+  };
+}
+
+export interface RedSocial {
+  platform: string;
+  username: string;
+}
+
+export interface Paciente {
+  id: string;
+  nombreCompleto: string;
+  cedula: string;
+  telefono: string;
+  email: string;
+  fechaNacimiento: string;
+  edad: number;
+  ocupacion: string;
+  genero: '' | 'Masculino' | 'Femenino' | 'Otro';
+  direccion: string;
+  fechaRegistro: string;
+  redesSociales: RedSocial[];
+  sede: 'guatire' | 'guarenas';
+}
+
+
 

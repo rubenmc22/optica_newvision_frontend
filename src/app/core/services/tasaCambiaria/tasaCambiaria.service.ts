@@ -4,7 +4,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators'; // Importa el operador map
 import { environment } from '../../../../environments/environment';
-//import { Empleado, ApiResponse } from '../../../Interfaces/models-interface';
+import { HistorialTasa} from '../../../Interfaces/models-interface';
 
 @Injectable({
   providedIn: 'root'
@@ -39,20 +39,11 @@ export class TasaCambiariaService {
     return this.http.put(`${environment.apiUrl}/tasas-rastreo-automatico/${id}`, { rastrear_auto });
   }
 
-  getHistorialTasas(id: string): Observable<any[]> {
-    let url = `${environment.apiUrl}/tasas-history/${id}`;
+getHistorialTasas(id: string): Observable<{ message: string; historial: HistorialTasa[] }> {
+  const url = `${environment.apiUrl}/tasas-history/${id}`;
+  return this.http.get<{ message: string; historial: HistorialTasa[] }>(url);
+}
 
-    /* const params = [];
-     if (anio) params.push(`anio=${anio}`);
-     if (mes) params.push(`mes=${mes}`);
-     if (dia) params.push(`dia=${dia}`);
- 
-     if (params.length > 0) {
-       url += `?${params.join('&')}`; // ✅ Construye la URL con filtros dinámicos
-     }
- */
-    return this.http.get<any[]>(url);
-  }
 
 }
 

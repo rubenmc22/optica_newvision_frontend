@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { TasaCambiariaService } from '../../core/services/tasaCambiaria/tasaCambiaria.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Modal } from 'bootstrap';
-import { Tasa } from '../../Interfaces/models-interface';
+import { Tasa, HistorialTasa } from '../../Interfaces/models-interface';
 
 @Component({
   selector: 'app-ver-atletas',
@@ -24,6 +24,7 @@ export class TasaComponent implements OnInit {
   simboloSeleccionado: string = '';
   loadingBCV: { [key: string]: boolean } = {};
   valorBCV: { [key: string]: number } = {};
+  bcvDisponible: { [key: string]: boolean } = {};
 
 
 
@@ -67,8 +68,8 @@ export class TasaComponent implements OnInit {
     this.tasaService.getTasaAutomaticaBCV().subscribe({
       next: (res: { tasa: { [key: string]: number } }) => {
         Object.entries(res.tasa).forEach(([monedaId, valorBCV]) => {
-          console.log('RDMD Dentro de valorBCV', valorBCV);
           this.valorBCV[monedaId] = valorBCV;
+          this.bcvDisponible[monedaId] = true;
         });
       },
       error: () => {
@@ -76,9 +77,15 @@ export class TasaComponent implements OnInit {
           duration: 3000,
           panelClass: ['snackbar-warning']
         });
+
+        // ❌ Marca todos como no disponibles
+        this.tasas.forEach(tasa => {
+          this.bcvDisponible[tasa.id] = false;
+        });
       }
     });
   }
+
 
   actualizarYRecargarTasasDesdeBCV(): void {
     this.tasaService.updateTasaBCV().subscribe({
@@ -252,21 +259,39 @@ export class TasaComponent implements OnInit {
   }
 
   abrirMenu(event: MouseEvent, monedaId: string): void {
-  event.stopPropagation(); // ✋ Evita que la apertura dispare cierre por clickOutside
-  this.menuAbierto = monedaId;
-}
+    event.stopPropagation(); // ✋ Evita que la apertura dispare cierre por clickOutside
+    this.menuAbierto = monedaId;
+  }
 
   cerrarMenu(): void {
     this.menuAbierto = null;
   }
 
-  verHistorial(moneda: string): void {
-    const tasaSeleccionada = this.tasas.find(t => t.id === moneda);
+  verHistorial(monedaId: string): void {
+    const tasaSeleccionada = this.tasas.find(t => t.id === monedaId);
     if (!tasaSeleccionada) return;
 
     this.simboloSeleccionado = tasaSeleccionada.simbolo;
-    this.modalOpen('modalHistorial');
+
+    this.tasaService.getHistorialTasas(monedaId).subscribe({
+      next: (res) => {
+        this.historialTasaSeleccionada = res.historial.map(item => ({
+          usuario: item.usuario.nombre,
+          fecha: item.updated_at,
+          valor: item.valor_nuevo,
+          metodo: item.tipo_cambio?.toLowerCase().includes('bcv') ? 'bcv' : 'manual'
+        }));
+        this.modalOpen('modalHistorial');
+      },
+      error: () => {
+        this.snackBar.open(`⚠️ No se pudo cargar historial para ${monedaId}`, 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-warning']
+        });
+      }
+    });
   }
+
 
   modalOpen(id: string): void {
     const modalElement = document.getElementById(id);

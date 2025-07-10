@@ -22,16 +22,33 @@ export class HistoriasMedicasComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private pacientesService: PacientesService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
-    this.idPaciente = this.route.snapshot.params['id'];
-    this.cargarDatos();
+    this.route.paramMap.subscribe(params => {
+      const idPaciente = params.get('id');
+      if (idPaciente) {
+        // 🚀 Cargar historial específico
+        this.cargarHistorialDePaciente(idPaciente);
+      } else {
+        // 🗂 Mostrar vista general o mensaje
+        this.mostrarVistaGeneralDeHistorias();
+      }
+    });
   }
+
+  cargarHistorialDePaciente(idPaciente: string): void {
+
+  }
+
+  mostrarVistaGeneralDeHistorias(): void {
+
+  }
+
 
   cargarDatos(): void {
     this.cargando = true;
-    
+
     // Cargar datos del paciente y sus historias en paralelo
     forkJoin([
       this.pacientesService.getPaciente(this.idPaciente),
@@ -41,7 +58,7 @@ export class HistoriasMedicasComponent implements OnInit {
         this.paciente = paciente;
         this.historias = historias;
         this.cargando = false;
-        
+
         // Mostrar vista previa de la última historia si existe
         if (this.historias.length > 0) {
           this.verHistoriaDetalle(this.historias[0]);
@@ -54,7 +71,7 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
-   // Método para calcular edad (versión en componente)
+  // Método para calcular edad (versión en componente)
   calcularEdad(fechaNacimiento: string): number {
     return this.pacientesService.calcularEdad(fechaNacimiento);
   }
@@ -62,7 +79,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
   verHistoriaDetalle(historia: any): void {
     this.historiaSeleccionada = historia;
-    
+
     // Animación o efecto visual al seleccionar
     document.querySelectorAll('.historia-card').forEach(el => {
       el.classList.remove('active');

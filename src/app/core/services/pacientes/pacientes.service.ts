@@ -15,20 +15,25 @@ export class PacientesService {
   constructor(private http: HttpClient) { }
 
   getPacientes(): Observable<any> {
-    return this.http.get(environment.apiUrl);
+    return this.http.get(`${environment.apiUrl}/paciente-get/`);
   }
 
   createPaciente(paciente: any): Observable<any> {
-    return this.http.post(environment.apiUrl, paciente);
+    return this.http.post(`${environment.apiUrl}/paciente-add`, paciente);
   }
 
-  updatePaciente(id: string, paciente: any): Observable<any> {
-    return this.http.put(`${environment.apiUrl}/${id}`, paciente);
+  updatePaciente(clavePaciente: string, payload: any): Observable<any> {
+    // console.log('RDMC Dentro de id', id);
+    console.log('RDMC Dentro de paciente', payload);
+    return this.http.put(`${environment.apiUrl}/paciente-update/${clavePaciente}`, payload);
+
   }
 
-  deletePaciente(id: string): Observable<any> {
-    return this.http.delete(`${environment.apiUrl}/${id}`);
+  deletePaciente(clavePaciente: string): Observable<any> {
+    return this.http.delete(`${environment.apiUrl}/paciente-delete/${clavePaciente}`);
   }
+
+
 
   // Para detalle completo (usado en historias médicas)
   getPaciente(id: string): Observable<any> {

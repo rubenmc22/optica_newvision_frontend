@@ -6,7 +6,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import * as bootstrap from 'bootstrap';
 import { ModalService } from './../../../core/services/modal/modal.service';
-
+import { Paciente } from '../../../Interfaces/models-interface';
+import { C } from 'node_modules/@angular/cdk/portal-directives.d-a65be59b';
 
 @Component({
   selector: 'app-ver-pacientes',
@@ -16,17 +17,31 @@ import { ModalService } from './../../../core/services/modal/modal.service';
 })
 
 export class VerPacientesComponent implements OnInit {
+  // Propiedades del componente
   formPaciente: FormGroup;
-  pacientes: any[] = [];
-  filtro: string = '';
-  modoEdicion: boolean = false;
+  pacientes: Paciente[] = [];
+  pacienteSeleccionado: any = null;
   pacienteEditando: any = null;
+  pacienteFormulario: Paciente = this.crearPacienteVacio();
   formOriginal: any = {};
+
+  // Estado y configuración
+  modoEdicion: boolean = false;
+  sedeActiva: 'guatire' | 'guarenas' = 'guarenas'; //Aca colocar las sede escogida en el login del sistema
+  sedeFiltro: string = this.sedeActiva;
+  filtro: string = '';
+  ordenActual: keyof Paciente = 'nombreCompleto';
+  ordenAscendente: boolean = true;
+
+  // Redes sociales
   listaRedes: string[] = ['Facebook', 'Twitter', 'Instagram', 'LinkedIn', 'TikTok'];
   nuevaRed: string = '';
   nuevoUsuario: string = '';
   usuarioInputHabilitado: boolean = false;
-  pacienteSeleccionado: any = null;
+redesEditables: boolean[] = [];
+
+
+
 
   constructor(
     private fb: FormBuilder,
@@ -50,98 +65,150 @@ export class VerPacientesComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    //   this.cargarPacientes();
-    this.cargarPacientesMock();
+    this.cargarPacientes();
     this.cdRef.detectChanges();
   }
 
+  // Métodos de acceso
   get redesSociales(): FormArray {
     return this.formPaciente.get('redesSociales') as FormArray;
   }
 
+  formatearFecha(fechaIso: string): string {
+    if (!fechaIso || typeof fechaIso !== 'string') return 'Fecha inválida';
+
+    // Evita formatear si ya está en formato DD/MM/YYYY
+    if (fechaIso.includes('/') && !fechaIso.includes('T')) return fechaIso;
+
+    const fechaLimpiada = fechaIso.split('T')[0]; // elimina hora si está presente
+    const [anio, mes, dia] = fechaLimpiada.split('-');
+    return `${dia}/${mes}/${anio}`;
+  }
+
+  // Métodos de carga de datos
   cargarPacientes(): void {
     this.pacientesService.getPacientes().subscribe({
       next: (data) => {
-        this.pacientes = data;
+        this.pacientes = Array.isArray(data.pacientes)
+          ? data.pacientes.map((p: any) => ({
+            id: p.key, // ✅ usa el mismo ID que luego usamos para reemplazar
+            nombreCompleto: p.nombre,
+            cedula: p.cedula,
+            telefono: p.telefono,
+            email: p.email,
+            fechaNacimiento: p.fecha_nacimiento,
+            edad: this.calcularEdad(p.fecha_nacimiento),
+            ocupacion: p.ocupacion,
+            genero: p.genero === 'm' ? 'Masculino' : p.genero === 'f' ? 'Femenino' : 'Otro',
+            direccion: p.direccion,
+            sede: p.sede?.id ?? 'sin-sede',
+            fechaRegistro: this.formatearFecha(p.created_at),
+            redesSociales: p.redes_sociales || []
+          }))
+          : [];
       },
       error: (error) => {
         console.error('Error al cargar pacientes:', error);
-        this.swalService.showError('Error', ' No se han podido cargar los pacientes');
+        this.swalService.showError('Error', 'No se han podido cargar los pacientes');
+        this.pacientes = [];
       }
     });
   }
 
-  // Datos mock para pacientes
-  cargarPacientesMock(): void {
-    this.pacientes = [
-      {
-        id: '1',
-        nombreCompleto: 'María González',
-        cedula: '123456789',
-        telefono: '3001234567',
-        email: 'maria@example.com',
-        fechaNacimiento: '1985-05-15',
-        edad: 38,
-        ocupacion: 'Ingeniera',
-        genero: 'Femenino',
-        direccion: 'Calle 123 #45-67',
-        fechaRegistro: '2023-01-10',
-        redesSociales: [
-          { platform: 'Facebook', username: 'maria.gonzalez' },
-          { platform: 'Instagram', username: '@maria.g' }
-        ]
-      },
-      {
-        id: '2',
-        nombreCompleto: 'Carlos Pérez',
-        cedula: '987654321',
-        telefono: '3107654321',
-        email: 'carlos@example.com',
-        fechaNacimiento: '1990-11-22',
-        edad: 33,
-        ocupacion: 'Médico',
-        genero: 'Masculino',
-        direccion: 'Avenida 5 #12-34',
-        fechaRegistro: '2023-02-15',
-        redesSociales: [
-          { platform: 'Twitter', username: '@carlos_p' },
-          { platform: 'LinkedIn', username: 'carlos-perez' }
-        ]
-      },
-      {
-        id: '3',
-        nombreCompleto: 'Ana Rodríguez',
-        cedula: '456789123',
-        telefono: '3204567890',
-        email: 'ana@example.com',
-        fechaNacimiento: '1978-08-30',
-        edad: 45,
-        ocupacion: 'Abogada',
-        genero: 'Femenino',
-        direccion: 'Carrera 7 #89-10',
-        fechaRegistro: '2023-03-20',
-        redesSociales: []
+  // Métodos de filtrado y ordenación
+  pacientesFiltrados(): Paciente[] {
+    // Si no es un array, retornar array vacío
+    if (!Array.isArray(this.pacientes)) {
+      console.warn('this.pacientes no es un array:', this.pacientes);
+      return [];
+    }
+
+    const filtroText = this.filtro.trim().toLowerCase();
+    //console.log('Pacientes:', this.pacientes);
+
+    return this.pacientes.filter(paciente => {
+      const esSedeActiva = paciente.sede === this.sedeActiva;
+      const esOtraSede = paciente.sede !== this.sedeActiva;
+
+      let mostrar = false;
+      if (this.sedeFiltro === this.sedeActiva) {
+        mostrar = esSedeActiva;
+      } else if (this.sedeFiltro === 'otra') {
+        mostrar = esOtraSede;
+      } else {
+        mostrar = true;
       }
-    ];
+
+      //  console.log('PACIENTE', paciente);
+      const coincideTexto =
+        paciente.nombreCompleto.toLowerCase().includes(filtroText) ||
+        paciente.cedula.includes(filtroText);
+
+      return mostrar && coincideTexto;
+    });
   }
 
-  pacientesFiltrados(): any[] {
-    return this.pacientes.filter(paciente =>
-      paciente.nombreCompleto.toLowerCase().includes(this.filtro.toLowerCase()) ||
-      paciente.cedula.includes(this.filtro)
-    );
+  ordenarPor(campo: keyof Paciente): void {
+    if (this.ordenActual === campo) {
+      this.ordenAscendente = !this.ordenAscendente;
+    } else {
+      this.ordenActual = campo;
+      this.ordenAscendente = true;
+    }
+
+    this.pacientes.sort((a, b) => {
+      const valorA = a[campo] ?? '';
+      const valorB = b[campo] ?? '';
+
+      if (typeof valorA === 'string' && typeof valorB === 'string') {
+        return this.ordenAscendente
+          ? valorA.localeCompare(valorB)
+          : valorB.localeCompare(valorA);
+      }
+
+      if (typeof valorA === 'number' && typeof valorB === 'number') {
+        return this.ordenAscendente ? valorA - valorB : valorB - valorA;
+      }
+
+      return 0;
+    });
   }
 
+  calcularEdad(fechaNac: string): number {
+    const nacimiento = new Date(fechaNac);
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const mes = hoy.getMonth() - nacimiento.getMonth();
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+    return edad;
+  }
+
+  // Métodos CRUD de pacientes
   crearPaciente(): void {
     if (this.formPaciente.invalid) {
       this.marcarCamposComoTouched();
       return;
     }
 
+    const mapGenero = this.formPaciente.value.genero === 'Masculino'
+      ? 'm'
+      : this.formPaciente.value.genero === 'Femenino'
+        ? 'f'
+        : 'otro'; // o null si el backend lo valida diferente
+
     const nuevoPaciente = {
       ...this.formPaciente.value,
-      fechaRegistro: new Date().toISOString()
+      nombreCompleto: this.formPaciente.value.nombreCompleto,
+      genero: mapGenero,
+      redesSociales: this.redesSociales.value,
+     // fechaRegistro: this.formatearFecha(this.formPaciente.value.fechaRegistro)
     };
+   // delete nuevoPaciente.nombreCompleto;
+
+
+     console.log('PACIENTE ', nuevoPaciente);
 
     this.pacientesService.createPaciente(nuevoPaciente).subscribe({
       next: (response) => {
@@ -161,32 +228,29 @@ export class VerPacientesComponent implements OnInit {
     this.modoEdicion = true;
     this.pacienteEditando = paciente;
 
-    // Guardar valores originales para comparación
     this.formOriginal = JSON.parse(JSON.stringify({
       nombreCompleto: paciente.nombreCompleto,
       cedula: paciente.cedula,
       telefono: paciente.telefono,
       email: paciente.email,
-      fechaNacimiento: paciente.fechaNacimiento,
+      fechaNacimiento: paciente.fecha_nacimiento,
       ocupacion: paciente.ocupacion,
       genero: paciente.genero,
       direccion: paciente.direccion,
       redesSociales: paciente.redesSociales || []
     }));
 
-    // Cargar datos en el formulario
     this.formPaciente.patchValue({
       nombreCompleto: paciente.nombreCompleto,
       cedula: paciente.cedula,
       telefono: paciente.telefono,
       email: paciente.email,
-      fechaNacimiento: paciente.fechaNacimiento,
+      fechaNacimiento: paciente.fecha_nacimiento,
       ocupacion: paciente.ocupacion,
       genero: paciente.genero,
       direccion: paciente.direccion
     });
 
-    // Cargar redes sociales
     this.redesSociales.clear();
     if (paciente.redesSociales) {
       paciente.redesSociales.forEach((red: any) => {
@@ -197,7 +261,7 @@ export class VerPacientesComponent implements OnInit {
       });
     }
 
-    this.openModalAgregar('modalAgregarPaciente');
+    this.abrirModalEditarPaciente(paciente);
   }
 
   actualizarPaciente(): void {
@@ -205,23 +269,93 @@ export class VerPacientesComponent implements OnInit {
       return;
     }
 
+    const pacienteFormValue = this.formPaciente.value;
+    const mapGenero = pacienteFormValue.genero === 'Masculino'
+      ? 'm'
+      : pacienteFormValue.genero === 'Femenino'
+        ? 'f'
+        : 'otro';
+
     const datosActualizados = {
-      ...this.formPaciente.value,
-      id: this.pacienteEditando.id
+      nombreCompleto: pacienteFormValue.nombreCompleto,
+      cedula: pacienteFormValue.cedula,
+      telefono: pacienteFormValue.telefono || null,
+      email: pacienteFormValue.email || null,
+      fechaNacimiento: pacienteFormValue.fechaNacimiento,
+      ocupacion: pacienteFormValue.ocupacion || null,
+      genero: mapGenero,
+      direccion: pacienteFormValue.direccion || null,
+      redesSociales: this.redesSociales.controls.map(control => ({
+        platform: control.get('platform')?.value,
+        username: control.get('username')?.value
+      }))
     };
 
-    this.pacientesService.updatePaciente(this.pacienteEditando.id, datosActualizados).subscribe({
+    console.log('Enviando al backend:', datosActualizados);
+
+    const clavePaciente = `${this.sedeActiva}-${datosActualizados.cedula}`;
+
+    this.pacientesService.updatePaciente(clavePaciente, datosActualizados).subscribe({
       next: (response) => {
-        const index = this.pacientes.findIndex(p => p.id === this.pacienteEditando.id);
+        const paciente = response.paciente;
+
+        const transformado = {
+          ...paciente,
+          id: paciente.key,
+          nombreCompleto: paciente.nombre,
+          genero: paciente.genero === 'm' ? 'Masculino' : paciente.genero === 'f' ? 'Femenino' : 'Otro',
+          sede: paciente.sede_id,
+          fechaRegistro: this.formatearFecha(paciente.updated_at),
+          fechaNacimiento: paciente.fecha_nacimiento, // ✅ deja formato ISO
+          edad: this.calcularEdad(paciente.fecha_nacimiento), // ✅ calcula edad
+          redesSociales: paciente.redes_sociales || []
+        };
+
+
+        const index = this.pacientes.findIndex(p => p.id === paciente.key);
         if (index !== -1) {
-          this.pacientes[index] = response;
+          this.pacientes[index] = transformado;
+        } else {
+          this.pacientes.push(transformado); // fallback si no lo encuentra
         }
+
+        this.pacientes = [...this.pacientes];
+        this.pacienteSeleccionado = transformado;
+        this.cdRef.detectChanges();
         this.cerrarModal('modalAgregarPaciente');
         this.swalService.showSuccess('¡Actualización exitosa!', 'El Paciente se ha actualizado correctamente.');
       },
       error: (error) => {
         console.error('Error al actualizar paciente:', error);
         this.swalService.showError('Error', 'No se ha podido actualizar al paciente');
+      }
+    });
+  }
+
+  eliminarPaciente(id: string): void {
+    const paciente = this.pacientes.find(p => p.id === id);
+    if (!paciente) return;
+
+    const sedeId = 'guatire'; // O usa this.sedeActiva si ya lo tienes dinámico
+    const clavePaciente = `${sedeId}-${paciente.cedula}`;
+
+    this.modalService.openGlobalModal(
+      'Eliminar Paciente',
+      `¿Está seguro que desea eliminar al paciente ${paciente.nombreCompleto}?`,
+      'Eliminar',
+      'Cancelar'
+    ).then((confirmed: boolean) => {
+      if (confirmed) {
+        this.pacientesService.deletePaciente(clavePaciente).subscribe({
+          next: () => {
+            this.pacientes = this.pacientes.filter(p => p.id !== id);
+            this.swalService.showSuccess('¡Eliminación exitosa!', 'Se ha eliminado al paciente correctamente.');
+          },
+          error: (error) => {
+            console.error('Error al eliminar paciente:', error);
+            this.swalService.showError('Error', 'No se ha podido eliminar al paciente');
+          }
+        });
       }
     });
   }
@@ -239,12 +373,14 @@ export class VerPacientesComponent implements OnInit {
     this.usuarioInputHabilitado = !!this.nuevaRed;
   }
 
+  
   addRedSocial(platform: string, username: string): void {
     if (platform && username) {
       this.redesSociales.push(this.fb.group({
         platform: [platform],
         username: [username]
       }));
+         this.redesEditables.push(false); // ✅ sincroniza la lógica editable
       this.nuevaRed = '';
       this.nuevoUsuario = '';
       this.usuarioInputHabilitado = false;
@@ -266,9 +402,67 @@ export class VerPacientesComponent implements OnInit {
     }
   }
 
-  // Métodos para el modal
-  openModalAgregar(id: string): void {
-    const modalElement = document.getElementById(id);
+  toggleEdicionUsername(index: number): void {
+  this.redesEditables[index] = !this.redesEditables[index];
+
+  if (!this.redesEditables[index]) {
+    // Si se cerró edición, marca como touched y dirty para validar
+    const control = this.redesSociales.at(index).get('username');
+    control?.markAsTouched();
+    control?.markAsDirty();
+  }
+}
+
+
+  // Métodos para modales
+  abrirModalAgregarPaciente(): void {
+    this.modoEdicion = false;
+    this.formPaciente.reset(this.crearPacienteVacio());
+
+    const modalElement = document.getElementById('modalAgregarPaciente');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  abrirModalEditarPaciente(paciente: Paciente): void {
+    this.modoEdicion = true;
+    this.pacienteEditando = paciente;
+    this.formPaciente.patchValue(paciente);
+    this.redesEditables = this.redesSociales.controls.map(() => false);
+
+
+    const modalElement = document.getElementById('modalAgregarPaciente');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  abrirModalVisualizacionPaciente(paciente: Paciente): void {
+    console.log('abrirModalVisualizacionPaciente', paciente);
+
+    const pacienteTransformado = {
+      ...paciente,
+      fechaNacimiento: this.formatearFecha(paciente.fechaNacimiento || paciente.fechaNacimiento),
+      fechaRegistro: this.formatearFecha(paciente.fechaRegistro || paciente.fechaRegistro),
+      redesSociales: paciente.redesSociales || paciente.redesSociales || [],
+
+    };
+
+    this.pacienteSeleccionado = pacienteTransformado;
+
+    /*this.redesSocialesEditables = pacienteTransformado.redesSociales.map((red: { platform: string; username: string }) => ({
+      platform: red.platform,
+      username: red.username,
+      editable: false
+    }));*/
+
+    console.log('pacienteTransformado', pacienteTransformado);
+    //  this.pacienteSeleccionado = paciente;
+
+    const modalElement = document.getElementById('verPacienteModal');
     if (modalElement) {
       const modal = new bootstrap.Modal(modalElement);
       modal.show();
@@ -285,8 +479,44 @@ export class VerPacientesComponent implements OnInit {
 
     this.resetearFormulario();
   }
+
+  cerrarModalVisualizacion(): void {
+    this.pacienteSeleccionado = null;
+    this.cerrarModal('verPacienteModal');
+  }
+
+  // Métodos de utilidad
+  crearPacienteVacio(): Paciente {
+    return {
+      id: '',
+      nombreCompleto: '',
+      cedula: '',
+      telefono: '',
+      email: '',
+      fechaNacimiento: '',
+      edad: 0,
+      ocupacion: '',
+      genero: '',
+      direccion: '',
+      fechaRegistro: '',
+      redesSociales: [],
+      sede: this.sedeActiva
+    };
+  }
+
   resetearFormulario(): void {
-    this.formPaciente.reset();
+    this.formPaciente.reset({
+      nombreCompleto: '',
+      cedula: '',
+      telefono: '',
+      email: '',
+      fechaNacimiento: '',
+      ocupacion: '',
+      genero: '', // ← esto fuerza "Seleccionar"
+      direccion: '',
+      redesSociales: []
+    });
+
     this.redesSociales.clear();
     this.modoEdicion = false;
     this.pacienteEditando = null;
@@ -296,18 +526,27 @@ export class VerPacientesComponent implements OnInit {
     this.usuarioInputHabilitado = false;
   }
 
-  // Métodos de validación
   formularioModificado(): boolean {
     if (!this.modoEdicion) return true;
 
-    // Verificar cambios en campos básicos
     const formActual = this.formPaciente.value;
-    const camposModificados = Object.keys(this.formOriginal).some(
-      key => key !== 'redesSociales' &&
-        formActual[key] !== this.formOriginal[key]
-    );
 
-    // Verificar cambios en redes sociales
+    const camposModificados = Object.keys(this.formOriginal).some(key => {
+      if (key === 'redesSociales') return false;
+
+      const valorActual = key === 'fechaNacimiento'
+        ? this.normalizarFechaParaComparar(formActual[key])
+        : formActual[key];
+
+      const valorOriginal = key === 'fechaNacimiento'
+        ? this.normalizarFechaParaComparar(this.formOriginal[key])
+        : this.formOriginal[key];
+
+      console.log('valorActual', valorActual);
+      console.log('valorOriginal', valorOriginal);
+      return valorActual !== valorOriginal;
+    });
+
     const redesModificadas = !this.arraysIguales(
       this.redesSociales.value,
       this.formOriginal.redesSociales
@@ -316,30 +555,16 @@ export class VerPacientesComponent implements OnInit {
     return camposModificados || redesModificadas;
   }
 
-  eliminarPaciente(id: string): void {
-    const paciente = this.pacientes.find(p => p.id === id);
-    if (!paciente) return;
 
-    this.modalService.openGlobalModal(
-      'Eliminar Paciente',
-      `¿Está seguro que desea eliminar al paciente ${paciente.nombreCompleto}?`,
-      'Eliminar',
-      'Cancelar'
-    ).then((confirmed: boolean) => {
-      if (confirmed) {
-        this.pacientesService.deletePaciente(id).subscribe({
-          next: () => {
-            this.pacientes = this.pacientes.filter(p => p.id !== id);
-            this.swalService.showSuccess('¡Eliminación exitosa!', 'Se ha eliminado al paciente correctamente.');
-          },
-          error: (error) => {
-            console.error('Error al eliminar paciente:', error);
-            this.swalService.showError('Error', 'No se ha podido eliminar al paciente');
-          }
-        });
-      }
-    });
+  normalizarFechaParaComparar(fecha: string): string {
+    if (!fecha || typeof fecha !== 'string') return '';
+    if (fecha.includes('/')) {
+      const [dia, mes, anio] = fecha.split('/');
+      return `${anio}-${mes}-${dia}`; // convierte a ISO para comparación
+    }
+    return fecha; // ya es ISO
   }
+
 
   arraysIguales(a: any[], b: any[]): boolean {
     if (a?.length !== b?.length) return false;
@@ -361,35 +586,29 @@ export class VerPacientesComponent implements OnInit {
   }
 
   mostrarMensaje(mensaje: string, tipo: 'success' | 'error' | 'info'): void {
-    // Implementa tu sistema de notificaciones aquí
     alert(`${tipo.toUpperCase()}: ${mensaje}`);
   }
 
-  // ver-pacientes.component.ts
+  // Navegación
   verHistorias(idPaciente: string): void {
-    // Guardar el estado actual (scroll, filtros, etc.)
     sessionStorage.setItem('pacientesListState', JSON.stringify({
       scrollPosition: window.scrollY,
       filtroActual: this.filtro
     }));
 
-    // Navegar al módulo de historias
-    this.router.navigate(['/pacientes/historias', idPaciente]);
+    this.router.navigate(['/pacientes-historias', idPaciente]);
   }
 
-  // Método para abrir el modal de visualización
-  verPaciente(paciente: any): void {
-    this.pacienteSeleccionado = paciente;
-
-    // Abrir el modal
-    this.openModalAgregar('verPacienteModal');
+  generarLinkRedSocial(platform: string, username: string): string {
+    switch (platform.toLowerCase()) {
+      case 'facebook':
+        return `https://facebook.com/${username.replace('@', '')}`;
+      case 'instagram':
+        return `https://instagram.com/${username.replace('@', '')}`;
+      default:
+        return '#';
+    }
   }
 
-  // Método para cerrar el modal
-  cerrarModalVisualizacion(): void {
-    this.pacienteSeleccionado = null;
-
-    this.cerrarModal('verPacienteModal');
-  }
 
 }

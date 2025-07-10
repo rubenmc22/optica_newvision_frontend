@@ -3,52 +3,112 @@
         <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
             <h4 class="mb-0">👨‍⚕️ Pacientes</h4>
             <div class="ms-auto">
-                <button class="btn btn-light btn-sm" (click)="openModalAgregar('modalAgregarPaciente')">➕ Agregar
-                    Paciente</button>
+                <button class="btn btn-light btn-sm" (click)="abrirModalAgregarPaciente()">
+                    ➕ Agregar Paciente
+                </button>
             </div>
         </div>
 
         <div class="card-body">
-            <div class="mb-3">
-                <input type="text" class="form-control" placeholder="Buscar pacientes..." [(ngModel)]="filtro">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="filtroSede" class="form-label">📍 Filtrar por sede</label>
+                    <select id="filtroSede" class="form-select" [(ngModel)]="sedeFiltro">
+                        <option [value]="sedeActiva">Solo {{ sedeActiva | titlecase }}</option>
+                        <option value="otra">Otra sede</option>
+                        <option value="todas">Todas las sedes</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <label for="filtroTexto" class="form-label">🔎 Buscar paciente</label>
+                    <input id="filtroTexto" type="text" class="form-control" placeholder="Nombre o cédula..."
+                        [(ngModel)]="filtro">
+                </div>
+            </div>
+
+            <div *ngIf="sedeFiltro !== sedeActiva && sedeFiltro !== 'todas'" class="alert alert-info">
+                🔒 Visualizando pacientes de otra sede. Las acciones de edición y eliminación están deshabilitadas.
             </div>
 
             <table class="table table-hover table-bordered">
-                <thead class="bg-secondary text-white">
+                <thead class="bg-secondary text-white text-center">
                     <tr>
-                        <th>Nombre Completo</th>
-                        <th>Cédula</th>
-                        <th>Edad</th>
-                        <th>Género</th>
-                        <th>Fecha de Registro</th>
+                        <th (click)="ordenarPor('nombreCompleto')" class="sortable">Nombre Completo
+                            <i class="bi" [ngClass]="{
+                'bi-caret-up-fill': ordenActual === 'nombreCompleto' && ordenAscendente,
+                'bi-caret-down-fill': ordenActual === 'nombreCompleto' && !ordenAscendente
+              }"></i>
+                        </th>
+                        <th (click)="ordenarPor('cedula')" class="sortable">Cédula
+                            <i class="bi" [ngClass]="{
+                'bi-caret-up-fill': ordenActual === 'cedula' && ordenAscendente,
+                'bi-caret-down-fill': ordenActual === 'cedula' && !ordenAscendente
+              }"></i>
+                        </th>
+                        <th (click)="ordenarPor('edad')" class="sortable">Edad
+                            <i class="bi" [ngClass]="{
+                'bi-caret-up-fill': ordenActual === 'edad' && ordenAscendente,
+                'bi-caret-down-fill': ordenActual === 'edad' && !ordenAscendente
+              }"></i>
+                        </th>
+                        <th (click)="ordenarPor('genero')" class="sortable">Género
+                            <i class="bi" [ngClass]="{
+                'bi-caret-up-fill': ordenActual === 'genero' && ordenAscendente,
+                'bi-caret-down-fill': ordenActual === 'genero' && !ordenAscendente
+              }"></i>
+                        </th>
+                        <th (click)="ordenarPor('fechaRegistro')" class="sortable">Fecha de Registro
+                            <i class="bi" [ngClass]="{
+                'bi-caret-up-fill': ordenActual === 'fechaRegistro' && ordenAscendente,
+                'bi-caret-down-fill': ordenActual === 'fechaRegistro' && !ordenAscendente
+              }"></i>
+                        </th>
                         <th>Historial Médico</th>
+                        <th>Sede</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
+
                 <tbody>
-                    <tr *ngFor="let paciente of pacientesFiltrados()">
+                    <tr *ngFor="let paciente of pacientesFiltrados()" class="text-center align-middle">
                         <td>{{ paciente.nombreCompleto }}</td>
                         <td>{{ paciente.cedula }}</td>
                         <td>{{ paciente.edad }}</td>
                         <td>{{ paciente.genero }}</td>
-                        <td>{{ paciente.fechaRegistro | date:'dd/MM/yyyy' }}</td>
+                        <td>{{ paciente.fechaRegistro }}</td> 
+
                         <td>
                             <button class="btn btn-info btn-sm" (click)="verHistorias(paciente.id)">📖 Ver
                                 Historias</button>
                         </td>
-                        <td class="text-center">
-                            <button class="btn btn-outline-info btn-sm me-1" (click)="verPaciente(paciente)"
-                                title="Ver Paciente">
+                        <td>
+                            <span class="badge" [ngClass]="{
+                'bg-primary': paciente.sede === 'guatire',
+                'bg-success': paciente.sede === 'guarenas'
+              }">{{ paciente.sede | titlecase }}</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-outline-info btn-sm me-1"
+                                (click)="abrirModalVisualizacionPaciente(paciente)" title="Ver Paciente">
                                 <i class="bi bi-eye"></i>
                             </button>
-                            <button class="btn btn-outline-warning btn-sm me-1" (click)="editarPaciente(paciente)"
-                                title="Editar">
-                                <i class="bi bi-pencil-square"></i>
-                            </button>
-                            <button class="btn btn-outline-danger btn-sm" (click)="eliminarPaciente(paciente.id)"
-                                title="Eliminar">
-                                <i class="bi bi-trash"></i>
-                            </button>
+
+                            <ng-container *ngIf="paciente.sede === sedeActiva">
+                                <button class="btn btn-outline-warning btn-sm me-1" (click)="editarPaciente(paciente)"
+                                    title="Editar">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" (click)="eliminarPaciente(paciente.id)"
+                                    title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </ng-container>
+                        </td>
+                    </tr>
+
+                    <tr *ngIf="pacientesFiltrados().length === 0">
+                        <td colspan="8" class="text-center text-muted py-4">
+                            🧐 No se encontraron pacientes que coincidan con el filtro aplicado.
                         </td>
                     </tr>
                 </tbody>
@@ -57,148 +117,145 @@
     </div>
 </div>
 
+
 <!-- Modal para agregar/editar paciente -->
 <div class="modal fade" id="modalAgregarPaciente" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="fas {{ modoEdicion ? 'fa-edit' : 'fa-plus' }} me-2"></i>
-                    {{ modoEdicion ? 'Editar Paciente' : 'Agregar Paciente' }}
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="fas {{ modoEdicion ? 'fa-edit' : 'fa-plus' }} me-2"></i>
+          {{ modoEdicion ? 'Editar Paciente' : 'Agregar Paciente' }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <form [formGroup]="formPaciente">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Nombre Completo <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" formControlName="nombreCompleto" placeholder="Ej: María Fernanda López">
+              <div *ngIf="formPaciente.get('nombreCompleto')?.invalid && formPaciente.get('nombreCompleto')?.touched" class="text-danger small">
+                Nombre completo es requerido
+              </div>
             </div>
 
-            <div class="modal-body">
-                <form [formGroup]="formPaciente">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Nombre Completo <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" formControlName="nombreCompleto">
-                            <div *ngIf="formPaciente.get('nombreCompleto')?.invalid && formPaciente.get('nombreCompleto')?.touched"
-                                class="text-danger small">
-                                Nombre completo es requerido
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Cédula <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" formControlName="cedula">
-                            <div *ngIf="formPaciente.get('cedula')?.invalid && formPaciente.get('cedula')?.touched"
-                                class="text-danger small">
-                                Cédula es requerida
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Teléfono <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" formControlName="telefono">
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Email <span class="text-danger">*</span></label>
-                            <input type="email" class="form-control" formControlName="email">
-                            <div *ngIf="formPaciente.get('email')?.errors?.['email']" class="text-danger small">
-                                Ingrese un email válido
-                            </div>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Fecha de Nacimiento <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control" formControlName="fechaNacimiento">
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Ocupación <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" formControlName="ocupacion">
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Género <span class="text-danger">*</span></label>
-                            <select class="form-select" formControlName="genero">
-                                <option value="">Seleccionar</option>
-                                <option value="Masculino">Masculino</option>
-                                <option value="Femenino">Femenino</option>
-                                <option value="Otro">Otro</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-12">
-                            <label class="form-label">Dirección <span class="text-danger">*</span></label>
-                            <textarea class="form-control" rows="2" formControlName="direccion"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <div class="d-flex flex-wrap gap-2 mb-2 align-items-end">
-                            <div>
-                                <label class="form-label mb-1">Red Social</label>
-                                <select class="form-select" [(ngModel)]="nuevaRed" [ngModelOptions]="{standalone: true}"
-                                    (change)="habilitarUsuario()">
-                                    <option value="">Seleccionar</option>
-                                    <option *ngFor="let red of listaRedes" [value]="red">{{ red }}</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="form-label mb-1">Usuario</label>
-                                <input class="form-control" type="text" placeholder="@usuario"
-                                    [(ngModel)]="nuevoUsuario" [ngModelOptions]="{standalone: true}"
-                                    [disabled]="!usuarioInputHabilitado" />
-                            </div>
-
-                            <button class="btn btn-outline-primary mt-auto" type="button"
-                                (click)="addRedSocial(nuevaRed, nuevoUsuario)" [disabled]="!nuevaRed || !nuevoUsuario">
-                                <i class="bi bi-plus"></i> Añadir
-                            </button>
-                        </div>
-
-                        <table class="table table-bordered table-sm mt-3">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Red</th>
-                                    <th>Usuario</th>
-                                    <th>Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr *ngFor="let social of redesSociales.controls; let i = index">
-                                    <td>
-                                        <i [ngClass]="getSocialIconClass(social.get('platform')?.value)"
-                                            class="me-2"></i>
-                                        {{ social.get('platform')?.value }}
-                                    </td>
-                                    <td>{{ social.get('username')?.value }}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-danger" (click)="removeRedSocial(i)">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr *ngIf="redesSociales.length === 0">
-                                    <td colspan="3" class="text-center text-muted">No hay redes sociales agregadas</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="text-danger mt-3" *ngIf="formPaciente.invalid && formPaciente.touched">
-                        <small>* Por favor complete todos los campos obligatorios.</small>
-                    </div>
-                </form>
+            <div class="col-md-6">
+              <label class="form-label">Cédula <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" formControlName="cedula" placeholder="Ej: 12345678">
+              <div *ngIf="formPaciente.get('cedula')?.invalid && formPaciente.get('cedula')?.touched" class="text-danger small">
+                Cédula es requerida
+              </div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary"
-                    [disabled]="!formularioModificado() || formPaciente.invalid" (click)="guardarPaciente()">
-                    {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
-                </button>
+            <div class="col-md-6">
+              <label class="form-label">Teléfono <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" formControlName="telefono" placeholder="Ej: 04121234567">
             </div>
-        </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              <input type="email" class="form-control" formControlName="email" placeholder="Ej: paciente@email.com">
+              <div *ngIf="formPaciente.get('email')?.errors?.['email']" class="text-danger small">
+                Ingrese un email válido
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Fecha de Nacimiento <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" formControlName="fechaNacimiento">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Ocupación <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" formControlName="ocupacion" placeholder="Ej: Profesor universitario">
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label">Género <span class="text-danger">*</span></label>
+              <select class="form-select" formControlName="genero">
+                <option value="">Seleccionar</option>
+                <option value="Masculino">Masculino</option>
+                <option value="Femenino">Femenino</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+
+            <div class="col-md-12">
+              <label class="form-label">Dirección <span class="text-danger">*</span></label>
+              <textarea class="form-control" rows="2" formControlName="direccion" placeholder="Ej: Calle 10, Quinta Cielo Azul, Guatire"></textarea>
+            </div>
+          </div>
+
+          <!-- Redes sociales -->
+          <div class="mt-4">
+            <div class="d-flex flex-wrap gap-2 mb-2 align-items-end">
+              <div>
+                <label class="form-label mb-1">Red Social</label>
+                <select class="form-select" [(ngModel)]="nuevaRed" [ngModelOptions]="{standalone: true}" (change)="habilitarUsuario()">
+                  <option value="">Seleccionar</option>
+                  <option *ngFor="let red of listaRedes" [value]="red">{{ red }}</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="form-label mb-1">Usuario</label>
+                <input class="form-control" type="text" placeholder="Ej: @maria.lopez"
+                  [(ngModel)]="nuevoUsuario" [ngModelOptions]="{standalone: true}" [disabled]="!usuarioInputHabilitado" />
+              </div>
+
+              <button class="btn btn-outline-primary mt-auto" type="button"
+                (click)="addRedSocial(nuevaRed, nuevoUsuario)" [disabled]="!nuevaRed || !nuevoUsuario">
+                <i class="bi bi-plus"></i> Añadir
+              </button>
+            </div>
+
+            <table class="table table-bordered table-sm mt-3">
+              <thead class="table-light">
+                <tr>
+                  <th>Red</th>
+                  <th>Usuario</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let social of redesSociales.controls; let i = index">
+                  <td>
+                    <i [ngClass]="getSocialIconClass(social.get('platform')?.value)" class="me-2"></i>
+                    {{ social.get('platform')?.value }}
+                  </td>
+                  <td>{{ social.get('username')?.value }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-danger" (click)="removeRedSocial(i)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="redesSociales.length === 0">
+                  <td colspan="3" class="text-center text-muted">No hay redes sociales agregadas</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="text-danger mt-3" *ngIf="formPaciente.invalid && formPaciente.touched">
+            <small>* Por favor complete todos los campos obligatorios.</small>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary"
+          [disabled]="!formularioModificado() || formPaciente.invalid" (click)="guardarPaciente()">
+          {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+        </button>
+      </div>
     </div>
+  </div>
 </div>
+
 
 
 <!-- Modal para visualizar paciente -->
@@ -234,7 +291,7 @@
                                 <p class="text-secondary text-muted mb-1"><strong>Fecha de Registro:</strong></p>
                                 <p class="text-dark">
                                     <ng-container *ngIf="pacienteSeleccionado?.fechaRegistro; else noFecha">
-                                        {{ pacienteSeleccionado.fechaRegistro | date:'dd/MM/yyyy' }}
+                                        {{ pacienteSeleccionado.fechaRegistro }} 
                                     </ng-container>
                                     <ng-template #noFecha>---</ng-template>
                                 </p>
@@ -264,7 +321,7 @@
                                 <p class="text-secondary text-muted mb-1"><strong>Fecha de Nacimiento:</strong></p>
                                 <p class="text-dark">
                                     <ng-container *ngIf="pacienteSeleccionado?.fechaNacimiento; else noFecha">
-                                        {{ pacienteSeleccionado.fechaNacimiento | date:'dd/MM/yyyy' }}
+                                        {{ pacienteSeleccionado.fechaNacimiento }}
                                     </ng-container>
                                     <ng-template #noFecha>---</ng-template>
                                 </p>
@@ -284,11 +341,13 @@
                         <h5 class="text-secondary pb-2"><strong>Redes Sociales</strong></h5>
                         <div *ngIf="pacienteSeleccionado?.redesSociales?.length > 0; else sinRedes">
                             <div class="d-flex flex-wrap gap-3">
-                                <div *ngFor="let red of pacienteSeleccionado.redesSociales"
-                                    class="badge bg-light text-dark p-3">
+                                <a *ngFor="let red of pacienteSeleccionado.redesSociales"
+                                    class="badge bg-light text-dark p-3 text-decoration-none" target="_blank"
+                                    [href]="generarLinkRedSocial(red.platform, red.username)">
                                     <i [ngClass]="getSocialIconClass(red.platform)" class="me-2"></i>
-                                    <span>{{ red.username }}</span>
-                                </div>
+                                    {{ red.username }}
+                                </a>
+
                             </div>
                         </div>
                         <ng-template #sinRedes>
@@ -300,7 +359,7 @@
 
             <div class="modal-footer ">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                   Cerrar
+                    Cerrar
                 </button>
             </div>
         </div>

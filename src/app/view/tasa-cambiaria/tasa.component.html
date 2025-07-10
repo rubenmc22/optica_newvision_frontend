@@ -8,10 +8,7 @@
 
         </button>
       </div>
-
     </div><br>
-
-
 
     <div class="card-body row">
       <div *ngFor="let tasa of tasas" class="col-md-6">
@@ -45,15 +42,24 @@
 
           <!-- ✅ Muestra referencia BCV solo cuando la tasa es manual -->
           <div class="text-muted small fst-italic">
-            <span class="d-block">Tasa oficial BCV: {{ valorBCV[tasa.id] || 0 }} {{ tasa.simbolo
-              }}</span>
-
+            <span class="d-block">
+              Tasa oficial BCV:
+              <ng-container *ngIf="bcvDisponible[tasa.id]; else noDisponible">
+                {{ valorBCV[tasa.id] }} {{ tasa.simbolo }}
+              </ng-container>
+              <ng-template #noDisponible>
+                <span class="bcv-unavailable">No disponible en este momento</span>
+              </ng-template>
+            </span>
           </div>
+
+
 
           <div class="d-flex justify-content-between align-items-center">
             <small class="text-muted">
-              Última actualización: {{ metodoTasa[tasa.id] === 'manual' ? fechaActualizacionManual[tasa.id] :
-              tasa.updated_at | date:'dd/MM/yyyy HH:mm' }}
+              Última actualización: {{ (metodoTasa[tasa.id] === 'manual' ? fechaActualizacionManual[tasa.id] :
+              tasa.updated_at) | date:'dd/MM/yyyy HH:mm' }}
+
             </small>
             <div class="form-check form-switch">
               <input class="form-check-input" type="checkbox" [(ngModel)]="autoActualizar[tasa.id]"
@@ -107,18 +113,18 @@
         <table class="table table-striped align-middle">
           <thead>
             <tr>
-              <th>🧍 Actualizado por</th>
-              <th>⏱ Fecha y hora</th>
-              <th>💵 Valor</th>
-              <th>🔁 Tipo</th>
+              <th class="text-center">🧍 Actualizado por</th>
+              <th class="text-center">⏱ Fecha y hora</th>
+              <th class="text-center">💵 Valor</th>
+              <th class="text-center">🔁 Tipo</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let item of historialTasaSeleccionada">
-              <td>{{ item.usuario }}</td>
-              <td>{{ item.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
-              <td><strong class="text-success">{{ item.valor | number:'1.2-2' }} {{ simboloSeleccionado }}</strong></td>
-              <td>
+              <td class="text-center">{{ item.usuario }}</td>
+              <td class="text-center">{{ item.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
+              <td class="text-center"><strong class="text-success">{{ item.valor | number:'1.2-2' }} {{ simboloSeleccionado }}</strong></td>
+              <td class="text-center">
                 <span class="badge" [ngClass]="{
                   'bg-secondary': item.metodo === 'manual',
                   'bg-info text-dark': item.metodo === 'bcv'

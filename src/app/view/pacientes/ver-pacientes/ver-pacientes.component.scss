@@ -44,25 +44,25 @@
 }
 
 .btn-primary {
-     background: var(--degradado-color);
-  border: var(--degradado-color);
-  border-left: none;
-  color: #fff;
-  transition: all 0.3s ease;
+    background: var(--degradado-color);
+    border: var(--degradado-color);
+    border-left: none;
+    color: #fff;
+    transition: all 0.3s ease;
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
-    color: var(--details-color);
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+        color: var(--details-color);
+
+        i {
+            color: var(--details-color);
+        }
+    }
 
     i {
-      color: var(--details-color);
+        transition: all 0.2s ease;
     }
-  }
-
-  i {
-    transition: all 0.2s ease;
-  }
 }
 
 
@@ -90,4 +90,9 @@
     margin-bottom: 3px;
     color: var(--primary-color) !important;
     font-size: 20px;
+}
+
+.sortable {
+  cursor: pointer;
+  user-select: none;
 }

@@ -79,8 +79,8 @@ export class AuthService {
     this.currentUserSubject.next(newData);
   }
 
-  login(cedula: string, password: string): Observable<AuthData> {
-    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/login`, { cedula, password }).pipe(
+  login(cedula: string, password: string, sede: string): Observable<AuthData> {
+    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/login`, { cedula, password, sede }).pipe(
       map((data: AuthResponse) => {
         if (!data.user?.correo) {
           throw new Error('El servidor no devolvió un correo de usuario');

@@ -68,10 +68,11 @@ export class LoginComponent implements OnInit {
     }
 
     this.isLoading = true;
+    let sedeActual= 'guatire';
 
     this.authService.login(
       this.loginForm.value.cedula,
-      this.loginForm.value.password
+      this.loginForm.value.password, sedeActual
     ).pipe(
       finalize(() => this.isLoading = false)
     ).subscribe({

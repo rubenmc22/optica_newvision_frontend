@@ -84,13 +84,18 @@ export const appRoutes: Routes = [
         component: TasaComponent,
         title: getFullTitle('Tipo-de-cambio')
       },
-        {
+      {
         path: 'pacientes',
         component: VerPacientesComponent,
         title: getFullTitle('pacientes')
       },
-        {
-        path: 'pacientes/historias',
+      {
+        path: 'pacientes-historias',
+        component: HistoriasMedicasComponent,
+        title: getFullTitle('historias-medicas')
+      },
+      {
+        path: 'pacientes-historias/:id',
         component: HistoriasMedicasComponent,
         title: getFullTitle('historias-medicas')
       },
