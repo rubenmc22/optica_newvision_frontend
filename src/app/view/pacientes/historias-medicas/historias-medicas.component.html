@@ -1,126 +1,453 @@
-<div class="container-fluid historia-medica-container">
-  <!-- Header con información del paciente -->
-  <div class="row paciente-header sticky-top bg-light py-3 shadow-sm">
-    <div class="col-md-8">
-      <h2>
-        <button class="btn btn-outline-secondary me-3" (click)="cerrarHistorias()">
-          <i class="bi bi-arrow-left"></i>
+<div class="container-fluid py-4">
+  <!-- Encabezado -->
+  <div class="card shadow-lg containerPrincipal">
+    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+      <h4 class="mb-0">👨‍⚕️ Historias médicas</h4>
+      <div class="ms-auto">
+        <button class="btn btn-light btn-sm" (click)="nuevaHistoria()">
+          ➕ Agregar Historia Nueva
         </button>
-        Historias Clínicas: {{paciente?.nombreCompleto || 'Cargando...'}}
-      </h2>
-      <div class="paciente-info">
-        <span class="badge bg-primary me-2">Cédula: {{paciente?.cedula}}</span>
-        <span class="badge bg-info me-2">Edad: {{calcularEdad(paciente?.fechaNacimiento)}}</span>
-        <span class="badge bg-secondary">Última visita: {{ultimaHistoriaFecha | date}}</span>
       </div>
     </div>
-    <div class="col-md-4 text-end">
-      <button class="btn btn-success" (click)="nuevaHistoria()">
-        <i class="bi bi-plus-lg"></i> Nueva Historia
-      </button>
-    </div>
-  </div>
+    <div class="card-body">
+      <!-- Selector de paciente -->
+      <div class="w-100 mb-3">
+        <label for="selectorPaciente" class="form-label">👤 Buscar y seleccionar paciente</label>
+        <ng-select [items]="pacientesFiltrados" bindLabel="nombreCompleto" bindValue="id"
+          [(ngModel)]="pacienteIdSeleccionado" (change)="seleccionarPacientePorId(pacienteIdSeleccionado)"
+          [searchable]="true" [clearable]="true" placeholder="Buscar por nombre o cédula..."
+          [searchFn]="filtrarPaciente">
+          <ng-template ng-option-tmp let-item="item">
+            {{ item.nombreCompleto }} — {{ item.cedula }}
+          </ng-template>
+        </ng-select>
+      </div>
 
-  <!-- Contenido principal -->
-  <div class="row mt-4">
-    <!-- Panel lateral con lista de historias -->
-    <div class="col-md-4">
-      <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">Listado de Historias</h5>
-        </div>
-        <div class="card-body p-0">
-          <div *ngIf="cargando" class="text-center p-4">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Cargando...</span>
+      <!-- Mensaje si el paciente no tiene historial -->
+      <div *ngIf="mostrarSinHistorial" class="alert alert-info">
+        Este paciente no posee historial médico registrado.
+      </div>
+
+      <!-- Panel principal -->
+      <div class="row g-2 mt-0" *ngIf="mostrarElementos">
+        <!-- Listado de historias -->
+        <div class="col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center"
+              style="padding: 10px 20px;">
+              <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i> Historiales</h5>
             </div>
-          </div>
 
-          <div *ngIf="!cargando && historias.length === 0" class="alert alert-info m-3">
-            No hay historias clínicas registradas.
-          </div>
+            <!-- Scroll SOLO si hay suficiente contenido -->
+            <div class="card-body px-0" style="max-height: 460px; overflow-y: auto;">
+              <div class="list-group list-group-flush">
+                <button *ngFor="let historia of historial"
+                  class="list-group-item list-group-item-action position-relative"
+                  [class.active]="historiaSeleccionada?.id === historia.id" (click)="verDetalle(historia)">
 
-          <div class="list-group list-group-flush">
-            <a *ngFor="let historia of historias" 
-               [id]="'historia-' + historia.id"
-               class="list-group-item list-group-item-action historia-card"
-               [class.active]="historiaSeleccionada?.id === historia.id"
-               (click)="verHistoriaDetalle(historia)">
-              <div class="d-flex w-100 justify-content-between">
-                <h6 class="mb-1">{{historia.motivoConsulta || 'Consulta médica'}}</h6>
-                <small>{{historia.fecha | date:'shortDate'}}</small>
+                  <!-- 🧠 Encabezado superior: motivo + fecha -->
+                  <div class="d-flex justify-content-between mb-1">
+                    <strong>{{ historia.motivo }}</strong>
+                    <span class="">{{ historia.fecha }}</span>
+                  </div>
+
+                  <!-- 👥 Pie inferior: médico + n° historia -->
+                  <div class="d-flex justify-content-between align-items-center mt-2">
+                    <small class="text-muted">👨‍⚕️ {{ historia.medico }}</small>
+                    <span class="badge bg-info">#{{ historia.n_historia || '00012345' }}</span>
+                  </div>
+
+                </button>
               </div>
-              <p class="mb-1 text-truncate">{{historia.diagnostico || 'Sin diagnóstico registrado'}}</p>
-              <small class="text-muted">Dr. {{historia.medico || 'Médico no especificado'}}</small>
-            </a>
+            </div>
+
+
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Panel principal con detalle de historia -->
-    <div class="col-md-8">
-      <div *ngIf="historiaSeleccionada" class="card shadow-sm">
-        <div class="card-header bg-info text-white">
-          <h5 class="mb-0">Detalle de Historia Clínica</h5>
-        </div>
-        <div class="card-body">
-          <div class="historia-header mb-4">
-            <h4>{{historiaSeleccionada.motivoConsulta || 'Consulta médica'}}</h4>
-            <div class="d-flex justify-content-between align-items-center">
-              <span class="badge bg-secondary">
-                {{historiaSeleccionada.fecha | date:'fullDate'}}
-              </span>
-              <span class="text-muted">
-                <i class="bi bi-person-badge"></i> Dr. {{historiaSeleccionada.medico}}
-              </span>
+
+
+
+        <!-- Detalle de historia clínica -->
+        <div class="col-md-9 details">
+          <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center"
+            style="padding: 10px 20px;">
+
+            <!-- Título a la izquierda -->
+            <h5 class="mb-0">
+              <i class="bi bi-eye-fill me-2"></i> Detalle del Examen
+            </h5>
+
+            <!-- Fecha y Médico en bloque alineado al margen derecho -->
+            <div class="ms-auto">
+              <div class="text-start">
+                <strong style="color: var(--details-color); font-size: 15px;">N° de historia:</strong>
+                <span class="fw-semibold" style="color: white; font-size: 15px;">
+                  {{ historiaSeleccionada.n_historia || '00012345' }}
+                </span>
+              </div>
+              <div class="mb-0 text-start">
+                <strong style="color: var(--details-color); font-size: 15px;">Fecha:</strong>
+                <span class="fw-semibold" style="color: white; font-size: 15px;">
+                  {{ historiaSeleccionada.fecha }}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div class="historia-content">
-            <!-- Sección de Diagnóstico -->
+          <div class="card-body" style=" " style="height: 500px; overflow-y: auto;  background-color: white;">
+            <div class="row mb-4">
+              <!-- Datos del paciente -->
+              <div class="col-md-8">
+                <h6 class="text-primary">📌 Datos del Paciente</h6>
+                <div class="row">
+                  <div class="col-md-4 mb-0">
+                    <strong>Nombre:</strong><br>
+                    <p class="ms-0  bg-light rounded p-2">{{ pacienteSeleccionado?.nombreCompleto }}</p>
+                  </div>
+                  <div class="col-md-4 mb-0">
+                    <strong>Cédula:</strong><br>
+                    <p class="ms-0  bg-light rounded p-2"> {{ pacienteSeleccionado?.cedula }}</p>
+                  </div>
+                  <div class="col-md-4 mb-0">
+                    <strong>Teléfono:</strong><br>
+                    <p class="ms-0  bg-light rounded p-2">{{ pacienteSeleccionado?.telefono }}</p>
+                  </div>
+                  <div class="col-md-4 mb-0">
+                    <strong>Edad:</strong><br>
+                    <p class="ms-0  bg-light rounded p-2">{{ calcularEdad(pacienteSeleccionado?.fechaNacimiento) }} años
+                    </p>
+                  </div>
+                  <div class="col-md-4 mb-0">
+                    <strong>Ocupación:</strong><br>
+                    <p class="ms-0  bg-light rounded p-2"> {{ pacienteSeleccionado?.ocupacion }}</p>
+                  </div>
+                  <div class="col-md-4 mb-0">
+                    <strong>Motivo:</strong><br>
+                    <p class="ms-0  bg-light rounded p-2">{{ historiaSeleccionada.motivo }}</p>
+                  </div>
+                  <div class="col-md-6 mb-0">
+                    <strong>Dirección:</strong><br>
+                    <p class="ms-0  bg-light rounded p-2">{{ pacienteSeleccionado?.direccion }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Médico tratante -->
+              <div class="col-md-4 d-flex align-items-start ">
+                <div>
+                  <h6 class="text-primary">👨‍⚕️ Médico tratante</h6>
+                  <strong style="font-size: 15px;">Nombre:</strong><br>
+                  <p class="ms-0  bg-light rounded p-2">{{ historiaSeleccionada.medico }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Historia Clínica del paciente -->
             <div class="mb-4">
-              <h5 class="section-title">
-                <i class="bi bi-clipboard2-pulse me-2"></i>Diagnóstico
-              </h5>
-              <div class="diagnostico-box p-3 bg-light rounded">
-                {{historiaSeleccionada.diagnostico || 'No especificado'}}
+              <h6 class="text-primary">🧬 Historia Clínica</h6>
+
+              <!-- Condiciones clínicas booleanas -->
+              <div class="row gy-0">
+                <div class="col-md-4 mb-0">
+                  <strong>Usuario de lentes:</strong>
+                  <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada.usuarioLentes ? 'Sí' : 'No' }}</p>
+                </div>
+                <div class="col-md-4 mb-0">
+                  <strong>Cristal actual:</strong>
+                  <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada.tipoCristalActual || 'No especificado' }}
+                  </p>
+                </div>
+                <div class="col-md-4 mb-0">
+                  <strong>Última graduación:</strong>
+                  <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada.ultimaGraduacion || 'No disponible' }}
+                  </p>
+                </div>
+              </div>
+              <div class="mb-0 row  gy-1">
+                <div class="col-md-4">
+                  <strong>Fotofobia:</strong>
+                  <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada.fotofobia ? 'Sí' : 'No' }}</p>
+                </div>
+                <div class="col-md-4">
+                  <strong>Alergias:</strong>
+                  <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada.alergico ? 'Sí' : 'No' }}</p>
+                </div>
+                <div class="col-md-4">
+                  <strong>Traumatismo ocular:</strong>
+                  <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada.traumatismoOcular ? 'Sí' : 'No' }}</p>
+                </div>
+
+              </div>
+              <!-- Dispositivos electrónicos -->
+              <div class="mb-0 row gy-2">
+                <div class="col-md-4">
+                  <strong>Cirugía ocular:</strong>
+                  <p class="ms-0">{{ historiaSeleccionada.cirugiaOcular ? 'Sí' : 'No' }}</p>
+                </div>
+                <div class="col-md-4">
+                  <strong>Dispositivos electrónicos:</strong>
+                  <p class="ms-1 bg-light rounded p-2">
+                    {{ historiaSeleccionada.usaDispositivosElectronicos ? 'Sí' : 'No' }}
+                    <span *ngIf="historiaSeleccionada.tiempoUsoEstimado"> — {{ historiaSeleccionada.tiempoUsoEstimado
+                      }}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div class="row">
+                <!-- Patologías generales -->
+                <div class="mb-2 col-md-4">
+                  <strong class="d-block mb-1">Patologías detectadas:</strong>
+                  <div *ngIf="historiaSeleccionada.patologias?.length > 0" class="d-flex flex-wrap gap-2">
+                    <span *ngFor="let patologia of historiaSeleccionada.patologias" class="badge bg-secondary p-2">
+                      {{ patologia }}
+                    </span>
+                  </div>
+                  <div *ngIf="!historiaSeleccionada.patologias?.length">
+                    <span class="badge bg-secondary p-2">No</span>
+                  </div>
+                </div>
+
+                <!-- Antecedentes familiares -->
+                <div class="mb-2 col-md-4">
+                  <strong class="d-block mb-1">Antecedentes familiares:</strong>
+                  <div *ngIf="historiaSeleccionada.antecedentesFamiliares?.length > 0" class="d-flex flex-wrap gap-2">
+                    <span *ngFor="let antecedente of historiaSeleccionada.antecedentesFamiliares"
+                      class="badge bg-info text-dark p-2">
+                      {{ antecedente }}
+                    </span>
+                  </div>
+                  <div *ngIf="!historiaSeleccionada.antecedentesFamiliares?.length">
+                    <span class="badge bg-secondary p-2">No</span>
+                  </div>
+                </div>
+                <!-- Patologías oculares -->
+                <div class="mb-2 col-md-4">
+                  <strong class="d-block mb-1">Patología ocular:</strong>
+                  <div *ngIf="historiaSeleccionada.patologiaOcular?.length > 0" class="d-flex flex-wrap gap-2">
+                    <span *ngFor="let pat of historiaSeleccionada.patologiaOcular"
+                      class="badge bg-warning text-dark p-2">
+                      {{ pat }}
+                    </span>
+                  </div>
+                  <div *ngIf="!historiaSeleccionada.patologiaOcular?.length">
+                    <span class="badge bg-secondary p-2">No</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Lensonmetria -->
+            <div class="row mb-0">
+              <div class="col-md-6">
+                <h6 class="text-primary">📐 Lensometria</h6>
+                <table class="table table-sm table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="text-align: center;">Ojo</th>
+                      <th style="text-align: center;">ESF</th>
+                      <th style="text-align: center;">CIL</th>
+                      <th style="text-align: center;">EJE</th>
+                      <th style="text-align: center;">ADD</th>
+                      <th style="text-align: center;">AV</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="text-align: center;">OD</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.ref_esf_od }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.ref_cil_od }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.ref_eje_od }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.ref_add_od }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.len_av_od }}</td>
+
+                    </tr>
+                    <tr>
+                      <td style="text-align: center;">OI</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.ref_esf_oi }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.ref_cil_oi }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.ref_eje_oi }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.ref_add_oi }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.len_av__oi }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- AVSC: ocupa 8 columnas -->
+              <div class="col-md-6">
+                <h6 class="text-primary">📐 AVSC</h6>
+                <table class="table table-sm table-bordered mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="text-align: center;">Ojo</th>
+                      <th style="text-align: center;">OD</th>
+                      <th style="text-align: center;">OI</th>
+                      <th style="text-align: center;">CERCA</th>
+                      <th style="text-align: center;">AVAE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="text-align: center;">OD</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.avsc_od_od }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.avsc_oi_od }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.avsc_cerca__od }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.avsc_avcc_od }}</td>
+                    </tr>
+                    <tr>
+                      <td style="text-align: center;">OI</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.avsc_od_oi }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.avsc_oi_oi }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.avsc_cerca_oi }}</td>
+                      <td style="text-align: center;">{{ historiaSeleccionada.avsc_avcc_oi }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="row align-items-start">
+              <!-- Hora: ocupa 4 columnas -->
+              <div class="col-md-4 mb-4">
+                <div class="d-flex align-items-center">
+                  <h6 class="text-primary mb-0 me-2">🕒 Hora de evaluación:</h6>
+                  <span class="fw-semibold">{{ historiaSeleccionada.horaEvaluacion || 'No registrada' }}</span>
+                </div>
+              </div><br>
+
+            </div>
+
+            <div class="row mb-2">
+              <div class="col-md-6">
+                <!-- Refracción  -->
+                <div class="mb-4">
+                  <h6 class="text-primary">📐 Refracción</h6>
+                  <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                      <tr>
+                        <th style="text-align: center;">Ojo</th>
+                        <th style="text-align: center;">ESF</th>
+                        <th style="text-align: center;">CIL</th>
+                        <th style="text-align: center;">EJE</th>
+                        <th style="text-align: center;">ADD</th>
+                        <th style="text-align: center;">AVCC</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style="text-align: center;">OD</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_esf_od }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_cil_od }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_eje_od }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_add_od }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_avcc_od }}</td>
+                      </tr>
+                      <tr>
+                        <td style="text-align: center;">OI</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_esf_oi }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_cil_oi }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_eje_oi }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_add_oi }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_avcc_oi }}</td>
+
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <!-- Refracción Final -->
+                <div class="mb-4">
+                  <h6 class="text-primary">📐 Refracción Final segun tipo de Lente</h6>
+                  <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                      <tr>
+                        <th style="text-align: center;">Ojo</th>
+                        <th style="text-align: center;">ESF</th>
+                        <th style="text-align: center;">CIL</th>
+                        <th style="text-align: center;">EJE</th>
+                        <th style="text-align: center;">ADD</th>
+                        <th style="text-align: center;">ALT</th>
+                        <th style="text-align: center;">DP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style="text-align: center;">OD</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_esf_od }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_cil_od }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_eje_od }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_add_od }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_alt_od }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_dp_od }}</td>
+                      </tr>
+                      <tr>
+                        <td style="text-align: center;">OI</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_esf_oi }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_cil_oi }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_eje_oi }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_add_oi }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_alt_oi }}</td>
+                        <td style="text-align: center;">{{ historiaSeleccionada.ref_final_dp_oi }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
               </div>
             </div>
 
-            <!-- Sección de Tratamiento -->
-            <div class="mb-4">
-              <h5 class="section-title">
-                <i class="bi bi-capsule me-2"></i>Tratamiento
-              </h5>
-              <div class="tratamiento-box p-3 bg-light rounded">
-                <pre>{{historiaSeleccionada.tratamiento || 'No se indicó tratamiento'}}</pre>
+            <!-- Diagnóstico y tratamiento -->
+            <div class="row mb-1">
+              <div class="col-md-6 mb-1">
+                <h6 class="text-primary">📝 Diagnóstico</h6>
+                <p class="bg-light rounded p-2">{{ historiaSeleccionada.diagnostico }}</p>
+              </div>
+              <div class="col-md-6 mb-1">
+                <h6 class="text-primary">💊 Tratamiento</h6>
+                <p class="bg-light rounded p-2">{{ historiaSeleccionada.tratamiento }}</p>
               </div>
             </div>
 
-            <!-- Sección de Notas -->
-            <div *ngIf="historiaSeleccionada.notas" class="mb-4">
-              <h5 class="section-title">
-                <i class="bi bi-journal-text me-2"></i>Notas Adicionales
-              </h5>
-              <div class="notas-box p-3 bg-light rounded">
-                {{historiaSeleccionada.notas}}
+            <!-- Asesoría -->
+            <div class="mb-3">
+              <h6 class="text-primary">🧑‍💼 Recomendaciones</h6>
+              <div class="row">
+                <div class="col-md-4 mb-0">
+                  <strong>Tipo de cristal:</strong><br>
+                  <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada.cristal }}</p>
+                </div>
+                <div class="col-md-4 mb-0">
+                  <strong>Material:</strong><br>
+                  <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada.material }}</p>
+                </div>
+                <div class="col-md-4 mb-0">
+                  <strong>Montura sugerida:</strong><br>
+                  <p class="ms-0 bg-light rounded p-2"> {{ historiaSeleccionada.montura }}</p>
+                </div>
+                <div class="col-md-4 mb-0">
+                  <strong>Cristal sugerido:</strong><br>
+                  <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada.cristalSugerido }} </p>
+                </div>
+                <div class="col-md-4 mb-0">
+                  <strong>Observaciones:</strong><br>
+                  <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada.observaciones }}</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="card-footer text-end">
-          <button class="btn btn-outline-primary me-2">
-            <i class="bi bi-printer"></i> Imprimir
-          </button>
-          <button class="btn btn-primary">
-            <i class="bi bi-pencil-square"></i> Editar
-          </button>
-        </div>
-      </div>
 
-      <div *ngIf="!historiaSeleccionada && !cargando" class="alert alert-info">
-        Seleccione una historia clínica para ver los detalles
+          <div class="card-footer text-end">
+            <button class="btn btn-outline-secondary me-2">
+              <i class="bi bi-printer"></i> Imprimir
+            </button>
+            <button class="btn btn-primary">
+              <i class="bi bi-pencil-square"></i> Editar
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

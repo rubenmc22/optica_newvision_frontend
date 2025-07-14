@@ -57,6 +57,19 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
   --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+::ng-deep .ng-dropdown-panel-items.scroll-host {
+  max-height: 120px !important; // aproximadamente para 3 ítems de ~50px cada uno
+  overflow-y: auto !important;
+}
+
+::ng-deep .paciente-card ul {
+  white-space: nowrap !important;
+  overflow-x: auto !important;
+}
+
+
+
+
 /* Estilos comunes para campos de texto en formularios de login y registro */
 .login-form-field .mat-mdc-notched-outline,
 .register-form-field .mat-mdc-notched-outline,

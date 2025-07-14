@@ -1,6 +1,8 @@
 @use './custom-theme.scss' as *;
 /* src/styles.scss */
 @use 'app/core/services/swal/swal.service.scss' as swal;
+@import "~@ng-select/ng-select/themes/default.theme.css";
+
 
 
 

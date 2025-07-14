@@ -28,6 +28,7 @@ import { MaterialModule } from '../material.module';
 import { appRoutes } from '../app.routes';
 import { authInterceptor } from '../core/interceptors/auth.interceptor';
 import { ClickOutsideDirective } from '../directives/click-outside.directive';
+import { NgSelectModule } from '@ng-select/ng-select';
 
 @NgModule({
   declarations: [
@@ -48,8 +49,10 @@ import { ClickOutsideDirective } from '../directives/click-outside.directive';
     HistoriasMedicasComponent,
     ClickOutsideDirective, // ✅ ahora sí podés declararla acá
     
+    
   ],
   imports: [
+    NgSelectModule,
     BrowserModule,
     ReactiveFormsModule,
     MaterialModule,
