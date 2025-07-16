@@ -1,5 +1,8 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import * as bootstrap from 'bootstrap';
+
 declare var $: any;
 
 @Component({
@@ -21,8 +24,78 @@ export class HistoriasMedicasComponent implements OnInit {
   historiasMock: Record<string, any[]> = {};
   mostrarElementos = false;
   mostrarSinHistorial = false;
+  notaConformidad: string = '';
+  modoEdicion: boolean = false;
 
+  // Formulario reactivo
+  historiaForm: FormGroup;
 
+  // Opciones para los select
+  opcionesAntecedentes: string[] = [
+    'Diabetes', 'Hipertensión', 'Migraña', 'Fotosensibilidad',
+    'Traumatismo ocular', 'Queratocono', 'Glaucoma', 'Retinopatía diabética'
+  ];
+
+  constructor(private fb: FormBuilder) {
+    this.historiaForm = this.fb.group({
+      // Datos del paciente
+      pacienteId: ['', Validators.required],
+      medico: ['', Validators.required],
+      motivo: ['', Validators.required],
+      fecha: [new Date().toISOString().split('T')[0]],
+      horaEvaluacion: [''],
+
+      // Antecedentes
+      usuarioLentes: [false],
+      tipoCristalActual: [''],
+      ultimaGraduacion: [''],
+      fotofobia: [false],
+      antecedentesPersonales: [[]],
+      antecedentesFamiliares: [[]],
+
+      // Lensometría
+      len_esf_od: [''],
+      len_cil_od: [''],
+      len_eje_od: [''],
+      len_add_od: [''],
+      len_av_lejos_od: [''],
+      len_av_cerca_od: [''],
+      len_esf_oi: [''],
+      len_cil_oi: [''],
+      len_eje_oi: [''],
+      len_add_oi: [''],
+      len_av_lejos_oi: [''],
+      len_av_cerca_oi: [''],
+
+      // Refracción
+      ref_esf_od: [''],
+      ref_cil_od: [''],
+      ref_eje_od: [''],
+      ref_add_od: [''],
+      ref_avccl_od: [''],
+      ref_avccc_od: [''],
+      ref_esf_oi: [''],
+      ref_cil_oi: [''],
+      ref_eje_oi: [''],
+      ref_add_oi: [''],
+      ref_avccl_oi: [''],
+      ref_avccc_oi: [''],
+
+      // Diagnóstico y tratamiento
+      diagnostico: [''],
+      tratamiento: [''],
+
+      // Recomendaciones
+      cristal: [''],
+      material: [''],
+      montura: [''],
+      observaciones: [''],
+
+      // Nota de conformidad
+      conforme: [false],
+      asesor: ['']
+    });
+  }
 
   pacientesMock = [
     {
@@ -117,21 +190,6 @@ export class HistoriasMedicasComponent implements OnInit {
     }
   ];
 
-  /*historiasMock = {
-    'p1': generarHistorias(1),
-    'p2': generarHistorias(5),
-    'p3': [], // sin historias
-    'p4': generarHistorias(10),
-    'p5': generarHistorias(3),
-    'p6': generarHistorias(2),
-    'p7': generarHistorias(3),
-    'p8': generarHistorias(2),
-    'p9': generarHistorias(3),
-    'p10': generarHistorias(2)
-  };*/
-
-
-
   ngOnInit(): void {
     this.historiasMock = {
       'p1': this.generarHistorias(1),
@@ -148,46 +206,43 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.pacientes = this.pacientesMock;
     this.pacientesFiltrados = [...this.pacientes];
-
-
   }
 
   generarHistorias(cantidad: number): any[] {
-    const motivos = [
-      'Molestia ocular',
-      'Fatiga visual',
-      'Consulta rutinaria',
-      'Cambio de fórmula',
-      'Sensibilidad lumínica',
-      'Dolor de cabeza',
-      'Evaluación prequirúrgica',
-      'Control post-operatorio',
-      'Evaluación para lentes',
-      'Problemas de enfoque'
+    const motivosConsulta = [
+      'Molestia ocular', 'Fatiga visual', 'Consulta rutinaria', 'Actualizar fórmula',
+      'Sensibilidad lumínica', 'Dolor de cabeza', 'Evaluación prequirúrgica',
+      'Control post-operatorio', 'Dificultad visual lejos', 'Dificultad visual cerca'
     ];
 
-    const posiblesPatologias = [
-      'Diabetes', 'Hipertensión', 'Hiperemia', 'Cefalea', 'Miopía',
-      'Astigmatismo', 'Glaucoma', 'Artritis', 'Fotofobia', 'Alergia ocular'
+    const antecedentesPersonales = [
+      'Diabetes', 'Hipertensión', 'Migraña', 'Fotosensibilidad',
+      'Traumatismo ocular', 'Queratocono'
     ];
 
     const antecedentesFamiliares = [
-      'Glaucoma', 'Degeneración macular', 'Miopía alta', 'Ceguera hereditaria'
+      'Diabetes', 'Hipertensión arterial', 'Glaucoma',
+      'Degeneración macular', 'Queratocono', 'Retinopatía diabética'
     ];
 
     const patologiasOculares = [
-      'Uveítis', 'Catarata', 'Queratitis', 'Desprendimiento de retina'
+      'Uveítis', 'Catarata', 'Queratitis', 'Desprendimiento de retina',
+      'Glaucoma', 'Queratocono', 'Ojo seco'
     ];
 
     const tiposCristales = [
-      'Antirreflejo básico', 'Blue Light Filter', 'Fotocromático', 'Polarizado', 'Alta definición'
+      'Visión sencilla (CR-39)', 'AR Básico', 'AR Blue Filter',
+      'Fotocromático', 'Polarizado', 'Coloración',
+      'Bifocal', 'Progresivo (CR39 First)', 'Progresivo (Digital)'
     ];
+
+    this.notaConformidad = 'PACIENTE CONFORME CON LA EXPLICACIÓN REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA. NO SE ACEPTARÁN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACIÓN Y FIRMADA LA HISTORIA POR EL PACIENTE.';
 
     return Array.from({ length: cantidad }, (_, i) => ({
       id: `h${i + 1}`,
       fecha: `2025-07-${String(i + 1).padStart(2, '0')}`,
       horaEvaluacion: `${8 + (i % 9)}:${(i % 2 === 0 ? '00' : '30')}`,
-      motivo: motivos[i % motivos.length],
+      motivo: motivosConsulta[i % motivosConsulta.length],
       medico: `Dr. Simulado #${i + 1}`,
       od: '20/25',
       oi: '20/30',
@@ -198,13 +253,19 @@ export class HistoriasMedicasComponent implements OnInit {
       ref_eje_od: '180',
       ref_add_od: '+1.25',
       ref_avcc_od: '20/20',
+      ref_avccl_od: '20/25',
+      ref_avccl_oi: '20/30',
+      ref_avccl_bi: '20/20',
+      ref_avccc_od: 'J1',
+      ref_avccc_oi: 'J1',
+      ref_avccc_bi: 'J1+',
       ref_esf_oi: '-0.75',
       ref_cil_oi: '-0.25',
       ref_eje_oi: '175',
       ref_add_oi: '+1.25',
       ref_avcc_oi: '20/20',
 
-      // Refracción final según tipo de lente
+      // Refracción final
       ref_final_esf_od: '-1.25',
       ref_final_cil_od: '-0.50',
       ref_final_eje_od: '180',
@@ -218,21 +279,32 @@ export class HistoriasMedicasComponent implements OnInit {
       ref_final_alt_oi: '18',
       ref_final_dp_oi: '30',
 
-      // Lensometría (AV)
-      len_av_od: '20/25',
-      len_av_oi: '20/30',
+      // Lensometría
+      len_av_lejos_od: '20/25',
+      len_av_lejos_oi: '20/30',
+      len_av_lejos_bi: i % 2 === 0 ? '20/20' : '20/25',
+      len_av_cerca_od: 'J1',
+      len_av_cerca_oi: 'J1',
+      len_av_cerca_bi: i % 3 === 0 ? 'J1+' : 'J2',
+      lenesf_od: '-1.25',
+      len_cil_od: '-0.50',
+      len_eje_od: '180',
+      len_add_od: '+1.25',
+      len_esf_oi: '-0.75',
+      len_cil_oi: '-0.25',
+      len_eje_oi: '175',
+      len_add_oi: '+1.25',
 
-      // AVSC
-      avsc_od_od: '20/25',
-      avsc_oi_od: '20/30',
-      avsc_cerca_od: 'J1',
-      avsc_avcc_od: '20/20',
-      avsc_od_oi: '20/25',
-      avsc_oi_oi: '20/30',
-      avsc_cerca_oi: 'J1',
-      avsc_avcc_oi: '20/20',
+      // AVSC - AVAE - OTROS
+      avsc_od: '20/25',
+      avsc_oi: '20/30',
+      avsc_bi: '20/20',
+      avae_od: '20/25',
+      avae_oi: '20/30',
+      otros_od: 'Sin hallazgos',
+      otros_oi: 'Leve hiperemia',
 
-      // Diagnóstico general
+      // Diagnóstico
       diagnostico: 'Miopía con astigmatismo',
       tratamiento: 'Lentes recetados',
       cristal: 'Antirreflejo básico',
@@ -240,10 +312,11 @@ export class HistoriasMedicasComponent implements OnInit {
       montura: 'Rectangular metálica',
       cristalSugerido: 'Standard Blue',
       observaciones: 'Paciente estable',
+      n_historia: '00012345',
 
       // Historia clínica
-      motivoConsulta: motivos[i % motivos.length],
-      patologias: posiblesPatologias.slice(0, (i % 5) + 6),
+      motivoConsulta: motivosConsulta[i % motivosConsulta.length],
+      patologias: antecedentesPersonales.slice(0, (i % 5) + 6),
       usaDispositivosElectronicos: i % 2 === 0,
       tiempoUsoEstimado: `${2 + (i % 4)} horas diarias`,
       fotofobia: i % 2 === 0,
@@ -260,14 +333,12 @@ export class HistoriasMedicasComponent implements OnInit {
     }));
   }
 
-
   @ViewChild('selectorPaciente') selectorPaciente!: ElementRef;
 
   filtrarPaciente = (term: string, item: any) => {
     const texto = term.toLowerCase();
     return item.nombreCompleto.toLowerCase().includes(texto) || item.cedula.toLowerCase().includes(texto);
   };
-
 
   seleccionarPacientePorId(id: string | null): void {
     if (!id) return;
@@ -282,19 +353,73 @@ export class HistoriasMedicasComponent implements OnInit {
     this.mostrarElementos = this.historial.length > 0;
   }
 
-
-
   verDetalle(historia: any): void {
     this.historiaSeleccionada = historia;
+
+    setTimeout(() => {
+      const detalle = document.getElementById('detalleExamen');
+      if (detalle) {
+        detalle.scrollTop = 0;
+      }
+    }, 100);
   }
 
   compararPacientes = (a: any, b: any): boolean => {
     return a && b ? a.id === b.id : a === b;
   };
 
+  guardarHistoria(): void {
+    if (this.historiaForm.invalid) {
+      alert('Por favor complete todos los campos requeridos');
+      return;
+    }
+
+    const historiaData = this.historiaForm.value;
+
+    if (this.modoEdicion) {
+      console.log('Actualizando historia:', historiaData);
+    } else {
+      console.log('Creando nueva historia:', historiaData);
+
+      const pacienteId = this.historiaForm.get('pacienteId')?.value?.id;
+      if (pacienteId) {
+        if (!this.historiasMock[pacienteId]) {
+          this.historiasMock[pacienteId] = [];
+        }
+
+        const nuevaHistoria = {
+          ...historiaData,
+          id: `h${this.historiasMock[pacienteId].length + 1}`,
+          fecha: historiaData.fecha || new Date().toISOString().split('T')[0]
+        };
+
+        this.historiasMock[pacienteId].unshift(nuevaHistoria);
+        this.seleccionarPacientePorId(pacienteId);
+      }
+    }
+
+    $('#historiaModal').modal('hide');
+    this.historiaForm.reset();
+  }
+
+  editarHistoria(historia: any): void {
+    this.modoEdicion = true;
+    this.historiaForm.patchValue(historia);
+    $('#historiaModal').modal('show');
+  }
+
   nuevaHistoria(): void {
-    console.log('Crear nueva historia para:', this.pacienteSeleccionado?.nombreCompleto);
-    // Aquí podrías abrir modal o navegar al formulario
+    this.modoEdicion = false;
+    this.historiaForm.reset({
+      fecha: new Date().toISOString().split('T')[0],
+      pacienteId: this.pacienteSeleccionado
+    });
+
+    const modalElement = document.getElementById('historiaModal');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
   }
 
   calcularEdad(fechaNacimiento: string): number {
