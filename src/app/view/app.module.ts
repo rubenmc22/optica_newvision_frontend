@@ -20,8 +20,8 @@ import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
 import { AcceptTycComponent } from './accept-tyc-component/accept-tyc-component.component';
 import { DynamicModalComponent } from './../shared/dynamic-modal/dynamic-modal.component';
 import { TasaComponent } from './tasa-cambiaria/tasa.component';
-import { VerPacientesComponent } from './pacientes/ver-pacientes/ver-pacientes.component';
-import { HistoriasMedicasComponent } from './pacientes/historias-medicas/historias-medicas.component';
+import { VerPacientesComponent } from './pacientes/ver-pacientes.component';
+import { HistoriasMedicasComponent } from './historias-medicas/historias-medicas.component';
 
 // Módulos y servicios
 import { MaterialModule } from '../material.module';

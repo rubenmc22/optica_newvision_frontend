@@ -129,5 +129,8 @@ export interface Paciente {
   sede: 'guatire' | 'guarenas';
 }
 
+// Tipos específicos para opciones predefinidas
+export type TipoSede = 'guatire' | 'guarenas';
+
 
 

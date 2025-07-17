@@ -1,4 +1,4 @@
-@use '../../../../custom-theme.scss' as theme;
+@use '../../../custom-theme.scss' as theme;
 
 .card-header {
     //  text-align: center;
@@ -66,6 +66,29 @@
 }
 
 
+/* Estilo moderno para scroll vertical */
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 123, 255, 0.5); /* azul translúcido */
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: background-color 0.3s ease;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 123, 255, 0.8);
+}
+
+
 
 //Modal detalles de pacientes
 .modal-title {
@@ -80,9 +103,13 @@
 
 .text-dark {
     color: #343a40 !important;
-    margin-bottom: 15px;
+    margin-bottom: 0px;
     font-weight: 400 !important;
     font-size: 18px;
+}
+
+.alert-warning{
+    background-color: var(--details-color) !important;
 }
 
 .text-secondary {
@@ -96,3 +123,4 @@
   cursor: pointer;
   user-select: none;
 }
+

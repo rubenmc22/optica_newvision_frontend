@@ -13,8 +13,8 @@ import { AuthService } from './core/services/auth/auth.service';
 import { AcceptTycComponent } from './view/accept-tyc-component/accept-tyc-component.component';
 import { Title } from '@angular/platform-browser';
 import { TasaComponent } from './view/tasa-cambiaria/tasa.component';
-import { VerPacientesComponent } from './view/pacientes/ver-pacientes/ver-pacientes.component';
-import { HistoriasMedicasComponent } from './view/pacientes/historias-medicas/historias-medicas.component';
+import { VerPacientesComponent } from './view/pacientes/ver-pacientes.component';
+import { HistoriasMedicasComponent } from './view/historias-medicas/historias-medicas.component';
 
 // Nombre de la óptica (constante global)
 const OPTICA_NAME = 'Óptica New Vision';

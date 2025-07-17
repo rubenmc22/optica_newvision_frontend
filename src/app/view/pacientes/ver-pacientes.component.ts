@@ -1,19 +1,19 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormArray, FormControl } from '@angular/forms';
-import { PacientesService } from '../../../core/services/pacientes/pacientes.service';
-import { SwalService } from '../../../core/services/swal/swal.service';
+import { PacientesService } from '../../core/services/pacientes/pacientes.service';
+import { SwalService } from '../../core/services/swal/swal.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import * as bootstrap from 'bootstrap';
-import { ModalService } from './../../../core/services/modal/modal.service';
-import { Paciente } from '../../../Interfaces/models-interface';
+import { ModalService } from '../../core/services/modal/modal.service';
+import { Paciente } from './paciente-interface';
 import { C } from 'node_modules/@angular/cdk/portal-directives.d-a65be59b';
 
 @Component({
   selector: 'app-ver-pacientes',
   standalone: false,
-  templateUrl: './ver-pacientes.component.html',
-  styleUrls: ['./ver-pacientes.component.scss']
+  templateUrl: './pacientes.component.html',
+  styleUrls: ['./pacientes.component.scss']
 })
 
 export class VerPacientesComponent implements OnInit {
@@ -38,9 +38,51 @@ export class VerPacientesComponent implements OnInit {
   nuevaRed: string = '';
   nuevoUsuario: string = '';
   usuarioInputHabilitado: boolean = false;
-redesEditables: boolean[] = [];
+  redesEditables: boolean[] = [];
 
+  //Perfil clinico
+  opcionesBooleanasSimple: string[] = ['Sí', 'No'];
+  opcionesGenero: string[] = [
+    'Masculino',
+    'Femenino',
+  ];
+  opcionesAntecedentesPersonales: string[] = [
+    'Diabetes',
+    'Hipertensión',
+    'Migraña',
+    'Fotosensibilidad',
+    'Traumatismo ocular',
+    'Queratocono'
+  ];
 
+  opcionesAntecedentesFamiliares: string[] = [
+    'Diabetes',
+    'Hipertensión arterial',
+    'Glaucoma',
+    'Degeneración macular',
+    'Queratocono',
+    'Retinopatía diabética'
+  ];
+
+  opcionesPatologiaOcular: string[] = [
+    'Uveítis',
+    'Catarata',
+    'Queratitis',
+    'Desprendimiento de retina',
+    'Glaucoma',
+    'Queratocono',
+    'Ojo seco'
+  ];
+
+  opcionesPatologias: string[] = [
+    'Diabetes',
+    'Hipertensión',
+    'Miopía',
+    'Astigmatismo',
+    'Alergia ocular',
+    'Artritis',
+    'Cefalea'
+  ];
 
 
   constructor(
@@ -60,7 +102,20 @@ redesEditables: boolean[] = [];
       ocupacion: ['', Validators.required],
       genero: ['', Validators.required],
       direccion: ['', Validators.required],
-      redesSociales: this.fb.array([])
+      redesSociales: this.fb.array([]),
+
+      // Campos de perfil clínico
+      usuarioLentes: [''],
+      fotofobia: [''],
+      traumatismoOcular: [''],
+      traumatismoOcularDescripcion: [''],
+      cirugiaOcular: [''],
+      cirugiaOcularDescripcion: [''],
+      alergicoA: [''],
+      antecedentesPersonales: [[]],
+      antecedentesFamiliares: [[]],
+      patologias: [[]],
+      patologiaOcular: [[]]
     });
   }
 
@@ -185,7 +240,6 @@ redesEditables: boolean[] = [];
     return edad;
   }
 
-  // Métodos CRUD de pacientes
   crearPaciente(): void {
     if (this.formPaciente.invalid) {
       this.marcarCamposComoTouched();
@@ -196,19 +250,59 @@ redesEditables: boolean[] = [];
       ? 'm'
       : this.formPaciente.value.genero === 'Femenino'
         ? 'f'
-        : 'otro'; // o null si el backend lo valida diferente
+        : 'otro';
+
+    const {
+      nombreCompleto,
+      cedula,
+      telefono,
+      email,
+      fechaNacimiento,
+      ocupacion,
+      genero,
+      direccion,
+      redesSociales,
+      usuarioLentes,
+      fotofobia,
+      traumatismoOcular,
+      traumatismoOcularDescripcion,
+      cirugiaOcular,
+      cirugiaOcularDescripcion,
+      alergicoA,
+      antecedentesPersonales,
+      antecedentesFamiliares,
+      patologias,
+      patologiaOcular
+    } = this.formPaciente.value;
 
     const nuevoPaciente = {
-      ...this.formPaciente.value,
-      nombreCompleto: this.formPaciente.value.nombreCompleto,
-      genero: mapGenero,
+      informacionPersonal: {
+        nombreCompleto,
+        cedula,
+        telefono,
+        email,
+        fechaNacimiento,
+        ocupacion,
+        genero: mapGenero,
+        direccion
+      },
       redesSociales: this.redesSociales.value,
-     // fechaRegistro: this.formatearFecha(this.formPaciente.value.fechaRegistro)
+      historiaClinica: {
+        usuarioLentes,
+        fotofobia,
+        traumatismoOcular,
+        traumatismoOcularDescripcion,
+        cirugiaOcular,
+        cirugiaOcularDescripcion,
+        alergicoA,
+        antecedentesPersonales,
+        antecedentesFamiliares,
+        patologias,
+        patologiaOcular
+      }
     };
-   // delete nuevoPaciente.nombreCompleto;
 
-
-     console.log('PACIENTE ', nuevoPaciente);
+    console.log('PACIENTE ', nuevoPaciente);
 
     this.pacientesService.createPaciente(nuevoPaciente).subscribe({
       next: (response) => {
@@ -373,14 +467,14 @@ redesEditables: boolean[] = [];
     this.usuarioInputHabilitado = !!this.nuevaRed;
   }
 
-  
+
   addRedSocial(platform: string, username: string): void {
     if (platform && username) {
       this.redesSociales.push(this.fb.group({
         platform: [platform],
         username: [username]
       }));
-         this.redesEditables.push(false); // ✅ sincroniza la lógica editable
+      this.redesEditables.push(false); // ✅ sincroniza la lógica editable
       this.nuevaRed = '';
       this.nuevoUsuario = '';
       this.usuarioInputHabilitado = false;
@@ -403,15 +497,15 @@ redesEditables: boolean[] = [];
   }
 
   toggleEdicionUsername(index: number): void {
-  this.redesEditables[index] = !this.redesEditables[index];
+    this.redesEditables[index] = !this.redesEditables[index];
 
-  if (!this.redesEditables[index]) {
-    // Si se cerró edición, marca como touched y dirty para validar
-    const control = this.redesSociales.at(index).get('username');
-    control?.markAsTouched();
-    control?.markAsDirty();
+    if (!this.redesEditables[index]) {
+      // Si se cerró edición, marca como touched y dirty para validar
+      const control = this.redesSociales.at(index).get('username');
+      control?.markAsTouched();
+      control?.markAsDirty();
+    }
   }
-}
 
 
   // Métodos para modales
