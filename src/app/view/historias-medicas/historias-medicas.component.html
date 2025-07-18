@@ -4,7 +4,7 @@
     <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
       <h4 class="mb-0">👨‍⚕️ Historias médicas</h4>
       <div class="ms-auto">
-        <button class="btn btn-light btn-sm" (click)="nuevaHistoria()">
+        <button class="btn btn-light btn-sm" (click)="iniciarFlujoHistoria()">
           ➕ Agregar Historia Nueva
         </button>
       </div>
@@ -47,13 +47,13 @@
 
                   <!-- 🧠 Encabezado superior: motivo + fecha -->
                   <div class="d-flex justify-content-between mb-1">
-                    <strong>{{ historia.motivo }}</strong>
+                    <strong>{{ historia.datosConsulta.motivo }}</strong>
                     <span class="">{{ historia.fecha }}</span>
                   </div>
 
                   <!-- 👥 Pie inferior: médico + n° historia -->
                   <div class="d-flex justify-content-between align-items-center mt-2">
-                    <small class="text-muted">👨‍⚕️ {{ historia.medico }}</small>
+                    <small class="text-muted">👨‍⚕️ {{ historia.datosConsulta.medico }}</small>
                     <span class="badge bg-info">#{{ historia.nHistoria || '00012345' }}</span>
                   </div>
                 </button>
@@ -118,7 +118,7 @@
                   <div class="col-md-3 mb-0">
                     <strong>Motivo:</strong><br>
                     <p class="ms-0 bg-light rounded p-2">
-                      {{ historiaSeleccionada?.motivo || 'No especificado' }}
+                      {{ historiaSeleccionada?.datosConsulta?.motivo || 'No especificado' }}
                     </p>
                   </div>
                   <div class="col-md-6 mb-0">
@@ -132,7 +132,7 @@
               <div class="mb-4">
                 <h6 class="text-primary">🧬 Historia Clínica</h6>
                 <!-- Condiciones clínicas booleanas -->
-                <div class="row gy-2 mb-3">
+                <div class="row gy-2 mb-1">
                   <div class="col-md-3">
                     <strong>Usuario de lentes:</strong>
                     <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.usuarioLentes ? 'Sí' : 'No' }}</p>
@@ -144,7 +144,8 @@
                   </div>
                   <div class="col-md-3">
                     <strong>Última graduación:</strong>
-                    <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.ultimaGraduacion || 'No especificado' }}</p>
+                    <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.ultimaGraduacion || 'No especificado' }}
+                    </p>
                   </div>
                   <div class="col-md-3">
                     <strong>Fotofobia:</strong>
@@ -153,7 +154,7 @@
                 </div>
 
                 <!-- Antecedentes personales visualizados como badges -->
-                <div class="row gy-2 mb-3">
+                <div class="row gy-2 mb-1">
                   <div class="col-md-3">
                     <strong class="d-block mb-1">Alergias a:</strong>
                     <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.alergicoA || 'No especificado' }}</p>
@@ -164,8 +165,8 @@
                   </div>
                   <div class="col-md-3">
                     <strong class="d-block mb-1">Tipo de cirugía ocular:</strong>
-                    <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.cirugiaOcularDescripcion || 'No
-                      especificada' }}</p>
+                    <p class="bg-light rounded p-2">
+                      {{ pacienteSeleccionado?.cirugiaOcularDescripcion || 'No especificada' }}</p>
                   </div>
                   <div class="col-md-3">
                     <strong>Traumatismo ocular:</strong>
@@ -174,7 +175,7 @@
                 </div>
 
                 <!-- Condiciones adicionales -->
-                <div class="row gy-2 mb-3">
+                <div class="row gy-2 mb-1">
                   <div class="col-md-4">
                     <strong>Uso de dispositivos electrónicos:</strong>
                     <p class="bg-light rounded p-2">
@@ -213,7 +214,7 @@
                 </div>
 
                 <!-- Listados dinámicos -->
-                <div class="row gy-2">
+                <div class="row gy-2 mb-2">
                   <!-- Patologías generales -->
                   <div class="col-md-4">
                     <strong class="d-block mb-1">Patologías generales:</strong>
@@ -263,25 +264,27 @@
                       <tbody>
                         <tr>
                           <td>OD</td>
-                          <td>{{ historiaSeleccionada?.len_esf_od }}</td>
-                          <td>{{ historiaSeleccionada?.len_cil_od }}</td>
-                          <td>{{ historiaSeleccionada?.len_eje_od }}</td>
-                          <td>{{ historiaSeleccionada?.len_add_od }}</td>
-                          <td>{{ historiaSeleccionada?.len_av_lejos_od || '10 OD'}}</td>
-                          <td rowspan="2" class="align-middle">{{ historiaSeleccionada?.len_av_lejos_bi || '20 BI'}}
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.esf_od }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.cil_od }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.eje_od }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.add_od }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_od || '10 OD'}}</td>
+                          <td rowspan="2" class="align-middle">{{
+                            historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_bi || '20 BI'}}
                           </td>
-                          <td>{{ historiaSeleccionada?.len_av_cerca_od || '10 OD'}}</td>
-                          <td rowspan="2" class="align-middle">{{ historiaSeleccionada?.len_av_cerca_bi || '20 BI' }}
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_od || '10 OD'}}</td>
+                          <td rowspan="2" class="align-middle">{{
+                            historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_bi || '20 BI' }}
                           </td>
                         </tr>
                         <tr>
                           <td>OI</td>
-                          <td>{{ historiaSeleccionada?.len_esf_oi }}</td>
-                          <td>{{ historiaSeleccionada?.len_cil_oi }}</td>
-                          <td>{{ historiaSeleccionada?.len_eje_oi }}</td>
-                          <td>{{ historiaSeleccionada?.len_add_oi }}</td>
-                          <td>{{ historiaSeleccionada?.len_av_lejos_oi || '30 OI'}}</td>
-                          <td>{{ historiaSeleccionada?.len_av_cerca_oi || '30 OI'}}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.esf_oi }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.cil_oi }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.eje_oi }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.add_oi }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_oi || '30 OI'}}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_oi || '30 OI'}}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -301,19 +304,25 @@
                       <tbody>
                         <tr>
                           <td style="text-align: center;">OD</td>
-                          <td style="text-align: center;">{{ historiaSeleccionada?.avsc_od || '20 BI' }}</td>
+                          <td style="text-align: center;">{{
+                            historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_od || '20 BI' }}</td>
                           <td rowspan="2" class="align-middle" style="text-align: center;">{{
-                            historiaSeleccionada?.avsc_bi
+                            historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_bi
                             || '20 BI'}}</td>
-                          <td style="text-align: center;">{{ historiaSeleccionada?.avae_od || '20 BI' }}</td>
-                          <td style="text-align: center;" colspan="2">{{ historiaSeleccionada?.otros_od || '20 BI' }}
+                          <td style="text-align: center;">{{
+                            historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avae_od || '20 BI' }}</td>
+                          <td style="text-align: center;" colspan="2">{{
+                            historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_od || '20 BI' }}
                           </td>
                         </tr>
                         <tr>
                           <td style="text-align: center;">OI</td>
-                          <td style="text-align: center;">{{ historiaSeleccionada?.avsc_oi || '20 BI'}}</td>
-                          <td style="text-align: center;">{{ historiaSeleccionada?.avae_oi || '20 BI'}}</td>
-                          <td style="text-align: center;" colspan="2">{{ historiaSeleccionada?.otros_oi || '20 BI'}}
+                          <td style="text-align: center;">{{
+                            historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_oi || '20 BI'}}</td>
+                          <td style="text-align: center;">{{
+                            historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avae_oi || '20 BI'}}</td>
+                          <td style="text-align: center;" colspan="2">{{
+                            historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_oi || '20 BI'}}
                           </td>
                         </tr>
                       </tbody>
@@ -350,23 +359,37 @@
                         <tbody>
                           <tr>
                             <td style="text-align: center;">OD</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_esf_od }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_cil_od }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_eje_od }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_add_od }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_avccl_od || '20 BI' }}</td>
-                            <td rowspan="2" class="align-middle">{{ historiaSeleccionada?.ref_avccl_bi || '20 BI'}}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_avccc_od || '20 BI' }}</td>
-                            <td rowspan="2" class="align-middle">{{ historiaSeleccionada?.ref_avccc_bi || '20 BI'}}</td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.esf_od }}
+                            </td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.cil_od }}
+                            </td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.eje_od }}
+                            </td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.add_od }}
+                            </td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.avccl_od
+                              || '20 BI' }}</td>
+                            <td rowspan="2" class="align-middle">{{
+                              historiaSeleccionada?.examenOcular?.refraccion?.avccl_bi || '20 BI'}}</td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.avccc_od
+                              || '20 BI' }}</td>
+                            <td rowspan="2" class="align-middle">{{
+                              historiaSeleccionada?.examenOcular?.refraccion?.avccc_bi || '20 BI'}}</td>
                           </tr>
                           <tr>
                             <td style="text-align: center;">OI</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_esf_oi }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_cil_oi }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_eje_oi }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_add_oi }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_avccl_oi || '20 BI' }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_avccc_oi || '20 BI' }}</td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.esf_oi }}
+                            </td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.cil_oi }}
+                            </td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.eje_oi }}
+                            </td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.add_oi }}
+                            </td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.avccl_oi
+                              || '20 BI' }}</td>
+                            <td style="text-align: center;">{{ historiaSeleccionada?.examenOcular?.refraccion?.avccc_oi
+                              || '20 BI' }}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -391,21 +414,33 @@
                         <tbody>
                           <tr>
                             <td style="text-align: center;">OD</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_esf_od }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_cil_od }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_eje_od }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_add_od }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_alt_od }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_dp_od }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_od }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_od }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.eje_od }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.add_od }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.alt_od }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.dp_od }}</td>
                           </tr>
                           <tr>
                             <td style="text-align: center;">OI</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_esf_oi }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_cil_oi }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_eje_oi }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_add_oi }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_alt_oi }}</td>
-                            <td style="text-align: center;">{{ historiaSeleccionada?.ref_final_dp_oi }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_oi }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_oi }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.eje_oi }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.add_oi }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.alt_oi }}</td>
+                            <td style="text-align: center;">{{
+                              historiaSeleccionada?.examenOcular?.refraccionFinal?.dp_oi }}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -417,593 +452,605 @@
                 <div class="row mb-1">
                   <div class="col-md-6 mb-1">
                     <h6 class="text-primary">📝 Diagnóstico</h6>
-                    <p class="bg-light rounded p-2">{{ historiaSeleccionada?.diagnostico }}</p>
+                    <p class="bg-light rounded p-2">
+                      {{ historiaSeleccionada?.diagnosticoTratamiento?.diagnostico || 'No especificado' }}
+                    </p>
                   </div>
                   <div class="col-md-6 mb-1">
                     <h6 class="text-primary">💊 Tratamiento</h6>
-                    <p class="bg-light rounded p-2">{{ historiaSeleccionada?.tratamiento }}</p>
+                    <p class="bg-light rounded p-2">
+                      {{ historiaSeleccionada?.diagnosticoTratamiento?.tratamiento || 'No especificado' }}
+                    </p>
                   </div>
                 </div>
 
-                <!-- Asesoría -->
-                <div class="mb-2">
+                <!-- Recomendaciones del historial médico -->
+                <div *ngIf="historiaSeleccionada?.recomendaciones as recomendaciones; else sinRecomendaciones"
+                  class="mb-4">
                   <h6 class="text-primary">🧑‍💼 Recomendaciones</h6>
-                  <div class="row">
-                    <div class="col-md-3 mb-0">
-                      <strong>Tipo de cristal:</strong><br>
-                      <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada?.cristal }}</p>
-                    </div>
-                    <div class="col-md-3 mb-0">
-                      <strong>Material:</strong><br>
-                      <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada?.material }}</p>
-                    </div>
-                    <div class="col-md-3 mb-0">
-                      <strong>Montura sugerida:</strong><br>
-                      <p class="ms-0 bg-light rounded p-2"> {{ historiaSeleccionada?.montura }}</p>
-                    </div>
-                    <div class="col-md-3 mb-0">
-                      <strong>Cristal sugerido:</strong><br>
-                      <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada?.cristalSugerido }} </p>
-                    </div>
-                    <div class="col-md-12 mb-0">
-                      <strong>Observaciones:</strong><br>
-                      <p class="ms-0 bg-light rounded p-2">{{ historiaSeleccionada?.observaciones }}</p>
-                    </div>
-                  </div>
-                </div>
 
-                <!-- Nota de conformidad -->
-                <div class="mt-4 pt-0">
-                  <div class="alert alert-warning"
-                    style="background: var(--degradado-pastel) !important; border: none;">
-                    <h6 class="fw-bold">✍️ DECLARACIÓN DE CONFORMIDAD</h6>
-                    <p class="mb-0">{{ notaConformidad }}</p>
-                  </div>
-                </div>
-
-                <!-- Firmas -->
-                <div class="mt-4 pt-3 border-top mb-4">
-                  <div class="row justify-content-between text-center">
-                    <!-- Firma del paciente -->
-                    <div class="col-md-5">
-                      <p class="mb-1"><strong>Firma del Paciente</strong></p>
-                      <div class="border rounded p-3 bg-light" style="height: 100px;">
-                        <!-- espacio para firma manuscrita -->
+                  <div *ngFor="let rec of recomendaciones; let i = index" class="border rounded p-3 mb-3">
+                    <h6 class="text-secondary mb-3">Lente #{{ i + 1 }}</h6>
+                    <div class="row">
+                      <div class="col-md-4 mb-0">
+                        <strong>Tipo de cristal:</strong><br>
+                        <p class="ms-0 bg-light rounded p-2">{{ rec.cristal || 'No especificado' }}</p>
                       </div>
-                      <p class="mt-2 mb-0 text-muted">Nombre: {{ pacienteSeleccionado?.nombreCompleto }}</p>
-                      <p class="mb-0 text-muted">C.I: {{ pacienteSeleccionado?.cedula }}</p>
-                    </div>
-                    <!-- Firma del médico -->
-                    <div class="col-md-5">
-                      <p class="mb-1"><strong>Firma del Médico Tratante</strong></p>
-                      <div class="border rounded p-3 bg-light" style="height: 100px;">
-                        <!-- espacio para firma manuscrita -->
+                      <div class="col-md-4 mb-0">
+                        <strong>Material:</strong><br>
+                        <p class="ms-0 bg-light rounded p-2">
+                          {{ getMaterialLabel(rec.material) }}
+                        </p>
+
+
+
                       </div>
-                      <p class="mt-2 mb-0 text-muted">Nombre: {{ historiaSeleccionada?.medico }}</p>
-                      <p class="mb-0 text-muted">C.I: {{ pacienteSeleccionado?.cedula || 'No especificado' }}</p>
+                      <div class="col-md-4 mb-0">
+                        <strong>Montura sugerida:</strong><br>
+                        <p class="ms-0 bg-light rounded p-2">{{ rec.montura || 'No especificada' }}</p>
+                      </div>
+                      <div class="col-md-12 mt-2">
+                        <strong>Observaciones:</strong><br>
+                        <p class="ms-0 bg-light rounded p-2">{{ rec.observaciones || 'Sin observaciones' }}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div class="col-md-12 pt-4" style="text-align: center;">
-                  <p class="mb-1"><strong>Asesor Responsable</strong></p>
-                  <p class="mt-2 mb-0 text-muted">
-                    Nombre: {{ historiaSeleccionada?.asesor || 'Nombre del asesor' }}
-                  </p>
-                  <p class="mb-0 text-muted">
-                    Cédula: {{ historiaSeleccionada?.cedulaAsesor || 'No registrada' }}
-                  </p>
+
+                <!-- Si no hay recomendaciones registradas -->
+                <ng-template #sinRecomendaciones>
+                  <div class="mb-4">
+                    <h6 class="text-primary">🧑‍💼 Recomendaciones</h6>
+                    <p class="text-muted">No se registraron recomendaciones de lentes para este historial.</p>
+                  </div>
+                </ng-template>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer text-end">
+            <button class="btn btn-outline-secondary me-2">
+              <i class="bi bi-printer"></i> Imprimir
+            </button>
+            <button class="btn btn-primary" (click)="iniciarFlujoHistoria()">
+              <i class="bi bi-pencil-square"></i> Editar
+            </button>
+          </div>
+
+
+        </div>
+      </div>
+
+      <!-- Modal para agregar/editar historia -->
+      <div class="modal fade" id="historiaModal" tabindex="-1" aria-labelledby="historiaModalLabel"
+        data-bs-backdrop="static" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+          <div class="modal-content">
+
+            <!-- Card Header -->
+            <div class="modal-header bg-primary text-white">
+              <h5 class="modal-title" id="historiaModalLabel">
+                {{ modoEdicion ? '✏️ Editar Historia Médica' : '👨‍⚕️ Nueva Historia Médica' }}
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+
+            <!-- Card Body -->
+            <div class="modal-body" style="padding: 25px;">
+              <form [formGroup]="historiaForm" (ngSubmit)="iniciarFlujoHistoria()">
+                <!-- Sección Paciente -->
+                <div class="mb-5">
+                  <h6 class="text-primary mb-2" style="font-size: 20px; margin-bottom: 0px;">📌 Datos del Paciente</h6>
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <label class="form-label">Paciente</label>
+                      <ng-select [items]="pacientesFiltrados" bindLabel="nombreCompleto" formControlName="pacienteId"
+                        [searchable]="true" placeholder="Buscar paciente...">
+                      </ng-select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">Motivo de Consulta</label>
+                      <ng-select [items]="motivosConsulta" [multiple]="true" formControlName="motivo"
+                        [compareWith]="compareStrings" [appendTo]="'body'" (change)="onMotivoChange($event)"
+                        placeholder="Seleccione un motivo..">
+                      </ng-select>
+                    </div>
+                    <!-- Input para "Otro" motivo -->
+                    <div *ngIf="mostrarInputOtroMotivo" class="col-md-4">
+                      <label class="form-label">Especifique el motivo</label>
+                      <input type="text" class="form-control" formControlName="otroMotivo"
+                        placeholder="Ingrese el motivo de consulta...">
+                    </div>
+
+                    <div class="col-md-4">
+                      <label class="form-label">Tipo de cristal actual</label>
+                      <ng-select [items]="tiposCristales" formControlName="tipoCristalActual" [searchable]="true"
+                        placeholder="Seleccione un tipo...">
+                      </ng-select>
+                    </div>
+
+                    <div class="col-md-4">
+                      <label class="form-label">Fecha última graduación</label>
+                      <input type="date" class="form-control" formControlName="ultimaGraduacion" [max]="maxDate">
+                    </div>
+
+                    <div class="col-md-4">
+                      <label class="form-label">Médico Tratante</label>
+                      <ng-select [items]="medicosTratantes" formControlName="medico" [searchable]="true"
+                        placeholder="Seleccione un médico..." required>
+                      </ng-select>
+                      <div *ngIf="historiaForm.get('medico')?.invalid && historiaForm.get('medico')?.touched"
+                        class="text-danger small mt-1">
+                        <i class="bi bi-exclamation-circle-fill me-1"></i> Seleccione un médico tratante
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sección Examen Ocular -->
+                <div class="mb-5 shadow-sm tablas-optometria-container">
+                  <h6 class="text-primary mb-3" style="font-size: 20px;">👁️ Examen Ocular</h6>
+
+                  <!-- Lensometría -->
+                  <h6 class="mb-3 ms-3">📐 <strong>Lensometría</strong></h6>
+                  <div class="table-responsive-custom " style="overflow-x: auto;">
+                    <table class="table table-bordered">
+                      <thead class="table-light">
+                        <tr>
+                          <th style="text-align: center;">Ojo</th>
+                          <th style="text-align: center;">ESF</th>
+                          <th style="text-align: center;">CIL</th>
+                          <th style="text-align: center;">EJE</th>
+                          <th style="text-align: center;">ADD</th>
+                          <th colspan="2" style="text-align: center;">AV Lejos</th>
+                          <th colspan="2" style="text-align: center;">AV Cerca</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="text-center align-middle">OD</td>
+                          <td>
+                            <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
+                              formControlName="len_esf_od" placeholder="ESF" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                              formControlName="len_cil_od" placeholder="CIL" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                              formControlName="len_eje_od" placeholder="EJE" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                              formControlName="len_add_od" placeholder="ADD" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
+                              formControlName="len_av_lejos_od" placeholder="AV Lejos" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td rowspan="2" class="align-middle">
+                            <ng-select [items]="opcionesRef['avBinocular']" bindLabel="label" bindValue="value"
+                              formControlName="len_av_lejos_bi" placeholder="AV BI" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
+                              formControlName="len_av_cerca_od" placeholder="AV Cerca" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td rowspan="2" class="align-middle">
+                            <ng-select [items]="opcionesRef['avBinocular']" bindLabel="label" bindValue="value"
+                              formControlName="len_av_bi" placeholder="AV BI" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="text-center align-middle">OI</td>
+                          <td>
+                            <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
+                              formControlName="len_esf_oi" placeholder="ESF" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                              formControlName="len_cil_oi" placeholder="CIL" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                              formControlName="len_eje_oi" placeholder="EJE" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                              formControlName="len_add_oi" placeholder="ADD" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
+                              formControlName="len_av_lejos_oi" placeholder="AV Lejos" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
+                              formControlName="len_av_cerca_oi" placeholder="AV Cerca" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Refracción -->
+                  <h6 class="mb-3 ms-3">📐 <strong>Refracción</strong></h6>
+                  <div class="table-responsive-custom">
+                    <table class="table table-bordered">
+                      <thead class="table-light">
+                        <tr>
+                          <th style="text-align: center;">Ojo</th>
+                          <th style="text-align: center;">ESF</th>
+                          <th style="text-align: center;">CIL</th>
+                          <th style="text-align: center;">EJE</th>
+                          <th style="text-align: center;">ADD</th>
+                          <th colspan="2" style="text-align: center;">AVCCL</th>
+                          <th colspan="2" style="text-align: center;">AVCCC</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="text-center align-middle">OD</td>
+                          <td>
+                            <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
+                              formControlName="ref_esf_od" placeholder="ESF" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                              formControlName="ref_cil_od" placeholder="CIL" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                              formControlName="ref_eje_od" placeholder="EJE" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                              formControlName="ref_add_od" placeholder="ADD" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
+                              formControlName="ref_avccl_od" placeholder="AV CCL" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td rowspan="2" class="align-middle">
+                            <ng-select [items]="opcionesRef['avBinocular']" bindLabel="label" bindValue="value"
+                              formControlName="ref_avccl_bi" placeholder="AVCCL BI" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
+                              formControlName="ref_avccc_od" placeholder="AV CCC" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td rowspan="2" class="align-middle">
+                            <ng-select [items]="opcionesRef['avBinocular']" bindLabel="label" bindValue="value"
+                              formControlName="ref_avccc_bi" placeholder="AVCCC BI" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="text-center align-middle">OI</td>
+                          <td>
+                            <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
+                              formControlName="ref_esf_oi" placeholder="ESF" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                              formControlName="ref_cil_oi" placeholder="CIL" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                              formControlName="ref_eje_oi" placeholder="EJE" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                              formControlName="ref_add_oi" placeholder="ADD" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
+                              formControlName="ref_avccl_oi" placeholder="AV CCL" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
+                              formControlName="ref_avccc_oi" placeholder="AV CCC" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Refracción Final -->
+                  <h6 class="mb-3 ms-3">📐 <strong>Refracción Final</strong></h6>
+                  <div class="table-responsive-custom">
+                    <table class="table table-bordered">
+                      <thead class="table-light">
+                        <tr>
+                          <th style="text-align: center;">Ojo</th>
+                          <th style="text-align: center;">ESF</th>
+                          <th style="text-align: center;">CIL</th>
+                          <th style="text-align: center;">EJE</th>
+                          <th style="text-align: center;">ADD</th>
+                          <th style="text-align: center;">ALT</th>
+                          <th style="text-align: center;">DP</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="text-center align-middle">OD</td>
+                          <td>
+                            <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
+                              formControlName="ref_final_esf_od" placeholder="ESF" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                              formControlName="ref_final_cil_od" placeholder="CIL" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                              formControlName="ref_final_eje_od" placeholder="EJE" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                              formControlName="ref_final_add_od" placeholder="ADD" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <input type="text" class="form-control" formControlName="ref_final_alt_od"
+                              placeholder="ALT">
+                          </td>
+                          <td>
+                            <input type="text" class="form-control" formControlName="ref_final_dp_od" placeholder="DP">
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="text-center align-middle">OI</td>
+                          <td>
+                            <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
+                              formControlName="ref_final_esf_oi" placeholder="ESF" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
+                              formControlName="ref_final_cil_oi" placeholder="CIL" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
+                              formControlName="ref_final_eje_oi" placeholder="EJE" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
+                              formControlName="ref_final_add_oi" placeholder="ADD" [searchable]="true"
+                              [appendTo]="'body'" class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <input type="text" class="form-control" formControlName="ref_final_alt_oi"
+                              placeholder="ALT">
+                          </td>
+                          <td>
+                            <input type="text" class="form-control" formControlName="ref_final_dp_oi" placeholder="DP">
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- AVSC - AVAE - OTROS -->
+                  <h6 class="mb-3 ms-3">📐 <strong>AVSC - AVAE - OTROS</strong></h6>
+                  <div class="table-responsive-custom">
+                    <table class="table table-bordered">
+                      <thead class="table-light">
+                        <tr>
+                          <th style="text-align: center;">Ojo</th>
+                          <th style="text-align: center;">AVSC</th>
+                          <th style="text-align: center;">AVAE</th>
+                          <th style="text-align: center;">OTROS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td class="text-center align-middle">OD</td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avsc']" bindLabel="label" bindValue="value"
+                              formControlName="avsc_od" placeholder="AVSC" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avae']" bindLabel="label" bindValue="value"
+                              formControlName="avae_od" placeholder="AVAE" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <input type="text" class="form-control" formControlName="otros_od">
+                          </td>
+                        </tr>
+                        <tr>
+                          <td class="text-center align-middle">OI</td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avsc']" bindLabel="label" bindValue="value"
+                              formControlName="avsc_oi" placeholder="AVSC" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <ng-select [items]="opcionesRef['avae']" bindLabel="label" bindValue="value"
+                              formControlName="avae_oi" placeholder="AVAE" [searchable]="true" [appendTo]="'body'"
+                              class="select-optometria">
+                            </ng-select>
+                          </td>
+                          <td>
+                            <input type="text" class="form-control" formControlName="otros_oi">
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Sección Diagnóstico y Tratamiento -->
+                  <div class="mb-5 shadow-sm">
+                    <h6 class="text-primary mb-3" style="font-size: 20px;">💊 Diagnóstico y Tratamiento</h6>
+                    <div>
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-label">Diagnóstico</label>
+                          <textarea class="form-control" rows="3" placeholder="Indique el diagnóstico encontrado.."
+                            formControlName="diagnostico"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label">Tratamiento</label>
+                          <textarea class="form-control" placeholder="Indique el tratamiento.." rows="3"
+                            formControlName="tratamiento"></textarea>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Sección Recomendaciones -->
+                  <div class="mb-5 shadow-sm">
+                    <h6 class="text-primary mb-3 d-flex justify-content-between align-items-center"
+                      style="font-size: 20px;">
+                      🧑‍💼 Recomendaciones
+                      <button class="btn btn-sm btn-outline-primary" type="button" (click)="agregarRecomendacion()">
+                        <i class="bi bi-plus-circle me-1"></i> Añadir lente
+                      </button>
+                    </h6>
+
+                    <div formArrayName="recomendaciones">
+                      <div *ngFor="let grupo of recomendaciones.controls; let i = index" [formGroupName]="i"
+                        class="border rounded p-3 mb-4">
+                        <h6 class="text-secondary mb-3">Lente #{{ i + 1 }}</h6>
+                        <div class="row g-3">
+
+                          <!-- Tipo de cristal -->
+                          <div class="col-md-4">
+                            <label class="form-label">Tipo de cristal</label>
+                            <ng-select [items]="tiposCristales" [searchable]="true" [appendTo]="'body'"
+                              formControlName="cristal" placeholder="Seleccione el cristal...">
+                            </ng-select>
+                          </div>
+
+                          <!-- Material -->
+                          <div class="col-md-4">
+                            <label class="form-label">Material</label>
+                            <ng-select [items]="materiales" bindLabel="label" bindValue="value"
+                              formControlName="material" [searchable]="true" placeholder="Seleccione un material..."
+                              (change)="verificarMaterialOtro(i)">
+                            </ng-select>
+                          </div>
+
+                          <!-- Campo para material personalizado -->
+                          <div class="col-md-4" *ngIf="mostrarMaterialPersonalizado[i]">
+                            <label class="form-label">Otro material</label>
+                            <input type="text" class="form-control" [formControlName]="'materialPersonalizado'"
+                              placeholder="Ingrese el material..." />
+                          </div>
+
+
+                          <!-- Montura -->
+                          <div class="col-md-4">
+                            <label class="form-label">Montura sugerida</label>
+                            <input type="text" class="form-control" formControlName="montura"
+                              placeholder="Ej: Rectangular metálica" />
+                          </div>
+
+                          <!-- Observaciones -->
+                          <div class="col-md-8">
+                            <label class="form-label">Observaciones</label>
+                            <textarea class="form-control" rows="2" formControlName="observaciones"
+                              placeholder="Notas específicas para este lente"></textarea>
+                          </div>
+
+                          <!-- Botón eliminar -->
+                          <div class="col-md-12 text-end">
+                            <button class="btn btn-sm btn-outline-danger mt-2" type="button"
+                              (click)="eliminarRecomendacion(i)" *ngIf="recomendaciones.length > 1">
+                              <i class="bi bi-trash"></i> Quitar lente
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
 
-              </div>
-
-              <div class="card-footer text-end">
-                <button class="btn btn-outline-secondary me-2">
-                  <i class="bi bi-printer"></i> Imprimir
-                </button>
-                <button class="btn btn-primary">
-                  <i class="bi bi-pencil-square"></i> Editar
-                </button>
-              </div>
+              </form>
+            </div>
+            <!-- Card Footer -->
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="bi bi-x-circle"></i> Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary" [disabled]="historiaForm.invalid">
+                <i class="bi bi-save"></i> {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+              </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
-
-
-    <!-- Modal para agregar/editar historia -->
-    <div class="modal fade" id="historiaModal" tabindex="-1" aria-labelledby="historiaModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-
-          <!-- Card Header -->
-          <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title" id="historiaModalLabel">
-              {{ modoEdicion ? '✏️ Editar Historia Médica' : '👨‍⚕️ Nueva Historia Médica' }}
-            </h5>
-
-          </div>
-
-          <!-- Card Body -->
-          <div class="modal-body" style="padding: 25px;">
-            <form [formGroup]="historiaForm" (ngSubmit)="guardarHistoria()">
-
-              <!-- Sección Paciente -->
-              <div class="mb-5">
-                <h6 class="text-primary mb-2" style="font-size: 20px; margin-bottom: 0px;">📌 Datos del Paciente</h6>
-                <div class="row g-3">
-                  <div class="col-md-4">
-                    <label class="form-label">Paciente</label>
-                    <ng-select [items]="pacientesFiltrados" bindLabel="nombreCompleto" formControlName="pacienteId"
-                      [searchable]="true" placeholder="Buscar paciente...">
-                    </ng-select>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label">Motivo de Consulta</label>
-                    <ng-select [items]="motivosConsulta" [multiple]="true" formControlName="motivo"
-                      [compareWith]="compareStrings" [appendTo]="'body'" (change)="onMotivoChange($event)"
-                      placeholder="Seleccione un motivo..">
-                    </ng-select>
-                  </div>
-                  <!-- Input para "Otro" motivo -->
-                  <div *ngIf="mostrarInputOtroMotivo" class="col-md-4">
-                    <label class="form-label">Especifique el motivo</label>
-                    <input type="text" class="form-control" formControlName="otroMotivo"
-                      placeholder="Ingrese el motivo de consulta...">
-                  </div>
-
-                  <div class="col-md-4">
-                    <label class="form-label">Tipo de cristal actual</label>
-                    <ng-select [items]="tiposCristales" formControlName="tipoCristalActual" [searchable]="true"
-                      placeholder="Seleccione un tipo...">
-                    </ng-select>
-                  </div>
-
-                  <div class="col-md-4">
-                    <label class="form-label">Fecha última graduación</label>
-                    <input type="date" class="form-control" formControlName="ultimaGraduacion" [max]="maxDate">
-                  </div>
-
-                  <div class="col-md-4">
-                    <label class="form-label">Médico Tratante</label>
-                    <ng-select [items]="medicosTratantes" formControlName="medico" [searchable]="true"
-                      placeholder="Seleccione un médico..." required>
-                    </ng-select>
-                    <div *ngIf="historiaForm.get('medico')?.invalid && historiaForm.get('medico')?.touched"
-                      class="text-danger small mt-1">
-                      <i class="bi bi-exclamation-circle-fill me-1"></i> Seleccione un médico tratante
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Sección Examen Ocular -->
-              <div class="mb-5 shadow-sm tablas-optometria-container">
-                <h6 class="text-primary mb-3" style="font-size: 20px;">👁️ Examen Ocular</h6>
-
-                <!-- Lensometría -->
-                <h6 class="mb-3 ms-3">📐 <strong>Lensometría</strong></h6>
-                <div class="table-responsive-custom " style="overflow-x: auto;">
-                  <table class="table table-bordered">
-                    <thead class="table-light">
-                      <tr>
-                        <th style="text-align: center;">Ojo</th>
-                        <th style="text-align: center;">ESF</th>
-                        <th style="text-align: center;">CIL</th>
-                        <th style="text-align: center;">EJE</th>
-                        <th style="text-align: center;">ADD</th>
-                        <th colspan="2" style="text-align: center;">AV Lejos</th>
-                        <th colspan="2" style="text-align: center;">AV Cerca</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td class="text-center align-middle">OD</td>
-                        <td> <ng-select [items]="opcionesRef.esf" bindLabel="label" bindValue="value"
-                            formControlName="len_esf_od" placeholder="ESF" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select></td>
-
-                        <td><ng-select [items]="opcionesRef.cil" bindLabel="label" bindValue="value"
-                            formControlName="len_cil_oi" placeholder="CIL" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select></td>
-
-                        <td>
-                          <ng-select [items]="opcionesRef.eje" bindLabel="label" bindValue="value"
-                            formControlName="len_eje_od" placeholder="EJE" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.add" bindLabel="label" bindValue="value"
-                            formControlName="len_add_od" placeholder="ADD" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.avLejos" bindLabel="label" bindValue="value"
-                            formControlName="len_av_lejos_od" placeholder="AV Lejos" [searchable]="true"
-                            [appendTo]="'body'" class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td rowspan="2" class="align-middle">
-                          <ng-select [items]="opcionesRef.avBinocular" bindLabel="label" bindValue="value"
-                            formControlName="len_av_lejos_bi" placeholder="AV BI" [searchable]="true"
-                            [appendTo]="'body'" class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.avCerca" bindLabel="label" bindValue="value"
-                            formControlName="len_av_cerca_od" placeholder="AV Cerca" [searchable]="true"
-                            [appendTo]="'body'" class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td rowspan="2" class="align-middle">
-                          <ng-select [items]="opcionesRef.avBinocular" bindLabel="label" bindValue="value"
-                            formControlName="len_av_bi" placeholder="AV BI" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="text-center align-middle"> OI</td>
-                        <td>
-                          <ng-select [items]="opcionesRef.esf" bindLabel="label" bindValue="value"
-                            formControlName="len_esf_oi" placeholder="ESF" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.cil" bindLabel="label" bindValue="value"
-                            formControlName="len_cil_oi" placeholder="CIL" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.eje" bindLabel="label" bindValue="value"
-                            formControlName="len_eje_oi" placeholder="EJE" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.add" bindLabel="label" bindValue="value"
-                            formControlName="len_add_oi" placeholder="ADD" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.add" bindLabel="label" bindValue="value"
-                            formControlName="len_av_lejos_oi" placeholder="AV Lejos" [searchable]="true"
-                            [appendTo]="'body'" class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.add" bindLabel="label" bindValue="value"
-                            formControlName="len_av_cerca_oi" placeholder="AV Cerca" [searchable]="true"
-                            [appendTo]="'body'" class="select-optometria">
-                          </ng-select>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <!-- Refracción -->
-                <h6 class="mb-3 ms-3">📐 <strong>Refracción</strong></h6>
-                <div class="table-responsive-custom">
-                  <table class="table table-bordered">
-                    <thead class="table-light">
-                      <tr>
-                        <th style="text-align: center;">Ojo</th>
-                        <th style="text-align: center;">ESF</th>
-                        <th style="text-align: center;">CIL</th>
-                        <th style="text-align: center;">EJE</th>
-                        <th style="text-align: center;">ADD</th>
-                        <th colspan="2" style="text-align: center;">AVCCL</th>
-                        <th colspan="2" style="text-align: center;">AVCCC</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td class="text-center align-middle">OD</td>
-                        <td>
-                          <ng-select [items]="opcionesRef.esf" bindLabel="label" bindValue="value"
-                            formControlName="ref_esf_od" placeholder="ESF" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.cil" bindLabel="label" bindValue="value"
-                            formControlName="ref_cil_od" placeholder="CIL" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.eje" bindLabel="label" bindValue="value"
-                            formControlName="ref_eje_od" placeholder="EJE" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.add" bindLabel="label" bindValue="value"
-                            formControlName="ref_add_od" placeholder="ADD" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.avLejos" bindLabel="label" bindValue="value"
-                            formControlName="ref_avccl_od" placeholder="AV CCL" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td rowspan="2" class="align-middle">
-                          <ng-select [items]="opcionesRef.avBinocular" bindLabel="label" bindValue="value"
-                            formControlName="ref_avccl_bi" placeholder="AVCCL BI" [searchable]="true"
-                            [appendTo]="'body'" class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.avCerca" bindLabel="label" bindValue="value"
-                            formControlName="ref_avccc_od" placeholder="AV CCC" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td rowspan="2" class="align-middle">
-                          <ng-select [items]="opcionesRef.avBinocular" bindLabel="label" bindValue="value"
-                            formControlName="ref_avccc_bi" placeholder="AVCCC BI" [searchable]="true"
-                            [appendTo]="'body'" class="select-optometria">
-                          </ng-select>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="text-center align-middle">OI</td>
-                        <td>
-                          <ng-select [items]="opcionesRef.esf" bindLabel="label" bindValue="value"
-                            formControlName="ref_esf_oi" placeholder="ESF" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.cil" bindLabel="label" bindValue="value"
-                            formControlName="ref_cil_oi" placeholder="CIL" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.eje" bindLabel="label" bindValue="value"
-                            formControlName="ref_eje_oi" placeholder="EJE" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.add" bindLabel="label" bindValue="value"
-                            formControlName="ref_add_oi" placeholder="ADD" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.avCerca" bindLabel="label" bindValue="value"
-                            formControlName="ref_avccl_oi" placeholder="AV CCL" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.avBinocular" bindLabel="label" bindValue="value"
-                            formControlName="ref_avccc_oi" placeholder="AV CCC" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- Refracción Final -->
-                <h6 class="mb-3 ms-3">📐 <strong>Refracción Final</strong></h6>
-                <div class="table-responsive-custom">
-                  <table class="table table-bordered">
-                    <thead class="table-light">
-                      <tr>
-                        <th style="text-align: center;">Ojo</th>
-                        <th style="text-align: center;">ESF</th>
-                        <th style="text-align: center;">CIL</th>
-                        <th style="text-align: center;">EJE</th>
-                        <th style="text-align: center;">ADD</th>
-                        <th style="text-align: center;">ALT</th>
-                        <th style="text-align: center;">DP</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td class="text-center align-middle">OD</td>
-                        <td>
-                          <ng-select [items]="opcionesRef.esf" bindLabel="label" bindValue="value"
-                            formControlName="ref_final_esf_od" placeholder="ESF" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.cil" bindLabel="label" bindValue="value"
-                            formControlName="ref_final_cil_od" placeholder="CIL" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.eje" bindLabel="label" bindValue="value"
-                            formControlName="ref_final_eje_od" placeholder="EJE" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.add" bindLabel="label" bindValue="value"
-                            formControlName="ref_final_add_od" placeholder="ADD" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <input type="text" class="form-control" formControlName="ref_final_alt_od" placeholder="ALT">
-                        </td>
-                        <td>
-                          <input type="text" class="form-control" formControlName="ref_final_dp_od" placeholder="DP">
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="text-center align-middle">OI</td>
-                        <td>
-                          <ng-select [items]="opcionesRef.esf" bindLabel="label" bindValue="value"
-                            formControlName="ref_final_esf_oi" placeholder="ESF" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.cil" bindLabel="label" bindValue="value"
-                            formControlName="ref_final_cil_oi" placeholder="CIL" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.eje" bindLabel="label" bindValue="value"
-                            formControlName="ref_final_eje_oi" placeholder="EJE" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.add" bindLabel="label" bindValue="value"
-                            formControlName="ref_final_add_oi" placeholder="ADD" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-
-                        <td>
-                          <input type="text" class="form-control" formControlName="ref_final_alt_oi" placeholder="ALT">
-                        </td>
-                        <td>
-                          <input type="text" class="form-control" formControlName="ref_final_dp_oi" placeholder="DP">
-                        </td>
-
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- AVSC - AVAE - OTROS -->
-                <h6 class="mb-3 ms-3">📐 <strong>AVSC - AVAE - OTROS</strong></h6>
-                <div class="table-responsive-custom">
-                  <table class="table table-bordered">
-                    <thead class="table-light">
-                      <tr>
-                        <th style="text-align: center;">Ojo</th>
-                        <th style="text-align: center;">AVSC</th>
-                        <th style="text-align: center;">AVAE</th>
-                        <th style="text-align: center;">OTROS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td class="text-center align-middle">OD</td>
-                        <td>
-                          <ng-select [items]="opcionesRef.avsc" bindLabel="label" bindValue="value"
-                            formControlName="avsc_od" placeholder="AVSC" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.avae" bindLabel="label" bindValue="value"
-                            formControlName="avae_od" placeholder="AVAE" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <input type="text" class="form-control" formControlName="otros_od">
-                        </td>
-                      </tr>
-                      <tr>
-                        <td class="text-center align-middle">OI</td>
-                        <td>
-                          <ng-select [items]="opcionesRef.avsc" bindLabel="label" bindValue="value"
-                            formControlName="avsc_oi" placeholder="AVSC" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <ng-select [items]="opcionesRef.avae" bindLabel="label" bindValue="value"
-                            formControlName="avae_oi" placeholder="AVAE" [searchable]="true" [appendTo]="'body'"
-                            class="select-optometria">
-                          </ng-select>
-                        </td>
-                        <td>
-                          <input type="text" class="form-control" formControlName="otros_oi">
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <!-- Sección Diagnóstico y Tratamiento -->
-              <div class="mb-5 shadow-sm">
-                <h6 class="text-primary mb-3" style="font-size: 20px;">💊 Diagnóstico y Tratamiento</h6>
-                <div>
-                  <div class="row g-3">
-                    <div class="col-md-6">
-                      <label class="form-label">Diagnóstico</label>
-                      <textarea class="form-control" rows="3" placeholder="Indique el diagnóstico encontrado.."
-                        formControlName="diagnostico"></textarea>
-                    </div>
-                    <div class="col-md-6">
-                      <label class="form-label">Tratamiento</label>
-                      <textarea class="form-control" placeholder="Indique el tratamiento.." rows="3"
-                        formControlName="tratamiento"></textarea>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Sección Recomendaciones -->
-              <div class="mb-5 shadow-sm">
-                <h6 class="text-primary mb-3" style="font-size: 20px;">🧑‍💼 Recomendaciones</h6>
-                <div>
-                  <div class="row g-3">
-                    <!-- Select para Tipo de Cristal -->
-                    <div class="col-md-4">
-                      <label class="form-label">Tipo de cristal</label>
-                      <ng-select [items]="tiposCristales" [multiple]="true" [compareWith]="compareStrings"
-                        [appendTo]="'body'" [compareWith]="compareStrings" [appendTo]="'body'" formControlName="cristal"
-                        [searchable]="true" placeholder="Seleccione el cristal..">
-                      </ng-select>
-                    </div>
-
-                    <!-- Select para Material -->
-                    <div class="col-md-4">
-                      <label class="form-label">Material</label>
-                      <ng-select [items]="materiales" formControlName="material" [searchable]="true"
-                        placeholder="Seleccione un material..">
-                      </ng-select>
-                    </div>
-                    <div class="col-md-4">
-                      <label class="form-label">Montura sugerida</label>
-                      <input type="text" class="form-control" formControlName="montura">
-                    </div>
-                    <div class="col-md-12">
-                      <label class="form-label">Observaciones</label>
-                      <textarea class="form-control" rows="2" formControlName="observaciones"></textarea>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Card Footer -->
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                  <i class="bi bi-x-circle"></i> Cancelar
-                </button>
-                <button type="submit" class="btn btn-primary" [disabled]="historiaForm.invalid">
-                  <i class="bi bi-save"></i> {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
