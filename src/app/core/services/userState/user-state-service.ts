@@ -1,7 +1,7 @@
 // user-state.service.ts
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { User } from '../../../Interfaces/models-interface';
+import { User, AuthData } from '../../../Interfaces/models-interface';
 
 @Injectable({ providedIn: 'root' })
 
@@ -15,6 +15,7 @@ export class UserStateService {
 
   private loadInitialState(): void {
     const userData = localStorage.getItem('currentUser');
+    console.log('userdata ', userData);
     if (userData) {
       this.userSubject.next(JSON.parse(userData));
     }
@@ -32,4 +33,18 @@ export class UserStateService {
   getCurrentUser(): User | null {
     return this.userSubject.value;
   }
+
+  setUserFromAuth(authData: AuthData): void {
+    const user: User = {
+      ...authData.user,
+      rol: authData.rol.name,
+      cargo: authData.cargo.name,
+      sede: authData.sede.key // 👈 solo el identificador
+    };
+
+    this.userSubject.next(user);
+  }
+
+
+
 }

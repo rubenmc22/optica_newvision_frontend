@@ -7,6 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import * as bootstrap from 'bootstrap';
 import { ModalService } from '../../core/services/modal/modal.service';
 import { Paciente } from './paciente-interface';
+import { UserStateService } from '../../core/services/userState/user-state-service';
 import { C } from 'node_modules/@angular/cdk/portal-directives.d-a65be59b';
 
 @Component({
@@ -27,7 +28,7 @@ export class VerPacientesComponent implements OnInit {
 
   // Estado y configuración
   modoEdicion: boolean = false;
-  sedeActiva: 'guatire' | 'guarenas' = 'guarenas'; //Aca colocar las sede escogida en el login del sistema
+  sedeActiva: string = '';
   sedeFiltro: string = this.sedeActiva;
   filtro: string = '';
   ordenActual: keyof Paciente = 'nombreCompleto';
@@ -92,6 +93,7 @@ export class VerPacientesComponent implements OnInit {
     private cdRef: ChangeDetectorRef,
     private modalService: ModalService,
     private swalService: SwalService,
+    private userStateService: UserStateService,
   ) {
     this.formPaciente = this.fb.group({
       nombreCompleto: ['', Validators.required],
@@ -120,9 +122,19 @@ export class VerPacientesComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.cargarPacientes();
-    this.cdRef.detectChanges();
+    this.inicializarSedeDesdeUsuario();
   }
+
+
+  private inicializarSedeDesdeUsuario(): void {
+    this.userStateService.currentUser$.subscribe(user => {
+      this.sedeActiva = user?.sede ?? 'guatire';
+      this.sedeFiltro = this.sedeActiva;
+      console.log('Sede activa:', this.sedeActiva);
+      this.cargarPacientes();
+    });
+  }
+
 
   // Métodos de acceso
   get redesSociales(): FormArray {
@@ -430,7 +442,7 @@ export class VerPacientesComponent implements OnInit {
     const paciente = this.pacientes.find(p => p.id === id);
     if (!paciente) return;
 
-    const sedeId = 'guatire'; // O usa this.sedeActiva si ya lo tienes dinámico
+    const sedeId = this.sedeActiva;
     const clavePaciente = `${sedeId}-${paciente.cedula}`;
 
     this.modalService.openGlobalModal(

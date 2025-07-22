@@ -19,7 +19,7 @@ export interface Paciente {
   redesSociales: RedSocial[];
 
   //Sede
-  sede: 'guatire' | 'guarenas';
+   sede: string;
 
    // Historia clínica
   usuarioLentes?: boolean;

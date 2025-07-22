@@ -5,7 +5,8 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { environment } from '../../../../environments/environment';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
-import { User, Rol, AuthData, AuthResponse, Cargo  } from '../../../Interfaces/models-interface';
+import { User, Rol, AuthData, AuthResponse, Cargo } from '../../../Interfaces/models-interface';
+import { Sede } from './../../../view/login/login-interface';
 import { UserStateService } from './../userState/user-state-service';
 
 
@@ -92,7 +93,8 @@ export class AuthService {
             email: data.user.correo
           },
           rol: data.rol,
-          cargo: data.cargo
+          cargo: data.cargo,
+          sede: data.sede 
         };
 
         return authData;
@@ -109,6 +111,11 @@ export class AuthService {
       })
     );
   }
+
+  getSedes(): Observable<{ sedes: Sede[] }> {
+    return this.http.get<{ sedes: Sede[] }>(`${environment.apiUrl}/sedes-get`);
+  }
+
 
   hasAcceptedTyC(): boolean {
     return this.currentUserValue?.user?.tyc_aceptado === 1;

@@ -7,6 +7,7 @@ import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
 import { User, Rol, AuthData, AuthResponse, Cargo } from '../../../Interfaces/models-interface';
+import { Sede } from './../../../view/login/login-interface';
 
 @Injectable({
   providedIn: 'root'
@@ -20,7 +21,7 @@ export class ChangeInformationService {
     private swalService: SwalService,
     private authService: AuthService,
     private http: HttpClient
-  ) {}
+  ) { }
 
   // Editar perfil de usuario
   editUser(userData: Partial<User>): Observable<AuthResponse> {
@@ -40,6 +41,7 @@ export class ChangeInformationService {
             user: { ...response.user, email: response.user.correo },
             rol: response.rol || this.authService.currentUserValue?.rol as Rol,
             cargo: response.cargo || this.authService.currentUserValue?.cargo as Cargo,
+            sede: response.sede || this.authService.currentUserValue?.sede as Sede // 👈 aquí está la solución
           };
           this.authService.setAuth(authData);
         }

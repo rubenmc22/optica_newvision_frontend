@@ -1,5 +1,5 @@
 //Modelos cambio de contrase;a
-
+import { Sede } from '../../app/view/login/login-interface';
 
 export interface Cargo {
   _id: string;
@@ -15,10 +15,13 @@ export interface User {
   telefono?: string;
   email?: string;
   rol?: string;
-  //cargo?: string;
+  cargo?: string;
   ruta_imagen?: string | null;
   tyc_aceptado?: boolean | number;
+  sede?: string;
+  sedeNombre?: string;
 }
+
 
 export interface Rol {
   _id: string;
@@ -32,7 +35,8 @@ export interface AuthData {
   user: User;
   rol: Rol;
   cargo: Cargo;
-  message?: string; // Mensaje adicional, opcional
+  sede: Sede; 
+  message?: string;
 }
 
 export interface AuthResponse {
@@ -54,6 +58,10 @@ export interface AuthResponse {
     _id: string;
     key: string;
     name: string;
+  };
+  sede: {
+    key: string;
+    nombre: string;
   };
 }
 
@@ -129,8 +137,7 @@ export interface Paciente {
   sede: 'guatire' | 'guarenas';
 }
 
-// Tipos específicos para opciones predefinidas
-export type TipoSede = 'guatire' | 'guarenas';
+
 
 
 

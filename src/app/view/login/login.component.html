@@ -4,24 +4,31 @@
   </div>
   <div class="login-logo-container">
     <img class="login-logo" src="assets/logo/logo_1.png" alt="New Visión Logo" />
-
   </div>
   <div class="login-card-container">
     <div class="login-card">
       <div class="login-title">Inicie Sesión</div>
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+
+        <!-- Selector de Sede -->
+        <div class="mb-3">
+          <label for="sede" class="form-label">Sede</label>
+          <select class="form-select" id="sede" formControlName="sede">
+            <option value="">Seleccione una sede</option>
+            <option *ngFor="let s of sedes" [value]="s.id">{{ s.nombre }}</option>
+          </select>
+          <div *ngIf="isInvalidField('sede')" class="form-text text-danger">
+            <span *ngIf="loginForm.get('sede')?.hasError('required')">La sede es requerida.</span>
+          </div>
+        </div>
+
         <!-- Campo Cédula -->
         <div class="mb-3">
           <label for="cedula" class="form-label">Cédula</label>
-          <input type="text" class="form-control" id="cedula" formControlName="cedula"
-            placeholder="Ingrese su cédula" />
+          <input type="text" class="form-control" id="cedula" formControlName="cedula" placeholder="Ingrese su cédula" />
           <div *ngIf="isInvalidField('cedula')" class="form-text text-danger">
-            <span *ngIf="loginForm.get('cedula')?.hasError('required')">
-              La cédula es requerida.
-            </span>
-            <span *ngIf="loginForm.get('cedula')?.hasError('pattern')">
-              La cédula debe ser un número de hasta 8 dígitos.
-            </span>
+            <span *ngIf="loginForm.get('cedula')?.hasError('required')">La cédula es requerida.</span>
+            <span *ngIf="loginForm.get('cedula')?.hasError('pattern')">La cédula debe ser un número de hasta 8 dígitos.</span>
           </div>
         </div>
 
@@ -36,25 +43,18 @@
             </button>
           </div>
           <div *ngIf="isInvalidField('password')" class="form-text text-danger">
-            <span *ngIf="loginForm.get('password')?.hasError('required')">
-              La contraseña es requerida.
-            </span>
-            <span *ngIf="loginForm.get('password')?.hasError('minlength')">
-              La contraseña debe tener al menos 6 caracteres.
-            </span>
+            <span *ngIf="loginForm.get('password')?.hasError('required')">La contraseña es requerida.</span>
+            <span *ngIf="loginForm.get('password')?.hasError('minlength')">Debe tener al menos 6 caracteres.</span>
           </div>
         </div>
 
+        <!-- Recuérdame -->
         <div class="form-check mb-4 form-switch">
           <input type="checkbox" class="form-check-input" id="rememberMe" formControlName="rememberMe">
-          <label class="form-check-label" for="rememberMe">
-            Recuérdame
-          </label>
+          <label class="form-check-label" for="rememberMe">Recuérdame</label>
         </div>
-        
 
-
-        <!-- Botón de Entrar -->
+        <!-- Botón de Ingresar -->
         <button type="submit" class="btn btn-primary w-100 btn-ingresar" [disabled]="loginForm.invalid || isLoading">
           <span *ngIf="!isLoading">Ingresar</span>
           <span *ngIf="isLoading">
@@ -63,10 +63,12 @@
           </span>
         </button>
 
-        <!-- Botón de "¿Olvidó su contraseña?" -->
+        <!-- ¿Olvidó su contraseña? -->
         <button type="button" class="btn btn-link w-100 mt-2" routerLink="/forgot-password">
           ¿Olvidó su contraseña?
         </button>
+
       </form>
     </div>
   </div>
+</div>

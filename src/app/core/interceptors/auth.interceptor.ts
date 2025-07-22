@@ -13,6 +13,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     '/auth/login',
     '/auth/register',
     '/auth/forgot-password',
+    '/sedes-get',
     '/public/',
     '/assets/'
   ];
