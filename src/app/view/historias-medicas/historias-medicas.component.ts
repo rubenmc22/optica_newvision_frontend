@@ -13,6 +13,8 @@ import { HistoriaMedicaService } from '../../core/services/historias-medicas/his
 import * as bootstrap from 'bootstrap';
 import { SwalService } from '../../core/services/swal/swal.service';
 import { ModalService } from '../../core/services/modal/modal.service';
+import { PacientesService } from '../../core/services/pacientes/pacientes.service';
+import { UserStateService } from '../../core/services/userState/user-state-service';
 
 declare var $: any;
 
@@ -31,10 +33,13 @@ export class HistoriasMedicasComponent implements OnInit {
   modoEdicion: boolean = false;
   mostrarInputOtroMotivo = false;
   maxDate: string;
+  sedeActiva: string = '';
+  sedeFiltro: string = this.sedeActiva;
+  filtro: string = ''; // 👈 Añadido para búsqueda por nombre o cédula
 
   // Datos
   pacientes: Paciente[] = [];
-  pacientesFiltrados: Paciente[] = [];
+  //pacientesFiltrados: Paciente[] = [];
   pacienteSeleccionado: Paciente | null = null;
   historiaSeleccionada: HistoriaMedica | null = null;
   pacienteIdSeleccionado: string | null = null;
@@ -98,41 +103,17 @@ export class HistoriasMedicasComponent implements OnInit {
     'Dr. José Martínez'
   ];
 
-  pacientesMock: Paciente[] = [
-    {
-      id: 'p1',
-      nombreCompleto: 'Carlos González',
-      cedula: '24567890',
-      fechaNacimiento: '1985-03-21',
-      telefono: '0414-1234567',
-      ocupacion: 'Ingeniero Civil',
-      direccion: 'Av. Libertador, Caracas',
-      email: '',
-      genero: 'Masculino',
-      fechaRegistro: new Date().toISOString(),
-      redesSociales: [],
-      sede: 'guatire',
-      edad: this.calcularEdad('1985-03-21') // Esto calculará 38 (en 2023)
-    },
-    // ... otros pacientes mock si los necesitas
-  ];
-
   constructor(
     private fb: FormBuilder,
     private modalService: ModalService,
     private swalService: SwalService,
-    private historiaService: HistoriaMedicaService
+    private historiaService: HistoriaMedicaService,
+    private pacientesService: PacientesService,
+    private userStateService: UserStateService,
   ) {
     this.maxDate = new Date().toISOString().split('T')[0];
     this.historiaForm = this.fb.group({}); // Inicialización básica
     this.inicializarFormulario();
-  }
-
-  ngOnInit(): void {
-    this.inicializarDatosMock();
-    this.configurarSubscripciones();
-    this.pacientes = this.pacientesMock;
-    this.pacientesFiltrados = [...this.pacientes];
   }
 
   verificarMaterialOtro(index: number): void {
@@ -217,6 +198,108 @@ export class HistoriasMedicasComponent implements OnInit {
       //observaciones: ['']
     });
   }
+
+  /*obtenerHistoriasPorPaciente(id: string): HistoriaMedica[] {
+    return this.historiasMock[id] || [];
+  }*/
+
+
+  private inicializarSedeDesdeUsuario(): void {
+    this.userStateService.currentUser$.subscribe(user => {
+      this.sedeActiva = user?.sede ?? 'guatire';
+      this.sedeFiltro = this.sedeActiva;
+      console.log('Sede activa:', this.sedeActiva);
+      this.cargarPacientes();
+    });
+  }
+
+  get pacientesFiltrados(): Paciente[] {
+    const filtroTexto = this.filtro.trim().toLowerCase();
+
+    return this.pacientes.filter(paciente => {
+      const coincideTexto =
+        paciente.nombreCompleto.toLowerCase().includes(filtroTexto) ||
+        paciente.cedula.toLowerCase().includes(filtroTexto);
+
+      const esSedeActiva = paciente.sede === this.sedeActiva;
+
+      let mostrarPorSede = false;
+
+      if (this.sedeFiltro === 'todas') {
+        mostrarPorSede = true;
+      } else if (this.sedeFiltro === this.sedeActiva) {
+        mostrarPorSede = esSedeActiva;
+      } else if (this.sedeFiltro === 'otra') {
+        mostrarPorSede = !esSedeActiva;
+      }
+
+      return mostrarPorSede && coincideTexto;
+    });
+  }
+
+
+  ngOnInit(): void {
+    this.inicializarSedeDesdeUsuario();
+    this.configurarSubscripciones();
+    this.cargarPacientes();
+
+    // ✨ Forzamos cambio de referencia al terminar la carga inicial
+    setTimeout(() => {
+      this.pacienteIdSeleccionado = null;
+      this.pacienteSeleccionado = null;
+    }, 0);
+  }
+
+
+
+
+  // Métodos de carga de datos
+  cargarPacientes(): void {
+    this.pacientesService.getPacientes().subscribe({
+      next: (data) => {
+        this.pacientes = Array.isArray(data.pacientes)
+          ? data.pacientes.map((p: any) => ({
+            id: p.key, // ✅ usa el mismo ID que luego usamos para reemplazar
+            nombreCompleto: p.nombre,
+            cedula: p.cedula,
+            telefono: p.telefono,
+            email: p.email,
+            fechaNacimiento: p.fecha_nacimiento,
+            edad: this.calcularEdad(p.fecha_nacimiento),
+            ocupacion: p.ocupacion,
+            genero: p.genero === 'm' ? 'Masculino' : p.genero === 'f' ? 'Femenino' : 'Otro',
+            direccion: p.direccion,
+            sede: p.sede?.id ?? 'sin-sede',
+            fechaRegistro: this.formatearFecha(p.created_at),
+            redesSociales: p.redes_sociales || []
+          }))
+          : [];
+
+        // 🧪 Generar historias mock por paciente
+        this.historiasMock = {};
+        this.pacientes.forEach((paciente, i) => {
+          this.historiasMock[paciente.id] = this.generarHistorias((i % 5) + 1); // crea 1 a 5 historias simuladas
+        });
+      },
+      error: (error) => {
+        console.error('Error al cargar pacientes:', error);
+        this.swalService.showError('Error', 'No se han podido cargar los pacientes');
+        this.pacientes = [];
+      }
+    });
+  }
+
+  formatearFecha(fechaIso: string): string {
+    if (!fechaIso || typeof fechaIso !== 'string') return 'Fecha inválida';
+
+    // Evita formatear si ya está en formato DD/MM/YYYY
+    if (fechaIso.includes('/') && !fechaIso.includes('T')) return fechaIso;
+
+    const fechaLimpiada = fechaIso.split('T')[0]; // elimina hora si está presente
+    const [anio, mes, dia] = fechaLimpiada.split('-');
+    return `${dia}/${mes}/${anio}`;
+  }
+
 
   iniciarFlujoHistoria(): void {
     if (this.historiaSeleccionada) {
@@ -541,21 +624,6 @@ export class HistoriasMedicasComponent implements OnInit {
     //   this.resetearFormulario();
   }
 
-  private inicializarDatosMock(): void {
-    this.historiasMock = {
-      'p1': this.generarHistorias(1),
-      'p2': this.generarHistorias(5),
-      'p3': [],
-      'p4': this.generarHistorias(10),
-      'p5': this.generarHistorias(3),
-      'p6': this.generarHistorias(2),
-      'p7': this.generarHistorias(3),
-      'p8': this.generarHistorias(2),
-      'p9': this.generarHistorias(3),
-      'p10': this.generarHistorias(2)
-    };
-  }
-
   get recomendaciones(): FormArray {
     return this.historiaForm.get('recomendaciones') as FormArray;
   }
@@ -756,6 +824,7 @@ export class HistoriasMedicasComponent implements OnInit {
   };
 
   seleccionarPacientePorId(id: string | null): void {
+    console.log('Seleccionado:', id); // 👈 Verifica si se dispara
     if (!id) return;
 
     const paciente = this.pacientes.find(p => p.id === id);
@@ -763,10 +832,27 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.pacienteSeleccionado = paciente;
     this.historial = this.historiasMock[paciente.id] || [];
-    this.historiaSeleccionada = this.historial[0] || null;
-
+    this.historiaSeleccionada = null;
     this.mostrarSinHistorial = this.historial.length === 0;
     this.mostrarElementos = this.historial.length > 0;
+    //this.mostrarDetalle = false;
+  }
+
+  obtenerHistoriasPorPaciente(id: string): HistoriaMedica[] {
+    // Generar historias mock para el paciente seleccionado
+    const cantidadHistorias = parseInt(id.replace('p', '')) % 3 + 1; // 1-3 historias por paciente
+    return this.generarHistorias(cantidadHistorias).map((historia, i) => ({
+      ...historia,
+      id: `h${id}-${i}`,
+      pacienteId: id,
+      nHistoria: `HIS-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      fecha: new Date(new Date().setDate(new Date().getDate() - i)).toISOString().split('T')[0],
+      datosConsulta: {
+        ...historia.datosConsulta,
+        medico: `Dr. ${this.pacienteSeleccionado?.nombreCompleto.split(' ')[0]} Mock`,
+        motivo: this.motivosConsulta[i % this.motivosConsulta.length]
+      }
+    }));
   }
 
   verDetalle(historia: HistoriaMedica): void {
@@ -825,6 +911,27 @@ export class HistoriasMedicasComponent implements OnInit {
         modal.show();
       }
     }*/
+
+  cargarHistoriasMedicas(pacienteId: string): void {
+    this.cargando = true;
+
+    this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
+      next: (historias) => {
+        this.historial = historias;
+        this.historiaSeleccionada = this.historial[0] || null;
+
+        this.mostrarSinHistorial = this.historial.length === 0;
+        this.mostrarElementos = this.historial.length > 0;
+
+        this.cargando = false;
+      },
+      error: (error) => {
+        console.error('Error al cargar historias:', error);
+        this.swalService.showError('Error', 'No se pudieron cargar las historias médicas.');
+        this.cargando = false;
+      }
+    });
+  }
 
   calcularEdad(fechaNacimiento: string | undefined): number {
     if (!fechaNacimiento) return 0; // o algún valor por defecto

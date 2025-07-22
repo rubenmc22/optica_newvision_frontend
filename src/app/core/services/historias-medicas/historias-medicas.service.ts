@@ -20,11 +20,16 @@ export class HistoriaMedicaService {
     return this.http.get<any[]>(`${environment.apiUrl}/pacientes/${id}/historias`);
   }
 
+  // En historia-medica.service.ts
+  getHistoriasPorPaciente(pacienteId: string): Observable<HistoriaMedica[]> {
+    return this.http.get<HistoriaMedica[]>(`${environment.apiUrl}/historias?pacienteId=${pacienteId}`);
+  }
+
   createHistoria(historia: HistoriaMedica): Observable<HistoriaMedica> {
     return this.http.post<HistoriaMedica>(`${environment.apiUrl}/historias-medicas`, historia);
   }
 
-   updateHistoria(historia: HistoriaMedica): Observable<HistoriaMedica> {
+  updateHistoria(historia: HistoriaMedica): Observable<HistoriaMedica> {
     return this.http.post<HistoriaMedica>(`${environment.apiUrl}/historias-medicas`, historia);
   }
 

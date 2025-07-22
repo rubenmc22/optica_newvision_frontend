@@ -6,6 +6,9 @@ import { SharedUserService } from '../../core/services/sharedUser/shared-user.se
 import { environment } from '../../../environments/environment';
 import { User } from '../../Interfaces/models-interface';
 import { Subscription } from 'rxjs';
+import { UserStateService } from '../../core/services/userState/user-state-service';
+import { TasaCambiariaService } from '../../core/services/tasaCambiaria/tasaCambiaria.service';
+import { Tasa } from '../../Interfaces/models-interface';
 
 @Component({
   selector: 'app-sidebar',
@@ -13,11 +16,17 @@ import { Subscription } from 'rxjs';
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss']
 })
+
 export class SidebarComponent implements OnInit, OnDestroy {
   @Input() userRoleKey: string = '';
   @Input() userRoleName: string = '';
   @Input() userName: string = '';
   profileImage: string = 'assets/default-photo.png';
+  sedeActual: string = '';
+  tasaDolar: number = 0;
+  tasaEuro: number = 0;
+
+
 
   private userSubscriptions: Subscription[] = [];
 
@@ -26,6 +35,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
     private router: Router,
     private authService: AuthService,
     private sharedUserService: SharedUserService,
+    private userStateService: UserStateService,
+    private tasaCambiariaService: TasaCambiariaService,
+
   ) { }
 
   menuItems = [
@@ -44,7 +56,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
       ],
       roles: ['admin', 'gerente', 'asesor'],
-    //  underConstruction: true
+      //  underConstruction: true
     },
     {
       label: 'Productos',
@@ -67,21 +79,21 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
       ],
       roles: ['admin', 'gerente', 'asesor'],
-    //  underConstruction: true
+      //  underConstruction: true
     },
     {
       label: 'Ordenes de Trabajo',
       icon: 'fas fa-football-ball',
       routerLink: '/ordenes-de-trabajo',
       roles: ['admin', 'gerente', 'asesor'],
-     /* submenu: [
-        { label: 'Ordenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor'] },
-        { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor'] },
-        { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] },
+      /* submenu: [
+         { label: 'Ordenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor'] },
+         { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor'] },
+         { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] },
+ 
+       ],*/
 
-      ],*/
-
-    //  underConstruction: true
+      //  underConstruction: true
     },
     {
       label: 'Administración',
@@ -101,6 +113,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.initializeMenu();
     this.initializeUserData();
     this.setupSubscriptions();
+    this.obtenerSedeActual();
+    this.obtenerTasaCambio();
   }
 
   ngOnDestroy(): void {
@@ -247,5 +261,41 @@ export class SidebarComponent implements OnInit, OnDestroy {
       'Mi Perfil': '10px',
     };
     return margins[moduleName] || '8px';
+  }
+  obtenerSedeActual(): void {
+    const authData = sessionStorage.getItem('authData');
+
+    if (authData) {
+      try {
+        const parsed = JSON.parse(authData) as {
+          sede?: { nombre?: string };
+        };
+
+        const nombreOriginal = parsed?.sede?.nombre ?? 'Sin sede';
+        this.sedeActual = nombreOriginal.replace(/^Sede\s+/i, '');
+      } catch (e) {
+        console.error('Error al parsear authData:', e);
+        this.sedeActual = 'Sin sede';
+      }
+    } else {
+      this.sedeActual = 'Sin sede';
+    }
+  }
+
+
+  obtenerTasaCambio(): void {
+    this.tasaCambiariaService.getTasaActual().subscribe({
+      next: (res: { tasas: Tasa[] }) => {
+        const tasas: Tasa[] = res.tasas;
+
+        this.tasaDolar = tasas.find((t: Tasa) => t.id === 'dolar')?.valor ?? 0;
+        this.tasaEuro = tasas.find((t: Tasa) => t.id === 'euro')?.valor ?? 0;
+      },
+      error: () => {
+        this.tasaDolar = 0;
+        this.tasaEuro = 0;
+      }
+    });
+
   }
 }
