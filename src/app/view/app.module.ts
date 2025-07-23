@@ -10,7 +10,6 @@ import { GraficoComparativaSedesComponent } from './dashboard/graficos/grafico-c
 import { GraficoTotalSedeComponent } from './dashboard/graficos/grafico-total-sede/grafico-total-sede.component';
 import { GraficoPacientesPorMesComponent } from './dashboard/graficos/grafico-pacientes-por-mes/grafico-pacientes-por-mes.component';
 
-
 // Componentes
 import { AppComponent } from '../app.component';
 import { UserRegisterComponent } from './user-register/user-register.component';
@@ -35,7 +34,6 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
 import { ClickOutsideDirective } from '../directives/click-outside.directive';
 import { NgSelectModule } from '@ng-select/ng-select';
 
-
 @NgModule({
   declarations: [
     AppComponent,
@@ -54,7 +52,6 @@ import { NgSelectModule } from '@ng-select/ng-select';
     VerPacientesComponent,
     HistoriasMedicasComponent,
     ClickOutsideDirective,
-    // 🆕 Nuevos componentes de gráficos
     GraficoComparativaSedesComponent,
     GraficoTotalSedeComponent,
     GraficoPacientesPorMesComponent
@@ -71,20 +68,19 @@ import { NgSelectModule } from '@ng-select/ng-select';
 
     RouterModule.forRoot(appRoutes, {
       onSameUrlNavigation: 'reload',
-      bindToComponentInputs: true // Nueva feature de Angular 16+
+      bindToComponentInputs: true 
     })
   ],
   exports: [
-    DynamicModalComponent // ✅ Ahora puede ser usado en otros módulos
+    DynamicModalComponent
 
   ],
   providers: [
-    // Configuración moderna de HttpClient con interceptores funcionales
     provideHttpClient(
-      withInterceptors([authInterceptor]) // Registro directo del interceptor
+      withInterceptors([authInterceptor]) 
     )
   ],
   bootstrap: [AppComponent],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA] // ✅ Permite componentes personalizados como mat-chip-list
+  schemas: [CUSTOM_ELEMENTS_SCHEMA] 
 })
 export class AppModule { }

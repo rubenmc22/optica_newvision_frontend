@@ -370,7 +370,7 @@ export class VerPacientesComponent implements OnInit {
 
           // 🧾 Armamos el HTML del mensaje personalizado
           const mensajeHTML = `
-          <br>
+              <br>
               <div class="swal-custom-content ">
                 <h5 class="text-danger mb-2">
                   <i class="fas fa-id-card me-2"></i> Cédula ya registrada
@@ -386,7 +386,6 @@ export class VerPacientesComponent implements OnInit {
                 </div>
               </div>
           `;
-
           this.swalService.showWarning('', mensajeHTML, true);
           return;
         }

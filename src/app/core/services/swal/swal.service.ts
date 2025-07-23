@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import Swal from 'sweetalert2';
-import { SweetAlertResult, SweetAlertOptions  } from 'sweetalert2';
+import { SweetAlertResult, SweetAlertOptions } from 'sweetalert2';
 
 @Injectable({
   providedIn: 'root' // Hace que el servicio esté disponible en toda la aplicación
@@ -105,7 +105,7 @@ export class SwalService {
   showInactivityWarning(
     title: string,
     text: string,
-    timerDuration: number = 60000 // 1 minuto por defecto
+    timerDuration: number = 60000 
   ): Promise<boolean> {
     return new Promise((resolve) => {
       let timerInterval: number;

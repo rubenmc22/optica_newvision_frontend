@@ -19,6 +19,7 @@
             <option value="todas">Todas las sedes</option>
           </select>
         </div>
+        
         <div class="col-md-8">
           <label for="filtroTexto" class="form-label">🔎 Buscar paciente</label>
           <input id="filtroTexto" type="text" class="form-control" placeholder="Nombre o cédula..."
@@ -133,7 +134,7 @@
 
           <!-- 👤 Datos personales -->
           <div class="mb-4">
-             <h6 class="text-primary">👤 Datos personales</h6>
+            <h6 class="text-primary">👤 Datos personales</h6>
             <div class="row g-3">
               <!-- Nombre Completo -->
               <div class="col-md-6">
@@ -149,7 +150,8 @@
               <!-- Cédula -->
               <div class="col-md-6">
                 <label class="form-label fw-medium text-dark">Cédula <span class="text-danger">*</span></label>
-                <input type="text" class="form-control border-2 py-2" formControlName="cedula" placeholder="Ej: 12345678">
+                <input type="text" class="form-control border-2 py-2" formControlName="cedula"
+                  placeholder="Ej: 12345678">
                 <div *ngIf="formPaciente.get('cedula')?.invalid && formPaciente.get('cedula')?.touched"
                   class="text-danger small mt-1">
                   <i class="bi bi-exclamation-circle-fill me-1"></i> Cédula es requerida
@@ -159,8 +161,9 @@
               <!-- Teléfono -->
               <div class="col-md-6">
                 <label class="form-label fw-medium text-dark">Teléfono <span class="text-danger">*</span></label>
-                <input type="text" class="form-control border-2 py-2" formControlName="telefono" placeholder="Ej: 04121234567">
-                 <div *ngIf="formPaciente.get('telefono')?.invalid && formPaciente.get('telefono')?.touched"
+                <input type="text" class="form-control border-2 py-2" formControlName="telefono"
+                  placeholder="Ej: 04121234567">
+                <div *ngIf="formPaciente.get('telefono')?.invalid && formPaciente.get('telefono')?.touched"
                   class="text-danger small mt-1">
                   <i class="bi bi-exclamation-circle-fill me-1"></i> Teléfono es requerido
                 </div>
@@ -169,11 +172,12 @@
               <!-- Email -->
               <div class="col-md-6">
                 <label class="form-label fw-medium text-dark">Email <span class="text-danger">*</span></label>
-                <input type="email" class="form-control border-2 py-2" formControlName="email" placeholder="Ej: paciente@email.com">
+                <input type="email" class="form-control border-2 py-2" formControlName="email"
+                  placeholder="Ej: paciente@email.com">
                 <div *ngIf="formPaciente.get('email')?.errors?.['email']" class="text-danger small mt-1">
                   <i class="bi bi-exclamation-circle-fill me-1"></i> Ingrese un email válido
                 </div>
-                   <div *ngIf="formPaciente.get('email')?.invalid && formPaciente.get('email')?.touched"
+                <div *ngIf="formPaciente.get('email')?.invalid && formPaciente.get('email')?.touched"
                   class="text-danger small mt-1">
                   <i class="bi bi-exclamation-circle-fill me-1"></i> Email es requerido
                 </div>
@@ -181,7 +185,8 @@
 
               <!-- Fecha de Nacimiento -->
               <div class="col-md-4">
-                <label class="form-label fw-medium text-dark">Fecha de Nacimiento <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark">Fecha de Nacimiento <span
+                    class="text-danger">*</span></label>
                 <input type="date" class="form-control border-2 py-2" formControlName="fechaNacimiento">
               </div>
 
@@ -190,7 +195,7 @@
                 <label class="form-label fw-medium text-dark">Ocupación <span class="text-danger">*</span></label>
                 <input type="text" class="form-control border-2 py-2" formControlName="ocupacion"
                   placeholder="Ej: Profesor universitario">
-                     <div *ngIf="formPaciente.get('ocupacion')?.invalid && formPaciente.get('ocupacion')?.touched"
+                <div *ngIf="formPaciente.get('ocupacion')?.invalid && formPaciente.get('ocupacion')?.touched"
                   class="text-danger small mt-1">
                   <i class="bi bi-exclamation-circle-fill me-1"></i> Ocupación es requerida
                 </div>
@@ -199,13 +204,8 @@
               <!-- Género -->
               <div class="col-md-4">
                 <label class="form-label fw-medium text-dark">Género <span class="text-danger">*</span></label>
-                <ng-select 
-                  [items]="opcionesGenero" 
-                  formControlName="genero"
-                  placeholder="Seleccione..."
-                  [searchable]="false"
-                  class="border-2"
-                  required>
+                <ng-select [items]="opcionesGenero" formControlName="genero" placeholder="Seleccione..."
+                  [searchable]="false" class="border-2" required>
                 </ng-select>
               </div>
 
@@ -215,10 +215,10 @@
                 <textarea class="form-control border-2" rows="2" formControlName="direccion"
                   placeholder="Ej: Calle 10, Quinta Cielo Azul, Guatire"></textarea>
               </div>
-                <div *ngIf="formPaciente.get('direccion')?.invalid && formPaciente.get('direccion')?.touched"
-                  class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> Dirección es requerida
-                </div>
+              <div *ngIf="formPaciente.get('direccion')?.invalid && formPaciente.get('direccion')?.touched"
+                class="text-danger small mt-1">
+                <i class="bi bi-exclamation-circle-fill me-1"></i> Dirección es requerida
+              </div>
             </div>
           </div>
 
@@ -231,27 +231,28 @@
               <!-- Condiciones clínicas (Sí/No) -->
               <div class="col-md-3">
                 <label class="form-label fw-medium text-dark">¿Usa lentes?</label>
-                <ng-select [items]="['Sí', 'No']" formControlName="usuarioLentes"
-                  placeholder="Seleccione..." class="border-2"></ng-select>
+                <ng-select [items]="['Sí', 'No']" formControlName="usuarioLentes" placeholder="Seleccione..."
+                  class="border-2"></ng-select>
               </div>
 
               <div class="col-md-3">
                 <label class="form-label fw-medium text-dark">¿Tiene Fotofobia?</label>
-                <ng-select [items]="['Sí', 'No']" formControlName="fotofobia" 
-                  placeholder="Seleccione..." class="border-2"></ng-select>
+                <ng-select [items]="['Sí', 'No']" formControlName="fotofobia" placeholder="Seleccione..."
+                  class="border-2"></ng-select>
               </div>
 
               <!-- Alergias -->
               <div class="col-md-6">
                 <label class="form-label fw-medium text-dark">Alergias a:</label>
-                <input class="form-control border-2 py-2" formControlName="alergicoA" placeholder="Ej: Polvo, medicamentos..." />
+                <input class="form-control border-2 py-2" formControlName="alergicoA"
+                  placeholder="Ej: Polvo, medicamentos..." />
               </div>
 
               <!-- Traumatismo ocular -->
               <div class="col-md-4">
                 <label class="form-label fw-medium text-dark">¿Traumatismo ocular previo?</label>
-                <ng-select [items]="['Sí', 'No']" formControlName="traumatismoOcular"
-                  placeholder="Seleccione..." class="border-2"></ng-select>
+                <ng-select [items]="['Sí', 'No']" formControlName="traumatismoOcular" placeholder="Seleccione..."
+                  class="border-2"></ng-select>
               </div>
 
               <div class="col-md-8" *ngIf="formPaciente.get('traumatismoOcular')?.value === 'Sí'">
@@ -263,8 +264,8 @@
               <!-- Cirugía ocular -->
               <div class="col-md-4">
                 <label class="form-label fw-medium text-dark">¿Cirugía ocular previa?</label>
-                <ng-select [items]="opcionesBooleanasSimple" formControlName="cirugiaOcular"
-                  placeholder="Seleccione..." class="border-2"></ng-select>
+                <ng-select [items]="opcionesBooleanasSimple" formControlName="cirugiaOcular" placeholder="Seleccione..."
+                  class="border-2"></ng-select>
               </div>
 
               <div class="col-md-8" *ngIf="formPaciente.get('cirugiaOcular')?.value === 'Sí'">
@@ -302,7 +303,7 @@
 
           <!-- 🌐 Redes sociales -->
           <div class="mt-4">
-               <h6 class="text-primary">🌐 Redes sociales</h6>
+            <h6 class="text-primary">🌐 Redes sociales</h6>
             <div class="d-flex flex-wrap gap-3 mb-3 align-items-end">
               <div class="flex-grow-1">
                 <label class="form-label fw-medium text-dark mb-1">Red Social</label>
@@ -315,8 +316,9 @@
 
               <div class="flex-grow-1">
                 <label class="form-label fw-medium text-dark mb-1">Usuario</label>
-                <input class="form-control border-2 py-2" type="text" placeholder="Ej: @maria.lopez" [(ngModel)]="nuevoUsuario"
-                  [ngModelOptions]="{standalone: true}" [disabled]="!usuarioInputHabilitado" />
+                <input class="form-control border-2 py-2" type="text" placeholder="Ej: @maria.lopez"
+                  [(ngModel)]="nuevoUsuario" [ngModelOptions]="{standalone: true}"
+                  [disabled]="!usuarioInputHabilitado" />
               </div>
 
               <button class="btn btn-primary px-4 py-2 mt-auto" type="button"
@@ -367,8 +369,7 @@
         <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
           <i class="bi bi-x-lg me-1"></i> Cancelar
         </button>
-        <button type="button" class="btn btn-primary px-4" 
-          [disabled]="!formularioModificado() || formPaciente.invalid"
+        <button type="button" class="btn btn-primary px-4" [disabled]="!formularioModificado() || formPaciente.invalid"
           (click)="guardarPaciente()">
           <i class="bi bi-check-lg me-1"></i> {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
         </button>
