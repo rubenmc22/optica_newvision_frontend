@@ -48,10 +48,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
       roles: ['admin', 'gerente', 'asesor']
     },
     {
-      label: 'Pacientes',
+      label: 'Datos Clínicos',
       icon: 'fas fa-football-ball',
       submenu: [
-        { label: 'Ver pacientes', routerLink: '/pacientes', roles: ['admin', 'gerente', 'asesor'] },
+        { label: 'Pacientes', routerLink: '/pacientes', roles: ['admin', 'gerente', 'asesor'] },
         { label: 'Historias Medicas', routerLink: '/pacientes-historias', roles: ['admin', 'gerente', 'asesor'] },
 
       ],

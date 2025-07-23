@@ -5,6 +5,11 @@ import { RouterModule } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http'; // Cambio clave aquí
 import { ScrollingModule } from '@angular/cdk/scrolling'; // ✅ Importa el módulo necesario
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { NgChartsModule } from 'ng2-charts';
+import { GraficoComparativaSedesComponent } from './dashboard/graficos/grafico-comparativa-sedes/grafico-comparativa-sedes.component';
+import { GraficoTotalSedeComponent } from './dashboard/graficos/grafico-total-sede/grafico-total-sede.component';
+import { GraficoPacientesPorMesComponent } from './dashboard/graficos/grafico-pacientes-por-mes/grafico-pacientes-por-mes.component';
+
 
 // Componentes
 import { AppComponent } from '../app.component';
@@ -30,6 +35,7 @@ import { authInterceptor } from '../core/interceptors/auth.interceptor';
 import { ClickOutsideDirective } from '../directives/click-outside.directive';
 import { NgSelectModule } from '@ng-select/ng-select';
 
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -47,18 +53,24 @@ import { NgSelectModule } from '@ng-select/ng-select';
     TasaComponent,
     VerPacientesComponent,
     HistoriasMedicasComponent,
-    ClickOutsideDirective, // ✅ ahora sí podés declararla acá
-    
-    
+    ClickOutsideDirective,
+    // 🆕 Nuevos componentes de gráficos
+    GraficoComparativaSedesComponent,
+    GraficoTotalSedeComponent,
+    GraficoPacientesPorMesComponent
+
+
   ],
   imports: [
+    NgChartsModule,
     NgSelectModule,
     BrowserModule,
     ReactiveFormsModule,
     MaterialModule,
     FormsModule,
-    ScrollingModule, // ✅ Agregarlo aquí
+    ScrollingModule,
     BrowserAnimationsModule,
+
     RouterModule.forRoot(appRoutes, {
       onSameUrlNavigation: 'reload',
       bindToComponentInputs: true // Nueva feature de Angular 16+
@@ -66,7 +78,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
   ],
   exports: [
     DynamicModalComponent // ✅ Ahora puede ser usado en otros módulos
-    
+
   ],
   providers: [
     // Configuración moderna de HttpClient con interceptores funcionales
@@ -75,6 +87,6 @@ import { NgSelectModule } from '@ng-select/ng-select';
     )
   ],
   bootstrap: [AppComponent],
-    schemas: [CUSTOM_ELEMENTS_SCHEMA] // ✅ Permite componentes personalizados como mat-chip-list
+  schemas: [CUSTOM_ELEMENTS_SCHEMA] // ✅ Permite componentes personalizados como mat-chip-list
 })
 export class AppModule { }

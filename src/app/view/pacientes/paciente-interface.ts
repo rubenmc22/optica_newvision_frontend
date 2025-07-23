@@ -37,3 +37,11 @@ export interface Paciente {
   patologias?: string[];
   patologiaOcular?: string[];
 }
+
+export interface PacienteGrafico {
+  id: string;
+  nombre: string;
+  cedula: string;
+  sede: string;
+  created_at: string;
+}
