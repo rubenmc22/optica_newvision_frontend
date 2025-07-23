@@ -9,6 +9,12 @@ import { ModalService } from '../../core/services/modal/modal.service';
 import { Paciente } from './paciente-interface';
 import { UserStateService } from '../../core/services/userState/user-state-service';
 import { C } from 'node_modules/@angular/cdk/portal-directives.d-a65be59b';
+import {
+  AbstractControl,
+  ValidatorFn,
+  ValidationErrors
+} from '@angular/forms';
+
 
 @Component({
   selector: 'app-ver-pacientes',
@@ -107,24 +113,45 @@ export class VerPacientesComponent implements OnInit {
       redesSociales: this.fb.array([]),
 
       // Campos de perfil clínico
-      usuarioLentes: [''],
-      fotofobia: [''],
-      traumatismoOcular: [''],
+      usuarioLentes: ['', Validators.required],
+      fotofobia: ['', Validators.required],
+      traumatismoOcular: ['', Validators.required],
       traumatismoOcularDescripcion: [''],
-      cirugiaOcular: [''],
+      cirugiaOcular: ['', Validators.required],
       cirugiaOcularDescripcion: [''],
       alergicoA: [''],
       antecedentesPersonales: [[]],
       antecedentesFamiliares: [[]],
       patologias: [[]],
       patologiaOcular: [[]]
+    }, {
+      validators: [
+        this.requiereDescripcionCondicional('traumatismoOcular', 'traumatismoOcularDescripcion'),
+        this.requiereDescripcionCondicional('cirugiaOcular', 'cirugiaOcularDescripcion')
+      ]
     });
+
   }
 
   ngOnInit(): void {
     this.inicializarSedeDesdeUsuario();
   }
 
+  requiereDescripcionCondicional(condicion: string, campoDescripcion: string): ValidatorFn {
+    return (group: AbstractControl): ValidationErrors | null => {
+      const estado = group.get(condicion)?.value;
+      const descripcion = group.get(campoDescripcion)?.value;
+
+      const esObligatorio = estado === 'si' || estado === 'Sí' || estado === true;
+
+      if (esObligatorio && !descripcion?.trim()) {
+        group.get(campoDescripcion)?.setErrors({ required: true });
+        return { [`${campoDescripcion}Obligatoria`]: true };
+      }
+
+      return null;
+    };
+  }
 
   private inicializarSedeDesdeUsuario(): void {
     this.userStateService.currentUser$.subscribe(user => {
@@ -158,21 +185,24 @@ export class VerPacientesComponent implements OnInit {
       next: (data) => {
         this.pacientes = Array.isArray(data.pacientes)
           ? data.pacientes.map((p: any) => ({
-            id: p.key, // ✅ usa el mismo ID que luego usamos para reemplazar
-            nombreCompleto: p.nombre,
-            cedula: p.cedula,
-            telefono: p.telefono,
-            email: p.email,
-            fechaNacimiento: p.fecha_nacimiento,
-            edad: this.calcularEdad(p.fecha_nacimiento),
-            ocupacion: p.ocupacion,
-            genero: p.genero === 'm' ? 'Masculino' : p.genero === 'f' ? 'Femenino' : 'Otro',
-            direccion: p.direccion,
-            sede: p.sede?.id ?? 'sin-sede',
+            id: p.key,
+            nombreCompleto: p.informacionPersonal?.nombreCompleto ?? '',
+            cedula: p.informacionPersonal?.cedula ?? '',
+            telefono: p.informacionPersonal?.telefono ?? '',
+            email: p.informacionPersonal?.email ?? '',
+            fechaNacimiento: p.informacionPersonal?.fechaNacimiento ?? '',
+            edad: this.calcularEdad(p.informacionPersonal?.fechaNacimiento),
+            ocupacion: p.informacionPersonal?.ocupacion ?? '',
+            genero:
+              p.informacionPersonal?.genero === 'm' ? 'Masculino' :
+                p.informacionPersonal?.genero === 'f' ? 'Femenino' : 'Otro',
+            direccion: p.informacionPersonal?.direccion ?? '',
+            sede: p.key.split('-')[0] ?? 'sin-sede',
             fechaRegistro: this.formatearFecha(p.created_at),
-            redesSociales: p.redes_sociales || []
+            redesSociales: p.redesSociales ?? []
           }))
           : [];
+
       },
       error: (error) => {
         console.error('Error al cargar pacientes:', error);
@@ -323,10 +353,47 @@ export class VerPacientesComponent implements OnInit {
         this.swalService.showSuccess('¡Registro exitoso!', 'Paciente registrado correctamente.');
         this.cargarPacientes();
       },
+      /*  error: (error) => {
+          console.error('Error al crear paciente:', error);
+          this.swalService.showError('Error', 'No se ha podido registrar al paciente');
+        }*/
       error: (error) => {
-        console.error('Error al crear paciente:', error);
+        const msg = error.error?.message ?? '';
+
+        if (msg.includes('Ya esta registrada la cedula')) {
+          // 🔍 Extraemos los valores entre comillas simples
+          const coincidencias = [...msg.matchAll(/'([^']+)'/g)];
+
+          const cedula = coincidencias?.[0]?.[1] ?? 'Cédula desconocida';
+          const sedeRaw = coincidencias?.[1]?.[1] ?? 'Sede desconocida';
+          const sede = sedeRaw.replace(/^Sede\s+/i, '').trim(); // ✨ elimina el prefijo 'Sede '
+
+          // 🧾 Armamos el HTML del mensaje personalizado
+          const mensajeHTML = `
+          <br>
+              <div class="swal-custom-content ">
+                <h5 class="text-danger mb-2">
+                  <i class="fas fa-id-card me-2"></i> Cédula ya registrada
+                </h5>
+
+                <ul class="list-unstyled mb-3">
+                  <li><strong>Cédula:</strong> ${cedula}</li>
+                  <li><strong>Sede:</strong> ${sede}</li>
+                </ul><br>
+
+                <div class="text-muted small">
+                  <i class="fas fa-info-circle me-1"></i> Cada cédula debe ser única por sede. Revisa los datos ingresados.
+                </div>
+              </div>
+          `;
+
+          this.swalService.showWarning('', mensajeHTML, true);
+          return;
+        }
+
         this.swalService.showError('Error', 'No se ha podido registrar al paciente');
       }
+
     });
   }
 

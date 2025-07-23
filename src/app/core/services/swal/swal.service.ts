@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import Swal from 'sweetalert2';
-import { SweetAlertResult } from 'sweetalert2';
+import { SweetAlertResult, SweetAlertOptions  } from 'sweetalert2';
 
 @Injectable({
   providedIn: 'root' // Hace que el servicio esté disponible en toda la aplicación
@@ -71,27 +71,35 @@ export class SwalService {
    * @param title Título de la alerta.
    * @param text Mensaje de la alerta.
    */
-  showWarning(title: string, text: string): Promise<any> {
-    return Swal.fire({
-      icon: 'warning', // Ícono de advertencia
-      title: title, // Título de la alerta
-      text: text, // Mensaje de la alerta
-      confirmButtonText: 'Aceptar', // Texto del botón de confirmación
-      timer: 3000, // Cierra automáticamente la alerta después de 3 segundos
+  showWarning(title: string, content: string, isHtml: boolean = false): Promise<any> {
+    const config: SweetAlertOptions = {
+      icon: 'warning',
+      title: title,
+      confirmButtonText: 'Aceptar',
+      timer: 3000,
       customClass: {
         popup: 'custom-popup-class',
         title: 'custom-title-class',
-        htmlContainer: 'custom-content-class', // Usa htmlContainer en lugar de content
+        htmlContainer: 'custom-content-class',
         confirmButton: 'custom-confirm-button-class'
       },
-      buttonsStyling: false, // Desactiva los estilos por defecto de los botones
+      buttonsStyling: false,
       showClass: {
-        popup: 'animate__animated animate__wobble' // Animación de entrada
+        popup: 'animate__animated animate__wobble'
       },
       hideClass: {
-        popup: 'animate__animated animate__fadeOutUp' // Animación de salida
+        popup: 'animate__animated animate__fadeOutUp'
       }
-    });
+    };
+
+    // Usar html o text según corresponda
+    if (isHtml) {
+      config.html = content;
+    } else {
+      config.text = content;
+    }
+
+    return Swal.fire(config);
   }
 
   showInactivityWarning(
@@ -102,7 +110,7 @@ export class SwalService {
     return new Promise((resolve) => {
       let timerInterval: number;
       let confirmed = false;
-  
+
       Swal.fire({
         title: title,
         html: `<p class="custom-content-class">
@@ -142,7 +150,7 @@ export class SwalService {
           confirmed = true;
           resolve(false); // Usuario eligió cerrar sesión
         }
-  
+
         // Si se cierra por timer
         if (!confirmed && Swal.isVisible()) {
           Swal.fire({
@@ -161,7 +169,7 @@ export class SwalService {
       });
     });
   }
-  
+
 
   /**
    * Muestra una alerta de confirmación.

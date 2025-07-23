@@ -58,8 +58,6 @@ import { NgSelectModule } from '@ng-select/ng-select';
     GraficoComparativaSedesComponent,
     GraficoTotalSedeComponent,
     GraficoPacientesPorMesComponent
-
-
   ],
   imports: [
     NgChartsModule,
