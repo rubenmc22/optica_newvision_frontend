@@ -218,8 +218,8 @@ export class HistoriasMedicasComponent implements OnInit {
 
     return this.pacientes.filter(paciente => {
       const coincideTexto =
-        paciente.nombreCompleto.toLowerCase().includes(filtroTexto) ||
-        paciente.cedula.toLowerCase().includes(filtroTexto);
+        paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(filtroTexto) ||
+        paciente.informacionPersonal.cedula.toLowerCase().includes(filtroTexto);
 
       const esSedeActiva = paciente.sede === this.sedeActiva;
 
@@ -278,7 +278,7 @@ export class HistoriasMedicasComponent implements OnInit {
         // 🧪 Generar historias mock por paciente
         this.historiasMock = {};
         this.pacientes.forEach((paciente, i) => {
-          this.historiasMock[paciente.id] = this.generarHistorias((i % 5) + 1); // crea 1 a 5 historias simuladas
+          this.historiasMock[paciente.key] = this.generarHistorias((i % 5) + 1); // crea 1 a 5 historias simuladas
         });
       },
       error: (error) => {
@@ -819,19 +819,19 @@ export class HistoriasMedicasComponent implements OnInit {
 
   filtrarPaciente = (term: string, item: Paciente): boolean => {
     const texto = term.toLowerCase();
-    return item.nombreCompleto.toLowerCase().includes(texto) ||
-      item.cedula.toLowerCase().includes(texto);
+    return item.informacionPersonal.nombreCompleto.toLowerCase().includes(texto) ||
+      item.informacionPersonal.cedula.toLowerCase().includes(texto);
   };
 
   seleccionarPacientePorId(id: string | null): void {
     console.log('Seleccionado:', id); // 👈 Verifica si se dispara
     if (!id) return;
 
-    const paciente = this.pacientes.find(p => p.id === id);
+    const paciente = this.pacientes.find(p => p.key === id);
     if (!paciente) return;
 
     this.pacienteSeleccionado = paciente;
-    this.historial = this.historiasMock[paciente.id] || [];
+    this.historial = this.historiasMock[paciente.key] || [];
     this.historiaSeleccionada = null;
     this.mostrarSinHistorial = this.historial.length === 0;
     this.mostrarElementos = this.historial.length > 0;
@@ -849,7 +849,7 @@ export class HistoriasMedicasComponent implements OnInit {
       fecha: new Date(new Date().setDate(new Date().getDate() - i)).toISOString().split('T')[0],
       datosConsulta: {
         ...historia.datosConsulta,
-        medico: `Dr. ${this.pacienteSeleccionado?.nombreCompleto.split(' ')[0]} Mock`,
+        medico: `Dr. ${this.pacienteSeleccionado?.informacionPersonal.nombreCompleto.split(' ')[0]} Mock`,
         motivo: this.motivosConsulta[i % this.motivosConsulta.length]
       }
     }));
@@ -867,7 +867,7 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   compararPacientes = (a: Paciente, b: Paciente): boolean => {
-    return a && b ? a.id === b.id : a === b;
+    return a && b ? a.key === b.key : a === b;
   };
 
   get patologias(): string[] {

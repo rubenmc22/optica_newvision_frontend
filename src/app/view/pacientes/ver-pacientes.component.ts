@@ -37,7 +37,7 @@ export class VerPacientesComponent implements OnInit {
   sedeActiva: string = '';
   sedeFiltro: string = this.sedeActiva;
   filtro: string = '';
-  ordenActual: keyof Paciente = 'nombreCompleto';
+  ordenActual: string = 'informacionPersonal.nombreCompleto';
   ordenAscendente: boolean = true;
 
   // Redes sociales
@@ -91,7 +91,6 @@ export class VerPacientesComponent implements OnInit {
     'Cefalea'
   ];
 
-
   constructor(
     private fb: FormBuilder,
     private pacientesService: PacientesService,
@@ -112,7 +111,7 @@ export class VerPacientesComponent implements OnInit {
       direccion: ['', Validators.required],
       redesSociales: this.fb.array([]),
 
-      // Campos de perfil clínico
+      // Campos clínicos
       usuarioLentes: ['', Validators.required],
       fotofobia: ['', Validators.required],
       traumatismoOcular: ['', Validators.required],
@@ -135,6 +134,33 @@ export class VerPacientesComponent implements OnInit {
 
   ngOnInit(): void {
     this.inicializarSedeDesdeUsuario();
+
+    // Aplicar validaciones condicionales reactivas
+    this.aplicarValidacionCondicional('traumatismoOcular', 'traumatismoOcularDescripcion', this.formPaciente);
+    this.aplicarValidacionCondicional('cirugiaOcular', 'cirugiaOcularDescripcion', this.formPaciente);
+  }
+
+
+  private aplicarValidacionCondicional(
+    campoDecisor: string,
+    campoDescripcion: string,
+    grupo: FormGroup
+  ): void {
+    const campo = grupo.get(campoDecisor);
+    const descripcion = grupo.get(campoDescripcion);
+
+    campo?.valueChanges.subscribe(valor => {
+      const esObligatorio = valor === 'Sí' || valor === 'si' || valor === true;
+
+      if (esObligatorio) {
+        descripcion?.setValidators([Validators.required]);
+      } else {
+        descripcion?.clearValidators();
+        descripcion?.setValue('');
+      }
+
+      descripcion?.updateValueAndValidity();
+    });
   }
 
   requiereDescripcionCondicional(condicion: string, campoDescripcion: string): ValidatorFn {
@@ -143,9 +169,9 @@ export class VerPacientesComponent implements OnInit {
       const descripcion = group.get(campoDescripcion)?.value;
 
       const esObligatorio = estado === 'si' || estado === 'Sí' || estado === true;
+      const estaVacio = !descripcion?.toString().trim();
 
-      if (esObligatorio && !descripcion?.trim()) {
-        group.get(campoDescripcion)?.setErrors({ required: true });
+      if (esObligatorio && estaVacio) {
         return { [`${campoDescripcion}Obligatoria`]: true };
       }
 
@@ -161,7 +187,6 @@ export class VerPacientesComponent implements OnInit {
       this.cargarPacientes();
     });
   }
-
 
   // Métodos de acceso
   get redesSociales(): FormArray {
@@ -185,24 +210,33 @@ export class VerPacientesComponent implements OnInit {
       next: (data) => {
         this.pacientes = Array.isArray(data.pacientes)
           ? data.pacientes.map((p: any) => ({
-            id: p.key,
-            nombreCompleto: p.informacionPersonal?.nombreCompleto ?? '',
-            cedula: p.informacionPersonal?.cedula ?? '',
-            telefono: p.informacionPersonal?.telefono ?? '',
-            email: p.informacionPersonal?.email ?? '',
-            fechaNacimiento: p.informacionPersonal?.fechaNacimiento ?? '',
-            edad: this.calcularEdad(p.informacionPersonal?.fechaNacimiento),
-            ocupacion: p.informacionPersonal?.ocupacion ?? '',
-            genero:
-              p.informacionPersonal?.genero === 'm' ? 'Masculino' :
-                p.informacionPersonal?.genero === 'f' ? 'Femenino' : 'Otro',
-            direccion: p.informacionPersonal?.direccion ?? '',
-            sede: p.key.split('-')[0] ?? 'sin-sede',
+            key: p.key ?? '',
+            sede: p.key?.split('-')[0] ?? 'sin-sede',
             fechaRegistro: this.formatearFecha(p.created_at),
-            redesSociales: p.redesSociales ?? []
+
+            informacionPersonal: {
+              nombreCompleto: p.informacionPersonal?.nombreCompleto ?? '',
+              cedula: p.informacionPersonal?.cedula ?? '',
+              telefono: p.informacionPersonal?.telefono ?? '',
+              email: p.informacionPersonal?.email ?? '',
+              fechaNacimiento: p.informacionPersonal?.fechaNacimiento ?? '',
+              ocupacion: p.informacionPersonal?.ocupacion ?? '',
+              genero:
+                p.informacionPersonal?.genero === 'm'
+                  ? 'Masculino'
+                  : p.informacionPersonal?.genero === 'f'
+                    ? 'Femenino'
+                    : 'Otro',
+              direccion: p.informacionPersonal?.direccion ?? '',
+              edad: this.calcularEdad(p.informacionPersonal?.fechaNacimiento)
+            },
+
+            redesSociales: p.redesSociales ?? [],
+            historiaClinica: p.historiaClinica ?? {}
           }))
           : [];
 
+        console.log('Pacientes cargados:', this.pacientes);
       },
       error: (error) => {
         console.error('Error al cargar pacientes:', error);
@@ -211,6 +245,7 @@ export class VerPacientesComponent implements OnInit {
       }
     });
   }
+
 
   // Métodos de filtrado y ordenación
   pacientesFiltrados(): Paciente[] {
@@ -238,14 +273,18 @@ export class VerPacientesComponent implements OnInit {
 
       //  console.log('PACIENTE', paciente);
       const coincideTexto =
-        paciente.nombreCompleto.toLowerCase().includes(filtroText) ||
-        paciente.cedula.includes(filtroText);
+        paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(filtroText) ||
+        paciente.informacionPersonal.cedula.includes(filtroText);
 
       return mostrar && coincideTexto;
     });
   }
 
-  ordenarPor(campo: keyof Paciente): void {
+  getValorOrden(obj: any, path: string): any {
+    return path.split('.').reduce((acc, key) => acc?.[key], obj);
+  }
+
+  ordenarPor(campo: string): void {
     if (this.ordenActual === campo) {
       this.ordenAscendente = !this.ordenAscendente;
     } else {
@@ -254,8 +293,8 @@ export class VerPacientesComponent implements OnInit {
     }
 
     this.pacientes.sort((a, b) => {
-      const valorA = a[campo] ?? '';
-      const valorB = b[campo] ?? '';
+      const valorA = this.getValorOrden(a, campo) ?? '';
+      const valorB = this.getValorOrden(b, campo) ?? '';
 
       if (typeof valorA === 'string' && typeof valorB === 'string') {
         return this.ordenAscendente
@@ -271,16 +310,23 @@ export class VerPacientesComponent implements OnInit {
     });
   }
 
-  calcularEdad(fechaNac: string): number {
+  calcularEdad(fechaNac: string): number | '--' {
+    if (!fechaNac) return '--';
+
     const nacimiento = new Date(fechaNac);
+    if (isNaN(nacimiento.getTime())) return '--';
+
     const hoy = new Date();
     let edad = hoy.getFullYear() - nacimiento.getFullYear();
     const mes = hoy.getMonth() - nacimiento.getMonth();
+
     if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
       edad--;
     }
-    return edad;
+
+    return edad >= 0 ? edad : '--';
   }
+
 
   crearPaciente(): void {
     if (this.formPaciente.invalid) {
@@ -353,10 +399,7 @@ export class VerPacientesComponent implements OnInit {
         this.swalService.showSuccess('¡Registro exitoso!', 'Paciente registrado correctamente.');
         this.cargarPacientes();
       },
-      /*  error: (error) => {
-          console.error('Error al crear paciente:', error);
-          this.swalService.showError('Error', 'No se ha podido registrar al paciente');
-        }*/
+
       error: (error) => {
         const msg = error.error?.message ?? '';
 
@@ -399,30 +442,34 @@ export class VerPacientesComponent implements OnInit {
   editarPaciente(paciente: any): void {
     this.modoEdicion = true;
     this.pacienteEditando = paciente;
+    //console.log('editarPaciente - paciente', paciente);
 
-    this.formOriginal = JSON.parse(JSON.stringify({
-      nombreCompleto: paciente.nombreCompleto,
-      cedula: paciente.cedula,
-      telefono: paciente.telefono,
-      email: paciente.email,
-      fechaNacimiento: paciente.fecha_nacimiento,
-      ocupacion: paciente.ocupacion,
-      genero: paciente.genero,
-      direccion: paciente.direccion,
-      redesSociales: paciente.redesSociales || []
-    }));
+    this.formOriginal = {
+      nombreCompleto: paciente.informacionPersonal?.nombreCompleto,
+      cedula: paciente.informacionPersonal?.cedula,
+      telefono: paciente.informacionPersonal?.telefono,
+      email: paciente.informacionPersonal?.email,
+      fechaNacimiento: paciente.informacionPersonal?.fechaNacimiento,
+      ocupacion: paciente.informacionPersonal?.ocupacion,
+      genero: paciente.informacionPersonal?.genero,
+      direccion: paciente.informacionPersonal?.direccion,
+      usuarioLentes: paciente.historiaClinica?.usuarioLentes ?? '',
+      fotofobia: paciente.historiaClinica?.fotofobia ?? '',
+      traumatismoOcular: paciente.historiaClinica?.traumatismoOcular ?? '',
+      traumatismoOcularDescripcion: paciente.historiaClinica?.traumatismoOcularDescripcion ?? '',
+      cirugiaOcular: paciente.historiaClinica?.cirugiaOcular ?? '',
+      cirugiaOcularDescripcion: paciente.historiaClinica?.cirugiaOcularDescripcion ?? '',
+      alergicoA: paciente.historiaClinica?.alergicoA ?? '',
+      antecedentesPersonales: paciente.historiaClinica?.antecedentesPersonales ?? [],
+      antecedentesFamiliares: paciente.historiaClinica?.antecedentesFamiliares ?? [],
+      patologias: paciente.historiaClinica?.patologias ?? [],
+      patologiaOcular: paciente.historiaClinica?.patologiaOcular ?? [],
+      redesSociales: paciente.redesSociales ?? []
+    };
 
-    this.formPaciente.patchValue({
-      nombreCompleto: paciente.nombreCompleto,
-      cedula: paciente.cedula,
-      telefono: paciente.telefono,
-      email: paciente.email,
-      fechaNacimiento: paciente.fecha_nacimiento,
-      ocupacion: paciente.ocupacion,
-      genero: paciente.genero,
-      direccion: paciente.direccion
-    });
+    this.formPaciente.patchValue(this.formOriginal);
 
+    // Redes sociales
     this.redesSociales.clear();
     if (paciente.redesSociales) {
       paciente.redesSociales.forEach((red: any) => {
@@ -436,12 +483,15 @@ export class VerPacientesComponent implements OnInit {
     this.abrirModalEditarPaciente(paciente);
   }
 
+
   actualizarPaciente(): void {
     if (!this.formularioModificado()) {
       return;
     }
 
     const pacienteFormValue = this.formPaciente.value;
+    console.log('pacienteFormValue', pacienteFormValue);
+
     const mapGenero = pacienteFormValue.genero === 'Masculino'
       ? 'm'
       : pacienteFormValue.genero === 'Femenino'
@@ -449,42 +499,60 @@ export class VerPacientesComponent implements OnInit {
         : 'otro';
 
     const datosActualizados = {
-      nombreCompleto: pacienteFormValue.nombreCompleto,
-      cedula: pacienteFormValue.cedula,
-      telefono: pacienteFormValue.telefono || null,
-      email: pacienteFormValue.email || null,
-      fechaNacimiento: pacienteFormValue.fechaNacimiento,
-      ocupacion: pacienteFormValue.ocupacion || null,
-      genero: mapGenero,
-      direccion: pacienteFormValue.direccion || null,
+      key: `${this.sedeActiva}-${pacienteFormValue.cedula}`,
+      informacionPersonal: {
+        nombreCompleto: pacienteFormValue.nombreCompleto,
+        cedula: pacienteFormValue.cedula,
+        telefono: pacienteFormValue.telefono || null,
+        email: pacienteFormValue.email || null,
+        fechaNacimiento: pacienteFormValue.fechaNacimiento,
+        ocupacion: pacienteFormValue.ocupacion || null,
+        genero: mapGenero,
+        direccion: pacienteFormValue.direccion || null
+      },
       redesSociales: this.redesSociales.controls.map(control => ({
         platform: control.get('platform')?.value,
         username: control.get('username')?.value
-      }))
+      })),
+      historiaClinica: {
+        usuarioLentes: pacienteFormValue.usuarioLentes || null,
+        fotofobia: pacienteFormValue.fotofobia || null,
+        traumatismoOcular: pacienteFormValue.traumatismoOcular || null,
+        traumatismoOcularDescripcion: pacienteFormValue.traumatismoOcularDescripcion || null,
+        cirugiaOcular: pacienteFormValue.cirugiaOcular || null,
+        cirugiaOcularDescripcion: pacienteFormValue.cirugiaOcularDescripcion || null,
+        alergicoA: pacienteFormValue.alergicoA || null,
+        antecedentesPersonales: pacienteFormValue.antecedentesPersonales || [],
+        antecedentesFamiliares: pacienteFormValue.antecedentesFamiliares || [],
+        patologias: pacienteFormValue.patologias || [],
+        patologiaOcular: pacienteFormValue.patologiaOcular || []
+      }
     };
 
     console.log('Enviando al backend:', datosActualizados);
 
-    const clavePaciente = `${this.sedeActiva}-${datosActualizados.cedula}`;
+    const keyPaciente = `${this.sedeActiva}-${datosActualizados.informacionPersonal.cedula}`;
 
-    this.pacientesService.updatePaciente(clavePaciente, datosActualizados).subscribe({
+    this.pacientesService.updatePaciente(keyPaciente, datosActualizados).subscribe({
       next: (response) => {
         const paciente = response.paciente;
 
         const transformado = {
           ...paciente,
-          id: paciente.key,
-          nombreCompleto: paciente.nombre,
-          genero: paciente.genero === 'm' ? 'Masculino' : paciente.genero === 'f' ? 'Femenino' : 'Otro',
-          sede: paciente.sede_id,
+          key: keyPaciente, // clave generada correctamente
+          informacionPersonal: {
+            ...paciente.informacionPersonal,
+            genero: paciente.informacionPersonal.genero === 'm' ? 'Masculino' :
+              paciente.informacionPersonal.genero === 'f' ? 'Femenino' : 'Otro',
+            edad: this.calcularEdad(paciente.informacionPersonal.fechaNacimiento)
+          },
           fechaRegistro: this.formatearFecha(paciente.updated_at),
-          fechaNacimiento: paciente.fecha_nacimiento, // ✅ deja formato ISO
-          edad: this.calcularEdad(paciente.fecha_nacimiento), // ✅ calcula edad
-          redesSociales: paciente.redes_sociales || []
+          redesSociales: paciente.redesSociales || [],
+          sede: paciente.sede || this.sedeActiva
         };
 
 
-        const index = this.pacientes.findIndex(p => p.id === paciente.key);
+        const index = this.pacientes.findIndex(p => p.key === paciente.key);
         if (index !== -1) {
           this.pacientes[index] = transformado;
         } else {
@@ -505,22 +573,22 @@ export class VerPacientesComponent implements OnInit {
   }
 
   eliminarPaciente(id: string): void {
-    const paciente = this.pacientes.find(p => p.id === id);
+    const paciente = this.pacientes.find(p => p.key === id);
     if (!paciente) return;
 
     const sedeId = this.sedeActiva;
-    const clavePaciente = `${sedeId}-${paciente.cedula}`;
+    const clavePaciente = `${sedeId}-${paciente.informacionPersonal.cedula}`;
 
     this.modalService.openGlobalModal(
       'Eliminar Paciente',
-      `¿Está seguro que desea eliminar al paciente ${paciente.nombreCompleto}?`,
+      `¿Está seguro que desea eliminar al paciente ${paciente.informacionPersonal.nombreCompleto}?`,
       'Eliminar',
       'Cancelar'
     ).then((confirmed: boolean) => {
       if (confirmed) {
         this.pacientesService.deletePaciente(clavePaciente).subscribe({
           next: () => {
-            this.pacientes = this.pacientes.filter(p => p.id !== id);
+            this.pacientes = this.pacientes.filter(p => p.key !== id);
             this.swalService.showSuccess('¡Eliminación exitosa!', 'Se ha eliminado al paciente correctamente.');
           },
           error: (error) => {
@@ -585,7 +653,6 @@ export class VerPacientesComponent implements OnInit {
     }
   }
 
-
   // Métodos para modales
   abrirModalAgregarPaciente(): void {
     this.modoEdicion = false;
@@ -601,9 +668,7 @@ export class VerPacientesComponent implements OnInit {
   abrirModalEditarPaciente(paciente: Paciente): void {
     this.modoEdicion = true;
     this.pacienteEditando = paciente;
-    this.formPaciente.patchValue(paciente);
     this.redesEditables = this.redesSociales.controls.map(() => false);
-
 
     const modalElement = document.getElementById('modalAgregarPaciente');
     if (modalElement) {
@@ -612,34 +677,73 @@ export class VerPacientesComponent implements OnInit {
     }
   }
 
+
   abrirModalVisualizacionPaciente(paciente: Paciente): void {
-    console.log('abrirModalVisualizacionPaciente', paciente);
+    console.log('paciente', paciente);
 
+    const info = paciente?.informacionPersonal ?? {};
+    const redes = paciente?.redesSociales ?? [];
+    const historia = paciente?.historiaClinica ?? {};
+
+    const noEspecificadoTexto = 'No';
+    const noEspecificadoArray = [noEspecificadoTexto];
+    console.log('info', info);
     const pacienteTransformado = {
-      ...paciente,
-      fechaNacimiento: this.formatearFecha(paciente.fechaNacimiento || paciente.fechaNacimiento),
-      fechaRegistro: this.formatearFecha(paciente.fechaRegistro || paciente.fechaRegistro),
-      redesSociales: paciente.redesSociales || paciente.redesSociales || [],
+      id: paciente.key ?? '',
+      nombreCompleto: info.nombreCompleto ?? noEspecificadoTexto,
+      cedula: info.cedula ?? noEspecificadoTexto,
+      telefono: info.telefono ?? noEspecificadoTexto,
+      email: info.email ?? noEspecificadoTexto,
+      fechaNacimiento: this.formatearFecha(info.fechaNacimiento),
+      edad: this.calcularEdad(info.fechaNacimiento),
+      ocupacion: info.ocupacion ?? noEspecificadoTexto,
+      genero: info.genero || '--',
+      direccion: info.direccion ?? noEspecificadoTexto,
+      sede: paciente.key?.split('-')[0] ?? 'sin-sede',
+      fechaRegistro: paciente.fechaRegistro
+        ? this.formatearFecha(paciente.fechaRegistro)
+        : '',
 
+      redesSociales: redes.map((red: any) => ({
+        platform: red.platform ?? 'Plataforma desconocida',
+        username: red.username ?? noEspecificadoTexto,
+        editable: false
+      })),
+
+      historiaClinica: {
+        usuarioLentes: historia.usuarioLentes ?? noEspecificadoTexto,
+        fotofobia: historia.fotofobia ?? noEspecificadoTexto,
+        traumatismoOcular: historia.traumatismoOcular ?? noEspecificadoTexto,
+        traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion?.trim() || noEspecificadoTexto,
+        cirugiaOcular: historia.cirugiaOcular ?? noEspecificadoTexto,
+        cirugiaOcularDescripcion: historia.cirugiaOcularDescripcion?.trim() || noEspecificadoTexto,
+        alergicoA: historia.alergicoA?.trim() || noEspecificadoTexto,
+        antecedentesPersonales: Array.isArray(historia.antecedentesPersonales) && historia.antecedentesPersonales.length > 0
+          ? historia.antecedentesPersonales
+          : noEspecificadoArray,
+        antecedentesFamiliares: Array.isArray(historia.antecedentesFamiliares) && historia.antecedentesFamiliares.length > 0
+          ? historia.antecedentesFamiliares
+          : noEspecificadoArray,
+        patologias: Array.isArray(historia.patologias) && historia.patologias.length > 0
+          ? historia.patologias
+          : noEspecificadoArray,
+        patologiaOcular: Array.isArray(historia.patologiaOcular) && historia.patologiaOcular.length > 0
+          ? historia.patologiaOcular
+          : noEspecificadoArray
+      }
     };
 
     this.pacienteSeleccionado = pacienteTransformado;
-
-    /*this.redesSocialesEditables = pacienteTransformado.redesSociales.map((red: { platform: string; username: string }) => ({
-      platform: red.platform,
-      username: red.username,
-      editable: false
-    }));*/
-
-    console.log('pacienteTransformado', pacienteTransformado);
-    //  this.pacienteSeleccionado = paciente;
 
     const modalElement = document.getElementById('verPacienteModal');
     if (modalElement) {
       const modal = new bootstrap.Modal(modalElement);
       modal.show();
     }
+
+    console.log('pacienteTransformado', pacienteTransformado);
   }
+
 
   cerrarModal(id: string): void {
     const modalElement = document.getElementById(id);
@@ -657,39 +761,79 @@ export class VerPacientesComponent implements OnInit {
     this.cerrarModal('verPacienteModal');
   }
 
-  // Métodos de utilidad
   crearPacienteVacio(): Paciente {
     return {
-      id: '',
-      nombreCompleto: '',
-      cedula: '',
-      telefono: '',
-      email: '',
-      fechaNacimiento: '',
-      edad: 0,
-      ocupacion: '',
-      genero: '',
-      direccion: '',
+      key: '',
       fechaRegistro: '',
+      sede: this.sedeActiva,
+
+      informacionPersonal: {
+        nombreCompleto: '',
+        cedula: '',
+        telefono: '',
+        email: '',
+        edad: 0,
+        fechaNacimiento: '',
+        ocupacion: '',
+        genero: '',
+        direccion: ''
+      },
+
       redesSociales: [],
-      sede: this.sedeActiva
+
+      historiaClinica: {
+        usuarioLentes: null,
+        fotofobia: null,
+        traumatismoOcular: null,
+        traumatismoOcularDescripcion: null,
+        cirugiaOcular: null,
+        cirugiaOcularDescripcion: null,
+        alergicoA: null,
+        antecedentesPersonales: [],
+        antecedentesFamiliares: [],
+        patologias: [],
+        patologiaOcular: []
+      }
     };
   }
 
   resetearFormulario(): void {
     this.formPaciente.reset({
-      nombreCompleto: '',
-      cedula: '',
-      telefono: '',
-      email: '',
-      fechaNacimiento: '',
-      ocupacion: '',
-      genero: '', // ← esto fuerza "Seleccionar"
-      direccion: '',
-      redesSociales: []
+      informacionPersonal: {
+        nombreCompleto: '',
+        cedula: '',
+        telefono: '',
+        email: '',
+        fechaNacimiento: '',
+        ocupacion: '',
+        genero: '',
+        direccion: ''
+      },
+
+      redesSociales: [],
+
+      historiaClinica: {
+        usuarioLentes: '',
+        fotofobia: '',
+        traumatismoOcular: '',
+        traumatismoOcularDescripcion: '',
+        cirugiaOcular: '',
+        cirugiaOcularDescripcion: '',
+        alergicoA: '',
+        antecedentesPersonales: [],
+        antecedentesFamiliares: [],
+        patologias: [],
+        patologiaOcular: []
+      },
+
+      sede: this.sedeActiva,
+      fechaRegistro: ''
     });
 
+    // Si estás usando FormArrays para redes sociales
     this.redesSociales.clear();
+
+    // Resto de variables auxiliares
     this.modoEdicion = false;
     this.pacienteEditando = null;
     this.formOriginal = {};
@@ -697,6 +841,7 @@ export class VerPacientesComponent implements OnInit {
     this.nuevoUsuario = '';
     this.usuarioInputHabilitado = false;
   }
+
 
   formularioModificado(): boolean {
     if (!this.modoEdicion) return true;
@@ -714,8 +859,6 @@ export class VerPacientesComponent implements OnInit {
         ? this.normalizarFechaParaComparar(this.formOriginal[key])
         : this.formOriginal[key];
 
-      console.log('valorActual', valorActual);
-      console.log('valorOriginal', valorOriginal);
       return valorActual !== valorOriginal;
     });
 
@@ -727,7 +870,6 @@ export class VerPacientesComponent implements OnInit {
     return camposModificados || redesModificadas;
   }
 
-
   normalizarFechaParaComparar(fecha: string): string {
     if (!fecha || typeof fecha !== 'string') return '';
     if (fecha.includes('/')) {
@@ -736,7 +878,6 @@ export class VerPacientesComponent implements OnInit {
     }
     return fecha; // ya es ISO
   }
-
 
   arraysIguales(a: any[], b: any[]): boolean {
     if (a?.length !== b?.length) return false;
@@ -758,7 +899,8 @@ export class VerPacientesComponent implements OnInit {
   }
 
   mostrarMensaje(mensaje: string, tipo: 'success' | 'error' | 'info'): void {
-    alert(`${tipo.toUpperCase()}: ${mensaje}`);
+    alert(`${tipo.toUpperCase()
+      }: ${mensaje} `);
   }
 
   // Navegación
@@ -781,6 +923,4 @@ export class VerPacientesComponent implements OnInit {
         return '#';
     }
   }
-
-
 }

@@ -19,7 +19,7 @@
             <option value="todas">Todas las sedes</option>
           </select>
         </div>
-        
+
         <div class="col-md-8">
           <label for="filtroTexto" class="form-label">🔎 Buscar paciente</label>
           <input id="filtroTexto" type="text" class="form-control" placeholder="Nombre o cédula..."
@@ -72,14 +72,14 @@
 
         <tbody>
           <tr *ngFor="let paciente of pacientesFiltrados()" class="text-center align-middle">
-            <td>{{ paciente.nombreCompleto }}</td>
-            <td>{{ paciente.cedula }}</td>
-            <td>{{ paciente.edad }}</td>
-            <td>{{ paciente.genero }}</td>
+            <td>{{ paciente.informacionPersonal.nombreCompleto }}</td>
+            <td>{{ paciente.informacionPersonal.cedula }}</td>
+            <td>{{ paciente.informacionPersonal.edad }}</td>
+            <td>{{ paciente.informacionPersonal.genero }}</td>
             <td>{{ paciente.fechaRegistro }}</td>
 
             <td>
-              <button class="btn btn-info btn-sm" (click)="verHistorias(paciente.id)">📖 Ver
+              <button class="btn btn-info btn-sm" (click)="verHistorias(paciente.key)">📖 Ver
                 Historias</button>
             </td>
             <td>
@@ -98,7 +98,7 @@
                 <button class="btn btn-outline-warning btn-sm me-1" (click)="editarPaciente(paciente)" title="Editar">
                   <i class="bi bi-pencil-square"></i>
                 </button>
-                <button class="btn btn-outline-danger btn-sm" (click)="eliminarPaciente(paciente.id)" title="Eliminar">
+                <button class="btn btn-outline-danger btn-sm" (click)="eliminarPaciente(paciente.key)" title="Eliminar">
                   <i class="bi bi-trash"></i>
                 </button>
               </ng-container>
@@ -106,7 +106,7 @@
           </tr>
 
           <tr *ngIf="pacientesFiltrados().length === 0">
-            <td colspan="8" class="text-center text-muted py-4">
+            <td colspan="8" class="text-center text-dark py-4">
               🧐 No se encontraron pacientes que coincidan con el filtro aplicado.
             </td>
           </tr>
@@ -134,11 +134,12 @@
 
           <!-- 👤 Datos personales -->
           <div class="mb-4">
-            <h6 class="text-primary">👤 Datos personales</h6>
+            <h6 class="text-primary mb-2">👤 Datos personales</h6>
             <div class="row g-3">
               <!-- Nombre Completo -->
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark">Nombre Completo <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">Nombre Completo <span
+                    class="text-danger">*</span></label>
                 <input type="text" class="form-control border-2 py-2" formControlName="nombreCompleto"
                   placeholder="Ej: María Fernanda López">
                 <div *ngIf="formPaciente.get('nombreCompleto')?.invalid && formPaciente.get('nombreCompleto')?.touched"
@@ -149,7 +150,7 @@
 
               <!-- Cédula -->
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark">Cédula <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">Cédula <span class="text-danger">*</span></label>
                 <input type="text" class="form-control border-2 py-2" formControlName="cedula"
                   placeholder="Ej: 12345678">
                 <div *ngIf="formPaciente.get('cedula')?.invalid && formPaciente.get('cedula')?.touched"
@@ -160,7 +161,7 @@
 
               <!-- Teléfono -->
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark">Teléfono <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">Teléfono <span class="text-danger">*</span></label>
                 <input type="text" class="form-control border-2 py-2" formControlName="telefono"
                   placeholder="Ej: 04121234567">
                 <div *ngIf="formPaciente.get('telefono')?.invalid && formPaciente.get('telefono')?.touched"
@@ -171,7 +172,7 @@
 
               <!-- Email -->
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark">Email <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">Email <span class="text-danger">*</span></label>
                 <input type="email" class="form-control border-2 py-2" formControlName="email"
                   placeholder="Ej: paciente@email.com">
                 <div *ngIf="formPaciente.get('email')?.errors?.['email']" class="text-danger small mt-1">
@@ -185,14 +186,14 @@
 
               <!-- Fecha de Nacimiento -->
               <div class="col-md-4">
-                <label class="form-label fw-medium text-dark">Fecha de Nacimiento <span
+                <label class="form-label fw-medium text-dark-label">Fecha de Nacimiento <span
                     class="text-danger">*</span></label>
                 <input type="date" class="form-control border-2 py-2" formControlName="fechaNacimiento">
               </div>
 
               <!-- Ocupación -->
               <div class="col-md-4">
-                <label class="form-label fw-medium text-dark">Ocupación <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">Ocupación <span class="text-danger">*</span></label>
                 <input type="text" class="form-control border-2 py-2" formControlName="ocupacion"
                   placeholder="Ej: Profesor universitario">
                 <div *ngIf="formPaciente.get('ocupacion')?.invalid && formPaciente.get('ocupacion')?.touched"
@@ -203,7 +204,7 @@
 
               <!-- Género -->
               <div class="col-md-4">
-                <label class="form-label fw-medium text-dark">Género <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">Género <span class="text-danger">*</span></label>
                 <ng-select [items]="opcionesGenero" formControlName="genero" placeholder="Seleccione..."
                   [searchable]="false" class="border-2" required>
                 </ng-select>
@@ -211,7 +212,7 @@
 
               <!-- Dirección -->
               <div class="col-md-12">
-                <label class="form-label fw-medium text-dark">Dirección <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">Dirección <span class="text-danger">*</span></label>
                 <textarea class="form-control border-2" rows="2" formControlName="direccion"
                   placeholder="Ej: Calle 10, Quinta Cielo Azul, Guatire"></textarea>
               </div>
@@ -225,76 +226,76 @@
 
           <!-- 🧬 Perfil Clínico -->
           <div class="mt-4">
-            <h6 class="text-primary">🧬 Perfil Clínico</h6>
+            <h6 class="text-primary mb-2">🧬 Perfil Clínico</h6>
             <div class="row g-3">
 
               <!-- Condiciones clínicas (Sí/No) -->
               <div class="col-md-3">
-                <label class="form-label fw-medium text-dark">¿Usa lentes?</label>
+                <label class="form-label fw-medium text-dark-label">¿Usa lentes?</label>
                 <ng-select [items]="['Sí', 'No']" formControlName="usuarioLentes" placeholder="Seleccione..."
                   class="border-2"></ng-select>
               </div>
 
               <div class="col-md-3">
-                <label class="form-label fw-medium text-dark">¿Tiene Fotofobia?</label>
+                <label class="form-label fw-medium text-dark-label">¿Tiene Fotofobia?</label>
                 <ng-select [items]="['Sí', 'No']" formControlName="fotofobia" placeholder="Seleccione..."
                   class="border-2"></ng-select>
               </div>
 
               <!-- Alergias -->
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark">Alergias a:</label>
+                <label class="form-label fw-medium text-dark-label">Alergias a:</label>
                 <input class="form-control border-2 py-2" formControlName="alergicoA"
                   placeholder="Ej: Polvo, medicamentos..." />
               </div>
 
               <!-- Traumatismo ocular -->
               <div class="col-md-4">
-                <label class="form-label fw-medium text-dark">¿Traumatismo ocular previo?</label>
+                <label class="form-label fw-medium text-dark-label">¿Traumatismo ocular previo?</label>
                 <ng-select [items]="['Sí', 'No']" formControlName="traumatismoOcular" placeholder="Seleccione..."
                   class="border-2"></ng-select>
               </div>
 
               <div class="col-md-8" *ngIf="formPaciente.get('traumatismoOcular')?.value === 'Sí'">
-                <label class="form-label fw-medium text-dark">Descripción del traumatismo</label>
+                <label class="form-label fw-medium text-dark-label">Descripción del traumatismo</label>
                 <input class="form-control border-2 py-2" formControlName="traumatismoOcularDescripcion"
                   placeholder="Ej: Golpe en el ojo izquierdo" />
               </div>
 
               <!-- Cirugía ocular -->
               <div class="col-md-4">
-                <label class="form-label fw-medium text-dark">¿Cirugía ocular previa?</label>
+                <label class="form-label fw-medium text-dark-label">¿Cirugía ocular previa?</label>
                 <ng-select [items]="opcionesBooleanasSimple" formControlName="cirugiaOcular" placeholder="Seleccione..."
                   class="border-2"></ng-select>
               </div>
 
               <div class="col-md-8" *ngIf="formPaciente.get('cirugiaOcular')?.value === 'Sí'">
-                <label class="form-label fw-medium text-dark">Descripción de la cirugía</label>
+                <label class="form-label fw-medium text-dark-label">Descripción de la cirugía</label>
                 <input class="form-control border-2 py-2" formControlName="cirugiaOcularDescripcion"
                   placeholder="Ej: Extracción de catarata" />
               </div>
 
               <!-- Selecciones múltiples -->
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark">Antecedentes personales</label>
+                <label class="form-label fw-medium text-dark-label">Antecedentes personales</label>
                 <ng-select [items]="opcionesAntecedentesPersonales" formControlName="antecedentesPersonales"
                   [multiple]="true" placeholder="Seleccione..." class="border-2"></ng-select>
               </div>
 
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark">Antecedentes familiares</label>
+                <label class="form-label fw-medium text-dark-label">Antecedentes familiares</label>
                 <ng-select [items]="opcionesAntecedentesFamiliares" formControlName="antecedentesFamiliares"
                   [multiple]="true" placeholder="Seleccione..." class="border-2"></ng-select>
               </div>
 
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark">Patologías generales</label>
+                <label class="form-label fw-medium text-dark-label">Patologías generales</label>
                 <ng-select [items]="opcionesPatologias" formControlName="patologias" [multiple]="true"
                   placeholder="Seleccione..." class="border-2"></ng-select>
               </div>
 
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark">Patologías oculares</label>
+                <label class="form-label fw-medium text-dark-label">Patologías oculares</label>
                 <ng-select [items]="opcionesPatologiaOcular" formControlName="patologiaOcular" [multiple]="true"
                   placeholder="Seleccione..." class="border-2"></ng-select>
               </div>
@@ -303,10 +304,10 @@
 
           <!-- 🌐 Redes sociales -->
           <div class="mt-4">
-            <h6 class="text-primary">🌐 Redes sociales</h6>
+            <h6 class="text-primary mb-2">🌐 Redes sociales</h6>
             <div class="d-flex flex-wrap gap-3 mb-3 align-items-end">
               <div class="flex-grow-1">
-                <label class="form-label fw-medium text-dark mb-1">Red Social</label>
+                <label class="form-label fw-medium text-dark-label mb-1">Red Social</label>
                 <select class="form-select border-2 py-2" [(ngModel)]="nuevaRed" [ngModelOptions]="{standalone: true}"
                   (change)="habilitarUsuario()">
                   <option value="">Seleccionar</option>
@@ -315,7 +316,7 @@
               </div>
 
               <div class="flex-grow-1">
-                <label class="form-label fw-medium text-dark mb-1">Usuario</label>
+                <label class="form-label fw-medium text-dark-label mb-1">Usuario</label>
                 <input class="form-control border-2 py-2" type="text" placeholder="Ej: @maria.lopez"
                   [(ngModel)]="nuevoUsuario" [ngModelOptions]="{standalone: true}"
                   [disabled]="!usuarioInputHabilitado" />
@@ -331,9 +332,9 @@
               <table class="table table-borderless table-hover shadow-sm">
                 <thead class="bg-light">
                   <tr>
-                    <th class="fw-medium text-dark">Red</th>
-                    <th class="fw-medium text-dark">Usuario</th>
-                    <th class="fw-medium text-dark">Acción</th>
+                    <th class="fw-medium text-dark-label">Red</th>
+                    <th class="fw-medium text-dark-label">Usuario</th>
+                    <th class="fw-medium text-dark-label">Acción</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -378,10 +379,9 @@
   </div>
 </div>
 
-
 <!-- Modal para visualizar paciente -->
 <div class="modal fade" id="verPacienteModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-md">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
         <h5 class="modal-title w-100 ">
@@ -390,55 +390,19 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
-      <div class="modal-body">
-        <div class="card p-4">
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <div class="card p-4" style="background: var(--degradado-pastel) !important;">
           <h4 class="text-center mb-4">{{ pacienteSeleccionado?.nombreCompleto || '---' }}</h4>
-
+          <h5 class="text-primary pb-2"><strong>👤 Datos personales</strong></h5>
           <div class="row">
             <!-- Columna izquierda -->
-            <div class="col-md-6">
+            <div class="col-md-4">
               <div class="mb-3">
-                <p class="text-secondary text-muted mb-1"><strong>Cédula:</strong></p>
+                <p class="text-secondary mb-1"><strong>Cédula:</strong></p>
                 <p class="text-dark">{{ pacienteSeleccionado?.cedula || '---' }}</p>
               </div>
-
               <div class="mb-3">
-                <p class="text-secondary text-muted mb-1"><strong>Email:</strong></p>
-                <p class="text-dark">{{ pacienteSeleccionado?.email || '---' }}</p>
-              </div>
-
-              <div class="mb-3">
-                <p class="text-secondary text-muted mb-1"><strong>Fecha de Registro:</strong></p>
-                <p class="text-dark">
-                  <ng-container *ngIf="pacienteSeleccionado?.fechaRegistro; else noFecha">
-                    {{ pacienteSeleccionado.fechaRegistro }}
-                  </ng-container>
-                  <ng-template #noFecha>---</ng-template>
-                </p>
-
-              </div>
-
-              <div class="mb-3">
-                <p class="text-secondary text-muted mb-1"><strong>Género:</strong></p>
-                <p class="text-dark">{{ pacienteSeleccionado?.genero || '---' }}</p>
-              </div>
-            </div>
-
-            <!-- Columna derecha -->
-            <div class="col-md-6">
-              <div class="mb-3">
-                <p class="text-secondary text-muted mb-1"><strong>Teléfono:</strong></p>
-                <p class="text-dark">{{ pacienteSeleccionado?.telefono || '---' }}</p>
-              </div>
-
-
-              <div class="mb-3">
-                <p class="text-secondary text-muted mb-1"><strong>Ocupación:</strong></p>
-                <p class="text-dark">{{ pacienteSeleccionado?.ocupacion || '---' }}</p>
-              </div>
-
-              <div class="mb-3">
-                <p class="text-secondary text-muted mb-1"><strong>Fecha de Nacimiento:</strong></p>
+                <p class="text-secondary mb-1"><strong>Fecha de Nacimiento:</strong></p>
                 <p class="text-dark">
                   <ng-container *ngIf="pacienteSeleccionado?.fechaNacimiento; else noFecha">
                     {{ pacienteSeleccionado.fechaNacimiento }}
@@ -448,17 +412,143 @@
               </div>
 
               <div class="mb-3">
-                <p class="text-secondary text-muted mb-1"><strong>Dirección:</strong></p>
-                <p class="text-dark">{{ pacienteSeleccionado?.direccion || '---' }}</p>
+                <p class="text-secondary mb-1"><strong>Ocupación:</strong></p>
+                <p class="text-dark">{{ pacienteSeleccionado?.ocupacion || '---' }}</p>
+              </div>
+            </div>
+            <!-- Columna central -->
+            <div class="col-md-4">
+              <div class="mb-3">
+                <p class="text-secondary mb-1"><strong>Teléfono:</strong></p>
+                <p class="text-dark">{{ pacienteSeleccionado?.telefono || '---' }}</p>
               </div>
 
+              <div class="mb-3">
+                <p class="text-secondary mb-1"><strong>Edad:</strong></p>
+                <p class="text-dark">{{ pacienteSeleccionado?.edad || '---' }}</p>
+              </div>
+
+              <div class="mb-3">
+                <p class="text-secondary mb-1"><strong>Género:</strong></p>
+                <p class="text-dark">{{ pacienteSeleccionado?.genero || '---' }}</p>
+              </div>
+            </div>
+
+            <!-- Columna derecha -->
+            <div class="col-md-4">
+              <div class="mb-3">
+                <p class="text-secondary mb-1"><strong>Email:</strong></p>
+                <p class="text-dark">{{ pacienteSeleccionado?.email || '---' }}</p>
+              </div>
+              <div class="mb-3">
+                <p class="text-secondary mb-1"><strong>Fecha de Registro:</strong></p>
+                <p class="text-dark">
+                  <ng-container *ngIf="pacienteSeleccionado?.fechaRegistro; else noFecha">
+                    {{ pacienteSeleccionado.fechaRegistro }}
+                  </ng-container>
+                  <ng-template #noFecha>---</ng-template>
+                </p>
+              </div>
+              <div class="mb-3">
+                <p class="text-secondary mb-1"><strong>Dirección:</strong></p>
+                <p class="text-dark">{{ pacienteSeleccionado?.direccion || '---' }}</p>
+              </div>
+            </div>
+
+          </div>
+
+
+          <!-- Sección de Historia Clínica -->
+          <div class="mt-4">
+            <h5 class="text-primary pb-2"><strong>🧬 Perfil Clínico</strong></h5>
+
+            <div class="row">
+              <!-- Columna izquierda -->
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <p class="text-secondary mb-1"><strong>Usuario de lentes</strong></p>
+                  <p class="text-dark">{{ pacienteSeleccionado?.historiaClinica?.usuarioLentes || '--' }}</p>
+                </div>
+                <!-- 🔹 Patologías -->
+                <div class="mb-3">
+                  <p class="text-secondary mb-1"><strong>Patologías</strong></p>
+                  <p class="text-dark mb-1">
+                    {{ pacienteSeleccionado?.historiaClinica?.patologias?.join(', ') || 'No registrado' }}
+                  </p>
+                </div>
+
+                <div class="mb-3">
+                  <p class="text-secondary mb-1"><strong>Cirugía ocular</strong></p>
+                  <p class="text-dark">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcular || '--' }}</p>
+                </div>
+
+                <div class="mb-3">
+                  <p class="text-secondary mb-1"><strong>Traumatismo ocular</strong></p>
+                  <p class="text-dark">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcular || '--' }}</p>
+                </div>
+
+              </div>
+
+              <!-- Columna central -->
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <p class="text-secondary mb-1"><strong>Fotofobia</strong></p>
+                  <p class="text-dark">{{ pacienteSeleccionado?.historiaClinica?.fotofobia || '--' }}</p>
+                </div>
+
+                <div class="mb-3">
+                  <p class="text-secondary mb-1"><strong>Patología ocular</strong></p>
+                  <p class="text-dark mb-1">
+                    {{ pacienteSeleccionado?.historiaClinica?.patologiaOcular?.join(', ') || 'No registrado' }}
+                  </p>
+                </div>
+
+                <div class="mb-3" *ngIf="pacienteSeleccionado?.historiaClinica?.cirugiaOcular === 'Sí'">
+                  <p class="text-secondary mb-1"><strong>Descripción de la cirugía</strong></p>
+                  <p class="text-dark">
+                    {{ pacienteSeleccionado?.historiaClinica?.cirugiaOcularDescripcion || 'No registrado' }}
+                  </p>
+                </div>
+
+                <div class="mb-3" *ngIf="pacienteSeleccionado?.historiaClinica?.traumatismoOcular === 'Sí'">
+                  <p class="text-secondary mb-1"><strong>Descripción del traumatismo</strong></p>
+                  <p class="text-dark">
+                    {{ pacienteSeleccionado?.historiaClinica?.traumatismoOcularDescripcion || 'No registrado' }}
+                  </p>
+                </div>
+
+              </div>
+
+              <!-- Columna derecha -->
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <p class="text-secondary mb-1"><strong>Alergias</strong></p>
+                  <p class="text-dark">{{ pacienteSeleccionado?.historiaClinica?.alergicoA || '--' }}</p>
+                </div>
+
+                <!-- 🔹 Antecedentes personales -->
+                <div class="mb-3">
+                  <p class="text-secondary mb-1"><strong>Antecedentes personales</strong></p>
+                  <p class="text-dark mb-1">
+                    {{ pacienteSeleccionado?.historiaClinica?.antecedentesPersonales?.join(', ') || 'No registrado' }}
+                  </p>
+                </div>
+
+                <!-- 🔹 Antecedentes familiares -->
+                <div class="mb-3">
+                  <p class="text-secondary mb-1"><strong>Antecedentes familiares</strong></p>
+                  <p class="text-dark mb-1">
+                    {{ pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares?.join(', ') || 'No registrado' }}
+                  </p>
+                </div>
+              </div>
 
             </div>
           </div>
 
           <!-- Sección de Redes Sociales -->
           <div class="mt-4">
-            <h5 class="text-secondary pb-2"><strong>Redes Sociales</strong></h5>
+            <h5 class="text-primary pb-2"><strong>🌐 Redes Sociales</strong></h5>
             <div *ngIf="pacienteSeleccionado?.redesSociales?.length > 0; else sinRedes">
               <div class="d-flex flex-wrap gap-3">
                 <a *ngFor="let red of pacienteSeleccionado.redesSociales"
@@ -471,17 +561,19 @@
               </div>
             </div>
             <ng-template #sinRedes>
-              <p class="text-muted">No hay redes sociales registradas</p>
+              <p class="text-dark">No hay redes sociales registradas</p>
             </ng-template>
           </div>
         </div>
       </div>
-
       <div class="modal-footer ">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
           Cerrar
         </button>
       </div>
     </div>
+
+
   </div>
+
 </div>

@@ -4,38 +4,42 @@ export interface RedSocial {
 }
 
 export interface Paciente {
-     // Datos personales
-  id: string;
-  nombreCompleto: string;
-  cedula: string;
-  telefono: string;
-  email: string;
-  fechaNacimiento: string;
-  edad: number;
-  ocupacion: string;
-  genero: '' | 'Masculino' | 'Femenino' | 'Otro';
-  direccion: string;
-  fechaRegistro: string;
-  redesSociales: RedSocial[];
+  // Datos personales
+  key: string;
+  fechaRegistro?: string;
+  informacionPersonal: {
+    nombreCompleto: string;
+    cedula: string;
+    telefono: string;
+    email: string;
+    edad: number;
+    fechaNacimiento: string;
+    ocupacion: string;
+    genero: string;
+    direccion: string;
+  };
 
   //Sede
-   sede: string;
+  sede: string;
 
-   // Historia clínica
-  usuarioLentes?: boolean;
-  tipoCristalActual?: string;
-  ultimaGraduacion?: string;
-  fotofobia?: boolean;
-  alergicoA?: string;
-  cirugiaOcular?: boolean;
-  cirugiaOcularDescripcion?: string;
-  traumatismoOcular?: boolean;
-  usaDispositivosElectronicos?: boolean;
-  tiempoUsoEstimado?: string;
-  antecedentesPersonales?: string[];
-  antecedentesFamiliares?: string[];
-  patologias?: string[];
-  patologiaOcular?: string[];
+  redesSociales?: { platform: string; username: string }[];
+  historiaClinica?: {
+    usuarioLentes?: string | null;
+    tipoCristalActual?: string;
+    ultimaGraduacion?: string;
+    fotofobia?: string | null;
+    traumatismoOcular?: string | null;
+    traumatismoOcularDescripcion?: string | null;
+    usaDispositivosElectronicos?: boolean;
+    tiempoUsoEstimado?: string;
+    cirugiaOcular?: string | null;
+    cirugiaOcularDescripcion?: string | null;
+    alergicoA?: string | null;
+    antecedentesPersonales?: string[] | null;
+    antecedentesFamiliares?: string[] | null;
+    patologias?: string[] | null;
+    patologiaOcular?: string[] | null;
+  };
 }
 
 export interface PacienteGrafico {
