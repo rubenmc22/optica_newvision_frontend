@@ -25,8 +25,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   sedeActual: string = '';
   tasaDolar: number = 0;
   tasaEuro: number = 0;
-
-
+  private subsTasaCambio!: Subscription;
 
   private userSubscriptions: Subscription[] = [];
 
@@ -110,6 +109,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
   filteredMenu: any[] = [];
 
   ngOnInit(): void {
+    this.subsTasaCambio = this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
+      this.tasaDolar = usd;
+      this.tasaEuro = eur;
+    });
     this.initializeMenu();
     this.initializeUserData();
     this.setupSubscriptions();
@@ -282,20 +285,32 @@ export class SidebarComponent implements OnInit, OnDestroy {
     }
   }
 
-
   obtenerTasaCambio(): void {
+    // Reactivo: actualiza automáticamente si se cambian las tasas en otro módulo
+    this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
+      this.tasaDolar = usd;
+      this.tasaEuro = eur;
+    });
+
+    // Llamada inicial al backend
     this.tasaCambiariaService.getTasaActual().subscribe({
       next: (res: { tasas: Tasa[] }) => {
-        const tasas: Tasa[] = res.tasas;
+        const dolar = res.tasas.find(t => t.id === 'dolar');
+        const euro = res.tasas.find(t => t.id === 'euro');
 
-        this.tasaDolar = tasas.find((t: Tasa) => t.id === 'dolar')?.valor ?? 0;
-        this.tasaEuro = tasas.find((t: Tasa) => t.id === 'euro')?.valor ?? 0;
+        const usd = dolar?.valor ?? 0;
+        const eur = euro?.valor ?? 0;
+
+        this.tasaCambiariaService.setTasas(usd, eur);
+
+        this.tasaDolar = usd;
+        this.tasaEuro = eur;
       },
       error: () => {
         this.tasaDolar = 0;
         this.tasaEuro = 0;
       }
     });
-
   }
+
 }

@@ -180,13 +180,32 @@ export class VerPacientesComponent implements OnInit {
   }
 
   private inicializarSedeDesdeUsuario(): void {
-    this.userStateService.currentUser$.subscribe(user => {
-      this.sedeActiva = user?.sede ?? 'guatire';
-      this.sedeFiltro = this.sedeActiva;
-      console.log('Sede activa:', this.sedeActiva);
+    const authData = sessionStorage.getItem('authData');
+
+    if (authData) {
+      try {
+        const parsedData = JSON.parse(authData);
+        const sedeKey = parsedData?.sede?.key ?? 'guatire';
+
+        this.sedeActiva = sedeKey;
+        this.sedeFiltro = sedeKey;
+        console.log('Sede desde sesión:', sedeKey);
+
+        this.cargarPacientes();
+      } catch (error) {
+        console.error('Error al parsear authData de sesión:', error);
+        this.sedeActiva = 'guatire';
+        this.sedeFiltro = 'guatire';
+        this.cargarPacientes();
+      }
+    } else {
+      // Fallback por si no hay sesión
+      this.sedeActiva = 'guatire';
+      this.sedeFiltro = 'guatire';
       this.cargarPacientes();
-    });
+    }
   }
+
 
   // Métodos de acceso
   get redesSociales(): FormArray {
