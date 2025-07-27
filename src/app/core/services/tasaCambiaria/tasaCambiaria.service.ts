@@ -105,10 +105,7 @@ export class TasaCambiariaService {
   );
 }
 
-
-
-
-  activarRastreoAutoamticoBCV(id: string, rastrear_auto: boolean): Observable<{ tasa: Tasa }> {
+  activarRastreoAutomaticoBCV(id: string, rastrear_auto: boolean): Observable<{ tasa: Tasa }> {
     return this.http.put<{ tasa: Tasa }>(
       `${environment.apiUrl}/tasas-rastreo-automatico/${id}`,
       { rastrear_auto }

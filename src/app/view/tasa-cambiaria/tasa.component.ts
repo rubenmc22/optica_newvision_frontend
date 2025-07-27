@@ -12,23 +12,24 @@ import { ChangeDetectorRef } from '@angular/core';
   styleUrls: ['./tasa.component.scss']
 })
 export class TasaComponent implements OnInit {
-  // Propiedades del componente
+  // ==================== PROPIEDADES ====================
+  // Datos principales
   tasas: any[] = [];
   historialTasaSeleccionada: any[] = [];
   simboloSeleccionado: string = '';
 
-  // Control de UI
+  // Estados de UI
   menuAbierto: string | null = null;
   popoverActivo: string | null = null;
+  nuevaTasaManual: number = 0;
 
   // Configuración de tasas
   metodoTasa: { [key: string]: string } = {};
-  tasaManual: { [key: string]: number } = {};
+  tasaManual: { [key: string]: number | null } = {};
   fechaActualizacionManual: { [key: string]: string } = {};
   autoActualizar: { [key: string]: boolean } = {};
-  nuevaTasaManual: number = 0;
 
-  // BCV relacionados
+  // BCV y estados
   loadingBCV: { [key: string]: boolean } = {};
   valorBCV: { [key: string]: number } = {};
   bcvDisponible: { [key: string]: boolean } = {};
@@ -41,49 +42,44 @@ export class TasaComponent implements OnInit {
 
   // ==================== CICLO DE VIDA ====================
   ngOnInit(): void {
-    console.log(' metodoTasa', this.metodoTasa);
     this.cargarTasas();
     this.cargarReferenciaBCV();
   }
 
   // ==================== MÉTODOS DE CARGA INICIAL ====================
   cargarTasas(): void {
-    this.tasaService.getTasaActual().subscribe(response => {
-      this.tasas = response.tasas || [];
+    this.tasaService.getTasaActual().subscribe({
+      next: (res) => {
+        const lista = res?.tasas || [];
 
-      this.tasas.forEach(tasa => {
-        const id = tasa.id;
-        const modo = this.getModoValidacion(id);
+        this.tasas = lista.map((tasa: any) => ({
+          id: tasa.id,
+          nombre: tasa.nombre,
+          simbolo: tasa.simbolo,
+          valor: tasa.valor,
+          metodo: tasa.ultimo_tipo_cambio?.toLowerCase().includes('bcv') ? 'bcv' : 'manual',
+          rastreo: tasa.rastreo_bcv,
+          updated_at: tasa.updated_at
+        }));
 
-        this.metodoTasa[id] = modo;
-        this.tasaManual[id] = modo === 'manual' ? tasa.valor : 0;
-        this.fechaActualizacionManual[id] = tasa.updated_at;
-        this.autoActualizar[id] = !!tasa.rastreo_bcv;
-        this.valorBCV[id] = tasa.valor;
+        lista.forEach((tasa: any) => {
+          const monedaId = tasa.id;
+          this.metodoTasa[monedaId] = tasa.rastreo_bcv ? 'automatico' :
+            (tasa.ultimo_tipo_cambio?.toLowerCase().includes('bcv') ? 'bcv' : 'manual');
+          this.autoActualizar[monedaId] = tasa.rastreo_bcv;
+          this.tasaManual[monedaId] = !tasa.rastreo_bcv ? tasa.valor : null;
+          this.fechaActualizacionManual[monedaId] = !tasa.rastreo_bcv ? tasa.updated_at : null;
+        });
 
-      });
-
-      this.cdRef.detectChanges();
+        this.cdRef.detectChanges();
+      },
+      error: () => {
+        this.snackBar.open('❌ Error al cargar tasas actuales', 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-warning']
+        });
+      }
     });
-  }
-
-  getModoValidacion(id: string): 'bcv' | 'manual' | 'automatico' {
-    const t = this.tasas.find(x => x.id === id);
-    if (!t) return 'manual';
-
-    const tipo = t.ultimo_tipo_cambio?.toLowerCase();
-
-    if (tipo === 'manual con bcv') return 'bcv';        // se interpreta como BCV
-    if (tipo === 'manual') return 'manual';
-    if (tipo === 'automatico') return 'automatico';
-
-    return 'manual';
-  }
-
-  calcularModoVisual(moneda: Tasa): 'bcv' | 'manual' | 'automatico' {
-    if (moneda.rastreo_bcv) return 'automatico';
-
-    return 'bcv';
   }
 
   cargarReferenciaBCV(): void {
@@ -99,8 +95,6 @@ export class TasaComponent implements OnInit {
           duration: 3000,
           panelClass: ['snackbar-warning']
         });
-
-        // ❌ Marca todos como no disponibles
         this.tasas.forEach(tasa => {
           this.bcvDisponible[tasa.id] = false;
         });
@@ -109,151 +103,141 @@ export class TasaComponent implements OnInit {
   }
 
   // ==================== MÉTODOS DE GESTIÓN DE TASAS ====================
-  actualizarYRecargarTasasDesdeBCV(): void {
+  actualizarYMostrarTasasDesdeBCV(): void {
     this.tasaService.updateTasaBCV().subscribe({
-      next: (response: { tasa: Tasa[] }) => {
-        this.tasas = response.tasa || [];
-
-        this.tasas.forEach((tasa: Tasa) => {
-          const id = tasa.id;
-          this.metodoTasa[id] = this.calcularModoVisual(tasa);
-
-          this.tasaManual[id] = tasa.metodo === 'manual' ? tasa.valor : 0;
-          this.fechaActualizacionManual[id] = tasa.metodo === 'manual' ? tasa.updated_at : '';
-          this.autoActualizar[id] = !!tasa.rastreo_bcv;
-
-          const moneda = this.tasas.find((t: Tasa) => t.id === id);
-          if (moneda) {
-            moneda.valor = tasa.valor;
-            moneda.updated_at = tasa.updated_at;
+      next: (res) => {
+        const respuesta = res?.tasa || [];
+        respuesta.forEach((tasaActualizada: Tasa) => {
+          const index = this.tasas.findIndex(t => t.id === tasaActualizada.id);
+          if (index >= 0) {
+            this.tasas[index].valor = tasaActualizada.valor;
+            this.tasas[index].updated_at = tasaActualizada.updated_at;
+            this.tasas[index].rastreo_bcv = tasaActualizada.rastreo_bcv;
+            this.metodoTasa[tasaActualizada.id] = 'bcv';
+            if (this.tasaManual[tasaActualizada.id]) {
+              delete this.tasaManual[tasaActualizada.id];
+              this.autoActualizar[tasaActualizada.id] = false;
+            }
           }
         });
 
-        this.snackBar.open('✅ Tasas sincronizadas con BCV', 'Cerrar', {
-          duration: 4000,
+        this.snackBar.open('✅ Tasas actualizadas correctamente desde BCV', 'Cerrar', {
+          duration: 3000,
           panelClass: ['snackbar-success']
         });
+        this.cdRef.detectChanges();
       },
       error: () => {
-        this.snackBar.open('Error al sincronizar con BCV', 'Cerrar', {
+        this.snackBar.open('❌ Error al actualizar tasas desde BCV', 'Cerrar', {
           duration: 3000,
-          panelClass: ['snackbar-error']
+          panelClass: ['snackbar-warning']
         });
       }
     });
   }
 
-  activarRastreoBCVConSincronizacion(monedaId: string): void {
-    const rastreoActivo = !!this.autoActualizar[monedaId];
+  activarRastreoBCVAutomatico(id: string): void {
+    const rastrearAuto = this.autoActualizar[id] ?? false;
+    this.tasaService.activarRastreoAutomaticoBCV(id, rastrearAuto).subscribe({
+      next: ({ tasa }: { tasa: Tasa }) => {
+        const index = this.tasas.findIndex(t => t.id === tasa.id);
+        if (index >= 0) {
+          this.tasas[index].valor = tasa.valor;
+          this.tasas[index].updated_at = tasa.updated_at;
+          this.tasas[index].rastreo_bcv = tasa.rastreo_bcv;
+          this.metodoTasa[tasa.id] = 'bcv';
+          delete this.tasaManual[tasa.id];
+        }
 
-    this.tasaService.activarRastreoAutoamticoBCV(monedaId, rastreoActivo).subscribe({
-      next: ({ tasa }) => {
-        this.autoActualizar[monedaId] = !!tasa.rastreo_bcv;
+        this.snackBar.open(`📡 Rastreo automático activado para ${tasa.nombre}`, 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-success']
+        });
+        this.cdRef.detectChanges();
+      },
+      error: () => {
+        this.snackBar.open(`⚠️ Error al activar rastreo automático`, 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-warning']
+        });
+      }
+    });
+  }
 
-        if (tasa.rastreo_bcv) {
-          this.metodoTasa[monedaId] = 'bcv';
-          this.tasaManual[monedaId] = 0;
-          this.cdRef.detectChanges();
-
-          const moneda = this.tasas.find(t => t.id === monedaId);
-          if (moneda) {
-            moneda.valor = tasa.valor;
-            moneda.updated_at = tasa.updated_at;
+  updateTasaBCVPorId(monedaId: string): void {
+    this.loadingBCV[monedaId] = true;
+    this.tasaService.updateTasaBCVPorId(monedaId).subscribe({
+      next: (res) => {
+        const respuestaTasa = Array.isArray(res.tasa) ? res.tasa[0] : res.tasa;
+        if (respuestaTasa?.id === monedaId) {
+          const index = this.tasas.findIndex(t => t.id === monedaId);
+          if (index >= 0) {
+            this.tasas[index].valor = respuestaTasa.valor;
           }
+          this.metodoTasa[monedaId] = 'bcv';
+          this.autoActualizar[monedaId] = false;
+          this.cerrarMenu();
 
           this.snackBar.open(
-            `✅ Sincronización automática activada con el BCV para "${monedaId}"`,
+            `✅ ${monedaId.toUpperCase()} actualizado a BCV: ${respuestaTasa.valor}`,
             'Cerrar',
-            { duration: 4000, panelClass: ['snackbar-success'] }
+            { duration: 2500, panelClass: ['snackbar-success'] }
           );
         } else {
           this.snackBar.open(
-            `🔕 Sincronización automática desactivada para el ${monedaId}`,
+            `⚠️ No se encontró tasa BCV para ${monedaId}`,
             'Cerrar',
             { duration: 3000, panelClass: ['snackbar-warning'] }
           );
         }
       },
       error: () => {
-        this.snackBar.open('Error al actualizar rastreo automático', 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-error']
+        this.snackBar.open(`❌ Falló actualización BCV de ${monedaId}`, 'Cerrar', {
+          duration: 3000, panelClass: ['snackbar-warning']
         });
-      }
-    });
-  }
-
-
-  updateTasaBCVPorId(monedaId: string): void {//ajustar esta funcion al update tasas por id
-    this.tasaService.updateTasaBCVPorId(monedaId).subscribe({
-      next: ({ tasa }) => {
-        const monedaActualizada = tasa.find((t: Tasa) => t.id === monedaId);
-        if (monedaActualizada) {
-          const moneda = this.tasas.find(t => t.id === monedaId);
-          if (moneda) {
-            moneda.valor = monedaActualizada.valor;
-            moneda.updated_at = monedaActualizada.updated_at;
-
-            // 🔁 Estado visual sincronizado
-            this.autoActualizar[monedaId] = !!monedaActualizada.rastreo_bcv;
-            this.metodoTasa[monedaId] = this.calcularModoVisual(monedaActualizada);
-
-            this.valorBCV[monedaId] = monedaActualizada.valor;
-            this.tasaManual[monedaId] = !monedaActualizada.rastreo_bcv ? monedaActualizada.valor : 0;
-
-            // 🧹 Cerrar el formulario si está abierto
-            // this.mostrarFormularioManual[monedaId] = false;
-
-            this.cdRef.detectChanges();
-            this.cerrarMenu();
-          }
-
-          this.snackBar.open(`✅ Solo se actualizó ${monedaId}`, 'Cerrar', {
-            duration: 4000, panelClass: ['snackbar-success']
-          });
-        }
       },
-
-      error: () => {
-        this.snackBar.open('Error al sincronizar con BCV', 'Cerrar', {
-          duration: 3000, panelClass: ['snackbar-error']
-        });
+      complete: () => {
+        this.loadingBCV[monedaId] = false;
+        this.cdRef.detectChanges();
       }
     });
   }
 
   guardarTasaManual(monedaId: string): void {
-    const valor = parseFloat(this.nuevaTasaManual.toFixed(2));
-    const metodo = 'manual';
     const fecha = new Date().toISOString();
-
-    this.tasaService.updateTasaManual(monedaId, valor, metodo, fecha).subscribe({
+    this.tasaService.updateTasaManual(monedaId, this.nuevaTasaManual, 'manual', fecha).subscribe({
       next: () => {
-        const moneda = this.tasas.find(t => t.id === monedaId);
-        if (moneda) {
-          moneda.valor = valor;
-          moneda.updated_at = fecha;
-          this.metodoTasa[monedaId] = metodo;
-          this.autoActualizar[monedaId] = false;
-          this.fechaActualizacionManual[monedaId] = fecha;
-          this.tasaManual[monedaId] = valor;
-          this.cdRef.detectChanges();
-        }
-
-        this.snackBar.open(`✅ Tasa manual guardada para ${monedaId}`, 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-success']
-        });
-
+        this.metodoTasa[monedaId] = 'manual';
+        this.tasaManual[monedaId] = this.nuevaTasaManual;
+        this.autoActualizar[monedaId] = false;
+        this.snackBar.open(`💾 Tasa manual actualizada para ${monedaId}`, 'Cerrar', { duration: 2500 });
+        this.cdRef.detectChanges();
+        this.cerrarMenu();
         this.cerrarPopover();
       },
       error: () => {
-        this.snackBar.open('Error al guardar tasa manual', 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-error']
-        });
+        this.snackBar.open(`❌ Falló actualización manual de ${monedaId}`, 'Cerrar', { duration: 3000 });
       }
     });
+  }
+
+  // ==================== MÉTODOS AUXILIARES ====================
+  calcularModoVisual(monedaId: string): 'manual' | 'bcv' | 'automatico' {
+    if (this.autoActualizar[monedaId]) return 'automatico';
+    return this.metodoTasa[monedaId] === 'bcv' ? 'bcv' : 'manual';
+  }
+
+  obtenerValorVisual(monedaId: string): number {
+    const modo = this.metodoTasa[monedaId];
+    const tasa = this.tasas.find(t => t.id === monedaId);
+    if (!tasa) return 0;
+
+    switch (modo) {
+      case 'manual': return this.tasaManual[monedaId] || 0;
+      case 'bcv':
+      case 'automatico': return tasa.valor || 0;
+      default: return 0;
+    }
   }
 
   // ==================== MÉTODOS DE HISTORIAL ====================
@@ -262,15 +246,17 @@ export class TasaComponent implements OnInit {
     if (!tasaSeleccionada) return;
 
     this.simboloSeleccionado = tasaSeleccionada.simbolo;
-
     this.tasaService.getHistorialTasas(monedaId).subscribe({
       next: (res) => {
-        this.historialTasaSeleccionada = res.historial.map(item => ({
-          usuario: item.usuario.nombre,
-          fecha: item.updated_at,
-          valor: item.valor_nuevo,
-          metodo: item.tipo_cambio?.toLowerCase().includes('bcv') ? 'bcv' : 'manual'
-        }));
+        this.historialTasaSeleccionada = res.historial
+          .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()) // orden descendente
+          .map(item => ({
+            usuario: item.usuario.nombre,
+            fecha: item.updated_at,
+            valor: item.valor_nuevo,
+            metodo: item.tipo_cambio?.toLowerCase().includes('bcv') ? 'bcv' : 'manual'
+          }));
+
         this.modalOpen('modalHistorial');
       },
       error: () => {
@@ -293,7 +279,7 @@ export class TasaComponent implements OnInit {
   }
 
   abrirMenu(event: MouseEvent, monedaId: string): void {
-    event.stopPropagation(); // ✋ Evita que la apertura dispare cierre por clickOutside
+    event.stopPropagation();
     this.menuAbierto = monedaId;
   }
 
@@ -304,7 +290,6 @@ export class TasaComponent implements OnInit {
   modalOpen(id: string): void {
     const modalElement = document.getElementById(id);
     if (!modalElement) return;
-
     const modalInstance = new Modal(modalElement);
     modalInstance.show();
   }
