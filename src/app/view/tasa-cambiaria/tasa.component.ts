@@ -83,7 +83,6 @@ export class TasaComponent implements OnInit {
   calcularModoVisual(moneda: Tasa): 'bcv' | 'manual' | 'automatico' {
     if (moneda.rastreo_bcv) return 'automatico';
 
-    // Como no tenemos 'metodo' ni 'ultimo_tipo_cambio', deducimos BCV si se actualizó manualmente por botón
     return 'bcv';
   }
 

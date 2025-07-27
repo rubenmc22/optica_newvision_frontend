@@ -286,13 +286,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   obtenerTasaCambio(): void {
-    // Reactivo: actualiza automáticamente si se cambian las tasas en otro módulo
+    // 🧠 Solo te suscribís una vez al subject reactivo
     this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
       this.tasaDolar = usd;
       this.tasaEuro = eur;
     });
 
-    // Llamada inicial al backend
+    // 🚀 Inicializás las tasas desde el backend, pero sin reasignar directamente
     this.tasaCambiariaService.getTasaActual().subscribe({
       next: (res: { tasas: Tasa[] }) => {
         const dolar = res.tasas.find(t => t.id === 'dolar');
@@ -301,16 +301,15 @@ export class SidebarComponent implements OnInit, OnDestroy {
         const usd = dolar?.valor ?? 0;
         const eur = euro?.valor ?? 0;
 
+        // 🔁 Propagás solo vía setTasas()
         this.tasaCambiariaService.setTasas(usd, eur);
-
-        this.tasaDolar = usd;
-        this.tasaEuro = eur;
       },
       error: () => {
-        this.tasaDolar = 0;
-        this.tasaEuro = 0;
+        // Si hubo error, también lo propagás como estado reactivo
+        this.tasaCambiariaService.setTasas(0, 0);
       }
     });
   }
+
 
 }

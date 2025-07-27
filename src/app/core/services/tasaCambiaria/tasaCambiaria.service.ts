@@ -90,19 +90,22 @@ export class TasaCambiariaService {
   }
 
   updateTasaBCVPorId(id: string): Observable<any> {
-    return this.http.put<{ tasa: Tasa }>(`${environment.apiUrl}/tasas-update-with-bcv/${id}`, {}).pipe(
-      tap(response => {
-        const { tasa } = response;
-        if (!tasa) return;
+  return this.http.put<{ tasa: Tasa[] }>(`${environment.apiUrl}/tasas-update-with-bcv/${id}`, {}).pipe(
+    tap(response => {
+      const tasas = Array.isArray(response.tasa) ? response.tasa : [response.tasa];
 
-        // actualizar el valor correspondiente
-        const usd = tasa.id === 'dolar' ? +tasa.valor : this.tasas.usd;
-        const eur = tasa.id === 'euro' ? +tasa.valor : this.tasas.eur;
+      const tasaDolar = tasas.find(t => t.id === 'dolar');
+      const tasaEuro  = tasas.find(t => t.id === 'euro');
 
-        this.setTasas(usd, eur);
-      })
-    );
-  }
+      const usd = tasaDolar?.valor ?? this.tasaActualSubject.value.usd;
+      const eur = tasaEuro?.valor  ?? this.tasaActualSubject.value.eur;
+
+      this.setTasas(usd, eur); // 🔁 Estado global actualizado correctamente
+    })
+  );
+}
+
+
 
 
   activarRastreoAutoamticoBCV(id: string, rastrear_auto: boolean): Observable<{ tasa: Tasa }> {
