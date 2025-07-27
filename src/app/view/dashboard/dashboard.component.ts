@@ -72,7 +72,7 @@ export class DashboardComponent {
     if (!this.pacientes.length) return;
 
     // 📊 Agrupación por sede
-    const agrupadoPorSede: Record<string, { pacientes: number; ventas: number; ordenes: number }> = {};
+    const agrupadoPorSede: Record<string, { pacientes: number; ventas: number; ordenes: number, historias: number }> = {};
 
     for (const p of this.pacientes) {
       const sede = p.sede;
@@ -80,7 +80,8 @@ export class DashboardComponent {
         agrupadoPorSede[sede] = {
           pacientes: 0,
           ventas: Math.floor(Math.random() * 30), // Simulado
-          ordenes: Math.floor(Math.random() * 10)  // Simulado
+          ordenes: Math.floor(Math.random() * 10),  // Simulado
+          historias: Math.floor(Math.random() * 10)  // Simulado
         };
       }
       agrupadoPorSede[sede].pacientes += 1;
@@ -93,7 +94,7 @@ export class DashboardComponent {
 
     // 📅 Agrupación por mes para sede actual
     const pacientesSede = this.pacientes.filter(p => p.sede === this.sedeActual);
-    const porMes: Record<string, { pacientes: number; ventas: number; ordenes: number }> = {};
+    const porMes: Record<string, { pacientes: number; ventas: number; ordenes: number, historias: number }> = {};
 
     for (const p of pacientesSede) {
       const fecha = new Date(p.created_at);
@@ -103,7 +104,8 @@ export class DashboardComponent {
         porMes[mes] = {
           pacientes: 0,
           ventas: Math.floor(Math.random() * 15), // Simulado
-          ordenes: Math.floor(Math.random() * 5)  // Simulado
+          ordenes: Math.floor(Math.random() * 5),  // Simulado
+          historias: Math.floor(Math.random() * 5)  // Simulado
         };
       }
       porMes[mes].pacientes += 1;

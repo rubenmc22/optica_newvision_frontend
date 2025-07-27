@@ -74,12 +74,17 @@ export class GraficoComparativaSedesComponent implements OnInit {
       {
         label: 'Pacientes',
         data: Object.values(this.data).map(d => d.pacientes),
-        backgroundColor: '#0d6efd'
+        backgroundColor: '#14a4bc '
+      },
+      {
+        label: 'Historias',
+        data: Object.values(this.data).map(d => d.pacientes),
+        backgroundColor: '#2ca444 '
       },
       {
         label: 'Ventas',
         data: Object.values(this.data).map(d => d.ventas),
-        backgroundColor: '#20c997'
+        backgroundColor: '#fcc404'
       },
       {
         label: 'Órdenes pendientes',
