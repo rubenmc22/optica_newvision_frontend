@@ -76,15 +76,18 @@ export interface Empleado {
   rolNombre: string;
   cargoNombre: string;
   estatus: boolean; // ✅ Ahora es un booleano
-  loading?: boolean;
   fechaNacimiento: string;
   avatarUrl?: string; // 👈 Añadido para imagen de perfil
+  created_at: string;
+  updated_at: string;
   editing: false;
   modified: false;
   hasErrors: false;
   errors: {};
+  loading?: boolean;
   originalValues: null;
 }
+
 
 export interface ApiResponse {
   message: string;

@@ -96,7 +96,7 @@
                                         employee.errors.nombre }}</small>
                                 </div>
                             </td>
-                            <td>{{ employee.fechaRegistro || '-' }}</td> <!-- ✅ Ahora incluye la fecha -->
+                            <td>{{ employee.created_at || '-' }}</td>
                             <td>
                                 <span *ngIf="!employee.editing">{{ employee.cargoNombre }}</span>
                                 <select *ngIf="employee.editing" class="form-select form-select-sm select-cargo"
@@ -205,7 +205,7 @@
                             <p class="text-dark fw-bold">{{ selectedEmployee?.rolNombre ?? '---' }}</p>
 
                             <p class="text-secondary"><strong>Fecha de Registro:</strong></p>
-                            <p class="text-dark fw-bold">{{ selectedEmployee?.fechaRegistro ?? '---' }}</p>
+                            <p class="text-dark fw-bold">{{ selectedEmployee?.created_at ?? '---' }}</p>
 
                             <p class="text-secondary"><strong>Teléfono:</strong></p>
                             <p class="text-dark fw-bold">{{ selectedEmployee?.telefono ?? '---' }}</p>

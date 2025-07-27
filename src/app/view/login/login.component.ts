@@ -115,6 +115,7 @@ export class LoginComponent implements OnInit {
         this.swalService.showSuccess('¡Éxito!', 'Bienvenido, ha iniciado sesión correctamente');
       },
       error: (err: HttpErrorResponse) => {
+        //console.log('err', err);
         const message = err.error?.message === 'Credenciales inválidas.'
           ? 'Estimado usuario, las credenciales ingresadas son inválidas.'
           : err.error?.message || 'Error durante el login';

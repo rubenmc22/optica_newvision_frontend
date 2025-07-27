@@ -35,14 +35,31 @@ export class EmpleadosService {
 
   // empleados.service.ts
 
+
+  private formatDate(fechaISO: string): string {
+    try {
+      const date = new Date(fechaISO);
+      return new Intl.DateTimeFormat('es-VE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).format(date);
+    } catch {
+      return 'Sin dato';
+    }
+  }
+
   mapUsuarioToEmpleado(usuario: any): Empleado {
     return {
       id: usuario.id,
       cedula: usuario.cedula,
       nombre: usuario.nombre,
-      email: usuario.correo ?? 'Sin dato',
-      telefono: usuario.telefono ?? 'Sin dato',
-      fechaNacimiento: usuario.fecha_nacimiento ?? 'Sin dato',
+      email: usuario.correo ?? '--',
+      telefono: usuario.telefono ?? '--',
+      fechaNacimiento: usuario.fecha_nacimiento ?? '--',
       avatarUrl: usuario.avatar_url?.trim()
         ? usuario.avatar_url
         : usuario.ruta_imagen
@@ -53,6 +70,8 @@ export class EmpleadosService {
       cargoId: usuario.cargo?.id ?? '',
       cargoNombre: usuario.cargo?.nombre ?? 'Sin cargo',
       estatus: Boolean(usuario.activo),
+      created_at: usuario.created_at ? this.formatDate(usuario.created_at) : '--',
+      updated_at: usuario.updated_at ? this.formatDate(usuario.updated_at) : '--',
       editing: false,
       modified: false,
       hasErrors: false,
@@ -61,6 +80,7 @@ export class EmpleadosService {
       originalValues: null
     };
   }
+
 
   addEmployees(employee: any): Observable<any> {
     return this.http.post(`${environment.apiUrl}/add-usuarios`, employee).pipe(
@@ -95,7 +115,6 @@ export class EmpleadosService {
       })
     );
   }
-
 
   private calcularEdad(fechaNacimiento: string): number {
     const nacimiento = new Date(fechaNacimiento);
@@ -136,7 +155,5 @@ export class EmpleadosService {
       catchError(this.handleError)
     );
   }
-
-
 
 }

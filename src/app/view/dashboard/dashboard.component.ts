@@ -49,7 +49,6 @@ export class DashboardComponent {
   cargarPacientes(): void {
     this.pacientesService.getPacientes().subscribe({
       next: (data) => {
-        console.log(' data:', data);
         this.pacientes = Array.isArray(data.pacientes)
           ? data.pacientes.map((p: any): PacienteGrafico => ({
             id: p.key,
@@ -59,7 +58,7 @@ export class DashboardComponent {
             created_at: p.created_at
           }))
           : [];
-        console.log(' pacientes:', this.pacientes);
+
         this.cargarDatosGraficos();
       },
       error: (error) => {
@@ -94,7 +93,6 @@ export class DashboardComponent {
 
     // 📅 Agrupación por mes para sede actual
     const pacientesSede = this.pacientes.filter(p => p.sede === this.sedeActual);
-    console.log('pacientesSede', pacientesSede);
     const porMes: Record<string, { pacientes: number; ventas: number; ordenes: number }> = {};
 
     for (const p of pacientesSede) {

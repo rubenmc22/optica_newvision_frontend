@@ -75,6 +75,7 @@ export class EmpleadosComponent implements OnInit {
   private loadEmployees(): void {
     this.isLoading = true;
     this.empleadosService.getAllEmpleados().subscribe((empleados: Empleado[]) => {
+      console.log('Empleados', empleados);
       this.employees = empleados;
       this.filteredEmployees = [...this.employees];
       this.isLoading = false;
@@ -142,14 +143,18 @@ export class EmpleadosComponent implements OnInit {
         errorMessage: 'Debe ser numérico entre 6 y 9 dígitos', validation: [Validators.required, Validators.pattern(/^\d{6,9}$/)]
       },
       {
+        name: 'email', label: 'Correo Electrónico', type: 'email', required: true, cols: 6,
+        errorMessage: 'Correo inválido', validation: [Validators.required, Validators.email]
+      },
+      {
         name: 'position', label: 'Cargo', type: 'select',
         options: this.positions.map(pos => ({ value: pos.id, label: pos.nombre })),
-        required: true, cols: 6, errorMessage: 'Cargo requerido'
+        required: true, cols: 3, errorMessage: 'Cargo requerido'
       },
       {
         name: 'role', label: 'Rol en Sistema', type: 'select',
         options: this.roles.map(rol => ({ value: rol.id, label: rol.nombre })),
-        required: true, cols: 6, errorMessage: 'Rol requerido'
+        required: true, cols: 3, errorMessage: 'Rol requerido'
       }
     ];
 
@@ -204,7 +209,6 @@ export class EmpleadosComponent implements OnInit {
       }
     });
   }
-
 
   /**
    * Elimina un empleado con confirmación
@@ -447,7 +451,7 @@ export class EmpleadosComponent implements OnInit {
   }
 
   trackByCedula(index: number, emp: Empleado): string {
-  return emp.cedula;
-}
+    return emp.cedula;
+  }
 
 }
