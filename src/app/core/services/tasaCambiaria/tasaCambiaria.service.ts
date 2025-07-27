@@ -69,13 +69,11 @@ export class TasaCambiariaService {
             this.setTasas(actual.usd, tasa.valor);
             break;
         }
-
       })
-
     );
   }
 
-  updateTasaBCV(): Observable<any> { //usar esta para cambiar de manual a bcv
+  updateTasaBCV(): Observable<any> {
     return this.http.put<{ tasa: Tasa[] }>(`${environment.apiUrl}/tasas-update-with-bcv/`, {}).pipe(
       tap(response => {
         const tasas = response.tasa || [];
@@ -90,20 +88,20 @@ export class TasaCambiariaService {
   }
 
   updateTasaBCVPorId(id: string): Observable<any> {
-  return this.http.put<{ tasa: Tasa[] }>(`${environment.apiUrl}/tasas-update-with-bcv/${id}`, {}).pipe(
-    tap(response => {
-      const tasas = Array.isArray(response.tasa) ? response.tasa : [response.tasa];
+    return this.http.put<{ tasa: Tasa[] }>(`${environment.apiUrl}/tasas-update-with-bcv/${id}`, {}).pipe(
+      tap(response => {
+        const tasas = Array.isArray(response.tasa) ? response.tasa : [response.tasa];
 
-      const tasaDolar = tasas.find(t => t.id === 'dolar');
-      const tasaEuro  = tasas.find(t => t.id === 'euro');
+        const tasaDolar = tasas.find(t => t.id === 'dolar');
+        const tasaEuro = tasas.find(t => t.id === 'euro');
 
-      const usd = tasaDolar?.valor ?? this.tasaActualSubject.value.usd;
-      const eur = tasaEuro?.valor  ?? this.tasaActualSubject.value.eur;
+        const usd = tasaDolar?.valor ?? this.tasaActualSubject.value.usd;
+        const eur = tasaEuro?.valor ?? this.tasaActualSubject.value.eur;
 
-      this.setTasas(usd, eur); // 🔁 Estado global actualizado correctamente
-    })
-  );
-}
+        this.setTasas(usd, eur); // 🔁 Estado global actualizado correctamente
+      })
+    );
+  }
 
   activarRastreoAutomaticoBCV(id: string, rastrear_auto: boolean): Observable<{ tasa: Tasa }> {
     return this.http.put<{ tasa: Tasa }>(

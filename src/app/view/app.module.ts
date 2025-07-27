@@ -24,7 +24,7 @@ import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
 import { AcceptTycComponent } from './accept-tyc-component/accept-tyc-component.component';
 import { DynamicModalComponent } from './../shared/dynamic-modal/dynamic-modal.component';
 import { TasaComponent } from './tasa-cambiaria/tasa.component';
-import { VerPacientesComponent } from './pacientes/ver-pacientes.component';
+import { VerPacientesComponent } from './pacientes/pacientes.component';
 import { HistoriasMedicasComponent } from './historias-medicas/historias-medicas.component';
 
 // Módulos y servicios

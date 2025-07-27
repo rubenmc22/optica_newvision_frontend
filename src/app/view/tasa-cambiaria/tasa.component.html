@@ -62,7 +62,6 @@
         <button class="btn btn-sm position-absolute top-0 end-0 mt-2 me-2"
           (click)="abrirMenu($event, tasa.id)">☰</button>
 
-
         <!-- Menú de configuración adaptado -->
         <div *ngIf="menuAbierto === tasa.id"
           class="position-absolute menu top-0 end-0 mt-5 me-2 shadow bg-white p-2 rounded"
@@ -94,8 +93,6 @@
             Ver historial
           </button>
         </div>
-
-
 
         <!-- ✅ Modal flotante mejorado -->
         <div *ngIf="popoverActivo === tasa.id" class="popover-custom">

@@ -17,7 +17,7 @@ import {
 
 
 @Component({
-  selector: 'app-ver-pacientes',
+  selector: 'app-pacientes',
   standalone: false,
   templateUrl: './pacientes.component.html',
   styleUrls: ['./pacientes.component.scss']

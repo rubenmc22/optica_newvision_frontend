@@ -29,7 +29,7 @@ export class DashboardComponent {
     porMes: Record<string, { pacientes: number; ventas: number; ordenes: number }>;
   } | null = null;
 
-  constructor(private pacientesService: PacientesService) {}
+  constructor(private pacientesService: PacientesService) { }
 
   ngOnInit(): void {
     this.initializePantalla();
@@ -49,16 +49,17 @@ export class DashboardComponent {
   cargarPacientes(): void {
     this.pacientesService.getPacientes().subscribe({
       next: (data) => {
+        console.log(' data:', data);
         this.pacientes = Array.isArray(data.pacientes)
           ? data.pacientes.map((p: any): PacienteGrafico => ({
-              id: p.key,
-              nombre: p.nombre,
-              cedula: p.cedula,
-              sede: p.sede?.id ?? 'sin-sede',
-              created_at: p.created_at
-            }))
+            id: p.key,
+            nombre: p.informacionPersonal?.nombreCompleto,
+            cedula: p.informacionPersonal?.cedula,
+            sede: p.key?.split('-')[0] ?? 'sin-sede',
+            created_at: p.created_at
+          }))
           : [];
-
+        console.log(' pacientes:', this.pacientes);
         this.cargarDatosGraficos();
       },
       error: (error) => {
@@ -93,6 +94,7 @@ export class DashboardComponent {
 
     // 📅 Agrupación por mes para sede actual
     const pacientesSede = this.pacientes.filter(p => p.sede === this.sedeActual);
+    console.log('pacientesSede', pacientesSede);
     const porMes: Record<string, { pacientes: number; ventas: number; ordenes: number }> = {};
 
     for (const p of pacientesSede) {
