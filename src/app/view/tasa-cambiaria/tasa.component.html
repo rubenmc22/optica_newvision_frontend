@@ -79,12 +79,6 @@
                 Actualizar a Tasa BCV
               </button>
             </ng-container>
-
-            <ng-container *ngSwitchCase="'automatico'">
-              <button class="btn btn-sm btn-primary w-100 mb-1" (click)="abrirPopover(tasa.id)">
-                Ingresar Tasa Manual
-              </button>
-            </ng-container>
           </ng-container>
 
           <button class="btn btn-sm btn-secondary w-100 mb-1" (click)="verHistorial(tasa.id)">

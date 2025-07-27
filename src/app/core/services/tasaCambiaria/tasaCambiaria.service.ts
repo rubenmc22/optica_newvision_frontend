@@ -55,10 +55,23 @@ export class TasaCambiariaService {
   updateTasaManual(id: string, valor: number, metodo: string, fecha: string): Observable<any> {
     return this.http.put<any>(`${environment.apiUrl}/tasas-update/${id}`, { valor, metodo, fecha }).pipe(
       tap(response => {
-        const tasa = response?.tasa ?? { usd: 0, eur: 0 };
-        const { usd, eur } = tasa;
-        this.setTasas(usd, eur);
+        const tasa = response?.tasa;
+
+        if (!tasa) return;
+
+        const actual = this.tasaActualSubject.getValue();
+
+        switch (tasa.id) {
+          case 'dolar':
+            this.setTasas(tasa.valor, actual.eur);
+            break;
+          case 'euro':
+            this.setTasas(actual.usd, tasa.valor);
+            break;
+        }
+
       })
+
     );
   }
 

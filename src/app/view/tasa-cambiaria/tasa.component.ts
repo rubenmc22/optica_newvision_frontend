@@ -80,6 +80,12 @@ export class TasaComponent implements OnInit {
     return 'manual';
   }
 
+  calcularModoVisual(moneda: Tasa): 'bcv' | 'manual' | 'automatico' {
+    if (moneda.rastreo_bcv) return 'automatico';
+
+    // Como no tenemos 'metodo' ni 'ultimo_tipo_cambio', deducimos BCV si se actualizó manualmente por botón
+    return 'bcv';
+  }
 
   cargarReferenciaBCV(): void {
     this.tasaService.getTasaAutomaticaBCV().subscribe({
@@ -111,7 +117,8 @@ export class TasaComponent implements OnInit {
 
         this.tasas.forEach((tasa: Tasa) => {
           const id = tasa.id;
-          this.metodoTasa[id] = tasa.metodo || 'bcv';
+          this.metodoTasa[id] = this.calcularModoVisual(tasa);
+
           this.tasaManual[id] = tasa.metodo === 'manual' ? tasa.valor : 0;
           this.fechaActualizacionManual[id] = tasa.metodo === 'manual' ? tasa.updated_at : '';
           this.autoActualizar[id] = !!tasa.rastreo_bcv;
@@ -190,12 +197,13 @@ export class TasaComponent implements OnInit {
 
             // 🔁 Estado visual sincronizado
             this.autoActualizar[monedaId] = !!monedaActualizada.rastreo_bcv;
-            this.metodoTasa[monedaId] = monedaActualizada.rastreo_bcv ? 'automatico' : 'manual';
+            this.metodoTasa[monedaId] = this.calcularModoVisual(monedaActualizada);
+
             this.valorBCV[monedaId] = monedaActualizada.valor;
             this.tasaManual[monedaId] = !monedaActualizada.rastreo_bcv ? monedaActualizada.valor : 0;
 
             // 🧹 Cerrar el formulario si está abierto
-           // this.mostrarFormularioManual[monedaId] = false;
+            // this.mostrarFormularioManual[monedaId] = false;
 
             this.cdRef.detectChanges();
             this.cerrarMenu();

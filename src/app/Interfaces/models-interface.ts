@@ -103,6 +103,7 @@ export interface Tasa {
   nombre?: string;
   metodo?: string;
   rastreo_bcv?: boolean;
+  ultimo_tipo_cambio?: string;
 }
 
 export interface HistorialTasa {
