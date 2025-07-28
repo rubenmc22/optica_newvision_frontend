@@ -26,6 +26,9 @@ import { DynamicModalComponent } from './../shared/dynamic-modal/dynamic-modal.c
 import { TasaComponent } from './tasa-cambiaria/tasa.component';
 import { VerPacientesComponent } from './pacientes/pacientes.component';
 import { HistoriasMedicasComponent } from './historias-medicas/historias-medicas.component';
+import { ProductoModalComponent } from './productos/producto-modal/producto-modal.component';
+import { ProductosListComponent } from './productos/productos-list/productos-list.component';
+
 
 // Módulos y servicios
 import { MaterialModule } from '../material.module';
@@ -54,7 +57,9 @@ import { NgSelectModule } from '@ng-select/ng-select';
     ClickOutsideDirective,
     GraficoComparativaSedesComponent,
     GraficoTotalSedeComponent,
-    GraficoPacientesPorMesComponent
+    GraficoPacientesPorMesComponent,
+    ProductosListComponent,
+    ProductoModalComponent
   ],
   imports: [
     NgChartsModule,

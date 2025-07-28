@@ -1,0 +1,117 @@
+<div class="container mt-4">
+    <div class="card">
+        <!-- Header principal -->
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">📦 Inventario de productos</h3>
+            <button class="btn btn-primary" (click)="abrirModal('agregar')">
+                ➕ Agregar producto
+            </button>
+        </div>
+
+        <div class="card-body">
+            <!-- Vista vacía -->
+            <div *ngIf="productos.length === 0" class="text-center text-muted py-5">
+                <i class="fas fa-box-open fa-2x mb-2"></i>
+                <p class="mb-0">No hay productos disponibles.</p>
+            </div>
+
+            <!-- Vista de catálogo -->
+            <div class="row" *ngIf="productos.length > 0">
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3" *ngFor="let producto of productosPaginados">
+                    <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
+                        <!-- Imagen con estado flotante -->
+                        <div class="position-relative">
+                            <img [src]="producto.imagenUrl || 'https://via.placeholder.com/300x200?text=Producto'"
+                                class="card-img-top" alt="{{ producto.nombre }}"
+                                style="height: 180px; object-fit: cover;" />
+
+                            <!-- Estado: esquina superior izquierda -->
+                            <span class="position-absolute top-0 start-0 m-2 px-2 py-1 rounded text-white small fw-bold"
+                                [ngClass]="{
+                                    'bg-success': producto.activo,
+                                    'bg-secondary': !producto.activo
+                                    }">
+                                {{ producto.activo ? 'Activo' : 'Inactivo' }}
+                            </span>
+
+                            <!-- Código: esquina superior derecha -->
+                            <span class="position-absolute top-0 end-0 m-2 px-2 py-1 rounded bg-dark text-white small">
+                                {{ producto.codigo }}
+                            </span>
+                        </div>
+
+
+                        <!-- Contenido del card -->
+                        <div class="card-body py-3 d-flex flex-column">
+                            <!-- Marca + Nombre -->
+                            <h6 class="fw-semibold text-truncate mb-2">
+                                {{ producto.marca }} · {{ producto.nombre }}
+                            </h6>
+
+                            <!-- Sección de precios -->
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+
+                                    <span class="fs-5 fw-bold text-primary">${{ producto.precio }}</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 text-muted small">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    <span>Bs {{ (producto.precio * tasaDolar) | number:'1.2-2' }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Sección de stock -->
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <i class="fas fa-box text-secondary"></i>
+                                <span class="fw-medium" [ngClass]="{
+                                    'text-success': producto.stock
+                                   
+                                }">
+                                    {{ producto.stock }} unidades
+                                </span>
+                                <span *ngIf="producto.stock < 5"
+                                    class="badge bg-danger animate__animated animate__pulse animate__infinite">
+                                    ¡Stock bajo!
+                                </span>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="mt-auto pt-2 d-flex justify-content-between">
+                                <button class="btn btn-sm btn-light text-info border border-info"
+                                    (click)="abrirModal('ver', producto)">
+                                    👁️ Ver
+                                </button>
+                                <button class="btn btn-sm btn-light text-warning border border-warning"
+                                    (click)="abrirModal('editar', producto)">
+                                    ✏️ Editar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paginación compacta -->
+            <nav *ngIf="totalPaginas > 1" class="mt-4">
+                <ul class="pagination justify-content-center flex-wrap">
+                    <li class="page-item" [class.disabled]="paginaActual === 1">
+                        <button class="page-link" (click)="paginaActual = paginaActual - 1">◀</button>
+                    </li>
+                    <li class="page-item" *ngFor="let pagina of paginasVisibles"
+                        [class.active]="paginaActual === pagina">
+                        <button class="page-link" (click)="paginaActual = pagina">
+                            {{ pagina }}
+                        </button>
+                    </li>
+                    <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+                        <button class="page-link" (click)="paginaActual = paginaActual + 1">▶</button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Modal dinámico -->
+    <app-producto-modal *ngIf="mostrarModal" [modo]="modoModal" [producto]="productoSeguro"
+        (onGuardar)="guardarProducto($event)" (onCerrar)="cerrarModal()"></app-producto-modal>
+</div>
