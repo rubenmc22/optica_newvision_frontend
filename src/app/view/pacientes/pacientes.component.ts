@@ -101,17 +101,61 @@ export class VerPacientesComponent implements OnInit {
     private userStateService: UserStateService,
   ) {
     this.formPaciente = this.fb.group({
-      nombreCompleto: ['', Validators.required],
-      cedula: ['', Validators.required],
-      telefono: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
+      // 👤 Datos personales
+      nombreCompleto: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/),
+          Validators.maxLength(100)
+        ]
+      ],
+      cedula: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern(/^\d+$/),
+          Validators.minLength(6),
+          Validators.maxLength(9)
+        ]
+      ],
+      telefono: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern(/^\d+$/),
+          Validators.minLength(11),
+          Validators.maxLength(13)
+        ]
+      ],
+      email: [
+        '',
+        [
+          Validators.required,
+          Validators.email,
+          Validators.maxLength(100)
+        ]
+      ],
       fechaNacimiento: ['', Validators.required],
-      ocupacion: ['', Validators.required],
+      ocupacion: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/),
+          Validators.maxLength(60)
+        ]
+      ],
       genero: ['', Validators.required],
-      direccion: ['', Validators.required],
+      direccion: [
+        '',
+        [
+          Validators.required,
+          Validators.maxLength(150)
+        ]
+      ],
       redesSociales: this.fb.array([]),
 
-      // Campos clínicos
+      // 🩺 Campos clínicos
       usuarioLentes: ['', Validators.required],
       fotofobia: ['', Validators.required],
       traumatismoOcular: ['', Validators.required],
@@ -130,6 +174,7 @@ export class VerPacientesComponent implements OnInit {
       ]
     });
 
+
   }
 
   ngOnInit(): void {
@@ -139,6 +184,58 @@ export class VerPacientesComponent implements OnInit {
     this.aplicarValidacionCondicional('traumatismoOcular', 'traumatismoOcularDescripcion', this.formPaciente);
     this.aplicarValidacionCondicional('cirugiaOcular', 'cirugiaOcularDescripcion', this.formPaciente);
   }
+
+
+
+  getErrorMsg(campo: string): string {
+    const c = this.formPaciente.get(campo);
+    if (!c || !c.errors) return '';
+
+    if (c.hasError('required')) return 'Este campo es requerido';
+
+    // Específicos por campo
+    switch (campo) {
+      case 'nombreCompleto':
+        if (c.hasError('pattern')) return 'Solo se permiten letras y espacios';
+        if (c.hasError('maxlength')) return 'Máximo 100 caracteres';
+        break;
+
+      case 'cedula':
+        if (c.hasError('pattern')) return 'Formato de cédula inválido';
+        if (c.hasError('minlength')) return 'Cédula demasiado corta';
+        if (c.hasError('maxlength')) return 'Cédula demasiado larga';
+        break;
+
+      case 'telefono':
+        if (c.hasError('pattern')) return 'Formato de teléfono inválido';
+        if (c.hasError('minlength')) return 'Teléfono incompleto';
+        if (c.hasError('maxlength')) return 'Número demasiado largo';
+        break;
+
+      case 'email':
+        if (c.hasError('email')) return 'Ingrese un email válido';
+        break;
+
+      case 'ocupacion':
+        if (c.hasError('pattern')) return 'Solo se permiten letras y espacios';
+        if (c.hasError('maxlength')) return 'Máximo 60 caracteres';
+        break;
+
+      case 'direccion':
+        if (c.hasError('maxlength')) return 'Máximo 150 caracteres';
+        break;
+
+      case 'traumatismoOcularDescripcion':
+      case 'cirugiaOcularDescripcion':
+        if (c.hasError('required')) return 'Por favor, describa este antecedente';
+        break;
+
+    }
+
+    return '';
+  }
+
+
 
 
   private aplicarValidacionCondicional(

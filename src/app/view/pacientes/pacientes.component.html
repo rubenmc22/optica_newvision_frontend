@@ -136,75 +136,90 @@
           <div class="mb-4">
             <h6 class="text-primary mb-2">👤 Datos personales</h6>
             <div class="row g-3">
+
               <!-- Nombre Completo -->
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">Nombre Completo <span
-                    class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">
+                  Nombre Completo <span class="text-danger">*</span>
+                </label>
                 <input type="text" class="form-control border-2 py-2" formControlName="nombreCompleto"
-                  placeholder="Ej: María Fernanda López">
-                <div *ngIf="formPaciente.get('nombreCompleto')?.invalid && formPaciente.get('nombreCompleto')?.touched"
+                  placeholder="Ej: María Fernanda López" maxlength="100">
+                <div
+                  *ngIf="formPaciente.get('nombreCompleto')?.invalid && (formPaciente.get('nombreCompleto')?.touched || formPaciente.get('nombreCompleto')?.dirty)"
                   class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> Nombre completo es requerido
+                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('nombreCompleto') }}
                 </div>
               </div>
 
               <!-- Cédula -->
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">Cédula <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">
+                  Cédula <span class="text-danger">*</span>
+                </label>
                 <input type="text" class="form-control border-2 py-2" formControlName="cedula"
-                  placeholder="Ej: 12345678">
-                <div *ngIf="formPaciente.get('cedula')?.invalid && formPaciente.get('cedula')?.touched"
+                  placeholder="Ej: 12345678" minlength="6" maxlength="9">
+                <div
+                  *ngIf="formPaciente.get('cedula')?.invalid && (formPaciente.get('cedula')?.touched || formPaciente.get('cedula')?.dirty)"
                   class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> Cédula es requerida
+                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('cedula') }}
                 </div>
               </div>
 
               <!-- Teléfono -->
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">Teléfono <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">
+                  Teléfono <span class="text-danger">*</span>
+                </label>
                 <input type="text" class="form-control border-2 py-2" formControlName="telefono"
-                  placeholder="Ej: 04121234567">
-                <div *ngIf="formPaciente.get('telefono')?.invalid && formPaciente.get('telefono')?.touched"
+                  placeholder="Ej: 04121234567" minlength="11" maxlength="13">
+                <div
+                  *ngIf="formPaciente.get('telefono')?.invalid && (formPaciente.get('telefono')?.touched || formPaciente.get('telefono')?.dirty)"
                   class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> Teléfono es requerido
+                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('telefono') }}
                 </div>
               </div>
 
               <!-- Email -->
               <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">Email <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">
+                  Email <span class="text-danger">*</span>
+                </label>
                 <input type="email" class="form-control border-2 py-2" formControlName="email"
-                  placeholder="Ej: paciente@email.com">
-                <div *ngIf="formPaciente.get('email')?.errors?.['email']" class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> Ingrese un email válido
-                </div>
-                <div *ngIf="formPaciente.get('email')?.invalid && formPaciente.get('email')?.touched"
+                  placeholder="Ej: paciente@email.com" maxlength="100">
+                <div
+                  *ngIf="formPaciente.get('email')?.invalid && (formPaciente.get('email')?.touched || formPaciente.get('email')?.dirty)"
                   class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> Email es requerido
+                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('email') }}
                 </div>
               </div>
 
               <!-- Fecha de Nacimiento -->
               <div class="col-md-4">
-                <label class="form-label fw-medium text-dark-label">Fecha de Nacimiento <span
-                    class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">
+                  Fecha de Nacimiento <span class="text-danger">*</span>
+                </label>
                 <input type="date" class="form-control border-2 py-2" formControlName="fechaNacimiento">
               </div>
 
               <!-- Ocupación -->
               <div class="col-md-4">
-                <label class="form-label fw-medium text-dark-label">Ocupación <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">
+                  Ocupación <span class="text-danger">*</span>
+                </label>
                 <input type="text" class="form-control border-2 py-2" formControlName="ocupacion"
-                  placeholder="Ej: Profesor universitario">
-                <div *ngIf="formPaciente.get('ocupacion')?.invalid && formPaciente.get('ocupacion')?.touched"
+                  placeholder="Ej: Profesor universitario" maxlength="60">
+                <div
+                  *ngIf="formPaciente.get('ocupacion')?.invalid && (formPaciente.get('ocupacion')?.touched || formPaciente.get('ocupacion')?.dirty)"
                   class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> Ocupación es requerida
+                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('ocupacion') }}
                 </div>
               </div>
 
               <!-- Género -->
               <div class="col-md-4">
-                <label class="form-label fw-medium text-dark-label">Género <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">
+                  Género <span class="text-danger">*</span>
+                </label>
                 <ng-select [items]="opcionesGenero" formControlName="genero" placeholder="Seleccione..."
                   [searchable]="false" class="border-2" required>
                 </ng-select>
@@ -212,17 +227,19 @@
 
               <!-- Dirección -->
               <div class="col-md-12">
-                <label class="form-label fw-medium text-dark-label">Dirección <span class="text-danger">*</span></label>
+                <label class="form-label fw-medium text-dark-label">
+                  Dirección <span class="text-danger">*</span>
+                </label>
                 <textarea class="form-control border-2" rows="2" formControlName="direccion"
                   placeholder="Ej: Calle 10, Quinta Cielo Azul, Guatire"></textarea>
-              </div>
-              <div *ngIf="formPaciente.get('direccion')?.invalid && formPaciente.get('direccion')?.touched"
-                class="text-danger small mt-1">
-                <i class="bi bi-exclamation-circle-fill me-1"></i> Dirección es requerida
+                <div
+                  *ngIf="formPaciente.get('direccion')?.invalid && (formPaciente.get('direccion')?.touched || formPaciente.get('direccion')?.dirty)"
+                  class="text-danger small mt-1">
+                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('direccion') }}
+                </div>
               </div>
             </div>
           </div>
-
 
           <!-- 🧬 Perfil Clínico -->
           <div class="mt-4">
@@ -231,13 +248,17 @@
 
               <!-- Condiciones clínicas (Sí/No) -->
               <div class="col-md-3">
-                <label class="form-label fw-medium text-dark-label">¿Usa lentes?</label>
+                <label class="form-label fw-medium text-dark-label">
+                  ¿Usa lentes? <span class="text-danger">*</span>
+                </label>
                 <ng-select [items]="['Sí', 'No']" formControlName="usuarioLentes" placeholder="Seleccione..."
                   class="border-2"></ng-select>
               </div>
 
               <div class="col-md-3">
-                <label class="form-label fw-medium text-dark-label">¿Tiene Fotofobia?</label>
+                <label class="form-label fw-medium text-dark-label">
+                  ¿Tiene Fotofobia? <span class="text-danger">*</span>
+                </label>
                 <ng-select [items]="['Sí', 'No']" formControlName="fotofobia" placeholder="Seleccione..."
                   class="border-2"></ng-select>
               </div>
@@ -251,7 +272,9 @@
 
               <!-- Traumatismo ocular -->
               <div class="col-md-4">
-                <label class="form-label fw-medium text-dark-label">¿Traumatismo ocular previo?</label>
+                <label class="form-label fw-medium text-dark-label">
+                  ¿Traumatismo ocular previo? <span class="text-danger">*</span>
+                </label>
                 <ng-select [items]="['Sí', 'No']" formControlName="traumatismoOcular" placeholder="Seleccione..."
                   class="border-2"></ng-select>
               </div>
@@ -264,7 +287,9 @@
 
               <!-- Cirugía ocular -->
               <div class="col-md-4">
-                <label class="form-label fw-medium text-dark-label">¿Cirugía ocular previa?</label>
+                <label class="form-label fw-medium text-dark-label">
+                  ¿Cirugía ocular previa? <span class="text-danger">*</span>
+                </label>
                 <ng-select [items]="opcionesBooleanasSimple" formControlName="cirugiaOcular" placeholder="Seleccione..."
                   class="border-2"></ng-select>
               </div>
@@ -509,7 +534,7 @@
                     {{ pacienteSeleccionado?.historiaClinica?.cirugiaOcularDescripcion || 'No registrado' }}
                   </p>
                 </div>
-                
+
                 <div class="mb-3" *ngIf="pacienteSeleccionado?.historiaClinica?.traumatismoOcular === 'Sí'">
                   <p class="text-secondary mb-1"><strong>Descripción del traumatismo</strong></p>
                   <p class="text-dark">
