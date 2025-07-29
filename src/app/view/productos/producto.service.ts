@@ -1,13 +1,21 @@
 import { Injectable } from '@angular/core';
 import { Producto } from './producto.model';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, of, throwError } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class ProductoService {
   private productos: Producto[] = [];
 
+   constructor(private http: HttpClient) { }
+   
   getProductos(): Producto[] {
     return [...this.productos]; // devuelve copia para no mutar directamente
   }
+
+  getProductosPorPagina(pagina: number, limite: number): Observable<Producto[]> {
+  return this.http.get<Producto[]>(`/api/productos?page=${pagina}&limit=${limite}`);
+}
 
   agregarProducto(producto: Producto) {
     this.productos.push(producto);

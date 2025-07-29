@@ -235,9 +235,6 @@ export class VerPacientesComponent implements OnInit {
     return '';
   }
 
-
-
-
   private aplicarValidacionCondicional(
     campoDecisor: string,
     campoDescripcion: string,

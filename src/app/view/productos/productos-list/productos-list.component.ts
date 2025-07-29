@@ -10,19 +10,34 @@ import { Tasa } from '../../../Interfaces/models-interface';
     templateUrl: './productos-list.component.html',
     styleUrls: ['./productos-list.component.scss']
 })
+
 export class ProductosListComponent implements OnInit {
     productos: Producto[] = [];
-    mostrarModal: boolean = false;
+    mostrarModal = false;
     modoModal: 'agregar' | 'editar' | 'ver' = 'agregar';
     productoSeleccionado?: Producto;
+    imagenesPorTipo: Record<Producto['tipo'], string> = {
+        lente: 'assets/cristales.jpg',
+        montura: 'assets/montura_2.avif',
+        estuche: 'assets/estuches.jpg',
+        liquido: 'assets/liquido.webp', // Este faltaba
+        accesorio: 'assets/accesorios.jpg',
+    };
+    sedeActiva: string = '';
+    sedeFiltro: string = this.sedeActiva;
+    filtro: string = '';
 
-    // Tasas cambiarias
-    tasaDolar: number = 0;
-    tasaEuro: number = 0;
+    filtroBusqueda = '';
+    tipoSeleccionado = '';
+    estadoSeleccionado: boolean = true; // Solo activos por defecto
 
-    // Paginación
-    paginaActual: number = 1;
-    productosPorPagina: number = 12;
+    tiposProducto: string[] = ['Montura', 'Lente', 'Líquido', 'Estuche', 'Accesorio'];
+
+    tasaDolar = 0;
+    tasaEuro = 0;
+
+    paginaActual = 1;
+    productosPorPagina = 12;
 
     constructor(
         private productoService: ProductoService,
@@ -38,17 +53,41 @@ export class ProductosListComponent implements OnInit {
     obtenerTasaCambio(): void {
         this.tasaCambiariaService.getTasaActual().subscribe({
             next: (res: { tasas: Tasa[] }) => {
-                const dolar = res.tasas.find(t => t.id === 'dolar');
-                const euro = res.tasas.find(t => t.id === 'euro');
-
-                this.tasaDolar = dolar?.valor ?? 0;
-                this.tasaEuro = euro?.valor ?? 0;
+                this.tasaDolar = res.tasas.find(t => t.id === 'dolar')?.valor ?? 0;
+                this.tasaEuro = res.tasas.find(t => t.id === 'euro')?.valor ?? 0;
             },
             error: () => {
                 this.tasaDolar = 0;
                 this.tasaEuro = 0;
             }
         });
+    }
+
+    cargarPagina(pagina: number): void {
+        this.paginaActual = pagina;
+        this.productoService.getProductosPorPagina(pagina, this.productosPorPagina).subscribe(res => {
+            this.productos = this.actualizarEstadoPorStock(res);
+        });
+    }
+
+    get productosFiltrados(): Producto[] {
+        return this.productos
+            .filter(p => {
+                const texto = this.filtroBusqueda.toLowerCase();
+                const coincideTexto = p.nombre.toLowerCase().includes(texto) || p.codigo.toLowerCase().includes(texto);
+                const coincideTipo = !this.tipoSeleccionado || p.tipo.toLowerCase() === this.tipoSeleccionado.toLowerCase();
+                const coincideEstado = this.estadoSeleccionado === null || p.activo === this.estadoSeleccionado;
+                return coincideTexto && coincideTipo && coincideEstado;
+            });
+    }
+
+    get productosPaginados(): Producto[] {
+        const inicio = (this.paginaActual - 1) * this.productosPorPagina;
+        return this.productosFiltrados.slice(inicio, inicio + this.productosPorPagina);
+    }
+
+    get totalPaginas(): number {
+        return Math.ceil(this.productosFiltrados.length / this.productosPorPagina);
     }
 
     get paginas(): number[] {
@@ -83,6 +122,12 @@ export class ProductosListComponent implements OnInit {
         this.cerrarModal();
     }
 
+    limpiarFiltros(): void {
+        this.filtroBusqueda = '';
+        this.tipoSeleccionado = '';
+        this.estadoSeleccionado = true;
+    }
+
     get productoSeguro(): Producto {
         return this.productoSeleccionado ?? {
             id: crypto.randomUUID(),
@@ -102,59 +147,55 @@ export class ProductosListComponent implements OnInit {
         };
     }
 
-    get productosPaginados(): Producto[] {
-        const inicio = (this.paginaActual - 1) * this.productosPorPagina;
-        return this.productos.slice(inicio, inicio + this.productosPorPagina);
-    }
-
-    get totalPaginas(): number {
-        return Math.ceil(this.productos.length / this.productosPorPagina);
+    actualizarEstadoPorStock(productos: Producto[]): Producto[] {
+        return productos.map(p => p.stock === 0 ? { ...p, activo: false } : p);
     }
 
     getPrecioBs(producto: Producto): number {
         switch (producto.moneda) {
-            case 'usd':
-                return producto.precio * this.tasaDolar;
-            case 'eur':
-                return producto.precio * this.tasaEuro;
-            case 'ves':
-                return producto.precio;
-            default:
-                return 0;
+            case 'usd': return producto.precio * this.tasaDolar;
+            case 'eur': return producto.precio * this.tasaEuro;
+            case 'ves': return producto.precio;
+            default: return 0;
         }
     }
 
     generarProductosDummy(cantidad: number): Producto[] {
-        const tipos: Producto['tipo'][] = ['montura', 'lente', 'liquido', 'accesorio'];
+        const tipos: Producto['tipo'][] = ['montura', 'lente', 'liquido', 'estuche', 'accesorio'];
         const marcas = ['VisionPro', 'OptiClear', 'LentiMax', 'FocusOne'];
         const colores = ['Negro', 'Azul', 'Rojo', 'Transparente'];
         const monedas: Producto['moneda'][] = ['usd', 'eur', 'ves'];
 
-        return Array.from({ length: cantidad }, (_, i) => ({
-            id: (i + 1).toString(),
-            nombre: `Producto ${i + 1}`,
-            tipo: tipos[i % tipos.length],
-            marca: marcas[i % marcas.length],
-            color: colores[i % colores.length],
-            material: 'Acetato',
-            codigo: `NV-${String(i + 1).padStart(5, '0')}`,
-            stock: Math.floor(Math.random() * 50),
-            precio: parseFloat((Math.random() * 100).toFixed(2)),
-            moneda: monedas[i % monedas.length],
-            activo: Math.random() > 0.2,
-            descripcion: 'Producto simulado para pruebas.',
-            imagenUrl: this.obtenerImagen(tipos[i % tipos.length]),
-            fechaIngreso: '2025-07-27'
-        }));
+        return Array.from({ length: cantidad }, (_, i) => {
+            const tipoActual = tipos[i % tipos.length];
+            return {
+                id: (i + 1).toString(),
+                nombre: `Producto ${i + 1}`,
+                tipo: tipoActual,
+                marca: marcas[i % marcas.length],
+                color: colores[i % colores.length],
+                material: 'Acetato',
+                codigo: `NV-${String(i + 1).padStart(5, '0')}`,
+                stock: Math.floor(Math.random() * 50),
+                precio: parseFloat((Math.random() * 100).toFixed(2)),
+                moneda: monedas[i % monedas.length],
+                activo: Math.random() > 0.2,
+                descripcion: 'Producto simulado para pruebas.',
+                imagenUrl: this.imagenesPorTipo[tipoActual],
+                fechaIngreso: '2025-07-27'
+            };
+        });
     }
+
 
     obtenerImagen(tipo: Producto['tipo']): string {
         const imagenes = {
             montura: 'assets/montura_2.avif',
             lente: 'assets/montura_1.png',
             liquido: 'assets/montura_3.jpg',
+            estuche: 'assets/montura_1.png',
             accesorio: 'assets/montura_2.avif'
         };
-        return imagenes[tipo];
+        return imagenes[tipo] ?? 'assets/default.jpg';
     }
 }
