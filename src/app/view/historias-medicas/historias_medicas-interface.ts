@@ -18,6 +18,20 @@ export interface DatosConsulta {
   cedulaAsesor?: string;
 }
 
+export interface RespuestaCreacionHistoria {
+  message: string;
+  historial_medico: HistoriaMedica;
+}
+
+
+
+export interface Medico {
+  id: number;
+  nombre: string;
+  cedula: string;
+  // otros campos...
+}
+
 // Interfaz para antecedentes
 export interface Antecedentes {
   tipoCristalActual?: string;
@@ -101,6 +115,12 @@ export interface DiagnosticoTratamiento {
   diagnostico?: string;
   tratamiento?: string;
 }
+
+export interface HistorialResponse {
+  message: string;
+  historiales_medicos: HistoriaMedica[];
+}
+
 
 // Interfaz para recomendaciones
 export interface Recomendaciones {

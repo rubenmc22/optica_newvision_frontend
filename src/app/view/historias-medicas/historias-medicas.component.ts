@@ -1,13 +1,15 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { Paciente } from '../pacientes/paciente-interface';
-import { HistoriaMedica, HistoriaMedicaCompleta, Conformidad, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular } from './historias_medicas-interface';
+import { HistoriaMedica, HistoriaMedicaCompleta, Conformidad, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico, RespuestaCreacionHistoria } from './historias_medicas-interface';
 import {
   OPCIONES_REF,
   OPCIONES_ANTECEDENTES,
   MOTIVOS_CONSULTA,
-  TIPOS_CRISTALES
+  TIPOS_CRISTALES,
+  MATERIALES
 } from 'src/app/shared/constants/historias-medicas';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { HistoriaMedicaService } from '../../core/services/historias-medicas/historias-medicas.service';
 
 import * as bootstrap from 'bootstrap';
@@ -15,6 +17,13 @@ import { SwalService } from '../../core/services/swal/swal.service';
 import { ModalService } from '../../core/services/modal/modal.service';
 import { PacientesService } from '../../core/services/pacientes/pacientes.service';
 import { UserStateService } from '../../core/services/userState/user-state-service';
+import { HttpErrorResponse } from '@angular/common/http';
+
+import { Subject, Observable, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, tap, takeUntil } from 'rxjs/operators';
+import { EmpleadosService } from './../../core/services/empleados/empleados.service';
+import { Empleado } from '../../Interfaces/models-interface';
+
 
 declare var $: any;
 
@@ -27,6 +36,8 @@ declare var $: any;
 export class HistoriasMedicasComponent implements OnInit {
   // Estados del componente
   busqueda: string = '';
+  // Agrega esto en la sección de propiedades de tu componente
+  input$ = new Subject<string>();
   cargando: boolean = false;
   mostrarElementos = false;
   mostrarSinHistorial = false;
@@ -35,11 +46,22 @@ export class HistoriasMedicasComponent implements OnInit {
   maxDate: string;
   sedeActiva: string = '';
   sedeFiltro: string = this.sedeActiva;
-  filtro: string = ''; // 👈 Añadido para búsqueda por nombre o cédula
+  filtro: string = '';
+  sedesDisponibles: string[] = [];
+  pacienteParaNuevaHistoria: Paciente | null = null;
+
+  //Empleados
+  isLoading = true;
+  employees: any[] = [];
+  medicoTratante: any[] = [];
+  filteredEmployees: any[] = [];
 
   // Datos
   pacientes: Paciente[] = [];
-  //pacientesFiltrados: Paciente[] = [];
+  pacientesFiltrados: Paciente[] = [];
+  formOriginalHistoria: any = {};
+  medicoSeleccionado: Medico | null = null;
+
   pacienteSeleccionado: Paciente | null = null;
   historiaSeleccionada: HistoriaMedica | null = null;
   pacienteIdSeleccionado: string | null = null;
@@ -55,6 +77,9 @@ export class HistoriasMedicasComponent implements OnInit {
   opcionesAntecedentes = OPCIONES_ANTECEDENTES;
   motivosConsulta = MOTIVOS_CONSULTA;
   tiposCristales = TIPOS_CRISTALES;
+  materiales: typeof MATERIALES;
+  typeahead$ = new Subject<string>();
+  materialLabels!: Map<TipoMaterial, string>;
 
   readonly materialesValidos = new Set<TipoMaterial>([
     'CR39',
@@ -73,36 +98,6 @@ export class HistoriasMedicasComponent implements OnInit {
     'OTRO'
   ]);
 
-  materiales: { value: string; label: string }[] = [
-    { value: 'CR39', label: 'CR39' },
-    { value: 'AR_VERDE', label: 'Antirreflejo verde' },
-    { value: 'AR_BLUE_BLOCK', label: 'Antirreflejo Blue Block' },
-    { value: 'FOTOCROMATICO_CR39', label: 'Fotocromático CR39' },
-    { value: 'FOTOCROMATICO_AR', label: 'Fotocromático Antirreflejo' },
-    { value: 'FOTOCROMATICO_BLUE_BLOCK', label: 'Fotocromático Blue Block' },
-    { value: 'POLICARBONATO', label: 'Policarbonato' },
-    { value: 'HI_INDEX_156', label: 'Hi Index 1.56' },
-    { value: 'HI_INDEX_167', label: 'Hi Index 1.67' },
-    { value: 'HI_INDEX_174', label: 'Hi Index 1.74' },
-    { value: 'TRANSICION_PLUS', label: 'Transición Pluss' },
-    { value: 'FOTOSENSIBLE', label: 'Fotosensible' },
-    { value: 'POLICARBONATO_BLUE_BLOCK', label: 'Policarbonato Blue Block' },
-    { value: 'OTRO', label: 'Otro (especificar)' }
-  ];
-
-  readonly materialLabels = new Map<TipoMaterial, string>(
-    this.materiales.map(m => [m.value as TipoMaterial, m.label])
-  );
-
-
-  medicosTratantes = [
-    'Dr. Carlos Pérez',
-    'Dra. María González',
-    'Dr. Luis Rodríguez',
-    'Dra. Ana Fernández',
-    'Dr. José Martínez'
-  ];
-
   constructor(
     private fb: FormBuilder,
     private modalService: ModalService,
@@ -110,10 +105,23 @@ export class HistoriasMedicasComponent implements OnInit {
     private historiaService: HistoriaMedicaService,
     private pacientesService: PacientesService,
     private userStateService: UserStateService,
+    private snackBar: MatSnackBar,
+    private empleadosService: EmpleadosService,
   ) {
+
+    this.materiales = MATERIALES;
+    this.materialLabels = new Map<TipoMaterial, string>(
+      this.materiales.map(m => [m.value as TipoMaterial, m.label])
+    );
+
     this.maxDate = new Date().toISOString().split('T')[0];
     this.historiaForm = this.fb.group({}); // Inicialización básica
     this.inicializarFormulario();
+  }
+
+  crearHistoriaNueva(): void {
+    this.historiaSeleccionada = null;
+    this.iniciarFlujoHistoria();
   }
 
   verificarMaterialOtro(index: number): void {
@@ -124,9 +132,9 @@ export class HistoriasMedicasComponent implements OnInit {
   private inicializarFormulario(): void {
     this.historiaForm = this.fb.group({
       // Sección Paciente
-      pacienteId: ['', Validators.required],
+      paciente: [null, Validators.required],
       medico: ['', Validators.required],
-      motivo: ['', Validators.required],
+      motivo: [[], Validators.required],
       otroMotivo: [''],
       tipoCristalActual: [''],
       ultimaGraduacion: [''],
@@ -199,49 +207,108 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
-  /*obtenerHistoriasPorPaciente(id: string): HistoriaMedica[] {
-    return this.historiasMock[id] || [];
-  }*/
+  onPacienteSeleccionado(): void {
+    const paciente = this.historiaForm.get('paciente')?.value;
+    console.log('Paciente', paciente);
+    this.pacienteParaNuevaHistoria = paciente;
+  }
 
+  onMedicoSeleccionado(medico: Medico): void {
+    console.log('Médico seleccionado:', medico);
+    this.medicoSeleccionado = medico;
+  }
+
+  private limpiarDatosPaciente(): void {
+    this.historial = [];
+    this.historiaSeleccionada = null;
+  }
+
+  private loadEmployees(): void {
+    this.isLoading = true;
+    this.empleadosService.getAllEmpleados().subscribe((empleados: Empleado[]) => {
+      // Filtra solo oftalmólogos y optometristas
+      this.medicoTratante = empleados.filter(emp =>
+        emp.cargoId === 'oftalmologo' || emp.cargoId === 'optometrista'
+      );
+      this.filteredEmployees = [...this.employees]; // Copia filtrada para búsquedas
+      this.isLoading = false;
+    }, error => {
+      console.error('Error al cargar empleados:', error);
+      this.isLoading = false;
+    });
+  }
+
+  selesccionarPacientePorId(id: string | null): void {
+    if (!id) {
+      this.pacienteSeleccionado = null;
+      return;
+    }
+
+    const paciente = this.pacientes.find(p => p.key === id);
+    if (!paciente) {
+      console.error('Paciente no encontrado');
+      return;
+    }
+
+    this.pacienteSeleccionado = paciente;
+    console.log('Paciente seleccionado:', paciente);
+
+    // Aquí puedes cargar las historias médicas del paciente
+    this.cargarHistoriasMedicas(id);
+  }
+
+  seleccionarHistoriasPorPaciente(paciente: Paciente | null): void {
+    if (!paciente) {
+      console.log('Selección limpiada');
+      this.limpiarDatos();
+      return;
+    }
+
+    console.log('Paciente seleccionado:', paciente);
+    this.pacienteSeleccionado = paciente;
+
+    // Cargar historias médicas del paciente
+    this.cargarHistoriasMedicas(paciente.key);
+  }
+
+  limpiarDatos(): void {
+    this.pacienteSeleccionado = null;
+    // Limpiar otros datos relacionados si es necesario
+  }
 
   private inicializarSedeDesdeUsuario(): void {
     this.userStateService.currentUser$.subscribe(user => {
       this.sedeActiva = user?.sede ?? 'guatire';
       this.sedeFiltro = this.sedeActiva;
-      console.log('Sede activa:', this.sedeActiva);
+      // console.log('Sede activa:', this.sedeActiva);
       this.cargarPacientes();
     });
   }
 
-  get pacientesFiltrados(): Paciente[] {
-    const filtroTexto = this.filtro.trim().toLowerCase();
-
-    return this.pacientes.filter(paciente => {
-      const coincideTexto =
-        paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(filtroTexto) ||
-        paciente.informacionPersonal.cedula.toLowerCase().includes(filtroTexto);
-
-      const esSedeActiva = paciente.sede === this.sedeActiva;
-
-      let mostrarPorSede = false;
-
-      if (this.sedeFiltro === 'todas') {
-        mostrarPorSede = true;
-      } else if (this.sedeFiltro === this.sedeActiva) {
-        mostrarPorSede = esSedeActiva;
-      } else if (this.sedeFiltro === 'otra') {
-        mostrarPorSede = !esSedeActiva;
-      }
-
-      return mostrarPorSede && coincideTexto;
-    });
-  }
-
-
   ngOnInit(): void {
+    this.typeahead$
+      .pipe(
+        debounceTime(200),
+        distinctUntilChanged()
+      )
+      .subscribe(term => {
+        // Puedes usar esto para filtrar pacientes si lo prefieres
+        this.filtro = term;
+        this.actualizarPacientesFiltrados();
+      });
+
+    this.historiasMock = {};
     this.inicializarSedeDesdeUsuario();
     this.configurarSubscripciones();
     this.cargarPacientes();
+
+    // En el ngOnInit, después de inicializar otras propiedades
+    this.input$.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      tap(() => this.cargando = true),
+      switchMap(term => this.filtrarPacientes(term))
+    ).subscribe();
 
     // ✨ Forzamos cambio de referencia al terminar la carga inicial
     setTimeout(() => {
@@ -250,36 +317,74 @@ export class HistoriasMedicasComponent implements OnInit {
     }, 0);
   }
 
-
-
+  private filtrarPacientes(term: string): Observable<Paciente[]> {
+    if (!term.trim()) {
+      return of(this.pacientes);
+    }
+    return of(this.pacientes.filter(paciente =>
+      paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(term.toLowerCase()) ||
+      paciente.informacionPersonal.cedula.toLowerCase().includes(term.toLowerCase())
+    ));
+  }
 
   // Métodos de carga de datos
   cargarPacientes(): void {
     this.pacientesService.getPacientes().subscribe({
       next: (data) => {
+        const getSedeFromKey = (key: string): string =>
+          key?.split('-')[0]?.toLowerCase() ?? 'sin-sede';
+
         this.pacientes = Array.isArray(data.pacientes)
-          ? data.pacientes.map((p: any) => ({
-            id: p.key, // ✅ usa el mismo ID que luego usamos para reemplazar
-            nombreCompleto: p.nombre,
-            cedula: p.cedula,
-            telefono: p.telefono,
-            email: p.email,
-            fechaNacimiento: p.fecha_nacimiento,
-            edad: this.calcularEdad(p.fecha_nacimiento),
-            ocupacion: p.ocupacion,
-            genero: p.genero === 'm' ? 'Masculino' : p.genero === 'f' ? 'Femenino' : 'Otro',
-            direccion: p.direccion,
-            sede: p.sede?.id ?? 'sin-sede',
-            fechaRegistro: this.formatearFecha(p.created_at),
-            redesSociales: p.redes_sociales || []
-          }))
+          ? data.pacientes.map((p: any) => {
+            const info = p.informacionPersonal;
+            const historia = p.historiaClinica;
+            const sedePaciente = getSedeFromKey(p.key);
+
+            return {
+              key: p.key,
+              fechaRegistro: this.formatearFecha(p.created_at),
+              sede: sedePaciente,
+              redesSociales: p.redesSociales || [],
+
+              informacionPersonal: {
+                nombreCompleto: info.nombreCompleto,
+                cedula: info.cedula,
+                telefono: info.telefono,
+                email: info.email,
+                fechaNacimiento: info.fechaNacimiento,
+                edad: this.calcularEdad(info.fechaNacimiento),
+                ocupacion: info.ocupacion,
+                genero: info.genero === 'm' ? 'Masculino' : info.genero === 'f' ? 'Femenino' : 'Otro',
+                direccion: info.direccion
+              },
+
+              historiaClinica: {
+                usuarioLentes: historia.usuarioLentes ?? null,
+                tipoCristalActual: historia.tipoCristalActual ?? '',
+                ultimaGraduacion: historia.ultimaGraduacion ?? '',
+                fotofobia: historia.fotofobia ?? null,
+                traumatismoOcular: historia.traumatismoOcular ?? null,
+                traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion ?? '',
+                usaDispositivosElectronicos: this.textoABooleano(historia.usaDispositivosElectronicos),
+                tiempoUsoEstimado: historia.tiempoUsoEstimado ?? '',
+                cirugiaOcular: historia.cirugiaOcular ?? null,
+                cirugiaOcularDescripcion: historia.cirugiaOcularDescripcion ?? '',
+                alergicoA: historia.alergicoA ?? null,
+                antecedentesPersonales: historia.antecedentesPersonales ?? [],
+                antecedentesFamiliares: historia.antecedentesFamiliares ?? [],
+                patologias: historia.patologias ?? [],
+                patologiaOcular: historia.patologiaOcular ?? []
+              }
+            };
+          })
           : [];
 
-        // 🧪 Generar historias mock por paciente
-        this.historiasMock = {};
-        this.pacientes.forEach((paciente, i) => {
-          this.historiasMock[paciente.key] = this.generarHistorias((i % 5) + 1); // crea 1 a 5 historias simuladas
+        this.actualizarPacientesFiltrados(); // ← Aquí
+        const sedesSet = new Set<string>();
+        this.pacientes.forEach((p) => {
+          if (p.sede) sedesSet.add(p.sede);
         });
+        this.sedesDisponibles = Array.from(sedesSet);
       },
       error: (error) => {
         console.error('Error al cargar pacientes:', error);
@@ -287,6 +392,10 @@ export class HistoriasMedicasComponent implements OnInit {
         this.pacientes = [];
       }
     });
+  }
+
+  textoABooleano(valor: any): boolean {
+    return valor?.toString().toLowerCase() === 'sí' || valor === true;
   }
 
   formatearFecha(fechaIso: string): string {
@@ -300,11 +409,11 @@ export class HistoriasMedicasComponent implements OnInit {
     return `${dia}/${mes}/${anio}`;
   }
 
-
   iniciarFlujoHistoria(): void {
     if (this.historiaSeleccionada) {
       this.precargarHistoriaSeleccionada();
     } else {
+      this.loadEmployees();
       this.prepararNuevaHistoria();
     }
 
@@ -422,6 +531,9 @@ export class HistoriasMedicasComponent implements OnInit {
       this.recomendaciones.push(grupo);
     });
 
+    // Guardar el estado original del formulario para detectar cambios
+    this.formOriginalHistoria = this.historiaForm.value;
+
   }
 
   private prepararNuevaHistoria(): void {
@@ -429,6 +541,15 @@ export class HistoriasMedicasComponent implements OnInit {
     this.modoEdicion = false;
     this.recomendaciones.clear(); // si usas FormArray
     this.agregarRecomendacion();  // agrega una recomendación vacía
+  }
+
+  guardarHistoria(): void {
+    console.log('this.modoEdicion', this.modoEdicion);
+    if (this.modoEdicion) {
+      // this.actualizarHistoria(); // aún por implementar
+    } else {
+      this.crearHistoria(); // ya lo tienes listo
+    }
   }
 
   private construirHistoriaMedica(): HistoriaMedica {
@@ -566,6 +687,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
       const materialesSeleccionados: string[] = grupo.get('material')?.value || [];
       const otrosMaterialesRaw: string = grupo.get('materialPersonalizado')?.value?.trim() || '';
+      console.log('materialesSeleccionados:', grupo.get('material')?.value);
 
       const otrosMateriales = otrosMaterialesRaw
         ? otrosMaterialesRaw.split(',').map(m => m.trim()).filter(m => m)
@@ -586,18 +708,164 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
-  private crearHistoria(historia: HistoriaMedica): void {
-    this.historiaService.createHistoria(historia).subscribe({
-      next: () => {
-        this.swalService.showSuccess('¡Historia registrada!', 'La historia médica fue guardada correctamente.');
-        this.seleccionarPacientePorId(historia.pacienteId);
+  private crearHistoria(): void {
+    // Validar que hay un paciente seleccionado
+    if (!this.pacienteParaNuevaHistoria) {
+      this.swalService.showError('Error', 'No hay ningún paciente seleccionado');
+      return;
+    }
+
+    // Validar que el formulario es válido
+    if (this.historiaForm.invalid) {
+      this.swalService.showError('Error', 'Por favor complete todos los campos requeridos');
+      return;
+    }
+
+    // Obtener valores del formulario
+    const formValue = this.historiaForm.value;
+
+    const historia: any = {
+      pacienteId: this.pacienteParaNuevaHistoria.key,
+      datosConsulta: {
+        motivo: Array.isArray(formValue.motivo) ? formValue.motivo : [formValue.motivo],
+        otroMotivo: formValue.otroMotivo || '',
+        medico: formValue.medico?.cedula || 'Médico no especificado',
       },
+      examenOcular: {
+        lensometria: {
+          esf_od: formValue.len_esf_od || '',
+          cil_od: formValue.len_cil_od || '',
+          eje_od: formValue.len_eje_od || '',
+          add_od: formValue.len_add_od || '',
+          av_lejos_od: formValue.len_av_lejos_od || '',
+          av_cerca_od: formValue.len_av_cerca_od || '',
+          av_lejos_bi: formValue.len_av_lejos_bi || '',
+          av_bi: formValue.len_av_bi || '',
+          esf_oi: formValue.len_esf_oi || '',
+          cil_oi: formValue.len_cil_oi || '',
+          eje_oi: formValue.len_eje_oi || '',
+          add_oi: formValue.len_add_oi || '',
+          av_lejos_oi: formValue.len_av_lejos_oi || '',
+          av_cerca_oi: formValue.len_av_cerca_oi || '',
+          av_cerca_bi: formValue.len_av_cerca_bi || ''
+        },
+        refraccion: {
+          esf_od: formValue.ref_esf_od || '',
+          cil_od: formValue.ref_cil_od || '',
+          eje_od: formValue.ref_eje_od || '',
+          add_od: formValue.ref_add_od || '',
+          avccl_od: formValue.ref_avccl_od || '',
+          avccc_od: formValue.ref_avccc_od || '',
+          avccl_bi: formValue.ref_avccl_bi || '',
+          avccc_bi: formValue.ref_avccc_bi || '',
+          esf_oi: formValue.ref_esf_oi || '',
+          cil_oi: formValue.ref_cil_oi || '',
+          eje_oi: formValue.ref_eje_oi || '',
+          add_oi: formValue.ref_add_oi || '',
+          avccl_oi: formValue.ref_avccl_oi || '',
+          avccc_oi: formValue.ref_avccc_oi || ''
+        },
+        refraccionFinal: {
+          esf_od: formValue.ref_final_esf_od || '',
+          cil_od: formValue.ref_final_cil_od || '',
+          eje_od: formValue.ref_final_eje_od || '',
+          add_od: formValue.ref_final_add_od || '',
+          alt_od: formValue.ref_final_alt_od || '',
+          dp_od: formValue.ref_final_dp_od || '',
+          esf_oi: formValue.ref_final_esf_oi || '',
+          cil_oi: formValue.ref_final_cil_oi || '',
+          eje_oi: formValue.ref_final_eje_oi || '',
+          add_oi: formValue.ref_final_add_oi || '',
+          alt_oi: formValue.ref_final_alt_oi || '',
+          dp_oi: formValue.ref_final_dp_oi || ''
+        },
+        avsc_avae_otros: {
+          avsc_od: formValue.avsc_od || '',
+          avae_od: formValue.avae_od || '',
+          otros_od: formValue.otros_od || '',
+          avsc_oi: formValue.avsc_oi || '',
+          avae_oi: formValue.avae_oi || '',
+          otros_oi: formValue.otros_oi || '',
+          avsc_bi: formValue.avsc_bi || ''
+        }
+      },
+      diagnosticoTratamiento: {
+        diagnostico: formValue.diagnostico || '',
+        tratamiento: formValue.tratamiento || ''
+      },
+      recomendaciones: this.mapRecomendaciones(),
+      conformidad: {
+        notaConformidad: this.notaConformidad,
+      },
+    };
+
+    // Mostrar carga mientras se procesa
+    this.cargando = true;
+
+    this.historiaService.createHistoria(historia).subscribe({
+      next: (respuesta) => {
+        this.cargando = false;
+        const historiaCreada = respuesta.historial_medico;
+        this.cerrarModal('#historiaModal');
+        this.swalService.showSuccess(
+          '¡Historia creada!',
+          `Historia médica #${historiaCreada.nHistoria ?? 'sin número'} registrada correctamente`
+        );
+
+        if (!this.historial) {
+          this.historial = [];
+        }
+        this.historial.unshift(historiaCreada);
+        this.historiaSeleccionada = historiaCreada;
+
+        this.historiaForm.reset();
+        this.modoEdicion = false;
+      },
+
       error: (err) => {
+        this.cargando = false;
         console.error('Error al guardar historia:', err);
-        this.swalService.showError('Error', 'No se pudo guardar la historia médica.');
+
+        let mensajeError = 'No se pudo guardar la historia médica';
+        if (err.error?.message) {
+          mensajeError += `: ${err.error.message}`;
+        } else if (err.status === 409) {
+          mensajeError = 'Ya existe una historia idéntica para este paciente';
+        }
+
+        this.swalService.showError('Error', mensajeError);
       }
     });
+
   }
+
+  // Para manejar la lógica de modificación del formulario
+  historiaModificada(): boolean {
+    if (!this.modoEdicion) return true;
+
+    const actual = this.historiaForm.value;
+
+    const camposModificados = Object.keys(this.formOriginalHistoria).some(key => {
+      const valorActual = actual[key];
+      const valorOriginal = this.formOriginalHistoria[key];
+
+      // Si son arrays, comparar con lógica personalizada
+      if (Array.isArray(valorActual) && Array.isArray(valorOriginal)) {
+        return !this.arraysIguales(valorActual, valorOriginal);
+      }
+
+      return valorActual !== valorOriginal;
+    });
+
+    return camposModificados;
+  }
+
+  arraysIguales(arr1: any[], arr2: any[]): boolean {
+    if (arr1.length !== arr2.length) return false;
+    return arr1.every((val, i) => val === arr2[i]);
+  }
+
+
 
   /* private actualizarHistoria(historia: HistoriaMedica): void {
      this.historiaService.updateHistoria(historia.id, historia).subscribe({
@@ -630,11 +898,10 @@ export class HistoriasMedicasComponent implements OnInit {
 
   crearRecomendacion(rec?: Recomendaciones): FormGroup {
     return this.fb.group({
-      cristal: [rec?.cristal || ''],
-      material: [rec?.material || []],
+      cristal: [rec?.cristal || null, Validators.required], // Cambiado a null
+      material: [rec?.material || [], Validators.required], // Array vacío
       materialPersonalizado: [''],
       montura: [rec?.montura || ''],
-      cristalSugerido: [rec?.cristalSugerido || ''],
       observaciones: [rec?.observaciones || '']
     });
   }
@@ -691,129 +958,6 @@ export class HistoriasMedicasComponent implements OnInit {
     otroMotivoControl?.updateValueAndValidity();
   }
 
-  generarHistorias(cantidad: number): HistoriaMedica[] {
-    return Array.from({ length: cantidad }, (_, i) => ({
-      id: `h${i + 1}`,
-      nHistoria: `000${12345 + i}`,
-      fecha: `2025-07-${String(i + 1).padStart(2, '0')}`,
-      horaEvaluacion: `${8 + (i % 9)}:${(i % 2 === 0 ? '00' : '30')}`,
-      pacienteId: `p${(i % 10) + 1}`,
-
-      datosConsulta: {
-        motivo: this.motivosConsulta[i % this.motivosConsulta.length],
-        otroMotivo: '',
-        medico: `Dr. Simulado #${i + 1}`,
-        asesor: 'Asesor Ejemplo',
-        cedulaAsesor: 'V-12345678'
-      },
-
-      antecedentes: {
-        tipoCristalActual: 'Visión sencilla (CR-39)',
-        ultimaGraduacion: `2024-01-${String((i % 12) + 1).padStart(2, '0')}`,
-        usuarioLentes: true,
-        fotofobia: false,
-        alergicoA: '',
-        cirugiaOcular: false,
-        cirugiaOcularDescripcion: '',
-        traumatismoOcular: false,
-        usaDispositivosElectronicos: true,
-        tiempoUsoEstimado: '4-6 horas diarias',
-        antecedentesPersonales: ['Hipertensión'],
-        antecedentesFamiliares: ['Diabetes'],
-        patologias: [],
-        patologiaOcular: ['Ojo seco']
-      },
-
-      examenOcular: {
-        lensometria: {
-          esf_od: '+1.00',
-          cil_od: '-0.50',
-          eje_od: '90',
-          add_od: '+1.50',
-          av_lejos_od: '20/20',
-          av_cerca_od: 'J1',
-          av_lejos_bi: '20/20',
-          av_bi: '20/20',
-          esf_oi: '+1.25',
-          cil_oi: '-0.75',
-          eje_oi: '90',
-          add_oi: '+1.50',
-          av_lejos_oi: '20/25',
-          av_cerca_oi: 'J2',
-          av_cerca_bi: '20/20'
-        },
-        refraccion: {
-          esf_od: '+1.00',
-          cil_od: '-0.50',
-          eje_od: '90',
-          add_od: '+1.50',
-          avccl_od: '20/20',
-          avccc_od: 'J1',
-          avccl_bi: '20/20',
-          avccc_bi: '20/20',
-          esf_oi: '+1.25',
-          cil_oi: '-0.75',
-          eje_oi: '90',
-          add_oi: '+1.50',
-          avccl_oi: '20/25',
-          avccc_oi: 'J2'
-        },
-        refraccionFinal: {
-          esf_od: '+1.00',
-          cil_od: '-0.50',
-          eje_od: '90',
-          add_od: '+1.50',
-          alt_od: '2 mm',
-          dp_od: '64 mm',
-          esf_oi: '+1.25',
-          cil_oi: '-0.75',
-          eje_oi: '90',
-          add_oi: '+1.50',
-          alt_oi: '2 mm',
-          dp_oi: '64 mm'
-        },
-        avsc_avae_otros: {
-          avsc_od: '20/20',
-          avae_od: 'J1',
-          otros_od: 'Ninguna',
-          avsc_oi: '20/25',
-          avae_oi: 'J2',
-          otros_oi: 'Ninguna',
-          avsc_bi: '20/25'
-        }
-      },
-
-      diagnosticoTratamiento: {
-        diagnostico: 'Miopía leve',
-        tratamiento: 'Uso de lentes correctivos'
-      },
-
-      recomendaciones: [
-        {
-          cristal: 'AR Blue Filter',
-          material: ['POLICARBONATO', 'FOTOCROMATICO_BLUE_BLOCK'],
-          montura: 'Metálica',
-          cristalSugerido: 'AR Blue Filter',
-          observaciones: 'Control anual recomendado'
-        }
-      ],
-
-      conformidad: {
-        notaConformidad: 'PACIENTE CONFORME CON LA EXPLICACIÓN...',
-        firmaPaciente: '',
-        firmaMedico: '',
-        firmaAsesor: ''
-      },
-
-      auditoria: {
-        fechaCreacion: new Date(),
-        fechaActualizacion: undefined,
-        creadoPor: 'system',
-        actualizadoPor: undefined
-      }
-    }));
-  }
-
 
   @ViewChild('selectorPaciente') selectorPaciente!: ElementRef;
 
@@ -822,38 +966,6 @@ export class HistoriasMedicasComponent implements OnInit {
     return item.informacionPersonal.nombreCompleto.toLowerCase().includes(texto) ||
       item.informacionPersonal.cedula.toLowerCase().includes(texto);
   };
-
-  seleccionarPacientePorId(id: string | null): void {
-    console.log('Seleccionado:', id); // 👈 Verifica si se dispara
-    if (!id) return;
-
-    const paciente = this.pacientes.find(p => p.key === id);
-    if (!paciente) return;
-
-    this.pacienteSeleccionado = paciente;
-    this.historial = this.historiasMock[paciente.key] || [];
-    this.historiaSeleccionada = null;
-    this.mostrarSinHistorial = this.historial.length === 0;
-    this.mostrarElementos = this.historial.length > 0;
-    //this.mostrarDetalle = false;
-  }
-
-  obtenerHistoriasPorPaciente(id: string): HistoriaMedica[] {
-    // Generar historias mock para el paciente seleccionado
-    const cantidadHistorias = parseInt(id.replace('p', '')) % 3 + 1; // 1-3 historias por paciente
-    return this.generarHistorias(cantidadHistorias).map((historia, i) => ({
-      ...historia,
-      id: `h${id}-${i}`,
-      pacienteId: id,
-      nHistoria: `HIS-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      fecha: new Date(new Date().setDate(new Date().getDate() - i)).toISOString().split('T')[0],
-      datosConsulta: {
-        ...historia.datosConsulta,
-        medico: `Dr. ${this.pacienteSeleccionado?.informacionPersonal.nombreCompleto.split(' ')[0]} Mock`,
-        motivo: this.motivosConsulta[i % this.motivosConsulta.length]
-      }
-    }));
-  }
 
   verDetalle(historia: HistoriaMedica): void {
     this.historiaSeleccionada = historia;
@@ -866,9 +978,51 @@ export class HistoriasMedicasComponent implements OnInit {
     }, 100);
   }
 
-  compararPacientes = (a: Paciente, b: Paciente): boolean => {
-    return a && b ? a.key === b.key : a === b;
-  };
+  searchFn(term: string, item: any): boolean {
+    const texto = term.toLowerCase();
+    const nombre = item.informacionPersonal?.nombreCompleto?.toLowerCase() ?? '';
+    const cedula = String(item.informacionPersonal?.cedula).toLowerCase();
+
+    return nombre.includes(texto) || cedula.includes(texto);
+  }
+
+
+  actualizarPacientesFiltrados(): void {
+    const filtroTexto = this.filtro.trim().toLowerCase();
+    const sedeFiltro = this.sedeFiltro?.toLowerCase() ?? 'todas';
+
+    console.log('filtroTexto', filtroTexto);
+    this.pacientesFiltrados = this.pacientes.filter(paciente => {
+      const info = paciente.informacionPersonal;
+      const sedePaciente = paciente.sede?.toLowerCase() ?? 'sin-sede';
+
+      const coincideTexto =
+        info.nombreCompleto?.toLowerCase().includes(filtroTexto) ||
+        String(info.cedula)?.toLowerCase().includes(filtroTexto);
+
+      const coincideSede =
+        sedeFiltro === 'todas' || sedePaciente === sedeFiltro;
+
+      return coincideSede && coincideTexto;
+    });
+
+    // Verificar si el seleccionado sigue en la lista
+    const siguePresente = this.pacientesFiltrados.some(p =>
+      this.compararPacientes(p, this.pacienteSeleccionado)
+    );
+
+    if (!siguePresente) {
+      this.pacienteSeleccionado = null;
+    }
+  }
+
+  compararPacientes(p1: any, p2: any): boolean {
+    return p1 && p2
+      ? p1.informacionPersonal?.cedula === p2.informacionPersonal?.cedula
+      : false;
+  }
+
+
 
   get patologias(): string[] {
     return this.historiaSeleccionada?.antecedentes?.patologias ?? [];
@@ -877,8 +1031,6 @@ export class HistoriasMedicasComponent implements OnInit {
   get patologiaOcular(): string[] {
     return this.historiaSeleccionada?.antecedentes?.patologiaOcular ?? [];
   }
-
-
 
   /* editarHistoria(historia: HistoriaMedica): void {
      this.modoEdicion = true;
@@ -914,9 +1066,8 @@ export class HistoriasMedicasComponent implements OnInit {
 
   cargarHistoriasMedicas(pacienteId: string): void {
     this.cargando = true;
-
     this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
-      next: (historias) => {
+      next: (historias: HistoriaMedica[]) => {
         this.historial = historias;
         this.historiaSeleccionada = this.historial[0] || null;
 
@@ -925,9 +1076,12 @@ export class HistoriasMedicasComponent implements OnInit {
 
         this.cargando = false;
       },
-      error: (error) => {
+      error: (error: HttpErrorResponse) => {
         console.error('Error al cargar historias:', error);
-        this.swalService.showError('Error', 'No se pudieron cargar las historias médicas.');
+        this.snackBar.open(`⚠️ Error, No se pudieron cargar las historias médicas.`, 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-warning']
+        });
         this.cargando = false;
       }
     });

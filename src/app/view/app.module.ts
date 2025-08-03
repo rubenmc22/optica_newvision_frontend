@@ -28,6 +28,8 @@ import { VerPacientesComponent } from './pacientes/pacientes.component';
 import { HistoriasMedicasComponent } from './historias-medicas/historias-medicas.component';
 import { ProductoModalComponent } from './productos/producto-modal/producto-modal.component';
 import { ProductosListComponent } from './productos/productos-list/productos-list.component';
+import { ProductosInventarioComponent } from './productos/productos-inventario/productos-inventario.component';
+
 
 
 // Módulos y servicios
@@ -59,7 +61,8 @@ import { NgSelectModule } from '@ng-select/ng-select';
     GraficoTotalSedeComponent,
     GraficoPacientesPorMesComponent,
     ProductosListComponent,
-    ProductoModalComponent
+    ProductoModalComponent,
+    ProductosInventarioComponent
   ],
   imports: [
     NgChartsModule,

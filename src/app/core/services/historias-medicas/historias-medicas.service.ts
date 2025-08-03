@@ -4,7 +4,8 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators'; // Importa el operador map
 import { environment } from '../../../../environments/environment';
-import { HistoriaMedica, HistoriaMedicaCompleta, Conformidad } from './../../../view/historias-medicas/historias_medicas-interface';
+import { HistoriaMedica, HistoriaMedicaCompleta, Conformidad, HistorialResponse, RespuestaCreacionHistoria } from './../../../view/historias-medicas/historias_medicas-interface';
+
 
 @Injectable({
   providedIn: 'root'
@@ -21,22 +22,25 @@ export class HistoriaMedicaService {
   }
 
   // En historia-medica.service.ts
-  getHistoriasPorPaciente(pacienteId: string): Observable<HistoriaMedica[]> {
-    return this.http.get<HistoriaMedica[]>(`${environment.apiUrl}/historias?pacienteId=${pacienteId}`);
+  getHistoriasPorPaciente(pacienteKey: string): Observable<HistoriaMedica[]> {
+    const url = `${environment.apiUrl}/historial-medico-paciente/${pacienteKey}`;
+    return this.http.get<HistorialResponse>(url).pipe(
+      map(response => response.historiales_medicos),
+      catchError(error => {
+        console.error('Error al obtener historias del paciente:', error);
+        return of([]);
+      })
+    );
   }
 
-  createHistoria(historia: HistoriaMedica): Observable<HistoriaMedica> {
-    return this.http.post<HistoriaMedica>(`${environment.apiUrl}/historias-medicas`, historia);
+  createHistoria(historia: HistoriaMedica): Observable<RespuestaCreacionHistoria> {
+    return this.http.post<RespuestaCreacionHistoria>(`${environment.apiUrl}/historial-medico-add`, historia);
   }
+
 
   updateHistoria(historia: HistoriaMedica): Observable<HistoriaMedica> {
-    return this.http.post<HistoriaMedica>(`${environment.apiUrl}/historias-medicas`, historia);
+    return this.http.post<HistoriaMedica>(`${environment.apiUrl}/historial-medico-update`, historia);
   }
-
-
-
-
-
 
   // Métodos auxiliares con implementación completa
   public calcularEdad(fechaNacimiento: string): number {

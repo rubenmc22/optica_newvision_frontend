@@ -4,9 +4,8 @@
     <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
       <h4 class="mb-0">📦 Catálogo de productos</h4>
       <div class="ms-auto">
-        <button class="btn btn-light btn-sm" (click)="abrirModal('agregar')" [disabled]="sedeFiltro !== sedeActiva">
-          ➕ Agregar producto
-        </button>
+        <button (click)="abrirModal('agregar')" class="btn btn-light btn-sm">➕ Agregar producto</button>
+
       </div>
     </div>
 
@@ -25,8 +24,8 @@
         <!-- Buscador -->
         <div class="col-md-4">
           <label for="filtroBusqueda" class="form-label">🔎 Productos</label>
-          <input id="filtroBusqueda" type="text" class="form-control"
-            placeholder="Buscar por nombre, código o tipo" [(ngModel)]="filtroBusqueda" />
+          <input id="filtroBusqueda" type="text" class="form-control" placeholder="Buscar por nombre, código o tipo"
+            [(ngModel)]="filtroBusqueda" />
         </div>
 
         <!-- Filtro por categoría -->
@@ -70,15 +69,15 @@
           <h5 class="mb-0 fw-bold text-primary">Listado de productos</h5>
           <small class="text-muted">
             {{
-              productosFiltrados.length > 0
-                ? 'Mostrando ' + productosFiltrados.length + ' disponibles'
-                : 'No hay productos disponibles 😕'
+            productosFiltrados.length > 0
+            ? 'Mostrando ' + productosFiltrados.length + ' disponibles'
+            : 'No hay productos disponibles 😕'
             }}
           </small>
         </div>
       </div>
 
-      <!-- Vista vacía posicionada debajo del encabezado -->
+      <!-- Vista vacía -->
       <div *ngIf="productosFiltrados.length === 0" class="text-center text-muted py-5">
         <i class="fas fa-box-open fa-2x mb-2"></i>
         <p class="mb-0">No hay productos que coincidan con los filtros actuales.</p>
@@ -89,13 +88,11 @@
         <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3" *ngFor="let producto of productosPaginados">
           <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
             <div class="position-relative">
-              <img [src]="producto.imagenUrl ? producto.imagenUrl : 'assets/placeholder.jpg'"
-                class="card-img-top" [alt]="producto.nombre" style="height: 180px; object-fit: cover;" />
+              <img [src]="producto.imagenUrl ? producto.imagenUrl : 'assets/placeholder.jpg'" class="card-img-top"
+                [alt]="producto.nombre" style="height: 180px; object-fit: cover;" />
 
               <!-- Estado del producto -->
-              <span
-                class="position-absolute top-0 start-0 m-2 px-2 py-1 rounded text-white small fw-bold"
-                [ngClass]="{
+              <span class="position-absolute top-0 start-0 m-2 px-2 py-1 rounded text-white small fw-bold" [ngClass]="{
                   'bg-success': producto.activo && producto.stock > 0,
                   'bg-secondary': !producto.activo
                 }">
@@ -127,8 +124,7 @@
               <!-- Stock -->
               <div class="d-flex align-items-center gap-2 mb-3">
                 <i class="fas fa-box text-secondary"></i>
-                <span class="fw-medium"
-                  [ngClass]="{
+                <span class="fw-medium" [ngClass]="{
                     'text-success': producto.stock > 5,
                     'text-warning': producto.stock < 5 && producto.stock > 0,
                     'text-danger': producto.stock === 0
@@ -147,8 +143,7 @@
 
               <!-- Botones -->
               <div class="mt-auto pt-2 d-flex justify-content-between">
-                <button class="btn btn-sm btn-light text-info border border-info"
-                  (click)="abrirModal('ver', producto)">
+                <button class="btn btn-sm btn-light text-info border border-info" (click)="abrirModal('ver', producto)">
                   👁️ Ver
                 </button>
                 <button class="btn btn-sm btn-light text-warning border border-warning"
@@ -167,8 +162,7 @@
           <li class="page-item" [class.disabled]="paginaActual === 1">
             <button class="page-link" (click)="cargarPagina(paginaActual - 1)">◀</button>
           </li>
-          <li class="page-item" *ngFor="let pagina of paginasVisibles"
-            [class.active]="paginaActual === pagina">
+          <li class="page-item" *ngFor="let pagina of paginasVisibles" [class.active]="paginaActual === pagina">
             <button class="page-link" (click)="cargarPagina(pagina)">
               {{ pagina }}
             </button>
@@ -179,13 +173,10 @@
         </ul>
       </nav>
     </div>
-    <!-- Espacio inferior para evitar solapamiento con el footer -->
-<div style="height: 90px;"></div>
 
+    <div style="height: 90px;"></div>
   </div>
-
-  <!-- Modal dinámico -->
-  <app-producto-modal *ngIf="mostrarModal" [modo]="modoModal" [producto]="productoSeguro"
-    (onGuardar)="guardarProducto($event)" (onCerrar)="cerrarModal()">
-  </app-producto-modal>
 </div>
+
+
+

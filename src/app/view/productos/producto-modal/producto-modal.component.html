@@ -1,0 +1,150 @@
+<div class="modal-overlay">
+  <div class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-lg">
+      <form #formProducto="ngForm" class="modal-content border-0 shadow">
+        
+        <!-- Header -->
+        <div class="modal-header bg-gradient-primary text-white py-2 px-3">
+          <h5 class="modal-title fw-semibold">
+            <i class="fas" [ngClass]="{
+              'fa-plus': modo === 'agregar',
+              'fa-edit': modo === 'editar',
+              'fa-eye': modo === 'ver'
+            }" class="me-2"></i>
+            {{
+            modo === 'agregar' ? 'Agregar Producto' :
+            modo === 'editar' ? 'Editar Producto' : 'Ver Producto'
+            }}
+          </h5>
+          <button type="button" class="btn-close btn-close-white" aria-label="Close"
+            (click)="onCerrar.emit()"></button>
+        </div>
+
+        <!-- Cuerpo del modal con scroll -->
+        <div class="modal-body-custom">
+          <div class="container-fluid">
+            <!-- Fila superior: Imagen + Código + Estado -->
+            <div class="row g-3 mb-4">
+              <!-- Imagen -->
+              <div class="col-md-6 d-flex align-items-center justify-content-center">
+                <div class="avatar-widget">
+                  <img [src]="getProfileImage()" alt="Avatar del Producto" class="avatar-img"
+                    (error)="handleImageError($event)" />
+                  <div class="avatar-overlay show-on-hover">
+                    <label for="avatarUpload"><i class="fas fa-camera"></i></label>
+                    <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
+                      (change)="onFileSelected($event)" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Código y Estado -->
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label class="form-label">
+                    🆔 Código <span data-bs-toggle="tooltip"
+                      title="Identificador único del producto.">🛈</span>
+                  </label>
+                  <input type="text" class="form-control" [(ngModel)]="producto.codigo" name="codigo"
+                    required [disabled]="esSoloLectura" />
+                </div>
+
+                <div class="form-check form-switch">
+                  <label class="form-label d-block mb-1">
+                    🆔 Estatus
+                    <span data-bs-toggle="tooltip" title="Estado del producto">🛈</span>
+                  </label>
+                  <div class="d-flex align-items-center">
+                    <input class="form-check-input" type="checkbox" role="switch" id="estadoSwitch"
+                      [(ngModel)]="producto.activo" name="activo" [disabled]="esSoloLectura" />
+                    <label class="form-check-label fw-semibold ms-2" for="estadoSwitch">
+                      {{ producto.activo ? '🟢 Activo' : '⚪️ Inactivo' }}
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resto del formulario -->
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">🏷️ Marca</label>
+                <input type="text" class="form-control" [(ngModel)]="producto.marca" name="marca"
+                  required [disabled]="esSoloLectura" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">🧠 Modelo</label>
+                <input type="text" class="form-control" [(ngModel)]="producto.nombre" name="nombre"
+                  [disabled]="esSoloLectura" />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">📚 Categoría</label>
+                <input type="text" class="form-control" [(ngModel)]="producto.categoria" name="categoria"
+                  required [disabled]="esSoloLectura" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">🎨 Color</label>
+                <input type="text" class="form-control" [(ngModel)]="producto.color" name="color"
+                  [disabled]="esSoloLectura" />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">🧵 Material</label>
+                <input type="text" class="form-control" [(ngModel)]="producto.material" name="material"
+                  required [disabled]="esSoloLectura" />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">🚚 Proveedor</label>
+                <input type="text" class="form-control" [(ngModel)]="producto.proveedor" name="proveedor"
+                  required [disabled]="esSoloLectura" />
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">📦 Stock</label>
+                <input type="number" class="form-control" [(ngModel)]="producto.stock" name="stock"
+                  required min="0" [disabled]="esSoloLectura" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">💵 Precio</label>
+                <input type="number" class="form-control" [(ngModel)]="producto.precio" name="precio"
+                  required min="0" [disabled]="esSoloLectura" />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">💲 Moneda</label>
+                <select class="form-select" [(ngModel)]="producto.moneda" name="moneda" required
+                  [disabled]="esSoloLectura">
+                  <option value="usd">USD</option>
+                  <option value="ves">VES</option>
+                </select>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label">📝 Descripción</label>
+                <textarea class="form-control" rows="3" [(ngModel)]="producto.descripcion" name="descripcion"
+                  [disabled]="esSoloLectura"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer-custom border-0 bg-light">
+          <button *ngIf="modo === 'ver'" type="button" class="btn btn-secondary px-4" (click)="onCerrar.emit()">
+            <i class="bi bi-x-lg me-1"></i> Cerrar
+          </button>
+
+          <ng-container *ngIf="modo !== 'ver'">
+            <button type="button" class="btn btn-outline-secondary px-4" (click)="onCerrar.emit()">
+              <i class="bi bi-x-lg me-1"></i> Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary px-4"
+              [disabled]="!formularioModificado() || !formularioValido()">
+              <i class="bi bi-check-lg me-1"></i> {{ modo === 'editar' ? 'Actualizar' : 'Guardar' }}
+            </button>
+          </ng-container>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

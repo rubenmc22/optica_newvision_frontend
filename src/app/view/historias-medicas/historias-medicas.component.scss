@@ -24,6 +24,21 @@
   }
 }
 
+/* Contenedores padres (crítico) */
+.table-responsive-custom {
+  overflow: visible !important;
+}
+
+td {
+  position: relative;
+}
+
+table {
+  overflow: visible !important;
+}
+
+/* ------------------------------------ */
+/* Estilos existentes (se mantienen igual) */
 .card-header {
   font-size: 1.2rem;
   background: var(--degradado-color) !important;
@@ -36,7 +51,6 @@
   background: var(--degradado-pastel) !important;
 }
 
-/* Fondo general de la sección clínica */
 .historia-medica-container {
   min-height: 100vh;
   background-color: #f8f9fa;
@@ -47,17 +61,52 @@
   border-top: 1px solid #ccc !important;
 }
 
-/* Estilo moderno para scroll vertical */
-.card-body::-webkit-scrollbar {
+//scroll tables
+.ng-dropdown-panel .ng-dropdown-panel-items::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
-.card-body::-webkit-scrollbar-track {
+.ng-dropdown-panel .ng-dropdown-panel-items::-webkit-scrollbar-track {
+  background: #f5f5f5 !important;
+  border-radius: 4px;
+}
+
+.ng-dropdown-panel .ng-dropdown-panel-items::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 123, 255, 0.5) !important;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: background-color 0.3s ease;
+}
+
+.ng-dropdown-panel .ng-dropdown-panel-items::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 123, 255, 0.8) !important;
+}
+
+
+/* Scrollbars */
+.card-body::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar,
+.table-responsive-custom::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.card-body::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 4px;
 }
 
-.card-body::-webkit-scrollbar-thumb {
+.table-responsive-custom::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.card-body::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb,
+.table-responsive-custom::-webkit-scrollbar-thumb {
   background-color: rgba(0, 123, 255, 0.5);
   border-radius: 4px;
   border: 2px solid transparent;
@@ -65,17 +114,13 @@
   transition: background-color 0.3s ease;
 }
 
-.card-body::-webkit-scrollbar-thumb:hover {
+.card-body::-webkit-scrollbar-thumb:hover,
+.modal-body::-webkit-scrollbar-thumb:hover,
+.table-responsive-custom::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 123, 255, 0.8);
 }
 
-/* Contenedor principal */
-.tablas-optometria-container {
-  width: 100%;
-  overflow-y: visible;
-}
-
-/* Scroll horizontal personalizado para cada tabla */
+/* Tablas */
 .table-responsive-custom {
   width: 100%;
   overflow-x: auto;
@@ -95,112 +140,13 @@
   width: 100%;
 }
 
-/* Estilos para el scrollbar del modal-body */
-.modal-body::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.modal-body::-webkit-scrollbar-track {
-  background: #f5f5f5;
-  border-radius: 4px;
-}
-
-.modal-body::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 123, 255, 0.5);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-  transition: background-color 0.3s ease;
-}
-
-.modal-body::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 123, 255, 0.8);
-}
-
-
-/* Estilo para la barra de scroll */
-.table-responsive-custom::-webkit-scrollbar {
-  height: 8px;
-}
-
-.table-responsive-custom::-webkit-scrollbar-track {
-  background: #f5f5f5;
-  border-radius: 4px;
-}
-
-.table-responsive-custom::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 123, 255, 0.5);
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-  transition: background-color 0.3s ease;
-}
-
-.table-responsive-custom::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 123, 255, 0.8);
-}
-
-/* Estilos para Firefox (ambos casos) */
-.modal-body,
-.table-responsive-custom {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 123, 255, 0.5) #f5f5f5;
-}
-
-/* Estilos para selects */
-.select-optometria {
-  min-width: 80px;
-  width: 100%;
-  position: relative;
-}
-
-::ng-deep .select-optometria .ng-dropdown-panel {
-  z-index: 9999 !important;
-  position: fixed !important;
-  width: auto !important;
-  min-width: 100%;
-  max-height: 200px !important;
-  overflow-y: auto !important;
-}
-
-::ng-deep .select-optometria .ng-select-container {
-  position: relative;
-  z-index: auto;
-}
-
-.table td .ng-select {
-  min-width: 100px;
-  width: 100%;
-}
-
-/* Estilos para móviles */
-@media (max-width: 767.98px) {
-  .table-responsive-custom {
-    border: none;
-    background: transparent;
-  }
-
-  .table-responsive-custom>.table {
-    min-width: 100%;
-  }
-
-  ::ng-deep .select-optometria .ng-dropdown-panel {
-    width: 100% !important;
-    left: 0 !important;
-    right: 0 !important;
-  }
-}
-
+/* Modales */
 .modal-header {
   font-size: 1.2rem;
   background: var(--degradado-color) !important;
-  /* Fondo amarillo */
   color: var(--details-color) !important;
-  /* Texto negro */
   font-weight: bold;
   border-bottom: 2px solid var(--secondary-color);
-  /* Línea divisoria negra */
 
   .bi-plus-lg,
   .fa-plus {
@@ -212,16 +158,14 @@
   .btn-close {
     filter: invert(1) grayscale(100%) brightness(200%);
   }
-
 }
 
-//Modal detalles de pacientes
 .modal-title {
   text-align: left;
   color: var(--details-color);
-  //   font-weight: bold;
 }
 
+/* Botones */
 .btn-primary {
   background: var(--degradado-color);
   border: var(--degradado-color);
@@ -244,7 +188,7 @@
   }
 }
 
-/* Animación suave al cargar contenido */
+/* Animaciones */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -269,12 +213,20 @@
   transition: background-color 0.3s ease;
 }
 
-/* Estilos personalizados para opciones del select */
-.select-optometria .ng-dropdown-panel {
-  max-height: 200px;
+/* Responsive */
+@media (max-width: 767.98px) {
+  .table-responsive-custom {
+    border: none;
+    background: transparent;
+  }
 
-  .ng-option {
-    padding: 5px 10px;
-    font-size: 14px;
+  .table-responsive-custom>.table {
+    min-width: 100%;
+  }
+
+  ::ng-deep .select-optometria .ng-dropdown-panel {
+    width: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
   }
 }

@@ -239,24 +239,41 @@ export const OPCIONES_ANTECEDENTES: string[] = [
 ];
 
 export const MOTIVOS_CONSULTA: string[] = [
-  'Molestia ocular',
-  'Fatiga visual',
-  'Consulta rutinaria',
-  'Actualizar fórmula',
-  'Sensibilidad lumínica',
-  'Dolor de cabeza',
-  'Evaluación prequirúrgica',
-  'Control post-operatorio',
-  'Dificultad visual lejos',
-  'Dificultad visual cerca',
-  'Otro'
+    'Molestia ocular',
+    'Fatiga visual',
+    'Consulta rutinaria',
+    'Actualizar fórmula',
+    'Sensibilidad lumínica',
+    'Dolor de cabeza',
+    'Evaluación prequirúrgica',
+    'Control post-operatorio',
+    'Dificultad visual lejos',
+    'Dificultad visual cerca',
+    'Otro'
 ];
 
 export const TIPOS_CRISTALES: string[] = [
-  'Monofocal visión sencilla',
-  'Visión sencilla digital',
-  'Bifocal',
-  'Progresivo digital básico',
-  'Progresivo digital intermedio',
-  'Progresivo digital amplio'
+    'Monofocal visión sencilla',
+    'Visión sencilla digital',
+    'Bifocal',
+    'Progresivo digital básico',
+    'Progresivo digital intermedio',
+    'Progresivo digital amplio'
+];
+
+export const MATERIALES: OpcionSelect[] = [
+    { value: 'CR39', label: 'CR39' },
+    { value: 'AR_VERDE', label: 'Antirreflejo verde' },
+    { value: 'AR_BLUE_BLOCK', label: 'Antirreflejo Blue Block' },
+    { value: 'FOTOCROMATICO_CR39', label: 'Fotocromático CR39' },
+    { value: 'FOTOCROMATICO_AR', label: 'Fotocromático Antirreflejo' },
+    { value: 'FOTOCROMATICO_BLUE_BLOCK', label: 'Fotocromático Blue Block' },
+    { value: 'POLICARBONATO', label: 'Policarbonato' },
+    { value: 'HI_INDEX_156', label: 'Hi Index 1.56' },
+    { value: 'HI_INDEX_167', label: 'Hi Index 1.67' },
+    { value: 'HI_INDEX_174', label: 'Hi Index 1.74' },
+    { value: 'TRANSICION_PLUS', label: 'Transición Pluss' },
+    { value: 'FOTOSENSIBLE', label: 'Fotosensible' },
+    { value: 'POLICARBONATO_BLUE_BLOCK', label: 'Policarbonato Blue Block' },
+    { value: 'OTRO', label: 'Otro (especificar)' }
 ];

@@ -16,6 +16,7 @@ import { TasaComponent } from './view/tasa-cambiaria/tasa.component';
 import { VerPacientesComponent } from './view/pacientes/pacientes.component';
 import { HistoriasMedicasComponent } from './view/historias-medicas/historias-medicas.component';
 import { ProductosListComponent } from './view/productos/productos-list/productos-list.component';
+import { ProductosInventarioComponent } from './view/productos/productos-inventario/productos-inventario.component';
 
 
 // Nombre de la óptica (constante global)
@@ -102,8 +103,13 @@ export const appRoutes: Routes = [
         title: getFullTitle('historias-medicas')
       },
       {
-        path: 'productos',
+        path: 'productos-catalogo',
         component: ProductosListComponent,
+        title: getFullTitle('Catálogo de productos')
+      },
+      {
+        path: 'productos-inventario',
+        component: ProductosInventarioComponent,
         title: getFullTitle('Inventario de productos')
       },
 

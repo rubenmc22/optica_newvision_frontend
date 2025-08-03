@@ -8,6 +8,8 @@ export interface Producto {
   material?: string;
   moneda: string;
   stock: number;
+  categoria: string;
+  proveedor: string;
   precio: number;
   activo: boolean;
   descripcion?: string;
