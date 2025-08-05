@@ -13,8 +13,11 @@ export interface HistoriaMedicaBase {
 export interface DatosConsulta {
   motivo: string | string[];
   otroMotivo?: string;
-  medico: string;
-  asesor?: string;
+  //  medico: string;
+  nombre_medico: string;
+  cedula_medico: string;
+  nombre_asesor?: string;
+  cedula_asesor?: string;
   cedulaAsesor?: string;
 }
 

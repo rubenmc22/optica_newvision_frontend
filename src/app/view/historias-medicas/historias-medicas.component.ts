@@ -11,11 +11,12 @@ import {
 } from 'src/app/shared/constants/historias-medicas';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HistoriaMedicaService } from '../../core/services/historias-medicas/historias-medicas.service';
-
+import { take } from 'rxjs/operators';
 import * as bootstrap from 'bootstrap';
 import { SwalService } from '../../core/services/swal/swal.service';
 import { ModalService } from '../../core/services/modal/modal.service';
 import { PacientesService } from '../../core/services/pacientes/pacientes.service';
+import { AuthService } from '../../core/services/auth/auth.service';
 import { UserStateService } from '../../core/services/userState/user-state-service';
 import { HttpErrorResponse } from '@angular/common/http';
 
@@ -23,6 +24,8 @@ import { Subject, Observable, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, tap, takeUntil } from 'rxjs/operators';
 import { EmpleadosService } from './../../core/services/empleados/empleados.service';
 import { Empleado } from '../../Interfaces/models-interface';
+import { Sede } from '../../view/login/login-interface';
+import { forkJoin } from 'rxjs'
 
 
 declare var $: any;
@@ -36,8 +39,6 @@ declare var $: any;
 export class HistoriasMedicasComponent implements OnInit {
   // Estados del componente
   busqueda: string = '';
-  // Agrega esto en la sección de propiedades de tu componente
-  input$ = new Subject<string>();
   cargando: boolean = false;
   mostrarElementos = false;
   mostrarSinHistorial = false;
@@ -46,9 +47,11 @@ export class HistoriasMedicasComponent implements OnInit {
   maxDate: string;
   sedeActiva: string = '';
   sedeFiltro: string = this.sedeActiva;
+  sedesDisponibles: Sede[] = [];
   filtro: string = '';
-  sedesDisponibles: string[] = [];
+  // sedesDisponibles: string[] = [];
   pacienteParaNuevaHistoria: Paciente | null = null;
+  pacientesFiltradosPorSede: Paciente[] = [];
 
   //Empleados
   isLoading = true;
@@ -78,7 +81,6 @@ export class HistoriasMedicasComponent implements OnInit {
   motivosConsulta = MOTIVOS_CONSULTA;
   tiposCristales = TIPOS_CRISTALES;
   materiales: typeof MATERIALES;
-  typeahead$ = new Subject<string>();
   materialLabels!: Map<TipoMaterial, string>;
 
   readonly materialesValidos = new Set<TipoMaterial>([
@@ -107,6 +109,8 @@ export class HistoriasMedicasComponent implements OnInit {
     private userStateService: UserStateService,
     private snackBar: MatSnackBar,
     private empleadosService: EmpleadosService,
+    private authService: AuthService,
+
   ) {
 
     this.materiales = MATERIALES;
@@ -276,55 +280,109 @@ export class HistoriasMedicasComponent implements OnInit {
     // Limpiar otros datos relacionados si es necesario
   }
 
-  private inicializarSedeDesdeUsuario(): void {
-    this.userStateService.currentUser$.subscribe(user => {
-      this.sedeActiva = user?.sede ?? 'guatire';
+  private inicializarDatosIniciales(): void {
+    forkJoin({
+      user: this.userStateService.currentUser$.pipe(take(1)),
+      sedes: this.authService.getSedes().pipe(take(1))
+    }).subscribe(({ user, sedes }) => {
+      // 🧼 Normaliza y ordena las sedes
+      this.sedesDisponibles = (sedes.sedes ?? [])
+        .map(s => ({
+          ...s,
+          key: s.key?.trim().toLowerCase() || '',
+          nombre: s.nombre?.trim() || ''
+        }))
+        .sort((a, b) =>
+          a.nombre.replace(/^sede\s+/i, '').localeCompare(
+            b.nombre.replace(/^sede\s+/i, ''),
+            'es',
+            { sensitivity: 'base' }
+          )
+        );
+
+
+      console.log('Sedes disponibles:', this.sedesDisponibles.map(s => s.key));
+
+      // 🧠 Detecta sede del usuario
+      const sedeUsuario = (user?.sede ?? '').trim().toLowerCase();
+      const sedeValida = this.sedesDisponibles.some(s => s.key === sedeUsuario);
+
+      console.log('sedeUsuario', sedeUsuario);
+      console.log('sedeValida', sedeValida);
+
+      // 🏥 Aplica sede activa y filtro
+      this.sedeActiva = sedeValida ? sedeUsuario : '';
       this.sedeFiltro = this.sedeActiva;
-      // console.log('Sede activa:', this.sedeActiva);
-      this.cargarPacientes();
+
+      this.cargarPacientes(); // ← Ya aplica el filtro por sede
     });
   }
 
-  ngOnInit(): void {
-    this.typeahead$
-      .pipe(
-        debounceTime(200),
-        distinctUntilChanged()
-      )
-      .subscribe(term => {
-        // Puedes usar esto para filtrar pacientes si lo prefieres
-        this.filtro = term;
-        this.actualizarPacientesFiltrados();
+
+
+  actualizarPacientesPorSede(): void {
+    const sedeId = this.sedeFiltro?.trim().toLowerCase();
+
+    console.log('Sede filtro:', sedeId); // 👈 Verifica qué valor tiene
+
+    this.pacientesFiltradosPorSede = !sedeId
+      ? [...this.pacientes]
+      : this.pacientes.filter(p => {
+        console.log('Paciente sede:', p.sede); // 👈 Verifica qué sede tiene cada paciente
+        return p.sede === sedeId;
       });
+  }
 
-    this.historiasMock = {};
-    this.inicializarSedeDesdeUsuario();
+  ngOnInit(): void {
     this.configurarSubscripciones();
-    this.cargarPacientes();
+    this.inicializarDatosIniciales(); // Aquí se cargan usuario + sedes + pacientes
 
-    // En el ngOnInit, después de inicializar otras propiedades
-    this.input$.pipe(
-      debounceTime(300),
-      distinctUntilChanged(),
-      tap(() => this.cargando = true),
-      switchMap(term => this.filtrarPacientes(term))
-    ).subscribe();
-
-    // ✨ Forzamos cambio de referencia al terminar la carga inicial
+    // Limpieza visual al iniciar
     setTimeout(() => {
       this.pacienteIdSeleccionado = null;
       this.pacienteSeleccionado = null;
     }, 0);
   }
 
-  private filtrarPacientes(term: string): Observable<Paciente[]> {
-    if (!term.trim()) {
-      return of(this.pacientes);
-    }
-    return of(this.pacientes.filter(paciente =>
-      paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(term.toLowerCase()) ||
-      paciente.informacionPersonal.cedula.toLowerCase().includes(term.toLowerCase())
-    ));
+
+  cargarSedes(): void {
+    console.log('Sedes cargadas:', this.sedesDisponibles);
+    this.authService.getSedes().subscribe({
+      next: (response) => {
+        this.sedesDisponibles = response.sedes;
+      },
+      error: (err) => {
+        console.error('Error al cargar sedes:', err);
+      }
+    });
+  }
+
+  actualizarFiltroTexto(event: { term: string; items: any[] }): void {
+    const texto = event.term;
+    console.log('📝 Texto buscado:', texto);
+    this.filtro = texto;
+    this.actualizarPacientesFiltrados();
+  }
+
+
+  logEventoSearch(event: any): void {
+    console.log('Evento search:', event);
+  }
+
+  filtrarPacientes(term: string): Observable<Paciente[]> {
+    const sedeFiltrada = this.sedeFiltro?.trim().toLowerCase();
+
+    const pacientesFiltrados = this.pacientes.filter(paciente => {
+      const coincideConSede = !sedeFiltrada || paciente.sede === sedeFiltrada;
+      const coincideConBusqueda =
+        !term.trim() ||
+        paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(term.toLowerCase()) ||
+        paciente.informacionPersonal.cedula.toLowerCase().includes(term.toLowerCase());
+
+      return coincideConSede && coincideConBusqueda;
+    });
+
+    return of(pacientesFiltrados);
   }
 
   // Métodos de carga de datos
@@ -333,6 +391,8 @@ export class HistoriasMedicasComponent implements OnInit {
       next: (data) => {
         const getSedeFromKey = (key: string): string =>
           key?.split('-')[0]?.toLowerCase() ?? 'sin-sede';
+
+        console.log('getSedeFromKey', getSedeFromKey);
 
         this.pacientes = Array.isArray(data.pacientes)
           ? data.pacientes.map((p: any) => {
@@ -378,13 +438,8 @@ export class HistoriasMedicasComponent implements OnInit {
             };
           })
           : [];
-
+        this.actualizarPacientesPorSede(); // Aquí ya puedes filtrar
         this.actualizarPacientesFiltrados(); // ← Aquí
-        const sedesSet = new Set<string>();
-        this.pacientes.forEach((p) => {
-          if (p.sede) sedesSet.add(p.sede);
-        });
-        this.sedesDisponibles = Array.from(sedesSet);
       },
       error: (error) => {
         console.error('Error al cargar pacientes:', error);
@@ -444,9 +499,10 @@ export class HistoriasMedicasComponent implements OnInit {
       // Datos de consulta
       motivo: Array.isArray(dc.motivo) ? dc.motivo : [dc.motivo],
       otroMotivo: dc.otroMotivo,
-      medico: dc.medico,
-      asesor: dc.asesor,
-      cedulaAsesor: dc.cedulaAsesor,
+      nombre_medico: dc.nombre_medico,
+      cedula_medico: dc.cedula_medico,
+      nombre_asesor: dc.nombre_asesor,
+      cedula_asesor: dc.cedula_asesor,
 
       // Antecedentes
       tipoCristalActual: ant.tipoCristalActual,
@@ -550,51 +606,6 @@ export class HistoriasMedicasComponent implements OnInit {
     } else {
       this.crearHistoria(); // ya lo tienes listo
     }
-  }
-
-  private construirHistoriaMedica(): HistoriaMedica {
-    const formValue = this.historiaForm.value;
-
-    return {
-      id: this.modoEdicion && this.historiaSeleccionada ? this.historiaSeleccionada.id : `h${Date.now()}`,
-      nHistoria: this.modoEdicion && this.historiaSeleccionada ? this.historiaSeleccionada.nHistoria : `HIS-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
-      fecha: new Date().toISOString(),
-      horaEvaluacion: formValue.horaEvaluacion,
-      pacienteId: formValue.pacienteId.id || formValue.pacienteId,
-
-      datosConsulta: {
-        motivo: formValue.motivo.includes('Otro') ? formValue.otroMotivo : formValue.motivo,
-        otroMotivo: formValue.otroMotivo,
-        medico: formValue.medico,
-        asesor: formValue.asesor,
-        cedulaAsesor: formValue.cedulaAsesor
-      },
-
-      antecedentes: this.mapAntecedentes(),
-
-      examenOcular: this.mapExamenOcular(),
-
-      diagnosticoTratamiento: {
-        diagnostico: formValue.diagnostico ?? '',
-        tratamiento: formValue.tratamiento ?? ''
-      },
-
-      recomendaciones: this.mapRecomendaciones(),
-
-      conformidad: {
-        notaConformidad: this.notaConformidad,
-        firmaPaciente: '',
-        firmaMedico: '',
-        firmaAsesor: ''
-      },
-
-      auditoria: {
-        fechaCreacion: new Date().toISOString(),
-        creadoPor: 'usuario_actual',
-        fechaActualizacion: this.modoEdicion ? new Date().toISOString() : undefined,
-        actualizadoPor: this.modoEdicion ? 'usuario_actual' : undefined
-      }
-    };
   }
 
   private mapExamenOcular(): ExamenOcular {
@@ -729,7 +740,7 @@ export class HistoriasMedicasComponent implements OnInit {
       datosConsulta: {
         motivo: Array.isArray(formValue.motivo) ? formValue.motivo : [formValue.motivo],
         otroMotivo: formValue.otroMotivo || '',
-        medico: formValue.medico?.cedula || 'Médico no especificado',
+        medico: formValue.medico?.cedula,
       },
       examenOcular: {
         lensometria: {
@@ -988,20 +999,27 @@ export class HistoriasMedicasComponent implements OnInit {
 
 
   actualizarPacientesFiltrados(): void {
-    const filtroTexto = this.filtro.trim().toLowerCase();
-    const sedeFiltro = this.sedeFiltro?.toLowerCase() ?? 'todas';
+    const normalizar = (texto: string): string =>
+      texto
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // elimina acentos
+        .trim();
 
-    console.log('filtroTexto', filtroTexto);
+    const filtroTexto = normalizar(this.filtro || '');
+    const sedeFiltro = normalizar(this.sedeFiltro || 'todas');
+
     this.pacientesFiltrados = this.pacientes.filter(paciente => {
       const info = paciente.informacionPersonal;
-      const sedePaciente = paciente.sede?.toLowerCase() ?? 'sin-sede';
+      const nombre = normalizar(info?.nombreCompleto || '');
+      const cedula = normalizar(String(info?.cedula || ''));
+      const sedePaciente = normalizar(paciente.sede || 'sin-sede');
 
-      const coincideTexto =
-        info.nombreCompleto?.toLowerCase().includes(filtroTexto) ||
-        String(info.cedula)?.toLowerCase().includes(filtroTexto);
+      const coincideTexto = !filtroTexto || (
+        nombre.includes(filtroTexto) || cedula.includes(filtroTexto)
+      );
 
-      const coincideSede =
-        sedeFiltro === 'todas' || sedePaciente === sedeFiltro;
+      const coincideSede = sedeFiltro === 'todas' || sedePaciente === sedeFiltro;
 
       return coincideSede && coincideTexto;
     });
@@ -1015,6 +1033,7 @@ export class HistoriasMedicasComponent implements OnInit {
       this.pacienteSeleccionado = null;
     }
   }
+
 
   compararPacientes(p1: any, p2: any): boolean {
     return p1 && p2

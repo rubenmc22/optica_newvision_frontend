@@ -116,7 +116,6 @@ export class AuthService {
     return this.http.get<{ sedes: Sede[] }>(`${environment.apiUrl}/sedes-get`);
   }
 
-
   hasAcceptedTyC(): boolean {
     return this.currentUserValue?.user?.tyc_aceptado === 1;
   }

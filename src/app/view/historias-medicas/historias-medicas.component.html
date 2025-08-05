@@ -15,24 +15,26 @@
       <div class="row mb-3">
         <div class="col-md-4">
           <label for="filtroSede" class="form-label">📍 Filtrar por sede</label>
-          <select id="filtroSede" class="form-select" [(ngModel)]="sedeFiltro">
-            <option value="todas">Todas las sedes</option>
-            <option *ngFor="let sede of sedesDisponibles" [value]="sede.toLowerCase()">
-              {{ sede | titlecase }}
+          <select [(ngModel)]="sedeFiltro" (change)="actualizarPacientesPorSede()" class="form-select">
+            <option value="">Todas las sedes</option>
+            <option *ngFor="let sede of sedesDisponibles" [value]="sede.key ? sede.key.toLowerCase() : ''">
+              {{ sede.nombre }}
             </option>
           </select>
         </div>
 
         <div class="col-md-8">
           <label for="selectorPaciente" class="form-label">👤 Buscar y seleccionar paciente</label>
-          <ng-select [items]="pacientes" bindLabel="informacionPersonal.nombreCompleto" [selectOnTab]="true"
+          <ng-select [items]="pacientesFiltradosPorSede" bindLabel="informacionPersonal.nombreCompleto" [selectOnTab]="true"
             [clearable]="true" [searchable]="true" [(ngModel)]="pacienteSeleccionado"
-            (change)="seleccionarHistoriasPorPaciente($event)" placeholder="Buscar por nombre o cédula...">
+            (search)="actualizarFiltroTexto($event)" (change)="seleccionarHistoriasPorPaciente($event)"
+            placeholder="Buscar por nombre o cédula...">
 
             <ng-template ng-option-tmp let-item="item">
               {{item.informacionPersonal.nombreCompleto}} — {{item.informacionPersonal.cedula}}
             </ng-template>
           </ng-select>
+
         </div>
       </div>
       <!-- Mensaje si el paciente no tiene historial -->
@@ -68,7 +70,7 @@
 
                 <!-- 👥 Pie inferior: médico + n° historia -->
                 <div class="d-flex justify-content-between align-items-center mt-2">
-                  <small class="text-muted">👨‍⚕️ {{ historia.datosConsulta.medico }}</small>
+                 <!-- <small class="text-muted">👨‍⚕️ {{ historia.datosConsulta.nombre_medico }}</small> -->
                   <span class="badge bg-info">#{{ historia.nHistoria || '00012345' }}</span>
                 </div>
               </button>
@@ -524,6 +526,43 @@
               </ng-template>
             </div>
           </div>
+          <!-- Nota de conformidad -->
+            <div class="mt-4 pt-0">
+              <div class="alert alert-warning" style="background: var(--degradado-pastel) !important; border: none;">
+                <h6 class="fw-bold">✍️ DECLARACIÓN DE CONFORMIDAD</h6>
+                <p class="mb-0">{{ notaConformidad }}</p>
+              </div>
+            </div>
+
+            <!-- Firmas -->
+            <div class="mt-4 pt-3 border-top mb-4">
+              <div class="row justify-content-between text-center">
+                <!-- Firma del paciente -->
+                <div class="col-md-5">
+                  <p class="mb-1"><strong>Firma del Paciente</strong></p>
+                  <div class="border rounded p-3 bg-light" style="height: 100px;">
+                    <!-- espacio para firma manuscrita -->
+                  </div>
+                  <p class="mt-2 mb-0 text-muted">Nombre: {{ pacienteSeleccionado?.informacionPersonal?.nombreCompleto }}</p>
+                  <p class="mb-0 text-muted">C.I: {{ pacienteSeleccionado?.informacionPersonal?.cedula }}</p>
+                </div>
+                <!-- Firma del médico -->
+                <div class="col-md-5">
+                  <p class="mb-1"><strong>Firma del Médico Tratante</strong></p>
+                  <div class="border rounded p-3 bg-light" style="height: 100px;">
+                    <!-- espacio para firma manuscrita -->
+                  </div>
+               <!--  <p class="mt-2 mb-0 text-muted">Nombre: {{ historiaSeleccionada?.datosConsulta.nombre_medico }}</p>
+                  <p class="mb-0 text-muted">C.I: {{ historiaSeleccionada?.datosConsulta.cedula_medico || 'No disponible' }}</p>-->
+                </div>
+              </div>
+            </div>
+            <div class="col-md-12 pt-4" style="text-align: center;">
+              <p class="mb-1"><strong>Asesor Responsable</strong></p>
+              
+            <!--  <p class="mt-2 mb-0 text-muted">Nombre: {{ historiaSeleccionada.nombre_asesor || 'Nombre del asesor' }}</p>
+              <p class="mb-0 text-muted">Cédula: {{ historiaSeleccionada.cedula_asesor || 'Cedula' }}</p>-->
+            </div>
         </div>
         <div class="card-footer text-end">
           <button class="btn btn-outline-secondary me-2">

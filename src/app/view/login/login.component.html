@@ -15,12 +15,13 @@
           <label for="sede" class="form-label">Sede</label>
           <select class="form-select" id="sede" formControlName="sede">
             <option value="">Seleccione una sede</option>
-            <option *ngFor="let s of sedes" [value]="s.id">{{ s.nombre }}</option>
+            <option *ngFor="let s of sedes" [value]="s.key">{{ s.nombre }}</option>
           </select>
           <div *ngIf="isInvalidField('sede')" class="form-text text-danger">
             <span *ngIf="loginForm.get('sede')?.hasError('required')">La sede es requerida.</span>
           </div>
         </div>
+        
 
         <!-- Campo Cédula -->
         <div class="mb-3">
