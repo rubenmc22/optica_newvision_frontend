@@ -817,7 +817,7 @@ export class HistoriasMedicasComponent implements OnInit {
       next: (respuesta) => {
         this.cargando = false;
         const historiaCreada = respuesta.historial_medico;
-        this.cerrarModal('#historiaModal');
+        this.cerrarModal('historiaModal');
         this.swalService.showSuccess(
           '¡Historia creada!',
           `Historia médica #${historiaCreada.nHistoria ?? 'sin número'} registrada correctamente`
@@ -1087,7 +1087,13 @@ export class HistoriasMedicasComponent implements OnInit {
     this.cargando = true;
     this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
       next: (historias: HistoriaMedica[]) => {
-        this.historial = historias;
+        // 🗂️ Ordenar por fecha descendente
+        this.historial = historias.sort((a, b) => {
+          const fechaA = new Date(a.fecha).getTime();
+          const fechaB = new Date(b.fecha).getTime();
+          return fechaB - fechaA; // Más reciente primero
+        });
+
         this.historiaSeleccionada = this.historial[0] || null;
 
         this.mostrarSinHistorial = this.historial.length === 0;
@@ -1105,6 +1111,7 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     });
   }
+
 
   calcularEdad(fechaNacimiento: string | undefined): number {
     if (!fechaNacimiento) return 0; // o algún valor por defecto
