@@ -62,7 +62,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       icon: 'fas fa-users',
       routerLink: '/productos',
       roles: ['admin', 'gerente', 'asesor-optico'],
-       submenu: [
+      submenu: [
         { label: 'Catálogo', routerLink: '/productos-catalogo', roles: ['admin', 'gerente', 'asesor-optico'] },
         { label: 'Inventario', routerLink: '/productos-inventario', roles: ['admin', 'gerente', 'asesor-optico'] }
       ],
@@ -176,8 +176,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   handleImageError(event: Event): void {
-    const img = event.target as HTMLImageElement;
-    img.src = 'assets/default-photo.png';
+    const target = event.target as HTMLImageElement | null;
+    if (!target) return;
+
+    target.src = 'assets/default-photo.png';
+    this.profileImage = 'assets/default-photo.png'; // Actualiza la referencia
   }
 
   private initializeMenu(): void {

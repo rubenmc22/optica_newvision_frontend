@@ -1,15 +1,13 @@
 import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import * as bootstrap from 'bootstrap';
-import { Empleado, ApiResponse } from '../../Interfaces/models-interface';
+import { Empleado } from '../../Interfaces/models-interface';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 // Servicios
 import { ModalService } from './../../core/services/modal/modal.service';
 import { EmpleadosService } from './../../core/services/empleados/empleados.service';
-import { SwalService } from '../../core/services/swal/swal.service'; 
-import { environment } from '../../../environments/environment';
+import { SwalService } from '../../core/services/swal/swal.service';
 
 // Componentes
 import { DynamicModalComponent } from './../../shared/dynamic-modal/dynamic-modal.component';
@@ -116,7 +114,27 @@ export class EmpleadosComponent implements OnInit {
    * @param employee Empleado a mostrar en el modal
    */
   openViewModal(employee: any): void {
+    const rawDate = employee.fechaNacimiento;
+
+    // Evita el parseo UTC usando componentes separados
+    let date: Date | null = null;
+
+    if (typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+      const [year, month, day] = rawDate.split('-').map(Number);
+      date = new Date(year, month - 1, day); // Local time
+    } else {
+      date = new Date(rawDate);
+    }
+
+    if (date && !isNaN(date.getTime())) {
+      const dayStr = String(date.getDate()).padStart(2, '0');
+      const monthStr = String(date.getMonth() + 1).padStart(2, '0');
+      const yearStr = date.getFullYear();
+      employee.fechaNacimiento = `${dayStr}/${monthStr}/${yearStr}`;
+    }
+
     this.selectedEmployee = employee;
+
     const modalElement = document.getElementById('userDetailsModal');
     if (modalElement) {
       const modalInstance = new bootstrap.Modal(modalElement);
@@ -169,6 +187,12 @@ export class EmpleadosComponent implements OnInit {
     const el = document.getElementById(id);
     if (el) bootstrap.Modal.getInstance(el)?.hide();
   }
+
+  onSelectChange(employee: any, field: 'cargoNombre' | 'rolNombre'): void {
+    employee.modified = true;
+    this.validateField(employee, field === 'cargoNombre' ? 'cargo' : 'rol');
+  }
+
 
   // ==================== MÉTODOS DE CRUD EMPLEADOS ====================
   /**
@@ -247,43 +271,94 @@ export class EmpleadosComponent implements OnInit {
     this.employees[index].originalValues = { ...this.employees[index] };
   }
 
+  onCargoChange(employee: any, cargoId: string): void {
+    employee.cargoId = cargoId;
+    const selected = this.positions.find(pos => pos.id === cargoId);
+    if (selected) {
+      employee.cargoNombre = selected.nombre;
+    }
+    employee.modified = true;
+  }
+
+  onRolChange(employee: any, rolId: string): void {
+    employee.rolId = rolId;
+    const selected = this.roles.find(rol => rol.id === rolId);
+    if (selected) {
+      employee.rolNombre = selected.nombre;
+    }
+    employee.modified = true;
+  }
+
+
   /**
    * Guarda los cambios de un empleado editado
    * @param index Índice del empleado editado
    */
-  saveEmployeeChanges(index: number): void {
+  /* saveEmployeeChanges(index: number): void {
+     const emp = this.employees[index];
+     console.log('RDMC emp', emp);
+     let errors: string[] = [];
+ 
+     // Validar cédula solo si ha cambiado
+     if (emp.document !== emp.originalValues.document) {
+       if (!emp.document || emp.document.toString().length < 8 || emp.document.toString().length > 9) {
+         errors.push('La cédula debe tener entre 8 y 9 dígitos.');
+       }
+     }
+ 
+     // Validar nombre solo si ha cambiado
+     if (emp.name !== emp.originalValues.name) {
+       if (!emp.name || emp.name.trim().length === 0) {
+         errors.push('El nombre es requerido.');
+       }
+     }
+ 
+     // Validar cargo solo si ha cambiado
+     if (emp.position !== emp.originalValues.position) {
+       if (!emp.position) {
+         errors.push('Debe seleccionar un cargo.');
+       }
+     }
+ 
+     // Validar rol solo si ha cambiado
+     if (emp.role !== emp.originalValues.role) {
+       if (!emp.role) {
+         errors.push('Debe seleccionar un rol.');
+       }
+     }
+ 
+     // Si hay errores, mostrar todas las alertas juntas y detener el proceso
+     if (errors.length > 0) {
+       this.snackBar.open(errors.join(' '), 'Cerrar', {
+         duration: 5000,
+         panelClass: ['info-snackbar']
+       });
+       return;
+     }
+ 
+     // Enviar la actualización al backend
+     const updatedEmployee = { ...emp }; // Copia del objeto sin originalValues
+     delete updatedEmployee.originalValues;
+     delete updatedEmployee.editing;
+ 
+     console.log('RDMC updatedEmployee', updatedEmployee);
+ 
+     this.empleadosService.actualizarEmpleado(updatedEmployee).subscribe(() => {
+       emp.editing = false;
+       this.swalService.showSuccess('¡Actualización exitosa!', 'Se ha modificado el usuario correctamente.');
+       this.filterEmployees();
+     }, error => {
+       console.error('Error al actualizar empleado:', error);
+       this.swalService.showError('Error!', 'Hubo un problema al intentar actualizar el usuario.');
+     });
+   }*/
+
+
+  updateEmployee(index: number): void {
     const emp = this.employees[index];
-    let errors: string[] = [];
+    console.log('RDMC emp', emp);
+    const errors = this.validateEmployeeChanges(emp);
 
-    // Validar cédula solo si ha cambiado
-    if (emp.document !== emp.originalValues.document) {
-      if (!emp.document || emp.document.toString().length < 8 || emp.document.toString().length > 9) {
-        errors.push('La cédula debe tener entre 8 y 9 dígitos.');
-      }
-    }
-
-    // Validar nombre solo si ha cambiado
-    if (emp.name !== emp.originalValues.name) {
-      if (!emp.name || emp.name.trim().length === 0) {
-        errors.push('El nombre es requerido.');
-      }
-    }
-
-    // Validar cargo solo si ha cambiado
-    if (emp.position !== emp.originalValues.position) {
-      if (!emp.position) {
-        errors.push('Debe seleccionar un cargo.');
-      }
-    }
-
-    // Validar rol solo si ha cambiado
-    if (emp.role !== emp.originalValues.role) {
-      if (!emp.role) {
-        errors.push('Debe seleccionar un rol.');
-      }
-    }
-
-    // Si hay errores, mostrar todas las alertas juntas y detener el proceso
     if (errors.length > 0) {
       this.snackBar.open(errors.join(' '), 'Cerrar', {
         duration: 5000,
@@ -292,19 +367,66 @@ export class EmpleadosComponent implements OnInit {
       return;
     }
 
-    // Enviar la actualización al backend
-    const updatedEmployee = { ...emp }; // Copia del objeto sin originalValues
-    delete updatedEmployee.originalValues;
-    delete updatedEmployee.editing;
+    const updatedEmployee = this.buildEmployeePayload(emp);
 
-    this.empleadosService.actualizarEmpleado(updatedEmployee).subscribe(() => {
-      emp.editing = false;
-      this.swalService.showSuccess('¡Actualización exitosa!', 'Se ha modificado el usuario correctamente.');
-      this.filterEmployees();
-    }, error => {
-      console.error('Error al actualizar empleado:', error);
-      this.swalService.showError('Error!', 'Hubo un problema al intentar actualizar el usuario.');
+    console.log('RDMC updatedEmployee', updatedEmployee);
+
+    this.empleadosService.actualizarEmpleado(updatedEmployee).subscribe({
+      next: () => {
+        emp.editing = false;
+        this.swalService.showSuccess('¡Actualización exitosa!', 'Se ha modificado el usuario correctamente.');
+        this.filterEmployees();
+      },
+      error: (error) => {
+        console.error('Error al actualizar empleado:', error);
+        this.swalService.showError('Error!', 'Hubo un problema al intentar actualizar el usuario.');
+      }
     });
+
+  }
+
+  private buildEmployeePayload(emp: any): any {
+    return {
+      rolId: emp.rolId,
+      cargoId: emp.cargoId,
+      cedula: emp.cedula,
+      nombre: emp.nombre,
+      email: emp.email ?? '',
+    };
+  }
+
+
+  private formatDate(date: string | Date): string {
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+  }
+
+
+  private validateEmployeeChanges(emp: any): string[] {
+    const errors: string[] = [];
+
+    const hasChanged = (field: keyof typeof emp) => emp[field] !== emp.originalValues[field];
+
+    if (hasChanged('document')) {
+      const doc = emp.document?.toString() ?? '';
+      if (doc.length < 8 || doc.length > 9) {
+        errors.push('La cédula debe tener entre 8 y 9 dígitos.');
+      }
+    }
+
+    if (hasChanged('name') && (!emp.name || emp.name.trim().length === 0)) {
+      errors.push('El nombre es requerido.');
+    }
+
+    if (hasChanged('position') && !emp.position) {
+      errors.push('Debe seleccionar un cargo.');
+    }
+
+    if (hasChanged('role') && !emp.role) {
+      errors.push('Debe seleccionar un rol.');
+    }
+
+    return errors;
   }
 
   /**
@@ -450,8 +572,18 @@ export class EmpleadosComponent implements OnInit {
     return 'assets/default-photo.png';
   }
 
-  trackByCedula(index: number, emp: Empleado): string {
-    return emp.cedula;
+  trackByEmployeeId(index: number, emp: Empleado): string {
+    return emp.id;
   }
+
+  onFieldChange(employee: Empleado, field: keyof Empleado): void {
+    employee.modified = true;
+
+    // Si quieres validar también:
+    this.validateField(employee, field);
+  }
+
+
+
 
 }

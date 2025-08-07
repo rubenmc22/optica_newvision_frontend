@@ -74,7 +74,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr *ngFor="let employee of filteredEmployees; let i = index; trackBy: trackByCedula"
+                        <tr *ngFor="let employee of filteredEmployees; let i = index; trackBy: trackByEmployeeId"
                             [ngClass]="{'table-secondary': !employee.estatus}">
                             <td class="ps-4">
                                 <span *ngIf="!employee.editing">{{ employee.cedula }}</span>
@@ -97,23 +97,28 @@
                                 </div>
                             </td>
                             <td>{{ employee.created_at || '-' }}</td>
+                            <!-- Cargo -->
                             <td>
                                 <span *ngIf="!employee.editing">{{ employee.cargoNombre }}</span>
-                                <select *ngIf="employee.editing" class="form-select form-select-sm select-cargo"
-                                    [(ngModel)]="employee.cargoNombre" [disabled]="!employee.editing">
-                                    <option *ngFor="let pos of positions" [value]="pos.nombre">{{ pos.nombre }}</option>
+                                <select *ngIf="employee.editing" class="form-select form-select-sm"
+                                    [ngModel]="employee.cargoId" (ngModelChange)="onCargoChange(employee, $event)">
+                                    <option *ngFor="let pos of positions" [value]="pos.id">{{ pos.nombre }}</option>
                                 </select>
                             </td>
+
+                            <!-- Rol -->
                             <td>
                                 <span *ngIf="!employee.editing">
-                                    <span class="badge" [ngClass]="badgeClass(employee.rolNombre)">{{ employee.rolNombre
-                                        }}</span>
+                                    <span class="badge" [ngClass]="badgeClass(employee.rolNombre)">
+                                        {{ employee.rolNombre }}
+                                    </span>
                                 </span>
-                                <select *ngIf="employee.editing" class="form-select form-select-sm select-rol"
-                                    [(ngModel)]="employee.rolNombre" [disabled]="!employee.editing">
-                                    <option *ngFor="let rol of roles" [value]="rol.nombre">{{ rol.nombre }}</option>
+                                <select *ngIf="employee.editing" class="form-select form-select-sm"
+                                    [ngModel]="employee.rolId" (ngModelChange)="onRolChange(employee, $event)">
+                                    <option *ngFor="let rol of roles" [value]="rol.id">{{ rol.nombre }}</option>
                                 </select>
                             </td>
+
                             <td class="text-center">
                                 <div class="form-check form-switch">
                                     <input class="form-check-input" type="checkbox" [(ngModel)]="employee.estatus"
@@ -135,7 +140,7 @@
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <button *ngIf="employee.editing" class="btn btn-sm me-1"
-                                    (click)="saveEmployeeChanges(i)" title="Guardar"
+                                    (click)="updateEmployee(i)" title="Guardar"
                                     [ngClass]="{'btn-secondary': !employee.modified || employee.hasErrors || employee.estatus === false, 'btn-success': employee.modified && !employee.hasErrors && employee.estatus === true}"
                                     [disabled]="!employee.modified || employee.hasErrors">
                                     <i class="bi bi-check-lg"></i>
@@ -171,7 +176,7 @@
         <div class="modal-content">
             <div class="modal-header bg-primary text-center">
                 <h5 class="modal-title w-100">Detalles del Usuario</h5>
-                <button type="button" class="btn-close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="card text-center p-3">

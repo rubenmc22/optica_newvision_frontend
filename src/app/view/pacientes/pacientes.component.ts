@@ -8,7 +8,7 @@ import * as bootstrap from 'bootstrap';
 import { ModalService } from '../../core/services/modal/modal.service';
 import { Paciente } from './paciente-interface';
 import { UserStateService } from '../../core/services/userState/user-state-service';
-import { C } from 'node_modules/@angular/cdk/portal-directives.d-a65be59b';
+
 import {
   AbstractControl,
   ValidatorFn,

@@ -81,13 +81,12 @@ export interface Empleado {
   created_at: string;
   updated_at: string;
   editing: false;
-  modified: false;
+  modified: boolean;
   hasErrors: false;
   errors: {};
   loading?: boolean;
   originalValues: null;
 }
-
 
 export interface ApiResponse {
   message: string;
