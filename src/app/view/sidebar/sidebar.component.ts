@@ -44,49 +44,49 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Dashboard',
       icon: 'fas fa-tachometer-alt',
       routerLink: '/dashboard',
-      roles: ['admin', 'gerente', 'asesor']
+      roles: ['admin', 'gerente', 'asesor-optico']
     },
     {
       label: 'Datos Clínicos',
       icon: 'fas fa-football-ball',
       submenu: [
-        { label: 'Pacientes', routerLink: '/pacientes', roles: ['admin', 'gerente', 'asesor'] },
-        { label: 'Historias Medicas', routerLink: '/pacientes-historias', roles: ['admin', 'gerente', 'asesor'] },
+        { label: 'Pacientes', routerLink: '/pacientes', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Historias Medicas', routerLink: '/pacientes-historias', roles: ['admin', 'gerente', 'asesor-optico'] },
 
       ],
-      roles: ['admin', 'gerente', 'asesor'],
+      roles: ['admin', 'gerente', 'asesor-optico'],
       //  underConstruction: true
     },
     {
       label: 'Productos',
       icon: 'fas fa-users',
       routerLink: '/productos',
-      roles: ['admin', 'gerente', 'asesor'],
+      roles: ['admin', 'gerente', 'asesor-optico'],
        submenu: [
-        { label: 'Catálogo', routerLink: '/productos-catalogo', roles: ['admin', 'gerente', 'asesor'] },
-        { label: 'Inventario', routerLink: '/productos-inventario', roles: ['admin', 'gerente', 'asesor'] }
+        { label: 'Catálogo', routerLink: '/productos-catalogo', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Inventario', routerLink: '/productos-inventario', roles: ['admin', 'gerente', 'asesor-optico'] }
       ],
     },
     {
       label: 'Ventas',
       icon: 'fas fa-football-ball',
       submenu: [
-        { label: 'Historial de ventas.', routerLink: '/Ventas/voleibol', roles: ['admin', 'gerente', 'asesor'] },
-        { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor'] },
+        { label: 'Historial de ventas.', routerLink: '/Ventas/voleibol', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor-optico'] },
         { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] },
 
       ],
-      roles: ['admin', 'gerente', 'asesor'],
+      roles: ['admin', 'gerente', 'asesor-optico'],
       underConstruction: true
     },
     {
       label: 'Ordenes de Trabajo',
       icon: 'fas fa-football-ball',
       routerLink: '/ordenes-de-trabajo',
-      roles: ['admin', 'gerente', 'asesor'],
+      roles: ['admin', 'gerente', 'asesor-optico'],
       /* submenu: [
-         { label: 'Ordenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor'] },
-         { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor'] },
+         { label: 'Ordenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor-optico'] },
+         { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor-optico'] },
          { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] },
  
        ],*/
@@ -97,11 +97,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
       label: 'Administración',
       icon: 'fas fa-user',
       submenu: [
-        { label: 'Configurar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'gerente', 'asesor'] },
+        { label: 'Configurar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'gerente', 'asesor-optico'] },
         { label: 'Gestionar usuarios', routerLink: '/usuarios-empleados', roles: ['admin'], underConstruction: false },
-        { label: 'Tipo de cambio', routerLink: '/Tipo-de-cambio', roles: ['admin', 'gerente', 'asesor'] }
+        { label: 'Tipo de cambio', routerLink: '/Tipo-de-cambio', roles: ['admin', 'gerente', 'asesor-optico'] }
       ],
-      roles: ['admin', 'gerente', 'asesor']
+      roles: ['admin', 'gerente', 'asesor-optico']
     }
   ];
 

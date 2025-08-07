@@ -99,32 +99,6 @@ export class MyAccountComponent implements OnInit {
   // ============================================================
   // Métodos generales y de utilidad
   // ============================================================
-  /* private loadUserData(): void {
-     try {
-       const currentUser: ApiUser = this.authService.getCurrentUser() || {};
- 
-       this.user = {
-         nombre: currentUser.nombre?.trim() || '',
-         cedula: currentUser.cedula?.trim() || '',
-         cargo: this.currentCargo?.key ?? '',
-         correo: currentUser.correo?.trim() || currentUser.email?.trim() || '',
-         telefono: currentUser.telefono?.trim() || '',
-         fecha_nacimiento: currentUser.fecha_nacimiento || null,
-         avatarUrl: null,
-         ruta_imagen: currentUser.ruta_imagen || null,
-         rol: this.currentRol?.key ?? ''
-       };
- 
-       this.originalUser = { ...this.user };
-       this.sharedUserService.updateUserProfile(this.user);
-       this.userCargoSeleccionado = this.currentCargo?.key || '';
-     } catch (error) {
-       console.error('Error loading user data:', error);
-       this.user = this.getDefaultUserProfile();
-       this.originalUser = { ...this.user };
-     }
-   }*/
-
   private loadUserData(): void {
     const cedula = this.authService.getCurrentUser()?.cedula?.trim();
     console.log('cedula', cedula);

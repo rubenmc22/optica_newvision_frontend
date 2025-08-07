@@ -8,7 +8,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 // Servicios
 import { ModalService } from './../../core/services/modal/modal.service';
 import { EmpleadosService } from './../../core/services/empleados/empleados.service';
-import { SwalService } from '../../core/services/swal/swal.service'; // Servicio de SweetAlert2
+import { SwalService } from '../../core/services/swal/swal.service'; 
 import { environment } from '../../../environments/environment';
 
 // Componentes

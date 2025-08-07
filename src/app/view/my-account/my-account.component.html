@@ -17,13 +17,14 @@
                             <i class="fas fa-key"></i> Editar Contraseña
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item" *ngIf="currentRol?.key === 'admin'">
                         <a class="nav-link" id="edit-unique-password-tab" data-bs-toggle="tab"
                             href="#editUniquePassword" role="tab" aria-controls="editUniquePassword"
                             aria-selected="false" (click)="switchTab('uniquePassword')">
                             <i class="fas fa-lock"></i> Contraseña Única
                         </a>
                     </li>
+
                 </ul>
 
                 <!-- Contenido de las Pestañas -->
@@ -191,7 +192,8 @@
                                         [class.bi-eye-slash]="showUniquePassword"></i>
                                 </button>
                                 <small *ngIf="!uniquePasswordValid && uniquePassword" class="text-danger">
-                                    La contraseña debe tener entre 6 y 20 caracteres, incluyendo números y caractéres especiales.
+                                    La contraseña debe tener entre 6 y 20 caracteres, incluyendo números y caractéres
+                                    especiales.
                                 </small>
 
                             </div>

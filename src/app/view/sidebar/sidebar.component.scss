@@ -65,9 +65,12 @@
   font-weight: bold;
 
   position: fixed;
-  top: 0px !important; /* Altura del navbar fijo */
-  bottom: 60px; /* Altura del footer fijo */
-  height: calc(100vh - 116px); /* 100% de pantalla menos header y footer */
+  top: 0px !important;
+  /* Altura del navbar fijo */
+  bottom: 60px;
+  /* Altura del footer fijo */
+  height: calc(100vh - 116px);
+  /* 100% de pantalla menos header y footer */
   overflow-y: auto;
   overflow-x: hidden;
   z-index: 1020;
@@ -227,8 +230,10 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  z-index: 1020; /* menor que el navbar para evitar solapamiento */
-  height: 60px; /* ajusta según diseño */
+  z-index: 1020;
+  /* menor que el navbar para evitar solapamiento */
+  height: 60px;
+  /* ajusta según diseño */
   background-color: var(--secondary-color);
   /* Borde amarillo en la parte superior */
 }
@@ -249,16 +254,15 @@
 
 /*======================== MODAL ========================*/
 .modal-header {
-  background-color: var(--primary-color) !important;
-  color: black;
+  background: var(--degradado-color) !important;
+  color: var(--details-color) !important;
 
   .modal-title {
     font-weight: bold;
   }
 }
 
-.modal-footer,
-.modal-body {
+.modal-footer {
   background-color: var(--secondary-color);
   color: var(--text-color);
 }
@@ -267,12 +271,12 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  /* Centra verticalmente */
   height: 100%;
-  /* Asegura que ocupe toda la altura del modal */
 }
 
 .modal-body {
+//  background: var(--degradado-pastel);
+  color: var(--formLabel-color);
   text-align: center;
   height: 80px;
   align-content: center;
