@@ -277,6 +277,10 @@ export class HistoriasMedicasComponent implements OnInit {
 
   limpiarDatos(): void {
     this.pacienteSeleccionado = null;
+    this.historial = [];
+    this.historiaSeleccionada = null;
+    this.mostrarElementos = false;
+    this.mostrarSinHistorial = false;
     // Limpiar otros datos relacionados si es necesario
   }
 

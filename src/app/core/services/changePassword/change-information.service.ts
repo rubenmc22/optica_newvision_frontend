@@ -8,6 +8,9 @@ import { catchError, tap, map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
 import { User, Rol, AuthData, AuthResponse, Cargo } from '../../../Interfaces/models-interface';
 import { Sede } from './../../../view/login/login-interface';
+import { UserProfile, ApiUser } from '../../../view/my-account/my-account-interface';
+import { of } from 'rxjs';
+
 
 @Injectable({
   providedIn: 'root'
@@ -54,6 +57,22 @@ export class ChangeInformationService {
       })
     );
   }
+
+  getUsuarioPorCedula(cedula: string): Observable<ApiUser | null> {
+    return this.http.get<{ message: string; usuarios: ApiUser[] }>(`${environment.apiUrl}/get-usuarios/${cedula}`).pipe(
+      map(response => {
+        if (!response || !Array.isArray(response.usuarios) || response.usuarios.length === 0) {
+          return null;
+        }
+        return response.usuarios[0];
+      }),
+      catchError(error => {
+        console.error('Error al obtener usuario por cédula:', error);
+        return of(null);
+      })
+    );
+  }
+
 
   // Enviar OTP para cambio de contraseña única
   sendUniquePasswordOtp(email: string): Observable<any> {

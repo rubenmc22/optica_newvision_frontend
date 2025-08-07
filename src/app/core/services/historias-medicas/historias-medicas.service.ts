@@ -42,7 +42,7 @@ export class HistoriaMedicaService {
     return this.http.post<HistoriaMedica>(`${environment.apiUrl}/historial-medico-update`, historia);
   }
 
- 
+
   // Métodos auxiliares con implementación completa
   public calcularEdad(fechaNacimiento: string): number {
     const fechaNac = new Date(fechaNacimiento);
