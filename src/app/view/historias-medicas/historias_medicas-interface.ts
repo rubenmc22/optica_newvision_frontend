@@ -19,6 +19,8 @@ export interface DatosConsulta {
   nombre_asesor?: string;
   cedula_asesor?: string;
   cedulaAsesor?: string;
+  tipoCristalActual?: string;
+  fechaUltimaGraduacion?: string;
 }
 
 export interface RespuestaCreacionHistoria {

@@ -222,11 +222,6 @@ export class HistoriasMedicasComponent implements OnInit {
     this.medicoSeleccionado = medico;
   }
 
-  private limpiarDatosPaciente(): void {
-    this.historial = [];
-    this.historiaSeleccionada = null;
-  }
-
   private loadEmployees(): void {
     this.isLoading = true;
     this.empleadosService.getAllEmpleados().subscribe((empleados: Empleado[]) => {
@@ -322,8 +317,6 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
-
-
   actualizarPacientesPorSede(): void {
     const sedeId = this.sedeFiltro?.trim().toLowerCase();
 
@@ -347,7 +340,6 @@ export class HistoriasMedicasComponent implements OnInit {
       this.pacienteSeleccionado = null;
     }, 0);
   }
-
 
   cargarSedes(): void {
     console.log('Sedes cargadas:', this.sedesDisponibles);
@@ -738,12 +730,13 @@ export class HistoriasMedicasComponent implements OnInit {
 
     // Obtener valores del formulario
     const formValue = this.historiaForm.value;
-
     const historia: any = {
       pacienteId: this.pacienteParaNuevaHistoria.key,
       datosConsulta: {
         motivo: Array.isArray(formValue.motivo) ? formValue.motivo : [formValue.motivo],
         otroMotivo: formValue.otroMotivo || '',
+        tipoCristalActual: formValue.tipoCristalActual,
+        fechaUltimaGraduacion: formValue.ultimaGraduacion,
         medico: formValue.medico?.cedula,
       },
       examenOcular: {

@@ -48,6 +48,14 @@ export class VerPacientesComponent implements OnInit {
   redesEditables: boolean[] = [];
 
   //Perfil clinico
+  usoDispositivo: string | null = null;
+  intervaloSeleccionado: string | null = null;
+  intervalosHora: string[] = [
+    'Menos de 1 hora',
+    '1 a 3 horas',
+    '3 a 6 horas',
+    'Más de 6 horas'
+  ];
   opcionesBooleanasSimple: string[] = ['Sí', 'No'];
   opcionesGenero: string[] = [
     'Masculino',
@@ -158,6 +166,8 @@ export class VerPacientesComponent implements OnInit {
       // 🩺 Campos clínicos
       usuarioLentes: ['', Validators.required],
       fotofobia: ['', Validators.required],
+      usoDispositivo: [null, Validators.required],
+      intervaloUso: [null], // solo se valida si el primero es "Sí"
       traumatismoOcular: ['', Validators.required],
       traumatismoOcularDescripcion: [''],
       cirugiaOcular: ['', Validators.required],
@@ -183,9 +193,26 @@ export class VerPacientesComponent implements OnInit {
     // Aplicar validaciones condicionales reactivas
     this.aplicarValidacionCondicional('traumatismoOcular', 'traumatismoOcularDescripcion', this.formPaciente);
     this.aplicarValidacionCondicional('cirugiaOcular', 'cirugiaOcularDescripcion', this.formPaciente);
+    this.configurarValidacionCondicional();
   }
 
+  private configurarValidacionCondicional(): void {
+    const usoDispositivoControl = this.formPaciente.get('usoDispositivo');
+    const intervaloControl = this.formPaciente.get('intervaloUso');
 
+    usoDispositivoControl?.valueChanges.subscribe(valor => {
+      if (valor === 'Sí') {
+        intervaloControl?.setValidators([Validators.required]);
+        intervaloControl?.markAsTouched(); // Marcar como touched para que muestre error inmediatamente
+      } else {
+        intervaloControl?.clearValidators();
+        intervaloControl?.setValue(null);
+        intervaloControl?.markAsUntouched(); // Limpiar el estado touched si no es requerido
+      }
+      intervaloControl?.updateValueAndValidity();
+      this.formPaciente.updateValueAndValidity(); // Actualizar validación del formulario completo
+    });
+  }
 
   getErrorMsg(campo: string): string {
     const c = this.formPaciente.get(campo);
@@ -361,6 +388,38 @@ export class VerPacientesComponent implements OnInit {
 
 
   // Métodos de filtrado y ordenación
+  /* pacientesFiltrados(): Paciente[] {
+     // Si no es un array, retornar array vacío
+     if (!Array.isArray(this.pacientes)) {
+       console.warn('this.pacientes no es un array:', this.pacientes);
+       return [];
+     }
+ 
+     const filtroText = this.filtro.trim().toLowerCase();
+     //console.log('Pacientes:', this.pacientes);
+ 
+     return this.pacientes.filter(paciente => {
+       const esSedeActiva = paciente.sede === this.sedeActiva;
+       const esOtraSede = paciente.sede !== this.sedeActiva;
+ 
+       let mostrar = false;
+       if (this.sedeFiltro === this.sedeActiva) {
+         mostrar = esSedeActiva;
+       } else if (this.sedeFiltro === 'otra') {
+         mostrar = esOtraSede;
+       } else {
+         mostrar = true;
+       }
+ 
+       //  console.log('PACIENTE', paciente);
+       const coincideTexto =
+         paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(filtroText) ||
+         paciente.informacionPersonal.cedula.includes(filtroText);
+ 
+       return mostrar && coincideTexto;
+     });
+   }*/
+
   pacientesFiltrados(): Paciente[] {
     // Si no es un array, retornar array vacío
     if (!Array.isArray(this.pacientes)) {
@@ -369,9 +428,13 @@ export class VerPacientesComponent implements OnInit {
     }
 
     const filtroText = this.filtro.trim().toLowerCase();
-    //console.log('Pacientes:', this.pacientes);
 
     return this.pacientes.filter(paciente => {
+      // Verificar si existe informacionPersonal
+      if (!paciente?.informacionPersonal) {
+        return false; // Omitir pacientes sin estructura completa
+      }
+
       const esSedeActiva = paciente.sede === this.sedeActiva;
       const esOtraSede = paciente.sede !== this.sedeActiva;
 
@@ -384,10 +447,12 @@ export class VerPacientesComponent implements OnInit {
         mostrar = true;
       }
 
-      //  console.log('PACIENTE', paciente);
+      const nombre = paciente.informacionPersonal.nombreCompleto?.toLowerCase() || '';
+      const cedula = paciente.informacionPersonal.cedula || '';
+
       const coincideTexto =
-        paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(filtroText) ||
-        paciente.informacionPersonal.cedula.includes(filtroText);
+        nombre.includes(filtroText) ||
+        cedula.includes(filtroText);
 
       return mostrar && coincideTexto;
     });
@@ -453,6 +518,14 @@ export class VerPacientesComponent implements OnInit {
         ? 'f'
         : 'otro';
 
+    // Obtener valores del formulario
+    const formValues = this.formPaciente.value;
+
+    // Procesar uso de dispositivos electrónicos
+    const usoDispositivoValue = formValues.usoDispositivo === 'Sí'
+      ? `Sí, ${formValues.intervaloUso}`
+      : 'No';
+
     const {
       nombreCompleto,
       cedula,
@@ -474,7 +547,7 @@ export class VerPacientesComponent implements OnInit {
       antecedentesFamiliares,
       patologias,
       patologiaOcular
-    } = this.formPaciente.value;
+    } = formValues;
 
     const nuevoPaciente = {
       informacionPersonal: {
@@ -491,6 +564,7 @@ export class VerPacientesComponent implements OnInit {
       historiaClinica: {
         usuarioLentes,
         fotofobia,
+        usoDispositivo: usoDispositivoValue, // Aquí enviamos el valor combinado
         traumatismoOcular,
         traumatismoOcularDescripcion,
         cirugiaOcular,
@@ -512,31 +586,25 @@ export class VerPacientesComponent implements OnInit {
         this.swalService.showSuccess('¡Registro exitoso!', 'Paciente registrado correctamente.');
         this.cargarPacientes();
       },
-
       error: (error) => {
         const msg = error.error?.message ?? '';
 
         if (msg.includes('Ya esta registrada la cedula')) {
-          // 🔍 Extraemos los valores entre comillas simples
           const coincidencias = [...msg.matchAll(/'([^']+)'/g)];
-
           const cedula = coincidencias?.[0]?.[1] ?? 'Cédula desconocida';
           const sedeRaw = coincidencias?.[1]?.[1] ?? 'Sede desconocida';
-          const sede = sedeRaw.replace(/^Sede\s+/i, '').trim(); // ✨ elimina el prefijo 'Sede '
+          const sede = sedeRaw.replace(/^Sede\s+/i, '').trim();
 
-          // 🧾 Armamos el HTML del mensaje personalizado
           const mensajeHTML = `
               <br>
               <div class="swal-custom-content ">
                 <h5 class="text-danger mb-2">
                   <i class="fas fa-id-card me-2"></i> Cédula ya registrada
                 </h5>
-
                 <ul class="list-unstyled mb-3">
                   <li><strong>Cédula:</strong> ${cedula}</li>
                   <li><strong>Sede:</strong> ${sede}</li>
                 </ul><br>
-
                 <div class="text-muted small">
                   <i class="fas fa-info-circle me-1"></i> Cada cédula debe ser única por sede. Revisa los datos ingresados.
                 </div>
@@ -548,14 +616,26 @@ export class VerPacientesComponent implements OnInit {
 
         this.swalService.showError('Error', 'No se ha podido registrar al paciente');
       }
-
     });
   }
 
   editarPaciente(paciente: any): void {
     this.modoEdicion = true;
     this.pacienteEditando = paciente;
-    //console.log('editarPaciente - paciente', paciente);
+
+    // Procesar el valor de usoDispositivo que puede venir combinado
+    const usoDispositivoCompleto = paciente.historiaClinica?.usoDispositivo ?? '';
+    let usoDispositivoValue = 'No';
+    let intervaloUsoValue = null;
+
+    if (usoDispositivoCompleto.startsWith('Sí')) {
+      usoDispositivoValue = 'Sí';
+      // Extraer el intervalo después de la coma
+      const partes = usoDispositivoCompleto.split(',');
+      if (partes.length > 1) {
+        intervaloUsoValue = partes[1].trim();
+      }
+    }
 
     this.formOriginal = {
       nombreCompleto: paciente.informacionPersonal?.nombreCompleto,
@@ -568,6 +648,8 @@ export class VerPacientesComponent implements OnInit {
       direccion: paciente.informacionPersonal?.direccion,
       usuarioLentes: paciente.historiaClinica?.usuarioLentes ?? '',
       fotofobia: paciente.historiaClinica?.fotofobia ?? '',
+      usoDispositivo: usoDispositivoValue, // Valor separado
+      intervaloUso: intervaloUsoValue,     // Valor separado
       traumatismoOcular: paciente.historiaClinica?.traumatismoOcular ?? '',
       traumatismoOcularDescripcion: paciente.historiaClinica?.traumatismoOcularDescripcion ?? '',
       cirugiaOcular: paciente.historiaClinica?.cirugiaOcular ?? '',
@@ -603,7 +685,11 @@ export class VerPacientesComponent implements OnInit {
     }
 
     const pacienteFormValue = this.formPaciente.value;
-    console.log('pacienteFormValue', pacienteFormValue);
+
+    // Procesar uso de dispositivos electrónicos
+    const usoDispositivoValue = pacienteFormValue.usoDispositivo === 'Sí'
+      ? `Sí, ${pacienteFormValue.intervaloUso}`
+      : 'No';
 
     const mapGenero = pacienteFormValue.genero === 'Masculino'
       ? 'm'
@@ -630,6 +716,7 @@ export class VerPacientesComponent implements OnInit {
       historiaClinica: {
         usuarioLentes: pacienteFormValue.usuarioLentes || null,
         fotofobia: pacienteFormValue.fotofobia || null,
+        usoDispositivo: usoDispositivoValue, // Usamos el valor combinado aquí
         traumatismoOcular: pacienteFormValue.traumatismoOcular || null,
         traumatismoOcularDescripcion: pacienteFormValue.traumatismoOcularDescripcion || null,
         cirugiaOcular: pacienteFormValue.cirugiaOcular || null,
@@ -650,9 +737,17 @@ export class VerPacientesComponent implements OnInit {
       next: (response) => {
         const paciente = response.paciente;
 
+        // Procesar el usoDispositivo para la visualización
+        const usoDispositivoCompleto = paciente.historiaClinica?.usoDispositivo ?? '';
+        let usoDispositivoDisplay = 'No';
+
+        if (usoDispositivoCompleto.startsWith('Sí')) {
+          usoDispositivoDisplay = usoDispositivoCompleto;
+        }
+
         const transformado = {
           ...paciente,
-          key: keyPaciente, // clave generada correctamente
+          key: keyPaciente,
           informacionPersonal: {
             ...paciente.informacionPersonal,
             genero: paciente.informacionPersonal.genero === 'm' ? 'Masculino' :
@@ -661,15 +756,18 @@ export class VerPacientesComponent implements OnInit {
           },
           fechaRegistro: this.formatearFecha(paciente.updated_at),
           redesSociales: paciente.redesSociales || [],
-          sede: paciente.sede || this.sedeActiva
+          sede: paciente.sede || this.sedeActiva,
+          historiaClinica: {
+            ...paciente.historiaClinica,
+            usoDispositivo: usoDispositivoDisplay // Mantenemos el formato combinado para visualización
+          }
         };
-
 
         const index = this.pacientes.findIndex(p => p.key === paciente.key);
         if (index !== -1) {
           this.pacientes[index] = transformado;
         } else {
-          this.pacientes.push(transformado); // fallback si no lo encuentra
+          this.pacientes.push(transformado);
         }
 
         this.pacientes = [...this.pacientes];

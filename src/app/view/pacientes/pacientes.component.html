@@ -268,7 +268,36 @@
                 <label class="form-label fw-medium text-dark-label">Alergias a:</label>
                 <input class="form-control border-2 py-2" formControlName="alergicoA"
                   placeholder="Ej: Polvo, medicamentos..." />
+              </div> <br>
+
+              <!-- Uso de dispositivos -->
+              <div class="row g-2" style="margin-left: 0px; margin-right: 0px;">
+                <!-- Select principal -->
+                <div class="col-md-6">
+                  <label class="form-label fw-medium text-dark-label">
+                    ¿Usa dispositivos electrónicos? <span class="text-danger">*</span>
+                  </label>
+                  <ng-select [items]="['Sí', 'No']" formControlName="usoDispositivo" placeholder="Seleccione..."
+                    class="border-2">
+                  </ng-select>
+                </div>
+
+                <!-- Select secundario condicional -->
+                <div class="col-md-6 g-2" *ngIf="formPaciente.get('usoDispositivo')?.value === 'Sí'">
+                  <label class="form-label fw-medium text-dark-label">
+                    ¿Por cuánto tiempo? <span class="text-danger">*</span>
+                  </label>
+                  <ng-select [items]="intervalosHora" bindLabel="" formControlName="intervaloUso"
+                    placeholder="Seleccione intervalo" class="border-2">
+                  </ng-select>
+                  <div
+                    *ngIf="formPaciente.get('intervaloUso')?.invalid && (formPaciente.get('intervaloUso')?.touched || formPaciente.get('intervaloUso')?.dirty)"
+                    class="text-danger small mt-1">
+                  </div>
+                </div>
               </div>
+
+
 
               <!-- Traumatismo ocular -->
               <div class="col-md-4">
@@ -564,6 +593,13 @@
                   <p class="text-secondary mb-1"><strong>Antecedentes familiares</strong></p>
                   <p class="text-dark mb-1">
                     {{ pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares?.join(', ') || 'No registrado' }}
+                  </p>
+                </div>
+                <!-- Uso de dispositivos electrónicos -->
+                <div class="mb-3">
+                  <p class="text-secondary mb-1"><strong>Uso de dispositivos electrónicos</strong></p>
+                  <p class="text-dark">
+                    {{ pacienteSeleccionado?.historiaClinica?.usoDispositivo || 'No registrado' }}
                   </p>
                 </div>
               </div>

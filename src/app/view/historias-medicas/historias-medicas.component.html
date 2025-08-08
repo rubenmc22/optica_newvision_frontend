@@ -147,8 +147,7 @@
               <div class="row gy-2 mb-1">
                 <div class="col-md-3">
                   <strong>Usuario de lentes:</strong>
-                  <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.usuarioLentes ? 'Sí' : 'No'
-                    }}</p>
+                  <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.usuarioLentes || 'No especificado'  }}</p>
                 </div>
                 <div class="col-md-3">
                   <strong>Cristal actual:</strong>
@@ -164,7 +163,7 @@
                 </div>
                 <div class="col-md-3">
                   <strong>Fotofobia:</strong>
-                  <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.fotofobia ? 'Sí' : 'No' }}
+                  <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.fotofobia || 'No especificado'}}
                   </p>
                 </div>
               </div>
@@ -178,8 +177,7 @@
                 </div>
                 <div class="col-md-3">
                   <strong>Cirugía ocular previa:</strong>
-                  <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcular ? 'Sí' : 'No'
-                    }}</p>
+                  <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcular || 'No especificado'}}</p>
                 </div>
                 <div class="col-md-3">
                   <strong class="d-block mb-1">Tipo de cirugía ocular:</strong>
@@ -188,8 +186,7 @@
                 </div>
                 <div class="col-md-3">
                   <strong>Traumatismo ocular:</strong>
-                  <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcular ? 'Sí' :
-                    'No' }}</p>
+                  <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcular || 'No especificado'}}</p>
                 </div>
               </div>
 
@@ -198,7 +195,7 @@
                 <div class="col-md-4">
                   <strong>Uso de dispositivos electrónicos:</strong>
                   <p class="bg-light rounded p-2">
-                    {{ pacienteSeleccionado?.historiaClinica?.usaDispositivosElectronicos ? 'Sí' : 'No' }}
+                    {{ pacienteSeleccionado?.historiaClinica?.usaDispositivosElectronicos || 'No especificado' }}
                     <span *ngIf="pacienteSeleccionado?.historiaClinica?.tiempoUsoEstimado"> — {{
                       pacienteSeleccionado?.historiaClinica?.tiempoUsoEstimado }}</span>
                   </p>
