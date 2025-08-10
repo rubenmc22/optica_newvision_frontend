@@ -9,18 +9,37 @@ export interface HistoriaMedicaBase {
   pacienteId: string;
 }
 
-// Interfaz para datos de consulta
 export interface DatosConsulta {
-  motivo: string | string[];
+  motivo: string[]; // Siempre es un array
   otroMotivo?: string;
-  //  medico: string;
-  nombre_medico: string;
-  cedula_medico: string;
+
+  medico: {
+    nombre: string;
+    cedula: string;
+    cargo: string;
+  };
+
   nombre_asesor?: string;
   cedula_asesor?: string;
   cedulaAsesor?: string;
+
   tipoCristalActual?: string;
   fechaUltimaGraduacion?: string;
+}
+
+export interface Auditoria {
+  fechaCreacion: Date | string;
+  fechaActualizacion?: Date | string;
+  creadoPor: {
+    nombre: string;
+    cedula: string;
+    cargo: string;
+  };
+  actualizadoPor?: {
+    nombre: string;
+    cedula: string;
+    cargo: string;
+  };
 }
 
 export interface RespuestaCreacionHistoria {
@@ -142,14 +161,6 @@ export interface Conformidad {
   firmaPaciente?: string;
   firmaMedico?: string;
   firmaAsesor?: string;
-}
-
-// Interfaz para auditoría
-export interface Auditoria {
-  fechaCreacion: Date | string;
-  fechaActualizacion?: Date | string;
-  creadoPor: string;
-  actualizadoPor?: string;
 }
 
 // Interfaz principal organizada por secciones

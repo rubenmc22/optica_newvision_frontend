@@ -449,16 +449,19 @@ export class HistoriasMedicasComponent implements OnInit {
     return valor?.toString().toLowerCase() === 'sí' || valor === true;
   }
 
-  formatearFecha(fechaIso: string): string {
-    if (!fechaIso || typeof fechaIso !== 'string') return 'Fecha inválida';
+  formatearFecha(fechaIso: string | Date): string {
+    if (!fechaIso) return 'Fecha inválida';
+
+    const isoString = typeof fechaIso === 'string' ? fechaIso : fechaIso.toISOString();
 
     // Evita formatear si ya está en formato DD/MM/YYYY
-    if (fechaIso.includes('/') && !fechaIso.includes('T')) return fechaIso;
+    if (isoString.includes('/') && !isoString.includes('T')) return isoString;
 
-    const fechaLimpiada = fechaIso.split('T')[0]; // elimina hora si está presente
+    const fechaLimpiada = isoString.split('T')[0]; // elimina hora si está presente
     const [anio, mes, dia] = fechaLimpiada.split('-');
     return `${dia}/${mes}/${anio}`;
   }
+
 
   iniciarFlujoHistoria(): void {
     if (this.historiaSeleccionada) {
@@ -488,6 +491,7 @@ export class HistoriasMedicasComponent implements OnInit {
     const eo = h.examenOcular;
     const dt = h.diagnosticoTratamiento;
 
+    console.log('dc', dc);
     this.historiaForm.patchValue({
       horaEvaluacion: h.horaEvaluacion,
       pacienteId: h.pacienteId,
@@ -495,8 +499,9 @@ export class HistoriasMedicasComponent implements OnInit {
       // Datos de consulta
       motivo: Array.isArray(dc.motivo) ? dc.motivo : [dc.motivo],
       otroMotivo: dc.otroMotivo,
-      nombre_medico: dc.nombre_medico,
-      cedula_medico: dc.cedula_medico,
+      // nombre_medico: dc.medico?.nombre,
+      //  cedula_medico: dc.medico?.cedula,
+
       nombre_asesor: dc.nombre_asesor,
       cedula_asesor: dc.cedula_asesor,
 
@@ -1090,6 +1095,8 @@ export class HistoriasMedicasComponent implements OnInit {
           const fechaB = new Date(b.fecha).getTime();
           return fechaB - fechaA; // Más reciente primero
         });
+
+        console.log(' this.historial', this.historial);
 
         this.historiaSeleccionada = this.historial[0] || null;
 
