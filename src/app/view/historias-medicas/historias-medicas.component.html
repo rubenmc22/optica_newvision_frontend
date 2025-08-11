@@ -28,12 +28,13 @@
           <ng-select [items]="pacientesFiltradosPorSede" bindLabel="informacionPersonal.nombreCompleto"
             [selectOnTab]="true" [clearable]="true" [searchable]="true" [(ngModel)]="pacienteSeleccionado"
             (search)="actualizarFiltroTexto($event)" (change)="seleccionarHistoriasPorPaciente($event)"
-            placeholder="Buscar por nombre o cédula...">
+            [searchFn]="filtrarPorNombreOCedula" placeholder="Buscar por nombre o cédula...">
 
             <ng-template ng-option-tmp let-item="item">
               {{item.informacionPersonal.nombreCompleto}} — {{item.informacionPersonal.cedula}}
             </ng-template>
           </ng-select>
+
 
         </div>
       </div>

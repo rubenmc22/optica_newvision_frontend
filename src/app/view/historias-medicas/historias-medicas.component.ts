@@ -387,7 +387,7 @@ export class HistoriasMedicasComponent implements OnInit {
     this.pacienteParaNuevaHistoria = paciente!;
     this.pacienteSeleccionado = paciente!;
 
-       const cargarYPrecargar = () => {
+    const cargarYPrecargar = () => {
       const cedulaMedico = typeof dc.medico === 'object'
         ? dc.medico?.cedula
         : String(dc.medico);
@@ -673,12 +673,26 @@ export class HistoriasMedicasComponent implements OnInit {
 
   cargarHistoriasMedicas(pacienteId: string, callback?: () => void): void {
     this.cargando = true;
+
     this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
       next: (historias: HistoriaMedica[]) => {
         this.historial = historias.sort((a, b) => {
-          const fechaA = new Date(a.fecha).getTime();
-          const fechaB = new Date(b.fecha).getTime();
-          return fechaB - fechaA;
+          const fechaA = new Date(a.auditoria?.fechaCreacion || '').getTime();
+          const fechaB = new Date(b.auditoria?.fechaCreacion || '').getTime();
+
+          if (fechaA !== fechaB) {
+            return fechaB - fechaA; // más reciente primero
+          }
+
+          // Desempate por número de historia (últimos 3 dígitos)
+          const extraerSecuencia = (nHistoria: string): number => {
+            const partes = nHistoria?.split('-');
+            return partes?.length === 3 ? parseInt(partes[2], 10) : 0;
+          };
+
+          const idA = extraerSecuencia(a.nHistoria);
+          const idB = extraerSecuencia(b.nHistoria);
+          return idB - idA;
         });
 
         this.historiaSeleccionada = this.historial[0] || null;
@@ -686,7 +700,7 @@ export class HistoriasMedicasComponent implements OnInit {
         this.mostrarElementos = this.historial.length > 0;
         this.cargando = false;
 
-        if (callback) callback(); // ✅ Ejecuta lógica adicional si se pasa
+        if (callback) callback();
       },
       error: (error: HttpErrorResponse) => {
         console.error('Error al cargar historias:', error);
@@ -698,6 +712,7 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     });
   }
+
 
 
   seleccionarHistoriasPorPaciente(paciente: Paciente | null): void {
@@ -946,6 +961,8 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   actualizarPacientesPorSede(): void {
+    this.limpiarDatos();
+
     const sedeId = this.sedeFiltro?.trim().toLowerCase();
     this.pacientesFiltradosPorSede = !sedeId
       ? [...this.pacientes]
@@ -1062,6 +1079,22 @@ export class HistoriasMedicasComponent implements OnInit {
       ? p1.informacionPersonal?.cedula === p2.informacionPersonal?.cedula
       : false;
   }
+
+  filtrarPorNombreOCedula(term: string, item: any): boolean {
+    const normalizar = (texto: string): string =>
+      texto
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+
+    const filtro = normalizar(term);
+    const nombre = normalizar(item.informacionPersonal?.nombreCompleto || '');
+    const cedula = normalizar(String(item.informacionPersonal?.cedula || ''));
+
+    return nombre.includes(filtro) || cedula.includes(filtro);
+  }
+
 
   historiaModificada(): boolean {
     if (!this.modoEdicion) return true;
