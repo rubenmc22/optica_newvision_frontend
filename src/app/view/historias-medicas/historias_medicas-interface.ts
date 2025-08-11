@@ -66,8 +66,7 @@ export interface Antecedentes {
   cirugiaOcular?: boolean;
   cirugiaOcularDescripcion?: string;
   traumatismoOcular?: boolean;
-  usaDispositivosElectronicos?: boolean;
-  tiempoUsoEstimado?: string;
+  usoDispositivo?: string;
   antecedentesPersonales?: string[];
   antecedentesFamiliares?: string[];
   patologias?: string[];

@@ -310,7 +310,6 @@ export class VerPacientesComponent implements OnInit {
 
         this.sedeActiva = sedeKey;
         this.sedeFiltro = sedeKey;
-        console.log('Sede desde sesión:', sedeKey);
 
         this.cargarPacientes();
       } catch (error) {
@@ -375,8 +374,6 @@ export class VerPacientesComponent implements OnInit {
             historiaClinica: p.historiaClinica ?? {}
           }))
           : [];
-
-        console.log('Pacientes cargados:', this.pacientes);
       },
       error: (error) => {
         console.error('Error al cargar pacientes:', error);
@@ -385,40 +382,6 @@ export class VerPacientesComponent implements OnInit {
       }
     });
   }
-
-
-  // Métodos de filtrado y ordenación
-  /* pacientesFiltrados(): Paciente[] {
-     // Si no es un array, retornar array vacío
-     if (!Array.isArray(this.pacientes)) {
-       console.warn('this.pacientes no es un array:', this.pacientes);
-       return [];
-     }
- 
-     const filtroText = this.filtro.trim().toLowerCase();
-     //console.log('Pacientes:', this.pacientes);
- 
-     return this.pacientes.filter(paciente => {
-       const esSedeActiva = paciente.sede === this.sedeActiva;
-       const esOtraSede = paciente.sede !== this.sedeActiva;
- 
-       let mostrar = false;
-       if (this.sedeFiltro === this.sedeActiva) {
-         mostrar = esSedeActiva;
-       } else if (this.sedeFiltro === 'otra') {
-         mostrar = esOtraSede;
-       } else {
-         mostrar = true;
-       }
- 
-       //  console.log('PACIENTE', paciente);
-       const coincideTexto =
-         paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(filtroText) ||
-         paciente.informacionPersonal.cedula.includes(filtroText);
- 
-       return mostrar && coincideTexto;
-     });
-   }*/
 
   pacientesFiltrados(): Paciente[] {
     // Si no es un array, retornar array vacío
@@ -577,8 +540,6 @@ export class VerPacientesComponent implements OnInit {
       }
     };
 
-    console.log('PACIENTE ', nuevoPaciente);
-
     this.pacientesService.createPaciente(nuevoPaciente).subscribe({
       next: (response) => {
         this.pacientes.push(response);
@@ -728,8 +689,6 @@ export class VerPacientesComponent implements OnInit {
         patologiaOcular: pacienteFormValue.patologiaOcular || []
       }
     };
-
-    console.log('Enviando al backend:', datosActualizados);
 
     const keyPaciente = `${this.sedeActiva}-${datosActualizados.informacionPersonal.cedula}`;
 
@@ -888,17 +847,15 @@ export class VerPacientesComponent implements OnInit {
     }
   }
 
-
   abrirModalVisualizacionPaciente(paciente: Paciente): void {
-    console.log('paciente', paciente);
-
+ 
     const info = paciente?.informacionPersonal ?? {};
     const redes = paciente?.redesSociales ?? [];
     const historia = paciente?.historiaClinica ?? {};
 
     const noEspecificadoTexto = 'No';
     const noEspecificadoArray = [noEspecificadoTexto];
-    console.log('info', info);
+
     const pacienteTransformado = {
       id: paciente.key ?? '',
       nombreCompleto: info.nombreCompleto ?? noEspecificadoTexto,
@@ -924,6 +881,7 @@ export class VerPacientesComponent implements OnInit {
       historiaClinica: {
         usuarioLentes: historia.usuarioLentes ?? noEspecificadoTexto,
         fotofobia: historia.fotofobia ?? noEspecificadoTexto,
+        usoDispositivo: historia.usoDispositivo?.trim() || noEspecificadoTexto,
         traumatismoOcular: historia.traumatismoOcular ?? noEspecificadoTexto,
         traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion?.trim() || noEspecificadoTexto,
         cirugiaOcular: historia.cirugiaOcular ?? noEspecificadoTexto,
@@ -952,9 +910,7 @@ export class VerPacientesComponent implements OnInit {
       modal.show();
     }
 
-    console.log('pacienteTransformado', pacienteTransformado);
   }
-
 
   cerrarModal(id: string): void {
     const modalElement = document.getElementById(id);

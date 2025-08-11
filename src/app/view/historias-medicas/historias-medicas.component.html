@@ -33,6 +33,12 @@
             <ng-template ng-option-tmp let-item="item">
               {{item.informacionPersonal.nombreCompleto}} — {{item.informacionPersonal.cedula}}
             </ng-template>
+
+            <ng-template ng-notfound-tmp>
+              <div class="text-muted px-2 py-1">
+                No se encontraron pacientes con ese nombre o cédula
+              </div>
+            </ng-template>
           </ng-select>
 
 
@@ -64,13 +70,24 @@
 
                   <!-- 🧠 Encabezado superior: motivo + fecha -->
                   <div class="d-flex justify-content-between mb-1">
-                    <strong style="width: 65%;">{{ historia.datosConsulta.motivo }}</strong>
+                    <strong style="width: 65%;">
+                      {{
+                      historia.datosConsulta.motivo.includes('Otro')
+                      ? historia.datosConsulta.otroMotivo || '— Sin motivo especificado —'
+                      : historia.datosConsulta.motivo.join(', ')
+                      }}
+                    </strong>
+
                     <span class="text-muted">{{ formatearFecha(historia.auditoria.fechaCreacion) }}</span>
                   </div>
 
                   <!-- 👥 Pie inferior: médico + n° historia -->
                   <div class="d-flex justify-content-between align-items-center mt-2">
-                    <small class="text-muted">👨‍⚕️ {{ historia.datosConsulta.medico.nombre }}</small>
+                    <small class="text-muted">
+                      👨‍⚕️ {{ historia.datosConsulta.medico.nombre || 'Médico no registrado' }}
+
+                    </small>
+
                     <span class="badge bg-info">#{{ historia.nHistoria || '' }}</span>
                   </div>
                 </button>
@@ -133,9 +150,10 @@
                   <div class="col-md-3 mb-0">
                     <strong>Motivo:</strong><br>
                     <p class="ms-0 bg-light rounded p-2">
-                      {{ historiaSeleccionada?.datosConsulta?.motivo || 'No especificado' }}
+                      {{ getMotivoVisual() }}
                     </p>
                   </div>
+
                   <div class="col-md-6 mb-0">
                     <strong>Dirección:</strong><br>
                     <p class="ms-0  bg-light rounded p-2">{{ pacienteSeleccionado?.informacionPersonal?.direccion }}</p>
@@ -156,15 +174,17 @@
                   <div class="col-md-3">
                     <strong>Cristal actual:</strong>
                     <p class="bg-light rounded p-2">
-                      {{ pacienteSeleccionado?.historiaClinica?.tipoCristalActual || 'No especificado' }}
+                      {{ historiaSeleccionada?.datosConsulta?.tipoCristalActual || 'No especificado' }}
                     </p>
                   </div>
                   <div class="col-md-3">
                     <strong>Última graduación:</strong>
                     <p class="bg-light rounded p-2">
-                      {{ pacienteSeleccionado?.historiaClinica?.ultimaGraduacion || 'No especificado' }}
+                      {{ historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion ?
+                      (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No  especificado' }}
                     </p>
                   </div>
+
                   <div class="col-md-3">
                     <strong>Fotofobia:</strong>
                     <p class="bg-light rounded p-2">
@@ -202,11 +222,10 @@
                   <div class="col-md-4">
                     <strong>Uso de dispositivos electrónicos:</strong>
                     <p class="bg-light rounded p-2">
-                      {{ pacienteSeleccionado?.historiaClinica?.usaDispositivosElectronicos || 'No especificado' }}
-                      <span *ngIf="pacienteSeleccionado?.historiaClinica?.tiempoUsoEstimado"> — {{
-                        pacienteSeleccionado?.historiaClinica?.tiempoUsoEstimado }}</span>
+                      {{ pacienteSeleccionado?.historiaClinica?.usoDispositivo || 'No especificado' }}
                     </p>
                   </div>
+
                   <div class="col-md-4">
                     <strong class="d-block mb-1">Antecedentes personales:</strong>
                     <div *ngIf="(pacienteSeleccionado?.historiaClinica?.antecedentesPersonales ?? []).length > 0"
@@ -359,7 +378,7 @@
                   <div class="col-md-4 mb-4">
                     <div class="d-flex align-items-center">
                       <h6 class="text-primary mb-0 me-2">🕒 Hora de evaluación:</h6>
-                      <span class="fw-semibold">{{ historiaSeleccionada?.horaEvaluacion || 'No registrada' }}</span>
+                      <span class="fw-semibold">{{ horaEvaluacion || 'No registrada' }}</span>
                     </div>
                   </div><br>
                 </div>
@@ -644,9 +663,11 @@
 
                     <div class="col-md-4">
                       <label class="form-label">Tipo de cristal actual</label>
-                      <ng-select [items]="tiposCristales" formControlName="tipoCristalActual" [searchable]="true"
-                        placeholder="Seleccione un tipo...">
+                      <ng-select [items]="tiposCristales" bindLabel="label" bindValue="value"
+                        formControlName="tipoCristalActual" [searchable]="true" placeholder="Seleccione un tipo...">
                       </ng-select>
+
+
                     </div>
 
                     <div class="col-md-4">

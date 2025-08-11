@@ -3,7 +3,7 @@ import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, forkJoin } from 'rxjs';
-import { take } from 'rxjs/operators';
+import { take, catchError } from 'rxjs/operators';
 import * as bootstrap from 'bootstrap';
 declare var $: any;
 
@@ -75,6 +75,7 @@ export class HistoriasMedicasComponent implements OnInit {
   historial: HistoriaMedica[] = [];
   notaConformidad: string = 'PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE.';
   mostrarMaterialPersonalizado: boolean[] = [];
+  horaEvaluacion: string = '';
 
   // Formulario
   historiaForm: FormGroup;
@@ -83,7 +84,7 @@ export class HistoriasMedicasComponent implements OnInit {
   opcionesRef = OPCIONES_REF;
   opcionesAntecedentes = OPCIONES_ANTECEDENTES;
   motivosConsulta = MOTIVOS_CONSULTA;
-  tiposCristales = TIPOS_CRISTALES;
+  tiposCristales = TIPOS_CRISTALES.map(c => ({ label: c, value: c }));
   materiales: typeof MATERIALES;
   materialLabels!: Map<TipoMaterial, string>;
 
@@ -216,9 +217,30 @@ export class HistoriasMedicasComponent implements OnInit {
 
   private inicializarDatosIniciales(): void {
     forkJoin({
-      user: this.userStateService.currentUser$.pipe(take(1)),
-      sedes: this.authService.getSedes().pipe(take(1))
+      user: this.userStateService.currentUser$.pipe(
+        take(1),
+        catchError(error => {
+          console.error('Error al cargar usuario:', error);
+          this.snackBar.open('⚠️ Error al cargar su información de usuario. Por favor, intente nuevamente.', 'Cerrar', {
+            duration: 5000,
+            panelClass: ['snackbar-error']
+          });
+          return of(null); // Retorna null si hay error
+        })
+      ),
+      sedes: this.authService.getSedes().pipe(
+        take(1),
+        catchError(error => {
+          console.error('Error al cargar sedes:', error);
+          this.snackBar.open('⚠️ No se pudieron cargar las sedes disponibles. Mostrando opciones limitadas.', 'Cerrar', {
+            duration: 5000,
+            panelClass: ['snackbar-warning']
+          });
+          return of({ sedes: [] }); // Retorna estructura con array vacío
+        })
+      )
     }).subscribe(({ user, sedes }) => {
+      // Tu lógica original sigue igual aquí
       this.sedesDisponibles = (sedes.sedes ?? [])
         .map(s => ({
           ...s,
@@ -265,6 +287,7 @@ export class HistoriasMedicasComponent implements OnInit {
   crearHistoriaNueva(): void {
     this.historiaEnEdicion = this.generarHistoria('crear');
     this.modoEdicion = false;
+    this.onMotivoChange([]);
     this.iniciarFlujoHistoria();
   }
 
@@ -321,8 +344,7 @@ export class HistoriasMedicasComponent implements OnInit {
         cirugiaOcular: false,
         cirugiaOcularDescripcion: '',
         traumatismoOcular: false,
-        usaDispositivosElectronicos: false,
-        tiempoUsoEstimado: '',
+        usoDispositivo: '',
         antecedentesPersonales: [],
         antecedentesFamiliares: [],
         patologias: [],
@@ -379,13 +401,13 @@ export class HistoriasMedicasComponent implements OnInit {
 
     const h = this.historiaEnEdicion!;
     const dc = h.datosConsulta;
-    const ant = h.antecedentes ?? {} as Antecedentes;
     const eo = h.examenOcular;
     const dt = h.diagnosticoTratamiento;
 
     const paciente = this.pacientesFiltrados.find(p => p.key === h.pacienteId);
     this.pacienteParaNuevaHistoria = paciente!;
     this.pacienteSeleccionado = paciente!;
+    console.log('h:', h);
 
     const cargarYPrecargar = () => {
       const cedulaMedico = typeof dc.medico === 'object'
@@ -397,25 +419,12 @@ export class HistoriasMedicasComponent implements OnInit {
       );
 
       this.historiaForm.patchValue({
-        horaEvaluacion: h.horaEvaluacion,
         paciente: paciente,
         motivo: Array.isArray(dc.motivo) ? dc.motivo : [dc.motivo],
         otroMotivo: dc.otroMotivo,
         medico: medico ?? null,
-        tipoCristalActual: ant.tipoCristalActual,
-        ultimaGraduacion: ant.ultimaGraduacion,
-        usuarioLentes: ant.usuarioLentes,
-        fotofobia: ant.fotofobia,
-        alergicoA: ant.alergicoA,
-        cirugiaOcular: ant.cirugiaOcular,
-        cirugiaOcularDescripcion: ant.cirugiaOcularDescripcion,
-        traumatismoOcular: ant.traumatismoOcular,
-        usaDispositivosElectronicos: ant.usaDispositivosElectronicos,
-        tiempoUsoEstimado: ant.tiempoUsoEstimado,
-        antecedentesPersonales: ant.antecedentesPersonales,
-        antecedentesFamiliares: ant.antecedentesFamiliares,
-        patologias: ant.patologias,
-        patologiaOcular: ant.patologiaOcular,
+        tipoCristalActual: dc.tipoCristalActual,
+        ultimaGraduacion: dc.fechaUltimaGraduacion,
 
         // Lensometría
         len_esf_od: eo.lensometria.esf_od,
@@ -478,6 +487,7 @@ export class HistoriasMedicasComponent implements OnInit {
         tratamiento: dt.tratamiento
       });
 
+      this.onMotivoChange(this.historiaForm.value.motivo);
 
       this.recomendaciones.clear();
       h.recomendaciones.forEach(r => {
@@ -504,31 +514,107 @@ export class HistoriasMedicasComponent implements OnInit {
 
   guardarHistoria(): void {
     if (this.modoEdicion && this.historiaSeleccionada) {
-      const historiaActualizada = {
-        ...this.historiaSeleccionada,
-        ...this.historiaForm.value,
-        recomendaciones: this.mapRecomendaciones()
-      };
-
-      /* this.historiaService.updateHistoria(this.historiaSeleccionada.id, historiaActualizada).subscribe({
-     next: () => {
-       this.historiaSeleccionada = historiaActualizada; // Mantiene la referencia
-       this.swalService.showSuccess('¡Actualizado!', 'Cambios guardados correctamente');
-       $('#historiaModal').modal('hide'); // Cierra el modal sin resetear historiaSeleccionada
-     },
-     error: (err) => {
-       console.error('Error al actualizar:', err);
-       this.swalService.showError('Error', 'No se pudieron guardar los cambios');
-     }
-   });
- } else {
-   // Modo creación (manteniendo tu lógica existente)
-   this.crearHistoria(); 
- }*/
-      // Lógica de actualización aquí...
+      //  this.updateHistoria();
     } else {
       this.crearHistoria();
     }
+  }
+
+  private updateHistoria(): void {
+    if (!this.historiaSeleccionada) return;
+
+    const f = this.historiaForm.value;
+
+    const historiaActualizada: HistoriaMedica = {
+      ...this.historiaSeleccionada,
+      datosConsulta: {
+        motivo: Array.isArray(f.motivo) ? f.motivo : [f.motivo],
+        otroMotivo: f.otroMotivo || '',
+        tipoCristalActual: f.tipoCristalActual || '',
+        fechaUltimaGraduacion: f.ultimaGraduacion || '',
+        medico: typeof f.medico === 'string' ? f.medico : f.medico?.nombre || ''
+      },
+      examenOcular: {
+        lensometria: {
+          esf_od: f.len_esf_od,
+          cil_od: f.len_cil_od,
+          eje_od: f.len_eje_od,
+          add_od: f.len_add_od,
+          av_lejos_od: f.len_av_lejos_od,
+          av_cerca_od: f.len_av_cerca_od,
+          av_lejos_bi: f.len_av_lejos_bi,
+          av_bi: f.len_av_bi,
+          esf_oi: f.len_esf_oi,
+          cil_oi: f.len_cil_oi,
+          eje_oi: f.len_eje_oi,
+          add_oi: f.len_add_oi,
+          av_lejos_oi: f.len_av_lejos_oi,
+          av_cerca_oi: f.len_av_cerca_oi,
+          av_cerca_bi: f.len_av_cerca_bi
+        },
+        refraccion: {
+          esf_od: f.ref_esf_od,
+          cil_od: f.ref_cil_od,
+          eje_od: f.ref_eje_od,
+          add_od: f.ref_add_od,
+          avccl_od: f.ref_avccl_od,
+          avccc_od: f.ref_avccc_od,
+          avccl_bi: f.ref_avccl_bi,
+          avccc_bi: f.ref_avccc_bi,
+          esf_oi: f.ref_esf_oi,
+          cil_oi: f.ref_cil_oi,
+          eje_oi: f.ref_eje_oi,
+          add_oi: f.ref_add_oi,
+          avccl_oi: f.ref_avccl_oi,
+          avccc_oi: f.ref_avccc_oi
+        },
+        refraccionFinal: {
+          esf_od: f.ref_final_esf_od,
+          cil_od: f.ref_final_cil_od,
+          eje_od: f.ref_final_eje_od,
+          add_od: f.ref_final_add_od,
+          alt_od: f.ref_final_alt_od,
+          dp_od: f.ref_final_dp_od,
+          esf_oi: f.ref_final_esf_oi,
+          cil_oi: f.ref_final_cil_oi,
+          eje_oi: f.ref_final_eje_oi,
+          add_oi: f.ref_final_add_oi,
+          alt_oi: f.ref_final_alt_oi,
+          dp_oi: f.ref_final_dp_oi
+        },
+        avsc_avae_otros: {
+          avsc_od: f.avsc_od,
+          avae_od: f.avae_od,
+          otros_od: f.otros_od,
+          avsc_oi: f.avsc_oi,
+          avae_oi: f.avae_oi,
+          otros_oi: f.otros_oi,
+          avsc_bi: f.avsc_bi
+        }
+      },
+      diagnosticoTratamiento: {
+        diagnostico: f.diagnostico || '',
+        tratamiento: f.tratamiento || ''
+      },
+      recomendaciones: this.mapRecomendaciones(),
+      conformidad: {
+        notaConformidad: this.notaConformidad || ''
+      }
+    };
+
+    console.log('Payload enviado:', historiaActualizada);
+
+    this.historiaService.updateHistoria(this.historiaSeleccionada.nHistoria, historiaActualizada).subscribe({
+      next: () => {
+        this.historiaSeleccionada = historiaActualizada;
+        this.swalService.showSuccess('¡Historia Actualizada!', 'Cambios guardados correctamente');
+        $('#historiaModal').modal('hide');
+      },
+      error: (err) => {
+        console.error('Error al actualizar:', err);
+        this.swalService.showError('Error', 'No se pudieron guardar los cambios');
+      }
+    });
   }
 
   private crearHistoria(): void {
@@ -647,7 +733,7 @@ export class HistoriasMedicasComponent implements OnInit {
                 fotofobia: historia.fotofobia ?? null,
                 traumatismoOcular: historia.traumatismoOcular ?? null,
                 traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion ?? '',
-                usaDispositivosElectronicos: this.textoABooleano(historia.usaDispositivosElectronicos),
+                usoDispositivo: historia.usoDispositivo,
                 tiempoUsoEstimado: historia.tiempoUsoEstimado ?? '',
                 cirugiaOcular: historia.cirugiaOcular ?? null,
                 cirugiaOcularDescripcion: historia.cirugiaOcularDescripcion ?? '',
@@ -676,6 +762,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
       next: (historias: HistoriaMedica[]) => {
+        console.log('Historias en cargar Historias', historias);
         this.historial = historias.sort((a, b) => {
           const fechaA = new Date(a.auditoria?.fechaCreacion || '').getTime();
           const fechaB = new Date(b.auditoria?.fechaCreacion || '').getTime();
@@ -696,6 +783,7 @@ export class HistoriasMedicasComponent implements OnInit {
         });
 
         this.historiaSeleccionada = this.historial[0] || null;
+        this.setHoraEvaluacion();
         this.mostrarSinHistorial = this.historial.length === 0;
         this.mostrarElementos = this.historial.length > 0;
         this.cargando = false;
@@ -713,16 +801,14 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
-
-
-  seleccionarHistoriasPorPaciente(paciente: Paciente | null): void {
+  async seleccionarHistoriasPorPaciente(paciente: Paciente | null): Promise<void> {
     if (!paciente) {
       this.limpiarDatos();
       return;
     }
 
     this.pacienteSeleccionado = paciente;
-    this.cargarHistoriasMedicas(paciente.key);
+    this.cargarHistoriasMedicas(paciente.key); // espera a que se cargue
   }
 
   selesccionarPacientePorId(id: string | null): void {
@@ -788,6 +874,11 @@ export class HistoriasMedicasComponent implements OnInit {
       if (callback) callback();
     }, error => {
       console.error('Error al cargar empleados:', error);
+      this.snackBar.open(`⚠️ Error, No se pudieron cargar los Médicos.`, 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-warning']
+      });
+
       this.isLoading = false;
       if (callback) callback();
     });
@@ -936,8 +1027,7 @@ export class HistoriasMedicasComponent implements OnInit {
       cirugiaOcular: f.cirugiaOcular ?? false,
       cirugiaOcularDescripcion: f.cirugiaOcularDescripcion ?? '',
       traumatismoOcular: f.traumatismoOcular ?? false,
-      usaDispositivosElectronicos: f.usaDispositivosElectronicos ?? false,
-      tiempoUsoEstimado: f.tiempoUsoEstimado ?? '',
+      usoDispositivo: f.usoDispositivo ?? false,
       antecedentesPersonales: f.antecedentesPersonales ?? [],
       antecedentesFamiliares: f.antecedentesFamiliares ?? [],
       patologias: f.patologias ?? [],
@@ -948,17 +1038,6 @@ export class HistoriasMedicasComponent implements OnInit {
   // ***************************
   // * Métodos de sedes
   // ***************************
-
-  cargarSedes(): void {
-    this.authService.getSedes().subscribe({
-      next: (response) => {
-        this.sedesDisponibles = response.sedes;
-      },
-      error: (err) => {
-        console.error('Error al cargar sedes:', err);
-      }
-    });
-  }
 
   actualizarPacientesPorSede(): void {
     this.limpiarDatos();
@@ -1037,10 +1116,6 @@ export class HistoriasMedicasComponent implements OnInit {
   // * Métodos de utilidad
   // ***************************
 
-  textoABooleano(valor: any): boolean {
-    return valor?.toString().toLowerCase() === 'sí' || valor === true;
-  }
-
   formatearFecha(fechaIso: string | Date): string {
     if (!fechaIso) return 'Fecha inválida';
 
@@ -1051,6 +1126,31 @@ export class HistoriasMedicasComponent implements OnInit {
     const [anio, mes, dia] = fechaLimpiada.split('-');
     return `${dia}/${mes}/${anio}`;
   }
+
+  extraerHora(fechaIso: string): string {
+    if (!fechaIso) return '';
+    const fecha = new Date(fechaIso);
+    return new Intl.DateTimeFormat('es-VE', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: 'America/Caracas'
+    }).format(fecha);
+  }
+
+  setHoraEvaluacion() {
+    const fecha = this.historiaSeleccionada?.auditoria?.fechaCreacion;
+    this.horaEvaluacion = fecha
+      ? new Intl.DateTimeFormat('es-VE', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'America/Caracas'
+      }).format(new Date(fecha))
+      : 'No registrada';
+  }
+
 
   calcularEdad(fechaNacimiento: string | undefined): number {
     if (!fechaNacimiento) return 0;
@@ -1095,7 +1195,6 @@ export class HistoriasMedicasComponent implements OnInit {
     return nombre.includes(filtro) || cedula.includes(filtro);
   }
 
-
   historiaModificada(): boolean {
     if (!this.modoEdicion) return true;
 
@@ -1130,11 +1229,29 @@ export class HistoriasMedicasComponent implements OnInit {
 
     if (this.mostrarInputOtroMotivo) {
       otroMotivoControl?.setValidators([Validators.required]);
+      otroMotivoControl?.enable(); // ✅ habilita el campo si aplica
     } else {
       otroMotivoControl?.clearValidators();
       otroMotivoControl?.setValue('');
+      otroMotivoControl?.disable(); // ✅ deshabilita si no aplica
     }
+
     otroMotivoControl?.updateValueAndValidity();
+  }
+
+  getMotivoVisual(): string {
+    const motivo = this.historiaSeleccionada?.datosConsulta?.motivo;
+    const otro = this.historiaSeleccionada?.datosConsulta?.otroMotivo;
+
+    if (Array.isArray(motivo)) {
+      return motivo.includes('Otro')
+        ? otro || 'No especificado'
+        : motivo.join(', ');
+    }
+
+    return motivo === 'Otro'
+      ? otro || 'No especificado'
+      : motivo || 'No especificado';
   }
 
   verDetalle(historia: HistoriaMedica): void {

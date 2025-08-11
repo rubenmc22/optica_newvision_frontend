@@ -30,8 +30,7 @@ export interface Paciente {
     fotofobia?: string | null;
     traumatismoOcular?: string | null;
     traumatismoOcularDescripcion?: string | null;
-    usaDispositivosElectronicos?: boolean;
-    tiempoUsoEstimado?: string;
+    usoDispositivo?: string;
     cirugiaOcular?: string | null;
     cirugiaOcularDescripcion?: string | null;
     alergicoA?: string | null;
