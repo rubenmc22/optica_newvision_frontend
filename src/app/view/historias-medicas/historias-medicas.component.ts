@@ -387,9 +387,13 @@ export class HistoriasMedicasComponent implements OnInit {
     this.pacienteParaNuevaHistoria = paciente!;
     this.pacienteSeleccionado = paciente!;
 
-    const cargarYPrecargar = () => {
+       const cargarYPrecargar = () => {
+      const cedulaMedico = typeof dc.medico === 'object'
+        ? dc.medico?.cedula
+        : String(dc.medico);
+
       const medico = this.medicoTratante.find(
-        m => m.cedula === String(dc.medico) // 👈 Asegura que ambos sean string
+        m => m.cedula === cedulaMedico
       );
 
       this.historiaForm.patchValue({
