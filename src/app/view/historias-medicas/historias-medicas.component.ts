@@ -384,97 +384,111 @@ export class HistoriasMedicasComponent implements OnInit {
     const dt = h.diagnosticoTratamiento;
 
     const paciente = this.pacientesFiltrados.find(p => p.key === h.pacienteId);
-    const medico = this.medicoTratante.find(m => m.cedula === dc.medico.cedula);
+    this.pacienteParaNuevaHistoria = paciente!;
+    this.pacienteSeleccionado = paciente!;
 
-    this.historiaForm.patchValue({
-      horaEvaluacion: h.horaEvaluacion,
-      paciente: paciente,
-      motivo: Array.isArray(dc.motivo) ? dc.motivo : [dc.motivo],
-      otroMotivo: dc.otroMotivo,
-      medico: medico,
-      tipoCristalActual: ant.tipoCristalActual,
-      ultimaGraduacion: ant.ultimaGraduacion,
-      usuarioLentes: ant.usuarioLentes,
-      fotofobia: ant.fotofobia,
-      alergicoA: ant.alergicoA,
-      cirugiaOcular: ant.cirugiaOcular,
-      cirugiaOcularDescripcion: ant.cirugiaOcularDescripcion,
-      traumatismoOcular: ant.traumatismoOcular,
-      usaDispositivosElectronicos: ant.usaDispositivosElectronicos,
-      tiempoUsoEstimado: ant.tiempoUsoEstimado,
-      antecedentesPersonales: ant.antecedentesPersonales,
-      antecedentesFamiliares: ant.antecedentesFamiliares,
-      patologias: ant.patologias,
-      patologiaOcular: ant.patologiaOcular,
+    const cargarYPrecargar = () => {
+      const medico = this.medicoTratante.find(
+        m => m.cedula === String(dc.medico) // 👈 Asegura que ambos sean string
+      );
 
-      // Lensometría
-      len_esf_od: eo.lensometria.esf_od,
-      len_cil_od: eo.lensometria.cil_od,
-      len_eje_od: eo.lensometria.eje_od,
-      len_add_od: eo.lensometria.add_od,
-      len_av_lejos_od: eo.lensometria.av_lejos_od,
-      len_av_cerca_od: eo.lensometria.av_cerca_od,
-      len_av_lejos_bi: eo.lensometria.av_lejos_bi,
-      len_av_bi: eo.lensometria.av_bi,
-      len_esf_oi: eo.lensometria.esf_oi,
-      len_cil_oi: eo.lensometria.cil_oi,
-      len_eje_oi: eo.lensometria.eje_oi,
-      len_add_oi: eo.lensometria.add_oi,
-      len_av_lejos_oi: eo.lensometria.av_lejos_oi,
-      len_av_cerca_oi: eo.lensometria.av_cerca_oi,
-      len_av_cerca_bi: eo.lensometria.av_cerca_bi,
+      this.historiaForm.patchValue({
+        horaEvaluacion: h.horaEvaluacion,
+        paciente: paciente,
+        motivo: Array.isArray(dc.motivo) ? dc.motivo : [dc.motivo],
+        otroMotivo: dc.otroMotivo,
+        medico: medico ?? null,
+        tipoCristalActual: ant.tipoCristalActual,
+        ultimaGraduacion: ant.ultimaGraduacion,
+        usuarioLentes: ant.usuarioLentes,
+        fotofobia: ant.fotofobia,
+        alergicoA: ant.alergicoA,
+        cirugiaOcular: ant.cirugiaOcular,
+        cirugiaOcularDescripcion: ant.cirugiaOcularDescripcion,
+        traumatismoOcular: ant.traumatismoOcular,
+        usaDispositivosElectronicos: ant.usaDispositivosElectronicos,
+        tiempoUsoEstimado: ant.tiempoUsoEstimado,
+        antecedentesPersonales: ant.antecedentesPersonales,
+        antecedentesFamiliares: ant.antecedentesFamiliares,
+        patologias: ant.patologias,
+        patologiaOcular: ant.patologiaOcular,
 
-      // Refracción
-      ref_esf_od: eo.refraccion.esf_od,
-      ref_cil_od: eo.refraccion.cil_od,
-      ref_eje_od: eo.refraccion.eje_od,
-      ref_add_od: eo.refraccion.add_od,
-      ref_avccl_od: eo.refraccion.avccl_od,
-      ref_avccc_od: eo.refraccion.avccc_od,
-      ref_avccl_bi: eo.refraccion.avccl_bi,
-      ref_avccc_bi: eo.refraccion.avccc_bi,
-      ref_esf_oi: eo.refraccion.esf_oi,
-      ref_cil_oi: eo.refraccion.cil_oi,
-      ref_eje_oi: eo.refraccion.eje_oi,
-      ref_add_oi: eo.refraccion.add_oi,
-      ref_avccl_oi: eo.refraccion.avccl_oi,
-      ref_avccc_oi: eo.refraccion.avccc_oi,
+        // Lensometría
+        len_esf_od: eo.lensometria.esf_od,
+        len_cil_od: eo.lensometria.cil_od,
+        len_eje_od: eo.lensometria.eje_od,
+        len_add_od: eo.lensometria.add_od,
+        len_av_lejos_od: eo.lensometria.av_lejos_od,
+        len_av_cerca_od: eo.lensometria.av_cerca_od,
+        len_av_lejos_bi: eo.lensometria.av_lejos_bi,
+        len_av_bi: eo.lensometria.av_bi,
+        len_esf_oi: eo.lensometria.esf_oi,
+        len_cil_oi: eo.lensometria.cil_oi,
+        len_eje_oi: eo.lensometria.eje_oi,
+        len_add_oi: eo.lensometria.add_oi,
+        len_av_lejos_oi: eo.lensometria.av_lejos_oi,
+        len_av_cerca_oi: eo.lensometria.av_cerca_oi,
+        len_av_cerca_bi: eo.lensometria.av_cerca_bi,
 
-      // Refracción Final
-      ref_final_esf_od: eo.refraccionFinal.esf_od,
-      ref_final_cil_od: eo.refraccionFinal.cil_od,
-      ref_final_eje_od: eo.refraccionFinal.eje_od,
-      ref_final_add_od: eo.refraccionFinal.add_od,
-      ref_final_alt_od: eo.refraccionFinal.alt_od,
-      ref_final_dp_od: eo.refraccionFinal.dp_od,
-      ref_final_esf_oi: eo.refraccionFinal.esf_oi,
-      ref_final_cil_oi: eo.refraccionFinal.cil_oi,
-      ref_final_eje_oi: eo.refraccionFinal.eje_oi,
-      ref_final_add_oi: eo.refraccionFinal.add_oi,
-      ref_final_alt_oi: eo.refraccionFinal.alt_oi,
-      ref_final_dp_oi: eo.refraccionFinal.dp_oi,
+        // Refracción
+        ref_esf_od: eo.refraccion.esf_od,
+        ref_cil_od: eo.refraccion.cil_od,
+        ref_eje_od: eo.refraccion.eje_od,
+        ref_add_od: eo.refraccion.add_od,
+        ref_avccl_od: eo.refraccion.avccl_od,
+        ref_avccc_od: eo.refraccion.avccc_od,
+        ref_avccl_bi: eo.refraccion.avccl_bi,
+        ref_avccc_bi: eo.refraccion.avccc_bi,
+        ref_esf_oi: eo.refraccion.esf_oi,
+        ref_cil_oi: eo.refraccion.cil_oi,
+        ref_eje_oi: eo.refraccion.eje_oi,
+        ref_add_oi: eo.refraccion.add_oi,
+        ref_avccl_oi: eo.refraccion.avccl_oi,
+        ref_avccc_oi: eo.refraccion.avccc_oi,
 
-      // AVSC / AVAE / OTROS
-      avsc_od: eo.avsc_avae_otros.avsc_od,
-      avae_od: eo.avsc_avae_otros.avae_od,
-      otros_od: eo.avsc_avae_otros.otros_od,
-      avsc_oi: eo.avsc_avae_otros.avsc_oi,
-      avae_oi: eo.avsc_avae_otros.avae_oi,
-      otros_oi: eo.avsc_avae_otros.otros_oi,
-      avsc_bi: eo.avsc_avae_otros.avsc_bi,
+        // Refracción Final
+        ref_final_esf_od: eo.refraccionFinal.esf_od,
+        ref_final_cil_od: eo.refraccionFinal.cil_od,
+        ref_final_eje_od: eo.refraccionFinal.eje_od,
+        ref_final_add_od: eo.refraccionFinal.add_od,
+        ref_final_alt_od: eo.refraccionFinal.alt_od,
+        ref_final_dp_od: eo.refraccionFinal.dp_od,
+        ref_final_esf_oi: eo.refraccionFinal.esf_oi,
+        ref_final_cil_oi: eo.refraccionFinal.cil_oi,
+        ref_final_eje_oi: eo.refraccionFinal.eje_oi,
+        ref_final_add_oi: eo.refraccionFinal.add_oi,
+        ref_final_alt_oi: eo.refraccionFinal.alt_oi,
+        ref_final_dp_oi: eo.refraccionFinal.dp_oi,
 
-      // Diagnóstico / Tratamiento
-      diagnostico: dt.diagnostico,
-      tratamiento: dt.tratamiento
-    });
+        // AVSC / AVAE / OTROS
+        avsc_od: eo.avsc_avae_otros.avsc_od,
+        avae_od: eo.avsc_avae_otros.avae_od,
+        otros_od: eo.avsc_avae_otros.otros_od,
+        avsc_oi: eo.avsc_avae_otros.avsc_oi,
+        avae_oi: eo.avsc_avae_otros.avae_oi,
+        otros_oi: eo.avsc_avae_otros.otros_oi,
+        avsc_bi: eo.avsc_avae_otros.avsc_bi,
 
-    this.recomendaciones.clear();
-    h.recomendaciones.forEach(r => {
-      const grupo = this.crearRecomendacion(r);
-      this.recomendaciones.push(grupo);
-    });
+        // Diagnóstico / Tratamiento
+        diagnostico: dt.diagnostico,
+        tratamiento: dt.tratamiento
+      });
 
-    this.formOriginalHistoria = this.historiaForm.value;
+
+      this.recomendaciones.clear();
+      h.recomendaciones.forEach(r => {
+        const grupo = this.crearRecomendacion(r);
+        this.recomendaciones.push(grupo);
+      });
+
+      this.formOriginalHistoria = this.historiaForm.value;
+    }
+    // ✅ Solo carga empleados si no están disponibles
+    if (!this.medicoTratante || this.medicoTratante.length === 0) {
+      this.loadEmployees(cargarYPrecargar);
+    } else {
+      cargarYPrecargar();
+    }
   }
 
   private prepararNuevaHistoria(): void {
