@@ -1,7 +1,19 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Observable, of, forkJoin } from 'rxjs';
+import { take } from 'rxjs/operators';
+import * as bootstrap from 'bootstrap';
+declare var $: any;
+
+// Interfaces
 import { Paciente } from '../pacientes/paciente-interface';
-import { HistoriaMedica, HistoriaMedicaCompleta, Conformidad, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico, RespuestaCreacionHistoria } from './historias_medicas-interface';
+import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico } from './historias_medicas-interface';
+import { Empleado } from '../../Interfaces/models-interface';
+import { Sede } from '../../view/login/login-interface';
+
+// Constantes
 import {
   OPCIONES_REF,
   OPCIONES_ANTECEDENTES,
@@ -9,26 +21,16 @@ import {
   TIPOS_CRISTALES,
   MATERIALES
 } from 'src/app/shared/constants/historias-medicas';
-import { MatSnackBar } from '@angular/material/snack-bar';
+
+// Servicios
 import { HistoriaMedicaService } from '../../core/services/historias-medicas/historias-medicas.service';
-import { take } from 'rxjs/operators';
-import * as bootstrap from 'bootstrap';
 import { SwalService } from '../../core/services/swal/swal.service';
 import { ModalService } from '../../core/services/modal/modal.service';
 import { PacientesService } from '../../core/services/pacientes/pacientes.service';
 import { AuthService } from '../../core/services/auth/auth.service';
 import { UserStateService } from '../../core/services/userState/user-state-service';
-import { HttpErrorResponse } from '@angular/common/http';
-
-import { Subject, Observable, of } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap, tap, takeUntil } from 'rxjs/operators';
 import { EmpleadosService } from './../../core/services/empleados/empleados.service';
-import { Empleado } from '../../Interfaces/models-interface';
-import { Sede } from '../../view/login/login-interface';
-import { forkJoin } from 'rxjs'
 
-
-declare var $: any;
 
 @Component({
   selector: 'app-historias-medicas',
@@ -37,6 +39,9 @@ declare var $: any;
   styleUrls: ['./historias-medicas.component.scss']
 })
 export class HistoriasMedicasComponent implements OnInit {
+  // ViewChild
+  @ViewChild('selectorPaciente') selectorPaciente!: ElementRef;
+
   // Estados del componente
   busqueda: string = '';
   cargando: boolean = false;
@@ -49,11 +54,10 @@ export class HistoriasMedicasComponent implements OnInit {
   sedeFiltro: string = this.sedeActiva;
   sedesDisponibles: Sede[] = [];
   filtro: string = '';
-  // sedesDisponibles: string[] = [];
   pacienteParaNuevaHistoria: Paciente | null = null;
   pacientesFiltradosPorSede: Paciente[] = [];
 
-  //Empleados
+  // Empleados
   isLoading = true;
   employees: any[] = [];
   medicoTratante: any[] = [];
@@ -64,18 +68,18 @@ export class HistoriasMedicasComponent implements OnInit {
   pacientesFiltrados: Paciente[] = [];
   formOriginalHistoria: any = {};
   medicoSeleccionado: Medico | null = null;
-
   pacienteSeleccionado: Paciente | null = null;
+  historiaEnEdicion: HistoriaMedica | null = null;
   historiaSeleccionada: HistoriaMedica | null = null;
   pacienteIdSeleccionado: string | null = null;
   historial: HistoriaMedica[] = [];
-  historiasMock: Record<string, HistoriaMedica[]> = {};
   notaConformidad: string = 'PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE.';
   mostrarMaterialPersonalizado: boolean[] = [];
 
-  // Declaración sin inicialización directa
+  // Formulario
   historiaForm: FormGroup;
 
+  // Constantes
   opcionesRef = OPCIONES_REF;
   opcionesAntecedentes = OPCIONES_ANTECEDENTES;
   motivosConsulta = MOTIVOS_CONSULTA;
@@ -110,27 +114,30 @@ export class HistoriasMedicasComponent implements OnInit {
     private snackBar: MatSnackBar,
     private empleadosService: EmpleadosService,
     private authService: AuthService,
-
+    private cdr: ChangeDetectorRef
   ) {
-
     this.materiales = MATERIALES;
     this.materialLabels = new Map<TipoMaterial, string>(
       this.materiales.map(m => [m.value as TipoMaterial, m.label])
     );
 
     this.maxDate = new Date().toISOString().split('T')[0];
-    this.historiaForm = this.fb.group({}); // Inicialización básica
+    this.historiaForm = this.fb.group({});
     this.inicializarFormulario();
   }
 
-  crearHistoriaNueva(): void {
-    this.historiaSeleccionada = null;
-    this.iniciarFlujoHistoria();
-  }
+  // ***************************
+  // * Métodos de inicialización
+  // ***************************
 
-  verificarMaterialOtro(index: number): void {
-    const materialesSeleccionados = this.recomendaciones.at(index).get('material')?.value || [];
-    this.mostrarMaterialPersonalizado[index] = materialesSeleccionados.includes('OTRO');
+  ngOnInit(): void {
+    this.configurarSubscripciones();
+    this.inicializarDatosIniciales();
+
+    setTimeout(() => {
+      this.pacienteIdSeleccionado = null;
+      this.pacienteSeleccionado = null;
+    }, 0);
   }
 
   private inicializarFormulario(): void {
@@ -203,80 +210,8 @@ export class HistoriasMedicasComponent implements OnInit {
       tratamiento: [''],
 
       // Recomendaciones
-      recomendaciones: this.fb.array([this.crearRecomendacion()]),
-      // cristal: ['', Validators.required],
-      //  material: ['', Validators.required],
-      // montura: ['', Validators.required],
-      //observaciones: ['']
+      recomendaciones: this.fb.array([this.crearRecomendacion()])
     });
-  }
-
-  onPacienteSeleccionado(): void {
-    const paciente = this.historiaForm.get('paciente')?.value;
-    console.log('Paciente', paciente);
-    this.pacienteParaNuevaHistoria = paciente;
-  }
-
-  onMedicoSeleccionado(medico: Medico): void {
-    console.log('Médico seleccionado:', medico);
-    this.medicoSeleccionado = medico;
-  }
-
-  private loadEmployees(): void {
-    this.isLoading = true;
-    this.empleadosService.getAllEmpleados().subscribe((empleados: Empleado[]) => {
-      // Filtra solo oftalmólogos y optometristas
-      this.medicoTratante = empleados.filter(emp =>
-        emp.cargoId === 'oftalmologo' || emp.cargoId === 'optometrista'
-      );
-      this.filteredEmployees = [...this.employees]; // Copia filtrada para búsquedas
-      this.isLoading = false;
-    }, error => {
-      console.error('Error al cargar empleados:', error);
-      this.isLoading = false;
-    });
-  }
-
-  selesccionarPacientePorId(id: string | null): void {
-    if (!id) {
-      this.pacienteSeleccionado = null;
-      return;
-    }
-
-    const paciente = this.pacientes.find(p => p.key === id);
-    if (!paciente) {
-      console.error('Paciente no encontrado');
-      return;
-    }
-
-    this.pacienteSeleccionado = paciente;
-    console.log('Paciente seleccionado:', paciente);
-
-    // Aquí puedes cargar las historias médicas del paciente
-    this.cargarHistoriasMedicas(id);
-  }
-
-  seleccionarHistoriasPorPaciente(paciente: Paciente | null): void {
-    if (!paciente) {
-      console.log('Selección limpiada');
-      this.limpiarDatos();
-      return;
-    }
-
-    console.log('Paciente seleccionado:', paciente);
-    this.pacienteSeleccionado = paciente;
-
-    // Cargar historias médicas del paciente
-    this.cargarHistoriasMedicas(paciente.key);
-  }
-
-  limpiarDatos(): void {
-    this.pacienteSeleccionado = null;
-    this.historial = [];
-    this.historiaSeleccionada = null;
-    this.mostrarElementos = false;
-    this.mostrarSinHistorial = false;
-    // Limpiar otros datos relacionados si es necesario
   }
 
   private inicializarDatosIniciales(): void {
@@ -284,7 +219,6 @@ export class HistoriasMedicasComponent implements OnInit {
       user: this.userStateService.currentUser$.pipe(take(1)),
       sedes: this.authService.getSedes().pipe(take(1))
     }).subscribe(({ user, sedes }) => {
-      // 🧼 Normaliza y ordena las sedes
       this.sedesDisponibles = (sedes.sedes ?? [])
         .map(s => ({
           ...s,
@@ -299,213 +233,165 @@ export class HistoriasMedicasComponent implements OnInit {
           )
         );
 
-
-      console.log('Sedes disponibles:', this.sedesDisponibles.map(s => s.key));
-
-      // 🧠 Detecta sede del usuario
       const sedeUsuario = (user?.sede ?? '').trim().toLowerCase();
       const sedeValida = this.sedesDisponibles.some(s => s.key === sedeUsuario);
 
-      console.log('sedeUsuario', sedeUsuario);
-      console.log('sedeValida', sedeValida);
-
-      // 🏥 Aplica sede activa y filtro
       this.sedeActiva = sedeValida ? sedeUsuario : '';
       this.sedeFiltro = this.sedeActiva;
 
-      this.cargarPacientes(); // ← Ya aplica el filtro por sede
+      this.loadEmployees();
+      this.cargarPacientes();
     });
   }
 
-  actualizarPacientesPorSede(): void {
-    const sedeId = this.sedeFiltro?.trim().toLowerCase();
+  private configurarSubscripciones(): void {
+    this.historiaForm.get('motivo')?.valueChanges.subscribe((motivos: string[] | null) => {
+      const otroMotivoControl = this.historiaForm.get('otroMotivo');
 
-    console.log('Sede filtro:', sedeId); // 👈 Verifica qué valor tiene
-
-    this.pacientesFiltradosPorSede = !sedeId
-      ? [...this.pacientes]
-      : this.pacientes.filter(p => {
-        console.log('Paciente sede:', p.sede); // 👈 Verifica qué sede tiene cada paciente
-        return p.sede === sedeId;
-      });
-  }
-
-  ngOnInit(): void {
-    this.configurarSubscripciones();
-    this.inicializarDatosIniciales(); // Aquí se cargan usuario + sedes + pacientes
-
-    // Limpieza visual al iniciar
-    setTimeout(() => {
-      this.pacienteIdSeleccionado = null;
-      this.pacienteSeleccionado = null;
-    }, 0);
-  }
-
-  cargarSedes(): void {
-    console.log('Sedes cargadas:', this.sedesDisponibles);
-    this.authService.getSedes().subscribe({
-      next: (response) => {
-        this.sedesDisponibles = response.sedes;
-      },
-      error: (err) => {
-        console.error('Error al cargar sedes:', err);
+      if (motivos && motivos.includes('Otro')) {
+        otroMotivoControl?.setValidators([Validators.required]);
+      } else {
+        otroMotivoControl?.clearValidators();
+        otroMotivoControl?.setValue('');
       }
+      otroMotivoControl?.updateValueAndValidity();
     });
   }
 
-  actualizarFiltroTexto(event: { term: string; items: any[] }): void {
-    const texto = event.term;
-    console.log('📝 Texto buscado:', texto);
-    this.filtro = texto;
-    this.actualizarPacientesFiltrados();
+  // ***************************
+  // * Métodos de historias médicas
+  // ***************************
+
+  crearHistoriaNueva(): void {
+    this.historiaEnEdicion = this.generarHistoria('crear');
+    this.modoEdicion = false;
+    this.iniciarFlujoHistoria();
   }
 
+  editarHistoria(historia: HistoriaMedica | null): void {
+    if (!historia) {
+      console.error('Error', 'No hay historia seleccionada para editar');
+      return;
+    }
 
-  logEventoSearch(event: any): void {
-    console.log('Evento search:', event);
+    this.modoEdicion = true;
+    this.historiaEnEdicion = JSON.parse(JSON.stringify(historia));
+    this.iniciarFlujoHistoria();
   }
-
-  filtrarPacientes(term: string): Observable<Paciente[]> {
-    const sedeFiltrada = this.sedeFiltro?.trim().toLowerCase();
-
-    const pacientesFiltrados = this.pacientes.filter(paciente => {
-      const coincideConSede = !sedeFiltrada || paciente.sede === sedeFiltrada;
-      const coincideConBusqueda =
-        !term.trim() ||
-        paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(term.toLowerCase()) ||
-        paciente.informacionPersonal.cedula.toLowerCase().includes(term.toLowerCase());
-
-      return coincideConSede && coincideConBusqueda;
-    });
-
-    return of(pacientesFiltrados);
-  }
-
-  // Métodos de carga de datos
-  cargarPacientes(): void {
-    this.pacientesService.getPacientes().subscribe({
-      next: (data) => {
-        const getSedeFromKey = (key: string): string =>
-          key?.split('-')[0]?.toLowerCase() ?? 'sin-sede';
-
-        console.log('getSedeFromKey', getSedeFromKey);
-
-        this.pacientes = Array.isArray(data.pacientes)
-          ? data.pacientes.map((p: any) => {
-            const info = p.informacionPersonal;
-            const historia = p.historiaClinica;
-            const sedePaciente = getSedeFromKey(p.key);
-
-            return {
-              key: p.key,
-              fechaRegistro: this.formatearFecha(p.created_at),
-              sede: sedePaciente,
-              redesSociales: p.redesSociales || [],
-
-              informacionPersonal: {
-                nombreCompleto: info.nombreCompleto,
-                cedula: info.cedula,
-                telefono: info.telefono,
-                email: info.email,
-                fechaNacimiento: info.fechaNacimiento,
-                edad: this.calcularEdad(info.fechaNacimiento),
-                ocupacion: info.ocupacion,
-                genero: info.genero === 'm' ? 'Masculino' : info.genero === 'f' ? 'Femenino' : 'Otro',
-                direccion: info.direccion
-              },
-
-              historiaClinica: {
-                usuarioLentes: historia.usuarioLentes ?? null,
-                tipoCristalActual: historia.tipoCristalActual ?? '',
-                ultimaGraduacion: historia.ultimaGraduacion ?? '',
-                fotofobia: historia.fotofobia ?? null,
-                traumatismoOcular: historia.traumatismoOcular ?? null,
-                traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion ?? '',
-                usaDispositivosElectronicos: this.textoABooleano(historia.usaDispositivosElectronicos),
-                tiempoUsoEstimado: historia.tiempoUsoEstimado ?? '',
-                cirugiaOcular: historia.cirugiaOcular ?? null,
-                cirugiaOcularDescripcion: historia.cirugiaOcularDescripcion ?? '',
-                alergicoA: historia.alergicoA ?? null,
-                antecedentesPersonales: historia.antecedentesPersonales ?? [],
-                antecedentesFamiliares: historia.antecedentesFamiliares ?? [],
-                patologias: historia.patologias ?? [],
-                patologiaOcular: historia.patologiaOcular ?? []
-              }
-            };
-          })
-          : [];
-        this.actualizarPacientesPorSede(); // Aquí ya puedes filtrar
-        this.actualizarPacientesFiltrados(); // ← Aquí
-      },
-      error: (error) => {
-        console.error('Error al cargar pacientes:', error);
-        this.swalService.showError('Error', 'No se han podido cargar los pacientes');
-        this.pacientes = [];
-      }
-    });
-  }
-
-  textoABooleano(valor: any): boolean {
-    return valor?.toString().toLowerCase() === 'sí' || valor === true;
-  }
-
-  formatearFecha(fechaIso: string | Date): string {
-    if (!fechaIso) return 'Fecha inválida';
-
-    const isoString = typeof fechaIso === 'string' ? fechaIso : fechaIso.toISOString();
-
-    // Evita formatear si ya está en formato DD/MM/YYYY
-    if (isoString.includes('/') && !isoString.includes('T')) return isoString;
-
-    const fechaLimpiada = isoString.split('T')[0]; // elimina hora si está presente
-    const [anio, mes, dia] = fechaLimpiada.split('-');
-    return `${dia}/${mes}/${anio}`;
-  }
-
 
   iniciarFlujoHistoria(): void {
-    if (this.historiaSeleccionada) {
+    console.log('this.historiaSeleccionada', this.historiaSeleccionada);
+
+    if (this.historiaSeleccionada?.id && this.modoEdicion) {
       this.precargarHistoriaSeleccionada();
     } else {
-      this.loadEmployees();
       this.prepararNuevaHistoria();
     }
 
     $('#historiaModal').modal('show');
   }
 
-  getMaterialLabel(materiales: TipoMaterial | TipoMaterial[]): string {
-    if (!materiales) return 'No especificado';
+  private generarHistoria(modo: 'crear' | 'editar', historiaExistente?: HistoriaMedica): HistoriaMedica {
+    if (modo === 'editar' && historiaExistente) {
+      return { ...historiaExistente };
+    }
 
-    const array = Array.isArray(materiales) ? materiales : [materiales];
-    return array.map(m => this.materialLabels.get(m) || m).join(', ');
+    const ahora = new Date();
+    return {
+      id: '',
+      nHistoria: '',
+      pacienteId: '',
+      fecha: ahora.toISOString().split('T')[0],
+      horaEvaluacion: ahora.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
+
+      datosConsulta: {
+        motivo: [],
+        otroMotivo: '',
+        medico: { cedula: '', nombre: '', cargo: '' },
+        nombre_asesor: '',
+        cedula_asesor: ''
+      },
+
+      antecedentes: {
+        tipoCristalActual: '',
+        ultimaGraduacion: '',
+        usuarioLentes: false,
+        fotofobia: false,
+        alergicoA: '',
+        cirugiaOcular: false,
+        cirugiaOcularDescripcion: '',
+        traumatismoOcular: false,
+        usaDispositivosElectronicos: false,
+        tiempoUsoEstimado: '',
+        antecedentesPersonales: [],
+        antecedentesFamiliares: [],
+        patologias: [],
+        patologiaOcular: []
+      },
+
+      examenOcular: {
+        lensometria: {
+          esf_od: '', cil_od: '', eje_od: '', add_od: '',
+          av_lejos_od: '', av_cerca_od: '', av_lejos_bi: '', av_bi: '',
+          esf_oi: '', cil_oi: '', eje_oi: '', add_oi: '',
+          av_lejos_oi: '', av_cerca_oi: '', av_cerca_bi: ''
+        },
+        refraccion: {
+          esf_od: '', cil_od: '', eje_od: '', add_od: '',
+          avccl_od: '', avccc_od: '', avccl_bi: '', avccc_bi: '',
+          esf_oi: '', cil_oi: '', eje_oi: '', add_oi: '',
+          avccl_oi: '', avccc_oi: ''
+        },
+        refraccionFinal: {
+          esf_od: '', cil_od: '', eje_od: '', add_od: '', alt_od: '', dp_od: '',
+          esf_oi: '', cil_oi: '', eje_oi: '', add_oi: '', alt_oi: '', dp_oi: ''
+        },
+        avsc_avae_otros: {
+          avsc_od: '', avae_od: '', otros_od: '',
+          avsc_oi: '', avae_oi: '', otros_oi: '',
+          avsc_bi: ''
+        }
+      },
+
+      diagnosticoTratamiento: {
+        diagnostico: '',
+        tratamiento: ''
+      },
+
+      recomendaciones: [],
+
+      conformidad: {
+        notaConformidad: ''
+      },
+
+      auditoria: {
+        fechaCreacion: ahora.toISOString(),
+        creadoPor: { nombre: '', cedula: '', cargo: '' },
+        fechaActualizacion: '',
+        actualizadoPor: { nombre: '', cedula: '', cargo: '' }
+      }
+    };
   }
 
   private precargarHistoriaSeleccionada(): void {
     this.modoEdicion = true;
     this.historiaForm.reset();
 
-    const h = this.historiaSeleccionada!;
+    const h = this.historiaEnEdicion!;
     const dc = h.datosConsulta;
-    const ant = h.antecedentes;
+    const ant = h.antecedentes ?? {} as Antecedentes;
     const eo = h.examenOcular;
     const dt = h.diagnosticoTratamiento;
 
-    console.log('dc', dc);
+    const paciente = this.pacientesFiltrados.find(p => p.key === h.pacienteId);
+    const medico = this.medicoTratante.find(m => m.cedula === dc.medico.cedula);
+
     this.historiaForm.patchValue({
       horaEvaluacion: h.horaEvaluacion,
-      pacienteId: h.pacienteId,
-
-      // Datos de consulta
+      paciente: paciente,
       motivo: Array.isArray(dc.motivo) ? dc.motivo : [dc.motivo],
       otroMotivo: dc.otroMotivo,
-      // nombre_medico: dc.medico?.nombre,
-      //  cedula_medico: dc.medico?.cedula,
-
-      nombre_asesor: dc.nombre_asesor,
-      cedula_asesor: dc.cedula_asesor,
-
-      // Antecedentes
+      medico: medico,
       tipoCristalActual: ant.tipoCristalActual,
       ultimaGraduacion: ant.ultimaGraduacion,
       usuarioLentes: ant.usuarioLentes,
@@ -588,89 +474,422 @@ export class HistoriasMedicasComponent implements OnInit {
       this.recomendaciones.push(grupo);
     });
 
-    // Guardar el estado original del formulario para detectar cambios
     this.formOriginalHistoria = this.historiaForm.value;
-
   }
 
   private prepararNuevaHistoria(): void {
+    if (this.modoEdicion) return;
     this.historiaForm.reset();
-    this.modoEdicion = false;
-    this.recomendaciones.clear(); // si usas FormArray
-    this.agregarRecomendacion();  // agrega una recomendación vacía
+    this.recomendaciones.clear();
+    this.agregarRecomendacion();
   }
 
   guardarHistoria(): void {
-    console.log('this.modoEdicion', this.modoEdicion);
-    if (this.modoEdicion) {
-      // this.actualizarHistoria(); // aún por implementar
+    if (this.modoEdicion && this.historiaSeleccionada) {
+      const historiaActualizada = {
+        ...this.historiaSeleccionada,
+        ...this.historiaForm.value,
+        recomendaciones: this.mapRecomendaciones()
+      };
+
+      /* this.historiaService.updateHistoria(this.historiaSeleccionada.id, historiaActualizada).subscribe({
+     next: () => {
+       this.historiaSeleccionada = historiaActualizada; // Mantiene la referencia
+       this.swalService.showSuccess('¡Actualizado!', 'Cambios guardados correctamente');
+       $('#historiaModal').modal('hide'); // Cierra el modal sin resetear historiaSeleccionada
+     },
+     error: (err) => {
+       console.error('Error al actualizar:', err);
+       this.swalService.showError('Error', 'No se pudieron guardar los cambios');
+     }
+   });
+ } else {
+   // Modo creación (manteniendo tu lógica existente)
+   this.crearHistoria(); 
+ }*/
+      // Lógica de actualización aquí...
     } else {
-      this.crearHistoria(); // ya lo tienes listo
+      this.crearHistoria();
     }
   }
+
+  private crearHistoria(): void {
+    if (!this.pacienteParaNuevaHistoria) {
+      this.swalService.showError('Error', 'No hay ningún paciente seleccionado');
+      return;
+    }
+
+    if (this.historiaForm.invalid) {
+      this.swalService.showError('Error', 'Por favor complete todos los campos requeridos');
+      return;
+    }
+
+    const formValue = this.historiaForm.value;
+    const historia: any = {
+      pacienteId: this.pacienteParaNuevaHistoria.key,
+      datosConsulta: {
+        motivo: Array.isArray(formValue.motivo) ? formValue.motivo : [formValue.motivo],
+        otroMotivo: formValue.otroMotivo || '',
+        tipoCristalActual: formValue.tipoCristalActual,
+        fechaUltimaGraduacion: formValue.ultimaGraduacion,
+        medico: formValue.medico?.cedula,
+      },
+      examenOcular: this.mapExamenOcular(),
+      diagnosticoTratamiento: {
+        diagnostico: formValue.diagnostico || '',
+        tratamiento: formValue.tratamiento || ''
+      },
+      recomendaciones: this.mapRecomendaciones(),
+      conformidad: {
+        notaConformidad: this.notaConformidad,
+      },
+    };
+
+    this.cargando = true;
+
+    this.historiaService.createHistoria(historia).subscribe({
+      next: (respuesta) => {
+        this.cargando = false;
+        const historiaCreada = respuesta.historial_medico;
+
+        this.cerrarModal('historiaModal');
+        this.swalService.showSuccess(
+          '¡Historia creada!',
+          `Historia médica #${historiaCreada.nHistoria ?? 'sin número'} registrada correctamente`
+        );
+
+        // 🔄 Sincronizar paciente visualmente
+        const paciente = this.pacienteParaNuevaHistoria;
+        if (!paciente) {
+          console.warn('No hay paciente para recargar historias médicas');
+          return;
+        }
+
+        this.pacienteSeleccionado = paciente;
+        this.cargarHistoriasMedicas(paciente.key, () => {
+          this.historiaSeleccionada = historiaCreada;
+        });
+
+        this.historiaForm.reset();
+        this.modoEdicion = false;
+      },
+      error: (err) => {
+        this.cargando = false;
+        let mensajeError = 'No se pudo guardar la historia médica';
+        if (err.error?.message) {
+          mensajeError += `: ${err.error.message}`;
+        } else if (err.status === 409) {
+          mensajeError = 'Ya existe una historia idéntica para este paciente';
+        }
+
+        this.swalService.showError('Error', mensajeError);
+      }
+    });
+  }
+
+
+  // ***************************
+  // * Métodos de pacientes
+  // ***************************
+
+  cargarPacientes(): void {
+    this.pacientesService.getPacientes().subscribe({
+      next: (data) => {
+        const getSedeFromKey = (key: string): string =>
+          key?.split('-')[0]?.toLowerCase() ?? 'sin-sede';
+
+        this.pacientes = Array.isArray(data.pacientes)
+          ? data.pacientes.map((p: any) => {
+            const info = p.informacionPersonal;
+            const historia = p.historiaClinica;
+            const sedePaciente = getSedeFromKey(p.key);
+
+            return {
+              key: p.key,
+              fechaRegistro: this.formatearFecha(p.created_at),
+              sede: sedePaciente,
+              redesSociales: p.redesSociales || [],
+
+              informacionPersonal: {
+                nombreCompleto: info.nombreCompleto,
+                cedula: info.cedula,
+                telefono: info.telefono,
+                email: info.email,
+                fechaNacimiento: info.fechaNacimiento,
+                edad: this.calcularEdad(info.fechaNacimiento),
+                ocupacion: info.ocupacion,
+                genero: info.genero === 'm' ? 'Masculino' : info.genero === 'f' ? 'Femenino' : 'Otro',
+                direccion: info.direccion
+              },
+
+              historiaClinica: {
+                usuarioLentes: historia.usuarioLentes ?? null,
+                tipoCristalActual: historia.tipoCristalActual ?? '',
+                ultimaGraduacion: historia.ultimaGraduacion ?? '',
+                fotofobia: historia.fotofobia ?? null,
+                traumatismoOcular: historia.traumatismoOcular ?? null,
+                traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion ?? '',
+                usaDispositivosElectronicos: this.textoABooleano(historia.usaDispositivosElectronicos),
+                tiempoUsoEstimado: historia.tiempoUsoEstimado ?? '',
+                cirugiaOcular: historia.cirugiaOcular ?? null,
+                cirugiaOcularDescripcion: historia.cirugiaOcularDescripcion ?? '',
+                alergicoA: historia.alergicoA ?? null,
+                antecedentesPersonales: historia.antecedentesPersonales ?? [],
+                antecedentesFamiliares: historia.antecedentesFamiliares ?? [],
+                patologias: historia.patologias ?? [],
+                patologiaOcular: historia.patologiaOcular ?? []
+              }
+            };
+          })
+          : [];
+        this.actualizarPacientesPorSede();
+        this.actualizarPacientesFiltrados();
+      },
+      error: (error) => {
+        console.error('Error al cargar pacientes:', error);
+        this.swalService.showError('Error', 'No se han podido cargar los pacientes');
+        this.pacientes = [];
+      }
+    });
+  }
+
+  cargarHistoriasMedicas(pacienteId: string, callback?: () => void): void {
+    this.cargando = true;
+    this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
+      next: (historias: HistoriaMedica[]) => {
+        this.historial = historias.sort((a, b) => {
+          const fechaA = new Date(a.fecha).getTime();
+          const fechaB = new Date(b.fecha).getTime();
+          return fechaB - fechaA;
+        });
+
+        this.historiaSeleccionada = this.historial[0] || null;
+        this.mostrarSinHistorial = this.historial.length === 0;
+        this.mostrarElementos = this.historial.length > 0;
+        this.cargando = false;
+
+        if (callback) callback(); // ✅ Ejecuta lógica adicional si se pasa
+      },
+      error: (error: HttpErrorResponse) => {
+        console.error('Error al cargar historias:', error);
+        this.snackBar.open(`⚠️ Error, No se pudieron cargar las historias médicas.`, 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-warning']
+        });
+        this.cargando = false;
+      }
+    });
+  }
+
+
+  seleccionarHistoriasPorPaciente(paciente: Paciente | null): void {
+    if (!paciente) {
+      this.limpiarDatos();
+      return;
+    }
+
+    this.pacienteSeleccionado = paciente;
+    this.cargarHistoriasMedicas(paciente.key);
+  }
+
+  selesccionarPacientePorId(id: string | null): void {
+    if (!id) {
+      this.pacienteSeleccionado = null;
+      return;
+    }
+
+    const paciente = this.pacientes.find(p => p.key === id);
+    if (!paciente) {
+      console.error('Paciente no encontrado');
+      return;
+    }
+
+    this.pacienteSeleccionado = paciente;
+    this.cargarHistoriasMedicas(id);
+  }
+
+  onPacienteSeleccionado(): void {
+    const paciente = this.historiaForm.get('paciente')?.value;
+    this.pacienteParaNuevaHistoria = paciente;
+  }
+
+  // ***************************
+  // * Métodos de empleados
+  // ***************************
+
+  private loadEmployees(callback?: () => void): void {
+    this.isLoading = true;
+
+    this.empleadosService.getAllEmpleados().subscribe((usuarios: any[]) => {
+      const empleadosAdaptados: Empleado[] = usuarios.map(usuario => ({
+        id: usuario.id,
+        cedula: usuario.cedula,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        telefono: usuario.telefono,
+        rolId: usuario.rolId,
+        cargoId: usuario.cargoId,
+        rolNombre: usuario.rolNombre,
+        cargoNombre: usuario.cargoNombre,
+        estatus: usuario.estatus,
+        fechaNacimiento: usuario.fechaNacimiento,
+        avatarUrl: usuario.avatarUrl,
+        created_at: usuario.created_at,
+        updated_at: usuario.updated_at,
+        editing: usuario.editing,
+        modified: usuario.modified,
+        hasErrors: usuario.hasErrors,
+        errors: usuario.errors,
+        originalValues: usuario.originalValues
+      }));
+
+      const cargosValidos = ['optometrista', 'oftalmologo'];
+      this.medicoTratante = empleadosAdaptados.filter(emp =>
+        cargosValidos.includes(emp.cargoId)
+      );
+
+      this.filteredEmployees = [...empleadosAdaptados];
+      this.isLoading = false;
+      this.cdr.detectChanges();
+
+      if (callback) callback();
+    }, error => {
+      console.error('Error al cargar empleados:', error);
+      this.isLoading = false;
+      if (callback) callback();
+    });
+  }
+
+  onMedicoSeleccionado(medico: Medico): void {
+    this.medicoSeleccionado = medico;
+  }
+
+  // ***************************
+  // * Métodos de recomendaciones
+  // ***************************
+
+  get recomendaciones(): FormArray {
+    return this.historiaForm.get('recomendaciones') as FormArray;
+  }
+
+  crearRecomendacion(rec?: Recomendaciones): FormGroup {
+    return this.fb.group({
+      cristal: [rec?.cristal || null, Validators.required],
+      material: [rec?.material || [], Validators.required],
+      materialPersonalizado: [''],
+      montura: [rec?.montura || ''],
+      observaciones: [rec?.observaciones || '']
+    });
+  }
+
+  agregarRecomendacion(): void {
+    this.recomendaciones.push(this.crearRecomendacion());
+  }
+
+  eliminarRecomendacion(index: number): void {
+    this.recomendaciones.removeAt(index);
+  }
+
+  verificarMaterialOtro(index: number): void {
+    const materialesSeleccionados = this.recomendaciones.at(index).get('material')?.value || [];
+    this.mostrarMaterialPersonalizado[index] = materialesSeleccionados.includes('OTRO');
+  }
+
+  private mapRecomendaciones(): Recomendaciones[] {
+    return this.recomendaciones.controls.map(control => {
+      const grupo = control as FormGroup;
+      const materialesSeleccionados: string[] = grupo.get('material')?.value || [];
+      const otrosMaterialesRaw: string = grupo.get('materialPersonalizado')?.value?.trim() || '';
+
+      const otrosMateriales = otrosMaterialesRaw
+        ? otrosMaterialesRaw.split(',').map(m => m.trim()).filter(m => m)
+        : [];
+
+      const materialesCombinados = [
+        ...materialesSeleccionados.filter(m => m !== 'OTRO'),
+        ...otrosMateriales
+      ].filter(m => this.materialesValidos.has(m as TipoMaterial)) as TipoMaterial[];
+
+      return {
+        cristal: grupo.get('cristal')?.value || [],
+        material: materialesCombinados,
+        montura: grupo.get('montura')?.value || '',
+        cristalSugerido: grupo.get('cristalSugerido')?.value || '',
+        observaciones: grupo.get('observaciones')?.value || ''
+      };
+    });
+  }
+
+  // ***************************
+  // * Métodos de examen ocular
+  // ***************************
 
   private mapExamenOcular(): ExamenOcular {
     const f = this.historiaForm.value;
 
     return {
       lensometria: {
-        esf_od: f.len_esf_od,
-        cil_od: f.len_cil_od,
-        eje_od: f.len_eje_od,
-        add_od: f.len_add_od,
-        av_lejos_od: f.len_av_lejos_od,
-        av_cerca_od: f.len_av_cerca_od,
-        av_lejos_bi: f.len_av_lejos_bi,
-        av_bi: f.len_av_bi,
-        esf_oi: f.len_esf_oi,
-        cil_oi: f.len_cil_oi,
-        eje_oi: f.len_eje_oi,
-        add_oi: f.len_add_oi,
-        av_lejos_oi: f.len_av_lejos_oi,
-        av_cerca_oi: f.len_av_cerca_oi,
-        av_cerca_bi: f.len_av_cerca_bi
+        esf_od: f.len_esf_od || '',
+        cil_od: f.len_cil_od || '',
+        eje_od: f.len_eje_od || '',
+        add_od: f.len_add_od || '',
+        av_lejos_od: f.len_av_lejos_od || '',
+        av_cerca_od: f.len_av_cerca_od || '',
+        av_lejos_bi: f.len_av_lejos_bi || '',
+        av_bi: f.len_av_bi || '',
+        esf_oi: f.len_esf_oi || '',
+        cil_oi: f.len_cil_oi || '',
+        eje_oi: f.len_eje_oi || '',
+        add_oi: f.len_add_oi || '',
+        av_lejos_oi: f.len_av_lejos_oi || '',
+        av_cerca_oi: f.len_av_cerca_oi || '',
+        av_cerca_bi: f.len_av_cerca_bi || ''
       },
       refraccion: {
-        esf_od: f.ref_esf_od,
-        cil_od: f.ref_cil_od,
-        eje_od: f.ref_eje_od,
-        add_od: f.ref_add_od,
-        avccl_od: f.ref_avccl_od,
-        avccc_od: f.ref_avccc_od,
-        avccl_bi: f.ref_avccl_bi,
-        avccc_bi: f.ref_avccc_bi,
-        esf_oi: f.ref_esf_oi,
-        cil_oi: f.ref_cil_oi,
-        eje_oi: f.ref_eje_oi,
-        add_oi: f.ref_add_oi,
-        avccl_oi: f.ref_avccl_oi,
-        avccc_oi: f.ref_avccc_oi
+        esf_od: f.ref_esf_od || '',
+        cil_od: f.ref_cil_od || '',
+        eje_od: f.ref_eje_od || '',
+        add_od: f.ref_add_od || '',
+        avccl_od: f.ref_avccl_od || '',
+        avccc_od: f.ref_avccc_od || '',
+        avccl_bi: f.ref_avccl_bi || '',
+        avccc_bi: f.ref_avccc_bi || '',
+        esf_oi: f.ref_esf_oi || '',
+        cil_oi: f.ref_cil_oi || '',
+        eje_oi: f.ref_eje_oi || '',
+        add_oi: f.ref_add_oi || '',
+        avccl_oi: f.ref_avccl_oi || '',
+        avccc_oi: f.ref_avccc_oi || ''
       },
       refraccionFinal: {
-        esf_od: f.ref_final_esf_od,
-        cil_od: f.ref_final_cil_od,
-        eje_od: f.ref_final_eje_od,
-        add_od: f.ref_final_add_od,
-        alt_od: f.ref_final_alt_od,
-        dp_od: f.ref_final_dp_od,
-        esf_oi: f.ref_final_esf_oi,
-        cil_oi: f.ref_final_cil_oi,
-        eje_oi: f.ref_final_eje_oi,
-        add_oi: f.ref_final_add_oi,
-        alt_oi: f.ref_final_alt_oi,
-        dp_oi: f.ref_final_dp_oi
+        esf_od: f.ref_final_esf_od || '',
+        cil_od: f.ref_final_cil_od || '',
+        eje_od: f.ref_final_eje_od || '',
+        add_od: f.ref_final_add_od || '',
+        alt_od: f.ref_final_alt_od || '',
+        dp_od: f.ref_final_dp_od || '',
+        esf_oi: f.ref_final_esf_oi || '',
+        cil_oi: f.ref_final_cil_oi || '',
+        eje_oi: f.ref_final_eje_oi || '',
+        add_oi: f.ref_final_add_oi || '',
+        alt_oi: f.ref_final_alt_oi || '',
+        dp_oi: f.ref_final_dp_oi || ''
       },
       avsc_avae_otros: {
-        avsc_od: f.avsc_od,
-        avae_od: f.avae_od,
-        otros_od: f.otros_od,
-        avsc_oi: f.avsc_oi,
-        avae_oi: f.avae_oi,
-        otros_oi: f.otros_oi,
-        avsc_bi: f.avsc_bi
+        avsc_od: f.avsc_od || '',
+        avae_od: f.avae_od || '',
+        otros_od: f.otros_od || '',
+        avsc_oi: f.avsc_oi || '',
+        avae_oi: f.avae_oi || '',
+        otros_oi: f.otros_oi || '',
+        avsc_bi: f.avsc_bi || ''
       }
     };
   }
+
+  // ***************************
+  // * Métodos de antecedentes
+  // ***************************
 
   private mapAntecedentes(): Antecedentes {
     const f = this.historiaForm.value;
@@ -693,319 +912,63 @@ export class HistoriasMedicasComponent implements OnInit {
     };
   }
 
-  private mapRecomendaciones(): Recomendaciones[] {
-    return this.recomendaciones.controls.map(control => {
-      const grupo = control as FormGroup;
+  // ***************************
+  // * Métodos de sedes
+  // ***************************
 
-      const materialesSeleccionados: string[] = grupo.get('material')?.value || [];
-      const otrosMaterialesRaw: string = grupo.get('materialPersonalizado')?.value?.trim() || '';
-      console.log('materialesSeleccionados:', grupo.get('material')?.value);
-
-      const otrosMateriales = otrosMaterialesRaw
-        ? otrosMaterialesRaw.split(',').map(m => m.trim()).filter(m => m)
-        : [];
-
-      const materialesCombinados = [
-        ...materialesSeleccionados.filter(m => m !== 'OTRO'),
-        ...otrosMateriales
-      ].filter(m => this.materialesValidos.has(m as TipoMaterial)) as TipoMaterial[];
-
-      return {
-        cristal: grupo.get('cristal')?.value || [],
-        material: materialesCombinados,
-        montura: grupo.get('montura')?.value || '',
-        cristalSugerido: grupo.get('cristalSugerido')?.value || '',
-        observaciones: grupo.get('observaciones')?.value || ''
-      };
-    });
-  }
-
-  private crearHistoria(): void {
-    // Validar que hay un paciente seleccionado
-    if (!this.pacienteParaNuevaHistoria) {
-      this.swalService.showError('Error', 'No hay ningún paciente seleccionado');
-      return;
-    }
-
-    // Validar que el formulario es válido
-    if (this.historiaForm.invalid) {
-      this.swalService.showError('Error', 'Por favor complete todos los campos requeridos');
-      return;
-    }
-
-    // Obtener valores del formulario
-    const formValue = this.historiaForm.value;
-    const historia: any = {
-      pacienteId: this.pacienteParaNuevaHistoria.key,
-      datosConsulta: {
-        motivo: Array.isArray(formValue.motivo) ? formValue.motivo : [formValue.motivo],
-        otroMotivo: formValue.otroMotivo || '',
-        tipoCristalActual: formValue.tipoCristalActual,
-        fechaUltimaGraduacion: formValue.ultimaGraduacion,
-        medico: formValue.medico?.cedula,
+  cargarSedes(): void {
+    this.authService.getSedes().subscribe({
+      next: (response) => {
+        this.sedesDisponibles = response.sedes;
       },
-      examenOcular: {
-        lensometria: {
-          esf_od: formValue.len_esf_od || '',
-          cil_od: formValue.len_cil_od || '',
-          eje_od: formValue.len_eje_od || '',
-          add_od: formValue.len_add_od || '',
-          av_lejos_od: formValue.len_av_lejos_od || '',
-          av_cerca_od: formValue.len_av_cerca_od || '',
-          av_lejos_bi: formValue.len_av_lejos_bi || '',
-          av_bi: formValue.len_av_bi || '',
-          esf_oi: formValue.len_esf_oi || '',
-          cil_oi: formValue.len_cil_oi || '',
-          eje_oi: formValue.len_eje_oi || '',
-          add_oi: formValue.len_add_oi || '',
-          av_lejos_oi: formValue.len_av_lejos_oi || '',
-          av_cerca_oi: formValue.len_av_cerca_oi || '',
-          av_cerca_bi: formValue.len_av_cerca_bi || ''
-        },
-        refraccion: {
-          esf_od: formValue.ref_esf_od || '',
-          cil_od: formValue.ref_cil_od || '',
-          eje_od: formValue.ref_eje_od || '',
-          add_od: formValue.ref_add_od || '',
-          avccl_od: formValue.ref_avccl_od || '',
-          avccc_od: formValue.ref_avccc_od || '',
-          avccl_bi: formValue.ref_avccl_bi || '',
-          avccc_bi: formValue.ref_avccc_bi || '',
-          esf_oi: formValue.ref_esf_oi || '',
-          cil_oi: formValue.ref_cil_oi || '',
-          eje_oi: formValue.ref_eje_oi || '',
-          add_oi: formValue.ref_add_oi || '',
-          avccl_oi: formValue.ref_avccl_oi || '',
-          avccc_oi: formValue.ref_avccc_oi || ''
-        },
-        refraccionFinal: {
-          esf_od: formValue.ref_final_esf_od || '',
-          cil_od: formValue.ref_final_cil_od || '',
-          eje_od: formValue.ref_final_eje_od || '',
-          add_od: formValue.ref_final_add_od || '',
-          alt_od: formValue.ref_final_alt_od || '',
-          dp_od: formValue.ref_final_dp_od || '',
-          esf_oi: formValue.ref_final_esf_oi || '',
-          cil_oi: formValue.ref_final_cil_oi || '',
-          eje_oi: formValue.ref_final_eje_oi || '',
-          add_oi: formValue.ref_final_add_oi || '',
-          alt_oi: formValue.ref_final_alt_oi || '',
-          dp_oi: formValue.ref_final_dp_oi || ''
-        },
-        avsc_avae_otros: {
-          avsc_od: formValue.avsc_od || '',
-          avae_od: formValue.avae_od || '',
-          otros_od: formValue.otros_od || '',
-          avsc_oi: formValue.avsc_oi || '',
-          avae_oi: formValue.avae_oi || '',
-          otros_oi: formValue.otros_oi || '',
-          avsc_bi: formValue.avsc_bi || ''
-        }
-      },
-      diagnosticoTratamiento: {
-        diagnostico: formValue.diagnostico || '',
-        tratamiento: formValue.tratamiento || ''
-      },
-      recomendaciones: this.mapRecomendaciones(),
-      conformidad: {
-        notaConformidad: this.notaConformidad,
-      },
-    };
-
-    // Mostrar carga mientras se procesa
-    this.cargando = true;
-
-    this.historiaService.createHistoria(historia).subscribe({
-      next: (respuesta) => {
-        this.cargando = false;
-        const historiaCreada = respuesta.historial_medico;
-        this.cerrarModal('historiaModal');
-        this.swalService.showSuccess(
-          '¡Historia creada!',
-          `Historia médica #${historiaCreada.nHistoria ?? 'sin número'} registrada correctamente`
-        );
-
-        if (!this.historial) {
-          this.historial = [];
-        }
-        this.historial.unshift(historiaCreada);
-        this.historiaSeleccionada = historiaCreada;
-
-        this.historiaForm.reset();
-        this.modoEdicion = false;
-      },
-
       error: (err) => {
-        this.cargando = false;
-        console.error('Error al guardar historia:', err);
-
-        let mensajeError = 'No se pudo guardar la historia médica';
-        if (err.error?.message) {
-          mensajeError += `: ${err.error.message}`;
-        } else if (err.status === 409) {
-          mensajeError = 'Ya existe una historia idéntica para este paciente';
-        }
-
-        this.swalService.showError('Error', mensajeError);
-      }
-    });
-
-  }
-
-  // Para manejar la lógica de modificación del formulario
-  historiaModificada(): boolean {
-    if (!this.modoEdicion) return true;
-
-    const actual = this.historiaForm.value;
-
-    const camposModificados = Object.keys(this.formOriginalHistoria).some(key => {
-      const valorActual = actual[key];
-      const valorOriginal = this.formOriginalHistoria[key];
-
-      // Si son arrays, comparar con lógica personalizada
-      if (Array.isArray(valorActual) && Array.isArray(valorOriginal)) {
-        return !this.arraysIguales(valorActual, valorOriginal);
-      }
-
-      return valorActual !== valorOriginal;
-    });
-
-    return camposModificados;
-  }
-
-  arraysIguales(arr1: any[], arr2: any[]): boolean {
-    if (arr1.length !== arr2.length) return false;
-    return arr1.every((val, i) => val === arr2[i]);
-  }
-
-
-
-  /* private actualizarHistoria(historia: HistoriaMedica): void {
-     this.historiaService.updateHistoria(historia.id, historia).subscribe({
-       next: () => {
-         this.swalService.showSuccess('¡Historia actualizada!', 'Los cambios fueron guardados correctamente.');
-         this.seleccionarPacientePorId(historia.pacienteId);
-       },
-       error: (err) => {
-         console.error('Error al actualizar historia:', err);
-         this.swalService.showError('Error', 'No se pudo actualizar la historia médica.');
-       }
-     });
-   }*/
-
-
-  cerrarModal(id: string): void {
-    const modalElement = document.getElementById(id);
-
-    if (modalElement) {
-      const modal = bootstrap.Modal.getInstance(modalElement);
-      modal?.hide();
-    }
-
-    //   this.resetearFormulario();
-  }
-
-  get recomendaciones(): FormArray {
-    return this.historiaForm.get('recomendaciones') as FormArray;
-  }
-
-  crearRecomendacion(rec?: Recomendaciones): FormGroup {
-    return this.fb.group({
-      cristal: [rec?.cristal || null, Validators.required], // Cambiado a null
-      material: [rec?.material || [], Validators.required], // Array vacío
-      materialPersonalizado: [''],
-      montura: [rec?.montura || ''],
-      observaciones: [rec?.observaciones || '']
-    });
-  }
-
-  agregarRecomendacion(): void {
-    this.recomendaciones.push(this.crearRecomendacion());
-  }
-
-  eliminarRecomendacion(index: number): void {
-    this.recomendaciones.removeAt(index);
-  }
-
-  private configurarSubscripciones(): void {
-    this.historiaForm.get('motivo')?.valueChanges.subscribe((motivos: string[] | null) => {
-      const otroMotivoControl = this.historiaForm.get('otroMotivo');
-
-      if (motivos && motivos.includes('Otro')) {
-        otroMotivoControl?.setValidators([Validators.required]);
-      } else {
-        otroMotivoControl?.clearValidators();
-        otroMotivoControl?.setValue('');
-      }
-      otroMotivoControl?.updateValueAndValidity();
-    });
-  }
-
-  // Métodos públicos
-  compareStrings(a: string, b: string): boolean {
-    return a === b;
-  }
-
-  checkInvalidControls() {
-    Object.keys(this.historiaForm.controls).forEach(key => {
-      const control = this.historiaForm.get(key);
-      if (control?.invalid) {
-        console.log(`Campo inválido: ${key}`, {
-          value: control.value,
-          errors: control.errors
-        });
+        console.error('Error al cargar sedes:', err);
       }
     });
   }
 
-  onMotivoChange(selectedOptions: any[]) {
-    this.mostrarInputOtroMotivo = selectedOptions.includes('Otro');
-    const otroMotivoControl = this.historiaForm.get('otroMotivo');
-
-    if (this.mostrarInputOtroMotivo) {
-      otroMotivoControl?.setValidators([Validators.required]);
-    } else {
-      otroMotivoControl?.clearValidators();
-      otroMotivoControl?.setValue('');
-    }
-    otroMotivoControl?.updateValueAndValidity();
+  actualizarPacientesPorSede(): void {
+    const sedeId = this.sedeFiltro?.trim().toLowerCase();
+    this.pacientesFiltradosPorSede = !sedeId
+      ? [...this.pacientes]
+      : this.pacientes.filter(p => p.sede === sedeId);
   }
 
+  // ***************************
+  // * Métodos de búsqueda/filtrado
+  // ***************************
 
-  @ViewChild('selectorPaciente') selectorPaciente!: ElementRef;
-
-  filtrarPaciente = (term: string, item: Paciente): boolean => {
-    const texto = term.toLowerCase();
-    return item.informacionPersonal.nombreCompleto.toLowerCase().includes(texto) ||
-      item.informacionPersonal.cedula.toLowerCase().includes(texto);
-  };
-
-  verDetalle(historia: HistoriaMedica): void {
-    this.historiaSeleccionada = historia;
-
-    setTimeout(() => {
-      const detalle = document.getElementById('detalleExamen');
-      if (detalle) {
-        detalle.scrollTop = 0;
-      }
-    }, 100);
+  actualizarFiltroTexto(event: { term: string; items: any[] }): void {
+    this.filtro = event.term;
+    this.actualizarPacientesFiltrados();
   }
 
-  searchFn(term: string, item: any): boolean {
-    const texto = term.toLowerCase();
-    const nombre = item.informacionPersonal?.nombreCompleto?.toLowerCase() ?? '';
-    const cedula = String(item.informacionPersonal?.cedula).toLowerCase();
-
-    return nombre.includes(texto) || cedula.includes(texto);
+  logEventoSearch(event: any): void {
+    console.log('Evento search:', event);
   }
 
+  filtrarPacientes(term: string): Observable<Paciente[]> {
+    const sedeFiltrada = this.sedeFiltro?.trim().toLowerCase();
+
+    const pacientesFiltrados = this.pacientes.filter(paciente => {
+      const coincideConSede = !sedeFiltrada || paciente.sede === sedeFiltrada;
+      const coincideConBusqueda =
+        !term.trim() ||
+        paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(term.toLowerCase()) ||
+        paciente.informacionPersonal.cedula.toLowerCase().includes(term.toLowerCase());
+
+      return coincideConSede && coincideConBusqueda;
+    });
+
+    return of(pacientesFiltrados);
+  }
 
   actualizarPacientesFiltrados(): void {
     const normalizar = (texto: string): string =>
       texto
         .toLowerCase()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // elimina acentos
+        .replace(/[\u0300-\u036f]/g, '')
         .trim();
 
     const filtroTexto = normalizar(this.filtro || '');
@@ -1026,7 +989,6 @@ export class HistoriasMedicasComponent implements OnInit {
       return coincideSede && coincideTexto;
     });
 
-    // Verificar si el seleccionado sigue en la lista
     const siguePresente = this.pacientesFiltrados.some(p =>
       this.compararPacientes(p, this.pacienteSeleccionado)
     );
@@ -1036,89 +998,27 @@ export class HistoriasMedicasComponent implements OnInit {
     }
   }
 
+  // ***************************
+  // * Métodos de utilidad
+  // ***************************
 
-  compararPacientes(p1: any, p2: any): boolean {
-    return p1 && p2
-      ? p1.informacionPersonal?.cedula === p2.informacionPersonal?.cedula
-      : false;
+  textoABooleano(valor: any): boolean {
+    return valor?.toString().toLowerCase() === 'sí' || valor === true;
   }
 
+  formatearFecha(fechaIso: string | Date): string {
+    if (!fechaIso) return 'Fecha inválida';
 
+    const isoString = typeof fechaIso === 'string' ? fechaIso : fechaIso.toISOString();
+    if (isoString.includes('/') && !isoString.includes('T')) return isoString;
 
-  get patologias(): string[] {
-    return this.historiaSeleccionada?.antecedentes?.patologias ?? [];
+    const fechaLimpiada = isoString.split('T')[0];
+    const [anio, mes, dia] = fechaLimpiada.split('-');
+    return `${dia}/${mes}/${anio}`;
   }
-
-  get patologiaOcular(): string[] {
-    return this.historiaSeleccionada?.antecedentes?.patologiaOcular ?? [];
-  }
-
-  /* editarHistoria(historia: HistoriaMedica): void {
-     this.modoEdicion = true;
- 
-     const motivo = Array.isArray(historia.motivo) ? historia.motivo : [historia.motivo];
-     const esMotivoPersonalizado = motivo.some(m => !this.motivosConsulta.includes(m));
- 
-     this.historiaForm.patchValue({
-       ...historia,
-       motivo: esMotivoPersonalizado ? ['Otro'] : motivo,
-       otroMotivo: esMotivoPersonalizado ? historia.motivo.toString() : '',
-       pacienteId: this.pacientes.find(p => p.id === historia.pacienteId)
-     });
- 
-     this.mostrarInputOtroMotivo = esMotivoPersonalizado;
-     $('#historiaModal').modal('show');
-   }*/
-
-  /*  nuevaHistoria(): void {
-      this.modoEdicion = false;
-      this.historiaForm.reset({
-        fecha: new Date().toISOString().split('T')[0],
-        pacienteId: this.pacienteSeleccionado
-      });
-      this.mostrarInputOtroMotivo = false;
-  
-      const modalElement = document.getElementById('historiaModal');
-      if (modalElement) {
-        const modal = new bootstrap.Modal(modalElement);
-        modal.show();
-      }
-    }*/
-
-  cargarHistoriasMedicas(pacienteId: string): void {
-    this.cargando = true;
-    this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
-      next: (historias: HistoriaMedica[]) => {
-        // 🗂️ Ordenar por fecha descendente
-        this.historial = historias.sort((a, b) => {
-          const fechaA = new Date(a.fecha).getTime();
-          const fechaB = new Date(b.fecha).getTime();
-          return fechaB - fechaA; // Más reciente primero
-        });
-
-        console.log(' this.historial', this.historial);
-
-        this.historiaSeleccionada = this.historial[0] || null;
-
-        this.mostrarSinHistorial = this.historial.length === 0;
-        this.mostrarElementos = this.historial.length > 0;
-
-        this.cargando = false;
-      },
-      error: (error: HttpErrorResponse) => {
-        console.error('Error al cargar historias:', error);
-        this.snackBar.open(`⚠️ Error, No se pudieron cargar las historias médicas.`, 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-warning']
-        });
-        this.cargando = false;
-      }
-    });
-  }
-
 
   calcularEdad(fechaNacimiento: string | undefined): number {
-    if (!fechaNacimiento) return 0; // o algún valor por defecto
+    if (!fechaNacimiento) return 0;
 
     const nacimiento = new Date(fechaNacimiento);
     const hoy = new Date();
@@ -1130,5 +1030,140 @@ export class HistoriasMedicasComponent implements OnInit {
     }
 
     return edad;
+  }
+
+  getMaterialLabel(materiales: TipoMaterial | TipoMaterial[]): string {
+    if (!materiales) return 'No especificado';
+
+    const array = Array.isArray(materiales) ? materiales : [materiales];
+    return array.map(m => this.materialLabels.get(m) || m).join(', ');
+  }
+
+  compararPacientes(p1: any, p2: any): boolean {
+    return p1 && p2
+      ? p1.informacionPersonal?.cedula === p2.informacionPersonal?.cedula
+      : false;
+  }
+
+  historiaModificada(): boolean {
+    if (!this.modoEdicion) return true;
+
+    const actual = this.historiaForm.value;
+
+    const camposModificados = Object.keys(this.formOriginalHistoria).some(key => {
+      const valorActual = actual[key];
+      const valorOriginal = this.formOriginalHistoria[key];
+
+      if (Array.isArray(valorActual) && Array.isArray(valorOriginal)) {
+        return !this.arraysIguales(valorActual, valorOriginal);
+      }
+
+      return valorActual !== valorOriginal;
+    });
+
+    return camposModificados;
+  }
+
+  arraysIguales(arr1: any[], arr2: any[]): boolean {
+    if (arr1.length !== arr2.length) return false;
+    return arr1.every((val, i) => val === arr2[i]);
+  }
+
+  // ***************************
+  // * Métodos de UI/eventos
+  // ***************************
+
+  onMotivoChange(selectedOptions: any[]) {
+    this.mostrarInputOtroMotivo = selectedOptions.includes('Otro');
+    const otroMotivoControl = this.historiaForm.get('otroMotivo');
+
+    if (this.mostrarInputOtroMotivo) {
+      otroMotivoControl?.setValidators([Validators.required]);
+    } else {
+      otroMotivoControl?.clearValidators();
+      otroMotivoControl?.setValue('');
+    }
+    otroMotivoControl?.updateValueAndValidity();
+  }
+
+  verDetalle(historia: HistoriaMedica): void {
+    this.historiaSeleccionada = { ...historia };
+    setTimeout(() => {
+      const detalle = document.getElementById('detalleExamen');
+      if (detalle) detalle.scrollTop = 0;
+    }, 100);
+  }
+
+  limpiarDatos(): void {
+    this.pacienteSeleccionado = null;
+    this.historial = [];
+    this.historiaSeleccionada = null;
+    this.mostrarElementos = false;
+    this.mostrarSinHistorial = false;
+  }
+
+  cerrarModal(id: string): void {
+    const modalElement = document.getElementById(id);
+    if (modalElement) {
+      const modal = bootstrap.Modal.getInstance(modalElement);
+      modal?.hide();
+    }
+  }
+
+  limpiarModal(): void {
+    this.historiaEnEdicion = null;
+    this.modoEdicion = false;
+    this.historiaForm.reset();
+    this.recomendaciones.clear();
+  }
+
+  // ***************************
+  // * Métodos de validación
+  // ***************************
+
+  checkInvalidControls() {
+    Object.keys(this.historiaForm.controls).forEach(key => {
+      const control = this.historiaForm.get(key);
+      if (control?.invalid) {
+        console.log(`Campo inválido: ${key}`, {
+          value: control.value,
+          errors: control.errors
+        });
+      }
+    });
+  }
+
+  // ***************************
+  // * Getters
+  // ***************************
+
+  get patologias(): string[] {
+    return this.historiaSeleccionada?.antecedentes?.patologias ?? [];
+  }
+
+  get patologiaOcular(): string[] {
+    return this.historiaSeleccionada?.antecedentes?.patologiaOcular ?? [];
+  }
+
+  // ***************************
+  // * Métodos de comparación
+  // ***************************
+
+  compareStrings(a: string, b: string): boolean {
+    return a === b;
+  }
+
+  filtrarPaciente = (term: string, item: Paciente): boolean => {
+    const texto = term.toLowerCase();
+    return item.informacionPersonal.nombreCompleto.toLowerCase().includes(texto) ||
+      item.informacionPersonal.cedula.toLowerCase().includes(texto);
+  };
+
+  searchFn(term: string, item: any): boolean {
+    const texto = term.toLowerCase();
+    const nombre = item.informacionPersonal?.nombreCompleto?.toLowerCase() ?? '';
+    const cedula = String(item.informacionPersonal?.cedula).toLowerCase();
+
+    return nombre.includes(texto) || cedula.includes(texto);
   }
 }

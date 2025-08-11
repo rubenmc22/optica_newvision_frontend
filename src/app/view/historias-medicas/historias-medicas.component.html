@@ -149,8 +149,8 @@
                 <div class="row gy-2 mb-1">
                   <div class="col-md-3">
                     <strong>Usuario de lentes:</strong>
-                    <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.usuarioLentes || 'No
-                      especificado' }}</p>
+                    <p class="bg-light rounded p-2">
+                      {{ pacienteSeleccionado?.historiaClinica?.usuarioLentes || 'No especificado' }}</p>
                   </div>
                   <div class="col-md-3">
                     <strong>Cristal actual:</strong>
@@ -166,8 +166,8 @@
                   </div>
                   <div class="col-md-3">
                     <strong>Fotofobia:</strong>
-                    <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.fotofobia || 'No
-                      especificado'}}
+                    <p class="bg-light rounded p-2">
+                      {{ pacienteSeleccionado?.historiaClinica?.fotofobia || 'No especificado'}}
                     </p>
                   </div>
                 </div>
@@ -181,8 +181,8 @@
                   </div>
                   <div class="col-md-3">
                     <strong>Cirugía ocular previa:</strong>
-                    <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcular || 'No
-                      especificado'}}</p>
+                    <p class="bg-light rounded p-2">
+                      {{ pacienteSeleccionado?.historiaClinica?.cirugiaOcular || 'No especificado'}}</p>
                   </div>
                   <div class="col-md-3">
                     <strong class="d-block mb-1">Tipo de cirugía ocular:</strong>
@@ -191,8 +191,8 @@
                   </div>
                   <div class="col-md-3">
                     <strong>Traumatismo ocular:</strong>
-                    <p class="bg-light rounded p-2">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcular || 'No
-                      especificado'}}</p>
+                    <p class="bg-light rounded p-2">
+                      {{ pacienteSeleccionado?.historiaClinica?.traumatismoOcular || 'No especificado'}}</p>
                   </div>
                 </div>
 
@@ -557,8 +557,8 @@
                     <!-- espacio para firma manuscrita -->
                   </div>
                   <p class="mt-2 mb-0 text-muted">{{ historiaSeleccionada?.datosConsulta?.medico?.nombre }}</p>
-                  <p class="mb-0 text-muted">C.I: {{ historiaSeleccionada?.datosConsulta?.medico?.cedula || 'No disponible'
-                    }}</p>
+                  <p class="mb-0 text-muted">
+                    C.I: {{ historiaSeleccionada?.datosConsulta?.medico?.cedula || 'No disponible' }}</p>
                   <p class="mb-0 text-muted">{{ historiaSeleccionada?.datosConsulta?.medico?.cargo || 'No disponible' }}
                   </p>
                 </div>
@@ -567,8 +567,9 @@
             <div class="col-md-12 pt-4" style="text-align: center;">
               <p class="mb-1"><strong>Asesor Responsable</strong></p>
 
-              <p class="mt-2 mb-0 text-muted">{{ historiaSeleccionada?.auditoria?.creadoPor?.nombre || 'Nombrec  del asesor' }}</p>
-              <p class="mb-0 text-muted">C.I: {{ historiaSeleccionada?.auditoria?.creadoPor?.cedula || 'Cedula' }}   </p>
+              <p class="mt-2 mb-0 text-muted">
+                {{ historiaSeleccionada?.auditoria?.creadoPor?.nombre || 'Nombre del asesor' }}</p>
+              <p class="mb-0 text-muted">C.I: {{ historiaSeleccionada?.auditoria?.creadoPor?.cedula || 'Cedula' }} </p>
               <p class="mb-0 text-muted">{{ historiaSeleccionada?.auditoria?.creadoPor?.cargo || 'No disponible' }}
             </div>
           </div>
@@ -576,18 +577,17 @@
             <button class="btn btn-outline-secondary me-2">
               <i class="bi bi-printer"></i> Imprimir
             </button>
-            <button class="btn btn-primary" (click)="iniciarFlujoHistoria()">
+            <button class="btn btn-primary" (click)="historiaSeleccionada && editarHistoria(historiaSeleccionada)"
+              [disabled]="!historiaSeleccionada">
               <i class="bi bi-pencil-square"></i> Editar
             </button>
           </div>
-
-
         </div>
       </div>
 
       <!-- Modal para agregar/editar historia -->
       <div class="modal fade" id="historiaModal" tabindex="-1" aria-labelledby="historiaModalLabel"
-        data-bs-backdrop="static" aria-hidden="true">
+        data-bs-backdrop="static" aria-hidden="true" (hidden.bs.modal)="limpiarModal()">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
           <div class="modal-content">
 
@@ -655,20 +655,29 @@
 
                     <div class="col-md-4">
                       <label class="form-label">Médico Tratante <span class="text-danger">*</span></label>
-                      <ng-select [items]="medicoTratante" bindLabel="nombre" formControlName="medico"
-                        placeholder="Seleccione un médico..." [searchable]="true"
-                        (change)="onMedicoSeleccionado($event)">
 
-                        <!-- Opción personalizada: nombre + cédula -->
+                      <ng-select [items]="medicoTratante.length > 0 ? medicoTratante : []" bindLabel="nombre"
+                        formControlName="medico" [searchable]="true" [disabled]="medicoTratante.length === 0"
+                        placeholder="Seleccione un médico..." (change)="onMedicoSeleccionado($event)">
+                        <!-- Si no hay médicos, mostrar mensaje -->
+                        <ng-template ng-notfound-tmp>
+                          <div class="text-muted px-2 py-1">
+                            No hay médicos registrados
+                          </div>
+                        </ng-template>
+
+                        <!-- Opción personalizada: nombre + cédula + cargo -->
                         <ng-template ng-option-tmp let-item="item">
                           {{ item.nombre }} - CI: {{ item.cedula }} ({{ item.cargoNombre }})
                         </ng-template>
                       </ng-select>
+
                       <div *ngIf="historiaForm.get('medico')?.invalid && historiaForm.get('medico')?.touched"
                         class="text-danger small mt-1">
                         <i class="bi bi-exclamation-circle-fill me-1"></i> Seleccione un médico tratante
                       </div>
                     </div>
+
                   </div>
                 </div>
 
