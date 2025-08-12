@@ -84,8 +84,7 @@
                   <!-- 👥 Pie inferior: médico + n° historia -->
                   <div class="d-flex justify-content-between align-items-center mt-2">
                     <small class="text-muted">
-                      👨‍⚕️ {{ historia.datosConsulta.medico.nombre || 'Médico no registrado' }}
-
+                      👨‍⚕️ {{ getNombreMedico(historia.datosConsulta.medico) }}
                     </small>
 
                     <span class="badge bg-info">#{{ historia.nHistoria || '' }}</span>
@@ -181,7 +180,8 @@
                     <strong>Última graduación:</strong>
                     <p class="bg-light rounded p-2">
                       {{ historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion ?
-                      (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No  especificado' }}
+                      (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No
+                      especificado' }}
                     </p>
                   </div>
 

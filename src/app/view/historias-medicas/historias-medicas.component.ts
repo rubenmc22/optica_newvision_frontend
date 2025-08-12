@@ -9,7 +9,7 @@ declare var $: any;
 
 // Interfaces
 import { Paciente } from '../pacientes/paciente-interface';
-import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico } from './historias_medicas-interface';
+import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico, DatosConsulta } from './historias_medicas-interface';
 import { Empleado } from '../../Interfaces/models-interface';
 import { Sede } from '../../view/login/login-interface';
 
@@ -410,19 +410,12 @@ export class HistoriasMedicasComponent implements OnInit {
     console.log('h:', h);
 
     const cargarYPrecargar = () => {
-      const cedulaMedico = typeof dc.medico === 'object'
-        ? dc.medico?.cedula
-        : String(dc.medico);
-
-      const medico = this.medicoTratante.find(
-        m => m.cedula === cedulaMedico
-      );
-
+     
       this.historiaForm.patchValue({
         paciente: paciente,
         motivo: Array.isArray(dc.motivo) ? dc.motivo : [dc.motivo],
         otroMotivo: dc.otroMotivo,
-        medico: medico ?? null,
+        medico: dc.medico ?? null,
         tipoCristalActual: dc.tipoCristalActual,
         ultimaGraduacion: dc.fechaUltimaGraduacion,
 
@@ -514,11 +507,55 @@ export class HistoriasMedicasComponent implements OnInit {
 
   guardarHistoria(): void {
     if (this.modoEdicion && this.historiaSeleccionada) {
-      //  this.updateHistoria();
+      this.updateHistoria();
     } else {
       this.crearHistoria();
     }
   }
+
+  private refrescarHistoriaSeleccionada(): void {
+    const idActual = this.historiaSeleccionada?.id;
+    const pacienteKey = this.pacienteSeleccionado?.key;
+
+    if (!idActual || !pacienteKey) return;
+
+    this.cargando = true;
+
+    this.historiaService.getHistoriasPorPaciente(pacienteKey).subscribe({
+      next: (historias: HistoriaMedica[]) => {
+        this.historial = historias.sort((a, b) => {
+          const fechaA = new Date(a.auditoria?.fechaCreacion || '').getTime();
+          const fechaB = new Date(b.auditoria?.fechaCreacion || '').getTime();
+
+          if (fechaA !== fechaB) return fechaB - fechaA;
+
+          const extraerSecuencia = (nHistoria: string): number => {
+            const partes = nHistoria?.split('-');
+            return partes?.length === 3 ? parseInt(partes[2], 10) : 0;
+          };
+
+          return extraerSecuencia(b.nHistoria) - extraerSecuencia(a.nHistoria);
+        });
+
+        const historiaActualizada = this.historial.find(h => h.id === idActual);
+        this.historiaSeleccionada = historiaActualizada || this.historial[0] || null;
+
+        this.setHoraEvaluacion();
+        this.mostrarSinHistorial = this.historial.length === 0;
+        this.mostrarElementos = this.historial.length > 0;
+        this.cargando = false;
+      },
+      error: (error: HttpErrorResponse) => {
+        console.error('Error al refrescar historia:', error);
+        this.snackBar.open(`⚠️ Error al refrescar la historia médica.`, 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-warning']
+        });
+        this.cargando = false;
+      }
+    });
+  }
+
 
   private updateHistoria(): void {
     if (!this.historiaSeleccionada) return;
@@ -531,8 +568,16 @@ export class HistoriasMedicasComponent implements OnInit {
         motivo: Array.isArray(f.motivo) ? f.motivo : [f.motivo],
         otroMotivo: f.otroMotivo || '',
         tipoCristalActual: f.tipoCristalActual || '',
-        fechaUltimaGraduacion: f.ultimaGraduacion || '',
-        medico: typeof f.medico === 'string' ? f.medico : f.medico?.nombre || ''
+        fechaUltimaGraduacion: f.ultimaGraduacion
+          ? new Date(f.ultimaGraduacion).toISOString().split('T')[0] // "YYYY-MM-DD"
+          : ''
+        ,
+
+        medico: typeof f.medico === 'object' && f.medico?.cedula
+          ? f.medico.cedula
+          : typeof f.medico === 'string'
+            ? f.medico
+            : ''
       },
       examenOcular: {
         lensometria: {
@@ -605,11 +650,25 @@ export class HistoriasMedicasComponent implements OnInit {
     console.log('Payload enviado:', historiaActualizada);
 
     this.historiaService.updateHistoria(this.historiaSeleccionada.nHistoria, historiaActualizada).subscribe({
-      next: () => {
-        this.historiaSeleccionada = historiaActualizada;
+      next: (res: any) => {
+        const historia = res.historial_medico;
+
+        const historiaAdaptada = {
+          ...historia,
+          datosConsulta: {
+            ...historia.datosConsulta
+          }
+        };
+
+        const index = this.historial.findIndex(h => h.id === historiaAdaptada.id);
+        if (index !== -1) this.historial[index] = historiaAdaptada;
+
+        this.historiaSeleccionada = historiaAdaptada;
         this.swalService.showSuccess('¡Historia Actualizada!', 'Cambios guardados correctamente');
         $('#historiaModal').modal('hide');
+        this.refrescarHistoriaSeleccionada();
       },
+
       error: (err) => {
         console.error('Error al actualizar:', err);
         this.swalService.showError('Error', 'No se pudieron guardar los cambios');
@@ -690,8 +749,6 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     });
   }
-
-
   // ***************************
   // * Métodos de pacientes
   // ***************************
@@ -762,24 +819,25 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
       next: (historias: HistoriaMedica[]) => {
-        console.log('Historias en cargar Historias', historias);
+        /*   const historiasAdaptadas = historias.map(historia => ({
+             ...historia,
+             datosConsulta: {
+               ...historia.datosConsulta
+             }
+           }));*/
+
         this.historial = historias.sort((a, b) => {
           const fechaA = new Date(a.auditoria?.fechaCreacion || '').getTime();
           const fechaB = new Date(b.auditoria?.fechaCreacion || '').getTime();
 
-          if (fechaA !== fechaB) {
-            return fechaB - fechaA; // más reciente primero
-          }
+          if (fechaA !== fechaB) return fechaB - fechaA;
 
-          // Desempate por número de historia (últimos 3 dígitos)
           const extraerSecuencia = (nHistoria: string): number => {
             const partes = nHistoria?.split('-');
             return partes?.length === 3 ? parseInt(partes[2], 10) : 0;
           };
 
-          const idA = extraerSecuencia(a.nHistoria);
-          const idB = extraerSecuencia(b.nHistoria);
-          return idB - idA;
+          return extraerSecuencia(b.nHistoria) - extraerSecuencia(a.nHistoria);
         });
 
         this.historiaSeleccionada = this.historial[0] || null;
@@ -886,6 +944,11 @@ export class HistoriasMedicasComponent implements OnInit {
 
   onMedicoSeleccionado(medico: Medico): void {
     this.medicoSeleccionado = medico;
+  }
+
+  getNombreMedico(medico: { nombre?: string; cargo?: string } | null | undefined): string {
+    if (!medico || !medico.nombre) return 'Médico no registrado';
+    return medico.cargo ? `${medico.nombre} (${medico.cargo})` : medico.nombre;
   }
 
   // ***************************
@@ -1127,18 +1190,6 @@ export class HistoriasMedicasComponent implements OnInit {
     return `${dia}/${mes}/${anio}`;
   }
 
-  extraerHora(fechaIso: string): string {
-    if (!fechaIso) return '';
-    const fecha = new Date(fechaIso);
-    return new Intl.DateTimeFormat('es-VE', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-      timeZone: 'America/Caracas'
-    }).format(fecha);
-  }
-
   setHoraEvaluacion() {
     const fecha = this.historiaSeleccionada?.auditoria?.fechaCreacion;
     this.horaEvaluacion = fecha
@@ -1150,6 +1201,13 @@ export class HistoriasMedicasComponent implements OnInit {
       }).format(new Date(fecha))
       : 'No registrada';
   }
+
+  parseFechaSinZona(fecha: string | null): Date | null {
+  if (!fecha) return null;
+  const [año, mes, dia] = fecha.split('T')[0].split('-').map(Number);
+  return new Date(año, mes - 1, dia); // Sin zona horaria
+}
+
 
 
   calcularEdad(fechaNacimiento: string | undefined): number {
