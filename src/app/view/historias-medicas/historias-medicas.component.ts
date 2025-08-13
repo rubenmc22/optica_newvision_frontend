@@ -137,10 +137,24 @@ export class HistoriasMedicasComponent implements OnInit {
 
   ngOnInit(): void {
 
-    const savedState = sessionStorage.getItem('pacientesListState');
-    if (savedState) {
-      const { desdePacientes } = JSON.parse(savedState);
-      this.mostrarBotonVolver = !!desdePacientes;
+    const idPaciente = this.obtenerIdPacienteDesdeRuta();
+   // console.log('idPaciente', idPaciente);
+
+    if (idPaciente) {
+      const savedState = sessionStorage.getItem('pacientesListState');
+      //console.log('savedState', savedState);
+      if (savedState) {
+        try {
+          const { desdePacientes } = JSON.parse(savedState);
+          this.mostrarBotonVolver = !!desdePacientes;
+        } catch {
+          this.mostrarBotonVolver = false;
+        }
+      }
+    } else {
+      // Si no hay idPaciente en la ruta, no mostrar el botón
+      this.mostrarBotonVolver = false;
+      sessionStorage.removeItem('pacientesListState'); // Limpieza defensiva
     }
     this.configurarSubscripciones();
     this.inicializarDatosIniciales();
@@ -152,7 +166,19 @@ export class HistoriasMedicasComponent implements OnInit {
     }, 0);
   }
 
+  private obtenerIdPacienteDesdeRuta(): string | null {
+    let actual: ActivatedRoute | null = this.route;
+    while (actual) {
+      const id = actual.snapshot.paramMap.get('id');
+      if (id) return id;
+      actual = actual.firstChild;
+    }
+    return null;
+  }
+
+
   volverAlListado(): void {
+    sessionStorage.removeItem('pacientesListState');
     this.router.navigate(['/pacientes']);
   }
 
