@@ -5,6 +5,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, forkJoin } from 'rxjs';
 import { take, catchError } from 'rxjs/operators';
 import * as bootstrap from 'bootstrap';
+import { ActivatedRoute, Router } from '@angular/router';
 declare var $: any;
 
 // Interfaces
@@ -76,6 +77,7 @@ export class HistoriasMedicasComponent implements OnInit {
   notaConformidad: string = 'PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE.';
   mostrarMaterialPersonalizado: boolean[] = [];
   horaEvaluacion: string = '';
+  mostrarBotonVolver = false;
 
   // Formulario
   historiaForm: FormGroup;
@@ -115,7 +117,9 @@ export class HistoriasMedicasComponent implements OnInit {
     private snackBar: MatSnackBar,
     private empleadosService: EmpleadosService,
     private authService: AuthService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
+    private router: Router
   ) {
     this.materiales = MATERIALES;
     this.materialLabels = new Map<TipoMaterial, string>(
@@ -132,13 +136,24 @@ export class HistoriasMedicasComponent implements OnInit {
   // ***************************
 
   ngOnInit(): void {
+
+    const savedState = sessionStorage.getItem('pacientesListState');
+    if (savedState) {
+      const { desdePacientes } = JSON.parse(savedState);
+      this.mostrarBotonVolver = !!desdePacientes;
+    }
     this.configurarSubscripciones();
     this.inicializarDatosIniciales();
+
 
     setTimeout(() => {
       this.pacienteIdSeleccionado = null;
       this.pacienteSeleccionado = null;
     }, 0);
+  }
+
+  volverAlListado(): void {
+    this.router.navigate(['/pacientes']);
   }
 
   private inicializarFormulario(): void {
@@ -804,8 +819,33 @@ export class HistoriasMedicasComponent implements OnInit {
             };
           })
           : [];
+
         this.actualizarPacientesPorSede();
         this.actualizarPacientesFiltrados();
+
+        // 🔍 Precarga si hay idPaciente en la ruta
+        let idPaciente: string | null = null;
+        let actualRoute: ActivatedRoute | null = this.route;
+
+        while (actualRoute) {
+          idPaciente = actualRoute.snapshot.paramMap.get('id');
+          if (idPaciente) break;
+          actualRoute = actualRoute.firstChild;
+        }
+
+        console.log('idPaciente detectado:', idPaciente);
+
+        if (idPaciente) {
+          const paciente = this.pacientes.find(p => p.key === idPaciente);
+          if (paciente) {
+            this.pacienteSeleccionado = paciente;
+            this.pacienteIdSeleccionado = paciente.key;
+            this.pacienteParaNuevaHistoria = paciente;
+            this.cargarHistoriasMedicas(paciente.key);
+          } else {
+            console.warn('Paciente no encontrado para precarga:', idPaciente);
+          }
+        }
       },
       error: (error) => {
         console.error('Error al cargar pacientes:', error);
@@ -814,6 +854,7 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     });
   }
+
 
   cargarHistoriasMedicas(pacienteId: string, callback?: () => void): void {
     this.cargando = true;

@@ -690,6 +690,7 @@ export class VerPacientesComponent implements OnInit {
       }
     };
 
+
     const keyPaciente = `${this.sedeActiva}-${datosActualizados.informacionPersonal.cedula}`;
 
     this.pacientesService.updatePaciente(keyPaciente, datosActualizados).subscribe({
@@ -848,7 +849,7 @@ export class VerPacientesComponent implements OnInit {
   }
 
   abrirModalVisualizacionPaciente(paciente: Paciente): void {
- 
+
     const info = paciente?.informacionPersonal ?? {};
     const redes = paciente?.redesSociales ?? [];
     const historia = paciente?.historiaClinica ?? {};
@@ -1074,7 +1075,8 @@ export class VerPacientesComponent implements OnInit {
   verHistorias(idPaciente: string): void {
     sessionStorage.setItem('pacientesListState', JSON.stringify({
       scrollPosition: window.scrollY,
-      filtroActual: this.filtro
+      filtroActual: this.filtro,
+      desdePacientes: true
     }));
 
     this.router.navigate(['/pacientes-historias', idPaciente]);

@@ -95,12 +95,9 @@ export const appRoutes: Routes = [
       {
         path: 'pacientes-historias',
         component: HistoriasMedicasComponent,
-        title: getFullTitle('historias-medicas')
-      },
-      {
-        path: 'pacientes-historias/:id',
-        component: HistoriasMedicasComponent,
-        title: getFullTitle('historias-medicas')
+        children: [
+          { path: ':id', component: HistoriasMedicasComponent }
+        ]
       },
       {
         path: 'productos-catalogo',
