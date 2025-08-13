@@ -23,7 +23,6 @@ export class HistoriaMedicaService {
 
   // En historia-medica.service.ts
   getHistoriasPorPaciente(pacienteKey: string): Observable<HistoriaMedica[]> {
-    console.log('pacienteKey',pacienteKey);
     const url = `${environment.apiUrl}/historial-medico-paciente/${pacienteKey}`;
     return this.http.get<HistorialResponse>(url).pipe(
       map(response => response.historiales_medicos),

@@ -410,7 +410,7 @@ export class HistoriasMedicasComponent implements OnInit {
     console.log('h:', h);
 
     const cargarYPrecargar = () => {
-     
+
       this.historiaForm.patchValue({
         paciente: paciente,
         motivo: Array.isArray(dc.motivo) ? dc.motivo : [dc.motivo],
@@ -496,6 +496,8 @@ export class HistoriasMedicasComponent implements OnInit {
     } else {
       cargarYPrecargar();
     }
+    this.cdr.detectChanges();
+
   }
 
   private prepararNuevaHistoria(): void {
@@ -555,7 +557,6 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     });
   }
-
 
   private updateHistoria(): void {
     if (!this.historiaSeleccionada) return;
@@ -647,7 +648,7 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     };
 
-    console.log('Payload enviado:', historiaActualizada);
+    // console.log('Payload enviado:', historiaActualizada);
 
     this.historiaService.updateHistoria(this.historiaSeleccionada.nHistoria, historiaActualizada).subscribe({
       next: (res: any) => {
@@ -1111,6 +1112,11 @@ export class HistoriasMedicasComponent implements OnInit {
       : this.pacientes.filter(p => p.sede === sedeId);
   }
 
+  obtenerSedeDesdePacienteId(pacienteId: string): string {
+    return pacienteId?.split('-')[0]?.trim().toLowerCase() || '';
+  }
+
+
   // ***************************
   // * Métodos de búsqueda/filtrado
   // ***************************
@@ -1121,7 +1127,7 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   logEventoSearch(event: any): void {
-    console.log('Evento search:', event);
+    //  console.log('Evento search:', event);
   }
 
   filtrarPacientes(term: string): Observable<Paciente[]> {
@@ -1203,10 +1209,10 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   parseFechaSinZona(fecha: string | null): Date | null {
-  if (!fecha) return null;
-  const [año, mes, dia] = fecha.split('T')[0].split('-').map(Number);
-  return new Date(año, mes - 1, dia); // Sin zona horaria
-}
+    if (!fecha) return null;
+    const [año, mes, dia] = fecha.split('T')[0].split('-').map(Number);
+    return new Date(año, mes - 1, dia); // Sin zona horaria
+  }
 
 
 
@@ -1351,10 +1357,10 @@ export class HistoriasMedicasComponent implements OnInit {
     Object.keys(this.historiaForm.controls).forEach(key => {
       const control = this.historiaForm.get(key);
       if (control?.invalid) {
-        console.log(`Campo inválido: ${key}`, {
-          value: control.value,
-          errors: control.errors
-        });
+        /*  console.log(`Campo inválido: ${key}`, {
+            value: control.value,
+            errors: control.errors
+          });*/
       }
     });
   }
