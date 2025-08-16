@@ -66,6 +66,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
         { label: 'Catálogo', routerLink: '/productos-catalogo', roles: ['admin', 'gerente', 'asesor-optico'] },
         { label: 'Inventario', routerLink: '/productos-inventario', roles: ['admin', 'gerente', 'asesor-optico'] }
       ],
+      underConstruction: true
     },
     {
       label: 'Ventas',
@@ -84,14 +85,14 @@ export class SidebarComponent implements OnInit, OnDestroy {
       icon: 'fas fa-football-ball',
       routerLink: '/ordenes-de-trabajo',
       roles: ['admin', 'gerente', 'asesor-optico'],
-      /* submenu: [
+       submenu: [
          { label: 'Ordenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor-optico'] },
          { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor-optico'] },
          { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] },
  
-       ],*/
+       ],
 
-      //  underConstruction: true
+        underConstruction: true
     },
     {
       label: 'Administración',
