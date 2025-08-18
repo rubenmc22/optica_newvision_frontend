@@ -468,7 +468,6 @@ export class VerPacientesComponent implements OnInit {
     return edad >= 0 ? edad : '--';
   }
 
-
   crearPaciente(): void {
     if (this.formPaciente.invalid) {
       this.marcarCamposComoTouched();
@@ -639,7 +638,6 @@ export class VerPacientesComponent implements OnInit {
     this.abrirModalEditarPaciente(paciente);
   }
 
-
   actualizarPaciente(): void {
     if (!this.formularioModificado()) {
       return;
@@ -784,7 +782,6 @@ export class VerPacientesComponent implements OnInit {
     this.usuarioInputHabilitado = !!this.nuevaRed;
   }
 
-
   addRedSocial(platform: string, username: string): void {
     if (platform && username) {
       this.redesSociales.push(this.fb.group({
@@ -802,7 +799,11 @@ export class VerPacientesComponent implements OnInit {
     this.redesSociales.removeAt(index);
   }
 
-  getSocialIconClass(platform: string): string {
+  getSocialIconClass(platform: string | null | undefined): string {
+    if (!platform || typeof platform !== 'string') {
+      return 'bi bi-share'; // ícono genérico
+    }
+
     switch (platform.toLowerCase()) {
       case 'facebook': return 'bi bi-facebook text-primary';
       case 'twitter': return 'bi bi-twitter text-info';
@@ -812,6 +813,7 @@ export class VerPacientesComponent implements OnInit {
       default: return 'bi bi-share';
     }
   }
+
 
   toggleEdicionUsername(index: number): void {
     this.redesEditables[index] = !this.redesEditables[index];
@@ -827,14 +829,35 @@ export class VerPacientesComponent implements OnInit {
   // Métodos para modales
   abrirModalAgregarPaciente(): void {
     this.modoEdicion = false;
+
+    // 🔄 Reset completo del formulario
     this.formPaciente.reset(this.crearPacienteVacio());
 
+    // ✅ Limpieza explícita del FormArray redesSociales
+    const redesFormArray = this.formPaciente.get('redesSociales') as FormArray;
+    this.limpiarFormArray(redesFormArray);
+
+    // 🔄 Limpieza de variables auxiliares
+    this.nuevaRed = '';
+    this.nuevoUsuario = '';
+    this.usuarioInputHabilitado = false;
+
+    // 🧼 Mostrar modal limpio
     const modalElement = document.getElementById('modalAgregarPaciente');
     if (modalElement) {
       const modal = new bootstrap.Modal(modalElement);
       modal.show();
+
+      // ✅ Esperar al render completo antes de reiniciar scroll
+      setTimeout(() => {
+        const scrollableContent = modalElement.querySelector('.card-body');
+        if (scrollableContent) {
+          scrollableContent.scrollTop = 0;
+        }
+      }, 300);
     }
   }
+
 
   abrirModalEditarPaciente(paciente: Paciente): void {
     this.modoEdicion = true;
@@ -845,6 +868,14 @@ export class VerPacientesComponent implements OnInit {
     if (modalElement) {
       const modal = new bootstrap.Modal(modalElement);
       modal.show();
+
+      // ✅ Esperar al render completo antes de reiniciar scroll
+      setTimeout(() => {
+        const scrollableContent = modalElement.querySelector('.card-body');
+        if (scrollableContent) {
+          scrollableContent.scrollTop = 0;
+        }
+      }, 300); // tiempo suficiente para que el DOM se estabilice
     }
   }
 
@@ -919,6 +950,14 @@ export class VerPacientesComponent implements OnInit {
     if (modalElement) {
       const modal = bootstrap.Modal.getInstance(modalElement);
       modal?.hide();
+
+      // ✅ Esperar al render completo antes de reiniciar scroll
+      setTimeout(() => {
+        const scrollableContent = modalElement.querySelector('.card-body');
+        if (scrollableContent) {
+          scrollableContent.scrollTop = 0;
+        }
+      }, 300);
     }
 
     this.resetearFormulario();
@@ -967,41 +1006,36 @@ export class VerPacientesComponent implements OnInit {
 
   resetearFormulario(): void {
     this.formPaciente.reset({
-      informacionPersonal: {
-        nombreCompleto: '',
-        cedula: '',
-        telefono: '',
-        email: '',
-        fechaNacimiento: '',
-        ocupacion: '',
-        genero: '',
-        direccion: ''
-      },
-
-      redesSociales: [],
-
-      historiaClinica: {
-        usuarioLentes: '',
-        fotofobia: '',
-        traumatismoOcular: '',
-        traumatismoOcularDescripcion: '',
-        cirugiaOcular: '',
-        cirugiaOcularDescripcion: '',
-        alergicoA: '',
-        antecedentesPersonales: [],
-        antecedentesFamiliares: [],
-        patologias: [],
-        patologiaOcular: []
-      },
-
+      nombreCompleto: '',
+      cedula: '',
+      telefono: '',
+      email: '',
+      fechaNacimiento: '',
+      ocupacion: '',
+      genero: '',
+      direccion: '',
+      usuarioLentes: '',
+      fotofobia: '',
+      usoDispositivo: null,
+      intervaloUso: null,
+      traumatismoOcular: '',
+      traumatismoOcularDescripcion: '',
+      cirugiaOcular: '',
+      cirugiaOcularDescripcion: '',
+      alergicoA: '',
+      antecedentesPersonales: [],
+      antecedentesFamiliares: [],
+      patologias: [],
+      patologiaOcular: [],
       sede: this.sedeActiva,
       fechaRegistro: ''
     });
 
-    // Si estás usando FormArrays para redes sociales
-    this.redesSociales.clear();
+    // ✅ Limpieza correcta del FormArray redesSociales
+    const redesFormArray = this.formPaciente.get('redesSociales') as FormArray;
+    this.limpiarFormArray(redesFormArray);
 
-    // Resto de variables auxiliares
+    // Variables auxiliares
     this.modoEdicion = false;
     this.pacienteEditando = null;
     this.formOriginal = {};
@@ -1010,6 +1044,12 @@ export class VerPacientesComponent implements OnInit {
     this.usuarioInputHabilitado = false;
   }
 
+
+  limpiarFormArray(formArray: FormArray): void {
+    while (formArray.length !== 0) {
+      formArray.removeAt(0);
+    }
+  }
 
   formularioModificado(): boolean {
     if (!this.modoEdicion) return true;
