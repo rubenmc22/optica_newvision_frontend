@@ -139,7 +139,7 @@ export class VerPacientesComponent implements OnInit {
       email: [
         '',
         [
-          Validators.required,
+         // Validators.required,
           Validators.email,
           Validators.maxLength(100)
         ]
@@ -516,7 +516,7 @@ export class VerPacientesComponent implements OnInit {
         nombreCompleto,
         cedula,
         telefono,
-        email,
+        email: formValues.email?.trim() || null,
         fechaNacimiento,
         ocupacion,
         genero: mapGenero,
