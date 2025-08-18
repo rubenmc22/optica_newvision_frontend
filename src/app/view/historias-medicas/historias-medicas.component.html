@@ -23,7 +23,7 @@
           </select>
         </div>
 
-        <div class="col-md-9">
+        <div class="col-md-9 buscadorPaciente">
           <label for="selectorPaciente" class="form-label">👤 Buscar y seleccionar paciente</label>
           <ng-select [items]="pacientesFiltradosPorSede" bindLabel="informacionPersonal.nombreCompleto"
             [selectOnTab]="true" [clearable]="true" [searchable]="true" [(ngModel)]="pacienteSeleccionado"
@@ -40,8 +40,6 @@
               </div>
             </ng-template>
           </ng-select>
-
-
         </div>
       </div>
       <!-- Mensaje si el paciente no tiene historial -->
@@ -100,19 +98,32 @@
           <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center"
             style="padding: 10px 20px;">
             <!-- Título a la izquierda -->
-            <h5 class="mb-0">
+            <!-- Versión completa para escritorio -->
+            <h5 class="mb-0 d-none d-sm-flex align-items-center">
               <i class="bi bi-eye-fill me-2"></i> Detalle del Examen
             </h5>
 
-            <!-- Fecha y Médico en bloque alineado al margen derecho -->
-            <div class="ms-auto">
-              <div class="text-start">
-                <strong style="color: var(--details-color); font-size: 15px;">N° de historia:</strong>
-                <span class="fw-semibold" style="color: white; font-size: 15px;">
-                  {{ historiaSeleccionada?.nHistoria || '' }}
-                </span>
-              </div>
+            <!-- Versión corta para móvil -->
+            <h5 class="mb-0 d-flex d-sm-none align-items-center">
+              <i class="bi bi-eye-fill me-2"></i> Detalles
+            </h5>
+
+            <!-- N historia Versión escritorio: una sola línea -->
+            <div class="ms-auto d-none d-sm-flex align-items-center">
+              <strong style="color: var(--details-color); font-size: 15px;">N° historia:</strong>
+              <span class="fw-semibold ms-1" style="color: white; font-size: 15px;">
+                {{ historiaSeleccionada?.nHistoria || '' }}
+              </span>
             </div>
+
+            <!-- N historia Versión móvil: dos líneas -->
+            <div class="ms-auto d-flex d-sm-none flex-column">
+              <strong style="color: var(--details-color); font-size: 13px;">N° historia:</strong>
+              <span class="fw-semibold" style="color: white; font-size: 13px;">
+                {{ historiaSeleccionada?.nHistoria || '' }}
+              </span>
+            </div>
+
           </div>
 
           <div class="card-body" id="detalleExamen" style="height: 500px; overflow-y: auto;  background-color: white;">
