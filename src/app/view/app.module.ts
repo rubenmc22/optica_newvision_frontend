@@ -20,7 +20,6 @@ import { DashboardComponent } from './dashboard/dashboard.component';
 import { PostloginTemplateComponent } from './postlogin-template/postlogin-template.component';
 import { MyAccountComponent } from './my-account/my-account.component';
 import { EmpleadosComponent } from './empleados/empleados.component';
-import { CrearAtletasComponent } from './crear-atletas/crear-atletas.component';
 import { AcceptTycComponent } from './accept-tyc-component/accept-tyc-component.component';
 import { DynamicModalComponent } from './../shared/dynamic-modal/dynamic-modal.component';
 import { TasaComponent } from './tasa-cambiaria/tasa.component';
@@ -50,7 +49,6 @@ import { NgSelectModule } from '@ng-select/ng-select';
     PostloginTemplateComponent,
     MyAccountComponent,
     EmpleadosComponent,
-    CrearAtletasComponent,
     AcceptTycComponent,
     DynamicModalComponent,
     TasaComponent,

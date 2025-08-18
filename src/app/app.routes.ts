@@ -7,7 +7,6 @@ import { DashboardComponent } from './view/dashboard/dashboard.component';
 import { MyAccountComponent } from './view/my-account/my-account.component';
 import { PostloginTemplateComponent } from './view/postlogin-template/postlogin-template.component';
 import { EmpleadosComponent } from './view/empleados/empleados.component';
-import { CrearAtletasComponent } from './view/crear-atletas/crear-atletas.component';
 import { authGuard } from './core/services/auth/auth.guard';
 import { AuthService } from './core/services/auth/auth.service';
 import { AcceptTycComponent } from './view/accept-tyc-component/accept-tyc-component.component';
@@ -78,7 +77,7 @@ export const appRoutes: Routes = [
         title: getFullTitle('Mi cuenta')
       },
       {
-        path: 'usuarios-empleados',
+        path: 'empleados',
         component: EmpleadosComponent,
         title: getFullTitle('Empleados')
       },

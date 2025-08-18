@@ -62,26 +62,8 @@
     }
 
     @media (max-width: 620px) {
+        display: none;
         transform: translateY(10%);
-    }
-
-    @media (max-width: 500px) {
-        display: block;
-        width: 100% !important;
-        top: 10%;
-        text-align: center;
-    }
-
-    @media (max-width: 400px) {
-        width: 100% !important;
-        top: 11%;
-        text-align: center;
-    }
-
-    @media (max-width: 360px) {
-        width: 100% !important;
-        top: 13%;
-        text-align: center;
     }
 }
 
@@ -239,7 +221,7 @@
             &:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
-        
+
                 i {
                     color: #fff; // Icono azul
                 }
@@ -320,11 +302,11 @@
 }
 
 
-.form-check{
+.form-check {
     padding-left: 2.5rem !important;
 }
 
-.form-text{
+.form-text {
     margin-top: -1rem;
 }
 
@@ -333,10 +315,17 @@
 @media (max-width: 500px) {
     .login-container {
         padding: 15px !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh; // asegura altura completa
+        flex-direction: column;
     }
 
     .login-card-container {
-        margin-top: 110px !important;
+        margin: 0 !important;
+        width: 100%;
+        max-width: 400px;
     }
 
     .login-card {
@@ -352,7 +341,7 @@
             .form-control {
                 height: 48px !important;
             }
-            
+
             .btn-outline-secondary {
                 padding: 0 12px;
             }
