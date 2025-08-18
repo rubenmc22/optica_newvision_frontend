@@ -26,6 +26,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
   tasaDolar: number = 0;
   tasaEuro: number = 0;
   private subsTasaCambio!: Subscription;
+  selectedMenuLabel: string = '';
+  selectedSubmenuLabel: string | null = null;
+
+
 
   private userSubscriptions: Subscription[] = [];
 
@@ -85,21 +89,21 @@ export class SidebarComponent implements OnInit, OnDestroy {
       icon: 'fas fa-football-ball',
       routerLink: '/ordenes-de-trabajo',
       roles: ['admin', 'gerente', 'asesor-optico'],
-       submenu: [
-         { label: 'Ordenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor-optico'] },
-         { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor-optico'] },
-         { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] },
- 
-       ],
+      submenu: [
+        { label: 'Ordenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] },
 
-        underConstruction: true
+      ],
+
+      underConstruction: true
     },
     {
       label: 'Administración',
       icon: 'fas fa-user',
       submenu: [
         { label: 'Configurar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Gestionar usuarios', routerLink: '/usuarios-empleados', roles: ['admin'], underConstruction: false },
+        { label: 'Gestionar usuarios', routerLink: '/empleados', roles: ['admin'], underConstruction: false },
         { label: 'Tipo de cambio', routerLink: '/Tipo-de-cambio', roles: ['admin', 'gerente', 'asesor-optico'] }
       ],
       roles: ['admin', 'gerente', 'asesor-optico']
@@ -109,6 +113,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
   filteredMenu: any[] = [];
 
   ngOnInit(): void {
+    const currentUrl = this.router.url;
+    this.markActiveFromUrl(currentUrl);
+
     this.subsTasaCambio = this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
       this.tasaDolar = usd;
       this.tasaEuro = eur;
@@ -119,6 +126,29 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.obtenerSedeActual();
     this.obtenerTasaCambio();
   }
+
+  markActiveFromUrl(url: string): void {
+    for (const menu of this.filteredMenu) {
+      if (menu.routerLink === url) {
+        this.selectedMenuLabel = menu.label;
+        return;
+      }
+
+      if (menu.submenu) {
+        const sub = menu.submenu.find((s: { routerLink: string }) => s.routerLink === url);
+        if (sub) {
+          this.selectedMenuLabel = menu.label;
+          this.selectedSubmenuLabel = sub.label;
+          return;
+        }
+      }
+    }
+  }
+
+  buildSubmenuItem(sub: any, parentLabel: string): any {
+    return { ...sub, parentLabel };
+  }
+
 
   ngOnDestroy(): void {
     this.userSubscriptions.forEach(sub => sub.unsubscribe());
@@ -219,37 +249,74 @@ export class SidebarComponent implements OnInit, OnDestroy {
   toggleSubmenu(event: Event): void {
     event.preventDefault();
     const target = event.currentTarget as HTMLElement;
+    const menuLabel = target.textContent?.trim() || '';
+
+    // 🔁 Cerrar todos los submenús e íconos
+    const allSubmenus = document.querySelectorAll('.nav-treeview');
+    const allIcons = document.querySelectorAll('.fas.fa-angle-left');
+
+    allSubmenus.forEach(sub => {
+      sub.classList.remove('menu-open');
+      (sub as HTMLElement).style.display = 'none';
+    });
+
+    allIcons.forEach(i => {
+      i.classList.remove('fa-rotate-custom-open');
+      i.classList.add('fa-rotate-custom');
+    });
+
+    // 🧼 Resetear selección previa
+    this.selectedMenuLabel = '';
+    this.selectedSubmenuLabel = '';
+
+    // ✅ Abrir el nuevo menú
     const submenu = target.nextElementSibling as HTMLElement | null;
     const icon = target.querySelector('.fas.fa-angle-left') as HTMLElement | null;
 
     if (submenu) {
-      const isOpen = submenu.classList.contains('menu-open');
-
-      if (isOpen) {
-        submenu.classList.remove('menu-open');
-        submenu.style.display = 'none';
-        if (icon) {
-          icon.classList.remove('fa-rotate-custom-open');
-          icon.classList.add('fa-rotate-custom');
-        }
-      } else {
-        submenu.classList.add('menu-open');
-        submenu.style.display = 'block';
-        if (icon) {
-          icon.classList.remove('fa-rotate-custom');
-          icon.classList.add('fa-rotate-custom-open');
-        }
-      }
+      submenu.classList.add('menu-open');
+      submenu.style.display = 'block';
     }
+
+    if (icon) {
+      icon.classList.remove('fa-rotate-custom');
+      icon.classList.add('fa-rotate-custom-open');
+    }
+
+    // 🟢 Marcar como activo
+    this.selectedMenuLabel = menuLabel;
   }
 
-  onMenuClick(event: Event, menuItem: any) {
-    if (menuItem?.underConstruction) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      return;
+  onMenuClick(event: Event, menuItem: any): void {
+  if (menuItem?.underConstruction) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    // this.swalService.showInfo('Este módulo está en desarrollo. Próximamente disponible.');
+    return;
+  }
+
+  // 🟢 Marcar nuevo menú/submenú antes de resetear
+  if (!menuItem.submenu && !menuItem.parentLabel) {
+    this.selectedMenuLabel = menuItem.label;
+    this.selectedSubmenuLabel = null;
+  } else if (menuItem.parentLabel) {
+    this.selectedMenuLabel = menuItem.parentLabel;
+    this.selectedSubmenuLabel = menuItem.label;
+  } else {
+    this.selectedMenuLabel = menuItem.label;
+    this.selectedSubmenuLabel = null;
+  }
+
+  // 📱 Cierre automático en móvil
+  if (window.innerWidth < 768) {
+    const body = document.body;
+    if (body.classList.contains('sidebar-open')) {
+      const toggleButton = document.querySelector('[data-widget="pushmenu"]') as HTMLElement;
+      toggleButton?.click();
     }
   }
+}
+
 
   confirmLogout(): void {
     this.authService.logout();
@@ -313,6 +380,4 @@ export class SidebarComponent implements OnInit, OnDestroy {
       }
     });
   }
-
-
 }

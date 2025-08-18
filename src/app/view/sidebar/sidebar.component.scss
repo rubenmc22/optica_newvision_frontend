@@ -63,64 +63,39 @@
   background: var(--degradado-color) !important;
   color: var(--secondary-color);
   font-weight: bold;
-
   position: fixed;
   top: 0px !important;
-  /* Altura del navbar fijo */
   bottom: 60px;
-  /* Altura del footer fijo */
   height: calc(100vh - 116px);
-  /* 100% de pantalla menos header y footer */
   overflow-y: auto;
   overflow-x: hidden;
   z-index: 1020;
 }
 
-/* Links en el Sidebar */
 .main-sidebar .nav-sidebar>.nav-item>.nav-link {
   color: var(--secondary-color) !important;
-  /* Color de texto azul oscuro */
-
 }
 
-.main-sidebar .nav-sidebar>.nav-item>.nav-link:hover {
-  background: var(--degradado-color) !important;
-  /* Fondo azul en hover */
-  color: var(--details-color) !important
-    /* Texto negro en hover */
-}
-
-/* Títulos del Sidebar */
-/*.main-sidebar .sidebar .nav-header {
-  color: var(--secondary-color) !important;
-  // font-weight: bold;
-  text-transform: uppercase;
-}*/
-
-/* Ítem Activo */
 .main-sidebar .nav-sidebar>.nav-item>.nav-link.active {
-  background-color: red !important;
-  /* Amarillo brillante */
-  color: #000000 !important;
-  /* Texto negro */
+  background: var(--degradado-color) !important;
+  font-weight: 600;
+  // color: var(--details-color) !important;
 }
 
-/* Imagen o Logo del Sidebar */
-/*.brand-link {
-  background: var( --degradado-color) !important;
-  color: var( --secondary-color) !important;
+.nav-sidebar .nav-link.active {
+  background: linear-gradient(135deg, var(--primary-color) 0%, #2b4f7e 100%) !important;
+  font-weight: 600;
+  color: var(--details-color) !important;
+  border-left: 3px solid var(--primary-color);
+  transition: all 0.3s ease;
+}
 
-}*/
+.nav-sidebar .nav-link.active i {
+  color: var(--details-color) !important;
+}
 
-/* .brand-link:hover {
-    background-color: var(--primary-color) !important; 
-    color: var(--secondary-color) !important; 
-  }*/
-
-/* Sombra (Opcional) */
 .main-sidebar {
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
-  /* Añade separación visual */
 }
 
 .user-panel {
@@ -133,25 +108,18 @@
     .user-name {
       font-weight: 500;
       color: var(--secondary-color) !important;
-      /* Color amarillo */
       font-size: 1.2rem;
       line-height: 1.2;
       margin-bottom: 2px;
       white-space: normal;
-      /* Permite saltos de línea */
       word-wrap: break-word;
-      /* Fuerza el salto si es necesario */
-      /* Espacio entre nombre y rol */
     }
 
     .user-role {
       color: var(--details-color) !important;
-      /* Color negro */
       font-size: 18px;
       font-weight: bold;
-      /* Tamaño más pequeño */
       line-height: 1;
-      //text-transform: lowercase;
     }
   }
 
@@ -168,16 +136,12 @@
   }
 }
 
-
 /*======================== NAVBAR ========================*/
 .main-header {
   position: fixed;
   background: var(--degradado-color) !important;
-  /* Fondo negro */
   border-bottom: 2px solid var(--primary-color);
-  /* Borde amarillo en la parte inferior */
   color: var(--primary-color);
-  /* Texto amarillo */
 }
 
 
@@ -187,12 +151,7 @@
   font-weight: lighter;
 }
 
-.nav-link:hover {
-  // background: var(--degradado-color) !important;
-  /* Fondo amarillo en hover */
-  //  color: var(--secondary-color) !important;
-  /* Texto negro en hover */
-}
+.nav-link:hover {}
 
 .navbar-info-block {
   color: #ffffff;
@@ -212,44 +171,36 @@
   padding: 14px;
 }
 
-/* Íconos del Navbar */
+.sidebar-closing .main-sidebar {
+  transition: transform 0.3s ease-in-out;
+}
+
 .main-header .fas {
   color: var(--details-color) !important;
-  /* Íconos amarillos */
 }
 
 /*======================== FOOTER ========================*/
 .main-footer {
   background-color: var(--secondary-color) !important;
-  /* Fondo negro */
   color: var(--primary-color) !important;
-  /* Texto amarillo */
   border-top: 2px solid var(--primary-color);
-
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
   z-index: 1020;
-  /* menor que el navbar para evitar solapamiento */
   height: 60px;
-  /* ajusta según diseño */
   background-color: var(--secondary-color);
-  /* Borde amarillo en la parte superior */
 }
 
-/* Links en el Footer */
 .main-footer a {
   color: var(--primary-color);
-  /* Amarillo para los enlaces */
   font-weight: bold;
 }
 
 .main-footer a:hover {
   color: var(--secondary-color);
-  /* Texto negro en hover */
   background-color: var(--primary-color);
-  /* Fondo amarillo en hover */
 }
 
 /*======================== MODAL ========================*/
@@ -275,16 +226,13 @@
 }
 
 .modal-body {
-//  background: var(--degradado-pastel);
   color: var(--formLabel-color);
   text-align: center;
   height: 80px;
   align-content: center;
-  /* Centra horizontalmente el contenido */
 }
 
 //scroll
-/* styles.scss o dentro del componente si el modal está aislado */
 .modal-body::-webkit-scrollbar {
   width: 8px;
 }
@@ -306,7 +254,6 @@
   background-color: rgba(0, 123, 255, 0.8);
 }
 
-
 /* Botón de guardar */
 button.btn-success {
   background-color: var(--primary-color);
@@ -322,16 +269,28 @@ button.btn-success {
 
 button.btn-success:hover {
   background-color: #e6c200;
-  /* Fondo amarillo más oscuro */
   color: #000000;
   box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
-  /* Sombra al pasar el mouse */
   transform: scale(1.05);
-  /* Efecto de agrandamiento */
 }
 
 button.btn-success:active {
   background-color: #cba800;
   transform: scale(0.98);
-  /* Efecto de clic */
+}
+
+.fa-rotate-custom {
+  transition: transform 0.3s ease;
+  transform: rotate(0deg);
+}
+
+.fa-rotate-custom-open {
+  transition: transform 0.3s ease;
+  transform: rotate(-90deg);
+}
+
+.menu-expanded>.nav-link {
+  background-color: rgba(255, 255, 255, 0.05); // sutil fondo
+  font-weight: 500;
+  border-left: 3px solid var(--primary-color); // línea decorativa
 }

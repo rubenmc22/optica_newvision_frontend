@@ -97,49 +97,70 @@
         <!-- Sidebar Menu -->
         <nav class="mt-2">
           <ul class="nav nav-pills nav-sidebar flex-column" data-accordion="false">
-            <li *ngFor="let menu of filteredMenu" class="nav-item">
+            <li *ngFor="let menu of filteredMenu" class="nav-item" [ngClass]="{
+              'menu-open': selectedMenuLabel === menu.label,
+              'menu-expanded': selectedMenuLabel === menu.label && menu.submenu
+            }">
+
               <!-- Menú sin submenú -->
               <a *ngIf="!menu.submenu" [routerLink]="menu.underConstruction ? null : menu.routerLink" class="nav-link"
-                [matTooltip]="menu.underConstruction ? 'Módulo en desarrollo �' : null" matTooltipPosition="right"
-                [matTooltipDisabled]="!menu.underConstruction" (click)="onMenuClick($event, menu)">
+                [matTooltip]="menu.underConstruction ? 'Módulo en desarrollo 🚧' : null" matTooltipPosition="right"
+                [matTooltipDisabled]="!menu.underConstruction" (click)="onMenuClick($event, menu)" [ngClass]="{
+                  'active': selectedMenuLabel === menu.label,
+                  'disabled': menu.underConstruction
+                }">
                 <i *ngIf="menu.icon" [class]="menu.icon"></i>
-                <p [ngStyle]="{'margin-left': getMarginForModule(menu.label)}">{{ menu.label }} <span
-                    *ngIf="menu.underConstruction" class="right badge badge-warning">🚧</span></p>
+                <p [ngStyle]="{'margin-left': getMarginForModule(menu.label)}">
+                  {{ menu.label }}
+                  <span *ngIf="menu.underConstruction" class="right badge badge-warning">🚧</span>
+                </p>
               </a>
 
-              <!-- Menú con submenú -->
-              <a *ngIf="menu.submenu && !menu.underConstruction" class="nav-link" (click)="toggleSubmenu($event)">
+
+              <!-- Menú con submenú activo -->
+              <a *ngIf="menu.submenu && !menu.underConstruction" class="nav-link"
+                [ngClass]="{ 'active': selectedMenuLabel === menu.label }" role="button" tabindex="0"
+                (click)="toggleSubmenu($event)">
                 <i [class]="menu.icon"></i>
                 <p [ngStyle]="{'margin-left': getMarginForModule(menu.label)}">
                   {{ menu.label }}
-                  <i class="right fas fa-angle-left"></i>
+                  <i class="right fas fa-angle-left" [ngClass]="{
+               'fa-rotate-custom': selectedMenuLabel !== menu.label,
+               'fa-rotate-custom-open': selectedMenuLabel === menu.label
+             }"></i>
                 </p>
               </a>
 
               <!-- Menú con submenú en desarrollo -->
               <span *ngIf="menu.submenu && menu.underConstruction" class="nav-link"
-                [matTooltip]="'Módulo en desarrollo 🚧'" matTooltipPosition="right"
-                [routerLink]="menu.underConstruction ? null : menu.routerLink">
+                [matTooltip]="'Módulo en desarrollo 🚧'" matTooltipPosition="right">
                 <i [class]="menu.icon"></i>
-                <p [ngStyle]="{'margin-left': getMarginForModule(menu.label)}">{{ menu.label }}<span
-                    *ngIf="menu.underConstruction" class="right badge badge-warning">🚧</span></p>
+                <p [ngStyle]="{'margin-left': getMarginForModule(menu.label)}">
+                  {{ menu.label }}
+                  <span class="right badge badge-warning">🚧</span>
+                </p>
               </span>
 
-              <!-- Submenú (solo se muestra si no está en desarrollo) -->
-              <ul *ngIf="menu.submenu && !menu.underConstruction" class="nav nav-treeview">
+              <!-- Submenús (solo si no está en desarrollo) -->
+              <ul *ngIf="menu.submenu && !menu.underConstruction" class="nav nav-treeview"
+                [ngClass]="{ 'menu-open': selectedMenuLabel === menu.label }"
+                [style.display]="selectedMenuLabel === menu.label ? 'block' : 'none'">
                 <li *ngFor="let sub of menu.submenu" class="nav-item">
                   <a [routerLink]="sub.underConstruction ? null : sub.routerLink" class="nav-link"
                     [matTooltip]="sub.underConstruction ? 'Módulo en desarrollo 🚧' : null" matTooltipPosition="right"
-                    [matTooltipDisabled]="!sub.underConstruction" (click)="onMenuClick($event, sub)">
+                    [matTooltipDisabled]="!sub.underConstruction"
+                    (click)="onMenuClick($event, buildSubmenuItem(sub, menu.label))"
+                    [ngClass]="{ 'active': selectedSubmenuLabel === sub.label }">
                     <i class="far fa-circle nav-icon"></i>
                     <p>{{ sub.label }}</p>
                   </a>
                 </li>
               </ul>
+
             </li>
           </ul>
-
         </nav>
+
       </div>
 
       <div class="sidebar-custom">
