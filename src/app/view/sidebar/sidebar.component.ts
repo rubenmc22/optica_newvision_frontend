@@ -3,7 +3,6 @@ import { AuthService } from '../../core/services/auth/auth.service';
 import { Router } from '@angular/router';
 import { SwalService } from '../../core/services/swal/swal.service';
 import { SharedUserService } from '../../core/services/sharedUser/shared-user.service';
-import { environment } from '../../../environments/environment';
 import { User } from '../../Interfaces/models-interface';
 import { Subscription } from 'rxjs';
 import { UserStateService } from '../../core/services/userState/user-state-service';
@@ -28,8 +27,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private subsTasaCambio!: Subscription;
   selectedMenuLabel: string = '';
   selectedSubmenuLabel: string | null = null;
-
-
 
   private userSubscriptions: Subscription[] = [];
 
@@ -113,19 +110,40 @@ export class SidebarComponent implements OnInit, OnDestroy {
   filteredMenu: any[] = [];
 
   ngOnInit(): void {
+    // 🧠 Restaurar selección previa desde localStorage
+    const savedMenu = localStorage.getItem('selectedMenuLabel');
+    const savedSubmenu = localStorage.getItem('selectedSubmenuLabel');
+
+    if (savedMenu) {
+      this.selectedMenuLabel = savedMenu;
+    } else {
+      this.selectedMenuLabel = 'Dashboard'; // 🟢 Valor por defecto
+    }
+
+    if (savedSubmenu) {
+      this.selectedSubmenuLabel = savedSubmenu;
+    } else {
+      this.selectedSubmenuLabel = null;
+    }
+
+    // 📍 Marcar activo según URL actual
     const currentUrl = this.router.url;
     this.markActiveFromUrl(currentUrl);
 
+    // 💱 Obtener tasas de cambio
     this.subsTasaCambio = this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
       this.tasaDolar = usd;
       this.tasaEuro = eur;
     });
+
+    // ⚙️ Inicializar menú y datos
     this.initializeMenu();
     this.initializeUserData();
     this.setupSubscriptions();
     this.obtenerSedeActual();
     this.obtenerTasaCambio();
   }
+
 
   markActiveFromUrl(url: string): void {
     for (const menu of this.filteredMenu) {
@@ -204,6 +222,11 @@ export class SidebarComponent implements OnInit, OnDestroy {
         this.profileImage = this.sharedUserService.getFullImageUrl(currentUser.ruta_imagen);
       }
     }
+
+    if (!localStorage.getItem('selectedMenuLabel')) {
+      localStorage.setItem('selectedMenuLabel', 'Dashboard');
+      localStorage.setItem('selectedSubmenuLabel', '');
+    }
   }
 
   handleImageError(event: Event): void {
@@ -224,18 +247,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
     this.filteredMenu = this.menuItems
       .map(menu => {
-        if (menu.label === 'Atletas' && this.userRoleKey !== 'atleta' && menu.submenu) {
-          const fichaTecnicaExists = menu.submenu.some(sub => sub.label === 'Ficha Técnica');
-          if (!fichaTecnicaExists) {
-            menu.submenu.push({
-              label: 'Ficha Técnica',
-              routerLink: '/ficha-tecnica',
-              roles: ['admin', 'representante'],
-              underConstruction: false
-            });
-          }
-        }
-
         if (menu.submenu) {
           const filteredSubmenu = menu.submenu.filter(sub => sub.roles.includes(this.userRoleKey));
           return { ...menu, submenu: filteredSubmenu };
@@ -251,7 +262,30 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const target = event.currentTarget as HTMLElement;
     const menuLabel = target.textContent?.trim() || '';
 
-    // 🔁 Cerrar todos los submenús e íconos
+    const isSameMenu = this.selectedMenuLabel === menuLabel;
+
+    // 🔁 Si el mismo menú está activo, cerrarlo
+    if (isSameMenu) {
+      this.selectedMenuLabel = '';
+      this.selectedSubmenuLabel = '';
+
+      const submenu = target.nextElementSibling as HTMLElement | null;
+      const icon = target.querySelector('.fas.fa-angle-left') as HTMLElement | null;
+
+      if (submenu) {
+        submenu.classList.remove('menu-open');
+        submenu.style.display = 'none';
+      }
+
+      if (icon) {
+        icon.classList.remove('fa-rotate-custom-open');
+        icon.classList.add('fa-rotate-custom');
+      }
+
+      return;
+    }
+
+    // 🧼 Cerrar todos los submenús e íconos
     const allSubmenus = document.querySelectorAll('.nav-treeview');
     const allIcons = document.querySelectorAll('.fas.fa-angle-left');
 
@@ -264,10 +298,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
       i.classList.remove('fa-rotate-custom-open');
       i.classList.add('fa-rotate-custom');
     });
-
-    // 🧼 Resetear selección previa
-    this.selectedMenuLabel = '';
-    this.selectedSubmenuLabel = '';
 
     // ✅ Abrir el nuevo menú
     const submenu = target.nextElementSibling as HTMLElement | null;
@@ -285,41 +315,54 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
     // 🟢 Marcar como activo
     this.selectedMenuLabel = menuLabel;
+    this.selectedSubmenuLabel = '';
+
+    localStorage.setItem('selectedMenuLabel', this.selectedMenuLabel);
+    localStorage.setItem('selectedSubmenuLabel', '');
+
   }
+
 
   onMenuClick(event: Event, menuItem: any): void {
-  if (menuItem?.underConstruction) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    // this.swalService.showInfo('Este módulo está en desarrollo. Próximamente disponible.');
-    return;
-  }
-
-  // 🟢 Marcar nuevo menú/submenú antes de resetear
-  if (!menuItem.submenu && !menuItem.parentLabel) {
-    this.selectedMenuLabel = menuItem.label;
-    this.selectedSubmenuLabel = null;
-  } else if (menuItem.parentLabel) {
-    this.selectedMenuLabel = menuItem.parentLabel;
-    this.selectedSubmenuLabel = menuItem.label;
-  } else {
-    this.selectedMenuLabel = menuItem.label;
-    this.selectedSubmenuLabel = null;
-  }
-
-  // 📱 Cierre automático en móvil
-  if (window.innerWidth < 768) {
-    const body = document.body;
-    if (body.classList.contains('sidebar-open')) {
-      const toggleButton = document.querySelector('[data-widget="pushmenu"]') as HTMLElement;
-      toggleButton?.click();
+    if (menuItem?.underConstruction) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      // this.swalService.showInfo('Este módulo está en desarrollo. Próximamente disponible.');
+      return;
     }
-  }
-}
 
+    // 🟢 Marcar nuevo menú/submenú antes de resetear
+    if (!menuItem.submenu && !menuItem.parentLabel) {
+      this.selectedMenuLabel = menuItem.label;
+      this.selectedSubmenuLabel = null;
+    } else if (menuItem.parentLabel) {
+      this.selectedMenuLabel = menuItem.parentLabel;
+      this.selectedSubmenuLabel = menuItem.label;
+    } else {
+      this.selectedMenuLabel = menuItem.label;
+      this.selectedSubmenuLabel = null;
+    }
+
+    // 📱 Cierre automático en móvil
+    if (window.innerWidth < 768) {
+      const body = document.body;
+      if (body.classList.contains('sidebar-open')) {
+        const toggleButton = document.querySelector('[data-widget="pushmenu"]') as HTMLElement;
+        toggleButton?.click();
+      }
+    }
+
+    localStorage.setItem('selectedMenuLabel', this.selectedMenuLabel);
+    localStorage.setItem('selectedSubmenuLabel', this.selectedSubmenuLabel || '');
+
+  }
 
   confirmLogout(): void {
     this.authService.logout();
+
+    localStorage.removeItem('selectedMenuLabel');
+    localStorage.removeItem('selectedSubmenuLabel');
+
     this.swalService.showSuccess('Sesión cerrada', 'Tu sesión se ha cerrado exitosamente.')
       .then(() => {
         this.router.navigate(['/login']);
