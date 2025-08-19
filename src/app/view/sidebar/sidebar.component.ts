@@ -214,6 +214,18 @@ export class SidebarComponent implements OnInit, OnDestroy {
     const currentUser = this.authService.getCurrentUser();
     const currentRole = this.authService.getCurrentRol();
 
+    // Detectar si es una nueva sesión (por ejemplo, tras cierre por inactividad)
+    const isNewSession = !sessionStorage.getItem('sessionStarted');
+
+    if (isNewSession) {
+      // Limpiar residuos visuales persistentes
+      localStorage.removeItem('selectedMenuLabel');
+      localStorage.removeItem('selectedSubmenuLabel');
+
+      // Marcar que la sesión ya fue inicializada
+      sessionStorage.setItem('sessionStarted', 'true');
+    }
+
     if (currentUser) {
       this.userName = currentUser.nombre || '';
       this.userRoleName = currentRole?.name || '';
@@ -223,11 +235,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
       }
     }
 
+    // Establecer valores por defecto si no existen
     if (!localStorage.getItem('selectedMenuLabel')) {
       localStorage.setItem('selectedMenuLabel', 'Dashboard');
       localStorage.setItem('selectedSubmenuLabel', '');
     }
   }
+
 
   handleImageError(event: Event): void {
     const target = event.target as HTMLImageElement | null;

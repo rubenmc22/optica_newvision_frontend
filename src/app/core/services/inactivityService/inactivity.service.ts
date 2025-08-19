@@ -7,7 +7,7 @@ import { takeUntil } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class InactivityService implements OnDestroy {
-    private timeoutMinutes = 10; // Tiempo de inactividad en minutos
+    private timeoutMinutes = 1; // Tiempo de inactividad en minutos
     private countdown!: Subscription;
     private destroy$ = new Subject<void>();
 
@@ -40,7 +40,7 @@ export class InactivityService implements OnDestroy {
     }
 
     private handleInactivity(): void {
-     //   console.log('Inactividad detectada. Mostrando alerta...');
+        //   console.log('Inactividad detectada. Mostrando alerta...');
         this.swalService.showInactivityWarning(
             'Inactividad detectada',
             '¿Deseas continuar con tu sesión?'
@@ -60,6 +60,9 @@ export class InactivityService implements OnDestroy {
             replaceUrl: true
         });
 
+        // Limpiar residuos visuales persistentes
+        localStorage.removeItem('selectedMenuLabel');
+        localStorage.removeItem('selectedSubmenuLabel');
         // Mensaje de confirmación de cierre
         this.swalService.showInfo(
             'Sesión cerrada',
