@@ -9,31 +9,70 @@
 
 
 .card-header {
-    //  text-align: center;
-    font-size: 1.2rem;
-    background: var(--degradado-color) !important;
-    /* Fondo amarillo */
-    color: var(--details-color) !important;
-    /* Texto negro */
-    font-weight: bold;
-    border-bottom: 2px solid var(--secondary-color);
-    /* Línea divisoria negra */
+  //  text-align: center;
+  font-size: 1.2rem;
+  background: var(--degradado-color) !important;
+  /* Fondo amarillo */
+  color: var(--details-color) !important;
+  /* Texto negro */
+  font-weight: bold;
+  border-bottom: 2px solid var(--secondary-color);
+  /* Línea divisoria negra */
 }
-.h4{
+
+.h4 {
   color: var(--details-color) !important;
 }
-//Input filtro busqueda
-/*.user-management-filter {
-  background: transparent;
- // padding: 30px !important;
-  border: none;
-  background: var(--degradado-pastel) !important;
-}*/
+
+.search-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 63%;
+  margin-top: -15px;
+
+  @media (max-width: 2305px) {
+    width: 78%;
+  }
+
+  @media (max-width: 2050px) {
+    width: 74%;
+  }
+
+  @media (max-width: 1920px) {
+    width: 72%;
+  }
+
+  @media (max-width: 1710px) {
+    width: 68%;
+  }
+
+  @media (max-width: 1536px) {
+    width: 63%;
+  }
+
+
+
+  @media (max-width: 1397px) {
+    width: 58%;
+  }
+
+  @media (max-width: 1230px) {
+    width: 49%;
+  }
+
+  /* @media (max-width: 1024px) {
+  width: 33%;
+  }
+
+  @media (max-width: 1024px) {
+  width: 33%;
+  }*/
+}
 
 .search-container {
   transition: all 0.3s ease;
   border: 1px solid #e0e0e0;
-  width: 71%;
+  width: 100%;
 }
 
 .search-container:focus-within {
@@ -65,9 +104,8 @@
 
 .filter-group {
   display: flex;
-  // align-items: center;
+  flex-direction: column;
   margin-top: -15px !important;
-  // gap: 0.5rem;
 }
 
 .input-group-borderless .form-control,
@@ -115,9 +153,9 @@
 }
 
 input[type="text"]::placeholder {
-//  color: var(--primary-color) !important;
- // opacity: 1 !important;
- font-size: 1rem;
+  //  color: var(--primary-color) !important;
+  // opacity: 1 !important;
+  font-size: 1rem;
 }
 
 input[type="text"]:focus::placeholder {
@@ -185,68 +223,120 @@ input[type="text"]:focus::placeholder {
 }
 
 .text-secondary {
-    margin-top: 0;
-    margin-bottom: 3px;
-    color: var(--primary-color) !important;
+  margin-top: 0;
+  margin-bottom: 3px;
+  color: var(--primary-color) !important;
 }
 
 .avatar-widget {
-    position: relative;
-    display: inline-block;
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    overflow: hidden;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  display: inline-block;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .avatar-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    position: relative;
-    z-index: 1; // Asegura que la imagen esté por encima del overlay
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: relative;
+  z-index: 1; // Asegura que la imagen esté por encima del overlay
 }
 
 .avatar-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); // Fondo semitransparente
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2; // Asegura que el overlay esté por encima de la imagen
-    opacity: 1; // Visible por defecto
-    transition: opacity 0.3s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); // Fondo semitransparente
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2; // Asegura que el overlay esté por encima de la imagen
+  opacity: 1; // Visible por defecto
+  transition: opacity 0.3s ease;
 
-    .fa-camera {
-        color: white;
-        font-size: 24px;
-    }
+  .fa-camera {
+    color: white;
+    font-size: 24px;
+  }
 }
 
 // Clase para ocultar el overlay cuando hay una imagen cargada
 .show-on-hover {
-    opacity: 0; // Inicialmente invisible
+  opacity: 0; // Inicialmente invisible
 
-    &:hover {
-        opacity: 1; // Visible al hacer hover
-    }
+  &:hover {
+    opacity: 1; // Visible al hacer hover
+  }
 }
 
-.modal-header{
-   background: var(--degradado-color);
+.modal-header {
+  background: var(--degradado-color);
 }
 
-.modal-title{
-    text-align: left;
-       color: var(--details-color);
-       font-weight: bold;
+.modal-title {
+  text-align: left;
+  color: var(--details-color);
+  font-weight: bold;
 }
 
-.card{
-   background: var(--degradado-pastel) !important;
+.card {
+  background: var(--degradado-pastel) !important;
+}
+
+.btn-addEmpleado {
+  width: 170px !important;
+}
+
+.lblAgregarEmpleado {
+  font-size: 16px !important;
+}
+
+@media (max-width: 1024px) {
+  .filtros-empleados {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .search-wrapper,
+  .search-container,
+  .filtros-avanzados,
+  .filter-group select {
+    width: 100% !important;
+  }
+
+  .filter-group {
+    width: 100% !important;
+    margin-top: -5px !important;
+  }
+
+  #filtroRol {
+    margin-top: 5px !important;
+  }
+
+  .filtros-avanzados {
+    flex-direction: column !important;
+    margin-left: 0 !important;
+  }
+
+  .filter-label {
+    margin-bottom: 4px;
+  }
+
+  .search-container {
+    margin-bottom: 0.5rem;
+  }
+
+  .btn-addEmpleado {
+    width: 75px !important;
+  }
+
+  .lblAgregarEmpleado {
+    font-size: 13px !important;
+  }
 }

@@ -1,31 +1,33 @@
-<div class="container-fluid p-4">
-    <div class="card shadow-lg">
+<div class="container-fluid p-4 mb-5">
+    <div class="card shadow-lg ">
         <!-- Header y Controles Superiores -->
         <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between"
             style="margin-bottom: 1%;">
             <h4 class="mb-0">👨‍💼 Empleados</h4>
-            <div class="ms-auto">
-                <button class="btn btn-light btn-sm" (click)="openDynamicModal()">➕ Agregar
-                    Empleado</button>
+            <div class="ms-auto btn-addEmpleado">
+                <button class="btn btn-light btn-sm" (click)="openDynamicModal()"> <span class="lblAgregarEmpleado">➕ Agregar Empleado</span></button>
             </div>
         </div>
 
         <div class="card-body">
-            <div class="d-flex align-items-center mb-3">
+            <div class="d-flex align-items-start flex-wrap mb-3 gap-2 filtros-empleados">
                 <!-- Barra de Búsqueda -->
-                <div class="search-container bg-light rounded-2 px-3">
-                    <div class="input-group ">
-                        <input type="text" class="form-control border-0 bg-transparent shadow-none"
-                            placeholder="Buscar por cédula o nombre..." style="font-size: 1.1rem;"
-                            [(ngModel)]="searchQuery" (input)="filterEmployees()">
-                        <button class="btn btn-link text-secondary p-0" (click)="clearSearch()">
-                            <i class="bi bi-x"></i>
-                        </button>
+                <div class="search-wrapper">
+                    <span class="filter-label text-muted small text-start">Filtrar empleados</span>
+                    <div class="search-container bg-light rounded-2 px-1">
+                        <div class="input-group">
+                            <input type="text" class="form-control border-0 bg-transparent shadow-none"
+                                placeholder="Buscar por cédula o nombre..." style="font-size: 1.1rem;"
+                                [(ngModel)]="searchQuery" (input)="filterEmployees()" />
+                            <button class="btn btn-link text-secondary p-0" (click)="clearSearch()">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Filtros Avanzados -->
-                <div class="d-flex align-items-center ms-2 gap-2">
+                <div class="d-flex flex-wrap gap-2 filtros-avanzados">
                     <div class="filter-group d-flex flex-column">
                         <span class="filter-label text-muted small text-start">Filtrar por Cargo</span>
                         <select class="form-select form-select-sm border-0 bg-light rounded-2 px-3 py-2"
@@ -36,7 +38,7 @@
                         </select>
                     </div>
 
-                    <div class="filter-group d-flex flex-column">
+                    <div class="filter-group d-flex flex-column" id="filtroRol"  >
                         <span class="filter-label text-muted small text-start">Filtrar por Rol</span>
                         <select class="form-select form-select-sm border-0 bg-light rounded-2 px-3 py-2"
                             style="width: 200px; font-size: 0.85rem;" [(ngModel)]="selectedRole"
@@ -47,6 +49,7 @@
                     </div>
                 </div>
             </div>
+
 
             <!-- Modal de formulario dinámico -->
             <app-dynamic-modal [modalTitle]="'Agregar Nuevo Empleado'" [modalFields]="modalFields"
@@ -139,8 +142,8 @@
                                     (click)="toggleEdit(i)" title="Editar" [disabled]="employee.estatus === false">
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <button *ngIf="employee.editing" class="btn btn-sm me-1"
-                                    (click)="updateEmployee(i)" title="Guardar"
+                                <button *ngIf="employee.editing" class="btn btn-sm me-1" (click)="updateEmployee(i)"
+                                    title="Guardar"
                                     [ngClass]="{'btn-secondary': !employee.modified || employee.hasErrors || employee.estatus === false, 'btn-success': employee.modified && !employee.hasErrors && employee.estatus === true}"
                                     [disabled]="!employee.modified || employee.hasErrors">
                                     <i class="bi bi-check-lg"></i>

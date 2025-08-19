@@ -7,7 +7,7 @@ import { takeUntil } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class InactivityService implements OnDestroy {
-    private timeoutMinutes = 1; // Tiempo de inactividad en minutos
+    private timeoutMinutes = 10; // Tiempo de inactividad en minutos
     private countdown!: Subscription;
     private destroy$ = new Subject<void>();
 

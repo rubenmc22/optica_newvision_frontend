@@ -583,7 +583,7 @@
                 </div>
                 <!-- Firma del médico -->
                 <div class="col-md-5">
-                  <p class="mb-1"><strong>Firma del Médico Tratante</strong></p>
+                  <p class="mb-1"><strong>Firma del Especialista</strong></p>
                   <div class="border rounded p-3 bg-light" style="height: 100px;">
                     <!-- espacio para firma manuscrita -->
                   </div>
@@ -687,7 +687,7 @@
                     </div>
 
                     <div class="col-md-4">
-                      <label class="form-label">Médico Tratante <span class="text-danger">*</span></label>
+                      <label class="form-label">Especialista <span class="text-danger">*</span></label>
 
                       <ng-select [items]="medicoTratante.length > 0 ? medicoTratante : []" bindLabel="nombre"
                         formControlName="medico" [searchable]="true" [disabled]="medicoTratante.length === 0"
@@ -707,7 +707,7 @@
 
                       <div *ngIf="historiaForm.get('medico')?.invalid && historiaForm.get('medico')?.touched"
                         class="text-danger small mt-1">
-                        <i class="bi bi-exclamation-circle-fill me-1"></i> Seleccione un médico tratante
+                        <i class="bi bi-exclamation-circle-fill me-1"></i> Seleccione un Especialista
                       </div>
                     </div>
 
