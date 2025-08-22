@@ -566,7 +566,8 @@ export const TIPOS_CRISTALES: string[] = [
     'Bifocal',
     'Progresivo digital básico',
     'Progresivo digital intermedio',
-    'Progresivo digital amplio'
+    'Progresivo digital amplio',
+    'Lentes de contacto'
 ];
 
 export const MATERIALES: OpcionSelect[] = [

@@ -147,7 +147,7 @@ export interface HistorialResponse {
 
 // Interfaz para recomendaciones
 export interface Recomendaciones {
-  cristal: TipoCristal | TipoCristal[];
+  cristal: Cristal;
   material: TipoMaterial | TipoMaterial[];
   montura: string;
   cristalSugerido?: string;
@@ -187,6 +187,10 @@ export interface HistoriaMedicaCompleta {
 
 // Tipos específicos
 export type TipoGenero = '' | 'Masculino' | 'Femenino' | 'Otro';
+export interface Cristal {
+  label: string;
+  value: TipoCristal;
+}
 export type TipoCristal =
   | 'VISIÓN SENCILLA (CR-39)'
   | 'AR Básico'

@@ -191,8 +191,7 @@
                     <strong>Última graduación:</strong>
                     <p class="bg-light rounded p-2">
                       {{ historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion ?
-                      (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No
-                      especificado' }}
+                      (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No especificado' }}
                     </p>
                   </div>
 
@@ -529,7 +528,7 @@
                     <div class="row">
                       <div class="col-md-4 mb-0">
                         <strong>Tipo de cristal:</strong><br>
-                        <p class="ms-0 bg-light rounded p-2">{{ rec.cristal || 'No especificado' }}</p>
+                        <p class="ms-0 bg-light rounded p-2">{{ rec.cristal?.label || 'No especificado' }}</p>
                       </div>
                       <div class="col-md-4 mb-0">
                         <strong>Material:</strong><br>
@@ -610,6 +609,7 @@
             </button>
             <button class="btn btn-primary"
               *ngIf="obtenerSedeDesdePacienteId(historiaSeleccionada?.pacienteId ?? '') === sedeActiva"
+              
               (click)="editarHistoria(historiaSeleccionada)">
               <i class="bi bi-pencil-square"></i> Editar
             </button>
