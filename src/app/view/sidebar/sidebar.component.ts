@@ -67,7 +67,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
         { label: 'Catálogo', routerLink: '/productos-catalogo', roles: ['admin', 'gerente', 'asesor-optico'] },
         { label: 'Inventario', routerLink: '/productos-inventario', roles: ['admin', 'gerente', 'asesor-optico'] }
       ],
-      underConstruction: true
+      underConstruction: false
     },
     {
       label: 'Ventas',

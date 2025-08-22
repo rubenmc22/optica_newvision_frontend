@@ -1028,7 +1028,6 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   crearRecomendacion(rec?: Recomendaciones): FormGroup {
-    console.log('Rec', rec);
     return this.fb.group({
       cristal: [rec?.cristal || null, Validators.required],
       material: [rec?.material || [], Validators.required],

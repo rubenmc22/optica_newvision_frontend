@@ -21,6 +21,12 @@ export class HistoriaMedicaService {
     return this.http.get<any[]>(`${environment.apiUrl}/pacientes/${id}/historias`);
   }
 
+  getHistoriasMedicasAll(): Observable<{ message: string; historiales_medicos: any[] }> {
+  return this.http.get<{ message: string; historiales_medicos: any[] }>(`${environment.apiUrl}/historial-medico-all`);
+}
+
+
+
   // En historia-medica.service.ts
   getHistoriasPorPaciente(pacienteKey: string): Observable<HistoriaMedica[]> {
     const url = `${environment.apiUrl}/historial-medico-paciente/${pacienteKey}`;

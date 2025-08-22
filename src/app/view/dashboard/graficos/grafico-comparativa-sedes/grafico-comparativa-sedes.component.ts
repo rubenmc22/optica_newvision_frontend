@@ -4,6 +4,7 @@ import {
   ChartData,
   ChartOptions
 } from 'chart.js';
+import { DatosPorSede  } from './../../dashboard-interface';
 
 @Component({
   selector: 'app-grafico-comparativa-sedes',
@@ -12,7 +13,7 @@ import {
   styleUrls: ['./grafico-comparativa-sedes.component.scss']
 })
 export class GraficoComparativaSedesComponent implements OnInit {
-  @Input() data: Record<string, { pacientes: number; ventas: number; ordenes: number }> = {};
+  @Input() data: Record<string, DatosPorSede> = {};
 
   chartType: 'bar' = 'bar';
 
@@ -78,8 +79,8 @@ export class GraficoComparativaSedesComponent implements OnInit {
       },
       {
         label: 'Historias',
-        data: Object.values(this.data).map(d => d.pacientes),
-        backgroundColor: '#2ca444 '
+        data: Object.values(this.data).map(d => d.historias),
+        backgroundColor: '#2ca444'
       },
       {
         label: 'Ventas',
