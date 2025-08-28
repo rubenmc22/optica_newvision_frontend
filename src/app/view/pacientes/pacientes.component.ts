@@ -15,7 +15,6 @@ import {
   ValidationErrors
 } from '@angular/forms';
 
-
 @Component({
   selector: 'app-pacientes',
   standalone: false,
@@ -39,6 +38,7 @@ export class VerPacientesComponent implements OnInit {
   filtro: string = '';
   ordenActual: string = 'informacionPersonal.nombreCompleto';
   ordenAscendente: boolean = true;
+  esMenorSinCedula: boolean = false;
 
   // Redes sociales
   listaRedes: string[] = ['Facebook', 'Twitter', 'Instagram', 'LinkedIn', 'TikTok'];
@@ -110,6 +110,7 @@ export class VerPacientesComponent implements OnInit {
   ) {
     this.formPaciente = this.fb.group({
       // 👤 Datos personales
+      esMenorSinCedula: [false],
       nombreCompleto: [
         '',
         [
@@ -483,6 +484,8 @@ export class VerPacientesComponent implements OnInit {
     // Obtener valores del formulario
     const formValues = this.formPaciente.value;
 
+    console.log('formValues', formValues);
+
     // Procesar uso de dispositivos electrónicos
     const usoDispositivoValue = formValues.usoDispositivo === 'Sí'
       ? `Sí, ${formValues.intervaloUso}`
@@ -513,6 +516,7 @@ export class VerPacientesComponent implements OnInit {
 
     const nuevoPaciente = {
       informacionPersonal: {
+        esMenorSinCedula: formValues.esMenorSinCedula,
         nombreCompleto,
         cedula,
         telefono,
@@ -539,6 +543,7 @@ export class VerPacientesComponent implements OnInit {
       }
     };
 
+    console.log('nuevoPaciente', nuevoPaciente);
     this.pacientesService.createPaciente(nuevoPaciente).subscribe({
       next: (response) => {
         this.pacientes.push(response);
@@ -666,7 +671,8 @@ export class VerPacientesComponent implements OnInit {
         fechaNacimiento: pacienteFormValue.fechaNacimiento,
         ocupacion: pacienteFormValue.ocupacion || null,
         genero: mapGenero,
-        direccion: pacienteFormValue.direccion || null
+        direccion: pacienteFormValue.direccion || null,
+          esMenorSinCedula: pacienteFormValue.esMenorSinCedula || false
       },
       redesSociales: this.redesSociales.controls.map(control => ({
         platform: control.get('platform')?.value,

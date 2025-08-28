@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, } from '@angular/core';
 import { Producto } from '../producto.model';
 import { ProductoService } from '../producto.service';
 import { TasaCambiariaService } from '../../../core/services/tasaCambiaria/tasaCambiaria.service';
@@ -11,13 +11,15 @@ import { Tasa } from '../../../Interfaces/models-interface';
     styleUrls: ['./productos-list.component.scss']
 })
 export class ProductosListComponent implements OnInit {
+    @Output() onCerrar = new EventEmitter<void>();
     // CONSTANTES
     private readonly PRODUCTOS_POR_PAGINA = 12;
     private readonly RANGO_PAGINACION = 3;
 
     // ESTADO DEL COMPONENTE
     productos: Producto[] = [];
-    mostrarModal = false;
+    mostrarModal: boolean = false;
+
     modoModal: 'agregar' | 'editar' | 'ver' = 'agregar';
     productoSeleccionado?: Producto;
     paginaActual = 1;
@@ -29,16 +31,29 @@ export class ProductosListComponent implements OnInit {
     sedeActiva: string = '';
     sedeFiltro: string = this.sedeActiva;
     filtro: string = '';
+    categoriaAbierto = false;
+
 
     // CATÁLOGOS
-    tiposProducto: string[] = ['Montura', 'Lente', 'Líquido', 'Estuche', 'Accesorio'];
-    imagenesPorTipo: Record<Producto['tipo'], string> = {
+    categoriasProducto: string[] = ['Monturas', 'Lentes', 'Líquidos', 'Estuches', 'Misceláneos', 'Lentes de contacto'];
+    moneda: string[] = ['USD', 'VES'];
+    imagenesPorTipo: Record<Producto['categoria'], string> = {
         lente: 'assets/cristales.jpg',
         montura: 'assets/montura_2.avif',
         estuche: 'assets/estuches.jpg',
         liquido: 'assets/liquido.webp',
         accesorio: 'assets/accesorios.jpg',
     };
+
+    //MODAL
+    modo: 'agregar' | 'editar' | 'ver' = 'agregar'; // ✅ para definir el contexto
+    avatarPreview: string | null = null;
+    user: any = { ruta_imagen: '' };
+    esSoloLectura: boolean = false;
+    producto: any = {};
+    productoOriginal: any;
+
+
 
     // TASAS DE CAMBIO
     tasaDolar = 0;
@@ -52,6 +67,7 @@ export class ProductosListComponent implements OnInit {
     // =========== LIFECYCLE HOOKS ===========
     ngOnInit(): void {
         this.cargarDatosIniciales();
+        this.productoOriginal = { ...this.producto };
     }
 
     private cargarDatosIniciales(): void {
@@ -85,24 +101,37 @@ export class ProductosListComponent implements OnInit {
     // =========== GESTIÓN DE MODAL ===========
     abrirModal(modo: 'agregar' | 'editar' | 'ver', producto?: Producto): void {
         this.modoModal = modo;
-        this.productoSeleccionado = producto;
+        const base = producto ?? this.crearProductoVacio();
+        this.productoSeleccionado = base;
+        this.producto = { ...base }; // 🔹 Así el ngModel en la vista usa un objeto con activo = true
+
         this.mostrarModal = true;
+        document.body.classList.add('modal-open');
     }
+
 
     cerrarModal(): void {
         this.mostrarModal = false;
         this.productoSeleccionado = undefined;
+        document.body.classList.remove('modal-open'); // restaura scroll
     }
 
-    guardarProducto(producto: Producto): void {
+    guardarProducto(): void {
+        const producto = this.productoSeguro;
+
+        console.log('Guardando:', producto);
+
         if (this.modoModal === 'agregar') {
             this.productoService.agregarProducto(producto);
-        } else if (this.modoModal === 'editar') {
+        } else {
             this.productoService.editarProducto(producto);
         }
+
         this.productos = this.productoService.getProductos();
         this.cerrarModal();
     }
+
+
 
     // =========== FILTRADO Y BÚSQUEDA ===========
     limpiarFiltros(): void {
@@ -117,12 +146,21 @@ export class ProductosListComponent implements OnInit {
             const coincideTexto = p.nombre.toLowerCase().includes(texto) ||
                 p.codigo.toLowerCase().includes(texto);
             const coincideTipo = !this.tipoSeleccionado ||
-                p.tipo.toLowerCase() === this.tipoSeleccionado.toLowerCase();
+                p.categoria.toLowerCase() === this.tipoSeleccionado.toLowerCase();
             const coincideEstado = this.estadoSeleccionado === null ||
                 p.activo === this.estadoSeleccionado;
             return coincideTexto && coincideTipo && coincideEstado;
         });
     }
+
+    ngOnChanges() {
+        if (this.mostrarModal) {
+            document.body.classList.add('modal-open');
+        } else {
+            document.body.classList.remove('modal-open');
+        }
+    }
+
 
     // =========== PAGINACIÓN ===========
     get productosPaginados(): Producto[] {
@@ -153,22 +191,22 @@ export class ProductosListComponent implements OnInit {
         return {
             id: crypto.randomUUID(),
             nombre: '',
-            tipo: 'montura',
             marca: '',
             color: '',
             codigo: '',
             material: '',
             proveedor: '',
-            categoria: '',
+            categoria: null as any, // antes era ''
             stock: 0,
             precio: 0,
-            moneda: 'usd',
+            moneda: null as any,    // antes era ''
             activo: true,
             descripcion: '',
             imagenUrl: '',
             fechaIngreso: new Date().toISOString().split('T')[0]
         };
     }
+
 
     actualizarEstadoPorStock(productos: Producto[]): Producto[] {
         return productos.map(p => p.stock === 0 ? { ...p, activo: false } : p);
@@ -183,20 +221,26 @@ export class ProductosListComponent implements OnInit {
         }
     }
 
-    obtenerImagen(tipo: Producto['tipo']): string {
-        const imagenes = {
+    obtenerImagen(categoria: string): string {
+        // Mapa local para las categorías más comunes
+        const imagenes: Record<string, string> = {
             montura: 'assets/montura_2.avif',
             lente: 'assets/montura_1.png',
             liquido: 'assets/montura_3.jpg',
             estuche: 'assets/montura_1.png',
             accesorio: 'assets/montura_2.avif'
         };
-        return imagenes[tipo] ?? 'assets/default.jpg';
+
+        // Normalizamos a minúsculas para evitar problemas de casing
+        const clave = categoria?.toLowerCase() ?? '';
+
+        return imagenes[clave] || 'assets/default.jpg';
     }
+
 
     // =========== DATOS DE PRUEBA ===========
     generarProductosDummy(cantidad: number): Producto[] {
-        const tipos: Producto['tipo'][] = ['montura', 'lente', 'liquido', 'estuche', 'accesorio'];
+        const tipos: Producto['categoria'][] = ['montura', 'lente', 'liquido', 'estuche', 'accesorio'];
         const marcas = ['VisionPro', 'OptiClear', 'LentiMax', 'FocusOne'];
         const proveedores = ['Distribuidora Global', 'Óptica Center', 'LensSupreme'];
         const categorias = ['Visual', 'Estética', 'Mantenimiento'];
@@ -225,4 +269,51 @@ export class ProductosListComponent implements OnInit {
             };
         });
     }
+
+    getProfileImage(): string {
+        return this.avatarPreview || this.user.ruta_imagen || 'assets/avatar-placeholder.avif';
+    }
+
+    handleImageError(event: Event): void {
+        const img = event.target as HTMLImageElement;
+        img.src = 'assets/avatar-placeholder.avif';
+    }
+
+    onFileSelected(event: Event): void {
+        const input = event.target as HTMLInputElement;
+
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                this.avatarPreview = reader.result as string;
+                // Si estás cargando el archivo al backend, aquí podrías disparar la carga
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    formularioModificado(): boolean {
+        if (!this.productoOriginal || !this.producto) return false;
+        return JSON.stringify(this.productoOriginal) !== JSON.stringify(this.producto);
+    }
+
+
+    formularioValido(): boolean {
+        const camposObligatorios = [
+            'codigo', 'activo', 'marca', 'categoria',
+            'material', 'proveedor', 'stock', 'precio', 'moneda'
+        ];
+
+        return camposObligatorios.every(campo => {
+            const valor = this.producto?.[campo];
+
+            if (typeof valor === 'boolean') return true;
+            if (typeof valor === 'number') return !isNaN(valor);
+            return valor !== undefined && valor !== null && `${valor}`.trim().length > 0;
+        });
+
+    }
+
 }

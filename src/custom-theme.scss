@@ -180,3 +180,45 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
     }
   }
 }
+
+/*MODULO CATALOGO: NG SELECT CATEGORIAS - MODAL AGREGAR PRODUCTO*/
+/*:root { --control-height: 3.5rem; }
+
+.ng-select.ng-select-single .ng-select-container {
+  height: var(--control-height) !important;
+  min-height: var(--control-height) !important;
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  box-sizing: border-box;
+}
+
+.ng-select .ng-select-container .ng-value-container {
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.ng-select .ng-input > input {
+  height: 100% !important;
+  padding: 0;
+  margin: 0;
+}
+
+.ng-select .ng-arrow-wrapper {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.form-select option {
+  background-color: #fff;      
+  color: #212529;              
+  font-weight: 500;            
+  padding: 0.5rem;
+}
+
+.form-select option:hover {
+  background-color: red !important;   
+  color: #fff;
+}*/

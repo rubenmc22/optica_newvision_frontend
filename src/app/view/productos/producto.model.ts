@@ -2,7 +2,6 @@ export interface Producto {
   id: string;
   nombre: string;
   codigo: string;
-  tipo: 'montura' | 'lente' | 'liquido' | 'estuche' | 'accesorio'; // puedes extender con más tipos
   marca?: string;
   color?: string;
   material?: string;

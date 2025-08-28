@@ -1,75 +1,293 @@
-.custom-toggle {
-    display: inline-flex;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-}
-
-.custom-toggle input {
-    display: none;
-}
-
+/* ===== COMPONENTES GENERALES ===== */
 .card-header {
-    font-size: 1.2rem;
-    background: var(--degradado-color) !important;
-    color: var(--details-color) !important;
-    font-weight: bold;
-    border-bottom: 2px solid var(--secondary-color);
+  font-size: 1.2rem;
+  background: var(--degradado-color) !important;
+  color: var(--details-color) !important;
+  font-weight: bold;
+  border-bottom: 2px solid var(--secondary-color);
 }
 
 .card-body {
-  padding-bottom: calc(70px + 1rem); /* más respiración visual */
+  padding-bottom: calc(70px + 1rem);
+  /* más respiración visual */
 }
 
-
-.limpiar-filtros-btn {
-    background-color: #ffc107;
-    color: #212529;
-    border: none;
-    font-weight: 500;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-    transition: background-color 0.3s ease;
-    height: 36px;
-    margin-top: 4px;
+/* ===== TOGGLE SWITCH ===== */
+.custom-toggle {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
 }
 
-.limpiar-filtros-btn:hover {
-    background-color: #ffca2c;
+.custom-toggle input {
+  display: none;
 }
-
 
 .toggle-track {
-    width: 50px;
-    height: 26px;
-    background-color: #ddd;
-    border-radius: 50px;
-    position: relative;
-    transition: background-color 0.3s ease;
+  width: 50px;
+  height: 26px;
+  background-color: #ddd;
+  border-radius: 50px;
+  position: relative;
+  transition: background-color 0.3s ease;
 }
 
 .toggle-track .toggle-indicator {
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 20px;
-    height: 20px;
-    background-color: white;
-    border-radius: 50%;
-    transition: transform 0.3s ease;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
 }
 
 .custom-toggle input:checked+.toggle-track {
-    background-color: #0d6efd;
-    /* Bootstrap primary */
+  background-color: #0d6efd;
+  /* Bootstrap primary */
 }
 
 .custom-toggle input:checked+.toggle-track .toggle-indicator {
-    transform: translateX(24px);
+  transform: translateX(24px);
+}
+
+/* ===== BOTONES ===== */
+.limpiar-filtros-btn {
+  background-color: #ffc107;
+  color: #212529;
+  border: none;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: background-color 0.3s ease;
+  height: 36px;
+  margin-top: 4px;
+}
+
+.limpiar-filtros-btn:hover {
+  background-color: #ffca2c;
+}
+
+/* ===== FORMULARIOS ===== */
+/* Ajustes input floating */
+.form-floating>label {
+  font-size: 0.85rem;
+}
+
+/* Cambiar color y fondo de todas las opciones */
+.form-select option {
+  background-color: #fff;      /* fondo blanco o el que prefieras */
+  color: #212529;              /* texto gris oscuro legible */
+  font-weight: 500;            /* un poco más grueso para legibilidad */
+  padding: 0.5rem;
+}
+
+/* Color al pasar el mouse (en navegadores que lo soportan) */
+.form-select option:hover {
+  background-color: red !important;   /* azul Bootstrap o tu acento */
+  color: #fff;
+}
+
+/* Color de opción seleccionada (en la lista desplegable) */
+.form-select option:checked {
+  background-color: green !important; 
+  color: #fff;
 }
 
 
-/*==== MODAL =====*/
-/* Avatar Widget (tus estilos con mejoras) */
+.form-control,
+.form-select {
+  border-radius: 0.5rem;
+}
+
+/* Texto dentro del input */
+.form-control:not(:placeholder-shown),
+.form-select:not(:placeholder-shown) {
+  font-weight: 600;
+  color: #495057;
+}
+
+/* Estado activo / foco */
+.form-control:focus,
+.form-select:focus {
+  border-color: #0d6efd;
+  /* Azul principal de Bootstrap */
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+/* Label flotante más pequeño y alto */
+.form-floating>label {
+  font-size: 1rem;
+  /* Grande inicial */
+  color: #6c757d;
+}
+
+.form-floating>.form-control:focus~label,
+.form-floating>.form-control:not(:placeholder-shown)~label,
+.form-floating>.form-select:focus~label,
+.form-floating>.form-select:not(:placeholder-shown)~label {
+  font-size: 0.85rem;
+  /* Más pequeño al flotar */
+}
+
+.form-check-input:checked {
+  background-color: #198754;
+  border-color: #198754;
+}
+
+.form-check-label {
+  transition: color 0.3s ease;
+  user-select: none;
+}
+
+.form-switch {
+  margin-left: 25px;
+}
+
+
+/* =========================================
+   Patrones flotantes unificados para ng-select
+   ========================================= */
+/* Ajuste visual unificado para ng-select normal */
+.ng-select {
+  display: block;
+  width: 100%;
+  min-height: 3.5rem; /* igual que input grande */
+  border: 1px solid #ced4da;
+  border-radius: 0.5rem;
+  background-color: #fff;
+}
+
+/* Selector más específico y con variantes de estado */
+.ng-select.ng-select-single .ng-select-container,
+.ng-select.ng-select-single.ng-select-opened .ng-select-container {
+  height: 3.5rem !important;
+  min-height: 3.5rem !important;
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  box-sizing: border-box;
+}
+
+/* Forzar input interno */
+.ng-select.ng-select-single .ng-select-container .ng-input input {
+  height: 100% !important;
+  padding: 0;
+  margin: 0;
+}
+
+/* Ajuste de texto y placeholder */
+.ng-select .ng-placeholder {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.ng-select .ng-value {
+  font-weight: 600;
+  color: #495057;
+}
+
+/* Borde y sombra al enfocar */
+.ng-select.ng-select-focused .ng-select-container {
+  border: 1px solid #0d6efd !important;
+  box-shadow: 0 0 0 0.25rem rgba(13,110,253,0.15);
+  border-radius: 0.5rem;
+}
+
+
+.modal-catalogo {
+  --control-height: 3.5rem;
+
+  ::ng-deep .ng-select.ng-select-single .ng-select-container {
+    height: var(--control-height) !important;
+    min-height: var(--control-height) !important;
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+    box-sizing: border-box;
+  }
+
+  ::ng-deep .ng-select .ng-select-container .ng-value-container {
+    display: flex;
+    align-items: center;
+    padding: 0;
+  }
+
+  ::ng-deep .ng-select .ng-input > input {
+    height: 100% !important;
+    padding: 0;
+    margin: 0;
+  }
+
+  ::ng-deep .ng-select .ng-arrow-wrapper {
+    height: 100%;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Scroll y demás solo aquí */
+  ::ng-deep .ng-dropdown-panel-items.scroll-host {
+    max-height: 120px !important;
+    overflow-y: auto !important;
+  }
+
+  ::ng-deep .ng-dropdown-panel .ng-dropdown-panel-items::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.ng-animating {
+  opacity: 1;
+}
+
+.modal-open {
+  overflow: hidden;
+}
+
+/* Header del modal */
+.modal-header {
+  font-size: 1.2rem;
+  background: var(--degradado-color) !important;
+  color: var(--details-color) !important;
+  font-weight: bold;
+  border-bottom: 2px solid var(--secondary-color);
+  padding: 16px 16px 15px 20px !important;
+}
+
+.modal-header .bi-plus-lg,
+.modal-header .fa-plus {
+  color: var(--details-color) !important;
+  font-size: 1.25rem;
+  vertical-align: middle;
+}
+
+.modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+  margin-top: -3px !important;
+}
+
+.modal-footer {
+  padding: 1rem 1.25rem;
+}
+
+/* Avatar Widget */
 .avatar-widget {
   width: 100%;
   max-width: 360px;
@@ -80,10 +298,10 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease-in-out;
   border: 1px solid #eee;
+}
 
-  &:hover {
-    transform: scale(1.03);
-  }
+.avatar-widget:hover {
+  transform: scale(1.03);
 }
 
 .avatar-img {
@@ -109,56 +327,41 @@
   justify-content: center;
   align-items: center;
   cursor: pointer;
-
-  &.show-on-hover:hover {
-    opacity: 1;
-  }
-
-  label {
-    font-size: 1.8rem;
-    cursor: pointer;
-    transition: transform 0.3s ease;
-
-    &:hover {
-      transform: scale(1.2);
-    }
-  }
 }
 
-/* Header del modal */
-.modal-header {
-  font-size: 1.2rem;
-  background: var(--degradado-color) !important;
-  color: var(--details-color) !important;
-  font-weight: bold;
-  border-bottom: 2px solid var(--secondary-color);
-  padding: 0.75rem 1.5rem;
-
-  .bi-plus-lg,
-  .fa-plus {
-    color: var(--details-color) !important;
-    font-size: 1.25rem;
-    vertical-align: middle;
-  }
-
-  .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
-    opacity: 0.8;
-    transition: opacity 0.2s;
-
-    &:hover {
-      opacity: 1;
-    }
-  }
+.avatar-overlay.show-on-hover:hover {
+  opacity: 1;
 }
 
-/* Form elements */
-.form-check-input:checked {
-  background-color: #198754;
-  border-color: #198754;
+.avatar-overlay label {
+  font-size: 1.8rem;
+  cursor: pointer;
+  transition: transform 0.3s ease;
 }
 
-.form-check-label {
-  transition: color 0.3s ease;
-  user-select: none;
+.avatar-overlay label:hover {
+  transform: scale(1.2);
+}
+
+/* ===== UTILIDADES ===== */
+.estatus-wrapper {
+  min-width: 200px;
+  margin-left: 10px;
+}
+
+.acciones-wrapper .btn {
+  min-width: 110px;
+}
+
+/* ===== MEDIA QUERIES ===== */
+@media (max-width: 576px) {
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .acciones-wrapper {
+    justify-content: center;
+    width: 100%;
+  }
 }

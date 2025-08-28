@@ -33,7 +33,7 @@
           <label for="tipo" class="form-label">🧬 Categoría</label>
           <select id="tipo" class="form-select" [(ngModel)]="tipoSeleccionado">
             <option value="">Todas</option>
-            <option *ngFor="let tipo of tiposProducto" [value]="tipo.toLowerCase()">{{ tipo }}</option>
+            <option *ngFor="let tipo of categoriasProducto" [value]="tipo.toLowerCase()">{{ tipo }}</option>
           </select>
         </div>
 
@@ -143,11 +143,12 @@
 
               <!-- Botones -->
               <div class="mt-auto pt-2 d-flex justify-content-between">
-                <button class="btn btn-sm btn-light text-info border border-info" (click)="abrirModal('ver', producto)">
+                <button class="btn btn-sm btn-light text-info border border-info"
+                  (click)="abrirModal('ver', producto); $event.stopPropagation()">
                   👁️ Ver
                 </button>
                 <button class="btn btn-sm btn-light text-warning border border-warning"
-                  (click)="abrirModal('editar', producto)">
+                  (click)="abrirModal('editar', producto); $event.stopPropagation()">
                   ✏️ Editar
                 </button>
               </div>
@@ -173,10 +174,197 @@
         </ul>
       </nav>
     </div>
-
-    <div style="height: 90px;"></div>
   </div>
 </div>
 
+<!-- Modal Agregar/Ver/Editar -->
+<div class="modal-overlay modal-catalogo" *ngIf="mostrarModal">
+  <div class="modal d-block" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-lg">
+
+      <form #formProducto="ngForm" class="modal-content border-0 shadow" (ngSubmit)="guardarProducto()">
+
+        <!-- Header -->
+        <div class="modal-header bg-gradient-primary text-white py-2 px-3">
+          <h5 class="modal-title fw-semibold">
+            <i [ngClass]="[
+              'fas',
+              'me-2',
+              modo === 'agregar' ? 'fa-plus' :
+              modo === 'editar' ? 'fa-edit' : 'fa-eye'
+            ]"></i>
+
+            {{
+            modo === 'agregar' ? 'Agregar Producto' :
+            modo === 'editar' ? 'Editar Producto' : 'Ver Producto'
+            }}
+          </h5>
+          <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="cerrarModal()"></button>
+        </div>
+
+        <!-- Cuerpo del modal con scroll -->
+        <div class="modal-body p-4">
+          <div class="container-fluid">
+            <!-- Fila superior: Imagen + Código + Estado -->
+            <div class="row g-3 mb-4">
+              <!-- Imagen -->
+              <div class="col-md-6 d-flex align-items-center justify-content-center">
+                <div class="avatar-widget">
+                  <img [src]="getProfileImage()" alt="Avatar del Producto" class="avatar-img"
+                    (error)="handleImageError($event)" />
+                  <div class="avatar-overlay show-on-hover">
+                    <label for="avatarUpload"><i class="fas fa-camera"></i></label>
+                    <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
+                      (change)="onFileSelected($event)" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Código y Estado -->
+              <div class="col-md-6">
+                <div class="row g-3">
+
+                  <div class="col-md-8">
+                    <div class="form-floating">
+                      <input type="text" class="form-control" id="nombreProducto" [(ngModel)]="producto.codigo"
+                        name="codigo" required [disabled]="esSoloLectura" placeholder="Nombre del producto">
+                      <label for="nombreProducto">🏷️ Nombre del producto</label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <input type="number" class="form-control" id="stock" [(ngModel)]="producto.stock" name="stock"
+                        required min="0" [disabled]="esSoloLectura" placeholder="Stock">
+                      <label for="stock">📦 Stock</label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <div class="form-floating">
+                      <input type="number" class="form-control" id="precio" [(ngModel)]="producto.precio" name="precio"
+                        required min="0" [disabled]="esSoloLectura" placeholder="Precio">
+                      <label for="precio">💵 Precio</label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                      <ng-select [items]="moneda" [(ngModel)]="producto.moneda" name="moneda" [searchable]="false"
+                        [clearable]="true" placeholder="📚 Moneda " [disabled]="esSoloLectura" required>
+                      </ng-select>                
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- Resto del formulario -->
+            <div class="row g-3">
+              <div class="col-md-4">
+                <ng-select [items]="categoriasProducto" [(ngModel)]="producto.categoria" name="categoria" [searchable]="true"
+                  [clearable]="true" placeholder="📚 Indique una categoría " [disabled]="esSoloLectura">
+                </ng-select>
+              </div>
+
+              <div class="col-md-4">
+                <div class="form-floating">
+                  <input type="text" class="form-control" id="marca" placeholder="🏷️ Marca"
+                    [(ngModel)]="producto.marca" name="marca" required [disabled]="esSoloLectura">
+                  <label for="marca">🏷️ Marca</label>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="form-floating">
+                  <input type="text" class="form-control" id="modelo" placeholder="🧠 Modelo"
+                    [(ngModel)]="producto.nombre" name="nombre" [disabled]="esSoloLectura">
+                  <label for="modelo">🧠 Modelo</label>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="form-floating">
+                  <input type="text" class="form-control" id="proveedor" placeholder="🚚 Proveedor"
+                    [(ngModel)]="producto.proveedor" name="proveedor" required [disabled]="esSoloLectura">
+                  <label for="proveedor">🚚 Proveedor</label>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="form-floating">
+                  <input type="text" class="form-control" id="material" placeholder="🧵 Material"
+                    [(ngModel)]="producto.material" name="material" required [disabled]="esSoloLectura">
+                  <label for="material">🧵 Material</label>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="form-floating">
+                  <input type="text" class="form-control" id="color" placeholder="🎨 Color" [(ngModel)]="producto.color"
+                    name="color" [disabled]="esSoloLectura">
+                  <label for="color">🎨 Color</label>
+                </div>
+              </div>
+
+              <div class="col-12">
+                <div class="form-floating">
+                  <textarea class="form-control" id="descripcion" placeholder="📝 Descripción"
+                    [(ngModel)]="producto.descripcion" name="descripcion" style="height: 100px"
+                    [disabled]="esSoloLectura"></textarea>
+                  <label for="descripcion">📝 Descripción</label>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div
+          class="modal-footer flex-wrap justify-content-between align-items-center gap-3 border-0 bg-body-tertiary rounded-bottom shadow-sm py-3 px-4">
+
+          <!-- Estatus -->
+          <div class="estatus-wrapper d-flex flex-column gap-1">
+
+            <!-- Línea superior: solo el título -->
+            <label class="form-label mb-1 fw-semibold"> 🆔 Estatus
+              <span data-bs-toggle="tooltip" title="Estado del producto" class="text-muted small ms-1">🛈</span>
+            </label>
+
+            <!-- Línea inferior: badge + switch -->
+            <div class="d-flex align-items-center gap-2" style="margin-left: 25px !important;">
+              <div class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" id="estadoSwitch" [(ngModel)]="producto.activo"
+                  name="activo" [disabled]="esSoloLectura">
+              </div>
+              <span class="badge px-3 py-2" [class.bg-success]="producto.activo"
+                [class.bg-secondary]="!producto.activo">
+                {{ producto.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Botones -->
+          <div class="acciones-wrapper d-flex flex-wrap gap-2">
+            <button *ngIf="modo === 'ver'" type="button" class="btn btn-light border px-4 py-2" (click)="cerrarModal()">
+              <i class="bi bi-x-lg me-1"></i> Cerrar
+            </button>
+
+            <ng-container *ngIf="modo !== 'ver'">
+              <button type="button" class="btn btn-outline-secondary px-4 py-2" (click)="cerrarModal()">
+                <i class="bi bi-x-lg me-1"></i> Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary px-4 py-2 shadow-sm"
+                [disabled]="!formularioModificado() || !formularioValido()">
+                <i class="bi bi-check-lg me-1"></i> {{ modo === 'editar' ? 'Actualizar' : 'Guardar' }}
+              </button>
+            </ng-container>
+          </div>
+        </div>
 
 
+
+      </form>
+    </div>
+  </div>
+</div>
