@@ -3,6 +3,10 @@ import { Producto } from '../producto.model';
 import { ProductoService } from '../producto.service';
 import { TasaCambiariaService } from '../../../core/services/tasaCambiaria/tasaCambiaria.service';
 import { Tasa } from '../../../Interfaces/models-interface';
+import { SwalService } from '../../../core/services/swal/swal.service';
+import { switchMap, catchError, tap } from 'rxjs/operators';
+import { of, throwError } from 'rxjs';
+
 
 @Component({
     selector: 'app-productos-list',
@@ -10,8 +14,10 @@ import { Tasa } from '../../../Interfaces/models-interface';
     templateUrl: './productos-list.component.html',
     styleUrls: ['./productos-list.component.scss']
 })
+
 export class ProductosListComponent implements OnInit {
     @Output() onCerrar = new EventEmitter<void>();
+
     // CONSTANTES
     private readonly PRODUCTOS_POR_PAGINA = 12;
     private readonly RANGO_PAGINACION = 3;
@@ -19,7 +25,6 @@ export class ProductosListComponent implements OnInit {
     // ESTADO DEL COMPONENTE
     productos: Producto[] = [];
     mostrarModal: boolean = false;
-
     modoModal: 'agregar' | 'editar' | 'ver' = 'agregar';
     productoSeleccionado?: Producto;
     paginaActual = 1;
@@ -33,10 +38,9 @@ export class ProductosListComponent implements OnInit {
     filtro: string = '';
     categoriaAbierto = false;
 
-
-    // CATÁLOGOS
+    // CATÁLOGO
     categoriasProducto: string[] = ['Monturas', 'Lentes', 'Líquidos', 'Estuches', 'Misceláneos', 'Lentes de contacto'];
-    moneda: string[] = ['USD', 'VES'];
+    moneda: string[] = [];
     imagenesPorTipo: Record<Producto['categoria'], string> = {
         lente: 'assets/cristales.jpg',
         montura: 'assets/montura_2.avif',
@@ -46,14 +50,12 @@ export class ProductosListComponent implements OnInit {
     };
 
     //MODAL
-    modo: 'agregar' | 'editar' | 'ver' = 'agregar'; // ✅ para definir el contexto
+    modo: 'agregar' | 'editar' | 'ver' = 'agregar';
     avatarPreview: string | null = null;
     user: any = { ruta_imagen: '' };
     esSoloLectura: boolean = false;
     producto: any = {};
     productoOriginal: any;
-
-
 
     // TASAS DE CAMBIO
     tasaDolar = 0;
@@ -61,7 +63,8 @@ export class ProductosListComponent implements OnInit {
 
     constructor(
         private productoService: ProductoService,
-        private tasaCambiariaService: TasaCambiariaService
+        private tasaCambiariaService: TasaCambiariaService,
+        private swalService: SwalService,
     ) { }
 
     // =========== LIFECYCLE HOOKS ===========
@@ -71,8 +74,11 @@ export class ProductosListComponent implements OnInit {
     }
 
     private cargarDatosIniciales(): void {
-        const productosRecibidos = this.productoService.getProductos();
-        this.productos = productosRecibidos?.length ? productosRecibidos : this.generarProductosDummy(1000);
+        this.productoService.getProductos().subscribe((productos) => {
+            this.productos = productos?.length
+                ? productos
+                : this.generarProductosDummy(1000);
+        });
         this.obtenerTasasCambio();
     }
 
@@ -80,12 +86,33 @@ export class ProductosListComponent implements OnInit {
     private obtenerTasasCambio(): void {
         this.tasaCambiariaService.getTasaActual().subscribe({
             next: (res: { tasas: Tasa[] }) => {
+                // Guardar valores de referencia
                 this.tasaDolar = res.tasas.find(t => t.id === 'dolar')?.valor ?? 0;
                 this.tasaEuro = res.tasas.find(t => t.id === 'euro')?.valor ?? 0;
+
+                // Mapa de conversión fijo
+                const idToCode: Record<string, string> = {
+                    dolar: 'USD',
+                    euro: 'EUR'
+                };
+
+                // Construir lista base desde servicio
+                const monedasServicio = res.tasas.map(t => {
+                    const id = t.id?.toLowerCase() ?? '';
+                    return idToCode[id] || t.nombre?.trim().toUpperCase() || id.toUpperCase();
+                });
+
+                // Eliminar duplicados + vacíos
+                const unicas = Array.from(new Set(monedasServicio.filter(m => m)));
+
+                // Forzar que VES esté siempre de último
+                this.moneda = [...unicas.filter(m => m !== 'VES'), 'VES'];
             },
             error: () => {
+                // Fallback seguro
                 this.tasaDolar = 0;
                 this.tasaEuro = 0;
+                this.moneda = ['USD', 'EUR', 'VES'];
             }
         });
     }
@@ -109,7 +136,6 @@ export class ProductosListComponent implements OnInit {
         document.body.classList.add('modal-open');
     }
 
-
     cerrarModal(): void {
         this.mostrarModal = false;
         this.productoSeleccionado = undefined;
@@ -117,21 +143,81 @@ export class ProductosListComponent implements OnInit {
     }
 
     guardarProducto(): void {
-        const producto = this.productoSeguro;
-
-        console.log('Guardando:', producto);
-
-        if (this.modoModal === 'agregar') {
-            this.productoService.agregarProducto(producto);
-        } else {
-            this.productoService.editarProducto(producto);
+        if (this.producto?.moneda) {
+            this.producto.moneda = this.producto.moneda.toLowerCase();
         }
 
-        this.productos = this.productoService.getProductos();
-        this.cerrarModal();
+        if (this.modoModal === 'agregar') {
+            this.agregarProductoFlow();
+        } else {
+            this.editarProductoFlow();
+        }
     }
 
+    private agregarProductoFlow(): void {
+        const producto = this.productoSeguro;
 
+        this.productoService.agregarProducto(producto)
+            .pipe(
+                switchMap(() => {
+                    this.swalService.showSuccess(
+                        '¡Registro exitoso!',
+                        'Producto agregado correctamente'
+                    );
+                    return this.productoService.getProductos();
+                }),
+                catchError((error) => {
+                    this.manejarErrorOperacion(error, 'agregar');
+                    return of<Producto[]>([]); // 🔹 tipado explícito
+                })
+            )
+            .subscribe((productos: Producto[]) => {
+                if (productos.length) {
+                    this.productos = productos;
+                    this.cerrarModal();
+                }
+            });
+    }
+
+    private editarProductoFlow(): void {
+        const producto = this.productoSeguro;
+
+        this.productoService.editarProducto(producto)
+            .pipe(
+                switchMap(() => {
+                    this.swalService.showSuccess('¡Actualización exitosa!', 'Producto actualizado correctamente');
+                    return this.productoService.getProductos();
+                }),
+                catchError((error) => {
+                    this.manejarErrorOperacion(error, 'editar');
+                    return of([]);
+                })
+            )
+            .subscribe((productos) => {
+                if (productos.length) {
+                    this.productos = productos;
+                    this.cerrarModal();
+                }
+            });
+    }
+
+    private manejarErrorOperacion(error: any, operacion: 'agregar' | 'editar'): void {
+        const msg = error.error?.message ?? '';
+
+        if (msg.includes('Ya existe un producto con el mismo nombre')) {
+            this.swalService.showWarning(
+                'Duplicado',
+                'Ya existe un producto con este nombre. Cambia el nombre e intenta nuevamente.'
+            );
+        } else {
+            this.swalService.showError(
+                'Error',
+                operacion === 'agregar'
+                    ? 'No se pudo agregar el producto'
+                    : 'No se pudo actualizar el producto'
+            );
+        }
+    }
 
     // =========== FILTRADO Y BÚSQUEDA ===========
     limpiarFiltros(): void {
@@ -160,7 +246,6 @@ export class ProductosListComponent implements OnInit {
             document.body.classList.remove('modal-open');
         }
     }
-
 
     // =========== PAGINACIÓN ===========
     get productosPaginados(): Producto[] {
@@ -196,17 +281,16 @@ export class ProductosListComponent implements OnInit {
             codigo: '',
             material: '',
             proveedor: '',
-            categoria: null as any, // antes era ''
+            categoria: null as any,
             stock: 0,
             precio: 0,
-            moneda: null as any,    // antes era ''
+            moneda: null as any,
             activo: true,
             descripcion: '',
             imagenUrl: '',
             fechaIngreso: new Date().toISOString().split('T')[0]
         };
     }
-
 
     actualizarEstadoPorStock(productos: Producto[]): Producto[] {
         return productos.map(p => p.stock === 0 ? { ...p, activo: false } : p);
@@ -236,7 +320,6 @@ export class ProductosListComponent implements OnInit {
 
         return imagenes[clave] || 'assets/default.jpg';
     }
-
 
     // =========== DATOS DE PRUEBA ===========
     generarProductosDummy(cantidad: number): Producto[] {
@@ -299,7 +382,6 @@ export class ProductosListComponent implements OnInit {
         return JSON.stringify(this.productoOriginal) !== JSON.stringify(this.producto);
     }
 
-
     formularioValido(): boolean {
         const camposObligatorios = [
             'codigo', 'activo', 'marca', 'categoria',
@@ -315,5 +397,4 @@ export class ProductosListComponent implements OnInit {
         });
 
     }
-
 }

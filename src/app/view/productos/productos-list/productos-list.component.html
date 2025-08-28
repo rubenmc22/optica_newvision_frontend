@@ -112,13 +112,28 @@
 
               <!-- Precios -->
               <div class="mb-3">
-                <div class="d-flex align-items-center gap-2 mb-1">
-                  <span class="fs-5 fw-bold text-primary">${{ producto.precio }}</span>
-                </div>
-                <div class="d-flex align-items-center gap-2 text-muted small">
-                  <i class="fas fa-exchange-alt"></i>
-                  <span>Bs {{ (producto.precio * tasaDolar) | number:'1.2-2' }}</span>
-                </div>
+                <ng-container *ngIf="producto.moneda && producto.moneda !== 'ves'; else soloBs">
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="fs-5 fw-bold text-primary">
+                      {{ producto.moneda === 'usd' ? '$' :
+                      producto.moneda === 'eur' ? '€' :
+                      producto.moneda?.toUpperCase() }}
+                      {{ producto.precio | number:'1.2-2' }}
+                    </span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 text-muted small">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>Bs {{ getPrecioBs(producto) | number:'1.2-2' }}</span>
+                  </div>
+                </ng-container>
+
+                <ng-template #soloBs>
+                  <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="fs-5 fw-bold text-primary">
+                      Bs {{ producto.precio | number:'1.2-2' }}
+                    </span>
+                  </div>
+                </ng-template>
               </div>
 
               <!-- Stock -->
@@ -249,9 +264,9 @@
                   </div>
 
                   <div class="col-md-6">
-                      <ng-select [items]="moneda" [(ngModel)]="producto.moneda" name="moneda" [searchable]="false"
-                        [clearable]="true" placeholder="📚 Moneda " [disabled]="esSoloLectura" required>
-                      </ng-select>                
+                    <ng-select [items]="moneda" [(ngModel)]="producto.moneda" name="moneda" [searchable]="false"
+                      [clearable]="true" placeholder="📚 Moneda " [disabled]="esSoloLectura" required>
+                    </ng-select>
                   </div>
 
                 </div>
@@ -261,8 +276,9 @@
             <!-- Resto del formulario -->
             <div class="row g-3">
               <div class="col-md-4">
-                <ng-select [items]="categoriasProducto" [(ngModel)]="producto.categoria" name="categoria" [searchable]="true"
-                  [clearable]="true" placeholder="📚 Indique una categoría " [disabled]="esSoloLectura">
+                <ng-select [items]="categoriasProducto" [(ngModel)]="producto.categoria" name="categoria"
+                  [searchable]="true" [clearable]="true" placeholder="📚 Indique una categoría "
+                  [disabled]="esSoloLectura">
                 </ng-select>
               </div>
 

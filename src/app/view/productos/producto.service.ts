@@ -2,30 +2,34 @@ import { Injectable } from '@angular/core';
 import { Producto } from './producto.model';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
+import { environment } from 'src/environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ProductoService {
   private productos: Producto[] = [];
 
-   constructor(private http: HttpClient) { }
-   
-  getProductos(): Producto[] {
-    return [...this.productos]; // devuelve copia para no mutar directamente
+  constructor(private http: HttpClient) { }
+
+  getProductos(): Observable<Producto[]> {
+    // Si usas dummy data por ahora:
+    return of([...this.productos]);
+
+    // Y el día que tengas API:
+    // return this.http.get<Producto[]>(`${environment.apiUrl}/productos`);
   }
+
 
   getProductosPorPagina(pagina: number, limite: number): Observable<Producto[]> {
-  return this.http.get<Producto[]>(`/api/productos?page=${pagina}&limit=${limite}`);
-}
-
-  agregarProducto(producto: Producto) {
-    this.productos.push(producto);
+    return this.http.get<Producto[]>(`/api/productos?page=${pagina}&limit=${limite}`);
   }
 
-  editarProducto(producto: Producto) {
-    const index = this.productos.findIndex(p => p.id === producto.id);
-    if (index !== -1) {
-      this.productos[index] = { ...producto };
-    }
+  agregarProducto(producto: Producto): Observable<Producto> {
+    return this.http.post<Producto>(`${environment.apiUrl}/productos`, producto);
+
+  }
+
+  editarProducto(producto: Producto): Observable<Producto> {
+    return this.http.put<Producto>(`${environment.apiUrl}/productos/${producto.id}`, producto);
   }
 
   obtenerPorId(id: string): Producto | undefined {
@@ -36,10 +40,4 @@ export class ProductoService {
     this.productos = this.productos.filter(p => p.id !== id);
   }
 
-  desactivarProducto(id: string) {
-    const index = this.productos.findIndex(p => p.id === id);
-    if (index !== -1) {
-      this.productos[index].activo = false;
-    }
-  }
 }
