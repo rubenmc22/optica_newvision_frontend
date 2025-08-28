@@ -353,6 +353,50 @@
   min-width: 110px;
 }
 
+
+//HOVER VER DETALLES PRODUCTO
+:host ::ng-deep .tarjeta-clickable {
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+  }
+
+  .contenedor-imagen {
+    position: relative;
+    overflow: hidden;
+
+    .overlay-hover {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.25s ease-in-out;
+
+      span {
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-align: center;
+        padding: 0.5rem 1rem;
+        background: rgba(0, 0, 0, 0.35);
+        border-radius: 4px;
+      }
+    }
+
+    &:hover .overlay-hover {
+      opacity: 1;
+    }
+  }
+}
+
+
 /* ===== MEDIA QUERIES ===== */
 @media (max-width: 576px) {
   .modal-footer {

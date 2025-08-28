@@ -5,7 +5,6 @@
       <h4 class="mb-0">📦 Catálogo de productos</h4>
       <div class="ms-auto">
         <button (click)="abrirModal('agregar')" class="btn btn-light btn-sm">➕ Agregar producto</button>
-
       </div>
     </div>
 
@@ -86,16 +85,24 @@
       <!-- Catálogo de productos -->
       <div class="row" *ngIf="productosFiltrados.length > 0">
         <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3" *ngFor="let producto of productosPaginados">
-          <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden">
-            <div class="position-relative">
+          <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden tarjeta-clickable" role="button"
+            tabindex="0" (click)="abrirModal('ver', producto)" (keydown.enter)="abrirModal('ver', producto)"
+            (keydown.space)="abrirModal('ver', producto)">
+
+            <div class="position-relative contenedor-imagen">
               <img [src]="producto.imagenUrl ? producto.imagenUrl : 'assets/placeholder.jpg'" class="card-img-top"
                 [alt]="producto.nombre" style="height: 180px; object-fit: cover;" />
 
-              <!-- Estado del producto -->
+              <!-- Overlay hover -->
+              <div class="overlay-hover">
+                <span>Ver detalles del producto</span>
+              </div>
+
+              <!-- Estado -->
               <span class="position-absolute top-0 start-0 m-2 px-2 py-1 rounded text-white small fw-bold" [ngClass]="{
-                  'bg-success': producto.activo && producto.stock > 0,
-                  'bg-secondary': !producto.activo
-                }">
+              'bg-success': producto.activo && producto.stock > 0,
+              'bg-secondary': !producto.activo
+              }">
                 {{ producto.activo ? 'Activo' : 'Inactivo' }}
               </span>
 
@@ -156,17 +163,14 @@
                 </span>
               </div>
 
-              <!-- Botones -->
-              <div class="mt-auto pt-2 d-flex justify-content-between">
-                <button class="btn btn-sm btn-light text-info border border-info"
-                  (click)="abrirModal('ver', producto); $event.stopPropagation()">
-                  👁️ Ver
-                </button>
+              <!-- Botón Editar (detiene propagación) -->
+              <div class="mt-auto pt-2 d-flex justify-content-end">
                 <button class="btn btn-sm btn-light text-warning border border-warning"
                   (click)="abrirModal('editar', producto); $event.stopPropagation()">
                   ✏️ Editar
                 </button>
               </div>
+
             </div>
           </div>
         </div>
@@ -205,13 +209,13 @@
             <i [ngClass]="[
               'fas',
               'me-2',
-              modo === 'agregar' ? 'fa-plus' :
-              modo === 'editar' ? 'fa-edit' : 'fa-eye'
+              modoModal === 'agregar' ? 'fa-plus' :
+              modoModal === 'editar' ? 'fa-edit' : 'fa-eye'
             ]"></i>
 
             {{
-            modo === 'agregar' ? 'Agregar Producto' :
-            modo === 'editar' ? 'Editar Producto' : 'Ver Producto'
+            modoModal === 'agregar' ? 'Agregar Producto' :
+            modoModal === 'editar' ? 'Editar Producto' : 'Ver Producto'
             }}
           </h5>
           <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="cerrarModal()"></button>
@@ -362,24 +366,21 @@
 
           <!-- Botones -->
           <div class="acciones-wrapper d-flex flex-wrap gap-2">
-            <button *ngIf="modo === 'ver'" type="button" class="btn btn-light border px-4 py-2" (click)="cerrarModal()">
+            <button *ngIf="modoModal === 'ver'" type="button" class="btn btn-outline-secondary border px-4 py-2" (click)="cerrarModal()">
               <i class="bi bi-x-lg me-1"></i> Cerrar
             </button>
 
-            <ng-container *ngIf="modo !== 'ver'">
+            <ng-container *ngIf="modoModal !== 'ver'">
               <button type="button" class="btn btn-outline-secondary px-4 py-2" (click)="cerrarModal()">
                 <i class="bi bi-x-lg me-1"></i> Cancelar
               </button>
               <button type="submit" class="btn btn-primary px-4 py-2 shadow-sm"
                 [disabled]="!formularioModificado() || !formularioValido()">
-                <i class="bi bi-check-lg me-1"></i> {{ modo === 'editar' ? 'Actualizar' : 'Guardar' }}
+                <i class="bi bi-check-lg me-1"></i> {{ modoModal === 'editar' ? 'Actualizar' : 'Guardar' }}
               </button>
             </ng-container>
           </div>
         </div>
-
-
-
       </form>
     </div>
   </div>

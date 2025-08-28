@@ -50,7 +50,6 @@ export class ProductosListComponent implements OnInit {
     };
 
     //MODAL
-    modo: 'agregar' | 'editar' | 'ver' = 'agregar';
     avatarPreview: string | null = null;
     user: any = { ruta_imagen: '' };
     esSoloLectura: boolean = false;
