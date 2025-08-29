@@ -269,10 +269,9 @@
 
                   <div class="col-md-6">
                     <ng-select [items]="moneda" [(ngModel)]="producto.moneda" name="moneda" [searchable]="false"
-                      [clearable]="true" placeholder="📚 Moneda " [disabled]="esSoloLectura" required>
+                      [clearable]="true" placeholder="📚 Moneda " [disabled]="esSoloLectura" ngbTooltip="Moneda" placement="top-start">
                     </ng-select>
                   </div>
-
                 </div>
               </div>
             </div>
@@ -282,7 +281,7 @@
               <div class="col-md-4">
                 <ng-select [items]="categoriasProducto" [(ngModel)]="producto.categoria" name="categoria"
                   [searchable]="true" [clearable]="true" placeholder="📚 Indique una categoría "
-                  [disabled]="esSoloLectura">
+                  [disabled]="esSoloLectura" ngbTooltip="Categoría del producto" placement="top-start">
                 </ng-select>
               </div>
 
@@ -341,7 +340,7 @@
 
         <!-- Footer -->
         <div
-          class="modal-footer flex-wrap justify-content-between align-items-center gap-3 border-0 bg-body-tertiary rounded-bottom shadow-sm py-3 px-4">
+          class="modal-footer flex-wrap justify-content-between align-items-center gap-3 border-0 bg-body-tertiary rounded-bottom shadow-sm py-3 px-4" style="color: beige;">
 
           <!-- Estatus -->
           <div class="estatus-wrapper d-flex flex-column gap-1">
@@ -366,7 +365,8 @@
 
           <!-- Botones -->
           <div class="acciones-wrapper d-flex flex-wrap gap-2">
-            <button *ngIf="modoModal === 'ver'" type="button" class="btn btn-outline-secondary border px-4 py-2" (click)="cerrarModal()">
+            <button *ngIf="modoModal === 'ver'" type="button" class="btn btn-outline-secondary border px-4 py-2"
+              (click)="cerrarModal()">
               <i class="bi bi-x-lg me-1"></i> Cerrar
             </button>
 

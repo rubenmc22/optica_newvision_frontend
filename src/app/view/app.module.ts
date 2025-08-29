@@ -9,6 +9,7 @@ import { NgChartsModule } from 'ng2-charts';
 import { GraficoComparativaSedesComponent } from './dashboard/graficos/grafico-comparativa-sedes/grafico-comparativa-sedes.component';
 import { GraficoTotalSedeComponent } from './dashboard/graficos/grafico-total-sede/grafico-total-sede.component';
 import { GraficoPacientesPorMesComponent } from './dashboard/graficos/grafico-pacientes-por-mes/grafico-pacientes-por-mes.component';
+import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 
 // Componentes
 import { AppComponent } from '../app.component';
@@ -69,6 +70,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
     FormsModule,
     ScrollingModule,
     BrowserAnimationsModule,
+    NgbTooltipModule,
 
     RouterModule.forRoot(appRoutes, {
       onSameUrlNavigation: 'reload',

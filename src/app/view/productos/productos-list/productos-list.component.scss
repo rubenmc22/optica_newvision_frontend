@@ -396,6 +396,23 @@
   }
 }
 
+//TOLTIP CATEGORIA Y MONEDA
+// Dentro del SCSS del componente
+:host ::ng-deep .tooltip-inner {
+  background: var(--degradado-pastel) !important;
+  color: #333;            
+  font-weight: 500;
+  font-size: 0.8rem;
+  border: 1px solid #ccc;   
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+:host ::ng-deep .tooltip.bs-tooltip-top .tooltip-arrow::before {
+  border-top-color: #f4f6f8;
+}
+
+
 
 /* ===== MEDIA QUERIES ===== */
 @media (max-width: 576px) {

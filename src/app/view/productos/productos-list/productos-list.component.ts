@@ -129,8 +129,8 @@ export class ProductosListComponent implements OnInit {
         this.modoModal = modo;
         const base = producto ?? this.crearProductoVacio();
         this.productoSeleccionado = base;
-        this.producto = { ...base }; // 🔹 Así el ngModel en la vista usa un objeto con activo = true
-
+        this.producto = { ...base };
+        this.esSoloLectura = (modo === 'ver');
         this.mostrarModal = true;
         document.body.classList.add('modal-open');
     }
