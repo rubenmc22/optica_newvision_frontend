@@ -24,7 +24,7 @@ export class PacientesService {
 
   updatePaciente(clavePaciente: string, payload: any): Observable<any> {
     // console.log('RDMC Dentro de id', id);
-    console.log('RDMC Dentro de paciente', payload);
+    console.log('RDMC Dentro de clavePaciente', clavePaciente);
     return this.http.put(`${environment.apiUrl}/paciente-update/${clavePaciente}`, payload);
 
   }

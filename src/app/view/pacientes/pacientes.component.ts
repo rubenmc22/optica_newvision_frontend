@@ -7,8 +7,11 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import * as bootstrap from 'bootstrap';
 import { ModalService } from '../../core/services/modal/modal.service';
 import { Paciente } from './paciente-interface';
+import { Observable, of, forkJoin } from 'rxjs';
+import { take, catchError } from 'rxjs/operators';
+import { Sede } from '../../view/login/login-interface';
+import { AuthService } from '../../core/services/auth/auth.service';
 import { UserStateService } from '../../core/services/userState/user-state-service';
-
 import {
   AbstractControl,
   ValidatorFn,
@@ -30,6 +33,8 @@ export class VerPacientesComponent implements OnInit {
   pacienteEditando: any = null;
   pacienteFormulario: Paciente = this.crearPacienteVacio();
   formOriginal: any = {};
+  sedesDisponibles: Sede[] = [];
+  pacientesFiltradosPorSede: Paciente[] = [];
 
   // Estado y configuración
   modoEdicion: boolean = false;
@@ -107,6 +112,8 @@ export class VerPacientesComponent implements OnInit {
     private modalService: ModalService,
     private swalService: SwalService,
     private userStateService: UserStateService,
+    private snackBar: MatSnackBar,
+    private authService: AuthService,
   ) {
     this.formPaciente = this.fb.group({
       // 👤 Datos personales
@@ -140,7 +147,7 @@ export class VerPacientesComponent implements OnInit {
       email: [
         '',
         [
-         // Validators.required,
+          // Validators.required,
           Validators.email,
           Validators.maxLength(100)
         ]
@@ -189,7 +196,7 @@ export class VerPacientesComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.inicializarSedeDesdeUsuario();
+    this.inicializarDatosIniciales();
 
     // Aplicar validaciones condicionales reactivas
     this.aplicarValidacionCondicional('traumatismoOcular', 'traumatismoOcularDescripcion', this.formPaciente);
@@ -301,31 +308,57 @@ export class VerPacientesComponent implements OnInit {
     };
   }
 
-  private inicializarSedeDesdeUsuario(): void {
-    const authData = sessionStorage.getItem('authData');
+  private inicializarDatosIniciales(): void {
+    forkJoin({
+      user: this.userStateService.currentUser$.pipe(
+        take(1),
+        catchError(error => {
+          console.error('Error al cargar usuario:', error);
+          this.snackBar.open(
+            '⚠️ Error al cargar su información de usuario. Por favor, intente nuevamente.',
+            'Cerrar',
+            { duration: 5000, panelClass: ['snackbar-error'] }
+          );
+          return of(null);
+        })
+      ),
+      sedes: this.authService.getSedes().pipe(
+        take(1),
+        catchError(error => {
+          console.error('Error al cargar sedes:', error);
+          this.snackBar.open(
+            '⚠️ No se pudieron cargar las sedes disponibles. Mostrando opciones limitadas.',
+            'Cerrar',
+            { duration: 5000, panelClass: ['snackbar-warning'] }
+          );
+          return of({ sedes: [] });
+        })
+      )
+    }).subscribe(({ user, sedes }) => {
+      // 🔹 Poblar lista de sedes
+      this.sedesDisponibles = (sedes.sedes ?? [])
+        .map(s => ({
+          ...s,
+          key: s.key?.trim().toLowerCase() || '',
+          nombre: s.nombre?.trim() || ''
+        }))
+        .sort((a, b) =>
+          a.nombre.replace(/^sede\s+/i, '').localeCompare(
+            b.nombre.replace(/^sede\s+/i, ''),
+            'es',
+            { sensitivity: 'base' }
+          )
+        );
 
-    if (authData) {
-      try {
-        const parsedData = JSON.parse(authData);
-        const sedeKey = parsedData?.sede?.key ?? 'guatire';
+      const sedeUsuario = (user?.sede ?? '').trim().toLowerCase();
+      const sedeValida = this.sedesDisponibles.some(s => s.key === sedeUsuario);
+      this.sedeActiva = sedeValida ? sedeUsuario : '';
+      this.sedeFiltro = sedeValida ? sedeUsuario : '';
 
-        this.sedeActiva = sedeKey;
-        this.sedeFiltro = sedeKey;
-
-        this.cargarPacientes();
-      } catch (error) {
-        console.error('Error al parsear authData de sesión:', error);
-        this.sedeActiva = 'guatire';
-        this.sedeFiltro = 'guatire';
-        this.cargarPacientes();
-      }
-    } else {
-      // Fallback por si no hay sesión
-      this.sedeActiva = 'guatire';
-      this.sedeFiltro = 'guatire';
       this.cargarPacientes();
-    }
+    });
   }
+
 
 
   // Métodos de acceso
@@ -349,32 +382,51 @@ export class VerPacientesComponent implements OnInit {
     this.pacientesService.getPacientes().subscribe({
       next: (data) => {
         this.pacientes = Array.isArray(data.pacientes)
-          ? data.pacientes.map((p: any) => ({
-            key: p.key ?? '',
-            sede: p.key?.split('-')[0] ?? 'sin-sede',
-            fechaRegistro: this.formatearFecha(p.created_at),
+          ? data.pacientes.map((p: any) => {
+            const info = p.informacionPersonal;
+            const historia = p.historiaClinica;
 
-            informacionPersonal: {
-              nombreCompleto: p.informacionPersonal?.nombreCompleto ?? '',
-              cedula: p.informacionPersonal?.cedula ?? '',
-              telefono: p.informacionPersonal?.telefono ?? '',
-              email: p.informacionPersonal?.email ?? '',
-              fechaNacimiento: p.informacionPersonal?.fechaNacimiento ?? '',
-              ocupacion: p.informacionPersonal?.ocupacion ?? '',
-              genero:
-                p.informacionPersonal?.genero === 'm'
-                  ? 'Masculino'
-                  : p.informacionPersonal?.genero === 'f'
-                    ? 'Femenino'
-                    : 'Otro',
-              direccion: p.informacionPersonal?.direccion ?? '',
-              edad: this.calcularEdad(p.informacionPersonal?.fechaNacimiento)
-            },
+            return {
+              key: p.key,
+              fechaRegistro: this.formatearFecha(p.created_at),
+              sede: p.sedeId?.toLowerCase() ?? 'sin-sede',
+              redesSociales: p.redesSociales || [],
 
-            redesSociales: p.redesSociales ?? [],
-            historiaClinica: p.historiaClinica ?? {}
-          }))
+              informacionPersonal: {
+                esMenorSinCedula: info.esMenorSinCedula ?? false,
+                nombreCompleto: info.nombreCompleto,
+                cedula: info.cedula,
+                telefono: info.telefono,
+                email: info.email,
+                fechaNacimiento: info.fechaNacimiento,
+                edad: this.calcularEdad(info.fechaNacimiento),
+                ocupacion: info.ocupacion,
+                genero: info.genero === 'm' ? 'Masculino' : info.genero === 'f' ? 'Femenino' : 'Otro',
+                direccion: info.direccion
+              },
+
+              historiaClinica: {
+                usuarioLentes: historia.usuarioLentes ?? null,
+                tipoCristalActual: historia.tipoCristalActual ?? '',
+                ultimaGraduacion: historia.ultimaGraduacion ?? '',
+                fotofobia: historia.fotofobia ?? null,
+                traumatismoOcular: historia.traumatismoOcular ?? null,
+                traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion ?? '',
+                usoDispositivo: historia.usoDispositivo,
+                tiempoUsoEstimado: historia.tiempoUsoEstimado ?? '',
+                cirugiaOcular: historia.cirugiaOcular ?? null,
+                cirugiaOcularDescripcion: historia.cirugiaOcularDescripcion ?? '',
+                alergicoA: historia.alergicoA ?? null,
+                antecedentesPersonales: historia.antecedentesPersonales ?? [],
+                antecedentesFamiliares: historia.antecedentesFamiliares ?? [],
+                patologias: historia.patologias ?? [],
+                patologiaOcular: historia.patologiaOcular ?? []
+              }
+            };
+          })
           : [];
+
+        this.actualizarPacientesPorSede();
       },
       error: (error) => {
         console.error('Error al cargar pacientes:', error);
@@ -384,42 +436,20 @@ export class VerPacientesComponent implements OnInit {
     });
   }
 
-  pacientesFiltrados(): Paciente[] {
-    // Si no es un array, retornar array vacío
-    if (!Array.isArray(this.pacientes)) {
-      console.warn('this.pacientes no es un array:', this.pacientes);
-      return [];
-    }
+  actualizarPacientesPorSede(): void {
+    const sedeId = this.sedeFiltro?.trim().toLowerCase();
+    this.pacientesFiltradosPorSede = sedeId && sedeId !== 'todas'
+      ? this.pacientes.filter(p => p.sede === sedeId)
+      : [...this.pacientes];
 
+    // Aplicar filtro de texto
     const filtroText = this.filtro.trim().toLowerCase();
-
-    return this.pacientes.filter(paciente => {
-      // Verificar si existe informacionPersonal
-      if (!paciente?.informacionPersonal) {
-        return false; // Omitir pacientes sin estructura completa
-      }
-
-      const esSedeActiva = paciente.sede === this.sedeActiva;
-      const esOtraSede = paciente.sede !== this.sedeActiva;
-
-      let mostrar = false;
-      if (this.sedeFiltro === this.sedeActiva) {
-        mostrar = esSedeActiva;
-      } else if (this.sedeFiltro === 'otra') {
-        mostrar = esOtraSede;
-      } else {
-        mostrar = true;
-      }
-
-      const nombre = paciente.informacionPersonal.nombreCompleto?.toLowerCase() || '';
-      const cedula = paciente.informacionPersonal.cedula || '';
-
-      const coincideTexto =
-        nombre.includes(filtroText) ||
-        cedula.includes(filtroText);
-
-      return mostrar && coincideTexto;
-    });
+    if (filtroText) {
+      this.pacientesFiltradosPorSede = this.pacientesFiltradosPorSede.filter(p =>
+        p.informacionPersonal?.nombreCompleto?.toLowerCase().includes(filtroText) ||
+        p.informacionPersonal?.cedula?.includes(filtroText)
+      );
+    }
   }
 
   getValorOrden(obj: any, path: string): any {
@@ -603,6 +633,7 @@ export class VerPacientesComponent implements OnInit {
     }
 
     this.formOriginal = {
+      esMenorSinCedula: paciente.informacionPersonal?.esMenorSinCedula ?? false,
       nombreCompleto: paciente.informacionPersonal?.nombreCompleto,
       cedula: paciente.informacionPersonal?.cedula,
       telefono: paciente.informacionPersonal?.telefono,
@@ -662,7 +693,6 @@ export class VerPacientesComponent implements OnInit {
         : 'otro';
 
     const datosActualizados = {
-      key: `${this.sedeActiva}-${pacienteFormValue.cedula}`,
       informacionPersonal: {
         nombreCompleto: pacienteFormValue.nombreCompleto,
         cedula: pacienteFormValue.cedula,
@@ -672,7 +702,7 @@ export class VerPacientesComponent implements OnInit {
         ocupacion: pacienteFormValue.ocupacion || null,
         genero: mapGenero,
         direccion: pacienteFormValue.direccion || null,
-          esMenorSinCedula: pacienteFormValue.esMenorSinCedula || false
+        esMenorSinCedula: pacienteFormValue.esMenorSinCedula || false
       },
       redesSociales: this.redesSociales.controls.map(control => ({
         platform: control.get('platform')?.value,
@@ -694,8 +724,8 @@ export class VerPacientesComponent implements OnInit {
       }
     };
 
-
-    const keyPaciente = `${this.sedeActiva}-${datosActualizados.informacionPersonal.cedula}`;
+    console.log('this.pacienteEditando', this.pacienteEditando);
+    const keyPaciente = this.pacienteEditando.key;
 
     this.pacientesService.updatePaciente(keyPaciente, datosActualizados).subscribe({
       next: (response) => {
@@ -735,6 +765,7 @@ export class VerPacientesComponent implements OnInit {
         }
 
         this.pacientes = [...this.pacientes];
+        this.actualizarPacientesPorSede();
         this.pacienteSeleccionado = transformado;
         this.cdRef.detectChanges();
         this.cerrarModal('modalAgregarPaciente');
@@ -820,7 +851,6 @@ export class VerPacientesComponent implements OnInit {
     }
   }
 
-
   toggleEdicionUsername(index: number): void {
     this.redesEditables[index] = !this.redesEditables[index];
 
@@ -887,6 +917,7 @@ export class VerPacientesComponent implements OnInit {
 
   abrirModalVisualizacionPaciente(paciente: Paciente): void {
 
+    console.log('paciente', paciente);
     const info = paciente?.informacionPersonal ?? {};
     const redes = paciente?.redesSociales ?? [];
     const historia = paciente?.historiaClinica ?? {};
@@ -895,7 +926,8 @@ export class VerPacientesComponent implements OnInit {
     const noEspecificadoArray = [noEspecificadoTexto];
 
     const pacienteTransformado = {
-      id: paciente.key ?? '',
+      key: paciente.key ?? '',
+      esMenorSinCedula: info.esMenorSinCedula ?? false,
       nombreCompleto: info.nombreCompleto ?? noEspecificadoTexto,
       cedula: info.cedula ?? noEspecificadoTexto,
       telefono: info.telefono ?? noEspecificadoTexto,
@@ -905,7 +937,7 @@ export class VerPacientesComponent implements OnInit {
       ocupacion: info.ocupacion ?? noEspecificadoTexto,
       genero: info.genero || '--',
       direccion: info.direccion ?? noEspecificadoTexto,
-      sede: paciente.key?.split('-')[0] ?? 'sin-sede',
+      sede: paciente.sede,
       fechaRegistro: paciente.fechaRegistro
         ? this.formatearFecha(paciente.fechaRegistro)
         : '',
@@ -941,6 +973,8 @@ export class VerPacientesComponent implements OnInit {
     };
 
     this.pacienteSeleccionado = pacienteTransformado;
+
+    console.log('this.pacienteSeleccionado', this.pacienteSeleccionado);
 
     const modalElement = document.getElementById('verPacienteModal');
     if (modalElement) {
@@ -981,6 +1015,7 @@ export class VerPacientesComponent implements OnInit {
       sede: this.sedeActiva,
 
       informacionPersonal: {
+        esMenorSinCedula: false,
         nombreCompleto: '',
         cedula: '',
         telefono: '',
@@ -1049,7 +1084,6 @@ export class VerPacientesComponent implements OnInit {
     this.nuevoUsuario = '';
     this.usuarioInputHabilitado = false;
   }
-
 
   limpiarFormArray(formArray: FormArray): void {
     while (formArray.length !== 0) {

@@ -138,7 +138,7 @@ export class HistoriasMedicasComponent implements OnInit {
   ngOnInit(): void {
 
     const idPaciente = this.obtenerIdPacienteDesdeRuta();
-   // console.log('idPaciente', idPaciente);
+    // console.log('idPaciente', idPaciente);
 
     if (idPaciente) {
       const savedState = sessionStorage.getItem('pacientesListState');
@@ -791,21 +791,18 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     });
   }
+  
   // ***************************
   // * Métodos de pacientes
   // ***************************
-
   cargarPacientes(): void {
     this.pacientesService.getPacientes().subscribe({
       next: (data) => {
-        const getSedeFromKey = (key: string): string =>
-          key?.split('-')[0]?.toLowerCase() ?? 'sin-sede';
-
         this.pacientes = Array.isArray(data.pacientes)
           ? data.pacientes.map((p: any) => {
             const info = p.informacionPersonal;
             const historia = p.historiaClinica;
-            const sedePaciente = getSedeFromKey(p.key);
+            const sedePaciente = (p.sedeId ?? '').toString().trim().toLowerCase();
 
             return {
               key: p.key,
@@ -880,7 +877,6 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     });
   }
-
 
   cargarHistoriasMedicas(pacienteId: string, callback?: () => void): void {
     this.cargando = true;

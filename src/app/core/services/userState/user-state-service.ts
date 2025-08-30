@@ -15,7 +15,7 @@ export class UserStateService {
 
   private loadInitialState(): void {
     const userData = localStorage.getItem('currentUser');
-    console.log('userdata ', userData);
+   // console.log('userdata ', userData);
     if (userData) {
       this.userSubject.next(JSON.parse(userData));
     }
@@ -35,15 +35,20 @@ export class UserStateService {
   }
 
   setUserFromAuth(authData: AuthData): void {
-    const user: User = {
-      ...authData.user,
-      rol: authData.rol.name,
-      cargo: authData.cargo.name,
-      sede: authData.sede.key // 👈 solo el identificador
-    };
+  const user: User = {
+    ...authData.user,
+    rol: authData.rol.name,
+    cargo: authData.cargo.name,
+    sede: authData.sede.key // 👈 solo el identificador
+  };
 
-    this.userSubject.next(user);
-  }
+  // Guardar en localStorage para persistencia
+  localStorage.setItem('currentUser', JSON.stringify(user));
+
+  // Emitir al BehaviorSubject
+  this.userSubject.next(user);
+}
+
 
 
 

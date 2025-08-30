@@ -17,6 +17,7 @@ export interface Paciente {
     ocupacion: string;
     genero: string;
     direccion: string;
+    esMenorSinCedula: boolean;
   };
 
   //Sede
