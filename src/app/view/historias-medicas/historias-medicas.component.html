@@ -1135,8 +1135,10 @@
                 <i class="bi bi-x-circle"></i> Cancelar
               </button>
               <button type="submit" class="btn btn-primary" (click)="guardarHistoria()"
-                [disabled]="!historiaModificada() || historiaForm.invalid">
-                <i class="bi bi-save"></i> {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+                [disabled]="cargando || !historiaModificada() || historiaForm.invalid">
+                <i class="bi bi-save" *ngIf="!cargando"></i>
+                <span *ngIf="cargando" class="spinner-border spinner-border-sm"></span>
+                {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
               </button>
             </div>
           </div>

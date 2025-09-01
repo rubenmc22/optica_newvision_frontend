@@ -442,9 +442,10 @@
         <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
           <i class="bi bi-x-lg me-1"></i> Cancelar
         </button>
-        <button type="button" class="btn btn-primary px-4" [disabled]="!formularioModificado() || formPaciente.invalid"
-          (click)="guardarPaciente()">
-          <i class="bi bi-check-lg me-1"></i> {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+        <button type="button" class="btn btn-primary px-4"
+          [disabled]="cargando || !formularioModificado() || formPaciente.invalid" (click)="guardarPaciente()">
+          <i class="bi bi-check-lg me-1"></i>
+          {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
         </button>
       </div>
     </div>
@@ -659,8 +660,5 @@
         </button>
       </div>
     </div>
-
-
   </div>
-
 </div>

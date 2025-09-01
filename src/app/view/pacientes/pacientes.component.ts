@@ -38,6 +38,7 @@ export class VerPacientesComponent implements OnInit {
 
   // Estado y configuración
   modoEdicion: boolean = false;
+  cargando: boolean = false;
   sedeActiva: string = '';
   sedeFiltro: string = this.sedeActiva;
   filtro: string = '';
@@ -505,7 +506,7 @@ export class VerPacientesComponent implements OnInit {
       this.marcarCamposComoTouched();
       return;
     }
-
+    this.cargando = true;
     const mapGenero = this.formPaciente.value.genero === 'Masculino'
       ? 'm'
       : this.formPaciente.value.genero === 'Femenino'
@@ -574,12 +575,14 @@ export class VerPacientesComponent implements OnInit {
 
     this.pacientesService.createPaciente(nuevoPaciente).subscribe({
       next: (response) => {
+        this.cargando = false;
         this.pacientes.push(response);
         this.cerrarModal('modalAgregarPaciente');
         this.swalService.showSuccess('¡Registro exitoso!', 'Paciente registrado correctamente.');
         this.cargarPacientes();
       },
       error: (error) => {
+        this.cargando = false;
         const msg = error.error?.message ?? '';
 
         if (msg.includes('Ya esta registrada la cedula')) {
@@ -676,7 +679,7 @@ export class VerPacientesComponent implements OnInit {
     if (!this.formularioModificado()) {
       return;
     }
-
+    this.cargando = true;
     const pacienteFormValue = this.formPaciente.value;
 
     // Procesar uso de dispositivos electrónicos
@@ -727,7 +730,7 @@ export class VerPacientesComponent implements OnInit {
     this.pacientesService.updatePaciente(keyPaciente, datosActualizados).subscribe({
       next: (response) => {
         const paciente = response.paciente;
-
+        this.cargando = false;
         // Procesar el usoDispositivo para la visualización
         const usoDispositivoCompleto = paciente.historiaClinica?.usoDispositivo ?? '';
         let usoDispositivoDisplay = 'No';
@@ -769,6 +772,7 @@ export class VerPacientesComponent implements OnInit {
         this.swalService.showSuccess('¡Actualización exitosa!', 'El Paciente se ha actualizado correctamente.');
       },
       error: (error) => {
+        this.cargando = false;
         console.error('Error al actualizar paciente:', error);
         this.swalService.showError('Error', 'No se ha podido actualizar al paciente');
       }

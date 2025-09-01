@@ -625,7 +625,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
   private updateHistoria(): void {
     if (!this.historiaSeleccionada) return;
-
+    this.cargando = true;
     const f = this.historiaForm.value;
 
     const historiaActualizada: HistoriaMedica = {
@@ -733,9 +733,11 @@ export class HistoriasMedicasComponent implements OnInit {
         this.swalService.showSuccess('¡Historia Actualizada!', 'Cambios guardados correctamente');
         $('#historiaModal').modal('hide');
         this.refrescarHistoriaSeleccionada();
+        this.cargando = false;
       },
 
       error: (err) => {
+        this.cargando = false;
         console.error('Error al actualizar:', err);
         this.swalService.showError('Error', 'No se pudieron guardar los cambios');
       }
@@ -778,6 +780,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.historiaService.createHistoria(historia).subscribe({
       next: (respuesta) => {
+        this.cargando = false;
         const historiaCreada = respuesta.historial_medico;
 
         this.cerrarModal('historiaModal');
@@ -800,6 +803,17 @@ export class HistoriasMedicasComponent implements OnInit {
 
         this.historiaForm.reset();
         this.modoEdicion = false;
+      },
+      error: (err) => {
+        this.cargando = false;
+        let mensajeError = 'No se pudo guardar la historia médica';
+        if (err.error?.message) {
+          mensajeError += `: ${err.error.message}`;
+        } else if (err.status === 409) {
+          mensajeError = 'Ya existe una historia idéntica para este paciente';
+        }
+
+        this.swalService.showError('Error', mensajeError);
       }
     });
 
