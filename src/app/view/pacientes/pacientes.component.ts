@@ -387,6 +387,7 @@ export class VerPacientesComponent implements OnInit {
             const historia = p.historiaClinica;
 
             return {
+              id: p.id,
               key: p.key,
               fechaRegistro: this.formatearFecha(p.created_at),
               sede: p.sedeId?.toLowerCase() ?? 'sin-sede',
@@ -514,8 +515,6 @@ export class VerPacientesComponent implements OnInit {
     // Obtener valores del formulario
     const formValues = this.formPaciente.value;
 
-    console.log('formValues', formValues);
-
     // Procesar uso de dispositivos electrónicos
     const usoDispositivoValue = formValues.usoDispositivo === 'Sí'
       ? `Sí, ${formValues.intervaloUso}`
@@ -573,7 +572,6 @@ export class VerPacientesComponent implements OnInit {
       }
     };
 
-    console.log('nuevoPaciente', nuevoPaciente);
     this.pacientesService.createPaciente(nuevoPaciente).subscribe({
       next: (response) => {
         this.pacientes.push(response);
@@ -724,7 +722,6 @@ export class VerPacientesComponent implements OnInit {
       }
     };
 
-    console.log('this.pacienteEditando', this.pacienteEditando);
     const keyPaciente = this.pacienteEditando.key;
 
     this.pacientesService.updatePaciente(keyPaciente, datosActualizados).subscribe({
@@ -916,8 +913,6 @@ export class VerPacientesComponent implements OnInit {
   }
 
   abrirModalVisualizacionPaciente(paciente: Paciente): void {
-
-    console.log('paciente', paciente);
     const info = paciente?.informacionPersonal ?? {};
     const redes = paciente?.redesSociales ?? [];
     const historia = paciente?.historiaClinica ?? {};
@@ -973,9 +968,6 @@ export class VerPacientesComponent implements OnInit {
     };
 
     this.pacienteSeleccionado = pacienteTransformado;
-
-    console.log('this.pacienteSeleccionado', this.pacienteSeleccionado);
-
     const modalElement = document.getElementById('verPacienteModal');
     if (modalElement) {
       const modal = new bootstrap.Modal(modalElement);
@@ -1010,6 +1002,7 @@ export class VerPacientesComponent implements OnInit {
 
   crearPacienteVacio(): Paciente {
     return {
+      id: '',
       key: '',
       fechaRegistro: '',
       sede: this.sedeActiva,
@@ -1152,15 +1145,31 @@ export class VerPacientesComponent implements OnInit {
   }
 
   // Navegación
-  verHistorias(idPaciente: string): void {
+  verHistorias(paciente: any): void {
+    const cedula = paciente.informacionPersonal.cedula || 'sin-cedula';
+    const nombreSlug = this.slugify(paciente.informacionPersonal.nombreCompleto);
+    const slug = `${paciente.id}-${cedula}-${nombreSlug}`;
+
     sessionStorage.setItem('pacientesListState', JSON.stringify({
       scrollPosition: window.scrollY,
       filtroActual: this.filtro,
       desdePacientes: true
     }));
 
-    this.router.navigate(['/pacientes-historias', idPaciente]);
+    sessionStorage.setItem('pacienteKey', paciente.key);
+
+    this.router.navigate(['/pacientes-historias', slug]);
   }
+
+  private slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9\-]/g, '');
+  }
+
 
   generarLinkRedSocial(platform: string, username: string): string {
     switch (platform.toLowerCase()) {

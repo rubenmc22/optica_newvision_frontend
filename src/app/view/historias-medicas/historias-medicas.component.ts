@@ -9,7 +9,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 declare var $: any;
 
 // Interfaces
-import { Paciente } from '../pacientes/paciente-interface';
+import { Paciente, PacientesListState } from '../pacientes/paciente-interface';
 import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico, DatosConsulta } from './historias_medicas-interface';
 import { Empleado } from '../../Interfaces/models-interface';
 import { Sede } from '../../view/login/login-interface';
@@ -136,29 +136,40 @@ export class HistoriasMedicasComponent implements OnInit {
   // ***************************
 
   ngOnInit(): void {
-
     const idPaciente = this.obtenerIdPacienteDesdeRuta();
-    // console.log('idPaciente', idPaciente);
 
     if (idPaciente) {
       const savedState = sessionStorage.getItem('pacientesListState');
-      //console.log('savedState', savedState);
+
       if (savedState) {
         try {
-          const { desdePacientes } = JSON.parse(savedState);
+          const { desdePacientes } = JSON.parse(savedState) as PacientesListState;
           this.mostrarBotonVolver = !!desdePacientes;
+
+          // Si el flag es falso, limpiar para no arrastrar estado viejo
+          if (!desdePacientes) {
+            sessionStorage.removeItem('pacientesListState');
+            sessionStorage.removeItem('pacienteKey');
+          }
         } catch {
           this.mostrarBotonVolver = false;
+          sessionStorage.removeItem('pacientesListState');
+          sessionStorage.removeItem('pacienteKey');
         }
+      } else {
+        this.mostrarBotonVolver = false;
+        sessionStorage.removeItem('pacientesListState');
+        sessionStorage.removeItem('pacienteKey');
       }
     } else {
-      // Si no hay idPaciente en la ruta, no mostrar el botón
+      // Entrada directa sin idPaciente → no mostrar botón
       this.mostrarBotonVolver = false;
-      sessionStorage.removeItem('pacientesListState'); // Limpieza defensiva
+      sessionStorage.removeItem('pacientesListState');
+      sessionStorage.removeItem('pacienteKey');
     }
+
     this.configurarSubscripciones();
     this.inicializarDatosIniciales();
-
 
     setTimeout(() => {
       this.pacienteIdSeleccionado = null;
@@ -169,11 +180,26 @@ export class HistoriasMedicasComponent implements OnInit {
   private obtenerIdPacienteDesdeRuta(): string | null {
     let actual: ActivatedRoute | null = this.route;
     while (actual) {
-      const id = actual.snapshot.paramMap.get('id');
-      if (id) return id;
+      const param = actual.snapshot.paramMap.get('id');
+      if (param) {
+        return param.split('-')[0];
+      }
       actual = actual.firstChild;
     }
     return null;
+  }
+
+
+  private recuperarEstadoVolver(): void {
+    const savedState = sessionStorage.getItem('pacientesListState');
+    if (savedState) {
+      try {
+        const { desdePacientes } = JSON.parse(savedState);
+        this.mostrarBotonVolver = !!desdePacientes;
+      } catch {
+        this.mostrarBotonVolver = false;
+      }
+    }
   }
 
 
@@ -344,8 +370,6 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   iniciarFlujoHistoria(): void {
-    console.log('this.historiaSeleccionada', this.historiaSeleccionada);
-
     if (this.historiaSeleccionada?.id && this.modoEdicion) {
       this.precargarHistoriaSeleccionada();
     } else {
@@ -448,7 +472,6 @@ export class HistoriasMedicasComponent implements OnInit {
     const paciente = this.pacientesFiltrados.find(p => p.key === h.pacienteId);
     this.pacienteParaNuevaHistoria = paciente!;
     this.pacienteSeleccionado = paciente!;
-    console.log('h:', h);
 
     const cargarYPrecargar = () => {
 
@@ -791,7 +814,7 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     });
   }
-  
+
   // ***************************
   // * Métodos de pacientes
   // ***************************
@@ -799,18 +822,20 @@ export class HistoriasMedicasComponent implements OnInit {
     this.pacientesService.getPacientes().subscribe({
       next: (data) => {
         this.pacientes = Array.isArray(data.pacientes)
-          ? data.pacientes.map((p: any) => {
+          ? data.pacientes.map((p: any): Paciente => {
             const info = p.informacionPersonal;
             const historia = p.historiaClinica;
             const sedePaciente = (p.sedeId ?? '').toString().trim().toLowerCase();
 
             return {
               key: p.key,
+              id: String(p.id),
               fechaRegistro: this.formatearFecha(p.created_at),
               sede: sedePaciente,
               redesSociales: p.redesSociales || [],
 
               informacionPersonal: {
+                esMenorSinCedula: false,
                 nombreCompleto: info.nombreCompleto,
                 cedula: info.cedula,
                 telefono: info.telefono,
@@ -830,7 +855,7 @@ export class HistoriasMedicasComponent implements OnInit {
                 traumatismoOcular: historia.traumatismoOcular ?? null,
                 traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion ?? '',
                 usoDispositivo: historia.usoDispositivo,
-                tiempoUsoEstimado: historia.tiempoUsoEstimado ?? '',
+                //  tiempoUsoEstimado: historia.tiempoUsoEstimado ?? '',
                 cirugiaOcular: historia.cirugiaOcular ?? null,
                 cirugiaOcularDescripcion: historia.cirugiaOcularDescripcion ?? '',
                 alergicoA: historia.alergicoA ?? null,
@@ -856,19 +881,24 @@ export class HistoriasMedicasComponent implements OnInit {
           actualRoute = actualRoute.firstChild;
         }
 
-        console.log('idPaciente detectado:', idPaciente);
-
         if (idPaciente) {
-          const paciente = this.pacientes.find(p => p.key === idPaciente);
+          const id = idPaciente.split('-')[0];
+
+          // Buscar paciente por su campo "id"
+          const paciente = this.pacientes.find(p => p.id === id);
+
           if (paciente) {
             this.pacienteSeleccionado = paciente;
-            this.pacienteIdSeleccionado = paciente.key;
+            this.pacienteIdSeleccionado = paciente.id; // aquí guardas el ID numérico
             this.pacienteParaNuevaHistoria = paciente;
+
+            // Usar la key para cargar historias
             this.cargarHistoriasMedicas(paciente.key);
           } else {
-            console.warn('Paciente no encontrado para precarga:', idPaciente);
+            console.warn('Paciente no encontrado para precarga con ID:', id);
           }
         }
+
       },
       error: (error) => {
         console.error('Error al cargar pacientes:', error);
@@ -880,16 +910,8 @@ export class HistoriasMedicasComponent implements OnInit {
 
   cargarHistoriasMedicas(pacienteId: string, callback?: () => void): void {
     this.cargando = true;
-
     this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
       next: (historias: HistoriaMedica[]) => {
-        /*   const historiasAdaptadas = historias.map(historia => ({
-             ...historia,
-             datosConsulta: {
-               ...historia.datosConsulta
-             }
-           }));*/
-
         this.historial = historias.sort((a, b) => {
           const fechaA = new Date(a.auditoria?.fechaCreacion || '').getTime();
           const fechaB = new Date(b.auditoria?.fechaCreacion || '').getTime();

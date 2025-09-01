@@ -3,8 +3,16 @@ export interface RedSocial {
   username: string;
 }
 
+export interface PacientesListState {
+  scrollPosition: number;
+  filtroActual: string;
+  desdePacientes: boolean;
+}
+
+
 export interface Paciente {
   // Datos personales
+  id: string,
   key: string;
   fechaRegistro?: string;
   informacionPersonal: {
