@@ -778,7 +778,6 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.historiaService.createHistoria(historia).subscribe({
       next: (respuesta) => {
-        this.cargando = false;
         const historiaCreada = respuesta.historial_medico;
 
         this.cerrarModal('historiaModal');
@@ -787,33 +786,24 @@ export class HistoriasMedicasComponent implements OnInit {
           `Historia médica #${historiaCreada.nHistoria ?? 'sin número'} registrada correctamente`
         );
 
-        // 🔄 Sincronizar paciente visualmente
         const paciente = this.pacienteParaNuevaHistoria;
-        if (!paciente) {
-          console.warn('No hay paciente para recargar historias médicas');
-          return;
-        }
+        if (!paciente) return;
 
         this.pacienteSeleccionado = paciente;
-        this.cargarHistoriasMedicas(paciente.key, () => {
-          this.historiaSeleccionada = historiaCreada;
-        });
+
+        // Recargar y seleccionar directamente la recién creada
+        this.cargarHistoriasMedicas(
+          paciente.key,
+          undefined,
+          historiaCreada.id
+        );
 
         this.historiaForm.reset();
         this.modoEdicion = false;
-      },
-      error: (err) => {
-        this.cargando = false;
-        let mensajeError = 'No se pudo guardar la historia médica';
-        if (err.error?.message) {
-          mensajeError += `: ${err.error.message}`;
-        } else if (err.status === 409) {
-          mensajeError = 'Ya existe una historia idéntica para este paciente';
-        }
-
-        this.swalService.showError('Error', mensajeError);
       }
     });
+
+
   }
 
   // ***************************
@@ -909,8 +899,13 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
-  cargarHistoriasMedicas(pacienteId: string, callback?: () => void): void {
+  cargarHistoriasMedicas(
+    pacienteId: string,
+    callback?: () => void,
+    historiaIdSeleccionar?: string
+  ): void {
     this.cargando = true;
+
     this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
       next: (historias: HistoriaMedica[]) => {
         this.historial = historias.sort((a, b) => {
@@ -927,7 +922,13 @@ export class HistoriasMedicasComponent implements OnInit {
           return extraerSecuencia(b.nHistoria) - extraerSecuencia(a.nHistoria);
         });
 
-        this.historiaSeleccionada = this.historial[0] || null;
+        if (historiaIdSeleccionar) {
+          const encontrada = this.historial.find(h => h.id === historiaIdSeleccionar);
+          this.historiaSeleccionada = encontrada || this.historial[0] || null;
+        } else {
+          this.historiaSeleccionada = this.historial[0] || null;
+        }
+
         this.setHoraEvaluacion();
         this.mostrarSinHistorial = this.historial.length === 0;
         this.mostrarElementos = this.historial.length > 0;
@@ -937,14 +938,19 @@ export class HistoriasMedicasComponent implements OnInit {
       },
       error: (error: HttpErrorResponse) => {
         console.error('Error al cargar historias:', error);
-        this.snackBar.open(`⚠️ Error, No se pudieron cargar las historias médicas.`, 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-warning']
-        });
+        this.snackBar.open(
+          `⚠️ Error, No se pudieron cargar las historias médicas.`,
+          'Cerrar',
+          {
+            duration: 3000,
+            panelClass: ['snackbar-warning']
+          }
+        );
         this.cargando = false;
       }
     });
   }
+
 
   async seleccionarHistoriasPorPaciente(paciente: Paciente | null): Promise<void> {
     if (!paciente) {
