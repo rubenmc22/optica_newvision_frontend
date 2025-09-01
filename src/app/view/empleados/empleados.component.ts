@@ -208,18 +208,22 @@ export class EmpleadosComponent implements OnInit {
       email: employee.email || '',
       phone: employee.phone || ''
     };
+    this.isLoading = true;
 
     this.empleadosService.addEmployees(payload).subscribe({
       next: () => {
+
         this.empleadosService.getAllEmpleados().subscribe((empleados) => {
           this.employees = [...empleados]; // 🔄 Reemplazo con spread para minimizar cambio de referencia
           this.filterEmployees();          // Mantienes filtros activos
         });
+        this.isLoading = false;
 
         this.cerrarModal('dynamicModal');
         this.swalService.showSuccess('¡Registro exitoso!', 'Usuario registrado correctamente.');
       },
       error: (err) => {
+        this.isLoading = false;
         const msg = err.message?.trim() || '';
 
         if (msg === 'El numero de cedula ya esta registrado.') {
