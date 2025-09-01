@@ -1,41 +1,53 @@
-// atletas.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, of, throwError } from 'rxjs';
-import { map, catchError } from 'rxjs/operators'; // Importa el operador map
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { map, catchError, timeout } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
-//import { Empleado, ApiResponse } from '../../../Interfaces/models-interface';
+import { ErrorHandlerService } from '../../services/errorHandlerService'; // Ajusta la ruta según tu estructura
 
 @Injectable({
   providedIn: 'root'
 })
-
 export class PacientesService {
 
-  constructor(private http: HttpClient) { }
+  private readonly REQUEST_TIMEOUT = 8000; // 8 segundos
 
-  getPacientes(): Observable<any> {
-    return this.http.get(`${environment.apiUrl}/paciente-get/`);
+  constructor(
+    private http: HttpClient,
+    private errorHandler: ErrorHandlerService
+  ) { }
+
+  getPacientes(): Observable<{ pacientes: any[] }> {
+    return this.http
+      .get<{ pacientes: any[] }>(`${environment.apiUrl}/paciente-get/`)
+      .pipe(
+        timeout(this.REQUEST_TIMEOUT),
+        catchError(error => this.errorHandler.handleHttpError(error))
+      );
   }
 
+
   createPaciente(paciente: any): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/paciente-add`, paciente);
+    return this.http.post(`${environment.apiUrl}/paciente-add`, paciente).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
   }
 
   updatePaciente(clavePaciente: string, payload: any): Observable<any> {
-    // console.log('RDMC Dentro de id', id);
-    console.log('RDMC Dentro de clavePaciente', clavePaciente);
-    return this.http.put(`${environment.apiUrl}/paciente-update/${clavePaciente}`, payload);
-
+    return this.http.put(`${environment.apiUrl}/paciente-update/${clavePaciente}`, payload).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
   }
 
   deletePaciente(clavePaciente: string): Observable<any> {
-    return this.http.delete(`${environment.apiUrl}/paciente-delete/${clavePaciente}`);
+    return this.http.delete(`${environment.apiUrl}/paciente-delete/${clavePaciente}`).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
   }
 
-
-
-  // Para detalle completo (usado en historias médicas)
   getPaciente(id: string): Observable<any> {
     return this.http.get<any>(`${environment.apiUrl}/pacientes/${id}`).pipe(
       map(paciente => ({
@@ -44,12 +56,11 @@ export class PacientesService {
         ultimaConsulta: paciente.historias
           ? this.getFechaMasReciente(paciente.historias)
           : null
-        // otros campos extendidos
-      }))
+      })),
+      catchError(error => this.errorHandler.handleHttpError(error))
     );
   }
 
-  // Métodos auxiliares con implementación completa
   public calcularEdad(fechaNacimiento: string): number {
     const fechaNac = new Date(fechaNacimiento);
     const hoy = new Date();
@@ -59,28 +70,19 @@ export class PacientesService {
     if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNac.getDate())) {
       edad--;
     }
-
     return edad;
   }
 
   private getFechaMasReciente(historias: any[]): string {
     if (!historias || historias.length === 0) return '';
-
-    const fechas = historias
-      .map(h => h.fecha)
-      .filter(fecha => fecha); // Filtra fechas vacías o inválidas
-
+    const fechas = historias.map(h => h.fecha).filter(Boolean);
     if (fechas.length === 0) return '';
-
-    return fechas.reduce((latest, fecha) =>
-      fecha > latest ? fecha : latest, fechas[0]);
+    return fechas.reduce((latest, fecha) => fecha > latest ? fecha : latest, fechas[0]);
   }
 
-  // En tu pacientes.service.ts
   getHistoriasPaciente(id: string): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.apiUrl}/pacientes/${id}/historias`);
+    return this.http.get<any[]>(`${environment.apiUrl}/pacientes/${id}/historias`).pipe(
+      catchError(error => this.errorHandler.handleHttpError(error))
+    );
   }
-
 }
-
-

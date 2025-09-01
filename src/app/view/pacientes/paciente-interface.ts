@@ -20,7 +20,7 @@ export interface Paciente {
     cedula: string;
     telefono: string;
     email: string;
-    edad: number;
+    edad: number | string;
     fechaNacimiento: string;
     ocupacion: string;
     genero: string;
@@ -51,7 +51,7 @@ export interface Paciente {
 }
 
 export interface PacienteGrafico {
-  id: string;
+  key: string;
   nombre: string;
   cedula: string;
   sede: string;

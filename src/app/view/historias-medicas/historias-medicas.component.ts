@@ -8,7 +8,7 @@ import * as bootstrap from 'bootstrap';
 import { ActivatedRoute, Router } from '@angular/router';
 declare var $: any;
 
-// Interfaces
+// cargarPacientes
 import { Paciente, PacientesListState } from '../pacientes/paciente-interface';
 import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico, DatosConsulta } from './historias_medicas-interface';
 import { Empleado } from '../../Interfaces/models-interface';
@@ -738,8 +738,22 @@ export class HistoriasMedicasComponent implements OnInit {
 
       error: (err) => {
         this.cargando = false;
-        console.error('Error al actualizar:', err);
-        this.swalService.showError('Error', 'No se pudieron guardar los cambios');
+
+        if (err.status === 409) {
+          this.swalService.showWarning(
+            'Conflicto',
+            'Ya existe un registro con estos datos'
+          );
+          return;
+        }
+
+        if (err.status === 422 && err.error?.message) {
+          this.swalService.showWarning(
+            'Validación',
+            err.error.message
+          );
+          return;
+        }
       }
     });
   }
@@ -806,18 +820,17 @@ export class HistoriasMedicasComponent implements OnInit {
       },
       error: (err) => {
         this.cargando = false;
-        let mensajeError = 'No se pudo guardar la historia médica';
-        if (err.error?.message) {
-          mensajeError += `: ${err.error.message}`;
-        } else if (err.status === 409) {
-          mensajeError = 'Ya existe una historia idéntica para este paciente';
-        }
 
-        this.swalService.showError('Error', mensajeError);
+        // Caso específico: historia duplicada
+        if (err.status === 409) {
+          this.swalService.showWarning(
+            'Historia duplicada',
+            'Ya existe una historia idéntica para este paciente'
+          );
+          return;
+        }
       }
     });
-
-
   }
 
   // ***************************
@@ -905,10 +918,17 @@ export class HistoriasMedicasComponent implements OnInit {
         }
 
       },
-      error: (error) => {
-        console.error('Error al cargar pacientes:', error);
-        this.swalService.showError('Error', 'No se han podido cargar los pacientes');
+      error: (err: HttpErrorResponse) => {
         this.pacientes = [];
+
+        // Caso específico: no hay pacientes registrados
+        if (err.status === 404) {
+          this.swalService.showWarning(
+            'Sin registros',
+            'No se encontraron pacientes en el sistema'
+          );
+          return;
+        }
       }
     });
   }
@@ -950,21 +970,24 @@ export class HistoriasMedicasComponent implements OnInit {
 
         if (callback) callback();
       },
-      error: (error: HttpErrorResponse) => {
-        console.error('Error al cargar historias:', error);
-        this.snackBar.open(
-          `⚠️ Error, No se pudieron cargar las historias médicas.`,
-          'Cerrar',
-          {
-            duration: 3000,
-            panelClass: ['snackbar-warning']
-          }
-        );
+      error: (err: HttpErrorResponse) => {
         this.cargando = false;
+
+        if (err.status === 404) {
+          this.snackBar.open(
+            '⚠️ No se encontraron historias médicas para este paciente.',
+            'Cerrar',
+            {
+              duration: 3000,
+              panelClass: ['snackbar-warning']
+            }
+          );
+          return;
+        }
       }
+
     });
   }
-
 
   async seleccionarHistoriasPorPaciente(paciente: Paciente | null): Promise<void> {
     if (!paciente) {

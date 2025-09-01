@@ -12,6 +12,7 @@ import { take, catchError } from 'rxjs/operators';
 import { Sede } from '../../view/login/login-interface';
 import { AuthService } from '../../core/services/auth/auth.service';
 import { UserStateService } from '../../core/services/userState/user-state-service';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   AbstractControl,
   ValidatorFn,
@@ -430,10 +431,17 @@ export class VerPacientesComponent implements OnInit {
 
         this.actualizarPacientesPorSede();
       },
-      error: (error) => {
-        console.error('Error al cargar pacientes:', error);
-        this.swalService.showError('Error', 'No se han podido cargar los pacientes');
+      error: (err: HttpErrorResponse) => {
         this.pacientes = [];
+
+        // Caso específico: no hay pacientes registrados
+        if (err.status === 404) {
+          this.swalService.showWarning(
+            'Sin registros',
+            'No se encontraron pacientes en el sistema'
+          );
+          return;
+        }
       }
     });
   }
@@ -585,6 +593,7 @@ export class VerPacientesComponent implements OnInit {
         this.cargando = false;
         const msg = error.error?.message ?? '';
 
+        // Caso específico: cédula duplicada
         if (msg.includes('Ya esta registrada la cedula')) {
           const coincidencias = [...msg.matchAll(/'([^']+)'/g)];
           const cedula = coincidencias?.[0]?.[1] ?? 'Cédula desconocida';
@@ -592,25 +601,23 @@ export class VerPacientesComponent implements OnInit {
           const sede = sedeRaw.replace(/^Sede\s+/i, '').trim();
 
           const mensajeHTML = `
-              <br>
-              <div class="swal-custom-content ">
-                <h5 class="text-danger mb-2">
-                  <i class="fas fa-id-card me-2"></i> Cédula ya registrada
-                </h5>
-                <ul class="list-unstyled mb-3">
-                  <li><strong>Cédula:</strong> ${cedula}</li>
-                  <li><strong>Sede:</strong> ${sede}</li>
-                </ul><br>
-                <div class="text-muted small">
-                  <i class="fas fa-info-circle me-1"></i> Cada cédula debe ser única por sede. Revisa los datos ingresados.
-                </div>
-              </div>
+          <br>
+          <div class="swal-custom-content ">
+            <h5 class="text-danger mb-2">
+              <i class="fas fa-id-card me-2"></i> Cédula ya registrada
+            </h5>
+            <ul class="list-unstyled mb-3">
+              <li><strong>Cédula:</strong> ${cedula}</li>
+              <li><strong>Sede:</strong> ${sede}</li>
+            </ul><br>
+            <div class="text-muted small">
+              <i class="fas fa-info-circle me-1"></i> Cada cédula debe ser única por sede. Revisa los datos ingresados.
+            </div>
+          </div>
           `;
           this.swalService.showWarning('', mensajeHTML, true);
           return;
         }
-
-        this.swalService.showError('Error', 'No se ha podido registrar al paciente');
       }
     });
   }
@@ -679,6 +686,7 @@ export class VerPacientesComponent implements OnInit {
     if (!this.formularioModificado()) {
       return;
     }
+
     this.cargando = true;
     const pacienteFormValue = this.formPaciente.value;
 
@@ -712,7 +720,7 @@ export class VerPacientesComponent implements OnInit {
       historiaClinica: {
         usuarioLentes: pacienteFormValue.usuarioLentes || null,
         fotofobia: pacienteFormValue.fotofobia || null,
-        usoDispositivo: usoDispositivoValue, // Usamos el valor combinado aquí
+        usoDispositivo: usoDispositivoValue,
         traumatismoOcular: pacienteFormValue.traumatismoOcular || null,
         traumatismoOcularDescripcion: pacienteFormValue.traumatismoOcularDescripcion || null,
         cirugiaOcular: pacienteFormValue.cirugiaOcular || null,
@@ -731,10 +739,10 @@ export class VerPacientesComponent implements OnInit {
       next: (response) => {
         const paciente = response.paciente;
         this.cargando = false;
+
         // Procesar el usoDispositivo para la visualización
         const usoDispositivoCompleto = paciente.historiaClinica?.usoDispositivo ?? '';
         let usoDispositivoDisplay = 'No';
-
         if (usoDispositivoCompleto.startsWith('Sí')) {
           usoDispositivoDisplay = usoDispositivoCompleto;
         }
@@ -753,7 +761,7 @@ export class VerPacientesComponent implements OnInit {
           sede: paciente.sede || this.sedeActiva,
           historiaClinica: {
             ...paciente.historiaClinica,
-            usoDispositivo: usoDispositivoDisplay // Mantenemos el formato combinado para visualización
+            usoDispositivo: usoDispositivoDisplay
           }
         };
 
@@ -771,13 +779,12 @@ export class VerPacientesComponent implements OnInit {
         this.cerrarModal('modalAgregarPaciente');
         this.swalService.showSuccess('¡Actualización exitosa!', 'El Paciente se ha actualizado correctamente.');
       },
-      error: (error) => {
+      complete: () => {
         this.cargando = false;
-        console.error('Error al actualizar paciente:', error);
-        this.swalService.showError('Error', 'No se ha podido actualizar al paciente');
       }
     });
   }
+
 
   eliminarPaciente(id: string): void {
     const paciente = this.pacientes.find(p => p.key === id);

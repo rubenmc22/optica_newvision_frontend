@@ -3,7 +3,7 @@ import { AuthData, Rol } from '../../Interfaces/models-interface';
 import { PacientesService } from '../../core/services/pacientes/pacientes.service';
 import { HistoriaMedicaService } from '../../core/services/historias-medicas/historias-medicas.service';
 import { PacienteGrafico } from './../pacientes/paciente-interface';
-import { DatosPorSede  } from './dashboard-interface';
+import { DatosPorSede } from './dashboard-interface';
 import { forkJoin } from 'rxjs';
 
 @Component({
@@ -25,7 +25,7 @@ export class DashboardComponent {
   pacientes: PacienteGrafico[] = [];
 
   // 📊 Datos para comparativa por sede
-datosComparativa: Record<string, DatosPorSede> | null = null;
+  datosComparativa: Record<string, DatosPorSede> | null = null;
 
   // 📅 Distribución mensual por sede actual
   datosLocales: {
@@ -59,12 +59,13 @@ datosComparativa: Record<string, DatosPorSede> | null = null;
       historias: this.historiasService.getHistoriasMedicasAll()
     }).subscribe({
       next: ({ pacientes, historias }) => {
+        console.log('Pacientes', pacientes);
         this.pacientes = Array.isArray(pacientes.pacientes)
           ? pacientes.pacientes.map((p: any): PacienteGrafico => ({
-            id: p.key,
+            key: p.key,
             nombre: p.informacionPersonal?.nombreCompleto,
             cedula: p.informacionPersonal?.cedula,
-            sede: p.key?.split('-')[0] ?? 'sin-sede',
+            sede: p.sedeId ?? 'sin-sede',
             created_at: p.created_at
           }))
           : [];
@@ -72,7 +73,7 @@ datosComparativa: Record<string, DatosPorSede> | null = null;
         const historiasFiltradas = Array.isArray(historias.historiales_medicos)
           ? historias.historiales_medicos
           : [];
-
+        console.log('historiasFiltradas', historiasFiltradas);
         this.totalHistorias = historiasFiltradas.filter(h => h.pacienteId?.startsWith(this.sedeActual)).length;
         this.cargarDatosGraficos(historiasFiltradas);
       },
@@ -84,33 +85,11 @@ datosComparativa: Record<string, DatosPorSede> | null = null;
     });
   }
 
-
-  /* cargarPacientes(): void {
-     this.pacientesService.getPacientes().subscribe({
-       next: (data) => {
-         this.pacientes = Array.isArray(data.pacientes)
-           ? data.pacientes.map((p: any): PacienteGrafico => ({
-             id: p.key,
-             nombre: p.informacionPersonal?.nombreCompleto,
-             cedula: p.informacionPersonal?.cedula,
-             sede: p.key?.split('-')[0] ?? 'sin-sede',
-             created_at: p.created_at
-           }))
-           : [];
- 
-         this.cargarDatosGraficos();
-       },
-       error: (error) => {
-         console.error('Error al cargar pacientes:', error);
-         this.pacientes = [];
-       }
-     });
-   }*/
-
   cargarDatosGraficos(historias: any[]): void {
     const agrupadoPorSede: Record<string, { pacientes: number; ventas: number; ordenes: number; historias: number }> = {};
 
     for (const p of this.pacientes) {
+      console.log('P', p);
       const sede = p.sede;
       if (!agrupadoPorSede[sede]) {
         agrupadoPorSede[sede] = {
@@ -124,6 +103,7 @@ datosComparativa: Record<string, DatosPorSede> | null = null;
     }
 
     for (const h of historias) {
+      console.log('h', h);
       const sede = h.pacienteId?.split('-')[0] ?? 'sin-sede';
       if (!agrupadoPorSede[sede]) {
         agrupadoPorSede[sede] = {
