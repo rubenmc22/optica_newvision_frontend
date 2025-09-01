@@ -68,6 +68,7 @@ export class HistoriasMedicasComponent implements OnInit {
   pacientes: Paciente[] = [];
   pacientesFiltrados: Paciente[] = [];
   formOriginalHistoria: any = {};
+  sedePacienteSeleccionado = '';
   medicoSeleccionado: Medico | null = null;
   pacienteSeleccionado: Paciente | null = null;
   historiaEnEdicion: HistoriaMedica | null = null;
@@ -948,10 +949,12 @@ export class HistoriasMedicasComponent implements OnInit {
   async seleccionarHistoriasPorPaciente(paciente: Paciente | null): Promise<void> {
     if (!paciente) {
       this.limpiarDatos();
+      this.sedePacienteSeleccionado = '';
       return;
     }
 
     this.pacienteSeleccionado = paciente;
+    this.sedePacienteSeleccionado = this.obtenerSedeDesdePaciente(paciente);
     this.cargarHistoriasMedicas(paciente.key); // espera a que se cargue
   }
 
@@ -1197,10 +1200,9 @@ export class HistoriasMedicasComponent implements OnInit {
       : this.pacientes.filter(p => p.sede === sedeId);
   }
 
-  obtenerSedeDesdePacienteId(pacienteId: string): string {
-    return pacienteId?.split('-')[0]?.trim().toLowerCase() || '';
+  obtenerSedeDesdePaciente(paciente: Paciente): string {
+    return paciente?.sede?.toLowerCase() || '';
   }
-
 
   // ***************************
   // * Métodos de búsqueda/filtrado

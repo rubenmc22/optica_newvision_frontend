@@ -191,7 +191,8 @@
                     <strong>Última graduación:</strong>
                     <p class="bg-light rounded p-2">
                       {{ historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion ?
-                      (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No especificado' }}
+                      (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No
+                      especificado' }}
                     </p>
                   </div>
 
@@ -607,12 +608,11 @@
             <button class="btn btn-outline-secondary me-2">
               <i class="bi bi-printer"></i> Imprimir
             </button>
-            <button class="btn btn-primary"
-              *ngIf="obtenerSedeDesdePacienteId(historiaSeleccionada?.pacienteId ?? '') === sedeActiva"
-              
+            <button class="btn btn-primary" *ngIf="sedePacienteSeleccionado === sedeActiva"
               (click)="editarHistoria(historiaSeleccionada)">
               <i class="bi bi-pencil-square"></i> Editar
             </button>
+
 
           </div>
         </div>
