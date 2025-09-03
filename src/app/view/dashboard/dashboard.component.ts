@@ -30,12 +30,12 @@ export class DashboardComponent {
   // 📅 Distribución mensual por sede actual
   datosLocales: {
     total: number;
-    porMes: Record<string, { pacientes: number; ventas: number; ordenes: number }>;
+    porMes: Record<string, { pacientes: number; ventas: number; ordenes: number; historias: number }>;
   } | null = null;
 
   constructor(
     private pacientesService: PacientesService,
-    private historiasService: HistoriaMedicaService // ← nuevo
+    private historiasService: HistoriaMedicaService
   ) { }
 
   ngOnInit(): void {
@@ -73,8 +73,12 @@ export class DashboardComponent {
         const historiasFiltradas = Array.isArray(historias.historiales_medicos)
           ? historias.historiales_medicos
           : [];
+
         console.log('historiasFiltradas', historiasFiltradas);
-        this.totalHistorias = historiasFiltradas.filter(h => h.pacienteId?.startsWith(this.sedeActual)).length;
+
+        // CORRECCIÓN: Usar el mismo criterio que en cargarDatosGraficos
+        this.totalHistorias = historiasFiltradas.filter(h => h.sedeId === this.sedeActual).length;
+
         this.cargarDatosGraficos(historiasFiltradas);
       },
       error: (err) => {
@@ -88,8 +92,8 @@ export class DashboardComponent {
   cargarDatosGraficos(historias: any[]): void {
     const agrupadoPorSede: Record<string, { pacientes: number; ventas: number; ordenes: number; historias: number }> = {};
 
+    // Contar pacientes por sede
     for (const p of this.pacientes) {
-      console.log('P', p);
       const sede = p.sede;
       if (!agrupadoPorSede[sede]) {
         agrupadoPorSede[sede] = {
@@ -102,14 +106,14 @@ export class DashboardComponent {
       agrupadoPorSede[sede].pacientes += 1;
     }
 
+    // Contar historias por sede
     for (const h of historias) {
-      console.log('h', h);
-      const sede = h.pacienteId?.split('-')[0] ?? 'sin-sede';
+      const sede = h.sedeId ?? 'sin-sede';
       if (!agrupadoPorSede[sede]) {
         agrupadoPorSede[sede] = {
           pacientes: 0,
-          ventas: 0,
-          ordenes: 0,
+          ventas: Math.floor(Math.random() * 30),
+          ordenes: Math.floor(Math.random() * 10),
           historias: 0
         };
       }
@@ -121,10 +125,13 @@ export class DashboardComponent {
       this.datosComparativa = agrupadoPorSede;
     }
 
-    // 📅 Agrupación mensual por sede actual
-    const historiasSede = historias.filter(h => h.pacienteId?.startsWith(this.sedeActual));
+    // 📅 Agrupación mensual por sede actual - CORRECCIÓN: usar sedeId en lugar de pacienteId
+    const historiasSede = historias.filter(h => h.sedeId === this.sedeActual);
+    const pacientesSede = this.pacientes.filter(p => p.sede === this.sedeActual);
+
     const porMes: Record<string, { pacientes: number; ventas: number; ordenes: number; historias: number }> = {};
 
+    // Contar historias por mes
     for (const h of historiasSede) {
       const fecha = new Date(h.auditoria?.fechaCreacion ?? h.created_at);
       const mes = fecha.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -132,15 +139,17 @@ export class DashboardComponent {
       if (!porMes[mes]) {
         porMes[mes] = {
           pacientes: 0,
-          ventas: Math.floor(Math.random() * 15),
-          ordenes: Math.floor(Math.random() * 5),
+          ventas: 0,
+          ordenes: 0,
+         // ventas: Math.floor(Math.random() * 15),
+         // ordenes: Math.floor(Math.random() * 5),
           historias: 0
         };
       }
       porMes[mes].historias += 1;
     }
 
-    const pacientesSede = this.pacientes.filter(p => p.sede === this.sedeActual);
+    // Contar pacientes por mes
     for (const p of pacientesSede) {
       const fecha = new Date(p.created_at);
       const mes = fecha.toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -160,10 +169,15 @@ export class DashboardComponent {
       total: pacientesSede.length,
       porMes
     };
+
+    // DEBUG: Verificar consistencia
+    console.log('🔍 DEBUG - Consistencia de datos:');
+    console.log('Total historias (sede actual):', this.totalHistorias);
+    console.log('Historias en gráfico:', historiasSede.length);
+    console.log('Pacientes en gráfico:', pacientesSede.length);
+    console.log('Datos por sede:', agrupadoPorSede);
   }
 
-
-  // 🛡️ Helper para visibilidad de gráficos
   get puedeVerComparativa(): boolean {
     const key = this.rolUsuario?.key ?? '';
     return ['admin', 'gerente'].includes(key) && !!this.datosComparativa;
