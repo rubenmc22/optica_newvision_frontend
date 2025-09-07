@@ -8,6 +8,7 @@ import { Subscription } from 'rxjs';
 import { UserStateService } from '../../core/services/userState/user-state-service';
 import { TasaCambiariaService } from '../../core/services/tasaCambiaria/tasaCambiaria.service';
 import { Tasa } from '../../Interfaces/models-interface';
+import { LoaderService } from '../../shared/loader/loader.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -37,6 +38,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     private sharedUserService: SharedUserService,
     private userStateService: UserStateService,
     private tasaCambiariaService: TasaCambiariaService,
+    public loader: LoaderService
 
   ) { }
 

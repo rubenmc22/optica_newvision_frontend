@@ -50,7 +50,7 @@
         </div>
 
         <!-- 🔍 Bloque derecho: buscador -->
-       <!-- <li class="nav-item">
+        <!-- <li class="nav-item">
           <a class="nav-link" data-widget="navbar-search" href="#" role="button">
             <i class="fas fa-search"></i>
           </a>
@@ -173,7 +173,12 @@
     <!-- Content Wrapper -->
     <section class="content-wrapper">
       <div class="container-fluid">
+        <ng-container *ngIf="loader.loading$ | async">
+  <app-global-loader></app-global-loader>
+</ng-container>
+
         <router-outlet></router-outlet>
+
       </div>
     </section>
     <!-- /.content -->

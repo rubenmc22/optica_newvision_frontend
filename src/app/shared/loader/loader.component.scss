@@ -1,0 +1,90 @@
+@use '../../../custom-theme.scss' as theme;
+
+:host {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.8); // fondo semitransparente
+  pointer-events: none;
+}
+
+.spinner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999;
+  backdrop-filter: blur(4px);
+  background-color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.spinner-container {
+  text-align: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.custom-spinner {
+  width: 4.5rem; // tamaño ampliado
+  height: 4.5rem;
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  transform-origin: center;
+}
+
+.custom-spinner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--primary-color) 0deg 30deg,
+    lighten(#3a7bd5, 20%) 30deg 60deg,
+    lighten(#3a7bd5, 40%) 60deg 90deg,
+    lighten(#3a7bd5, 20%) 90deg 120deg,
+    var(--primary-color) 120deg 150deg,
+    lighten(#3a7bd5, 20%) 150deg 180deg,
+    lighten(#3a7bd5, 40%) 180deg 210deg,
+    lighten(#3a7bd5, 20%) 210deg 240deg,
+    var(--primary-color) 240deg 270deg,
+    lighten(#3a7bd5, 20%) 270deg 300deg,
+    lighten(#3a7bd5, 40%) 300deg 330deg,
+    lighten(#3a7bd5, 20%) 330deg 360deg
+  );
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-top: 14px;
+  font-size: 18px;
+  color: #333;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.spinner-overlay.ng-hide {
+  display: none !important;
+}

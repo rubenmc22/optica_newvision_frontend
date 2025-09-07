@@ -191,8 +191,7 @@
                     <strong>Última graduación:</strong>
                     <p class="bg-light rounded p-2">
                       {{ historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion ?
-                      (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No
-                      especificado' }}
+                      (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No especificado' }}
                     </p>
                   </div>
 
@@ -1146,6 +1145,6 @@
       </div>
 
 
-      <div *ngIf="mostrarBotonVolver" class="boton-flotante" (click)="volverAlListado()">
+      <div *ngIf="mostrarBotonVolver && dataIsReady" class="boton-flotante" (click)="volverAlListado()">
         🧭 ¿Volver al listado de pacientes?
       </div>

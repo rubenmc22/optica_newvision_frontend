@@ -13,6 +13,8 @@ import { Paciente, PacientesListState } from '../pacientes/paciente-interface';
 import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico, DatosConsulta } from './historias_medicas-interface';
 import { Empleado } from '../../Interfaces/models-interface';
 import { Sede } from '../../view/login/login-interface';
+import { LoaderService } from './../../shared/loader/loader.service';
+
 
 // Constantes
 import {
@@ -57,6 +59,8 @@ export class HistoriasMedicasComponent implements OnInit {
   filtro: string = '';
   pacienteParaNuevaHistoria: Paciente | null = null;
   pacientesFiltradosPorSede: Paciente[] = [];
+  tareasPendientes = 0;
+  dataIsReady = false;
 
   // Empleados
   isLoading = true;
@@ -120,7 +124,8 @@ export class HistoriasMedicasComponent implements OnInit {
     private authService: AuthService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private loader: LoaderService
   ) {
     this.materiales = MATERIALES;
     this.materialLabels = new Map<TipoMaterial, string>(
@@ -189,20 +194,6 @@ export class HistoriasMedicasComponent implements OnInit {
     }
     return null;
   }
-
-
-  private recuperarEstadoVolver(): void {
-    const savedState = sessionStorage.getItem('pacientesListState');
-    if (savedState) {
-      try {
-        const { desdePacientes } = JSON.parse(savedState);
-        this.mostrarBotonVolver = !!desdePacientes;
-      } catch {
-        this.mostrarBotonVolver = false;
-      }
-    }
-  }
-
 
   volverAlListado(): void {
     sessionStorage.removeItem('pacientesListState');
@@ -284,6 +275,9 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   private inicializarDatosIniciales(): void {
+    this.iniciarCarga();
+    this.tareaIniciada(); // forkJoin
+
     forkJoin({
       user: this.userStateService.currentUser$.pipe(
         take(1),
@@ -329,10 +323,32 @@ export class HistoriasMedicasComponent implements OnInit {
       this.sedeActiva = sedeValida ? sedeUsuario : '';
       this.sedeFiltro = this.sedeActiva;
 
+      this.tareaFinalizada(); // forkJoin terminado
+
       this.loadEmployees();
       this.cargarPacientes();
     });
   }
+
+  private iniciarCarga(): void {
+    this.tareasPendientes = 0;
+    this.loader.show();
+  }
+
+  private tareaIniciada(): void {
+    this.tareasPendientes++;
+    this.dataIsReady = false;
+  }
+
+  private tareaFinalizada(): void {
+
+    this.tareasPendientes--;
+    if (this.tareasPendientes <= 0) {
+      setTimeout(() => this.loader.hide(), 300); // Delay visual
+      this.dataIsReady = true;
+    }
+  }
+
 
   private configurarSubscripciones(): void {
     this.historiaForm.get('motivo')?.valueChanges.subscribe((motivos: string[] | null) => {
@@ -837,6 +853,7 @@ export class HistoriasMedicasComponent implements OnInit {
   // * Métodos de pacientes
   // ***************************
   cargarPacientes(): void {
+    this.tareaIniciada();
     this.pacientesService.getPacientes().subscribe({
       next: (data) => {
         this.pacientes = Array.isArray(data.pacientes)
@@ -916,6 +933,7 @@ export class HistoriasMedicasComponent implements OnInit {
             console.warn('Paciente no encontrado para precarga con ID:', id);
           }
         }
+        this.tareaFinalizada();
 
       },
       error: (err: HttpErrorResponse) => {
@@ -929,6 +947,7 @@ export class HistoriasMedicasComponent implements OnInit {
           );
           return;
         }
+        this.tareaFinalizada();
       }
     });
   }
@@ -1028,6 +1047,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
   private loadEmployees(callback?: () => void): void {
     this.isLoading = true;
+    this.tareaIniciada();
 
     this.empleadosService.getAllEmpleados().subscribe((usuarios: any[]) => {
       const empleadosAdaptados: Empleado[] = usuarios.map(usuario => ({
@@ -1059,6 +1079,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
       this.filteredEmployees = [...empleadosAdaptados];
       this.isLoading = false;
+      this.tareaFinalizada();
       this.cdr.detectChanges();
 
       if (callback) callback();
@@ -1070,6 +1091,7 @@ export class HistoriasMedicasComponent implements OnInit {
       });
 
       this.isLoading = false;
+      this.tareaFinalizada();
       if (callback) callback();
     });
   }

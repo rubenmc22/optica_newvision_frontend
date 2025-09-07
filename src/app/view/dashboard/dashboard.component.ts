@@ -59,7 +59,6 @@ export class DashboardComponent {
       historias: this.historiasService.getHistoriasMedicasAll()
     }).subscribe({
       next: ({ pacientes, historias }) => {
-        console.log('Pacientes', pacientes);
         this.pacientes = Array.isArray(pacientes.pacientes)
           ? pacientes.pacientes.map((p: any): PacienteGrafico => ({
             key: p.key,
@@ -73,8 +72,6 @@ export class DashboardComponent {
         const historiasFiltradas = Array.isArray(historias.historiales_medicos)
           ? historias.historiales_medicos
           : [];
-
-        console.log('historiasFiltradas', historiasFiltradas);
 
         // CORRECCIÓN: Usar el mismo criterio que en cargarDatosGraficos
         this.totalHistorias = historiasFiltradas.filter(h => h.sedeId === this.sedeActual).length;
@@ -169,13 +166,6 @@ export class DashboardComponent {
       total: pacientesSede.length,
       porMes
     };
-
-    // DEBUG: Verificar consistencia
-    console.log('🔍 DEBUG - Consistencia de datos:');
-    console.log('Total historias (sede actual):', this.totalHistorias);
-    console.log('Historias en gráfico:', historiasSede.length);
-    console.log('Pacientes en gráfico:', pacientesSede.length);
-    console.log('Datos por sede:', agrupadoPorSede);
   }
 
   get puedeVerComparativa(): boolean {

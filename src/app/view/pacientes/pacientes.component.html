@@ -1,124 +1,127 @@
-<div class="container mt-4">
-  <div class="card shadow-lg">
-    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
-      <h4 class="mb-0">👨‍⚕️ Pacientes</h4>
-      <div class="ms-auto">
-        <button class="btn btn-light btn-sm" (click)="abrirModalAgregarPaciente()">
-          ➕ Agregar Paciente
-        </button>
-      </div>
-    </div>
-
-    <div class="card-body" style="background: var(--degradado-pastel) !important;">
-      <div class="row mb-4">
-        <div class="col-md-4">
-          <label for="filtroSede" class="form-label">📍 Filtrar por sede</label>
-          <select id="filtroSede" class="form-select" [(ngModel)]="sedeFiltro" (change)="cargarPacientes()"
-            (change)="actualizarPacientesPorSede()">
-            <!-- Opción para ver todos -->
-            <option value="todas">Todas las sedes</option>
-
-            <!-- Opciones dinámicas desde el API -->
-            <option *ngFor="let sede of sedesDisponibles" [value]="sede.key">
-              {{ sede.nombre }}
-            </option>
-          </select>
-        </div>
-
-        <div class="filtroPaciente col-md-8">
-          <label for="filtroTexto" class="form-label">🔎 Buscar paciente</label>
-          <input id="filtroTexto" type="text" class="form-control" placeholder="Nombre o cédula..."
-            [(ngModel)]="filtro">
+<div *ngIf="dataIsReady" class="fade-in">
+  <div class="container mt-4">
+    <div class="card shadow-lg">
+      <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+        <h4 class="mb-0">👨‍⚕️ Pacientes</h4>
+        <div class="ms-auto">
+          <button class="btn btn-light btn-sm" (click)="abrirModalAgregarPaciente()">
+            ➕ Agregar Paciente
+          </button>
         </div>
       </div>
 
-      <div *ngIf="sedeFiltro !== sedeActiva && sedeFiltro !== 'todas'" class="alert alert-info">
-        🔒 Visualizando pacientes de otra sede. Las acciones de edición y eliminación están deshabilitadas.
-      </div>
+      <div class="card-body" style="background: var(--degradado-pastel) !important;">
+        <div class="row mb-4">
+          <div class="col-md-4">
+            <label for="filtroSede" class="form-label">📍 Filtrar por sede</label>
+            <select id="filtroSede" class="form-select" [(ngModel)]="sedeFiltro" (change)="cargarPacientes()"
+              (change)="actualizarPacientesPorSede()">
+              <!-- Opción para ver todos -->
+              <option value="todas">Todas las sedes</option>
 
-      <div class="table-responsive-wrapper">
-        <table class="table table-hover table-bordered">
-          <thead class="bg-secondary text-white text-center">
-            <tr>
-              <th (click)="ordenarPor('nombreCompleto')" class="sortable">Nombre Completo
-                <i class="bi" [ngClass]="{
+              <!-- Opciones dinámicas desde el API -->
+              <option *ngFor="let sede of sedesDisponibles" [value]="sede.key">
+                {{ sede.nombre }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filtroPaciente col-md-8">
+            <label for="filtroTexto" class="form-label">🔎 Buscar paciente</label>
+            <input id="filtroTexto" type="text" class="form-control" placeholder="Nombre o cédula..."
+              [(ngModel)]="filtro">
+          </div>
+        </div>
+
+        <div *ngIf="sedeFiltro !== sedeActiva && sedeFiltro !== 'todas'" class="alert alert-info">
+          🔒 Visualizando pacientes de otra sede. Las acciones de edición y eliminación están deshabilitadas.
+        </div>
+
+        <div class="table-responsive-wrapper">
+          <table class="table table-hover table-bordered">
+            <thead class="bg-secondary text-white text-center">
+              <tr>
+                <th (click)="ordenarPor('nombreCompleto')" class="sortable">Nombre Completo
+                  <i class="bi" [ngClass]="{
                 'bi-caret-up-fill': ordenActual === 'nombreCompleto' && ordenAscendente,
                 'bi-caret-down-fill': ordenActual === 'nombreCompleto' && !ordenAscendente
               }"></i>
-              </th>
-              <th (click)="ordenarPor('cedula')" class="sortable">Cédula
-                <i class="bi" [ngClass]="{
+                </th>
+                <th (click)="ordenarPor('cedula')" class="sortable">Cédula
+                  <i class="bi" [ngClass]="{
                 'bi-caret-up-fill': ordenActual === 'cedula' && ordenAscendente,
                 'bi-caret-down-fill': ordenActual === 'cedula' && !ordenAscendente
               }"></i>
-              </th>
-              <th (click)="ordenarPor('edad')" class="sortable">Edad
-                <i class="bi" [ngClass]="{
+                </th>
+                <th (click)="ordenarPor('edad')" class="sortable">Edad
+                  <i class="bi" [ngClass]="{
                 'bi-caret-up-fill': ordenActual === 'edad' && ordenAscendente,
                 'bi-caret-down-fill': ordenActual === 'edad' && !ordenAscendente
               }"></i>
-              </th>
-              <th (click)="ordenarPor('genero')" class="sortable">Género
-                <i class="bi" [ngClass]="{
+                </th>
+                <th (click)="ordenarPor('genero')" class="sortable">Género
+                  <i class="bi" [ngClass]="{
                 'bi-caret-up-fill': ordenActual === 'genero' && ordenAscendente,
                 'bi-caret-down-fill': ordenActual === 'genero' && !ordenAscendente
               }"></i>
-              </th>
-              <th (click)="ordenarPor('fechaRegistro')" class="sortable">Fecha de Registro
-                <i class="bi" [ngClass]="{
+                </th>
+                <th (click)="ordenarPor('fechaRegistro')" class="sortable">Fecha de Registro
+                  <i class="bi" [ngClass]="{
                 'bi-caret-up-fill': ordenActual === 'fechaRegistro' && ordenAscendente,
                 'bi-caret-down-fill': ordenActual === 'fechaRegistro' && !ordenAscendente
               }"></i>
-              </th>
-              <th>Historial Médico</th>
-              <th>Sede</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
+                </th>
+                <th>Historial Médico</th>
+                <th>Sede</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
 
-          <tbody>
-            <tr *ngFor="let paciente of pacientesFiltradosPorSede" class="text-center align-middle">
-              <td>{{ paciente.informacionPersonal.nombreCompleto }}</td>
-              <td>{{ paciente.informacionPersonal.cedula }}</td>
-              <td>{{ paciente.informacionPersonal.edad }}</td>
-              <td>{{ paciente.informacionPersonal.genero }}</td>
-              <td>{{ paciente.fechaRegistro }}</td>
+            <tbody>
+              <tr *ngFor="let paciente of pacientesFiltradosPorSede" class="text-center align-middle">
+                <td>{{ paciente.informacionPersonal.nombreCompleto }}</td>
+                <td>{{ paciente.informacionPersonal.cedula }}</td>
+                <td>{{ paciente.informacionPersonal.edad }}</td>
+                <td>{{ paciente.informacionPersonal.genero }}</td>
+                <td>{{ paciente.fechaRegistro }}</td>
 
-              <td>
-                <button class="btn btn-info btn-sm" (click)="verHistorias(paciente)">📖 Ver
-                  Historias</button>
-              </td>
-              <td>
-                <span class="badge" [ngClass]="{
+                <td>
+                  <button class="btn btn-info btn-sm" (click)="verHistorias(paciente)">📖 Ver
+                    Historias</button>
+                </td>
+                <td>
+                  <span class="badge" [ngClass]="{
                 'bg-primary': paciente.sede === 'guatire',
                 'bg-success': paciente.sede === 'guarenas'
               }">{{ paciente.sede | titlecase }}</span>
-              </td>
-              <td>
-                <button class="btn btn-outline-info btn-sm me-1" (click)="abrirModalVisualizacionPaciente(paciente)"
-                  title="Ver Paciente">
-                  <i class="bi bi-eye"></i>
-                </button>
-
-                <ng-container *ngIf="paciente.sede === sedeActiva">
-                  <button class="btn btn-outline-warning btn-sm me-1" (click)="editarPaciente(paciente)" title="Editar">
-                    <i class="bi bi-pencil-square"></i>
+                </td>
+                <td>
+                  <button class="btn btn-outline-info btn-sm me-1" (click)="abrirModalVisualizacionPaciente(paciente)"
+                    title="Ver Paciente">
+                    <i class="bi bi-eye"></i>
                   </button>
-                  <button class="btn btn-outline-danger btn-sm" (click)="eliminarPaciente(paciente.key)"
-                    title="Eliminar">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </ng-container>
-              </td>
-            </tr>
 
-            <tr *ngIf="pacientesFiltradosPorSede.length === 0">
-              <td colspan="8" class="text-center text-dark py-4">
-                🧐 No se encontraron pacientes que coincidan con el filtro aplicado.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                  <ng-container *ngIf="paciente.sede === sedeActiva">
+                    <button class="btn btn-outline-warning btn-sm me-1" (click)="editarPaciente(paciente)"
+                      title="Editar">
+                      <i class="bi bi-pencil-square"></i>
+                    </button>
+                <!--    <button class="btn btn-outline-danger btn-sm" (click)="eliminarPaciente(paciente.key)"
+                      title="Eliminar">
+                      <i class="bi bi-trash"></i>
+                    </button>-->
+                  </ng-container>
+                </td>
+              </tr>
+
+              <tr *ngIf="dataIsReady && pacientesFiltradosPorSede.length === 0">
+                <td colspan="8" class="text-center text-dark py-4">
+                  🧐 No se encontraron pacientes que coincidan con el filtro aplicado.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>

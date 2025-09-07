@@ -3,12 +3,18 @@ import { Producto } from './producto.model';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { environment } from 'src/environments/environment';
+import { ErrorHandlerService } from './../../core/services/errorHandlerService'; 
+
 
 @Injectable({ providedIn: 'root' })
 export class ProductoService {
   private productos: Producto[] = [];
+ private readonly REQUEST_TIMEOUT = 8000; // 8 segundos
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private errorHandler: ErrorHandlerService
+  ) { }
 
   getProductos(): Observable<Producto[]> {
     // Si usas dummy data por ahora:

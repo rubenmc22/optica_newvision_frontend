@@ -18,6 +18,8 @@ import {
   ValidatorFn,
   ValidationErrors
 } from '@angular/forms';
+import { LoaderService } from './../../shared/loader/loader.service';
+
 
 @Component({
   selector: 'app-pacientes',
@@ -46,6 +48,7 @@ export class VerPacientesComponent implements OnInit {
   ordenActual: string = 'informacionPersonal.nombreCompleto';
   ordenAscendente: boolean = true;
   esMenorSinCedula: boolean = false;
+  dataIsReady = false;
 
   // Redes sociales
   listaRedes: string[] = ['Facebook', 'Twitter', 'Instagram', 'LinkedIn', 'TikTok'];
@@ -116,6 +119,7 @@ export class VerPacientesComponent implements OnInit {
     private userStateService: UserStateService,
     private snackBar: MatSnackBar,
     private authService: AuthService,
+    private loader: LoaderService
   ) {
     this.formPaciente = this.fb.group({
       // 👤 Datos personales
@@ -193,8 +197,6 @@ export class VerPacientesComponent implements OnInit {
         this.requiereDescripcionCondicional('cirugiaOcular', 'cirugiaOcularDescripcion')
       ]
     });
-
-
   }
 
   ngOnInit(): void {
@@ -381,6 +383,8 @@ export class VerPacientesComponent implements OnInit {
 
   // Métodos de carga de datos
   cargarPacientes(): void {
+     this.dataIsReady = false;
+    this.loader.show(); // activa el loader
     this.pacientesService.getPacientes().subscribe({
       next: (data) => {
         this.pacientes = Array.isArray(data.pacientes)
@@ -426,15 +430,19 @@ export class VerPacientesComponent implements OnInit {
                 patologiaOcular: historia.patologiaOcular ?? []
               }
             };
+
           })
           : [];
-
         this.actualizarPacientesPorSede();
+        setTimeout(() => {
+        this.dataIsReady = true;
+        this.loader.hide();
+      }, 100); // Delay visual para evitar parpadeo
       },
       error: (err: HttpErrorResponse) => {
         this.pacientes = [];
-
-        // Caso específico: no hay pacientes registrados
+        this.dataIsReady = false;
+        this.loader.hide();
         if (err.status === 404) {
           this.swalService.showWarning(
             'Sin registros',

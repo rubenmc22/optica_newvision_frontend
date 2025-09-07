@@ -10,6 +10,7 @@ import { GraficoComparativaSedesComponent } from './dashboard/graficos/grafico-c
 import { GraficoTotalSedeComponent } from './dashboard/graficos/grafico-total-sede/grafico-total-sede.component';
 import { GraficoPacientesPorMesComponent } from './dashboard/graficos/grafico-pacientes-por-mes/grafico-pacientes-por-mes.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
+import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 // Componentes
 import { AppComponent } from '../app.component';
@@ -28,6 +29,7 @@ import { VerPacientesComponent } from './pacientes/pacientes.component';
 import { HistoriasMedicasComponent } from './historias-medicas/historias-medicas.component';
 import { ProductosListComponent } from './productos/productos-list/productos-list.component';
 import { ProductosInventarioComponent } from './productos/productos-inventario/productos-inventario.component';
+import { LoaderComponent } from './../shared/loader/loader.component'; 
 
 
 
@@ -59,7 +61,8 @@ import { NgSelectModule } from '@ng-select/ng-select';
     GraficoTotalSedeComponent,
     GraficoPacientesPorMesComponent,
     ProductosListComponent,
-    ProductosInventarioComponent
+    ProductosInventarioComponent,
+    LoaderComponent
   ],
   imports: [
     NgChartsModule,
@@ -71,6 +74,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
     ScrollingModule,
     BrowserAnimationsModule,
     NgbTooltipModule,
+    NgxSkeletonLoaderModule,
 
     RouterModule.forRoot(appRoutes, {
       onSameUrlNavigation: 'reload',

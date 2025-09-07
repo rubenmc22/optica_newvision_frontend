@@ -124,7 +124,7 @@
                     <span class="fs-5 fw-bold text-primary">
                       {{ producto.moneda === 'usd' ? '$' :
                       producto.moneda === 'eur' ? '€' :
-                      producto.moneda?.toUpperCase() }}
+                      producto.moneda.toUpperCase() }}
                       {{ producto.precio | number:'1.2-2' }}
                     </span>
                   </div>
@@ -215,7 +215,7 @@
 
             {{
             modoModal === 'agregar' ? 'Agregar Producto' :
-            modoModal === 'editar' ? 'Editar Producto' : 'Ver Producto'
+            modoModal === 'editar' ? 'Editar Producto' : 'Detalles del Producto'
             }}
           </h5>
           <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="cerrarModal()"></button>

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map, catchError, timeout } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
-import { ErrorHandlerService } from '../../services/errorHandlerService'; // Ajusta la ruta según tu estructura
+import { ErrorHandlerService } from '../../services/errorHandlerService'; 
 
 @Injectable({
   providedIn: 'root'

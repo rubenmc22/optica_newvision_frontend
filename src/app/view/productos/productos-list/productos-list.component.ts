@@ -28,6 +28,7 @@ export class ProductosListComponent implements OnInit {
     modoModal: 'agregar' | 'editar' | 'ver' = 'agregar';
     productoSeleccionado?: Producto;
     paginaActual = 1;
+    cargando: boolean = false;
 
     // FILTROS
     filtroBusqueda = '';
@@ -155,6 +156,7 @@ export class ProductosListComponent implements OnInit {
 
     private agregarProductoFlow(): void {
         const producto = this.productoSeguro;
+        this.cargando = true;
 
         this.productoService.agregarProducto(producto)
             .pipe(
@@ -166,17 +168,21 @@ export class ProductosListComponent implements OnInit {
                     return this.productoService.getProductos();
                 }),
                 catchError((error) => {
+                    this.cargando = false;
                     this.manejarErrorOperacion(error, 'agregar');
-                    return of<Producto[]>([]); // 🔹 tipado explícito
+                    return of<Producto[]>([]);
                 })
             )
             .subscribe((productos: Producto[]) => {
+                this.cargando = false;
                 if (productos.length) {
                     this.productos = productos;
                     this.cerrarModal();
                 }
             });
     }
+
+
 
     private editarProductoFlow(): void {
         const producto = this.productoSeguro;
