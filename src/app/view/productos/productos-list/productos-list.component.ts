@@ -1,11 +1,17 @@
-import { Component, OnInit, Output, EventEmitter, } from '@angular/core';
-import { Producto } from '../producto.model';
+import { Component, OnInit, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
+import { Producto, ProductoDto } from '../producto.model';
+import { Sede } from '../../../view/login/login-interface';
 import { ProductoService } from '../producto.service';
 import { TasaCambiariaService } from '../../../core/services/tasaCambiaria/tasaCambiaria.service';
 import { Tasa } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
-import { switchMap, catchError, tap } from 'rxjs/operators';
-import { of, throwError } from 'rxjs';
+import { Observable, of, forkJoin, map } from 'rxjs';
+import { switchMap, take, catchError } from 'rxjs/operators';
+import { LoaderService } from './../../../shared/loader/loader.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { AuthService } from '../../../core/services/auth/auth.service';
+import { UserStateService } from '../../../core/services/userState/user-state-service';
+
 
 
 @Component({
@@ -29,6 +35,10 @@ export class ProductosListComponent implements OnInit {
     productoSeleccionado?: Producto;
     paginaActual = 1;
     cargando: boolean = false;
+    productosFiltradosPorSede: Producto[] = [];
+    sedesDisponibles: Sede[] = [];
+    tareasPendientes = 0;
+    dataIsReady = false;
 
     // FILTROS
     filtroBusqueda = '';
@@ -38,6 +48,9 @@ export class ProductosListComponent implements OnInit {
     sedeFiltro: string = this.sedeActiva;
     filtro: string = '';
     categoriaAbierto = false;
+    ordenarPorStockActivo: boolean = false;
+    ordenStockAscendente: boolean = true;
+
 
     // CATÁLOGO
     categoriasProducto: string[] = ['Monturas', 'Lentes', 'Líquidos', 'Estuches', 'Misceláneos', 'Lentes de contacto'];
@@ -64,7 +77,13 @@ export class ProductosListComponent implements OnInit {
     constructor(
         private productoService: ProductoService,
         private tasaCambiariaService: TasaCambiariaService,
+        //    private fb: FormBuilder,
         private swalService: SwalService,
+        private userStateService: UserStateService,
+        private snackBar: MatSnackBar,
+        private authService: AuthService,
+        private cdr: ChangeDetectorRef,
+        private loader: LoaderService
     ) { }
 
     // =========== LIFECYCLE HOOKS ===========
@@ -74,15 +93,81 @@ export class ProductosListComponent implements OnInit {
     }
 
     private cargarDatosIniciales(): void {
-        this.productoService.getProductos().subscribe((productos) => {
-            this.productos = productos?.length
-                ? productos
-                : this.generarProductosDummy(1000);
-        });
+        this.iniciarCarga();
+        this.tareaIniciada();
         this.obtenerTasasCambio();
+        this.cargarProductosYSedes(); // delega la lógica
     }
 
     // =========== GESTIÓN DE DATOS ===========
+    private cargarProductosYSedes(): void {
+        this.iniciarCarga();
+        this.tareaIniciada();
+
+        forkJoin({
+            productos: this.productoService.getProductos().pipe(
+                take(1),
+                catchError(error => {
+                    console.error('Error al cargar productos:', error);
+                    this.snackBar.open('⚠️ No se pudo cargar el catálogo de productos.', 'Cerrar', {
+                        duration: 5000,
+                        panelClass: ['snackbar-error']
+                    });
+                    return of([]); // ← aquí está el cambio
+                })
+            ),
+            sedes: this.authService.getSedes().pipe(
+                take(1),
+                catchError(error => {
+                    console.error('Error al cargar sedes:', error);
+                    this.snackBar.open('⚠️ No se pudieron cargar las sedes disponibles.', 'Cerrar', {
+                        duration: 5000,
+                        panelClass: ['snackbar-warning']
+                    });
+                    return of({ sedes: [] });
+                })
+            ),
+            user: this.userStateService.currentUser$.pipe(
+                take(1),
+                catchError(error => {
+                    console.error('Error al cargar usuario:', error);
+                    this.snackBar.open('⚠️ Error al cargar su información de usuario.', 'Cerrar', {
+                        duration: 5000,
+                        panelClass: ['snackbar-error']
+                    });
+                    return of(null);
+                })
+            )
+        }).subscribe(({ productos, sedes, user }) => {
+            this.productos = productos;
+            this.ordenarPorStock();
+
+            this.sedesDisponibles = (sedes.sedes ?? [])
+                .map(s => ({
+                    ...s,
+                    key: s.key?.trim().toLowerCase() || '',
+                    nombre: s.nombre?.trim() || ''
+                }))
+                .sort((a, b) =>
+                    a.nombre.replace(/^sede\s+/i, '').localeCompare(
+                        b.nombre.replace(/^sede\s+/i, ''),
+                        'es',
+                        { sensitivity: 'base' }
+                    )
+                );
+
+            const sedeUsuario = (user?.sede ?? '').trim().toLowerCase();
+            const sedeValida = this.sedesDisponibles.some(s => s.key === sedeUsuario);
+
+            this.sedeActiva = sedeValida ? sedeUsuario : '';
+            this.sedeFiltro = this.sedeActiva;
+
+            this.tareaFinalizada();
+        });
+
+
+    }
+
     private obtenerTasasCambio(): void {
         this.tasaCambiariaService.getTasaActual().subscribe({
             next: (res: { tasas: Tasa[] }) => {
@@ -123,6 +208,25 @@ export class ProductosListComponent implements OnInit {
             .subscribe(res => {
                 this.productos = this.actualizarEstadoPorStock(res);
             });
+    }
+
+    private iniciarCarga(): void {
+        this.tareasPendientes = 0;
+        this.loader.show();
+    }
+
+    private tareaIniciada(): void {
+        this.tareasPendientes++;
+        this.dataIsReady = false;
+    }
+
+    private tareaFinalizada(): void {
+
+        this.tareasPendientes--;
+        if (this.tareasPendientes <= 0) {
+            setTimeout(() => this.loader.hide(), 300); // Delay visual
+            this.dataIsReady = true;
+        }
     }
 
     // =========== GESTIÓN DE MODAL ===========
@@ -173,16 +277,12 @@ export class ProductosListComponent implements OnInit {
                     return of<Producto[]>([]);
                 })
             )
-            .subscribe((productos: Producto[]) => {
-                this.cargando = false;
-                if (productos.length) {
-                    this.productos = productos;
-                    this.cerrarModal();
-                }
+            .subscribe(productos => {
+                this.productos = productos;
+                this.cerrarModal();
             });
+
     }
-
-
 
     private editarProductoFlow(): void {
         const producto = this.productoSeguro;
@@ -232,16 +332,37 @@ export class ProductosListComponent implements OnInit {
     }
 
     get productosFiltrados(): Producto[] {
-        return this.productos.filter(p => {
-            const texto = this.filtroBusqueda.toLowerCase();
-            const coincideTexto = p.nombre.toLowerCase().includes(texto) ||
-                p.codigo.toLowerCase().includes(texto);
-            const coincideTipo = !this.tipoSeleccionado ||
-                p.categoria.toLowerCase() === this.tipoSeleccionado.toLowerCase();
-            const coincideEstado = this.estadoSeleccionado === null ||
-                p.activo === this.estadoSeleccionado;
-            return coincideTexto && coincideTipo && coincideEstado;
+        const texto = this.filtroBusqueda?.trim().toLowerCase() ?? '';
+        const tipo = this.tipoSeleccionado?.toLowerCase() ?? '';
+        const sede = this.sedeFiltro?.trim().toLowerCase() ?? '';
+        const estado = this.estadoSeleccionado;
+
+        const productosValidos = Array.isArray(this.productos) ? this.productos : [];
+
+        const filtrados = productosValidos.filter(p => {
+            const nombre = p.nombre?.toLowerCase() ?? '';
+            const codigo = p.codigo?.toLowerCase() ?? '';
+            const categoria = p.categoria?.toLowerCase() ?? '';
+            const sedeProducto = p.sede?.toLowerCase() ?? '';
+            const activo = p.activo;
+
+            const coincideTexto = nombre.includes(texto) || codigo.includes(texto);
+            const coincideTipo = !tipo || categoria === tipo;
+            const coincideEstado = estado === null || activo === estado;
+            const coincideSede = !sede || sedeProducto === sede;
+
+            return coincideTexto && coincideTipo && coincideEstado && coincideSede;
         });
+
+        if (this.ordenarPorStockActivo) {
+            return [...filtrados].sort((a, b) => {
+                const stockA = a.stock ?? 0;
+                const stockB = b.stock ?? 0;
+                return this.ordenStockAscendente ? stockA - stockB : stockB - stockA;
+            });
+        }
+
+        return filtrados;
     }
 
     ngOnChanges() {
@@ -251,6 +372,13 @@ export class ProductosListComponent implements OnInit {
             document.body.classList.remove('modal-open');
         }
     }
+
+    ordenarPorStock(): void {
+        this.ordenarPorStockActivo = true;
+        this.ordenStockAscendente = !this.ordenStockAscendente;
+        this.paginaActual = 1;
+    }
+
 
     // =========== PAGINACIÓN ===========
     get productosPaginados(): Producto[] {
@@ -280,6 +408,7 @@ export class ProductosListComponent implements OnInit {
     private crearProductoVacio(): Producto {
         return {
             id: crypto.randomUUID(),
+            sede: '',
             nombre: '',
             marca: '',
             color: '',
@@ -310,6 +439,16 @@ export class ProductosListComponent implements OnInit {
         }
     }
 
+    getSimboloMoneda(moneda: string): string {
+        switch (moneda) {
+            case 'usd': return '$';
+            case 'eur': return '€';
+            case 'ves': return 'Bs';
+            default: return moneda.toUpperCase();
+        }
+    }
+
+
     obtenerImagen(categoria: string): string {
         // Mapa local para las categorías más comunes
         const imagenes: Record<string, string> = {
@@ -326,40 +465,8 @@ export class ProductosListComponent implements OnInit {
         return imagenes[clave] || 'assets/default.jpg';
     }
 
-    // =========== DATOS DE PRUEBA ===========
-    generarProductosDummy(cantidad: number): Producto[] {
-        const tipos: Producto['categoria'][] = ['montura', 'lente', 'liquido', 'estuche', 'accesorio'];
-        const marcas = ['VisionPro', 'OptiClear', 'LentiMax', 'FocusOne'];
-        const proveedores = ['Distribuidora Global', 'Óptica Center', 'LensSupreme'];
-        const categorias = ['Visual', 'Estética', 'Mantenimiento'];
-        const colores = ['Negro', 'Azul', 'Rojo', 'Transparente'];
-        const monedas: Producto['moneda'][] = ['usd', 'eur', 'ves'];
-
-        return Array.from({ length: cantidad }, (_, i) => {
-            const tipoActual = tipos[i % tipos.length];
-            return {
-                id: (i + 1).toString(),
-                nombre: `Producto ${i + 1}`,
-                tipo: tipoActual,
-                categoria: categorias[i % categorias.length],
-                proveedor: proveedores[i % proveedores.length],
-                marca: marcas[i % marcas.length],
-                codigo: `NV-${String(i + 1).padStart(5, '0')}`,
-                color: colores[i % colores.length],
-                material: 'Acetato',
-                moneda: monedas[i % monedas.length],
-                stock: Math.floor(Math.random() * 50),
-                precio: parseFloat((Math.random() * 100).toFixed(2)),
-                activo: Math.random() > 0.2,
-                descripcion: 'Producto simulado para pruebas.',
-                imagenUrl: this.imagenesPorTipo[tipoActual],
-                fechaIngreso: '2025-07-27'
-            };
-        });
-    }
-
     getProfileImage(): string {
-        return this.avatarPreview || this.user.ruta_imagen || 'assets/avatar-placeholder.avif';
+        return this.avatarPreview || this.producto?.imagenUrl || 'assets/avatar-placeholder.avif';
     }
 
     handleImageError(event: Event): void {
@@ -402,4 +509,22 @@ export class ProductosListComponent implements OnInit {
         });
 
     }
+
+    actualizarPacientesPorSede(): void {
+        //  this.limpiarDatos();
+        const sedeId = this.sedeFiltro?.trim().toLowerCase();
+        this.productosFiltradosPorSede = !sedeId
+            ? [...this.productos]
+            : this.productos.filter(p => p.sede === sedeId);
+    }
+
+    obtenerSedeDesdePaciente(productos: Producto): string {
+        return productos?.sede?.toLowerCase() || '';
+    }
+
+    onImageError(event: Event): void {
+        const imgElement = event.target as HTMLImageElement;
+        imgElement.src = 'assets/avatar-placeholder.avif';
+    }
+
 }

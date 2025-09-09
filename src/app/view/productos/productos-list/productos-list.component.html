@@ -13,10 +13,11 @@
         <!-- Filtro por sede -->
         <div class="col-md-2">
           <label for="filtroSede" class="form-label">📍 Filtrar por sede</label>
-          <select id="filtroSede" class="form-select" [(ngModel)]="sedeFiltro">
-            <option [value]="sedeActiva">Solo {{ sedeActiva | titlecase }}</option>
-            <option value="otra">Otra sede</option>
-            <option value="todas">Todas las sedes</option>
+          <select [(ngModel)]="sedeFiltro" (change)="actualizarPacientesPorSede()" class="form-select">
+            <option value="">Todas las sedes</option>
+            <option *ngFor="let sede of sedesDisponibles" [value]="sede.key ? sede.key.toLowerCase() : ''">
+              {{ sede.nombre }}
+            </option>
           </select>
         </div>
 
@@ -60,21 +61,37 @@
         🔒 Visualizando productos de otra sede. Las acciones de edición, eliminación y carga están deshabilitadas.
       </div>
 
-      <!-- Encabezado siempre visible con animación -->
+      <!-- Encabezado interactivo con orden por stock descendente por defecto -->
       <div
-        class="mt-4 mb-3 px-3 py-2 bg-white rounded shadow-sm d-flex align-items-center gap-3 border-start border-3 border-primary animate__animated animate__fadeInDown">
-        <i class="fas fa-list-alt text-primary fs-4"></i>
-        <div>
-          <h5 class="mb-0 fw-bold text-primary">Listado de productos</h5>
-          <small class="text-muted">
-            {{
-            productosFiltrados.length > 0
-            ? 'Mostrando ' + productosFiltrados.length + ' disponibles'
-            : 'No hay productos disponibles 😕'
-            }}
-          </small>
+        class="mt-4 mb-3 px-3 py-2 bg-white rounded shadow-sm d-flex align-items-center justify-content-between border-start border-3 border-primary animate__animated animate__fadeInDown tarjeta-clickable"
+        role="button" tabindex="0" (click)="ordenarPorStock()" (keydown.enter)="ordenarPorStock()"
+        (keydown.space)="ordenarPorStock()" title="Haz clic para ordenar los productos por stock disponible">
+        <div class="d-flex align-items-center gap-3">
+          <i class="fas fa-list-alt text-primary fs-4"></i>
+          <div>
+            <h5 class="mb-0 fw-bold text-primary">Listado de productos</h5>
+            <small class="text-muted">
+              {{
+              productosFiltrados.length > 0
+              ? 'Mostrando ' + productosFiltrados.length + ' disponibles'
+              : 'No hay productos disponibles 😕'
+              }}
+            </small>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 text-muted" style="color: var(--details-color) !important;">
+          <i class="bi" [ngClass]="{
+      'bi-sort-numeric-down': !ordenStockAscendente,
+      'bi-sort-numeric-up': ordenStockAscendente
+    }"></i>
+          <span class="small fw-bold text-primary">
+            Ordenar por stock {{ ordenStockAscendente ? '(ascendente)' : '(descendente)' }}
+          </span>
         </div>
       </div>
+
+
 
       <!-- Vista vacía -->
       <div *ngIf="productosFiltrados.length === 0" class="text-center text-muted py-5">
@@ -90,7 +107,7 @@
             (keydown.space)="abrirModal('ver', producto)">
 
             <div class="position-relative contenedor-imagen">
-              <img [src]="producto.imagenUrl ? producto.imagenUrl : 'assets/placeholder.jpg'" class="card-img-top"
+              <img [src]="producto.imagenUrl" (error)="onImageError($event)" class="card-img-top"
                 [alt]="producto.nombre" style="height: 180px; object-fit: cover;" />
 
               <!-- Overlay hover -->
@@ -122,10 +139,7 @@
                 <ng-container *ngIf="producto.moneda && producto.moneda !== 'ves'; else soloBs">
                   <div class="d-flex align-items-center gap-2 mb-1">
                     <span class="fs-5 fw-bold text-primary">
-                      {{ producto.moneda === 'usd' ? '$' :
-                      producto.moneda === 'eur' ? '€' :
-                      producto.moneda.toUpperCase() }}
-                      {{ producto.precio | number:'1.2-2' }}
+                      {{ getSimboloMoneda(producto.moneda) }} {{ producto.precio | number:'1.2-2' }}
                     </span>
                   </div>
                   <div class="d-flex align-items-center gap-2 text-muted small">
@@ -231,22 +245,22 @@
                 <div class="avatar-widget">
                   <img [src]="getProfileImage()" alt="Avatar del Producto" class="avatar-img"
                     (error)="handleImageError($event)" />
-                  <div class="avatar-overlay show-on-hover">
+                  <div class="avatar-overlay show-on-hover" *ngIf="modoModal !== 'ver'">
                     <label for="avatarUpload"><i class="fas fa-camera"></i></label>
                     <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
                       (change)="onFileSelected($event)" />
                   </div>
+
                 </div>
               </div>
 
               <!-- Código y Estado -->
               <div class="col-md-6">
                 <div class="row g-3">
-
                   <div class="col-md-8">
                     <div class="form-floating">
-                      <input type="text" class="form-control" id="nombreProducto" [(ngModel)]="producto.codigo"
-                        name="codigo" required [disabled]="esSoloLectura" placeholder="Nombre del producto">
+                      <input type="text" class="form-control" id="nombreProducto" [(ngModel)]="producto.nombre"
+                        name="nombre" required [disabled]="esSoloLectura" placeholder="Nombre del producto">
                       <label for="nombreProducto">🏷️ Nombre del producto</label>
                     </div>
                   </div>
@@ -269,7 +283,8 @@
 
                   <div class="col-md-6">
                     <ng-select [items]="moneda" [(ngModel)]="producto.moneda" name="moneda" [searchable]="false"
-                      [clearable]="true" placeholder="📚 Moneda " [disabled]="esSoloLectura" ngbTooltip="Moneda" placement="top-start">
+                      [clearable]="true" placeholder="📚 Moneda " [disabled]="esSoloLectura" ngbTooltip="Moneda"
+                      placement="top-start">
                     </ng-select>
                   </div>
                 </div>
@@ -340,13 +355,14 @@
 
         <!-- Footer -->
         <div
-          class="modal-footer flex-wrap justify-content-between align-items-center gap-3 border-0 bg-body-tertiary rounded-bottom shadow-sm py-3 px-4" style="color: beige;">
+          class="modal-footer flex-wrap justify-content-between align-items-center gap-3 border-0 bg-body-tertiary rounded-bottom shadow-sm py-3 px-4"
+          style="color: beige;">
 
           <!-- Estatus -->
           <div class="estatus-wrapper d-flex flex-column gap-1">
 
             <!-- Línea superior: solo el título -->
-            <label class="form-label mb-1 fw-semibold"> 🆔 Estatus
+            <label class="form-label mb-1 fw-semibold" style="color: #212529;"> 🆔 Estatus
               <span data-bs-toggle="tooltip" title="Estado del producto" class="text-muted small ms-1">🛈</span>
             </label>
 

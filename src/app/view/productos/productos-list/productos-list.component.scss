@@ -1,3 +1,5 @@
+@use '../../../../custom-theme.scss' as theme;
+
 /* ===== COMPONENTES GENERALES ===== */
 .card-header {
   font-size: 1.2rem;
@@ -108,12 +110,41 @@
   color: #495057;
 }
 
+.btnEstado {
+  background-color: #fff;      /* fondo blanco o el que prefieras */
+  color: #212529;              /* texto gris oscuro legible */
+  font-weight: 500;            /* un poco más grueso para legibilidad */
+  padding: 0.5rem;
+}
+
 /* Estado activo / foco */
 .form-control:focus,
 .form-select:focus {
-  border-color: #0d6efd;
+  border-color: var(--primary-color);
   /* Azul principal de Bootstrap */
   box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+.btn-primary {
+    background: var(--degradado-color);
+    border: var(--degradado-color);
+    border-left: none;
+    color: #fff;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+        color: var(--details-color);
+
+        i {
+            color: var(--details-color);
+        }
+    }
+
+    i {
+        transition: all 0.2s ease;
+    }
 }
 
 /* Label flotante más pequeño y alto */

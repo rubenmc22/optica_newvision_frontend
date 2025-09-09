@@ -349,7 +349,6 @@ export class HistoriasMedicasComponent implements OnInit {
     }
   }
 
-
   private configurarSubscripciones(): void {
     this.historiaForm.get('motivo')?.valueChanges.subscribe((motivos: string[] | null) => {
       const otroMotivoControl = this.historiaForm.get('otroMotivo');
