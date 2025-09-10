@@ -4,6 +4,7 @@ export interface Producto {
   nombre: string;
   codigo: string;
   marca?: string;
+  modelo?: string;
   color?: string;
   material?: string;
   moneda: string;
@@ -23,6 +24,7 @@ export interface ProductoDto {
   nombre: string;
   codigo: string;
   marca?: string;
+  modelo?: string;
   color?: string;
   material?: string;
   moneda: string;
@@ -34,5 +36,13 @@ export interface ProductoDto {
   descripcion?: string;
   imagen_url?: string;
   created_at: string;
+}
+
+export interface MonedaVisual {
+  id: string;         // ID real del backend (dolar, euro, bolivar)
+  alias: string;      // Alias visual (USD, EUR, Bs)
+  simbolo: string;    // $, €, Bs
+  nombre: string;     // Nombre completo
+  valor: number;      // Tasa de cambio
 }
 

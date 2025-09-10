@@ -92,7 +92,6 @@
       </div>
 
 
-
       <!-- Vista vacía -->
       <div *ngIf="productosFiltrados.length === 0" class="text-center text-muted py-5">
         <i class="fas fa-box-open fa-2x mb-2"></i>
@@ -136,7 +135,7 @@
 
               <!-- Precios -->
               <div class="mb-3">
-                <ng-container *ngIf="producto.moneda && producto.moneda !== 'ves'; else soloBs">
+                <ng-container *ngIf="!esMonedaBolivar(producto.moneda); else soloBs">
                   <div class="d-flex align-items-center gap-2 mb-1">
                     <span class="fs-5 fw-bold text-primary">
                       {{ getSimboloMoneda(producto.moneda) }} {{ producto.precio | number:'1.2-2' }}
@@ -282,9 +281,9 @@
                   </div>
 
                   <div class="col-md-6">
-                    <ng-select [items]="moneda" [(ngModel)]="producto.moneda" name="moneda" [searchable]="false"
-                      [clearable]="true" placeholder="📚 Moneda " [disabled]="esSoloLectura" ngbTooltip="Moneda"
-                      placement="top-start">
+                    <ng-select [items]="moneda" bindLabel="alias" bindValue="id" [(ngModel)]="producto.moneda"
+                      name="moneda" [searchable]="false" [clearable]="true" placeholder="💱 Moneda"
+                      [disabled]="esSoloLectura">
                     </ng-select>
                   </div>
                 </div>
@@ -311,7 +310,7 @@
               <div class="col-md-4">
                 <div class="form-floating">
                   <input type="text" class="form-control" id="modelo" placeholder="🧠 Modelo"
-                    [(ngModel)]="producto.nombre" name="nombre" [disabled]="esSoloLectura">
+                    [(ngModel)]="producto.modelo" name="modelo" [disabled]="esSoloLectura">
                   <label for="modelo">🧠 Modelo</label>
                 </div>
               </div>
@@ -319,7 +318,7 @@
               <div class="col-md-4">
                 <div class="form-floating">
                   <input type="text" class="form-control" id="proveedor" placeholder="🚚 Proveedor"
-                    [(ngModel)]="producto.proveedor" name="proveedor" required [disabled]="esSoloLectura">
+                    [(ngModel)]="producto.proveedor" name="proveedor" [disabled]="esSoloLectura">
                   <label for="proveedor">🚚 Proveedor</label>
                 </div>
               </div>

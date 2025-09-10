@@ -27,7 +27,7 @@ export class ProductoService {
   }
 
   agregarProducto(producto: Producto): Observable<Producto> {
-    return this.http.post<Producto>(`${environment.apiUrl}/productos`, producto);
+    return this.http.post<Producto>(`${environment.apiUrl}/producto-add`, producto);
 
   }
 
@@ -55,6 +55,7 @@ export class ProductoService {
       nombre: dto.nombre,
       codigo: dto.codigo,
       marca: dto.marca,
+      modelo: dto.modelo,
       color: dto.color,
       material: dto.material,
       moneda: this.normalizarMoneda(dto.moneda),
@@ -88,7 +89,5 @@ export class ProductoService {
         return 'ves'; // fallback seguro
     }
   }
-
-
 
 }

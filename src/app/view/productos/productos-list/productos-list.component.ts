@@ -1,5 +1,5 @@
 import { Component, OnInit, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
-import { Producto, ProductoDto } from '../producto.model';
+import { Producto, ProductoDto, MonedaVisual } from '../producto.model';
 import { Sede } from '../../../view/login/login-interface';
 import { ProductoService } from '../producto.service';
 import { TasaCambiariaService } from '../../../core/services/tasaCambiaria/tasaCambiaria.service';
@@ -11,7 +11,6 @@ import { LoaderService } from './../../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import { UserStateService } from '../../../core/services/userState/user-state-service';
-
 
 
 @Component({
@@ -54,14 +53,7 @@ export class ProductosListComponent implements OnInit {
 
     // CATÁLOGO
     categoriasProducto: string[] = ['Monturas', 'Lentes', 'Líquidos', 'Estuches', 'Misceláneos', 'Lentes de contacto'];
-    moneda: string[] = [];
-    imagenesPorTipo: Record<Producto['categoria'], string> = {
-        lente: 'assets/cristales.jpg',
-        montura: 'assets/montura_2.avif',
-        estuche: 'assets/estuches.jpg',
-        liquido: 'assets/liquido.webp',
-        accesorio: 'assets/accesorios.jpg',
-    };
+    moneda: MonedaVisual[] = [];
 
     //MODAL
     avatarPreview: string | null = null;
@@ -171,33 +163,29 @@ export class ProductosListComponent implements OnInit {
     private obtenerTasasCambio(): void {
         this.tasaCambiariaService.getTasaActual().subscribe({
             next: (res: { tasas: Tasa[] }) => {
-                // Guardar valores de referencia
-                this.tasaDolar = res.tasas.find(t => t.id === 'dolar')?.valor ?? 0;
-                this.tasaEuro = res.tasas.find(t => t.id === 'euro')?.valor ?? 0;
+                const monedasVisuales: MonedaVisual[] = res.tasas.map(t => ({
+                    id: t.id?.toLowerCase() ?? '',
+                    alias: t.id === 'dolar' ? 'USD' : t.id === 'euro' ? 'EUR' : 'Bs',
+                    simbolo: t.simbolo?.trim() ?? '',
+                    nombre: t.nombre?.trim() ?? '',
+                    valor: t.valor ?? 0
+                }));
 
-                // Mapa de conversión fijo
-                const idToCode: Record<string, string> = {
-                    dolar: 'USD',
-                    euro: 'EUR'
-                };
+                // Guardar tasas específicas si las necesitas
+                this.tasaDolar = monedasVisuales.find(m => m.id === 'dolar')?.valor ?? 0;
+                this.tasaEuro = monedasVisuales.find(m => m.id === 'euro')?.valor ?? 0;
 
-                // Construir lista base desde servicio
-                const monedasServicio = res.tasas.map(t => {
-                    const id = t.id?.toLowerCase() ?? '';
-                    return idToCode[id] || t.nombre?.trim().toUpperCase() || id.toUpperCase();
-                });
-
-                // Eliminar duplicados + vacíos
-                const unicas = Array.from(new Set(monedasServicio.filter(m => m)));
-
-                // Forzar que VES esté siempre de último
-                this.moneda = [...unicas.filter(m => m !== 'VES'), 'VES'];
+                // Guardar lista completa para el ng-select
+                this.moneda = monedasVisuales;
             },
             error: () => {
-                // Fallback seguro
                 this.tasaDolar = 0;
                 this.tasaEuro = 0;
-                this.moneda = ['USD', 'EUR', 'VES'];
+                this.moneda = [
+                    { id: 'dolar', alias: 'USD', simbolo: '$', nombre: 'Dólar', valor: 0 },
+                    { id: 'euro', alias: 'EUR', simbolo: '€', nombre: 'Euro', valor: 0 },
+                    { id: 'bolivar', alias: 'Bs', simbolo: 'Bs', nombre: 'Bolívar', valor: 1 }
+                ];
             }
         });
     }
@@ -231,14 +219,20 @@ export class ProductosListComponent implements OnInit {
 
     // =========== GESTIÓN DE MODAL ===========
     abrirModal(modo: 'agregar' | 'editar' | 'ver', producto?: Producto): void {
-        this.modoModal = modo;
         const base = producto ?? this.crearProductoVacio();
+
+        // Normaliza la moneda antes de asignar
+        const monedaNormalizada = this.normalizarMoneda(base.moneda);
+        this.producto = { ...base, moneda: monedaNormalizada };
+
         this.productoSeleccionado = base;
-        this.producto = { ...base };
+        this.modoModal = modo;
         this.esSoloLectura = (modo === 'ver');
         this.mostrarModal = true;
+        this.avatarPreview = '';
         document.body.classList.add('modal-open');
     }
+
 
     cerrarModal(): void {
         this.mostrarModal = false;
@@ -247,10 +241,6 @@ export class ProductosListComponent implements OnInit {
     }
 
     guardarProducto(): void {
-        if (this.producto?.moneda) {
-            this.producto.moneda = this.producto.moneda.toLowerCase();
-        }
-
         if (this.modoModal === 'agregar') {
             this.agregarProductoFlow();
         } else {
@@ -261,6 +251,8 @@ export class ProductosListComponent implements OnInit {
     private agregarProductoFlow(): void {
         const producto = this.productoSeguro;
         this.cargando = true;
+
+        console.log('PRODUCTO', producto);
 
         this.productoService.agregarProducto(producto)
             .pipe(
@@ -278,10 +270,18 @@ export class ProductosListComponent implements OnInit {
                 })
             )
             .subscribe(productos => {
-                this.productos = productos;
-                this.cerrarModal();
+                if (productos && productos.length > 0) {
+                    this.productos = productos;
+                    this.cerrarModal();
+                } else {
+                    this.cargando = false;
+                    this.swalService.showError(
+                        'Error',
+                        'No se pudo agregar el producto. Intenta nuevamente.'
+                    );
+                    // El modal permanece abierto
+                }
             });
-
     }
 
     private editarProductoFlow(): void {
@@ -379,7 +379,6 @@ export class ProductosListComponent implements OnInit {
         this.paginaActual = 1;
     }
 
-
     // =========== PAGINACIÓN ===========
     get productosPaginados(): Producto[] {
         const inicio = (this.paginaActual - 1) * this.PRODUCTOS_POR_PAGINA;
@@ -402,7 +401,15 @@ export class ProductosListComponent implements OnInit {
 
     // =========== UTILIDADES ===========
     get productoSeguro(): Producto {
-        return this.productoSeleccionado ?? this.crearProductoVacio();
+        const base = this.producto ?? this.crearProductoVacio();
+
+        return {
+            ...base,
+            id: base.id || crypto.randomUUID(),
+            moneda: base.moneda?.toLowerCase() ?? 'bolivar', // ya es el id del backend
+            fechaIngreso: base.fechaIngreso || new Date().toISOString().split('T')[0],
+            imagenUrl: this.avatarPreview || base.imagenUrl || ''
+        };
     }
 
     private crearProductoVacio(): Producto {
@@ -414,6 +421,7 @@ export class ProductosListComponent implements OnInit {
             color: '',
             codigo: '',
             material: '',
+            modelo: '',
             proveedor: '',
             categoria: null as any,
             stock: 0,
@@ -430,39 +438,28 @@ export class ProductosListComponent implements OnInit {
         return productos.map(p => p.stock === 0 ? { ...p, activo: false } : p);
     }
 
+    private normalizarMoneda(moneda: string): string {
+        switch (moneda?.toLowerCase()) {
+            case 'usd': return 'dolar';
+            case 'eur': return 'euro';
+            case 'ves': return 'bolivar';
+            default: return moneda?.toLowerCase() ?? 'bolivar';
+        }
+    }
+
+    esMonedaBolivar(moneda: string): boolean {
+        return this.normalizarMoneda(moneda) === 'bolivar';
+    }
+
     getPrecioBs(producto: Producto): number {
-        switch (producto.moneda) {
-            case 'usd': return producto.precio * this.tasaDolar;
-            case 'eur': return producto.precio * this.tasaEuro;
-            case 'ves': return producto.precio;
-            default: return 0;
-        }
+        const monedaId = this.normalizarMoneda(producto.moneda);
+        const tasa = this.moneda.find(m => m.id === monedaId)?.valor ?? 1;
+        return producto.precio * tasa;
     }
 
-    getSimboloMoneda(moneda: string): string {
-        switch (moneda) {
-            case 'usd': return '$';
-            case 'eur': return '€';
-            case 'ves': return 'Bs';
-            default: return moneda.toUpperCase();
-        }
-    }
-
-
-    obtenerImagen(categoria: string): string {
-        // Mapa local para las categorías más comunes
-        const imagenes: Record<string, string> = {
-            montura: 'assets/montura_2.avif',
-            lente: 'assets/montura_1.png',
-            liquido: 'assets/montura_3.jpg',
-            estuche: 'assets/montura_1.png',
-            accesorio: 'assets/montura_2.avif'
-        };
-
-        // Normalizamos a minúsculas para evitar problemas de casing
-        const clave = categoria?.toLowerCase() ?? '';
-
-        return imagenes[clave] || 'assets/default.jpg';
+    getSimboloMoneda(monedaId: string): string {
+        const id = this.normalizarMoneda(monedaId);
+        return this.moneda.find(m => m.id === id)?.simbolo ?? '';
     }
 
     getProfileImage(): string {
@@ -496,18 +493,17 @@ export class ProductosListComponent implements OnInit {
 
     formularioValido(): boolean {
         const camposObligatorios = [
-            'codigo', 'activo', 'marca', 'categoria',
-            'material', 'proveedor', 'stock', 'precio', 'moneda'
+            'nombre', 'activo', 'marca', 'categoria',
+            'material', 'stock', 'precio', 'moneda'
         ];
 
         return camposObligatorios.every(campo => {
             const valor = this.producto?.[campo];
 
             if (typeof valor === 'boolean') return true;
-            if (typeof valor === 'number') return !isNaN(valor);
+            if (typeof valor === 'number') return valor >= 0;
             return valor !== undefined && valor !== null && `${valor}`.trim().length > 0;
         });
-
     }
 
     actualizarPacientesPorSede(): void {
@@ -526,5 +522,4 @@ export class ProductosListComponent implements OnInit {
         const imgElement = event.target as HTMLImageElement;
         imgElement.src = 'assets/avatar-placeholder.avif';
     }
-
 }
