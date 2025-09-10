@@ -26,15 +26,13 @@ export class ProductoService {
     return this.http.get<Producto[]>(`/api/productos?page=${pagina}&limit=${limite}`);
   }
 
-  agregarProducto(producto: Producto): Observable<Producto> {
-    return this.http.post<Producto>(`${environment.apiUrl}/producto-add`, producto);
-
+  agregarProductoFormData(data: FormData): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/producto-add`, data);
   }
 
-  editarProducto(producto: Producto): Observable<Producto> {
-    return this.http.put<Producto>(`${environment.apiUrl}/productos/${producto.id}`, producto);
+  editarProducto(data: FormData, id: string): Observable<any> {
+    return this.http.put(`${environment.apiUrl}/producto-update/${id}`, data);
   }
-
   obtenerPorId(id: string): Producto | undefined {
     return this.productos.find(p => p.id === id);
   }

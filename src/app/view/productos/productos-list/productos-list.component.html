@@ -1,5 +1,5 @@
 <div class="container mt-4">
-  <div class="card">
+  <div class="card mb-5">
     <!-- Header principal -->
     <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
       <h4 class="mb-0">📦 Catálogo de productos</h4>
@@ -24,7 +24,8 @@
         <!-- Buscador -->
         <div class="col-md-4">
           <label for="filtroBusqueda" class="form-label">🔎 Productos</label>
-          <input id="filtroBusqueda" type="text" class="form-control" placeholder="Buscar por nombre, código o tipo"
+          <input id="filtroBusqueda" type="text" class="form-control"
+            placeholder="Buscar por nombre, código, marca, modelo, proveedor, material o color"
             [(ngModel)]="filtroBusqueda" />
         </div>
 
@@ -177,13 +178,12 @@
               </div>
 
               <!-- Botón Editar (detiene propagación) -->
-              <div class="mt-auto pt-2 d-flex justify-content-end">
+              <div class="mt-auto pt-2 d-flex justify-content-end" *ngIf="producto.sede === sedeActiva">
                 <button class="btn btn-sm btn-light text-warning border border-warning"
                   (click)="abrirModal('editar', producto); $event.stopPropagation()">
                   ✏️ Editar
                 </button>
               </div>
-
             </div>
           </div>
         </div>
@@ -267,7 +267,9 @@
                   <div class="col-md-4">
                     <div class="form-floating">
                       <input type="number" class="form-control" id="stock" [(ngModel)]="producto.stock" name="stock"
-                        required min="0" [disabled]="esSoloLectura" placeholder="Stock">
+                        required min="0" [disabled]="esSoloLectura" placeholder="Stock" (focus)="limpiarSiCero('stock')"
+                        (input)="limpiarCeroInicial($event, 'stock')"  (blur)="restaurarCeroSiVacio('stock')" />
+
                       <label for="stock">📦 Stock</label>
                     </div>
                   </div>
@@ -275,7 +277,9 @@
                   <div class="col-md-6">
                     <div class="form-floating">
                       <input type="number" class="form-control" id="precio" [(ngModel)]="producto.precio" name="precio"
-                        required min="0" [disabled]="esSoloLectura" placeholder="Precio">
+                        required min="0" [disabled]="esSoloLectura" placeholder="Precio"
+                        (focus)="limpiarSiCero('precio')" (input)="limpiarCeroInicial($event, 'precio')"  (blur)="restaurarCeroSiVacio('precio')" />
+
                       <label for="precio">💵 Precio</label>
                     </div>
                   </div>
@@ -390,7 +394,7 @@
                 <i class="bi bi-x-lg me-1"></i> Cancelar
               </button>
               <button type="submit" class="btn btn-primary px-4 py-2 shadow-sm"
-                [disabled]="!formularioModificado() || !formularioValido()">
+                [disabled]="botonGuardarDeshabilitado()">
                 <i class="bi bi-check-lg me-1"></i> {{ modoModal === 'editar' ? 'Actualizar' : 'Guardar' }}
               </button>
             </ng-container>

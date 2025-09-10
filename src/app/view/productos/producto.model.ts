@@ -3,7 +3,7 @@ export interface Producto {
   sede: string;
   nombre: string;
   codigo: string;
-  marca?: string;
+  marca: string;
   modelo?: string;
   color?: string;
   material?: string;
@@ -23,7 +23,7 @@ export interface ProductoDto {
   sede_id: string;
   nombre: string;
   codigo: string;
-  marca?: string;
+  marca: string;
   modelo?: string;
   color?: string;
   material?: string;
