@@ -58,6 +58,7 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
+              "outputPath": "dist/prod",
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,
@@ -85,6 +86,7 @@
                   "with": "src/environments/environment.dev.ts"
                 }
               ],
+              "outputPath": "dist/dev",
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
@@ -97,6 +99,7 @@
                   "with": "src/environments/environment.stage.ts"
                 }
               ],
+              "outputPath": "dist/staging",
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,

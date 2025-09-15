@@ -1,5 +1,5 @@
 export const environment = {
     production: false,
-    apiUrl: 'http://localhost:3500/api',
-    baseUrl: 'http://localhost:3500' // Añade esta nueva propiedad
+    apiUrl: 'https://api-dev.opticanewvisionlens.com/api',
+    baseUrl: 'https://api-dev.opticanewvisionlens.com' // Añade esta nueva propiedad
 };
