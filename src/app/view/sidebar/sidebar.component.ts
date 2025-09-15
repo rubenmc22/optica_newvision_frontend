@@ -383,6 +383,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     };
     return margins[moduleName] || '8px';
   }
+  
   obtenerSedeActual(): void {
     const authData = sessionStorage.getItem('authData');
 

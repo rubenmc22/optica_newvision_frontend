@@ -92,12 +92,21 @@
         </div>
       </div>
 
-
-      <!-- Vista vacía -->
-      <div *ngIf="productosFiltrados.length === 0" class="text-center text-muted py-5">
+      <!-- Catálogo vacío en la sede visualizada -->
+      <div *ngIf="productosVisualizados.length === 0" class="text-center text-muted py-5">
         <i class="fas fa-box-open fa-2x mb-2"></i>
-        <p class="mb-0">No hay productos que coincidan con los filtros actuales.</p>
+        <p class="mb-0">Aún no hay productos registrados en esta sede.</p>
+        <small class="text-muted">Haz clic en “Agregar producto” para comenzar.</small>
       </div>
+
+      <!-- Filtros activos pero sin coincidencias -->
+      <div *ngIf="productosVisualizados.length > 0 && productosFiltrados.length === 0"
+        class="text-center text-muted py-5">
+        <i class="fas fa-search-minus fa-2x mb-2"></i>
+        <p class="mb-0">No hay productos que coincidan con los filtros actuales.</p>
+        <small class="text-muted">Prueba ajustando los criterios de búsqueda.</small>
+      </div>
+
 
       <!-- Catálogo de productos -->
       <div class="row" *ngIf="productosFiltrados.length > 0">
@@ -268,7 +277,7 @@
                     <div class="form-floating">
                       <input type="number" class="form-control" id="stock" [(ngModel)]="producto.stock" name="stock"
                         required min="0" [disabled]="esSoloLectura" placeholder="Stock" (focus)="limpiarSiCero('stock')"
-                        (input)="limpiarCeroInicial($event, 'stock')"  (blur)="restaurarCeroSiVacio('stock')" />
+                        (input)="limpiarCeroInicial($event, 'stock')" (blur)="restaurarCeroSiVacio('stock')" />
 
                       <label for="stock">📦 Stock</label>
                     </div>
@@ -278,7 +287,8 @@
                     <div class="form-floating">
                       <input type="number" class="form-control" id="precio" [(ngModel)]="producto.precio" name="precio"
                         required min="0" [disabled]="esSoloLectura" placeholder="Precio"
-                        (focus)="limpiarSiCero('precio')" (input)="limpiarCeroInicial($event, 'precio')"  (blur)="restaurarCeroSiVacio('precio')" />
+                        (focus)="limpiarSiCero('precio')" (input)="limpiarCeroInicial($event, 'precio')"
+                        (blur)="restaurarCeroSiVacio('precio')" />
 
                       <label for="precio">💵 Precio</label>
                     </div>
@@ -352,6 +362,16 @@
                 </div>
               </div>
 
+            </div>
+            <!-- Nota informativa sobre sede -->
+            <div class="w-100 text-start mt-3 px-2">
+              <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 py-2 px-3 small rounded-3">
+                <i class="bi bi-info-circle-fill text-warning fs-5"></i>
+                <div>
+                  Los productos registrados estarán disponibles únicamente en la sede actual del sistema:
+                  <strong class="text-uppercase">{{ sedeActiva }}</strong>.
+                </div>
+              </div>
             </div>
           </div>
         </div>

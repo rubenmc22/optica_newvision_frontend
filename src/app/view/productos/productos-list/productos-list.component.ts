@@ -149,8 +149,6 @@ export class ProductosListComponent implements OnInit {
 
             this.tareaFinalizada();
         });
-
-
     }
 
     private obtenerTasasCambio(): void {
@@ -425,6 +423,15 @@ export class ProductosListComponent implements OnInit {
 
         return filtrados;
     }
+
+    get productosVisualizados(): Producto[] {
+        const sede = this.sedeFiltro?.trim().toLowerCase();
+        if (!sede || sede === 'todas') {
+            return this.productos; // ← mostrar todos los productos
+        }
+        return this.productos.filter(p => p.sede?.toLowerCase() === sede);
+    }
+
 
     ngOnChanges() {
         if (this.mostrarModal) {

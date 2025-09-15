@@ -2,8 +2,8 @@ import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http'; // Cambio clave aquí
-import { ScrollingModule } from '@angular/cdk/scrolling'; // ✅ Importa el módulo necesario
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { ScrollingModule } from '@angular/cdk/scrolling'; 
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgChartsModule } from 'ng2-charts';
 import { GraficoComparativaSedesComponent } from './dashboard/graficos/grafico-comparativa-sedes/grafico-comparativa-sedes.component';
@@ -28,7 +28,6 @@ import { TasaComponent } from './tasa-cambiaria/tasa.component';
 import { VerPacientesComponent } from './pacientes/pacientes.component';
 import { HistoriasMedicasComponent } from './historias-medicas/historias-medicas.component';
 import { ProductosListComponent } from './productos/productos-list/productos-list.component';
-import { ProductosInventarioComponent } from './productos/productos-inventario/productos-inventario.component';
 import { LoaderComponent } from './../shared/loader/loader.component'; 
 
 
@@ -61,7 +60,6 @@ import { NgSelectModule } from '@ng-select/ng-select';
     GraficoTotalSedeComponent,
     GraficoPacientesPorMesComponent,
     ProductosListComponent,
-    ProductosInventarioComponent,
     LoaderComponent
   ],
   imports: [
