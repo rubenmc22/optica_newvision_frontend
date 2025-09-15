@@ -54,8 +54,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       icon: 'fas fa-football-ball',
       submenu: [
         { label: 'Pacientes', routerLink: '/pacientes', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Historias Medicas', routerLink: '/pacientes-historias', roles: ['admin', 'gerente', 'asesor-optico'] },
-
+        { label: 'Historias Medicas', routerLink: '/pacientes-historias', roles: ['admin', 'gerente', 'asesor-optico'] }
       ],
       roles: ['admin', 'gerente', 'asesor-optico'],
       //  underConstruction: true
@@ -63,12 +62,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
     {
       label: 'Productos',
       icon: 'fas fa-users',
-      routerLink: '/productos',
+      routerLink: '/productos-inventario',
       roles: ['admin', 'gerente', 'asesor-optico'],
-      submenu: [
-        { label: 'Catálogo', routerLink: '/productos-catalogo', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Inventario', routerLink: '/productos-inventario', roles: ['admin', 'gerente', 'asesor-optico'] }
-      ],
       underConstruction: false
     },
     {
@@ -91,10 +86,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
       submenu: [
         { label: 'Ordenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor-optico'] },
         { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] },
-
+        { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] }
       ],
-
       underConstruction: true
     },
     {
@@ -119,7 +112,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     if (savedMenu) {
       this.selectedMenuLabel = savedMenu;
     } else {
-      this.selectedMenuLabel = 'Dashboard'; // 🟢 Valor por defecto
+      this.selectedMenuLabel = 'Dashboard';
     }
 
     if (savedSubmenu) {
@@ -146,7 +139,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.obtenerTasaCambio();
   }
 
-
   markActiveFromUrl(url: string): void {
     for (const menu of this.filteredMenu) {
       if (menu.routerLink === url) {
@@ -168,7 +160,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
   buildSubmenuItem(sub: any, parentLabel: string): any {
     return { ...sub, parentLabel };
   }
-
 
   ngOnDestroy(): void {
     this.userSubscriptions.forEach(sub => sub.unsubscribe());
@@ -243,7 +234,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
       localStorage.setItem('selectedSubmenuLabel', '');
     }
   }
-
 
   handleImageError(event: Event): void {
     const target = event.target as HTMLImageElement | null;
@@ -337,7 +327,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
     localStorage.setItem('selectedSubmenuLabel', '');
 
   }
-
 
   onMenuClick(event: Event, menuItem: any): void {
     if (menuItem?.underConstruction) {

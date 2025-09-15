@@ -99,15 +99,7 @@ export class ProductosListComponent implements OnInit {
 
         forkJoin({
             productos: this.productoService.getProductos().pipe(
-                take(1),
-                catchError(error => {
-                    console.error('Error al cargar productos:', error);
-                    this.snackBar.open('⚠️ No se pudo cargar el catálogo de productos.', 'Cerrar', {
-                        duration: 5000,
-                        panelClass: ['snackbar-error']
-                    });
-                    return of([]); // ← aquí está el cambio
-                })
+                take(1)
             ),
             sedes: this.authService.getSedes().pipe(
                 take(1),
@@ -220,22 +212,36 @@ export class ProductosListComponent implements OnInit {
 
     // =========== GESTIÓN DE MODAL ===========
     abrirModal(modo: 'agregar' | 'editar' | 'ver', producto?: Producto): void {
-        const base = producto ?? this.crearProductoVacio();
+        // Clonado profundo para evitar referencias compartidas
+        const base = producto
+            ? JSON.parse(JSON.stringify(producto))
+            : this.crearProductoVacio();
+
+        // Normalización defensiva de moneda
         const monedaNormalizada = this.normalizarMoneda(base.moneda);
-        const productoFinal = { ...base, moneda: monedaNormalizada };
+        const productoFinal: Producto = {
+            ...base,
+            moneda: monedaNormalizada,
+            id: base.id ?? crypto.randomUUID(), // ← blindaje obligatorio
+        };
 
-        this.producto = productoFinal;
+        // Asignación de estado visual y funcional
+        this.producto = { ...productoFinal };
         this.productoOriginal = modo === 'editar' ? { ...productoFinal } : null;
-
-        this.productoSeleccionado = base;
+        this.productoSeleccionado = modo === 'editar' ? { ...productoFinal } : undefined;
         this.modoModal = modo;
-        this.esSoloLectura = (modo === 'ver');
+        this.esSoloLectura = modo === 'ver';
         this.mostrarModal = true;
         this.avatarPreview = '';
         this.imagenSeleccionada = null;
+
+
+        setTimeout(() => {
+            this.cdr.detectChanges?.();
+        });
+
         document.body.classList.add('modal-open');
     }
-
 
     cerrarModal(): void {
         this.mostrarModal = false;
@@ -243,7 +249,8 @@ export class ProductosListComponent implements OnInit {
         this.productoOriginal = null;
         this.productoSeleccionado = undefined;
         this.avatarPreview = '';
-        this.imagenSeleccionada = null; // ← limpia la imagen cargada
+        this.imagenSeleccionada = null;
+        this.cargando = false;
         document.body.classList.remove('modal-open');
     }
 
@@ -256,7 +263,7 @@ export class ProductosListComponent implements OnInit {
     }
 
     private agregarProductoFlow(): void {
-        if (this.cargando) return; // ← evita doble ejecución
+        if (this.cargando) return;
         this.cargando = true;
 
         const producto = this.productoSeguro;
@@ -276,45 +283,35 @@ export class ProductosListComponent implements OnInit {
         formData.append('descripcion', producto.descripcion ?? '');
         formData.append('fechaIngreso', producto.fechaIngreso);
 
-        // Imagen como archivo
         if (this.imagenSeleccionada) {
             formData.append('imagen', this.imagenSeleccionada);
         }
 
-        this.productoService.agregarProductoFormData(formData)
-            .pipe(
-                switchMap(() => {
-                    this.swalService.showSuccess(
-                        '¡Registro exitoso!',
-                        'Producto agregado correctamente'
-                    );
-                    return this.productoService.getProductos();
-                }),
-                catchError((error) => {
-                    this.cargando = false;
-                    this.manejarErrorOperacion(error, 'agregar');
-                    return of<Producto[]>([]);
-                })
-            )
-            .subscribe(productos => {
-                if (productos && productos.length > 0) {
-                    this.productos = productos;
-                    this.cerrarModal();
-                } else {
-                    this.cargando = false;
-                    this.swalService.showError(
-                        'Error',
-                        'No se pudo agregar el producto. Intenta nuevamente.'
-                    );
-                }
-            });
+        this.productoService.agregarProductoFormData(formData).pipe(
+            switchMap(() => {
+                this.swalService.showSuccess('¡Registro exitoso!', 'Producto agregado correctamente');
+                return this.productoService.getProductos();
+            })
+        ).subscribe({
+            next: (productos) => {
+                this.productos = productos;
+                this.cargando = false;
+                this.cerrarModal();
+            },
+            error: (error) => {
+                this.cargando = false;
+                this.manejarErrorOperacion(error, 'agregar');
+            }
+        });
     }
 
     private editarProductoFlow(): void {
+        if (this.cargando) return;
+        this.cargando = true;
+
         const producto = this.productoSeguro;
         const formData = new FormData();
 
-        // Campos simples (blindados con ?? '')
         formData.append('nombre', producto.nombre ?? '');
         formData.append('marca', producto.marca ?? '');
         formData.append('modelo', producto.modelo ?? '');
@@ -336,31 +333,27 @@ export class ProductosListComponent implements OnInit {
         const id = this.productoSeleccionado?.id;
         if (!id) {
             this.swalService.showError('Error', 'No se encontró el ID del producto para editar.');
+            this.cargando = false;
             return;
         }
 
-        this.cargando = true;
-
-        this.productoService.editarProducto(formData, id)
-            .pipe(
-                switchMap(() => {
-                    this.swalService.showSuccess('¡Actualización exitosa!', 'Producto actualizado correctamente');
-                    return this.productoService.getProductos();
-                }),
-                catchError((error) => {
-                    this.cargando = false;
-                    this.manejarErrorOperacion(error, 'editar');
-                    return of([]);
-                })
-            )
-            .subscribe((productos) => {
-                if (productos.length) {
-                    this.productos = productos;
-                    this.cerrarModal();
-                }
-            });
+        this.productoService.editarProducto(formData, id).pipe(
+            switchMap(() => {
+                this.swalService.showSuccess('¡Actualización exitosa!', 'Producto actualizado correctamente');
+                return this.productoService.getProductos();
+            })
+        ).subscribe({
+            next: (productos) => {
+                this.productos = productos;
+                this.cargando = false;
+                this.cerrarModal();
+            },
+            error: (error) => {
+                this.cargando = false;
+                this.manejarErrorOperacion(error, 'editar');
+            }
+        });
     }
-
 
     private manejarErrorOperacion(error: any, operacion: 'agregar' | 'editar'): void {
         const msg = error.error?.message ?? '';
@@ -378,7 +371,6 @@ export class ProductosListComponent implements OnInit {
             this.swalService.showError(titulo, detalle);
         }
     }
-
 
     // =========== FILTRADO Y BÚSQUEDA ===========
     limpiarFiltros(): void {
@@ -565,6 +557,8 @@ export class ProductosListComponent implements OnInit {
         delete productoBase.imagenUrl;
 
         const imagenCambiada = this.imagenSeleccionada !== null;
+        const modificado = JSON.stringify(productoActual) !== JSON.stringify(productoBase) || imagenCambiada;
+        console.log('¿Formulario modificado?', modificado);
 
         return JSON.stringify(productoActual) !== JSON.stringify(productoBase) || imagenCambiada;
     }
@@ -586,8 +580,10 @@ export class ProductosListComponent implements OnInit {
     }
 
     botonGuardarDeshabilitado(): boolean {
+        console.log('Evaluando estado del botón');
         if (this.cargando) return true;
 
+        console.log('Evaluando estado del botón 2');
         if (this.modoModal === 'editar') {
             return !this.formularioModificado() || !this.formularioValido();
         }

@@ -93,10 +93,9 @@
 
 /* Color de opción seleccionada (en la lista desplegable) */
 .form-select option:checked {
-  background-color: green !important; 
+  background-color: var(--primary-color) !important; // o #0d6efd si no usas variables
   color: #fff;
 }
-
 
 .form-control,
 .form-select {
@@ -267,7 +266,9 @@
     width: 8px;
     height: 8px;
   }
+
 }
+
 
 /* ===== MODAL ===== */
 .modal-overlay {

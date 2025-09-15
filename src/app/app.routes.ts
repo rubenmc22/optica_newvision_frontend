@@ -99,16 +99,10 @@ export const appRoutes: Routes = [
         ]
       },
       {
-        path: 'productos-catalogo',
+        path: 'productos-inventario',
         component: ProductosListComponent,
         title: getFullTitle('Catálogo de productos')
       },
-      {
-        path: 'productos-inventario',
-        component: ProductosInventarioComponent,
-        title: getFullTitle('Inventario de productos')
-      },
-
       { path: '', redirectTo: 'dashboard', pathMatch: 'prefix' }
     ]
   },

@@ -113,6 +113,9 @@ export class LoginComponent implements OnInit {
         // Redirección y notificación de éxito
         this.router.navigate(['/dashboard'], { replaceUrl: true });
         this.swalService.showSuccess('¡Éxito!', 'Bienvenido, ha iniciado sesión correctamente');
+        localStorage.removeItem('selectedMenuLabel');
+        localStorage.removeItem('selectedSubmenuLabel');
+
       },
       error: (err: HttpErrorResponse) => {
         //console.log('err', err);
