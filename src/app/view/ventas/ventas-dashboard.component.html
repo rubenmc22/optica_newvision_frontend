@@ -1,0 +1,68 @@
+<div class="container-fluid px-4 mt-4">
+
+  <div class="row">
+    <!-- Generar Venta -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="small-box bg-info cursor-pointer" (click)="vista = 'venta'">
+        <div class="inner">
+          <div class="h4 fw-bold">{{ totalVentas }}</div>
+          <p>Generar Venta</p>
+        </div>
+        <div class="icon">
+          <i class="fas fa-cash-register"></i>
+        </div>
+        <span class="small-box-footer text-white-50 d-block">Abrir módulo <i class="fas fa-arrow-circle-right"></i></span>
+      </div>
+    </div>
+
+    <!-- Presupuesto -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="small-box bg-success cursor-pointer" (click)="vista = 'presupuesto'">
+        <div class="inner">
+          <div class="h4 fw-bold">{{ totalPresupuestos }}</div>
+          <p>Presupuestos activos</p>
+        </div>
+        <div class="icon">
+          <i class="fas fa-file-invoice-dollar"></i>
+        </div>
+        <span class="small-box-footer text-white-50 d-block">Abrir módulo <i class="fas fa-arrow-circle-right"></i></span>
+      </div>
+    </div>
+
+    <!-- Historial -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="small-box bg-warning cursor-pointer" (click)="vista = 'historial'">
+        <div class="inner">
+          <div class="h4 fw-bold">{{ totalHistorialVentas }}</div>
+          <p>Historial de ventas</p>
+        </div>
+        <div class="icon">
+          <i class="fas fa-history"></i>
+        </div>
+        <span class="small-box-footer text-white-50 d-block">Abrir módulo <i class="fas fa-arrow-circle-right"></i></span>
+      </div>
+    </div>
+
+    <!-- Cierre de Caja -->
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="small-box bg-danger cursor-pointer" (click)="vista = 'caja'">
+        <div class="inner">
+          <div class="h4 fw-bold">{{ totalCierres }}</div>
+          <p>Cierre de Caja</p>
+        </div>
+        <div class="icon">
+          <i class="fas fa-lock"></i>
+        </div>
+        <span class="small-box-footer text-white-50 d-block">Abrir módulo <i class="fas fa-arrow-circle-right"></i></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel dinámico -->
+  <div class="card shadow-sm p-3 mt-3">
+    <app-generar-venta *ngIf="vista === 'venta'"></app-generar-venta>
+    <app-presupuesto *ngIf="vista === 'presupuesto'"></app-presupuesto>
+    <app-historial-ventas *ngIf="vista === 'historial'"></app-historial-ventas>
+    <app-cierre-caja *ngIf="vista === 'caja'"></app-cierre-caja>
+  </div>
+</div>

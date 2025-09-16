@@ -1,0 +1,9 @@
+.small-box {
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+
+  &:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.2);
+  }
+}

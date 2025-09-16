@@ -106,9 +106,13 @@
               "namedChunks": false,
               "extractLicenses": true,
               "vendorChunk": false
+            },
+            "local": {
+              "fileReplacements": [],
+              "outputPath": "dist/local"
             }
           },
-          "defaultConfiguration": "production"
+          "defaultConfiguration": "local"
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
@@ -126,9 +130,12 @@
             },
             "staging": {
               "buildTarget": "optica_newvision_frontend:build:staging"
+            },
+            "local": {
+              "buildTarget": "optica_newvision_frontend:build:local"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "local"
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",

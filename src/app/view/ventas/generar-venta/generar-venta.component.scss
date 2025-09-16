@@ -1,0 +1,49 @@
+.contenedor-generar-venta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.panel-contexto,
+.panel-productos,
+.panel-resumen {
+    flex: 1 1 30%;
+    min-width: 280px;
+    border: 1px solid #ccc;
+    padding: 1rem;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+th,
+td {
+    border: 1px solid #ddd;
+    padding: 0.5rem;
+    text-align: left;
+}
+
+input[type="number"],
+input[type="text"],
+select,
+textarea {
+    width: 100%;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.4rem;
+    box-sizing: border-box;
+}
+
+.buscadorPaciente {
+    margin-bottom: 1rem;
+}
+
+ng-select {
+    width: 100%;
+}

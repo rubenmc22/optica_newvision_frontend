@@ -15,6 +15,7 @@ import { TasaComponent } from './view/tasa-cambiaria/tasa.component';
 import { VerPacientesComponent } from './view/pacientes/pacientes.component';
 import { HistoriasMedicasComponent } from './view/historias-medicas/historias-medicas.component';
 import { ProductosListComponent } from './view/productos/productos-list/productos-list.component';
+import { VentasDashboardComponent } from './view/ventas/ventas-dashboard.component';
 
 // Nombre de la óptica (constante global)
 const OPTICA_NAME = 'Óptica New Vision';
@@ -100,6 +101,11 @@ export const appRoutes: Routes = [
         path: 'productos-inventario',
         component: ProductosListComponent,
         title: getFullTitle('Catálogo de productos')
+      },
+      {
+        path: 'ventas',
+        component: VentasDashboardComponent,
+        title: getFullTitle('Ventas')
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'prefix' }
     ]

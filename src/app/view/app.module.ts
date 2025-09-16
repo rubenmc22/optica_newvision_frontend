@@ -3,7 +3,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { ScrollingModule } from '@angular/cdk/scrolling'; 
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgChartsModule } from 'ng2-charts';
 import { GraficoComparativaSedesComponent } from './dashboard/graficos/grafico-comparativa-sedes/grafico-comparativa-sedes.component';
@@ -28,7 +28,11 @@ import { TasaComponent } from './tasa-cambiaria/tasa.component';
 import { VerPacientesComponent } from './pacientes/pacientes.component';
 import { HistoriasMedicasComponent } from './historias-medicas/historias-medicas.component';
 import { ProductosListComponent } from './productos/productos-list/productos-list.component';
-import { LoaderComponent } from './../shared/loader/loader.component'; 
+import { GenerarVentaComponent } from './ventas/generar-venta/generar-venta.component';
+import { VentasDashboardComponent } from './ventas/ventas-dashboard.component';
+import { PresupuestoComponent } from './ventas/presupuesto/presupuesto.component';
+import { CierreCajaComponent } from './ventas/cierre-caja/cierre-caja.component';
+import { LoaderComponent } from './../shared/loader/loader.component';
 
 
 
@@ -60,7 +64,11 @@ import { NgSelectModule } from '@ng-select/ng-select';
     GraficoTotalSedeComponent,
     GraficoPacientesPorMesComponent,
     ProductosListComponent,
-    LoaderComponent
+    LoaderComponent,
+    GenerarVentaComponent,
+    VentasDashboardComponent,
+    PresupuestoComponent,
+    CierreCajaComponent
   ],
   imports: [
     NgChartsModule,
@@ -76,7 +84,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
 
     RouterModule.forRoot(appRoutes, {
       onSameUrlNavigation: 'reload',
-      bindToComponentInputs: true 
+      bindToComponentInputs: true
     })
   ],
   exports: [
@@ -85,10 +93,10 @@ import { NgSelectModule } from '@ng-select/ng-select';
   ],
   providers: [
     provideHttpClient(
-      withInterceptors([authInterceptor]) 
+      withInterceptors([authInterceptor])
     )
   ],
   bootstrap: [AppComponent],
-  schemas: [CUSTOM_ELEMENTS_SCHEMA] 
+  schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class AppModule { }

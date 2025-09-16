@@ -57,10 +57,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
         { label: 'Historias Medicas', routerLink: '/pacientes-historias', roles: ['admin', 'gerente', 'asesor-optico'] }
       ],
       roles: ['admin', 'gerente', 'asesor-optico'],
-      //  underConstruction: true
+      underConstruction: false
     },
     {
-      label: 'Productos',
+      label: 'Inventario de Productos',
       icon: 'fas fa-users',
       routerLink: '/productos-inventario',
       roles: ['admin', 'gerente', 'asesor-optico'],
@@ -69,14 +69,16 @@ export class SidebarComponent implements OnInit, OnDestroy {
     {
       label: 'Ventas',
       icon: 'fas fa-football-ball',
-      submenu: [
-        { label: 'Historial de ventas.', routerLink: '/Ventas/voleibol', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] },
+      routerLink: '/ventas',
+      /*submenu: [
+         { label: 'Generacion de ventas', routerLink: 'generar-ventas', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Historial', routerLink: 'historial-ventas', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Presupuesto', routerLink: 'presupuesto-ventas', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Cierre de caja', routerLink: 'cierre-de-caja', roles: ['admin', 'gerente'] },
 
-      ],
+      ],*/
       roles: ['admin', 'gerente', 'asesor-optico'],
-      underConstruction: true
+      underConstruction: false
     },
     {
       label: 'Ordenes de Trabajo',
@@ -188,19 +190,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
     });
 
     this.userSubscriptions.push(userProfileSub, authUserSub);
-  }
-
-  private updateUserProfile(user: User): void {
-    if (user) {
-      this.userName = user.nombre || this.userName;
-
-      // Actualiza la imagen solo si hay un cambio real
-      if (user.ruta_imagen && user.ruta_imagen !== this.profileImage) {
-        this.profileImage = this.sharedUserService.getFullImageUrl(user.ruta_imagen);
-      } else if (!user.ruta_imagen) {
-        this.profileImage = 'assets/default-photo.png';
-      }
-    }
   }
 
   private initializeUserData(): void {
@@ -383,7 +372,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     };
     return margins[moduleName] || '8px';
   }
-  
+
   obtenerSedeActual(): void {
     const authData = sessionStorage.getItem('authData');
 
