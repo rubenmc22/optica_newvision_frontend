@@ -1,8 +1,11 @@
+@use '../../../../custom-theme.scss' as theme;
+
 .contenedor-generar-venta {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
     padding: 1rem;
+    background: var(--degradado-pastel) !important;
 }
 
 .panel-contexto,
@@ -40,7 +43,7 @@ textarea {
     box-sizing: border-box;
 }
 
-.buscadorPaciente {
+.buscadorPaciente .buscadorProducto {
     margin-bottom: 1rem;
 }
 

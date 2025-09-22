@@ -13,7 +13,7 @@ export class ProductoService {
   constructor(
     private http: HttpClient,
     private errorHandler: ErrorHandlerService
-  ) {}
+  ) { }
 
   /** =======================
    * Obtener todos los productos
@@ -84,7 +84,9 @@ export class ProductoService {
       stock: dto.stock,
       categoria: dto.categoria,
       proveedor: dto.proveedor,
-      precio: dto.precio,
+      aplicaIva: dto.aplicaIva,                          
+      precioConIva: dto.precioConIva ?? undefined,      
+      precio: dto.precio,                              
       activo: dto.activo,
       descripcion: dto.descripcion,
       imagenUrl: dto.imagen_url?.startsWith('/public/')

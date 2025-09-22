@@ -246,130 +246,183 @@
         <!-- Cuerpo del modal con scroll -->
         <div class="modal-body p-4">
           <div class="container-fluid">
-            <!-- Fila superior: Imagen + Código + Estado -->
-            <div class="row g-3 mb-4">
-              <!-- Imagen -->
-              <div class="col-md-6 d-flex align-items-center justify-content-center">
-                <div class="avatar-widget">
-                  <img [src]="getProfileImage()" alt="Avatar del Producto" class="avatar-img"
-                    (error)="handleImageError($event)" />
-                  <div class="avatar-overlay show-on-hover" *ngIf="modoModal !== 'ver'">
-                    <label for="avatarUpload"><i class="fas fa-camera"></i></label>
-                    <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
-                      (change)="onFileSelected($event)" />
+            <!-- Fila superior: Imagen + Datos -->
+            <div class="row g-4 mb-4">
+              <!-- Imagen del producto -->
+              <div class="col-md-5">
+                <div class="card shadow-sm border-0 h-100">
+                  <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                    <div class="position-relative">
+                      <img [src]="getProfileImage()" alt="Avatar del Producto" class="rounded-circle border img-fluid"
+                        style="width: 200px; height: 200px; object-fit: cover;" (error)="handleImageError($event)" />
+                      <div class="position-absolute bottom-0 end-0" *ngIf="modoModal !== 'ver'">
+                        <label for="avatarUpload" class="btn btn-sm btn-light border rounded-circle shadow">
+                          <i class="fas fa-camera"></i>
+                        </label>
+                        <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
+                          (change)="onFileSelected($event)" />
+                      </div>
+                    </div>
+                    <small class="text-muted mt-2">Imagen del producto</small>
                   </div>
-
                 </div>
               </div>
 
-              <!-- Código y Estado -->
-              <div class="col-md-6">
+              <!-- Datos del producto -->
+              <div class="col-md-7">
+                <div class="card shadow-sm border-0 h-100">
+                  <div class="card-body">
+                    <h6 class="fw-bold text-primary mb-3">
+                      <i class="fas fa-box-open me-2"></i> Datos del producto
+                    </h6>
+
+                    <div class="row g-4">
+                      <!-- Nombre del producto -->
+                      <div class="col-md-8">
+                        <div class="form-floating">
+                          <input type="text" class="form-control" id="nombreProducto" [(ngModel)]="producto.nombre"
+                            name="nombre" required [disabled]="esSoloLectura" placeholder="Nombre del producto">
+                          <label for="nombreProducto">🏷️ Nombre del producto</label>
+                        </div>
+                      </div>
+
+                      <!-- Stock -->
+                      <div class="col-md-4">
+                        <div class="form-floating">
+                          <input type="number" class="form-control" id="stock" [(ngModel)]="producto.stock"
+                            [value]="producto.stock === 0 ? null : producto.stock"
+                            (focus)="producto.stock === 0 ? producto.stock = null : null" name="stock" required min="0"
+                            [disabled]="esSoloLectura" placeholder="Stock" (focus)="limpiarSiCero('stock')"
+                            (input)="limpiarCeroInicial($event, 'stock')" (blur)="restaurarCeroSiVacio('stock')" />
+                          <label for="stock">📦 Stock</label>
+                        </div>
+                      </div>
+
+                      <!-- Switch IVA -->
+                      <div class="col-md-3" *ngIf="modoModal !== 'ver'">
+                        <label class="form-label fw-semibold">¿Aplica IVA?</label>
+                        <div class="form-check form-switch">
+                          <input class="form-check-input" type="checkbox" id="aplicaIva"
+                            [(ngModel)]="producto.aplicaIva" name="aplicaIva" />
+                        </div>
+                      </div>
+
+                      <!-- Campo de precio en modo agregar/editar -->
+                      <div class="col-md-5" *ngIf="modoModal !== 'ver'">
+                        <div class="form-floating">
+                          <input type="number" class="form-control" id="precio" [(ngModel)]="producto.precio"
+                            [value]="producto.precio === 0 ? null : producto.precio"
+                            (focus)="producto.precio === 0 ? producto.precio = null : null" name="precio" required
+                            min="0" placeholder="{{ producto.aplicaIva ? 'Precio + IVA' : 'Precio' }}" />
+                          <label for="precio">💵 {{ producto.aplicaIva ? 'Precio + IVA' : 'Precio' }}</label>
+                        </div>
+                      </div>
+
+                      <!-- Precio sin IVA en modo ver -->
+                      <div class="col-md-4" *ngIf="modoModal === 'ver'">
+                        <div class="form-floating">
+                          <input type="number" class="form-control" [value]="producto.precio" disabled />
+                          <label>💵 Precio</label>
+                        </div>
+                      </div>
+
+                      <!-- Precio con IVA en modo ver (solo si aplica IVA) -->
+                      <div class="col-md-4" *ngIf="modoModal === 'ver' && producto.aplicaIva">
+                        <div class="form-floating">
+                          <input type="number" class="form-control" [value]="producto.precioConIva" disabled />
+                          <label>💵 Precio + IVA</label>
+                        </div>
+                      </div>
+
+
+                      <!-- Moneda -->
+                      <div class="col-md-4">
+                        <ng-select [items]="moneda" bindLabel="alias" bindValue="id" [(ngModel)]="producto.moneda"
+                          name="moneda" [searchable]="false" [clearable]="true" [disabled]="esSoloLectura"
+                          ngbTooltip="Moneda" placement="top-start">
+                        </ng-select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+
+            </div>
+
+
+            <!-- Resto del formulario -->
+            <div class="card shadow-sm border-0 h-100">
+              <div class="card-body">
+                <h6 class="fw-bold text-primary mb-3">
+                  <i class="fas fa-box-open me-2"></i> Caracteristicas del producto
+                </h6>
                 <div class="row g-3">
-                  <div class="col-md-8">
+                  <div class="col-md-4">
+                    <ng-select [items]="categoriasProducto" [(ngModel)]="producto.categoria" name="categoria"
+                      [searchable]="true" [clearable]="true" placeholder="📚 Indique una categoría "
+                      [disabled]="esSoloLectura" ngbTooltip="Categoría del producto" placement="top-start">
+                    </ng-select>
+                  </div>
+
+                  <div class="col-md-4">
                     <div class="form-floating">
-                      <input type="text" class="form-control" id="nombreProducto" [(ngModel)]="producto.nombre"
-                        name="nombre" required [disabled]="esSoloLectura" placeholder="Nombre del producto">
-                      <label for="nombreProducto">🏷️ Nombre del producto</label>
+                      <input type="text" class="form-control" id="marca" placeholder="🏷️ Marca"
+                        [(ngModel)]="producto.marca" name="marca" required [disabled]="esSoloLectura">
+                      <label for="marca">🏷️ Marca</label>
                     </div>
                   </div>
 
                   <div class="col-md-4">
                     <div class="form-floating">
-                      <input type="number" class="form-control" id="stock" [(ngModel)]="producto.stock" name="stock"
-                        required min="0" [disabled]="esSoloLectura" placeholder="Stock" (focus)="limpiarSiCero('stock')"
-                        (input)="limpiarCeroInicial($event, 'stock')" (blur)="restaurarCeroSiVacio('stock')" />
-
-                      <label for="stock">📦 Stock</label>
+                      <input type="text" class="form-control" id="modelo" placeholder="🧠 Modelo"
+                        [(ngModel)]="producto.modelo" name="modelo" [disabled]="esSoloLectura">
+                      <label for="modelo">🧠 Modelo</label>
                     </div>
                   </div>
 
-                  <div class="col-md-6">
+                  <div class="col-md-4">
                     <div class="form-floating">
-                      <input type="number" class="form-control" id="precio" [(ngModel)]="producto.precio" name="precio"
-                        required min="0" [disabled]="esSoloLectura" placeholder="Precio"
-                        (focus)="limpiarSiCero('precio')" (input)="limpiarCeroInicial($event, 'precio')"
-                        (blur)="restaurarCeroSiVacio('precio')" />
-
-                      <label for="precio">💵 Precio</label>
+                      <input type="text" class="form-control" id="proveedor" placeholder="🚚 Proveedor"
+                        [(ngModel)]="producto.proveedor" name="proveedor" [disabled]="esSoloLectura">
+                      <label for="proveedor">🚚 Proveedor</label>
                     </div>
                   </div>
 
-                  <div class="col-md-6">
-                    <ng-select [items]="moneda" bindLabel="alias" bindValue="id" [(ngModel)]="producto.moneda"
-                      name="moneda" [searchable]="false" [clearable]="true" placeholder="💱 Moneda"
-                      [disabled]="esSoloLectura">
-                    </ng-select>
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <input type="text" class="form-control" id="material" placeholder="🧵 Material"
+                        [(ngModel)]="producto.material" name="material" required [disabled]="esSoloLectura">
+                      <label for="material">🧵 Material</label>
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <div class="form-floating">
+                      <input type="text" class="form-control" id="color" placeholder="🎨 Color"
+                        [(ngModel)]="producto.color" name="color" [disabled]="esSoloLectura">
+                      <label for="color">🎨 Color</label>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <div class="form-floating">
+                      <textarea class="form-control" id="descripcion" placeholder="📝 Descripción"
+                        [(ngModel)]="producto.descripcion" name="descripcion" style="height: 100px"
+                        [disabled]="esSoloLectura"></textarea>
+                      <label for="descripcion">📝 Descripción</label>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <!-- Resto del formulario -->
-            <div class="row g-3">
-              <div class="col-md-4">
-                <ng-select [items]="categoriasProducto" [(ngModel)]="producto.categoria" name="categoria"
-                  [searchable]="true" [clearable]="true" placeholder="📚 Indique una categoría "
-                  [disabled]="esSoloLectura" ngbTooltip="Categoría del producto" placement="top-start">
-                </ng-select>
-              </div>
-
-              <div class="col-md-4">
-                <div class="form-floating">
-                  <input type="text" class="form-control" id="marca" placeholder="🏷️ Marca"
-                    [(ngModel)]="producto.marca" name="marca" required [disabled]="esSoloLectura">
-                  <label for="marca">🏷️ Marca</label>
-                </div>
-              </div>
-
-              <div class="col-md-4">
-                <div class="form-floating">
-                  <input type="text" class="form-control" id="modelo" placeholder="🧠 Modelo"
-                    [(ngModel)]="producto.modelo" name="modelo" [disabled]="esSoloLectura">
-                  <label for="modelo">🧠 Modelo</label>
-                </div>
-              </div>
-
-              <div class="col-md-4">
-                <div class="form-floating">
-                  <input type="text" class="form-control" id="proveedor" placeholder="🚚 Proveedor"
-                    [(ngModel)]="producto.proveedor" name="proveedor" [disabled]="esSoloLectura">
-                  <label for="proveedor">🚚 Proveedor</label>
-                </div>
-              </div>
-
-              <div class="col-md-4">
-                <div class="form-floating">
-                  <input type="text" class="form-control" id="material" placeholder="🧵 Material"
-                    [(ngModel)]="producto.material" name="material" required [disabled]="esSoloLectura">
-                  <label for="material">🧵 Material</label>
-                </div>
-              </div>
-
-              <div class="col-md-4">
-                <div class="form-floating">
-                  <input type="text" class="form-control" id="color" placeholder="🎨 Color" [(ngModel)]="producto.color"
-                    name="color" [disabled]="esSoloLectura">
-                  <label for="color">🎨 Color</label>
-                </div>
-              </div>
-
-              <div class="col-12">
-                <div class="form-floating">
-                  <textarea class="form-control" id="descripcion" placeholder="📝 Descripción"
-                    [(ngModel)]="producto.descripcion" name="descripcion" style="height: 100px"
-                    [disabled]="esSoloLectura"></textarea>
-                  <label for="descripcion">📝 Descripción</label>
-                </div>
-              </div>
-
-            </div>
-            <!-- Nota informativa sobre sede -->
-            <div class="w-100 text-start mt-3 px-2">
-              <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 py-2 px-3 small rounded-3">
-                <i class="bi bi-info-circle-fill text-warning fs-5"></i>
-                <div>
-                  Los productos registrados estarán disponibles únicamente en la sede actual del sistema:
-                  <strong class="text-uppercase">{{ sedeActiva }}</strong>.
+              <!-- Nota informativa sobre sede -->
+              <div class="w-100 text-start mt-3 mb-3 px-2">
+                <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 py-2 px-3 small rounded-3">
+                  <i class="bi bi-info-circle-fill text-warning fs-5"></i>
+                  <div>
+                    Los productos registrados estarán disponibles únicamente en la sede actual del sistema:
+                    <strong class="text-uppercase">{{ sedeActiva }}</strong>.
+                  </div>
                 </div>
               </div>
             </div>

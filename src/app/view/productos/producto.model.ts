@@ -11,7 +11,9 @@ export interface Producto {
   stock: number;
   categoria: string;
   proveedor: string;
-  precio: number;
+  aplicaIva: boolean;        
+  precioConIva?: number;      
+  precio: number;            
   activo: boolean;
   descripcion?: string;
   imagenUrl?: string;
@@ -31,12 +33,15 @@ export interface ProductoDto {
   stock: number;
   categoria: string;
   proveedor: string;
-  precio: number;
+  aplicaIva: boolean;         
+  precioConIva?: number;      
+  precio: number;             
   activo: boolean;
   descripcion?: string;
   imagen_url?: string;
   created_at: string;
 }
+
 
 export interface MonedaVisual {
   id: string;         // ID real del backend (dolar, euro, bolivar)

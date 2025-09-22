@@ -2,126 +2,293 @@
 
     <!-- 🧑 Paciente y contexto clínico -->
     <section class="panel-contexto">
-        <div class="buscadorPaciente">
-            <label for="selectorPaciente" class="form-label">👤 Buscar y seleccionar paciente</label>
+        <div class="card-body">
+            <div class="buscadorPaciente">
+                <label for="selectorPaciente" class="form-label">👤 Buscar y seleccionar paciente</label>
 
-            <ng-select id="selectorPaciente" [items]="pacientesFiltradosPorSede"
-                bindLabel="informacionPersonal.nombreCompleto" [selectOnTab]="true" [clearable]="true"
-                [searchable]="true" [(ngModel)]="pacienteSeleccionado" (search)="actualizarFiltroTexto($event)"
-                (change)="onPacienteSeleccionado($event)" [searchFn]="filtrarPorNombreOCedula"
-                placeholder="Buscar por nombre o cédula...">
+                <ng-select id="selectorPaciente" [items]="pacientesFiltradosPorSede"
+                    bindLabel="informacionPersonal.nombreCompleto" [selectOnTab]="true" [clearable]="true"
+                    [searchable]="true" [(ngModel)]="pacienteSeleccionado" (search)="actualizarFiltroTexto($event)"
+                    (change)="onPacienteSeleccionado($event)" [searchFn]="filtrarPorNombreOCedula"
+                    placeholder="Buscar por nombre o cédula...">
 
-                <ng-template ng-option-tmp let-item="item">
-                    {{ item.informacionPersonal.nombreCompleto }} — {{ item.informacionPersonal.cedula }}
-                </ng-template>
+                    <ng-template ng-option-tmp let-item="item">
+                        {{ item.informacionPersonal.nombreCompleto }} — {{ item.informacionPersonal.cedula }}
+                    </ng-template>
 
-                <ng-template ng-notfound-tmp>
-                    <div class="text-muted px-2 py-1">
-                        No se encontraron pacientes con ese nombre o cédula
-                    </div>
-                </ng-template>
-            </ng-select>
-        </div>
+                    <ng-template ng-notfound-tmp>
+                        <div class="text-muted px-2 py-1">
+                            No se encontraron pacientes con ese nombre o cédula
+                        </div>
+                    </ng-template>
+                </ng-select>
+            </div>
 
+            <div *ngIf="historiaMedica" class="mt-4">
+                <h4 class="mb-1">👓 Formulación</h4>
 
-        <div *ngIf="historiaMedica">
-            <h4>Última fórmula óptica</h4>
-            <p><strong>OD:</strong> {{ historiaMedica.examenOcular?.refraccionFinal?.esf_od }} / {{
-                historiaMedica.examenOcular?.refraccionFinal?.cil_od }} × {{
-                historiaMedica.examenOcular?.refraccionFinal?.eje_od }}</p>
-            <p><strong>OI:</strong> {{ historiaMedica.examenOcular?.refraccionFinal?.esf_oi }} / {{
-                historiaMedica.examenOcular?.refraccionFinal?.cil_oi }} × {{
-                historiaMedica.examenOcular?.refraccionFinal?.eje_oi }}</p>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm text-center align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ojo</th>
+                                <th>ESF</th>
+                                <th>CIL</th>
+                                <th>EJE</th>
+                                <th>ADD</th>
+                                <th>ALT</th>
+                                <th>DP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>OD</strong></td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.esf_od }}</td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.cil_od }}</td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.eje_od }}</td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.add_od }}</td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.alt_od }}</td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.dp_od }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>OI</strong></td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.esf_oi }}</td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.cil_oi }}</td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.eje_oi }}</td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.add_oi }}</td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.alt_oi }}</td>
+                                <td>{{ historiaMedica.examenOcular.refraccionFinal.dp_oi }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
-            <h4>Recomendaciones</h4>
-            <ul>
-                <li>Montura: {{ historiaMedica.recomendaciones[0]?.montura }}</li>
-                <li>Material: {{ materialesRecomendados }}</li>
-                <li>Cristal: {{ historiaMedica.recomendaciones[0]?.cristal?.label }}</li>
-            </ul>
+                <h4 class="mt-4">📋 Recomendaciones</h4>
+                <ul>
+                    <li><strong>Montura:</strong> {{ historiaMedica.recomendaciones[0].montura }}</li>
+                    <li><strong>Material:</strong> {{ materialesRecomendados }}</li>
+                    <li><strong>Cristal:</strong> {{ historiaMedica.recomendaciones[0].cristal.label }}</li>
+                </ul>
+            </div>
+
         </div>
     </section>
 
-    <!-- 🛒 Carrito de productos -->
-    <section class="panel-productos">
-        <div class="buscadorProducto">
-            <label for="selectorProducto" class="form-label">🧴 Buscar y agregar producto</label>
+    <!-- 🧑‍💼 Asesor responsable -->
+    <section class="panel-asesor">
+        <label for="selectorAsesor" class="form-label">👤 Asesor responsable</label>
 
-            <ng-select id="selectorProducto" [items]="productosFiltradosPorSede" bindLabel="nombre" bindValue="id"
-                [searchable]="true" [clearable]="true" [selectOnTab]="true" [(ngModel)]="productoSeleccionado"
-                (change)="agregarProductoPorSeleccion($event)" [searchFn]="filtrarProductoPorNombreOCodigo"
-                placeholder="Buscar por nombre o código...">
+        <ng-select id="selectorAsesor" [items]="empleadosDisponibles" bindLabel="nombre" bindValue="id"
+            [(ngModel)]="asesorSeleccionado" [clearable]="false" [searchable]="true" placeholder="Selecciona asesor...">
+        </ng-select>
 
-                <ng-template ng-option-tmp let-item="item">
-                    {{ item.nombre }} — {{ item.codigo }}
-                </ng-template>
+        <div *ngIf="asesorSeleccionado" class="mt-2 text-muted">
+            <small>Asignado a: {{ getResumenAsesor() }}</small>
 
-                <ng-template ng-notfound-tmp>
-                    <div class="text-muted px-2 py-1">
-                        No se encontraron productos con ese nombre o código
-                    </div>
-                </ng-template>
-            </ng-select>
         </div>
+    </section>
 
 
+    <!-- 🛒 Carrito de productos -->
+    <section class="panel-productos shadow-sm">
+        <div class="card-body">
+            <div class="buscadorProducto">
+                <label for="selectorProducto" class="form-label">🧴 Buscar y agregar producto</label>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Precio</th>
-                    <th>Cantidad</th>
-                    <th>Total</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr *ngFor="let p of venta.productos">
-                    <td>{{ p.nombre }}</td>
-                    <td>{{ p.precio | number:'1.2-2' }} {{ p.moneda }}</td>
-                    <td><input type="number" [(ngModel)]="p.cantidad" min="1" /></td>
-                    <td>{{ p.precio * p.cantidad | number:'1.2-2' }} {{ p.moneda }}</td>
-                    <td><button (click)="eliminarProducto(p.id)">Eliminar</button></td>
-                </tr>
-            </tbody>
-        </table>
+                <ng-select id="selectorProducto" [items]="productosFiltradosPorSede" bindLabel="nombre"
+                    [searchable]="true" [clearable]="true" [selectOnTab]="true" [(ngModel)]="productoSeleccionado"
+                    (change)="agregarProductoPorSeleccion($event)" [searchFn]="filtrarProductoPorNombreOCodigo"
+                    placeholder="Buscar por nombre o código...">
+
+                    <ng-template ng-option-tmp let-item="item">
+                        {{ item.nombre }} — {{ item.codigo }}
+                    </ng-template>
+
+                    <ng-template ng-notfound-tmp>
+                        <div class="text-muted px-2 py-1">
+                            No se encontraron productos con ese nombre o código
+                        </div>
+                    </ng-template>
+                </ng-select>
+            </div>
+
+            <div *ngIf="venta.productos.length > 0" class="table-responsive mt-3">
+                <!-- Contenedor con scroll -->
+                <div class="scrollable-table border rounded" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-bordered table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top bg-white">
+                            <tr>
+                                <th class="text-center align-middle">Nombre</th>
+                                <th class="text-center align-middle">Precio</th>
+                                <th class="text-center align-middle">Cant.</th>
+                                <th class="text-center align-middle">Subtotal</th>
+                                <th class="text-center align-middle">IVA <span class="text-muted"> 
+                                    ({{ IVA * 100 }}%)</span></th>
+                                <th class="text-center align-middle">Total</th>
+                                <th class="text-center align-middle">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let p of productosConDetalle">
+                                <td class="text-center align-middle">{{ p.nombre }}</td>
+                                <td class="text-center align-middle">{{ p.precio | number:'1.2-2' }} {{ p.moneda }}</td>
+                                <td class="text-center align-middle">
+                                    <input type="number" [(ngModel)]="p.cantidad" min="1"
+                                        class="form-control form-control-sm text-center" style="max-width: 50px;"
+                                        (ngModelChange)="actualizarProductosConDetalle()" />
+                                </td>
+                                <td class="text-center align-middle">{{ p.subtotal | number:'1.2-2' }} {{ p.moneda }}</td>
+                                <td class="text-center align-middle">
+                                    <span *ngIf="p.iva > 0">{{ p.iva | number:'1.2-2' }} {{ p.moneda }}</span>
+                                    <span *ngIf="p.iva === 0" class="text-muted">—</span>
+                                </td>
+                                <td class="fw-bold text-center align-middle">{{ p.total | number:'1.2-2' }} {{ p.moneda }}</td>
+                                <td class="text-center align-middle">
+                                    <button class="btn btn-sm btn-outline-danger"
+                                        (click)="eliminarProducto(p.id)">🗑️</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+
+                </div>
+
+                <!-- Total fuera del scroll -->
+                <div class="d-flex justify-content-end mt-2">
+                    <div class="bg-light px-3 py-2 rounded border">
+                        <strong>Total productos:</strong>
+                        {{ subtotal | number:'1.2-2' }} {{ venta.moneda.toUpperCase() }}
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
     </section>
 
     <!-- 💳 Resumen de venta -->
-    <section class="panel-resumen">
-        <h3>Resumen de Venta</h3>
+    <section class="panel-resumen card shadow-sm">
+        <div class="card-body">
+            <h3 class="mb-3">Resumen de Venta</h3>
 
-        <label>Moneda:
-            <select [(ngModel)]="venta.moneda">
-                <option value="ves">VES</option>
-                <option value="usd">USD</option>
-                <option value="eur">EUR</option>
-            </select>
-        </label>
+            <!-- 💳 Forma de pago -->
+            <div class="row g-3 mt-3">
+                <div class="col-md-4">
+                    <label class="form-label">Forma de pago</label>
+                    <select class="form-select" [(ngModel)]="venta.formaPago"
+                        (ngModelChange)="onFormaPagoChange($event)">
+                        <option value="contado">Contado</option>
+                        <option value="cuotas">Cuotas</option>
+                        <option value="abono">Abono parcial</option>
+                        <option value="cashea">Cashea</option>
+                    </select>
+                </div>
 
-        <label>Forma de pago:
-            <input type="text" [(ngModel)]="venta.formaPago" />
-        </label>
+                <div class="col-md-4">
+                    <label class="form-label">Descuento (%)</label>
+                    <input type="number" class="form-control" [(ngModel)]="venta.descuento" min="0" max="100" />
+                </div>
+            </div>
 
-        <label>Descuento (%):
-            <input type="number" [(ngModel)]="venta.descuento" min="0" max="100" />
-        </label>
+            <!-- 💸 Si forma de pago es Cashea -->
+            <div *ngIf="venta.formaPago === 'cashea'" class="row g-3 mt-3">
+                <div class="col-md-4">
+                    <label class="form-label">Nivel Cashea</label>
+                    <select class="form-select" [(ngModel)]="nivelCashea" (change)="asignarInicialPorNivel()">
+                        <option value="nivel1">Nivel 1 (60%)</option>
+                        <option value="nivel2">Nivel 2 (50%)</option>
+                        <option value="nivel3">Nivel 3 (40%)</option>
+                        <option value="nivel4">Nivel 4 (40%)</option>
+                        <option value="nivel5">Nivel 5 (40%)</option>
+                        <option value="nivel6">Nivel 6 (40%)</option>
+                    </select>
+                </div>
 
-        <label>Observaciones clínicas:
-            <textarea [(ngModel)]="venta.observaciones"></textarea>
-        </label>
+                <div class="col-md-4">
+                    <label class="form-label">Inicial ($)</label>
+                    <input type="number" class="form-control" [(ngModel)]="venta.montoInicial"
+                        [min]="calcularInicialCasheaPorNivel(totalConDescuento, nivelCashea)"
+                        (blur)="validarInicialCashea()" />
+                    <small class="text-muted">
+                        Mínimo requerido: {{ calcularInicialCasheaPorNivel(totalConDescuento, nivelCashea) |
+                        number:'1.2-2' }} $
+                    </small>
+                </div>
 
-        <div class="totales">
-            <p>Subtotal: {{ subtotal | number:'1.2-2' }} {{ venta.moneda }}</p>
-            <p>Impuesto ({{ venta.impuesto }}%): {{ subtotal * (venta.impuesto / 100) | number:'1.2-2' }} {{
-                venta.moneda }}</p>
-            <p>Descuento: {{ venta.descuento ? subtotal * (venta.descuento / 100) : 0 | number:'1.2-2' }} {{
-                venta.moneda }}</p>
-            <h4>Total: {{ totalConDescuento | number:'1.2-2' }} {{ venta.moneda }}</h4>
+                <div class="col-md-4">
+                    <label class="form-label">Monto por cuota ($)</label>
+                    <input type="number" class="form-control" [value]="calcularCasheaPlan().cuotas[0]" disabled />
+                </div>
+
+                <div class="col-12 mt-3">
+                    <h6>📅 Fechas de pago</h6>
+                    <ul class="list-group">
+                        <li class="list-group-item" *ngFor="let fecha of calcularCasheaPlan().fechas; let i = index">
+                            Cuota {{ i + 1 }}: {{ fecha }}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+
+            <!-- 💸 Si forma de pago es abono -->
+            <div *ngIf="venta.formaPago === 'abono'" class="row g-3 mt-3">
+                <div class="col-md-6">
+                    <label class="form-label">Monto abonado ($)</label>
+                    <input type="number" class="form-control" [(ngModel)]="venta.montoAbonado" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Total adeudado ($)</label>
+                    <input type="text" class="form-control"
+                        [value]="(totalConDescuento - (venta.montoAbonado ?? 0)) | number:'1.2-2'" disabled />
+                </div>
+            </div>
+
+            <!-- 💳 Métodos de pago múltiples -->
+            <div class="mt-4">
+                <label class="form-label">Métodos de pago</label>
+                <div *ngFor="let metodo of venta.metodosDePago; let i = index" class="row g-2 align-items-center mb-2">
+                    <div class="col-md-5">
+                        <select class="form-select" [(ngModel)]="metodo.tipo">
+                            <option value="efectivo">Efectivo</option>
+                            <option value="debito">Débito</option>
+                            <option value="credito">Crédito</option>
+                            <option value="transferencia">Transferencia</option>
+                            <option value="zelle">Zelle</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <input type="number" class="form-control" [(ngModel)]="metodo.monto" placeholder="Monto ($)" />
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <button class="btn btn-outline-danger btn-sm" (click)="eliminarMetodo(i)">🗑️</button>
+                    </div>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" (click)="agregarMetodo()">➕ Agregar método</button>
+            </div>
+
+            <!-- 📝 Observaciones -->
+            <div class="mt-4">
+                <label class="form-label">Observaciones clínicas</label>
+                <textarea class="form-control" [(ngModel)]="venta.observaciones" rows="3"></textarea>
+            </div>
+
+            <!-- 📊 Totales -->
+            <!-- 📊 Totales -->
+            <div class="totales mt-4">
+                <p>Subtotal (sin IVA): {{ subtotal | number:'1.2-2' }} {{ venta.moneda }}</p>
+                <p>IVA total: {{ totalIva | number:'1.2-2' }} {{ venta.moneda }}</p>
+                <p>Descuento: {{ venta.descuento ? (subtotal + totalIva) * (venta.descuento / 100) : 0 | number:'1.2-2'
+                    }} {{ venta.moneda }}</p>
+                <h4>Total: {{ totalConDescuento | number:'1.2-2' }} {{ venta.moneda }}</h4>
+            </div>
+
+
+            <div class="text-end mt-3">
+                <button class="btn btn-success" (click)="generarVenta()">🧾 Generar Venta</button>
+            </div>
         </div>
-
-        <button (click)="generarVenta()">Generar Venta</button>
     </section>
 
 </div>

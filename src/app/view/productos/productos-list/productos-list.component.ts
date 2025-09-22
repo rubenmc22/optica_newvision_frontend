@@ -26,6 +26,7 @@ export class ProductosListComponent implements OnInit {
     // CONSTANTES
     private readonly PRODUCTOS_POR_PAGINA = 12;
     private readonly RANGO_PAGINACION = 3;
+    readonly IVA = 0.16;
 
     // ESTADO DEL COMPONENTE
     productos: Producto[] = [];
@@ -275,11 +276,14 @@ export class ProductosListComponent implements OnInit {
         formData.append('proveedor', producto.proveedor);
         formData.append('categoria', producto.categoria);
         formData.append('stock', producto.stock.toString());
-        formData.append('precio', producto.precio.toString());
         formData.append('moneda', producto.moneda);
         formData.append('activo', producto.activo ? 'true' : 'false');
         formData.append('descripcion', producto.descripcion ?? '');
         formData.append('fechaIngreso', producto.fechaIngreso);
+
+        // ✅ IVA logic simplificada
+        formData.append('aplicaIva', producto.aplicaIva.toString());
+        formData.append('precio', producto.precio.toString()); // siempre se envía este
 
         if (this.imagenSeleccionada) {
             formData.append('imagen', this.imagenSeleccionada);
@@ -302,6 +306,8 @@ export class ProductosListComponent implements OnInit {
             }
         });
     }
+
+
 
     private editarProductoFlow(): void {
         if (this.cargando) return;
@@ -493,7 +499,9 @@ export class ProductosListComponent implements OnInit {
             proveedor: '',
             categoria: null as any,
             stock: 0,
+            aplicaIva: false,
             precio: 0,
+            precioConIva: 0,
             moneda: null as any,
             activo: true,
             descripcion: '',
@@ -501,6 +509,7 @@ export class ProductosListComponent implements OnInit {
             fechaIngreso: new Date().toISOString().split('T')[0]
         };
     }
+
 
     actualizarEstadoPorStock(productos: Producto[]): Producto[] {
         return productos.map(p => p.stock === 0 ? { ...p, activo: false } : p);
@@ -637,5 +646,18 @@ export class ProductosListComponent implements OnInit {
     onImageError(event: Event): void {
         const imgElement = event.target as HTMLImageElement;
         imgElement.src = 'assets/avatar-placeholder.avif';
+    }
+
+    onToggleIva(): void {
+        if (!this.producto.aplicaIva) {
+            this.producto.precioConIva = undefined;
+        } else {
+            this.calcularPrecioSinIva();
+        }
+    }
+
+    calcularPrecioSinIva(): void {
+        const conIva = this.producto.precioConIva ?? 0;
+        this.producto.precio = +(conIva / (1 + this.IVA)).toFixed(2);
     }
 }
