@@ -97,6 +97,11 @@
   color: #fff;
 }
 
+.modal-ancho-custom {
+  max-width: 45vw; /* o 1200px, 1400px, según lo que necesites */
+}
+
+
 .form-control,
 .form-select {
   border-radius: 0.5rem;

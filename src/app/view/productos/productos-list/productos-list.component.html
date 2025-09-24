@@ -148,9 +148,12 @@
                 <ng-container *ngIf="!esMonedaBolivar(producto.moneda); else soloBs">
                   <div class="d-flex align-items-center gap-2 mb-1">
                     <span class="fs-5 fw-bold text-primary">
-                      {{ getSimboloMoneda(producto.moneda) }} {{ producto.precio | number:'1.2-2' }}
+                      {{ getSimboloMoneda(producto.moneda) }}
+                      {{ producto.aplicaIva ? (producto.precioConIva | number:'1.2-2') : (producto.precio |
+                      number:'1.2-2') }}
                     </span>
                   </div>
+
                   <div class="d-flex align-items-center gap-2 text-muted small">
                     <i class="fas fa-exchange-alt"></i>
                     <span>Bs {{ getPrecioBs(producto) | number:'1.2-2' }}</span>
@@ -221,7 +224,7 @@
 <!-- Modal Agregar/Ver/Editar -->
 <div class="modal-overlay modal-catalogo" *ngIf="mostrarModal">
   <div class="modal d-block" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-ancho-custom">
 
       <form #formProducto="ngForm" class="modal-content border-0 shadow" (ngSubmit)="guardarProducto()">
 
@@ -254,7 +257,7 @@
                   <div class="card-body d-flex flex-column align-items-center justify-content-center">
                     <div class="position-relative">
                       <img [src]="getProfileImage()" alt="Avatar del Producto" class="rounded-circle border img-fluid"
-                        style="width: 200px; height: 200px; object-fit: cover;" (error)="handleImageError($event)" />
+                        style="width: 220px; height: 220px; object-fit: cover;" (error)="handleImageError($event)" />
                       <div class="position-absolute bottom-0 end-0" *ngIf="modoModal !== 'ver'">
                         <label for="avatarUpload" class="btn btn-sm btn-light border rounded-circle shadow">
                           <i class="fas fa-camera"></i>
@@ -298,23 +301,34 @@
                         </div>
                       </div>
 
-                      <!-- Switch IVA -->
+                      <!-- Switch IVA con sincronización -->
                       <div class="col-md-3" *ngIf="modoModal !== 'ver'">
                         <label class="form-label fw-semibold">¿Aplica IVA?</label>
                         <div class="form-check form-switch">
                           <input class="form-check-input" type="checkbox" id="aplicaIva"
-                            [(ngModel)]="producto.aplicaIva" name="aplicaIva" />
+                            [(ngModel)]="producto.aplicaIva" name="aplicaIva" (change)="sincronizarPrecio()" />
                         </div>
                       </div>
 
-                      <!-- Campo de precio en modo agregar/editar -->
-                      <div class="col-md-5" *ngIf="modoModal !== 'ver'">
+                      <!-- Campo de precio editable -->
+                      <div class="col-md-5" *ngIf="modoModal !== 'ver' && !producto.aplicaIva">
                         <div class="form-floating">
                           <input type="number" class="form-control" id="precio" [(ngModel)]="producto.precio"
                             [value]="producto.precio === 0 ? null : producto.precio"
                             (focus)="producto.precio === 0 ? producto.precio = null : null" name="precio" required
-                            min="0" placeholder="{{ producto.aplicaIva ? 'Precio + IVA' : 'Precio' }}" />
-                          <label for="precio">💵 {{ producto.aplicaIva ? 'Precio + IVA' : 'Precio' }}</label>
+                            min="0" placeholder="Precio" />
+                          <label for="precio">💵 Precio</label>
+                        </div>
+                      </div>
+
+                      <div class="col-md-5" *ngIf="modoModal !== 'ver' && producto.aplicaIva">
+                        <div class="form-floating">
+                          <input type="number" class="form-control" id="precioConIva"
+                            [(ngModel)]="producto.precioConIva"
+                            [value]="producto.precioConIva === 0 ? null : producto.precioConIva"
+                            (focus)="producto.precioConIva === 0 ? producto.precioConIva = null : null"
+                            name="precioConIva" required min="0" placeholder="Precio + IVA" />
+                          <label for="precioConIva">💵 Precio + IVA</label>
                         </div>
                       </div>
 
@@ -334,7 +348,6 @@
                         </div>
                       </div>
 
-
                       <!-- Moneda -->
                       <div class="col-md-4">
                         <ng-select [items]="moneda" bindLabel="alias" bindValue="id" [(ngModel)]="producto.moneda"
@@ -343,10 +356,20 @@
                         </ng-select>
                       </div>
                     </div>
+
+                    <!-- Nota informativa sobre sede -->
+                    <div class="w-100 text-start mt-3 px-2" *ngIf="modoModal === 'agregar'">
+                      <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 py-2 px-3 small rounded-3">
+                        <i class="bi bi-info-circle-fill text-warning fs-5" style="color: red !important;"></i>
+                        <div>
+                          Los productos registrados estarán disponibles únicamente en la sede actual del sistema:
+                          <strong class="text-uppercase">{{ sedeActiva }}</strong>.
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-
 
             </div>
 
@@ -415,16 +438,7 @@
                   </div>
                 </div>
               </div>
-              <!-- Nota informativa sobre sede -->
-              <div class="w-100 text-start mt-3 mb-3 px-2">
-                <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 py-2 px-3 small rounded-3">
-                  <i class="bi bi-info-circle-fill text-warning fs-5"></i>
-                  <div>
-                    Los productos registrados estarán disponibles únicamente en la sede actual del sistema:
-                    <strong class="text-uppercase">{{ sedeActiva }}</strong>.
-                  </div>
-                </div>
-              </div>
+
             </div>
           </div>
         </div>

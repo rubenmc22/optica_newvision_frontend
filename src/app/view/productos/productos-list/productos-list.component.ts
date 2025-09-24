@@ -283,7 +283,12 @@ export class ProductosListComponent implements OnInit {
 
         // ✅ IVA logic simplificada
         formData.append('aplicaIva', producto.aplicaIva.toString());
-        formData.append('precio', producto.precio.toString()); // siempre se envía este
+
+        if (producto.aplicaIva) {
+            producto.precio = producto.precioConIva ?? producto.precio;
+        }
+
+        formData.append('precio', producto.precio.toString());
 
         if (this.imagenSeleccionada) {
             formData.append('imagen', this.imagenSeleccionada);
@@ -307,8 +312,6 @@ export class ProductosListComponent implements OnInit {
         });
     }
 
-
-
     private editarProductoFlow(): void {
         if (this.cargando) return;
         this.cargando = true;
@@ -324,11 +327,20 @@ export class ProductosListComponent implements OnInit {
         formData.append('proveedor', producto.proveedor ?? '');
         formData.append('categoria', producto.categoria ?? '');
         formData.append('stock', producto.stock?.toString() ?? '0');
-        formData.append('precio', producto.precio?.toString() ?? '0');
         formData.append('moneda', producto.moneda ?? '');
         formData.append('activo', producto.activo ? 'true' : 'false');
         formData.append('descripcion', producto.descripcion ?? '');
         formData.append('fechaIngreso', producto.fechaIngreso ?? '');
+
+        // ✅ IVA logic simplificada
+        formData.append('aplicaIva', producto.aplicaIva.toString());
+
+        if (producto.aplicaIva) {
+            producto.precio = producto.precioConIva ?? producto.precio;
+        }
+
+        formData.append('precio', producto.precio?.toString() ?? '0');
+
 
         if (this.imagenSeleccionada) {
             formData.append('imagen', this.imagenSeleccionada);
@@ -659,5 +671,13 @@ export class ProductosListComponent implements OnInit {
     calcularPrecioSinIva(): void {
         const conIva = this.producto.precioConIva ?? 0;
         this.producto.precio = +(conIva / (1 + this.IVA)).toFixed(2);
+    }
+
+    sincronizarPrecio(): void {
+        if (this.producto.aplicaIva) {
+            this.producto.precioConIva = this.producto.precio;
+        } else {
+            this.producto.precio = this.producto.precioConIva;
+        }
     }
 }
