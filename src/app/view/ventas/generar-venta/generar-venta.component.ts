@@ -3,7 +3,7 @@ import { Producto, ProductoDto, MonedaVisual } from '../../productos/producto.mo
 import { ProductoService } from '../../productos/producto.service';
 import { Sede } from '../../../view/login/login-interface';
 
-import { TasaCambiariaService } from '../../../core/services/tasaCambiaria/tasaCambiaria.service';
+import { GenerarVentaService } from './generar-venta.service';
 import { Tasa } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
 import { Observable, of, forkJoin, map } from 'rxjs';
@@ -17,16 +17,29 @@ import { PacientesService } from '../../../core/services/pacientes/pacientes.ser
 import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
 import { Paciente, PacientesListState } from '../../pacientes/paciente-interface';
 import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico, DatosConsulta } from './../../historias-medicas/historias_medicas-interface';
-import { VentaDto, ProductoVentaDto, ProductoVenta } from '../venta-interfaz';
+import { VentaDto, ProductoVentaDto, ProductoVenta, ProductoVentaCalculado } from '../venta-interfaz';
 import { Empleado, User } from '../../../Interfaces/models-interface';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
+import { trigger, transition, style, animate } from '@angular/animations';
+import * as bootstrap from 'bootstrap';
 
 
 @Component({
     selector: 'app-generar-venta',
     standalone: false,
     templateUrl: './generar-venta.component.html',
-    styleUrls: ['./generar-venta.component.scss']
+    styleUrls: ['./generar-venta.component.scss'],
+    animations: [
+        trigger('fadeInOut', [
+            transition(':enter', [
+                style({ opacity: 0 }),
+                animate('200ms ease-in', style({ opacity: 1 }))
+            ]),
+            transition(':leave', [
+                animate('200ms ease-out', style({ opacity: 0 }))
+            ])
+        ])
+    ]
 })
 
 export class GenerarVentaComponent implements OnInit {
@@ -51,12 +64,18 @@ export class GenerarVentaComponent implements OnInit {
     currentUser: User | null = null;
     asesorSeleccionado: string | null = null;
     nivelCashea: 'nivel1' | 'nivel2' | 'nivel3' | 'nivel4' | 'nivel5' | 'nivel6' = 'nivel3';
-    readonly IVA = 0.16;
+    ivaPorcentaje = 0; // en porcentaje, como 16
+    tasasDisponibles: Tasa[] = [];
+    tasasPorId: Record<string, number> = {};
+    monedasDisponibles: Tasa[] = [];
+    productosConDetalle: ProductoVentaCalculado[] = [];
+    totalProductos: number = 0;
+    requierePaciente: boolean = false; // ✅ por defecto no se requiere
 
 
     venta: VentaDto = {
         productos: [],
-        moneda: 'usd',
+        moneda: 'dolar',
         formaPago: 'contado',
         descuento: 0,
         impuesto: 16,
@@ -67,23 +86,10 @@ export class GenerarVentaComponent implements OnInit {
         metodosDePago: []
     };
 
-    productosConDetalle: {
-        id: string;
-        nombre: string;
-        precio: number;
-        cantidad: number;
-        subtotal: number;
-        iva: number;
-        total: number;
-        moneda: string;
-    }[] = [];
-
-
-
 
     constructor(
         private productoService: ProductoService,
-        private tasaCambiariaService: TasaCambiariaService,
+        private generarVentaService: GenerarVentaService,
         private swalService: SwalService,
         private userStateService: UserStateService,
         private snackBar: MatSnackBar,
@@ -103,55 +109,54 @@ export class GenerarVentaComponent implements OnInit {
 
     private cargarDatosIniciales(): void {
         forkJoin({
-            productos: this.productoService.getProductos().pipe(take(1)),
+            productosResponse: this.productoService.getProductos().pipe(take(1)),
             pacientes: this.pacientesService.getPacientes().pipe(
                 take(1),
                 map(resp => resp.pacientes ?? [])
             ),
             usuario: this.userStateService.currentUser$.pipe(take(1)),
-            tasas: this.tasaCambiariaService.getTasas().pipe(
-                take(1),
-                map(t => ({
-                    dolar: t.usd ?? 0,
-                    euro: t.eur ?? 0
-                })),
-                catchError(() => of({ dolar: 0, euro: 0 }))
-            ),
-            asesores: this.empleadosService.getAllEmpleados().pipe(take(1)) // ✅ llamada al API de empleados
-        }).subscribe(({ productos, pacientes, usuario, tasas, asesores }) => {
-            this.productos = productos;
+            tasasResponse: this.generarVentaService.getTasas().pipe(take(1)),
+            asesores: this.empleadosService.getAllEmpleados().pipe(take(1))
+        }).subscribe(({ productosResponse, pacientes, usuario, tasasResponse, asesores }) => {
+            this.ivaPorcentaje = +(productosResponse.iva ?? 0);
+            this.productos = productosResponse.productos ?? [];
+
             this.pacientes = pacientes;
-            this.tasaDolar = tasas.dolar;
-            this.tasaEuro = tasas.euro;
             this.todosLosPacientes = pacientes;
             this.pacientesFiltradosPorSede = pacientes;
 
             this.currentUser = usuario;
             this.asesorSeleccionado = usuario?.id ?? null;
             this.empleadosDisponibles = asesores;
-
-            console.log('Productos: ', this.productos);
-
             this.sedeActiva = usuario?.sede?.trim().toLowerCase() ?? '';
-            // this.productosFiltradosPorSede = productos.filter(p => p.sede === this.sedeActiva);
-            this.productosFiltradosPorSede = productos
-                .filter(p => p.sede?.trim().toLowerCase() === this.sedeActiva)
+
+            this.productosFiltradosPorSede = this.productos
+                .filter(p =>
+                    p.sede?.trim().toLowerCase() === this.sedeActiva &&
+                    p.activo === true
+                )
                 .map(p => ({
                     ...p,
-                    precioConIva: +p.precio, // cableado desde el campo original
-                    aplicaIva: this.determinarSiAplicaIva(p),
-                    moneda: p.moneda
+                    precio: +(p.precio ?? 0),
+                    precioConIva: +(p.precioConIva ?? 0),
+                    aplicaIva: p.aplicaIva ?? false,
+                    moneda: p.moneda?.toLowerCase() === 'ves' ? 'bolivar' : p.moneda ?? 'dolar',
+                    stock: p.stock ?? 0
                 }));
 
-            console.log(' this.productosFiltradosPorSede: ', this.productosFiltradosPorSede);
+            const tasas = tasasResponse.tasas ?? [];
+            this.tasasDisponibles = tasas;
+            //    console.log('Tasas disponibles:', this.tasasDisponibles);
+            this.monedasDisponibles = tasas;
+            this.tasasPorId = Object.fromEntries(tasas.map(t => [t.id, t.valor]));
+            console.log('this.tasasPorId', this.tasasPorId);
 
-
-
+            this.venta.moneda = 'dolar';
+            this.actualizarProductosConDetalle();
 
             this.completarTarea();
         });
     }
-
 
     onPacienteSeleccionado(pacienteSeleccionado: Paciente | null): void {
         this.registrarTarea();
@@ -164,7 +169,7 @@ export class GenerarVentaComponent implements OnInit {
         }
 
         const pacienteKey = pacienteSeleccionado.key;
-        console.log('🔍 pacienteKey:', pacienteKey);
+        // console.log('🔍 pacienteKey:', pacienteKey);
 
         this.historiaService.getHistoriasPorPaciente(pacienteKey).pipe(take(1)).subscribe({
             next: historial => {
@@ -203,34 +208,64 @@ export class GenerarVentaComponent implements OnInit {
         });
     }
 
-
-    agregarProducto(producto: ProductoVenta): void {
+    agregarProductoAlCarrito(producto: ProductoVenta | any): void {
         const yaExiste = this.venta.productos.find(p => p.id === producto.id);
+        console.log('agregarProductoAlCarrito - producto', producto);
+
+        // console.log('agregarProductoAlCarrito - producto ', producto);
+        // Validaciones defensivas
+        const stockDisponible = producto.stock ?? 0;
+        const precioBase = +(producto.precio ?? 0);
+        const precioFinal = +(producto.precioConIva ?? 0);
+        const monedaOriginal = this.idMap[producto.moneda?.toLowerCase()] ?? producto.moneda?.toLowerCase() ?? 'dolar';
+
+        const aplicaIva = producto.aplicaIva ?? false;
+
+
+        //  console.log('agregarProductoAlCarrito - monedaOriginal ', monedaOriginal);
+
+        if (stockDisponible <= 0) {
+            this.swalService.showWarning('Sin stock', 'Este producto no tiene unidades disponibles.');
+            return;
+        }
+
+        if (precioBase <= 0 || (aplicaIva && precioFinal <= 0)) {
+            this.swalService.showWarning('Precio inválido', 'Este producto no tiene precio asignado.');
+            return;
+        }
 
         if (yaExiste) {
-            yaExiste.cantidad = (yaExiste.cantidad ?? 1) + 1;
-        } else {
-            const precioSinIva = producto.aplicaIva
-                ? +(producto.precioConIva / (1 + this.IVA)).toFixed(2)
-                : producto.precioConIva;
+            const nuevaCantidad = (yaExiste.cantidad ?? 1) + 1;
 
+            if (nuevaCantidad > stockDisponible) {
+                this.swalService.showWarning('Stock insuficiente', `Solo hay ${stockDisponible} unidades disponibles.`);
+                return;
+            }
+
+            yaExiste.cantidad = nuevaCantidad;
+            this.swalService.showInfo('Producto actualizado', 'Se incrementó la cantidad en el carrito.');
+        } else {
             this.venta.productos.push({
                 id: producto.id,
                 nombre: producto.nombre,
-                precio: precioSinIva,
-                moneda: producto.moneda,
+                precio: precioBase,
+                precioConIva: precioFinal,
+                moneda: monedaOriginal, // ✅ se conserva la moneda original
                 cantidad: 1,
-                aplicaIva: producto.aplicaIva
+                aplicaIva,
+                stock: producto.stock ?? 0 // ✅ importante para validación posterior
             });
         }
+
+        this.actualizarProductosConDetalle();
+        this.productoSeleccionado = null;
     }
+
 
     determinarSiAplicaIva(producto: Producto): boolean {
         // Puedes ajustar esta lógica según el tipo, categoría o nombre
         return producto.categoria === 'Monturas' || producto.nombre.toLowerCase().includes('monturas');
     }
-
-
 
     filtrarPorNombreOCedula(term: string, item: Paciente): boolean {
         const nombre = item.informacionPersonal?.nombreCompleto?.toLowerCase() ?? '';
@@ -259,31 +294,11 @@ export class GenerarVentaComponent implements OnInit {
     eliminarProducto(id: string): void {
         const eliminado = this.venta.productos.find(p => p.id === id)?.nombre;
         this.venta.productos = this.venta.productos.filter(p => p.id !== id);
+
+        this.actualizarProductosConDetalle(); // ✅ actualiza la tabla
+
         this.snackBar.open(`${eliminado} eliminado`, 'Cerrar', { duration: 2000 });
     }
-
-    agregarProductoPorSeleccion(producto: any): void {
-        const yaExiste = this.venta.productos.some(p => p.id === producto.id);
-        if (yaExiste) {
-            this.swalService.showInfo('Producto ya agregado', 'Este producto ya está en el carrito.');
-            return;
-        }
-
-        const productoDto: ProductoVentaDto = {
-            id: producto.id,
-            nombre: producto.nombre,
-            precio: +producto.precio,
-            moneda: producto.moneda?.toLowerCase() === 'ves' ? 'bs' : producto.moneda ?? 'usd',
-            cantidad: 1,
-            aplicaIva: producto.categoria?.toLowerCase() === 'monturas' || producto.nombre?.toLowerCase().includes('montura')
-        };
-
-        this.venta.productos.push(productoDto);
-        this.actualizarProductosConDetalle();
-        this.productoSeleccionado = null;
-    }
-
-
 
 
     filtrarProductoPorNombreOCodigo(term: string, item: Producto): boolean {
@@ -292,7 +307,6 @@ export class GenerarVentaComponent implements OnInit {
         const normalizado = term.trim().toLowerCase();
         return nombre.includes(normalizado) || codigo.includes(normalizado);
     }
-
 
     generarVenta(): void {
         if (this.venta.productos.length === 0) {
@@ -330,7 +344,7 @@ export class GenerarVentaComponent implements OnInit {
     resetFormulario(): void {
         this.venta = {
             productos: [],
-            moneda: 'usd',
+            moneda: 'dolar',
             formaPago: 'contado',
             impuesto: 16,
             descuento: 0,
@@ -346,7 +360,6 @@ export class GenerarVentaComponent implements OnInit {
         this.productoSeleccionado = null;
         this.asesorSeleccionado = this.currentUser?.id ?? null;
     }
-
 
     private resetearCarga(): void {
         this.tareasPendientes = 0;
@@ -409,26 +422,26 @@ export class GenerarVentaComponent implements OnInit {
     }
 
     asignarInicialPorNivel(): void {
-        const minimo = this.calcularInicialCasheaPorNivel(this.totalConDescuento, this.nivelCashea);
+        const minimo = this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
         this.venta.montoInicial = minimo;
     }
 
     validarInicialCashea(): void {
-        const minimo = this.calcularInicialCasheaPorNivel(this.totalConDescuento, this.nivelCashea);
+        const minimo = this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
         if ((this.venta.montoInicial ?? 0) < minimo) {
             this.venta.montoInicial = minimo;
-            this.snackBar.open(`La inicial no puede ser menor a ${minimo} $ para ${this.nivelCashea}`, 'Cerrar', {
+            this.snackBar.open(`La inicial no puede ser menor a ${minimo} ${this.obtenerSimboloMoneda(this.venta.moneda)} para ${this.nivelCashea}`, 'Cerrar', {
                 duration: 3000
             });
         }
     }
 
     calcularCasheaPlan(): { inicial: number; cuotas: number[]; fechas: string[] } {
-        const total = this.totalConDescuento;
+        const total = this.montoTotal;
         const inicial = this.venta.montoInicial ?? this.calcularInicialCasheaPorNivel(total, this.nivelCashea);
         const restante = total - inicial;
         const numeroCuotas = 3;
-        const montoPorCuota = +(restante / numeroCuotas).toFixed(2);
+        const montoPorCuota = this.redondear(restante / numeroCuotas);
 
         const fechas: string[] = [];
         const hoy = new Date();
@@ -445,6 +458,15 @@ export class GenerarVentaComponent implements OnInit {
         };
     }
 
+    get progresoCashea(): number {
+        const plan = this.calcularCasheaPlan();
+        const pagado = this.redondear(plan.inicial + plan.cuotas.reduce((a, b) => a + b, 0));
+        const porcentaje = (pagado / this.montoTotal) * 100;
+        return this.casheaBalanceValido ? 100 : Math.round(porcentaje);
+    }
+
+
+
     onFormaPagoChange(valor: string): void {
         this.venta.formaPago = valor;
         if (valor === 'cashea') {
@@ -452,27 +474,46 @@ export class GenerarVentaComponent implements OnInit {
         }
     }
 
-    actualizarProductosConDetalle(): void {
-        this.productosConDetalle = this.venta.productos.map(p => {
-            const precioConIva = p.precio;
-            const precioSinIva = p.aplicaIva ? +(precioConIva / (1 + this.IVA)).toFixed(2) : precioConIva;
-            const iva = p.aplicaIva ? +(precioConIva - precioSinIva).toFixed(2) : 0;
-            const subtotal = +(precioSinIva * p.cantidad).toFixed(2);
-            const total = +(precioConIva * p.cantidad).toFixed(2);
-
-            return {
-                id: p.id,
-                nombre: p.nombre,
-                precio: precioSinIva,
-                cantidad: p.cantidad,
-                subtotal,
-                iva,
-                total,
-                moneda: p.moneda
-            };
-        });
+    redondear(valor: number): number {
+        return Math.round(valor * 100) / 100;
     }
 
+
+    actualizarProductosConDetalle(): void {
+        const tasaDestino = this.tasasDisponibles.find(t => t.nombre.toLowerCase() === this.venta.moneda)?.valor ?? 1;
+
+        console.log('this.venta.productos', this.venta.productos);
+        this.productosConDetalle = this.venta.productos.map(p => {
+            const cantidad = p.cantidad ?? 1;
+            const aplicaIva = p.aplicaIva ?? false;
+            const tasaOrigen = this.tasasDisponibles.find(t => t.nombre.toLowerCase() === p.moneda)?.valor ?? 1;
+
+            // Subtotal en moneda original
+            const subtotal = +(p.precio * cantidad).toFixed(2);
+
+            // IVA en moneda original
+            const iva = aplicaIva ? +(subtotal * (this.ivaPorcentaje / 100)).toFixed(2) : 0;
+
+            // Total en moneda original
+            const totalEnOrigen = subtotal + iva;
+
+            // Conversión al destino
+            const factor = tasaOrigen / tasaDestino;
+            const totalConvertido = +(totalEnOrigen * factor).toFixed(2);
+
+            return {
+                ...p,
+                cantidad,
+                subtotal, // en moneda original
+                iva,      // en moneda original
+                total: totalConvertido, // en moneda seleccionada
+                precioConvertido: +(p.precio * factor).toFixed(2),
+                stock: p.stock // ✅ mantenerlo para validación visual
+            };
+        });
+
+        this.totalProductos = this.calcularTotalProductos();
+    }
 
     get subtotal(): number {
         // Suma de subtotales sin IVA
@@ -489,18 +530,127 @@ export class GenerarVentaComponent implements OnInit {
         return +(this.subtotal + this.totalIva).toFixed(2);
     }
 
-
-
     get totalConDescuento(): number {
         const bruto = this.subtotal + this.totalIva;
         const descuento = (this.venta.descuento ?? 0) / 100;
         return +(bruto * (1 - descuento)).toFixed(2);
     }
 
+    onCantidadChange(p: any, nuevaCantidad: number): void {
+        const cantidad = Math.max(1, +nuevaCantidad);
+
+        const productoOriginal = this.venta.productos.find(prod => prod.id === p.id);
+        if (!productoOriginal) return;
+
+        if (cantidad > (productoOriginal.stock ?? 0)) {
+            this.swalService.showWarning('Stock insuficiente', `Solo hay ${productoOriginal.stock} unidades disponibles.`);
+            productoOriginal.cantidad = productoOriginal.stock;
+        } else {
+            productoOriginal.cantidad = cantidad;
+        }
+
+        this.actualizarProductosConDetalle();
+    }
 
 
 
+    convertirMonto(monto: number, origen: string, destino: string): number {
+        if (origen === destino) return +monto.toFixed(2);
+
+        const tasas = {
+            bolivar: 1,
+            dolar: this.tasasPorId['dolar'] ?? 0,
+            euro: this.tasasPorId['euro'] ?? 0
+        };
+
+        const montoEnBs = origen === 'dolar'
+            ? monto * tasas.dolar
+            : origen === 'euro'
+                ? monto * tasas.euro
+                : monto;
+
+        return destino === 'dolar'
+            ? +(montoEnBs / tasas.dolar).toFixed(2)
+            : destino === 'euro'
+                ? +(montoEnBs / tasas.euro).toFixed(2)
+                : +montoEnBs.toFixed(2);
+    }
+
+    private readonly idMap: Record<string, string> = {
+        usd: 'dolar',
+        ves: 'bolivar',
+        bs: 'bolivar',
+        eur: 'euro',
+        $: 'dolar',
+        '€': 'euro'
+    };
+
+    obtenerSimboloMoneda(id: string): string {
+        // console.log ('obtenerSimboloMoneda - id', id);
+        const normalizado = this.idMap[id?.toLowerCase()] ?? id?.toLowerCase();
+        const moneda = this.tasasDisponibles.find(m => m.id === normalizado);
+        return moneda?.simbolo ?? '';
+    }
+
+    calcularTotalProductos(): number {
+        if (!Array.isArray(this.productosConDetalle)) return 0;
+
+        return this.productosConDetalle.reduce((acc, p) => {
+            const total = +p.total || 0;
+            return acc + total;
+        }, 0);
+    }
+
+    trackByProducto(index: number, item: any): string {
+        return item.id;
+    }
 
 
+    abrirModalResumen(): void {
+        if (this.venta.productos.length === 0) {
+            this.swalService.showWarning('Sin productos', 'Debes agregar al menos un producto para continuar.');
+            return;
+        }
+
+        const hayFormulacion = !!this.historiaMedica?.examenOcular?.refraccionFinal;
+
+        if (hayFormulacion && !this.pacienteSeleccionado) {
+            this.swalService.showWarning('Paciente requerido', 'Debes seleccionar un paciente para aplicar la formulación.');
+            return;
+        }
+
+        this.actualizarProductosConDetalle();
+
+        const modalElement = document.getElementById('resumenVentaModal');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
+    }
+
+    obtenerEquivalenteBs(monto: number): number {
+        const moneda = this.venta.moneda;
+        const tasa = this.tasasPorId?.[moneda] ?? 1;
+        return moneda === 'bolivar' ? monto : monto * tasa;
+    }
+
+    redondearDosDecimales(valor: number): number {
+        return Math.round(valor * 100) / 100;
+    }
+
+    get montoTotal(): number {
+        const descuento = this.venta.descuento ?? 0;
+        return Math.round((this.totalProductos * (1 - descuento / 100)) * 100) / 100;
+    }
+
+    get totalAdeudado(): number {
+        return Math.max(this.montoTotal - (this.venta.montoAbonado ?? 0), 0);
+    }
+
+    get casheaBalanceValido(): boolean {
+        const plan = this.calcularCasheaPlan();
+        const totalPagado = this.redondear(plan.inicial + plan.cuotas.reduce((a, b) => a + b, 0));
+        return Math.abs(totalPagado - this.montoTotal) < 0.01;
+    }
 
 }

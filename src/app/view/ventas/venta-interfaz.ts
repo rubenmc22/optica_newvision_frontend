@@ -1,6 +1,6 @@
 export interface VentaDto {
     pacienteId?: string;
-    moneda: 'bs' | 'usd' | 'eur';
+    moneda: 'bolivar' | 'dolar' | 'euro' 
     formaPago: string;
     productos: ProductoVentaDto[];
     impuesto: number;
@@ -14,15 +14,17 @@ export interface VentaDto {
     metodosDePago: MetodoPago[];
 }
 
+
 export interface ProductoVentaDto {
     id: string;
     nombre: string;
     precio: number;
     cantidad: number;
+    stock: number;
     moneda: string;
+    precioConIva: number;
     aplicaIva: boolean; // ✅ nueva propiedad
 }
-
 
 export interface MetodoPago {
     tipo: string;
@@ -32,11 +34,29 @@ export interface MetodoPago {
 export interface ProductoVenta {
     id: string;
     nombre: string;
+    precio: number;
     precioConIva: number;
     aplicaIva: boolean;
     cantidad?: number;
     moneda: string;
 }
+
+export interface ProductoVentaCalculado {
+    id: string;
+    nombre: string;
+    precio: number;
+    cantidad: number;
+    moneda: string;
+    subtotal: number;
+    iva: number;
+    total: number;
+    precioConvertido: number;
+    aplicaIva: boolean;
+    stock: number;
+}
+
+
+
 
 
 

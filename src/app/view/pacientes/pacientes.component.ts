@@ -932,7 +932,7 @@ export class VerPacientesComponent implements OnInit {
   }
 
   abrirModalVisualizacionPaciente(paciente: Paciente): void {
-    const info = paciente?.informacionPersonal ?? {};
+    const info = paciente.informacionPersonal;
     const redes = paciente?.redesSociales ?? [];
     const historia = paciente?.historiaClinica ?? {};
 

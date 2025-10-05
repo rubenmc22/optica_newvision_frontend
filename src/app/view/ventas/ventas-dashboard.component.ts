@@ -125,7 +125,7 @@ export class VentasDashboardComponent {
                 })
             )
         }).subscribe(({ productos, sedes, user }) => {
-            this.productos = productos;
+          //  this.productos = productos;
 
             this.sedesDisponibles = (sedes.sedes ?? [])
                 .map(s => ({

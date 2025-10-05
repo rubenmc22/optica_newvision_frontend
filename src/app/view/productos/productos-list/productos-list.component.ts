@@ -99,9 +99,7 @@ export class ProductosListComponent implements OnInit {
         this.tareaIniciada();
 
         forkJoin({
-            productos: this.productoService.getProductos().pipe(
-                take(1)
-            ),
+            productosResponse: this.productoService.getProductos().pipe(take(1)), // ✅ capturamos el objeto completo
             sedes: this.authService.getSedes().pipe(
                 take(1),
                 catchError(error => {
@@ -124,8 +122,8 @@ export class ProductosListComponent implements OnInit {
                     return of(null);
                 })
             )
-        }).subscribe(({ productos, sedes, user }) => {
-            this.productos = productos;
+        }).subscribe(({ productosResponse, sedes, user }) => {
+            this.productos = productosResponse.productos ?? [];
             this.ordenarPorStock();
 
             this.sedesDisponibles = (sedes.sedes ?? [])
@@ -151,6 +149,7 @@ export class ProductosListComponent implements OnInit {
             this.tareaFinalizada();
         });
     }
+
 
     private obtenerTasasCambio(): void {
         this.tasaCambiariaService.getTasaActual().subscribe({
@@ -300,7 +299,7 @@ export class ProductosListComponent implements OnInit {
                 return this.productoService.getProductos();
             })
         ).subscribe({
-            next: (productos) => {
+            next: ({ productos }) => {
                 this.productos = productos;
                 this.cargando = false;
                 this.cerrarModal();
@@ -359,7 +358,7 @@ export class ProductosListComponent implements OnInit {
                 return this.productoService.getProductos();
             })
         ).subscribe({
-            next: (productos) => {
+            next: ({ productos }) => {
                 this.productos = productos;
                 this.cargando = false;
                 this.cerrarModal();
@@ -488,11 +487,11 @@ export class ProductosListComponent implements OnInit {
     // =========== UTILIDADES ===========
     get productoSeguro(): Producto {
         const base = this.producto ?? this.crearProductoVacio();
-        console.log('BASE', base);
+
         return {
             ...base,
             id: base.id || crypto.randomUUID(),
-            moneda: base.moneda?.toLowerCase() ?? 'bolivar', // ya es el id del backend
+            moneda: base.moneda?.toLowerCase() ?? 'bolivar',
             fechaIngreso: base.fechaIngreso || new Date().toISOString().split('T')[0],
             imagenUrl: this.avatarPreview || base.imagenUrl || ''
         };
@@ -531,7 +530,7 @@ export class ProductosListComponent implements OnInit {
         switch (moneda?.toLowerCase()) {
             case 'usd': return 'dolar';
             case 'eur': return 'euro';
-            case 'ves': return 'bolivar';
+            case 'bs': return 'bolivar';
             default: return moneda?.toLowerCase() ?? 'bolivar';
         }
     }

@@ -18,13 +18,17 @@ export class ProductoService {
   /** =======================
    * Obtener todos los productos
    ======================== */
-  getProductos(): Observable<Producto[]> {
-    return this.http.get<{ productos: ProductoDto[] }>(`${environment.apiUrl}/producto-get`).pipe(
+  getProductos(): Observable<{ iva: number; productos: Producto[] }> {
+    return this.http.get<{ iva: number; productos: ProductoDto[] }>(`${environment.apiUrl}/producto-get`).pipe(
       timeout(this.REQUEST_TIMEOUT),
-      map(res => res.productos.map(dto => this.mapProductoDtoToProducto(dto))),
+      map(res => ({
+        iva: res.iva ?? 16,
+        productos: res.productos.map(dto => this.mapProductoDtoToProducto(dto))
+      })),
       catchError(error => this.errorHandler.handleHttpError(error))
     );
   }
+
 
   /** =======================
    * Obtener productos paginados (sin error handler aún)
@@ -84,9 +88,9 @@ export class ProductoService {
       stock: dto.stock,
       categoria: dto.categoria,
       proveedor: dto.proveedor,
-      aplicaIva: dto.aplicaIva,                          
-      precioConIva: dto.precioConIva ?? undefined,      
-      precio: dto.precio,                              
+      aplicaIva: dto.aplicaIva,
+      precioConIva: dto.precioConIva ?? undefined,
+      precio: dto.precio,
       activo: dto.activo,
       descripcion: dto.descripcion,
       imagenUrl: dto.imagen_url?.startsWith('/public/')
@@ -96,7 +100,7 @@ export class ProductoService {
     };
   }
 
-  private normalizarMoneda(moneda: string | null | undefined): 'usd' | 'eur' | 'ves' {
+  private normalizarMoneda(moneda: string | null | undefined): 'usd' | 'eur' | 'bs' {
     const m = moneda?.trim().toLowerCase();
     switch (m) {
       case 'dolar':
@@ -105,11 +109,11 @@ export class ProductoService {
       case 'euro':
       case 'eur':
         return 'eur';
-      case 'ves':
+      case 'bs':
       case 'bolivar':
-        return 'ves';
+        return 'bs';
       default:
-        return 'ves'; // fallback seguro
+        return 'bs'; // fallback seguro
     }
   }
 }
