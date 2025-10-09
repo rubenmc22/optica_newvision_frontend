@@ -17,7 +17,7 @@ import { PacientesService } from '../../../core/services/pacientes/pacientes.ser
 import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
 import { Paciente, PacientesListState } from '../../pacientes/paciente-interface';
 import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico, DatosConsulta } from './../../historias-medicas/historias_medicas-interface';
-import { VentaDto, ProductoVentaDto, ProductoVenta, ProductoVentaCalculado } from '../venta-interfaz';
+import { VentaDto, ProductoVentaDto, ProductoVenta, ProductoVentaCalculado, CuotaCashea } from '../venta-interfaz';
 import { Empleado, User } from '../../../Interfaces/models-interface';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { trigger, transition, style, animate } from '@angular/animations';
@@ -44,49 +44,7 @@ import * as bootstrap from 'bootstrap';
 
 export class GenerarVentaComponent implements OnInit {
 
-    productos: Producto[] = [];
-    pacientes: any[] = [];
-    tasaDolar = 0;
-    tasaEuro = 0;
-    sedeActiva: string = '';
-    sedeFiltro: string = this.sedeActiva;
-    productosFiltradosPorSede: Producto[] = [];
-    historiaMedica: HistoriaMedica | null = null;
-    tareasPendientes = 0;
-    dataIsReady = false;
-    pacienteInput: string = '';
-    busquedaProducto: string = '';
-    pacienteSeleccionado: Paciente | null = null;
-    pacientesFiltradosPorSede: Paciente[] = [];
-    todosLosPacientes: Paciente[] = [];
-    productoSeleccionado: string | null = null;
-    empleadosDisponibles: Empleado[] = [];
-    currentUser: User | null = null;
-    asesorSeleccionado: string | null = null;
-    nivelCashea: 'nivel1' | 'nivel2' | 'nivel3' | 'nivel4' | 'nivel5' | 'nivel6' = 'nivel3';
-    ivaPorcentaje = 0; // en porcentaje, como 16
-    tasasDisponibles: Tasa[] = [];
-    tasasPorId: Record<string, number> = {};
-    monedasDisponibles: Tasa[] = [];
-    productosConDetalle: ProductoVentaCalculado[] = [];
-    totalProductos: number = 0;
-    requierePaciente: boolean = false; // ✅ por defecto no se requiere
-
-
-    venta: VentaDto = {
-        productos: [],
-        moneda: 'dolar',
-        formaPago: 'contado',
-        descuento: 0,
-        impuesto: 16,
-        observaciones: '',
-        montoInicial: 0,
-        numeroCuotas: 0,
-        montoAbonado: 0,
-        metodosDePago: []
-    };
-
-
+    // === CONSTRUCTOR Y CICLO DE VIDA ===
     constructor(
         private productoService: ProductoService,
         private generarVentaService: GenerarVentaService,
@@ -102,10 +60,84 @@ export class GenerarVentaComponent implements OnInit {
     ) { }
 
     ngOnInit(): void {
-        this.resetearCarga(); // limpia estado visual y activa loader
+        this.resetearCarga();
         this.registrarTarea();
         this.cargarDatosIniciales();
     }
+
+    // === PROPIEDADES DEL COMPONENTE ===
+
+    // Estado y configuración
+    dataIsReady = false;
+    tareasPendientes = 0;
+    sedeActiva: string = '';
+    sedeFiltro: string = this.sedeActiva;
+    currentUser: User | null = null;
+    nivelCashea: 'nivel1' | 'nivel2' | 'nivel3' | 'nivel4' | 'nivel5' | 'nivel6' = 'nivel3';
+    ivaPorcentaje = 0;
+    requierePaciente: boolean = false;
+    valorTemporal: string = '';
+    montoExcedido: boolean = false;
+    maximoCuotasPermitidas = 6;
+    cantidadCuotasCashea = 3;
+
+    // Datos maestros
+    productos: Producto[] = [];
+    pacientes: any[] = [];
+    todosLosPacientes: Paciente[] = [];
+    pacientesFiltradosPorSede: Paciente[] = [];
+    productosFiltradosPorSede: Producto[] = [];
+    empleadosDisponibles: Empleado[] = [];
+    tasasDisponibles: Tasa[] = [];
+    monedasDisponibles: Tasa[] = [];
+    tasasPorId: Record<string, number> = {};
+
+    // Selecciones del usuario
+    pacienteSeleccionado: Paciente | null = null;
+    productoSeleccionado: string | null = null;
+    asesorSeleccionado: string | null = null;
+
+    // Datos médicos
+    historiaMedica: HistoriaMedica | null = null;
+
+    // Carrito y cálculos
+    productosConDetalle: ProductoVentaCalculado[] = [];
+    totalProductos: number = 0;
+    cuotasCashea: CuotaCashea[] = [];
+    valorInicialTemporal = '';
+
+    // Modelo de venta
+    venta: VentaDto = {
+        productos: [],
+        moneda: 'dolar',
+        formaPago: 'contado',
+        descuento: 0,
+        impuesto: 16,
+        observaciones: '',
+        montoInicial: 0,
+        numeroCuotas: 0,
+        montoAbonado: 0,
+        metodosDePago: []
+    };
+
+    // Resumen Cashea
+    resumenCashea = {
+        cantidad: 0,
+        total: 0,
+        totalBs: 0
+    };
+
+    // Mapeos y constantes
+    private readonly idMap: Record<string, string> = {
+        usd: 'dolar',
+        ves: 'bolivar',
+        bs: 'bolivar',
+        eur: 'euro',
+        $: 'dolar',
+        '€': 'euro'
+    };
+
+    // === MÉTODOS DE INICIALIZACIÓN Y CARGA ===
 
     private cargarDatosIniciales(): void {
         forkJoin({
@@ -146,10 +178,8 @@ export class GenerarVentaComponent implements OnInit {
 
             const tasas = tasasResponse.tasas ?? [];
             this.tasasDisponibles = tasas;
-            //    console.log('Tasas disponibles:', this.tasasDisponibles);
             this.monedasDisponibles = tasas;
             this.tasasPorId = Object.fromEntries(tasas.map(t => [t.id, t.valor]));
-            console.log('this.tasasPorId', this.tasasPorId);
 
             this.venta.moneda = 'dolar';
             this.actualizarProductosConDetalle();
@@ -157,6 +187,29 @@ export class GenerarVentaComponent implements OnInit {
             this.completarTarea();
         });
     }
+
+    private resetearCarga(): void {
+        this.tareasPendientes = 0;
+        this.dataIsReady = false;
+        this.loader.show();
+    }
+
+    private registrarTarea(): void {
+        this.tareasPendientes++;
+        this.dataIsReady = false;
+    }
+
+    private completarTarea(): void {
+        this.tareasPendientes--;
+        if (this.tareasPendientes <= 0) {
+            setTimeout(() => {
+                this.loader.hide();
+                this.dataIsReady = true;
+            }, 300);
+        }
+    }
+
+    // === MÉTODOS DE PACIENTES ===
 
     onPacienteSeleccionado(pacienteSeleccionado: Paciente | null): void {
         this.registrarTarea();
@@ -169,7 +222,6 @@ export class GenerarVentaComponent implements OnInit {
         }
 
         const pacienteKey = pacienteSeleccionado.key;
-        // console.log('🔍 pacienteKey:', pacienteKey);
 
         this.historiaService.getHistoriasPorPaciente(pacienteKey).pipe(take(1)).subscribe({
             next: historial => {
@@ -183,7 +235,6 @@ export class GenerarVentaComponent implements OnInit {
                     return;
                 }
 
-                // Tomamos la más reciente por fecha de creación
                 this.historiaMedica = historial.sort((a, b) =>
                     new Date(b.auditoria.fechaCreacion).getTime() - new Date(a.auditoria.fechaCreacion).getTime()
                 )[0];
@@ -208,21 +259,40 @@ export class GenerarVentaComponent implements OnInit {
         });
     }
 
+    filtrarPorNombreOCedula(term: string, item: Paciente): boolean {
+        const nombre = item.informacionPersonal?.nombreCompleto?.toLowerCase() ?? '';
+        const cedula = item.informacionPersonal?.cedula?.toLowerCase() ?? '';
+        const normalizado = term.trim().toLowerCase();
+        return nombre.includes(normalizado) || cedula.includes(normalizado);
+    }
+
+    actualizarFiltroTexto(event: { term: string; items: any[] }): void {
+        const texto = event.term.trim().toLowerCase();
+        this.pacientesFiltradosPorSede = this.todosLosPacientes.filter(p => {
+            const nombre = p.informacionPersonal?.nombreCompleto?.toLowerCase() ?? '';
+            const cedula = p.informacionPersonal?.cedula?.toLowerCase() ?? '';
+            return nombre.includes(texto) || cedula.includes(texto);
+        });
+    }
+
+    get materialesRecomendados(): string {
+        const material = this.historiaMedica?.recomendaciones?.[0]?.material;
+        if (Array.isArray(material)) {
+            return material.join(', ');
+        }
+        return material ?? '';
+    }
+
+    // === MÉTODOS DE PRODUCTOS Y CARRITO ===
+
     agregarProductoAlCarrito(producto: ProductoVenta | any): void {
         const yaExiste = this.venta.productos.find(p => p.id === producto.id);
-        console.log('agregarProductoAlCarrito - producto', producto);
 
-        // console.log('agregarProductoAlCarrito - producto ', producto);
-        // Validaciones defensivas
         const stockDisponible = producto.stock ?? 0;
         const precioBase = +(producto.precio ?? 0);
         const precioFinal = +(producto.precioConIva ?? 0);
         const monedaOriginal = this.idMap[producto.moneda?.toLowerCase()] ?? producto.moneda?.toLowerCase() ?? 'dolar';
-
         const aplicaIva = producto.aplicaIva ?? false;
-
-
-        //  console.log('agregarProductoAlCarrito - monedaOriginal ', monedaOriginal);
 
         if (stockDisponible <= 0) {
             this.swalService.showWarning('Sin stock', 'Este producto no tiene unidades disponibles.');
@@ -250,10 +320,10 @@ export class GenerarVentaComponent implements OnInit {
                 nombre: producto.nombre,
                 precio: precioBase,
                 precioConIva: precioFinal,
-                moneda: monedaOriginal, // ✅ se conserva la moneda original
+                moneda: monedaOriginal,
                 cantidad: 1,
                 aplicaIva,
-                stock: producto.stock ?? 0 // ✅ importante para validación posterior
+                stock: producto.stock ?? 0
             });
         }
 
@@ -261,45 +331,12 @@ export class GenerarVentaComponent implements OnInit {
         this.productoSeleccionado = null;
     }
 
-
-    determinarSiAplicaIva(producto: Producto): boolean {
-        // Puedes ajustar esta lógica según el tipo, categoría o nombre
-        return producto.categoria === 'Monturas' || producto.nombre.toLowerCase().includes('monturas');
-    }
-
-    filtrarPorNombreOCedula(term: string, item: Paciente): boolean {
-        const nombre = item.informacionPersonal?.nombreCompleto?.toLowerCase() ?? '';
-        const cedula = item.informacionPersonal?.cedula?.toLowerCase() ?? '';
-        const normalizado = term.trim().toLowerCase();
-        return nombre.includes(normalizado) || cedula.includes(normalizado);
-    }
-
-    actualizarFiltroTexto(event: { term: string; items: any[] }): void {
-        const texto = event.term.trim().toLowerCase();
-        this.pacientesFiltradosPorSede = this.todosLosPacientes.filter(p => {
-            const nombre = p.informacionPersonal?.nombreCompleto?.toLowerCase() ?? '';
-            const cedula = p.informacionPersonal?.cedula?.toLowerCase() ?? '';
-            return nombre.includes(texto) || cedula.includes(texto);
-        });
-    }
-
-    get materialesRecomendados(): string {
-        const material = this.historiaMedica?.recomendaciones?.[0]?.material;
-        if (Array.isArray(material)) {
-            return material.join(', ');
-        }
-        return material ?? '';
-    }
-
     eliminarProducto(id: string): void {
         const eliminado = this.venta.productos.find(p => p.id === id)?.nombre;
         this.venta.productos = this.venta.productos.filter(p => p.id !== id);
-
-        this.actualizarProductosConDetalle(); // ✅ actualiza la tabla
-
+        this.actualizarProductosConDetalle();
         this.snackBar.open(`${eliminado} eliminado`, 'Cerrar', { duration: 2000 });
     }
-
 
     filtrarProductoPorNombreOCodigo(term: string, item: Producto): boolean {
         const nombre = item.nombre?.toLowerCase() ?? '';
@@ -307,6 +344,69 @@ export class GenerarVentaComponent implements OnInit {
         const normalizado = term.trim().toLowerCase();
         return nombre.includes(normalizado) || codigo.includes(normalizado);
     }
+
+    onCantidadChange(p: any, nuevaCantidad: number): void {
+        const cantidad = Math.max(1, +nuevaCantidad);
+        const productoOriginal = this.venta.productos.find(prod => prod.id === p.id);
+        if (!productoOriginal) return;
+
+        if (cantidad > (productoOriginal.stock ?? 0)) {
+            this.swalService.showWarning('Stock insuficiente', `Solo hay ${productoOriginal.stock} unidades disponibles.`);
+            productoOriginal.cantidad = productoOriginal.stock;
+        } else {
+            productoOriginal.cantidad = cantidad;
+        }
+
+        this.actualizarProductosConDetalle();
+    }
+
+    determinarSiAplicaIva(producto: Producto): boolean {
+        return producto.categoria === 'Monturas' || producto.nombre.toLowerCase().includes('monturas');
+    }
+
+    trackByProducto(index: number, item: any): string {
+        return item.id;
+    }
+
+    // === CÁLCULOS Y ACTUALIZACIONES DE PRODUCTOS ===
+
+    actualizarProductosConDetalle(): void {
+        const tasaDestino = this.tasasDisponibles.find(t => t.nombre.toLowerCase() === this.venta.moneda)?.valor ?? 1;
+
+        this.productosConDetalle = this.venta.productos.map(p => {
+            const cantidad = p.cantidad ?? 1;
+            const aplicaIva = p.aplicaIva ?? false;
+            const tasaOrigen = this.tasasDisponibles.find(t => t.nombre.toLowerCase() === p.moneda)?.valor ?? 1;
+
+            const subtotal = +(p.precio * cantidad).toFixed(2);
+            const iva = aplicaIva ? +(subtotal * (this.ivaPorcentaje / 100)).toFixed(2) : 0;
+            const totalEnOrigen = subtotal + iva;
+            const factor = tasaOrigen / tasaDestino;
+            const totalConvertido = +(totalEnOrigen * factor).toFixed(2);
+
+            return {
+                ...p,
+                cantidad,
+                subtotal,
+                iva,
+                total: totalConvertido,
+                precioConvertido: +(p.precio * factor).toFixed(2),
+                stock: p.stock
+            };
+        });
+
+        this.totalProductos = this.calcularTotalProductos();
+    }
+
+    calcularTotalProductos(): number {
+        if (!Array.isArray(this.productosConDetalle)) return 0;
+        return this.productosConDetalle.reduce((acc, p) => {
+            const total = +p.total || 0;
+            return acc + total;
+        }, 0);
+    }
+
+    // === MÉTODOS DE VENTA Y PAGO ===
 
     generarVenta(): void {
         if (this.venta.productos.length === 0) {
@@ -320,25 +420,7 @@ export class GenerarVentaComponent implements OnInit {
             sede: this.sedeActiva
         };
 
-        /*   const totalPagado = this.venta.metodosDePago.reduce((sum, m) => sum + m.monto, 0);
-   if (totalPagado !== this.totalConDescuento) {
-     this.swalService.showWarning('Monto inconsistente', 'La suma de los métodos de pago no coincide con el total.');
-     return;
-   }*/
-
-
         this.loader.show();
-        /* this.ventasService.crearVenta(payload).subscribe({
-             next: () => {
-                 this.loader.hide();
-                 this.swalService.showSuccess('Venta generada', 'La venta se registró correctamente.');
-                 this.resetFormulario();
-             },
-             error: () => {
-                 this.loader.hide();
-                 this.swalService.showError('Error al generar venta', 'Ocurrió un problema al registrar la venta.');
-             }
-         });*/
     }
 
     resetFormulario(): void {
@@ -361,33 +443,7 @@ export class GenerarVentaComponent implements OnInit {
         this.asesorSeleccionado = this.currentUser?.id ?? null;
     }
 
-    private resetearCarga(): void {
-        this.tareasPendientes = 0;
-        this.dataIsReady = false;
-        this.loader.show();
-    }
-
-    private registrarTarea(): void {
-        this.tareasPendientes++;
-        this.dataIsReady = false;
-    }
-
-    private completarTarea(): void {
-        this.tareasPendientes--;
-        if (this.tareasPendientes <= 0) {
-            setTimeout(() => {
-                this.loader.hide();
-                this.dataIsReady = true;
-            }, 300); // Delay visual para evitar parpadeo
-        }
-    }
-
-    calcularMontoPorCuota(): number {
-        const total = this.totalConDescuento;
-        const restante = total - (this.venta.montoInicial ?? 0);
-        const cuotas = this.venta.numeroCuotas ?? 1;
-        return cuotas > 0 ? +(restante / cuotas).toFixed(2) : 0;
-    }
+    // === MÉTODOS DE PAGO Y MÉTODOS DE PAGO ===
 
     agregarMetodo(): void {
         this.venta.metodosDePago.push({ tipo: '', monto: 0 });
@@ -397,16 +453,208 @@ export class GenerarVentaComponent implements OnInit {
         this.venta.metodosDePago.splice(index, 1);
     }
 
-    //User actual de la sesion
-    get nombreCompletoAsesor(): string {
-        return this.currentUser?.nombre ?? 'Sin nombre';
+    autocompletarUltimoMetodo(): void {
+        const index = this.venta.metodosDePago.length - 1;
+        const restante = this.getMontoRestanteParaMetodo(index);
+        if (!this.venta.metodosDePago[index].monto) {
+            this.venta.metodosDePago[index].monto = restante;
+        }
     }
 
-    //Asesor asignado para la venta
-    getResumenAsesor(): string {
-        const asesor = this.empleadosDisponibles.find(e => e.id === this.asesorSeleccionado);
-        if (!asesor) return 'Sin asesor asignado';
-        return `${asesor.nombre} — ${asesor.cargoNombre}`;
+    validarMontoMetodo(index: number): void {
+        const maximo = this.getMontoRestanteParaMetodo(index);
+        const actual = this.venta.metodosDePago[index].monto ?? 0;
+
+        if (actual > maximo) {
+            this.venta.metodosDePago[index].monto = maximo;
+        }
+    }
+
+    getMontoRestanteParaMetodo(index: number): number {
+        const otrosMontos = this.venta.metodosDePago
+            .filter((_, i) => i !== index)
+            .reduce((sum, metodo) => sum + (metodo.monto ?? 0), 0);
+        return Math.max(this.montoCubiertoPorMetodos - otrosMontos, 0);
+    }
+
+    // === CÁLCULOS FINANCIEROS ===
+
+    // Totales
+    get subtotal(): number {
+        return this.productosConDetalle.reduce((acc, p) => acc + p.subtotal, 0);
+    }
+
+    get totalIva(): number {
+        return this.productosConDetalle.reduce((acc, p) => acc + p.iva, 0);
+    }
+
+    get totalGeneral(): number {
+        return +(this.subtotal + this.totalIva).toFixed(2);
+    }
+
+    get totalConDescuento(): number {
+        const bruto = this.subtotal + this.totalIva;
+        const descuento = (this.venta.descuento ?? 0) / 100;
+        return +(bruto * (1 - descuento)).toFixed(2);
+    }
+
+    get montoTotal(): number {
+        const descuento = this.venta.descuento ?? 0;
+        return Math.round((this.totalProductos * (1 - descuento / 100)) * 100) / 100;
+    }
+
+    get totalAdeudado(): number {
+        return Math.max(this.montoTotal - (this.venta.montoAbonado ?? 0), 0);
+    }
+
+    // Métodos de pago
+    get totalPagadoPorMetodos(): number {
+        return this.venta.metodosDePago.reduce((sum, metodo) => sum + (metodo.monto ?? 0), 0);
+    }
+
+    get montoCubiertoPorMetodos(): number {
+        switch (this.venta.formaPago) {
+            case 'contado':
+                return this.montoTotal;
+            case 'abono':
+                return this.venta.montoAbonado ?? 0;
+            case 'cashea':
+                return this.venta.montoInicial ?? 0;
+            default:
+                return 0;
+        }
+    }
+
+    get restantePorMetodos(): number {
+        return Math.max(this.montoCubiertoPorMetodos - this.totalPagadoPorMetodos, 0);
+    }
+
+    get desbalanceMetodos(): boolean {
+        return this.totalPagadoPorMetodos > this.montoCubiertoPorMetodos;
+    }
+
+    // Progresos
+    get progresoMetodos(): number {
+        const pagado = this.totalPagadoPorMetodos;
+        const requerido = this.montoCubiertoPorMetodos;
+
+        if (Math.abs(pagado - requerido) < 0.01) return 100;
+        return Math.min((pagado / requerido) * 100, 100);
+    }
+
+    get progresoPago(): number {
+        let pagado = 0;
+
+        switch (this.venta.formaPago) {
+            case 'cashea':
+                const plan = this.calcularCasheaPlan(this.cantidadCuotasCashea);
+                pagado = plan.inicial + plan.cuotasOrdenadas.reduce((total, cuota) => {
+                    return cuota.pagada ? total + cuota.monto : total;
+                }, 0);
+                break;
+            case 'abono':
+                pagado = this.venta.montoAbonado ?? 0;
+                break;
+            case 'contado':
+                pagado = this.totalPagadoPorMetodos;
+                break;
+            default:
+                pagado = 0;
+        }
+
+        const requerido = this.montoRequeridoSegunFormaPago;
+        if (requerido === 0) return 0;
+
+        const diferencia = Math.abs(pagado - requerido);
+        if (diferencia < 0.01) return 100;
+
+        const porcentaje = (pagado / requerido) * 100;
+        return Math.min(Math.round(porcentaje * 100) / 100, 100);
+    }
+
+    get montoRequeridoSegunFormaPago(): number {
+        switch (this.venta.formaPago) {
+            case 'contado':
+                return this.montoTotal;
+            case 'abono':
+                return this.venta.montoAbonado ?? 0;
+            case 'cashea':
+                return this.venta.montoInicial ?? 0;
+            default:
+                return 0;
+        }
+    }
+
+    get porcentajeAbonadoDelTotal(): number {
+        const abonado = this.venta.montoAbonado ?? 0;
+        const total = this.montoTotal;
+
+        if (total === 0) return 0;
+
+        const porcentaje = (abonado / total) * 100;
+        return Math.min(Math.round(porcentaje * 100) / 100, 100);
+    }
+
+    // Mensajes y títulos
+    get mensajePagoCompleto(): string {
+        switch (this.venta.formaPago) {
+            case 'abono':
+                return '✅ El pago está completo y alineado con el monto abonado.';
+            case 'cashea':
+                return '✅ El pago inicial está completo y alineado con el monto requerido.';
+            case 'contado':
+                return '✅ El pago está completo y alineado con el monto total.';
+            default:
+                return '✅ El pago está completo.';
+        }
+    }
+
+    get tituloBarraMetodos(): string {
+        return 'Progreso de los métodos de pago';
+    }
+
+    get tituloBarraPago(): string {
+        switch (this.venta.formaPago) {
+            case 'abono': return 'Progreso del abono registrado';
+            case 'cashea': return 'Progreso del pago inicial';
+            case 'contado': return 'Progreso del pago total';
+            default: return 'Progreso del pago';
+        }
+    }
+
+    // === MÉTODOS CASHEA ===
+
+    onFormaPagoChange(valor: string): void {
+        this.venta.formaPago = valor;
+
+        if (valor === 'cashea') {
+            this.asignarInicialPorNivel();
+            this.generarCuotasCashea(); // ✅ genera cuotas solo si se selecciona Cashea
+        }
+    }
+
+    get cantidadCuotas(): number {
+        return this.calcularCasheaPlan(this.cantidadCuotasCashea).cuotasOrdenadas.length;
+    }
+
+    get montoPrimeraCuota(): number {
+        return this.calcularCasheaPlan(this.cantidadCuotasCashea).cuotasOrdenadas[0]?.monto ?? 0;
+    }
+
+    obtenerNombreNivelCashea(nivel: string): string {
+        const nombres: Record<string, string> = {
+            nivel1: 'Nivel 1 (60%)',
+            nivel2: 'Nivel 2 (50%)',
+            nivel3: 'Nivel 3 (40%)',
+            nivel4: 'Nivel 4 (40%)',
+            nivel5: 'Nivel 5 (40%)',
+            nivel6: 'Nivel 6 (40%)'
+        };
+        return nombres[nivel] ?? nivel;
+    }
+
+    nivelPermiteCuotasExtendidas(nivel: string): boolean {
+        return ['nivel3', 'nivel4', 'nivel5', 'nivel6'].includes(nivel);
     }
 
     calcularInicialCasheaPorNivel(total: number, nivel: string): number {
@@ -424,6 +672,7 @@ export class GenerarVentaComponent implements OnInit {
     asignarInicialPorNivel(): void {
         const minimo = this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
         this.venta.montoInicial = minimo;
+        this.valorInicialTemporal = `${minimo.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
     }
 
     validarInicialCashea(): void {
@@ -436,123 +685,114 @@ export class GenerarVentaComponent implements OnInit {
         }
     }
 
-    calcularCasheaPlan(): { inicial: number; cuotas: number[]; fechas: string[] } {
+    calcularCasheaPlan(numeroCuotas: number): {
+        inicial: number;
+        cuotasOrdenadas: CuotaCashea[];
+    } {
         const total = this.montoTotal;
         const inicial = this.venta.montoInicial ?? this.calcularInicialCasheaPorNivel(total, this.nivelCashea);
         const restante = total - inicial;
-        const numeroCuotas = 3;
         const montoPorCuota = this.redondear(restante / numeroCuotas);
 
-        const fechas: string[] = [];
         const hoy = new Date();
+        const cuotasOrdenadas: CuotaCashea[] = [];
+
         for (let i = 1; i <= numeroCuotas; i++) {
-            const fecha = new Date(hoy);
-            fecha.setDate(hoy.getDate() + i * 14);
-            fechas.push(fecha.toLocaleDateString('es-VE'));
+            const fechaBase = new Date();
+            const fechaCuota = new Date(fechaBase);
+            fechaCuota.setDate(fechaBase.getDate() + i * 14);
+
+            cuotasOrdenadas.push({
+                id: i,
+                fecha: fechaCuota.toLocaleDateString('es-VE', {
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                }),
+                monto: montoPorCuota,
+                pagada: false,
+                seleccionada: false,
+                habilitada: false
+            });
         }
+
 
         return {
             inicial,
-            cuotas: Array(numeroCuotas).fill(montoPorCuota),
-            fechas
+            cuotasOrdenadas
         };
     }
 
-    get progresoCashea(): number {
-        const plan = this.calcularCasheaPlan();
-        const pagado = this.redondear(plan.inicial + plan.cuotas.reduce((a, b) => a + b, 0));
-        const porcentaje = (pagado / this.montoTotal) * 100;
-        return this.casheaBalanceValido ? 100 : Math.round(porcentaje);
+    generarCuotasCashea(): void {
+        const plan = this.calcularCasheaPlan(this.cantidadCuotasCashea);
+        this.cuotasCashea = plan.cuotasOrdenadas.map((cuota, index) => ({
+            ...cuota,
+            habilitada: index === 0
+        }));
+        this.actualizarResumenCashea();
     }
 
+    toggleCuotaSeleccionada(index: number): void {
+        const cuota = this.cuotasCashea[index];
+        cuota.seleccionada = !cuota.seleccionada;
 
-
-    onFormaPagoChange(valor: string): void {
-        this.venta.formaPago = valor;
-        if (valor === 'cashea') {
-            this.asignarInicialPorNivel();
+        if (cuota.seleccionada && index + 1 < this.cuotasCashea.length) {
+            this.cuotasCashea[index + 1].habilitada = true;
         }
+
+        if (!cuota.seleccionada) {
+            for (let i = index + 1; i < this.cuotasCashea.length; i++) {
+                this.cuotasCashea[i].seleccionada = false;
+                this.cuotasCashea[i].habilitada = false;
+            }
+        }
+
+        this.actualizarResumenCashea();
     }
+
+    actualizarResumenCashea(): void {
+        const seleccionadas = this.cuotasCashea.filter(c => c.seleccionada);
+        const total = seleccionadas.reduce((sum, c) => sum + c.monto, 0);
+        const tasa = this.obtenerTasaBs();
+
+        this.resumenCashea = {
+            cantidad: seleccionadas.length,
+            total,
+            totalBs: this.redondear(this.obtenerEquivalenteBs(total))
+        };
+    }
+
+    get casheaBalanceValido(): boolean {
+        const plan = this.calcularCasheaPlan(this.cantidadCuotasCashea);
+        const totalPagado = this.redondear(
+            plan.inicial + plan.cuotasOrdenadas.reduce((total, cuota) => total + cuota.monto, 0)
+        );
+        return Math.abs(totalPagado - this.montoTotal) < 0.01;
+    }
+
+
+    // === MÉTODOS DE ASESOR ===
+
+    get nombreCompletoAsesor(): string {
+        return this.currentUser?.nombre ?? 'Sin nombre';
+    }
+
+    getResumenAsesor(): string {
+        const asesor = this.empleadosDisponibles.find(e => e.id === this.asesorSeleccionado);
+        if (!asesor) return 'Sin asesor asignado';
+        return `${asesor.nombre} — ${asesor.cargoNombre}`;
+    }
+
+    // === MÉTODOS DE UTILIDAD ===
 
     redondear(valor: number): number {
         return Math.round(valor * 100) / 100;
     }
 
-
-    actualizarProductosConDetalle(): void {
-        const tasaDestino = this.tasasDisponibles.find(t => t.nombre.toLowerCase() === this.venta.moneda)?.valor ?? 1;
-
-        console.log('this.venta.productos', this.venta.productos);
-        this.productosConDetalle = this.venta.productos.map(p => {
-            const cantidad = p.cantidad ?? 1;
-            const aplicaIva = p.aplicaIva ?? false;
-            const tasaOrigen = this.tasasDisponibles.find(t => t.nombre.toLowerCase() === p.moneda)?.valor ?? 1;
-
-            // Subtotal en moneda original
-            const subtotal = +(p.precio * cantidad).toFixed(2);
-
-            // IVA en moneda original
-            const iva = aplicaIva ? +(subtotal * (this.ivaPorcentaje / 100)).toFixed(2) : 0;
-
-            // Total en moneda original
-            const totalEnOrigen = subtotal + iva;
-
-            // Conversión al destino
-            const factor = tasaOrigen / tasaDestino;
-            const totalConvertido = +(totalEnOrigen * factor).toFixed(2);
-
-            return {
-                ...p,
-                cantidad,
-                subtotal, // en moneda original
-                iva,      // en moneda original
-                total: totalConvertido, // en moneda seleccionada
-                precioConvertido: +(p.precio * factor).toFixed(2),
-                stock: p.stock // ✅ mantenerlo para validación visual
-            };
-        });
-
-        this.totalProductos = this.calcularTotalProductos();
+    redondearDosDecimales(valor: number): number {
+        return Math.round(valor * 100) / 100;
     }
-
-    get subtotal(): number {
-        // Suma de subtotales sin IVA
-        return this.productosConDetalle.reduce((acc, p) => acc + p.subtotal, 0);
-    }
-
-    get totalIva(): number {
-        // Suma total del IVA por producto
-        return this.productosConDetalle.reduce((acc, p) => acc + p.iva, 0);
-    }
-
-    get totalGeneral(): number {
-        // Total final con IVA incluido
-        return +(this.subtotal + this.totalIva).toFixed(2);
-    }
-
-    get totalConDescuento(): number {
-        const bruto = this.subtotal + this.totalIva;
-        const descuento = (this.venta.descuento ?? 0) / 100;
-        return +(bruto * (1 - descuento)).toFixed(2);
-    }
-
-    onCantidadChange(p: any, nuevaCantidad: number): void {
-        const cantidad = Math.max(1, +nuevaCantidad);
-
-        const productoOriginal = this.venta.productos.find(prod => prod.id === p.id);
-        if (!productoOriginal) return;
-
-        if (cantidad > (productoOriginal.stock ?? 0)) {
-            this.swalService.showWarning('Stock insuficiente', `Solo hay ${productoOriginal.stock} unidades disponibles.`);
-            productoOriginal.cantidad = productoOriginal.stock;
-        } else {
-            productoOriginal.cantidad = cantidad;
-        }
-
-        this.actualizarProductosConDetalle();
-    }
-
-
 
     convertirMonto(monto: number, origen: string, destino: string): number {
         if (origen === destino) return +monto.toFixed(2);
@@ -576,35 +816,90 @@ export class GenerarVentaComponent implements OnInit {
                 : +montoEnBs.toFixed(2);
     }
 
-    private readonly idMap: Record<string, string> = {
-        usd: 'dolar',
-        ves: 'bolivar',
-        bs: 'bolivar',
-        eur: 'euro',
-        $: 'dolar',
-        '€': 'euro'
-    };
-
     obtenerSimboloMoneda(id: string): string {
-        // console.log ('obtenerSimboloMoneda - id', id);
         const normalizado = this.idMap[id?.toLowerCase()] ?? id?.toLowerCase();
         const moneda = this.tasasDisponibles.find(m => m.id === normalizado);
         return moneda?.simbolo ?? '';
     }
 
-    calcularTotalProductos(): number {
-        if (!Array.isArray(this.productosConDetalle)) return 0;
-
-        return this.productosConDetalle.reduce((acc, p) => {
-            const total = +p.total || 0;
-            return acc + total;
-        }, 0);
+    obtenerEquivalenteBs(monto: number): number {
+        const moneda = this.venta.moneda;
+        const tasa = this.tasasPorId?.[moneda] ?? 1;
+        return moneda === 'bolivar' ? monto : monto * tasa;
     }
 
-    trackByProducto(index: number, item: any): string {
-        return item.id;
+    // === MÉTODOS DE VALIDACIÓN Y FORMATEO ===
+
+    validarEntrada(event: KeyboardEvent): void {
+        const tecla = event.key;
+        const permitido = /^[0-9.,]$/;
+
+        if (!permitido.test(tecla)) {
+            event.preventDefault();
+        }
     }
 
+    formatearMonto(): void {
+        const limpio = this.valorTemporal.replace(/[^\d.]/g, '').trim();
+
+        if (!limpio) {
+            this.venta.montoAbonado = 0;
+            this.valorTemporal = '';
+            this.montoExcedido = false;
+            return;
+        }
+
+        const monto = parseFloat(limpio);
+        const adeudado = this.montoTotal;
+
+        if (isNaN(monto)) {
+            this.venta.montoAbonado = 0;
+            this.valorTemporal = '';
+            this.montoExcedido = false;
+            return;
+        }
+
+        this.montoExcedido = monto > adeudado;
+
+        if (this.montoExcedido) {
+            this.valorTemporal = `${adeudado.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+            return;
+        }
+
+        this.venta.montoAbonado = monto;
+        this.valorTemporal = `${monto.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+    }
+
+    formatearInicialCashea(): void {
+        const limpio = this.valorInicialTemporal.replace(/[^\d.]/g, '').trim();
+
+        if (!limpio) {
+            this.venta.montoInicial = 0;
+            this.valorInicialTemporal = '';
+            return;
+        }
+
+        const monto = parseFloat(limpio);
+        const minimo = this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
+
+        if (isNaN(monto)) {
+            this.venta.montoInicial = 0;
+            this.valorInicialTemporal = '';
+            return;
+        }
+
+        if (monto < minimo) {
+            this.venta.montoInicial = minimo;
+            this.valorInicialTemporal = `${minimo.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+            return;
+        }
+
+        this.venta.montoInicial = monto;
+        this.valorInicialTemporal = `${monto.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+    }
+
+
+    // === MÉTODOS DE UI Y MODALES ===
 
     abrirModalResumen(): void {
         if (this.venta.productos.length === 0) {
@@ -628,29 +923,16 @@ export class GenerarVentaComponent implements OnInit {
         }
     }
 
-    obtenerEquivalenteBs(monto: number): number {
-        const moneda = this.venta.moneda;
-        const tasa = this.tasasPorId?.[moneda] ?? 1;
-        return moneda === 'bolivar' ? monto : monto * tasa;
+    // NOTE: Este método parece estar incompleto en el código original
+    obtenerTasaBs(): number {
+        // Implementación pendiente - conectar con servicio de tasas
+        return 1;
     }
 
-    redondearDosDecimales(valor: number): number {
-        return Math.round(valor * 100) / 100;
+    calcularMontoPorCuota(): number {
+        const total = this.totalConDescuento;
+        const restante = total - (this.venta.montoInicial ?? 0);
+        const cuotas = this.venta.numeroCuotas ?? 1;
+        return cuotas > 0 ? +(restante / cuotas).toFixed(2) : 0;
     }
-
-    get montoTotal(): number {
-        const descuento = this.venta.descuento ?? 0;
-        return Math.round((this.totalProductos * (1 - descuento / 100)) * 100) / 100;
-    }
-
-    get totalAdeudado(): number {
-        return Math.max(this.montoTotal - (this.venta.montoAbonado ?? 0), 0);
-    }
-
-    get casheaBalanceValido(): boolean {
-        const plan = this.calcularCasheaPlan();
-        const totalPagado = this.redondear(plan.inicial + plan.cuotas.reduce((a, b) => a + b, 0));
-        return Math.abs(totalPagado - this.montoTotal) < 0.01;
-    }
-
 }

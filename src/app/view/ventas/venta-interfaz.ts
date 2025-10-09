@@ -55,6 +55,16 @@ export interface ProductoVentaCalculado {
     stock: number;
 }
 
+export interface CuotaCashea {
+  id: number;
+  fecha: string;
+  monto: number;
+  pagada: boolean;
+  seleccionada: boolean;
+  habilitada: boolean;
+}
+
+
 
 
 

@@ -25,6 +25,11 @@ table {
     margin-top: 1rem;
 }
 
+.progress-bar {
+  transition: width 0.6s ease, background-color 0.4s ease;
+}
+
+
 th,
 td {
     border: 1px solid #ddd;

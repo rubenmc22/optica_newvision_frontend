@@ -239,7 +239,6 @@
                                 <select class="form-select" [(ngModel)]="venta.formaPago"
                                     (ngModelChange)="onFormaPagoChange($event)">
                                     <option value="contado">Contado</option>
-                                    <option value="cuotas">Cuotas</option>
                                     <option value="abono">Abono parcial</option>
                                     <option value="cashea">Cashea</option>
                                 </select>
@@ -253,11 +252,11 @@
                         </div>
 
                         <!-- Cashea -->
-                        <div *ngIf="venta.formaPago === 'cashea'" class="row g-3 mt-3">
-                            <div class="col-md-4">
+                        <div *ngIf="venta.formaPago === 'cashea'" class="row g-3 mt-1">
+                            <div class="col-md-3">
                                 <label class="form-label">Nivel Cashea</label>
                                 <select class="form-select" [(ngModel)]="nivelCashea"
-                                    (change)="asignarInicialPorNivel()">
+                                    (change)="asignarInicialPorNivel()" style="margin-top: 0rem;">
                                     <option value="nivel1">Nivel 1 (60%)</option>
                                     <option value="nivel2">Nivel 2 (50%)</option>
                                     <option value="nivel3">Nivel 3 (40%)</option>
@@ -267,11 +266,22 @@
                                 </select>
                             </div>
 
+                            <div class="col-md-2">
+                                <label class="form-label">Cuotas</label>
+                                <select class="form-select" [(ngModel)]="cantidadCuotasCashea"
+                                    (change)="generarCuotasCashea()" style="margin-top: 0rem;"
+                                    [disabled]="!nivelPermiteCuotasExtendidas(nivelCashea)">
+                                    <option [value]="3">3 cuotas</option>
+                                    <option [value]="6">6 cuotas</option>
+                                </select>
+                            </div>
+
                             <div class="col-md-4">
-                                <label class="form-label">Inicial ({{ obtenerSimboloMoneda(venta.moneda) }})</label>
-                                <input type="number" class="form-control" [(ngModel)]="venta.montoInicial"
-                                    [min]="calcularInicialCasheaPorNivel(montoTotal, nivelCashea)"
-                                    (blur)="validarInicialCashea()" />
+                                <label class="form-label">Inicial</label>
+                                <input type="text" class="form-control" 
+                                    [placeholder]="'Monto en ' + obtenerSimboloMoneda(venta.moneda)"
+                                    [(ngModel)]="valorInicialTemporal" (blur)="formatearInicialCashea()"
+                                    (keypress)="validarEntrada($event)" style="margin-bottom: 0rem; margin-top: 0rem;" />
                                 <small class="text-muted">
                                     Mínimo requerido: {{ calcularInicialCasheaPorNivel(montoTotal, nivelCashea) |
                                     number:'1.2-2' }}
@@ -282,71 +292,126 @@
                                 </small>
                             </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label">Monto por cuota ({{ obtenerSimboloMoneda(venta.moneda)
-                                    }})</label>
-                                <input type="number" class="form-control" [value]="calcularCasheaPlan().cuotas[0]"
+                            <div class="col-md-3">
+                                <label class="form-label">Monto por cuota</label>
+                                <input type="text" class="form-control" style="margin-top: 0rem;"
+                                    [value]="redondearDosDecimales(montoPrimeraCuota) + ' ' + obtenerSimboloMoneda(venta.moneda)"
                                     disabled />
                             </div>
 
                             <div class="col-12 mt-3">
-                                <h6>📅 Fechas de pago</h6>
-                                <ul class="list-group">
-                                    <li class="list-group-item"
-                                        *ngFor="let fecha of calcularCasheaPlan().fechas; let i = index">
-                                        Cuota {{ i + 1 }}: {{ fecha }}
-                                    </li>
-                                </ul>
-                            </div>
-                            <div class="col-12 mt-2" *ngIf="!casheaBalanceValido">
-                                <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
-                                    ⚠️ El total de pagos (inicial + cuotas) no coincide con el monto total de la venta.
-                                    <br />
-                                    Verifica el nivel Cashea o ajusta la inicial manualmente.
+                                <label class="form-label mb-1">📅 Fechas de pago</label>
+                                <small class="text-muted d-block mb-2">
+                                    Fechas aproximadas. Valida en la aplicación de Cashea.
+                                </small>
+
+                                <div class="row g-3 mt-3">
+                                    <ng-container *ngFor="let cuota of cuotasCashea; let i = index">
+                                        <div class="col-md-4">
+                                            <div class="card h-100" [ngClass]="{
+                                            'border-success': cuota.pagada,
+                                            'border-primary': cuota.seleccionada && !cuota.pagada,
+                                            'border-light': !cuota.seleccionada && !cuota.pagada,
+                                            'opacity-50': !cuota.habilitada
+                                            }" (click)="cuota.habilitada && toggleCuotaSeleccionada(i)"
+                                                style="cursor: pointer;">
+                                                <div class="card-body p-2 d-flex flex-column justify-content-between">
+                                                    <div>
+                                                        <h6 class="mb-1">Cuota {{ cuota.id }}</h6>
+                                                        <small class="text-muted d-block">{{ cuota.fecha }}</small>
+                                                        <strong>{{ cuota.monto | number:'1.2-2' }} {{
+                                                            obtenerSimboloMoneda(venta.moneda) }}</strong>
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <span class="badge" [ngClass]="{
+                                                                'bg-success': cuota.pagada,
+                                                                'bg-primary': cuota.seleccionada && !cuota.pagada,
+                                                                'bg-secondary': !cuota.seleccionada && !cuota.pagada
+                                                            }">
+                                                            {{
+                                                            cuota.pagada
+                                                            ? 'Pagada'
+                                                            : cuota.seleccionada
+                                                            ? 'Seleccionada'
+                                                            : 'Pendiente'
+                                                            }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </ng-container>
+                                </div>
+
+                                <!-- Resumen compacto -->
+                                <div class="mt-2 text-end" [ngClass]="{ 'text-danger': !casheaBalanceValido }">
+                                    <small class="text-muted">
+                                        Adelantando <strong>{{ resumenCashea.cantidad }}</strong> cuota{{
+                                        resumenCashea.cantidad > 1 ? 's' : '' }} —
+                                        <strong>{{ resumenCashea.total | number:'1.2-2' }} {{
+                                            obtenerSimboloMoneda(venta.moneda) }}</strong>
+                                        <span *ngIf="venta.moneda !== 'bolivar'">
+                                            (~{{ resumenCashea.totalBs | number:'1.2-2' }} Bs)
+                                        </span>
+                                        <span *ngIf="!casheaBalanceValido">⚠️</span>
+                                    </small>
                                 </div>
                             </div>
-                            <div class="col-12 mt-3">
-                                <label class="form-label">Progreso de pago</label>
-                                <div class="progress" style="height: 24px;">
-                                    <div class="progress-bar" role="progressbar" [style.width.%]="progresoCashea"
-                                        [ngClass]="{
-                                            'bg-success': progresoCashea === 100,
-                                            'bg-warning': progresoCashea < 100
-                                        }">
-                                        {{ progresoCashea }}%
+
+                        </div>
+
+                        <!-- Abono parcial -->
+                        <div *ngIf="venta.formaPago === 'abono'" class="row g-3 mt-1">
+                            <!-- Monto abonado con barra embebida -->
+                            <div class="col-md-6">
+                                <label class="form-label">Monto abonado</label>
+
+                                <div class="d-flex flex-column gap-1">
+                                    <!-- Campo de monto -->
+                                    <input type="text" class="form-control"
+                                        [placeholder]="'Monto en ' + obtenerSimboloMoneda(venta.moneda)"
+                                        [(ngModel)]="valorTemporal" (blur)="formatearMonto()"
+                                        (keypress)="validarEntrada($event)"
+                                        style="margin-top: 0px; margin-bottom: 0.3rem;" />
+
+                                    <small *ngIf="montoExcedido" class="text-danger mt-0">
+                                        ⚠️ El monto ingresado excede el total adeudado ({{ montoTotal | number:'1.2-2'
+                                        }} {{ obtenerSimboloMoneda(venta.moneda) }}).
+                                    </small>
+
+                                    <!-- Barra de progreso del abono -->
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar" role="progressbar"
+                                            [style.width.%]="porcentajeAbonadoDelTotal" [ngClass]="{
+                                                'bg-success': porcentajeAbonadoDelTotal === 100,
+                                                'bg-warning': porcentajeAbonadoDelTotal < 100
+                                            }">
+                                        </div>
                                     </div>
+
+                                    <!-- Porcentaje + conversión embebidos -->
+                                    <small class="text-secondary d-block mt-1">
+                                        {{ porcentajeAbonadoDelTotal }}% del total cubierto
+                                        <span *ngIf="venta.moneda !== 'bolivar'">
+                                            (⇄ {{ obtenerEquivalenteBs(venta.montoAbonado ?? 0) | number:'1.2-2' }} Bs)
+                                        </span>
+                                    </small>
                                 </div>
-                                <small class="text-muted d-block mt-1">
-                                    Pagado: {{ redondear(calcularCasheaPlan().inicial + calcularCasheaPlan().cuotas[0] *
-                                    3) | number:'1.2-2' }}
-                                    {{ obtenerSimboloMoneda(venta.moneda) }}
-                                    <span *ngIf="venta.moneda !== 'bolivar'">
-                                        ⇄ {{ redondear(obtenerEquivalenteBs(calcularCasheaPlan().inicial +
-                                        calcularCasheaPlan().cuotas[0] * 3)) | number:'1.2-2' }} Bs
-                                    </span>
+                            </div>
+
+                            <!-- Total adeudado -->
+                            <div class="col-md-6">
+                                <label class="form-label">Total adeudado</label>
+                                <div class="form-control bg-light">
+                                    {{ montoTotal - (venta.montoAbonado ?? 0) | number:'1.2-2' }} {{
+                                    obtenerSimboloMoneda(venta.moneda) }}
+                                </div>
+                                <small *ngIf="venta.moneda !== 'bolivar'" class="text-muted mt-1 d-block">
+                                    ⇄ {{ obtenerEquivalenteBs(montoTotal - (venta.montoAbonado ?? 0)) | number:'1.2-2'
+                                    }} Bs
                                 </small>
                             </div>
-
                         </div>
-                        <!-- Abono -->
-                        <div *ngIf="venta.formaPago === 'abono'" class="row g-3 mt-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Monto abonado ({{ obtenerSimboloMoneda(venta.moneda)
-                                    }})</label>
-                                <input type="number" class="form-control" [(ngModel)]="venta.montoAbonado" />
-                                <small *ngIf="venta.moneda !== 'bolivar'" class="text-muted">
-                                    ⇄ {{ obtenerEquivalenteBs(venta.montoAbonado ?? 0) | number:'1.2-2' }} Bs
-                                </small>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label">Total adeudado ({{ obtenerSimboloMoneda(venta.moneda)
-                                    }})</label>
-                                <input type="text" class="form-control"
-                                    [value]="montoTotal - (venta.montoAbonado ?? 0) | number:'1.2-2'" disabled />
-                            </div>
-                        </div>
-
 
                         <!-- Métodos de pago -->
                         <div class="mt-4">
@@ -366,6 +431,7 @@
                                     <div class="d-flex flex-wrap gap-2 align-items-center">
                                         <select class="form-select form-select-sm flex-grow-1" [(ngModel)]="metodo.tipo"
                                             style="min-width: 140px;">
+                                            <option value="" disabled selected>Seleccionar un método</option>
                                             <option value="efectivo">Efectivo</option>
                                             <option value="debito">Débito</option>
                                             <option value="credito">Crédito</option>
@@ -374,13 +440,55 @@
                                         </select>
 
                                         <input type="number" class="form-control form-control-sm"
-                                            [(ngModel)]="metodo.monto" placeholder="$" style="width: 100px;" />
-
-                                        <button class="btn btn-outline-danger btn-sm" (click)="eliminarMetodo(i)">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                            [(ngModel)]="metodo.monto" [max]="getMontoRestanteParaMetodo(i)"
+                                            (blur)="validarMontoMetodo(i)"
+                                            placeholder="Monto ({{ obtenerSimboloMoneda(venta.moneda) }})" />
+                                        <small class="text-muted d-block mt-1">
+                                            Máximo permitido: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{
+                                            obtenerSimboloMoneda(venta.moneda) }}
+                                        </small>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Resumen dinámico -->
+                            <div *ngIf="venta.metodosDePago.length > 0" class="mt-4">
+                                <p class="mb-1">
+                                    <strong>Total pagado:</strong>
+                                    {{ redondear(totalPagadoPorMetodos) | number:'1.2-2' }} {{
+                                    obtenerSimboloMoneda(venta.moneda) }}
+                                    <span *ngIf="venta.moneda !== 'bolivar'" class="text-muted ms-2">
+                                        ⇄ {{ redondear(obtenerEquivalenteBs(totalPagadoPorMetodos)) | number:'1.2-2' }}
+                                        Bs
+                                    </span>
+                                </p>
+
+                                <p class="mb-3">
+                                    <strong>Restante:</strong>
+                                    {{ redondear(restantePorMetodos) | number:'1.2-2' }} {{
+                                    obtenerSimboloMoneda(venta.moneda) }}
+                                    <span *ngIf="venta.moneda !== 'bolivar'" class="text-muted ms-2">
+                                        ⇄ {{ redondear(obtenerEquivalenteBs(restantePorMetodos)) | number:'1.2-2' }} Bs
+                                    </span>
+                                </p>
+
+                                <!-- Barra de progreso metodo de pago -->
+                                <label class="form-label">Progreso de pago</label>
+                                <div class="progress" style="height: 24px;">
+                                    <div class="progress-bar" role="progressbar" [style.width.%]="progresoMetodos"
+                                        [ngClass]="{
+                                        'bg-success': progresoMetodos === 100 && restantePorMetodos === 0,
+                                        'bg-warning': progresoMetodos < 100
+                                        }">
+                                        {{ progresoMetodos }}%
+                                    </div>
+                                </div>
+
+                                <div *ngIf="progresoMetodos === 100 && restantePorMetodos === 0"
+                                    class="text-success mt-2">
+                                    {{ mensajePagoCompleto }}
+                                </div>
+
                             </div>
                         </div>
 
@@ -427,30 +535,47 @@
 
                     <!-- 💳 Forma de pago -->
                     <h5 class="text-primary pb-2"><strong>💳 Forma de pago</strong></h5>
-                    <p class="mb-2"><strong>Tipo:</strong> {{ venta.formaPago | titlecase }}</p>
 
                     <!-- Cashea -->
-                    <div *ngIf="venta.formaPago === 'cashea'">
-                        <p><strong>Nivel Cashea:</strong> {{ nivelCashea }}</p>
+                    <div *ngIf="venta.formaPago === 'cashea'" class="row g-3">
+                        <!-- 🧩 Tipo + Nivel -->
+                        <div class="col-md-4">
+                            <strong>Tipo:</strong> {{ venta.formaPago | titlecase }}
+                        </div>
+                        <div class="col-md-8">
+                            <strong>Nivel Cashea:</strong> {{ obtenerNombreNivelCashea(nivelCashea) }}
+                        </div>
 
-                        <p>
+                        <!-- 💰 Inicial + Cuotas + Adelanto -->
+                        <div class="col-md-4">
                             <strong>Inicial:</strong>
-                            {{ redondearDosDecimales(venta.montoInicial) | number:'1.2-2' }} {{
-                            obtenerSimboloMoneda(venta.moneda) }}
-                            <span *ngIf="venta.moneda !== 'bolivar'" class="text-muted ms-2">
-                                ⇄ {{ redondearDosDecimales(obtenerEquivalenteBs(venta.montoInicial)) |
-                                number:'1.2-2' }}
+                            {{ redondearDosDecimales(venta.montoInicial) | number:'1.2-2' }}
+                            {{ obtenerSimboloMoneda(venta.moneda) }}
+                            <span *ngIf="venta.moneda !== 'bolivar'" class="text-muted ms-1">
+                                ⇄ {{ redondearDosDecimales(obtenerEquivalenteBs(venta.montoInicial)) | number:'1.2-2' }}
                                 Bs
                             </span>
-                        </p>
+                        </div>
 
-                        <p>
+                        <div class="col-md-3">
                             <strong>Cuotas:</strong>
-                            {{ calcularCasheaPlan().cuotas.length }} de
-                            {{ redondearDosDecimales(calcularCasheaPlan().cuotas[0]) | number:'1.2-2' }} {{
-                            obtenerSimboloMoneda(venta.moneda) }}
-                        </p>
+                            {{ cantidadCuotas }} de
+                            {{ redondearDosDecimales(montoPrimeraCuota) | number:'1.2-2' }}
+                            {{ obtenerSimboloMoneda(venta.moneda) }}
+                        </div>
+
+                        <div class="col-md-5" *ngIf="resumenCashea.cantidad > 0">
+                            <strong>Adelanto:</strong>
+                            {{ resumenCashea.total | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
+                            <span *ngIf="venta.moneda !== 'bolivar'" class="text-muted ms-1">
+                                ⇄ {{ resumenCashea.totalBs | number:'1.2-2' }} Bs
+                            </span>
+                            <small class="text-muted ms-1">
+                                ({{ resumenCashea.cantidad }} cuota{{ resumenCashea.cantidad > 1 ? 's' : '' }})
+                            </small>
+                        </div>
                     </div>
+
 
                     <!-- Abono parcial -->
                     <div *ngIf="venta.formaPago === 'abono'">
@@ -470,8 +595,26 @@
                             obtenerSimboloMoneda(venta.moneda) }}
                         </p>
                     </div>
-                </div>
 
+                    <!-- 💳 Resumen de métodos de pago -->
+                    <div class="mt-4">
+                        <h5 class="text-primary pb-2"><strong>💰 Métodos de pago</strong></h5>
+
+                        <ul class="list-group mb-3">
+                            <li *ngFor="let metodo of venta.metodosDePago"
+                                class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ metodo.tipo | titlecase }}</span>
+                                <span>
+                                    {{ redondear(metodo.monto ?? 0) | number:'1.2-2' }} {{
+                                    obtenerSimboloMoneda(venta.moneda) }}
+                                    <span *ngIf="venta.moneda !== 'bolivar'" class="text-muted ms-2">
+                                        ⇄ {{ redondear(obtenerEquivalenteBs(metodo.monto ?? 0)) | number:'1.2-2' }} Bs
+                                    </span>
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
             <div class="modal-footer">
