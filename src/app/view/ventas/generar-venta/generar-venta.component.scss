@@ -4,8 +4,16 @@
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
-    padding: 1rem;
+  //  padding: 1rem;
     background: var(--degradado-pastel) !important;
+}
+
+.form-check-label{
+    font-size: 1rem !important;
+}
+
+.form-switch{
+    left: 35px;
 }
 
 .panel-contexto,
@@ -26,7 +34,7 @@ table {
 }
 
 .progress-bar {
-  transition: width 0.6s ease, background-color 0.4s ease;
+    transition: width 0.6s ease, background-color 0.4s ease;
 }
 
 
@@ -86,6 +94,63 @@ ng-select {
 
 .switchPaciente {
     left: 22px;
+}
+
+.modal-header {
+    font-size: 1.2rem;
+    background: var(--degradado-color) !important;
+    /* Fondo amarillo */
+    color: var(--details-color) !important;
+    /* Texto negro */
+    font-weight: bold;
+    border-bottom: 2px solid var(--secondary-color);
+    /* Línea divisoria negra */
+
+    .bi-plus-lg,
+    .fa-plus {
+        color: var(--details-color) !important;
+        font-size: 1.25rem;
+        vertical-align: middle;
+    }
+
+    .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+}
+
+.card-header {
+    //  text-align: center;
+    font-size: 1.2rem;
+    background: var(--degradado-color) !important;
+    /* Fondo amarillo */
+    color: var(--details-color) !important;
+    /* Texto negro */
+    font-weight: bold;
+    border-bottom: 2px solid var(--secondary-color);
+    /* Línea divisoria negra */
+}
+
+.btn-success {
+    background: var(--degradado-color);
+    border: var(--degradado-color);
+    border-left: none;
+    color: #fff;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+        color: var(--details-color);
+
+        i {
+            color: var(--details-color);
+        }
+    }
+
+    i {
+        transition: all 0.2s ease;
+    }
 }
 
 /* ✅ Responsividad para tablets y móviles */

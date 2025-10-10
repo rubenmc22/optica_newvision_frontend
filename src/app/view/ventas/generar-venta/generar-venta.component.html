@@ -1,218 +1,221 @@
-<div class="contenedor-generar-venta mb-3">
-    <div class="border-bottom pb-3 mb-3" style="width: 100%;">
-        <div class="d-flex flex-column">
-            <!-- Título y subtítulo -->
-            <div>
-                <h2 class="fw-bold text-dark mb-1">
-                    <i class="bi bi-cart-plus me-2"></i> Generar Venta
-                </h2>
-                <p class="text-muted mb-2">Selecciona un paciente y/o agrega productos para iniciar la venta</p>
-            </div>
+<div class="card contenedor-generar-venta mb-3" style="margin-bottom: 0rem;">
+    <!-- Encabezado -->
+    <div class="card-header bg-primary text-white position-relative">
+        <h4 class="mb-0">
+            🛒 Generar Venta
+        </h4>
 
-            <!-- Switch alineado a la derecha -->
-            <div class="d-flex justify-content-end" style="margin-top: -65px;">
-                <div
-                    class="bg-white switchIncluirPaciente border rounded px-3 py-2 d-flex align-items-center gap-2 shadow-sm">
-                    <label class="form-check-label text-muted fw-semibold mb-0" for="switchPaciente">
-                        ¿Incluir paciente?
-                    </label>
-                    <div class="form-check switchPaciente form-switch m-0">
-                        <input class="form-check-input" type="checkbox" id="switchPaciente"
-                            [(ngModel)]="requierePaciente">
-                    </div>
+        <!-- Switch incluir paciente alineado a la derecha -->
+        <div class="position-absolute end-0 top-50 translate-middle-y me-3" style="width: 220px;">
+            <div class="bg-white text-dark border rounded px-3 py-2 d-flex align-items-center gap-2 shadow-sm">
+                <label class="form-check-label fw-semibold mb-0" for="switchPaciente">
+                    ¿Incluir paciente?
+                </label>
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" id="switchPaciente"
+                        [(ngModel)]="requierePaciente" />
                 </div>
             </div>
         </div>
     </div>
 
 
-    <div class="contenedor-venta d-flex gap-3">
-        <!-- 🧑 Paciente y contexto clínico -->
+    <!-- Cuerpo -->
+    <div class="card-body" style="margin-top: -15px;">
+        <p class="text-muted mb-3">
+            Selecciona un paciente y/o agrega productos para iniciar la venta
+        </p>
 
-        <section class="panel-contexto" *ngIf="requierePaciente">
-            <div class="card-body">
-                <div class="buscadorPaciente">
-                    <label for="selectorPaciente" class="form-label">👤 Buscar y seleccionar paciente</label>
+        <div class="contenedor-venta d-flex gap-3">
+            <!-- 🧑 Paciente y contexto clínico -->
 
-                    <ng-select id="selectorPaciente" [items]="pacientesFiltradosPorSede"
-                        bindLabel="informacionPersonal.nombreCompleto" [selectOnTab]="true" [clearable]="true"
-                        [searchable]="true" [(ngModel)]="pacienteSeleccionado" (search)="actualizarFiltroTexto($event)"
-                        (change)="onPacienteSeleccionado($event)" [searchFn]="filtrarPorNombreOCedula"
-                        placeholder="Buscar por nombre o cédula...">
+            <section class="panel-contexto" *ngIf="requierePaciente">
+                <div class="card-body">
+                    <div class="buscadorPaciente">
+                        <label for="selectorPaciente" class="form-label">👤 Buscar y seleccionar paciente</label>
 
-                        <ng-template ng-option-tmp let-item="item">
-                            {{ item.informacionPersonal.nombreCompleto }} — {{ item.informacionPersonal.cedula }}
-                        </ng-template>
+                        <ng-select id="selectorPaciente" [items]="pacientesFiltradosPorSede"
+                            bindLabel="informacionPersonal.nombreCompleto" [selectOnTab]="true" [clearable]="true"
+                            [searchable]="true" [(ngModel)]="pacienteSeleccionado"
+                            (search)="actualizarFiltroTexto($event)" (change)="onPacienteSeleccionado($event)"
+                            [searchFn]="filtrarPorNombreOCedula" placeholder="Buscar por nombre o cédula...">
 
-                        <ng-template ng-notfound-tmp>
-                            <div class="text-muted px-2 py-1">
-                                No se encontraron pacientes con ese nombre o cédula
-                            </div>
-                        </ng-template>
-                    </ng-select>
-                </div>
-
-                <div *ngIf="historiaMedica" class="mt-4">
-                    <h4 class="mb-1">👓 Formulación</h4>
-
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-sm text-center align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Ojo</th>
-                                    <th>ESF</th>
-                                    <th>CIL</th>
-                                    <th>EJE</th>
-                                    <th>ADD</th>
-                                    <th>ALT</th>
-                                    <th>DP</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>OD</strong></td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.esf_od }}</td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.cil_od }}</td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.eje_od }}</td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.add_od }}</td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.alt_od }}</td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.dp_od }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>OI</strong></td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.esf_oi }}</td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.cil_oi }}</td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.eje_oi }}</td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.add_oi }}</td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.alt_oi }}</td>
-                                    <td>{{ historiaMedica.examenOcular.refraccionFinal.dp_oi }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <h4 class="mt-4">📋 Recomendaciones</h4>
-                    <ul>
-                        <li><strong>Montura:</strong> {{ historiaMedica.recomendaciones[0].montura }}</li>
-                        <li><strong>Material:</strong> {{ materialesRecomendados }}</li>
-                        <li><strong>Cristal:</strong> {{ historiaMedica.recomendaciones[0].cristal.label }}</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- 🛒 Carrito de productos -->
-        <section class="panel-productos">
-            <div class="card-body">
-                <div class="buscadorProducto d-flex align-items-end gap-3 flex-wrap">
-                    <div class="flex-grow-1">
-                        <label for="selectorProducto" class="form-label">🧴 Buscar y agregar producto</label>
-                        <ng-select id="selectorProducto" [items]="productosFiltradosPorSede" bindLabel="nombre"
-                            [searchable]="true" [clearable]="true" [selectOnTab]="true"
-                            [(ngModel)]="productoSeleccionado" (change)="agregarProductoAlCarrito($event)"
-                            [searchFn]="filtrarProductoPorNombreOCodigo" placeholder="Buscar por nombre o código...">
                             <ng-template ng-option-tmp let-item="item">
-                                {{ item.nombre }} — {{ item.codigo }}
+                                {{ item.informacionPersonal.nombreCompleto }} — {{ item.informacionPersonal.cedula }}
                             </ng-template>
+
                             <ng-template ng-notfound-tmp>
-                                <div class="text-muted px-2 py-1">No se encontraron productos con ese nombre o código
+                                <div class="text-muted px-2 py-1">
+                                    No se encontraron pacientes con ese nombre o cédula
                                 </div>
                             </ng-template>
                         </ng-select>
                     </div>
 
-                    <div style="min-width: 120px;">
-                        <label for="selectorMoneda" class="form-label">💱 Moneda</label>
-                        <ng-select id="selectorMoneda" [items]="monedasDisponibles" bindLabel="nombre" bindValue="id"
-                            [(ngModel)]="venta.moneda" (change)="actualizarProductosConDetalle()" [clearable]="false"
-                            [searchable]="false" placeholder="Moneda">
-                            <ng-template ng-option-tmp let-item="item">
-                                {{ item.nombre }} ({{ item.simbolo }})
-                            </ng-template>
-                        </ng-select>
-                    </div>
+                    <div *ngIf="historiaMedica" class="mt-4">
+                        <h4 class="mb-1">👓 Formulación</h4>
 
-                </div>
-
-                <div *ngIf="venta.productos.length > 0" class="table-responsive mt-3">
-                    <!-- Contenedor con scroll -->
-                    <div class="scrollable-table" style="max-height: 300px; overflow-y: auto;">
-
-                        <table class="table table-bordered table-sm text-center align-middle">
-                            <thead class="table-light sticky-top bg-white">
-                                <tr>
-                                    <th class="text-center align-middle">Nombre</th>
-                                    <th class="text-center align-middle">Precio</th>
-                                    <th class="text-center align-middle">Cant.</th>
-                                    <th class="text-center align-middle">Subtotal</th>
-                                    <th class="text-center align-middle">
-                                        IVA <span class="text-muted"> (16%) </span>
-                                    </th>
-                                    <th class="text-center align-middle">Total</th>
-                                    <th class="text-center align-middle">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr *ngFor="let p of productosConDetalle; trackBy: trackByProducto">
-                                    <td class="text-center align-middle">{{ p.nombre }}</td>
-                                    <td class="text-center align-middle">{{ p.precio | number:'1.2-2' }} {{
-                                        obtenerSimboloMoneda(p.moneda) }}
-                                    </td>
-                                    <td class="text-center align-middle" style="width: 100px; padding: 4px;">
-                                        <div class="d-flex justify-content-center align-items-center gap-1">
-                                            <input type="number" [ngModel]="p.cantidad ?? 1"
-                                                (ngModelChange)="onCantidadChange(p, $event)" min="1"
-                                                class="form-control form-control-sm text-center"
-                                                style="width: 45px; padding: 2px;" />
-
-                                            <small class="text-muted" style="font-size: 0.75rem;">/ {{ p.stock }}
-                                                disp</small>
-                                        </div>
-
-                                    </td>
-                                    <td class="text-center align-middle">{{ p.subtotal | number:'1.2-2' }}
-                                        {{ obtenerSimboloMoneda(p.moneda) }}
-                                    </td>
-                                    <td class="text-center align-middle">
-                                        <ng-container *ngIf="p.iva && p.iva > 0; else sinIva">
-                                            {{ p.iva | number:'1.2-2' }} {{ obtenerSimboloMoneda(p.moneda) }}
-                                        </ng-container>
-                                        <ng-template #sinIva>
-                                            <span class="text-muted">—</span>
-                                        </ng-template>
-                                    </td>
-
-                                    <td class="fw-bold text-center align-middle">
-                                        {{ p.total | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
-                                    </td>
-
-                                    <td class="text-center align-middle">
-                                        <button class="btn btn-sm btn-danger" (click)="eliminarProducto(p.id)">
-                                            🗑️
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm text-center align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Ojo</th>
+                                        <th>ESF</th>
+                                        <th>CIL</th>
+                                        <th>EJE</th>
+                                        <th>ADD</th>
+                                        <th>ALT</th>
+                                        <th>DP</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>OD</strong></td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.esf_od }}</td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.cil_od }}</td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.eje_od }}</td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.add_od }}</td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.alt_od }}</td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.dp_od }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>OI</strong></td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.esf_oi }}</td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.cil_oi }}</td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.eje_oi }}</td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.add_oi }}</td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.alt_oi }}</td>
+                                        <td>{{ historiaMedica.examenOcular.refraccionFinal.dp_oi }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <h4 class="mt-4">📋 Recomendaciones</h4>
+                        <ul>
+                            <li><strong>Montura:</strong> {{ historiaMedica.recomendaciones[0].montura }}</li>
+                            <li><strong>Material:</strong> {{ materialesRecomendados }}</li>
+                            <li><strong>Cristal:</strong> {{ historiaMedica.recomendaciones[0].cristal.label }}</li>
+                        </ul>
                     </div>
                 </div>
-                <div *ngIf="venta.productos.length > 0" @fadeInOut
-                    class="d-flex justify-content-between align-items-center bg-light rounded px-3 py-2 mt-3 shadow-sm"
-                    style="border: 1px solid #ddd;">
-                    <div class="text-muted fw-semibold">
-                        🧾 Monto total:
-                        <span class="text-dark">{{ totalProductos | number:'1.2-2' }} {{
-                            obtenerSimboloMoneda(venta.moneda) }}</span>
+            </section>
+
+            <!-- 🛒 Carrito de productos -->
+            <section class="panel-productos">
+                <div class="card-body">
+                    <div class="buscadorProducto d-flex align-items-end gap-3 flex-wrap">
+                        <div class="flex-grow-1">
+                            <label for="selectorProducto" class="form-label">🧴 Buscar y agregar producto</label>
+                            <ng-select id="selectorProducto" [items]="productosFiltradosPorSede" bindLabel="nombre"
+                                [searchable]="true" [clearable]="true" [selectOnTab]="true"
+                                [(ngModel)]="productoSeleccionado" (change)="agregarProductoAlCarrito($event)"
+                                [searchFn]="filtrarProductoPorNombreOCodigo"
+                                placeholder="Buscar por nombre o código...">
+                                <ng-template ng-option-tmp let-item="item">
+                                    {{ item.nombre }} — {{ item.codigo }}
+                                </ng-template>
+                                <ng-template ng-notfound-tmp>
+                                    <div class="text-muted px-2 py-1">No se encontraron productos con ese nombre o
+                                        código
+                                    </div>
+                                </ng-template>
+                            </ng-select>
+                        </div>
+
+                        <div style="min-width: 120px;">
+                            <label for="selectorMoneda" class="form-label">💱 Moneda</label>
+                            <ng-select id="selectorMoneda" [items]="monedasDisponibles" bindLabel="nombre"
+                                bindValue="id" [(ngModel)]="venta.moneda" (change)="actualizarProductosConDetalle()"
+                                [clearable]="false" [searchable]="false" placeholder="Moneda">
+                                <ng-template ng-option-tmp let-item="item">
+                                    {{ item.nombre }} ({{ item.simbolo }})
+                                </ng-template>
+                            </ng-select>
+                        </div>
+
                     </div>
 
-                    <button class="btn btn-success btn-sm px-3" (click)="abrirModalResumen()">
-                        ✅ Generar Venta
-                    </button>
-                </div>
+                    <div *ngIf="venta.productos.length > 0" class="table-responsive mt-3">
+                        <!-- Contenedor con scroll -->
+                        <div class="scrollable-table" style="max-height: 300px; overflow-y: auto;">
 
-            </div>
-        </section>
+                            <table class="table table-bordered table-sm text-center align-middle">
+                                <thead class="table-light sticky-top bg-white">
+                                    <tr>
+                                        <th class="text-center align-middle">Nombre</th>
+                                        <th class="text-center align-middle">Precio</th>
+                                        <th class="text-center align-middle">Cant.</th>
+                                        <th class="text-center align-middle">Subtotal</th>
+                                        <th class="text-center align-middle">
+                                            IVA <span class="text-muted"> (16%) </span>
+                                        </th>
+                                        <th class="text-center align-middle">Total</th>
+                                        <th class="text-center align-middle">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let p of productosConDetalle; trackBy: trackByProducto">
+                                        <td class="text-center align-middle">{{ p.nombre }}</td>
+                                        <td class="text-center align-middle">{{ p.precio | number:'1.2-2' }} {{
+                                            obtenerSimboloMoneda(p.moneda) }}
+                                        </td>
+                                        <td class="text-center align-middle" style="width: 100px; padding: 4px;">
+                                            <div class="d-flex justify-content-center align-items-center gap-1">
+                                                <input type="number" [ngModel]="p.cantidad ?? 1"
+                                                    (ngModelChange)="onCantidadChange(p, $event)" min="1"
+                                                    class="form-control form-control-sm text-center"
+                                                    style="width: 45px; padding: 2px;" />
+
+                                                <small class="text-muted" style="font-size: 0.75rem;">/ {{ p.stock }}
+                                                    disp</small>
+                                            </div>
+
+                                        </td>
+                                        <td class="text-center align-middle">{{ p.subtotal | number:'1.2-2' }}
+                                            {{ obtenerSimboloMoneda(p.moneda) }}
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            <ng-container *ngIf="p.iva && p.iva > 0; else sinIva">
+                                                {{ p.iva | number:'1.2-2' }} {{ obtenerSimboloMoneda(p.moneda) }}
+                                            </ng-container>
+                                            <ng-template #sinIva>
+                                                <span class="text-muted">—</span>
+                                            </ng-template>
+                                        </td>
+
+                                        <td class="fw-bold text-center align-middle">
+                                            {{ p.total | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
+                                        </td>
+
+                                        <td class="text-center align-middle">
+                                            <button class="btn btn-sm btn-danger" (click)="eliminarProducto(p.id)">
+                                                🗑️
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div *ngIf="venta.productos.length > 0" @fadeInOut
+                        class="d-flex justify-content-between align-items-center bg-light rounded px-3 py-2 mt-3 shadow-sm"
+                        style="border: 1px solid #ddd;">
+                        <div class="text-muted fw-semibold">
+                            🧾 Monto total:
+                            <span class="text-dark">{{ totalProductos | number:'1.2-2' }} {{
+                                obtenerSimboloMoneda(venta.moneda) }}</span>
+                        </div>
+
+                        <button class="btn btn-success btn-sm px-3" (click)="abrirModalResumen()">
+                            ✅ Generar Venta
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
     </div>
 </div>
+
 
 
 
@@ -278,10 +281,11 @@
 
                             <div class="col-md-4">
                                 <label class="form-label">Inicial</label>
-                                <input type="text" class="form-control" 
+                                <input type="text" class="form-control"
                                     [placeholder]="'Monto en ' + obtenerSimboloMoneda(venta.moneda)"
                                     [(ngModel)]="valorInicialTemporal" (blur)="formatearInicialCashea()"
-                                    (keypress)="validarEntrada($event)" style="margin-bottom: 0rem; margin-top: 0rem;" />
+                                    (keypress)="validarEntrada($event)"
+                                    style="margin-bottom: 0rem; margin-top: 0rem;" />
                                 <small class="text-muted">
                                     Mínimo requerido: {{ calcularInicialCasheaPorNivel(montoTotal, nivelCashea) |
                                     number:'1.2-2' }}
@@ -438,11 +442,10 @@
                                             <option value="transferencia">Transferencia</option>
                                             <option value="zelle">Zelle</option>
                                         </select>
-
-                                        <input type="number" class="form-control form-control-sm"
-                                            [(ngModel)]="metodo.monto" [max]="getMontoRestanteParaMetodo(i)"
-                                            (blur)="validarMontoMetodo(i)"
-                                            placeholder="Monto ({{ obtenerSimboloMoneda(venta.moneda) }})" />
+                                        <input type="text" class="form-control form-control-sm"
+                                            [placeholder]="'Monto en ' + obtenerSimboloMoneda(venta.moneda)"
+                                            [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
+                                            (keypress)="validarEntrada($event)" />
                                         <small class="text-muted d-block mt-1">
                                             Máximo permitido: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{
                                             obtenerSimboloMoneda(venta.moneda) }}
@@ -514,9 +517,11 @@
                         <li class="list-group-item d-flex justify-content-between">
                             <span>Descuento</span>
                             <strong>
-                                {{ redondearDosDecimales(
+                                {{
+                                truncarDosDecimales(
                                 venta.descuento ? (totalProductos * (venta.descuento / 100)) : 0
-                                ) | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
+                                )
+                                }} {{ obtenerSimboloMoneda(venta.moneda) }}
                             </strong>
                         </li>
 

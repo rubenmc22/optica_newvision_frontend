@@ -794,6 +794,15 @@ export class GenerarVentaComponent implements OnInit {
         return Math.round(valor * 100) / 100;
     }
 
+    truncarDosDecimales(valor: number): number {
+  const partes = valor.toString().split('.');
+  if (partes.length === 1) return valor;
+
+  const decimales = partes[1].substring(0, 2);
+  return parseFloat(`${partes[0]}.${decimales.padEnd(2, '0')}`);
+}
+
+
     convertirMonto(monto: number, origen: string, destino: string): number {
         if (origen === destino) return +monto.toFixed(2);
 
@@ -898,9 +907,32 @@ export class GenerarVentaComponent implements OnInit {
         this.valorInicialTemporal = `${monto.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
     }
 
+    formatearMontoMetodo(index: number): void {
+        const metodo = this.venta.metodosDePago[index];
+        const limpio = metodo.valorTemporal?.replace(/[^\d.]/g, '').trim();
+
+        if (!limpio) {
+            metodo.monto = 0;
+            metodo.valorTemporal = '';
+            return;
+        }
+
+        const monto = parseFloat(limpio);
+        const maximo = this.getMontoRestanteParaMetodo(index);
+
+        if (isNaN(monto)) {
+            metodo.monto = 0;
+            metodo.valorTemporal = '';
+            return;
+        }
+
+        metodo.monto = Math.min(monto, maximo);
+        metodo.valorTemporal = `${metodo.monto.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+    }
+
+
 
     // === MÉTODOS DE UI Y MODALES ===
-
     abrirModalResumen(): void {
         if (this.venta.productos.length === 0) {
             this.swalService.showWarning('Sin productos', 'Debes agregar al menos un producto para continuar.');
