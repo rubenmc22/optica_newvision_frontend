@@ -1,35 +1,44 @@
-<div class="card contenedor-generar-venta mb-3" style="margin-bottom: 0rem;">
+<div class="card contenedor-generar-venta" style="margin-bottom: 0rem;">
     <!-- Encabezado -->
-    <div class="card-header bg-primary text-white position-relative">
+    <div class="card-header bg-primary text-white">
         <h4 class="mb-0">
             🛒 Generar Venta
         </h4>
+    </div>
 
-        <!-- Switch incluir paciente alineado a la derecha -->
-        <div class="position-absolute end-0 top-50 translate-middle-y me-3" style="width: 220px;">
-            <div class="bg-white text-dark border rounded px-3 py-2 d-flex align-items-center gap-2 shadow-sm">
-                <label class="form-check-label fw-semibold mb-0" for="switchPaciente">
-                    ¿Incluir paciente?
-                </label>
-                <div class="form-check form-switch m-0">
+    <!-- Cuerpo -->
+    <div class="card-body" style="margin-top: -8px;">
+        <div
+            class="d-flex justify-content-between align-items-center mb-3 px-4 py-2 rounded shadow-sm border bg-light flex-wrap gap-3">
+            <!-- Mensaje contextual -->
+            <div class="d-flex align-items-center gap-2 text-muted">
+                <i class="bi bi-info-circle-fill text-primary"></i>
+                <span class="fw-semibold text-dark" style="font-size: 15px; color: var(--primary-color) !important;">
+                    Selecciona un paciente si aplica y agrega productos para continuar la venta.
+                </span>
+
+            </div>
+
+            <!-- Switch paciente -->
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-person-circle text-primary"></i>
+                <span class="fw-semibold text-dark">Paciente</span>
+                <span class="badge rounded-pill px-2 py-1"
+                    [ngClass]="requierePaciente ? 'bg-success text-white' : 'bg-secondary text-white'">
+                    {{ requierePaciente ? 'Incluido' : 'No incluido' }}
+                </span>
+                <div class="form-check form-switch m-0" style="margin-left: 20px !important;">
                     <input class="form-check-input" type="checkbox" id="switchPaciente"
                         [(ngModel)]="requierePaciente" />
                 </div>
             </div>
         </div>
-    </div>
 
-
-    <!-- Cuerpo -->
-    <div class="card-body" style="margin-top: -15px;">
-        <p class="text-muted mb-3">
-            Selecciona un paciente y/o agrega productos para iniciar la venta
-        </p>
-
+        <!-- Paneles -->
         <div class="contenedor-venta d-flex gap-3">
             <!-- 🧑 Paciente y contexto clínico -->
-
             <section class="panel-contexto" *ngIf="requierePaciente">
+                <!-- contenido paciente -->
                 <div class="card-body">
                     <div class="buscadorPaciente">
                         <label for="selectorPaciente" class="form-label">👤 Buscar y seleccionar paciente</label>
@@ -91,7 +100,7 @@
                             </table>
                         </div>
                         <h4 class="mt-4">📋 Recomendaciones</h4>
-                        <ul>
+                        <ul style="margin-bottom: 0rem !important;">
                             <li><strong>Montura:</strong> {{ historiaMedica.recomendaciones[0].montura }}</li>
                             <li><strong>Material:</strong> {{ materialesRecomendados }}</li>
                             <li><strong>Cristal:</strong> {{ historiaMedica.recomendaciones[0].cristal.label }}</li>
@@ -102,6 +111,7 @@
 
             <!-- 🛒 Carrito de productos -->
             <section class="panel-productos">
+                <!-- contenido productos -->
                 <div class="card-body">
                     <div class="buscadorProducto d-flex align-items-end gap-3 flex-wrap">
                         <div class="flex-grow-1">
@@ -215,7 +225,6 @@
         </div>
     </div>
 </div>
-
 
 
 

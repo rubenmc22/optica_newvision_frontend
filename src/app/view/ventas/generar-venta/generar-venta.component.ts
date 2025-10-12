@@ -423,7 +423,7 @@ export class GenerarVentaComponent implements OnInit {
         this.loader.show();
     }
 
-    resetFormulario(): void {
+    /*resetFormulario(): void {
         this.venta = {
             productos: [],
             moneda: 'dolar',
@@ -441,7 +441,7 @@ export class GenerarVentaComponent implements OnInit {
         this.pacienteSeleccionado = null;
         this.productoSeleccionado = null;
         this.asesorSeleccionado = this.currentUser?.id ?? null;
-    }
+    }*/
 
     // === MÉTODOS DE PAGO Y MÉTODOS DE PAGO ===
 
@@ -717,7 +717,6 @@ export class GenerarVentaComponent implements OnInit {
             });
         }
 
-
         return {
             inicial,
             cuotasOrdenadas
@@ -795,12 +794,12 @@ export class GenerarVentaComponent implements OnInit {
     }
 
     truncarDosDecimales(valor: number): number {
-  const partes = valor.toString().split('.');
-  if (partes.length === 1) return valor;
+        const partes = valor.toString().split('.');
+        if (partes.length === 1) return valor;
 
-  const decimales = partes[1].substring(0, 2);
-  return parseFloat(`${partes[0]}.${decimales.padEnd(2, '0')}`);
-}
+        const decimales = partes[1].substring(0, 2);
+        return parseFloat(`${partes[0]}.${decimales.padEnd(2, '0')}`);
+    }
 
 
     convertirMonto(monto: number, origen: string, destino: string): number {
@@ -930,10 +929,10 @@ export class GenerarVentaComponent implements OnInit {
         metodo.valorTemporal = `${metodo.monto.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
     }
 
-
-
     // === MÉTODOS DE UI Y MODALES ===
     abrirModalResumen(): void {
+        // this.resetFormulario(); // ← limpieza previa
+
         if (this.venta.productos.length === 0) {
             this.swalService.showWarning('Sin productos', 'Debes agregar al menos un producto para continuar.');
             return;
@@ -955,9 +954,32 @@ export class GenerarVentaComponent implements OnInit {
         }
     }
 
+    ngAfterViewInit(): void {
+        const modalElement = document.getElementById('resumenVentaModal');
+        if (modalElement) {
+            modalElement.addEventListener('hidden.bs.modal', () => {
+                this.resetearModalVenta(); // ← limpieza aquí
+            });
+        }
+    }
+
+    resetearModalVenta(): void {
+        this.venta.descuento = 0;
+        this.venta.observaciones = '';
+        this.venta.montoInicial = 0;
+        this.venta.numeroCuotas = 0;
+        this.venta.montoAbonado = 0;
+        this.venta.metodosDePago = [];
+        this.venta.formaPago = 'contado';
+        this.venta.impuesto = 16;
+        this.venta.moneda = 'dolar';
+        this.valorInicialTemporal = '';
+        this.montoExcedido = false;
+    }
+
     // NOTE: Este método parece estar incompleto en el código original
     obtenerTasaBs(): number {
-        // Implementación pendiente - conectar con servicio de tasas
+
         return 1;
     }
 
@@ -967,4 +989,5 @@ export class GenerarVentaComponent implements OnInit {
         const cuotas = this.venta.numeroCuotas ?? 1;
         return cuotas > 0 ? +(restante / cuotas).toFixed(2) : 0;
     }
+
 }
