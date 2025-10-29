@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import {
   ChartConfiguration,
   ChartData,
@@ -12,22 +12,14 @@ import { DatosPorSede  } from './../../dashboard-interface';
   templateUrl: './grafico-comparativa-sedes.component.html',
   styleUrls: ['./grafico-comparativa-sedes.component.scss']
 })
-export class GraficoComparativaSedesComponent implements OnInit {
-  @Input() data: Record<string, DatosPorSede> = {};
+export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
+  @Input() data: any = {}; // Más flexible
 
   chartType: 'bar' = 'bar';
-
-  chartData: ChartData<'bar'> = {
-    labels: [],
-    datasets: []
-  };
-
+  chartData: ChartData<'bar'> = { labels: [], datasets: [] };
   chartOptions: ChartOptions<'bar'> = {
     responsive: true,
-    animation: {
-      duration: 1000,
-      easing: 'easeOutBounce'
-    },
+    animation: { duration: 1000, easing: 'easeOutBounce' },
     plugins: {
       tooltip: {
         callbacks: {
@@ -39,59 +31,155 @@ export class GraficoComparativaSedesComponent implements OnInit {
       },
       legend: {
         position: 'bottom',
-        labels: {
-          color: '#6c757d',
-          boxWidth: 12
-        }
+        labels: { color: '#6c757d', boxWidth: 12 }
       }
     },
     scales: {
       x: {
         stacked: false,
-        title: {
-          display: true,
-          text: 'Sede'
-        }
+        title: { display: true, text: 'Sede' }
       },
       y: {
         stacked: false,
         beginAtZero: true,
-        title: {
-          display: true,
-          text: 'Cantidad'
-        }
+        title: { display: true, text: 'Cantidad' }
       }
     }
   };
 
   ngOnInit(): void {
-    const sedes = Object.keys(this.data);
-    const pacientes = sedes.map(s => this.data[s].pacientes);
-    const ventas = sedes.map(s => this.data[s].ventas);
-    const ordenes = sedes.map(s => this.data[s].ordenes);
+    this.actualizarGrafico();
+  }
 
-    this.chartData.labels = sedes;
-    this.chartData.datasets = [
-      {
-        label: 'Pacientes',
-        data: Object.values(this.data).map(d => d.pacientes),
-        backgroundColor: '#14a4bc '
-      },
-      {
-        label: 'Historias',
-        data: Object.values(this.data).map(d => d.historias),
-        backgroundColor: '#2ca444'
-      },
-      {
-        label: 'Ventas',
-        data: Object.values(this.data).map(d => d.ventas),
-        backgroundColor: '#fcc404'
-      },
-      {
-        label: 'Órdenes pendientes',
-        data: Object.values(this.data).map(d => d.ordenes),
-        backgroundColor: '#dc3545'
-      }
-    ];
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['data']) {
+      this.actualizarGrafico();
+    }
+  }
+
+  private actualizarGrafico(): void {
+    console.log('📊 Datos recibidos:', this.data);
+    
+    if (!this.data || Object.keys(this.data).length === 0) {
+      console.warn('No hay datos para mostrar en el gráfico');
+      this.mostrarGraficoVacio();
+      return;
+    }
+
+    try {
+      // Intentar diferentes estructuras de datos
+      const { labels, datasets } = this.procesarDatos();
+      
+      this.chartData.labels = labels;
+      this.chartData.datasets = datasets;
+      
+      console.log('✅ Gráfico actualizado:', this.chartData);
+    } catch (error) {
+      console.error('❌ Error procesando datos:', error);
+      this.mostrarGraficoVacio();
+    }
+  }
+
+  private procesarDatos(): { labels: string[], datasets: any[] } {
+    // Si es un array de sedes
+    if (Array.isArray(this.data)) {
+      return this.procesarArraySedes(this.data);
+    }
+    
+    // Si es un objeto con sedes como propiedades
+    if (typeof this.data === 'object' && !Array.isArray(this.data)) {
+      return this.procesarObjetoSedes(this.data);
+    }
+
+    throw new Error('Estructura de datos no reconocida');
+  }
+
+  private procesarArraySedes(sedesArray: any[]): { labels: string[], datasets: any[] } {
+    const labels = sedesArray.map(sede => sede.nombre || sede.sede || 'Sin nombre');
+    
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Pacientes',
+          data: sedesArray.map(s => s.pacientes || s.totalPacientes || 0),
+          backgroundColor: '#14a4bc'
+        },
+        {
+          label: 'Historias',
+          data: sedesArray.map(s => s.historias || s.totalHistorias || 0),
+          backgroundColor: '#2ca444'
+        },
+        {
+          label: 'Ventas',
+          data: sedesArray.map(s => s.ventas || s.totalVentas || 0),
+          backgroundColor: '#fcc404'
+        },
+        {
+          label: 'Órdenes pendientes',
+          data: sedesArray.map(s => s.ordenes || s.ordenesPendientes || 0),
+          backgroundColor: '#dc3545'
+        }
+      ]
+    };
+  }
+
+  private procesarObjetoSedes(sedesObj: Record<string, any>): { labels: string[], datasets: any[] } {
+    const sedes = Object.keys(sedesObj);
+    const labels = sedes;
+    
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Pacientes',
+          data: sedes.map(sede => sedesObj[sede].pacientes || sedesObj[sede].totalPacientes || 0),
+          backgroundColor: '#14a4bc'
+        },
+        {
+          label: 'Historias',
+          data: sedes.map(sede => sedesObj[sede].historias || sedesObj[sede].totalHistorias || 0),
+          backgroundColor: '#2ca444'
+        },
+        {
+          label: 'Ventas',
+          data: sedes.map(sede => sedesObj[sede].ventas || sedesObj[sede].totalVentas || 0),
+          backgroundColor: '#fcc404'
+        },
+        {
+          label: 'Órdenes pendientes',
+          data: sedes.map(sede => sedesObj[sede].ordenes || sedesObj[sede].ordenesPendientes || 0),
+          backgroundColor: '#dc3545'
+        }
+      ]
+    };
+  }
+
+  private mostrarGraficoVacio(): void {
+    this.chartData = {
+      labels: ['Sin datos'],
+      datasets: [
+        {
+          label: 'Pacientes',
+          data: [0],
+          backgroundColor: '#14a4bc'
+        },
+        {
+          label: 'Historias',
+          data: [0],
+          backgroundColor: '#2ca444'
+        },
+        {
+          label: 'Ventas',
+          data: [0],
+          backgroundColor: '#fcc404'
+        },
+        {
+          label: 'Órdenes pendientes',
+          data: [0],
+          backgroundColor: '#dc3545'
+        }
+      ]
+    };
   }
 }

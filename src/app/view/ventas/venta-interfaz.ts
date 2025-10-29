@@ -1,6 +1,6 @@
 export interface VentaDto {
     pacienteId?: string;
-    moneda: 'bolivar' | 'dolar' | 'euro'
+    moneda: 'bolivar' | 'dolar' | 'euro';
     formaPago: string;
     productos: ProductoVentaDto[];
     impuesto: number;
@@ -14,10 +14,10 @@ export interface VentaDto {
     metodosDePago: MetodoPago[];
 }
 
-
 export interface ProductoVentaDto {
     id: string;
     nombre: string;
+    codigo: string; // ✅ AGREGADO
     precio: number;
     cantidad: number;
     stock: number;
@@ -35,16 +35,19 @@ export interface MetodoPago {
 export interface ProductoVenta {
     id: string;
     nombre: string;
+    codigo: string; // ✅ AGREGADO
     precio: number;
     precioConIva: number;
     aplicaIva: boolean;
     cantidad?: number;
     moneda: string;
+    stock?: number; // ✅ AGREGADO (opcional para consistencia)
 }
 
 export interface ProductoVentaCalculado {
     id: string;
     nombre: string;
+    codigo: string; // ✅ AGREGADO
     precio: number;
     cantidad: number;
     moneda: string;
@@ -64,10 +67,3 @@ export interface CuotaCashea {
     seleccionada: boolean;
     habilitada: boolean;
 }
-
-
-
-
-
-
-

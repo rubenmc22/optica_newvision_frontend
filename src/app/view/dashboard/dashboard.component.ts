@@ -75,6 +75,7 @@ export class DashboardComponent {
 
         // CORRECCIÓN: Usar el mismo criterio que en cargarDatosGraficos
         this.totalHistorias = historiasFiltradas.filter(h => h.sedeId === this.sedeActual).length;
+        console.log('historiasFiltradas', historiasFiltradas);
 
         this.cargarDatosGraficos(historiasFiltradas);
       },
