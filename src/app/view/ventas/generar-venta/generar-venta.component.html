@@ -323,7 +323,11 @@
                             <div class="col-md-4">
                                 <label class="form-label">Descuento (%)</label>
                                 <input type="number" class="form-control" [(ngModel)]="venta.descuento" min="0"
-                                    max="100" />
+                                    max="100" (ngModelChange)="onDescuentoChange()" />
+
+                                <small class="text-muted d-block mt-1">
+                                    💡 El descuento afecta el <strong>Monto total</strong>
+                                </small>
                             </div>
                         </div>
 
@@ -539,6 +543,17 @@
                                     </span>
                                 </p>
 
+                                <p class="mb-1">
+                                    <strong>Monto requerido:</strong>
+                                    {{ redondear(montoCubiertoPorMetodos) | number:'1.2-2' }} {{
+                                    obtenerSimboloMoneda(venta.moneda) }}
+                                    <span *ngIf="venta.formaPago === 'cashea' && resumenCashea.total > 0"
+                                        class="text-info">
+                                        (Inicial: {{ redondear(venta.montoInicial ?? 0) | number:'1.2-2' }} +
+                                        Cuotas: {{ redondear(resumenCashea.total) | number:'1.2-2' }})
+                                    </span>
+                                </p>
+
                                 <p class="mb-3">
                                     <strong>Restante:</strong>
                                     {{ redondear(restantePorMetodos) | number:'1.2-2' }} {{
@@ -553,8 +568,8 @@
                                 <div class="progress" style="height: 24px;">
                                     <div class="progress-bar" role="progressbar" [style.width.%]="progresoMetodos"
                                         [ngClass]="{
-                                        'bg-success': progresoMetodos === 100 && restantePorMetodos === 0,
-                                        'bg-warning': progresoMetodos < 100
+                                            'bg-success': progresoMetodos === 100 && restantePorMetodos === 0,
+                                            'bg-warning': progresoMetodos < 100
                                         }">
                                         {{ progresoMetodos }}%
                                     </div>
@@ -564,7 +579,6 @@
                                     class="text-success mt-2">
                                     {{ mensajePagoCompleto }}
                                 </div>
-
                             </div>
                         </div>
                     </div>

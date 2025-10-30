@@ -1,23 +1,21 @@
-import { Component, OnInit, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
-import { Producto, ProductoDto, MonedaVisual } from '../../productos/producto.model';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Producto } from '../../productos/producto.model';
 import { ProductoService } from '../../productos/producto.service';
-import { Sede } from '../../../view/login/login-interface';
 
 import { GenerarVentaService } from './generar-venta.service';
 import { Tasa } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
-import { Observable, of, forkJoin, map } from 'rxjs';
-import { switchMap, take, catchError } from 'rxjs/operators';
+import { forkJoin, map } from 'rxjs';
+import { take } from 'rxjs/operators';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import { UserStateService } from '../../../core/services/userState/user-state-service';
-import { HttpErrorResponse } from '@angular/common/http';
 import { PacientesService } from '../../../core/services/pacientes/pacientes.service';
 import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
-import { Paciente, PacientesListState } from '../../pacientes/paciente-interface';
-import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico, DatosConsulta } from './../../historias-medicas/historias_medicas-interface';
-import { VentaDto, ProductoVentaDto, ProductoVenta, ProductoVentaCalculado, CuotaCashea } from '../venta-interfaz';
+import { Paciente } from '../../pacientes/paciente-interface';
+import { HistoriaMedica } from './../../historias-medicas/historias_medicas-interface';
+import { VentaDto, ProductoVenta, ProductoVentaCalculado, CuotaCashea } from '../venta-interfaz';
 import { Empleado, User } from '../../../Interfaces/models-interface';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { trigger, transition, style, animate } from '@angular/animations';
@@ -64,6 +62,7 @@ export class GenerarVentaComponent implements OnInit {
         this.registrarTarea();
         this.cargarDatosIniciales();
     }
+
 
     // === PROPIEDADES DEL COMPONENTE ===
 
@@ -136,6 +135,8 @@ export class GenerarVentaComponent implements OnInit {
         $: 'dolar',
         '€': 'euro'
     };
+
+    private montoCubiertoAnterior: number = 0;
 
     // === MÉTODOS DE INICIALIZACIÓN Y CARGA ===
 
@@ -210,7 +211,6 @@ export class GenerarVentaComponent implements OnInit {
     }
 
     // === MÉTODOS DE PACIENTES ===
-
     onPacienteSeleccionado(pacienteSeleccionado: Paciente | null): void {
         this.registrarTarea();
         this.historiaMedica = null;
@@ -284,7 +284,6 @@ export class GenerarVentaComponent implements OnInit {
     }
 
     // === MÉTODOS DE PRODUCTOS Y CARRITO ===
-
     agregarProductoAlCarrito(producto: ProductoVenta | any): void {
         const yaExiste = this.venta.productos.find(p => p.id === producto.id);
 
@@ -369,8 +368,8 @@ export class GenerarVentaComponent implements OnInit {
         return item.id;
     }
 
-    // === CÁLCULOS Y ACTUALIZACIONES DE PRODUCTOS ===
 
+    // === CÁLCULOS Y ACTUALIZACIONES DE PRODUCTOS ===
     actualizarProductosConDetalle(): void {
         const tasaDestino = this.tasasDisponibles.find(t => t.nombre.toLowerCase() === this.venta.moneda)?.valor ?? 1;
 
@@ -408,9 +407,8 @@ export class GenerarVentaComponent implements OnInit {
         }, 0);
     }
 
-    // === MÉTODOS DE VENTA Y PAGO ===
 
-    // === SERVICIO DE VALIDACIÓN (podría moverse a un servicio aparte) ===
+    // === MÉTODOS DE VENTA Y PAGO ===
     private validaciones = {
         ventaBasica: (): boolean => {
             if (this.venta.productos.length === 0) {
@@ -514,8 +512,6 @@ export class GenerarVentaComponent implements OnInit {
         }
     };
 
-
-    // Método para conversión de moneda - usa el que ya tienes o corrige
     convertirMonto(monto: number, origen: string, destino: string): number {
         if (origen === destino) return this.redondear(monto);
 
@@ -579,7 +575,6 @@ export class GenerarVentaComponent implements OnInit {
         return tasaOrigen / tasaDestino;
     }
 
-    // === PAYLOAD BUILDER CORREGIDO ===
     private payloadBuilder = {
         basico: (): any => ({
             fecha: new Date().toISOString(),
@@ -609,7 +604,7 @@ export class GenerarVentaComponent implements OnInit {
 
                 // Solo información esencial para la venta
                 return {
-                    id: p.id, // ID del producto para referencia
+                    id: p.id, 
                     cantidad: cantidad,
                     precio: this.convertirMonto(p.precio, p.moneda, this.venta.moneda),
                     precioConIva: this.convertirMonto(p.precioConIva, p.moneda, this.venta.moneda),
@@ -687,7 +682,7 @@ export class GenerarVentaComponent implements OnInit {
                 return {};
             }
 
-            // Solo enviar el ID de la historia médica más reciente
+            //ID de la historia médica más reciente
             return {
                 historiaMedicaId: this.historiaMedica.id
             };
@@ -700,10 +695,6 @@ export class GenerarVentaComponent implements OnInit {
             const financieros = this.payloadBuilder.financieros();
             const formaPago = this.payloadBuilder.formaPago();
             const historiaMedica = this.payloadBuilder.historiaMedica();
-
-            console.log('Payload optimizado:', {
-                basico, paciente, productos, financieros, formaPago, historiaMedica
-            });
 
             return {
                 ...basico,
@@ -736,7 +727,6 @@ export class GenerarVentaComponent implements OnInit {
         }
     };
 
-    // === MÉTODO PRINCIPAL SUPER SIMPLIFICADO ===
     generarVenta(): void {
         if (!this.validaciones.ejecutarTodas()) {
             return;
@@ -790,8 +780,8 @@ export class GenerarVentaComponent implements OnInit {
         this.montoExcedido = false;
     }
 
-    // === MÉTODOS DE PAGO Y MÉTODOS DE PAGO ===
 
+    // === MÉTODOS DE PAGO Y MÉTODOS DE PAGO ===
     agregarMetodo(): void {
         this.venta.metodosDePago.push({ tipo: '', monto: 0 });
     }
@@ -801,10 +791,19 @@ export class GenerarVentaComponent implements OnInit {
     }
 
     autocompletarUltimoMetodo(): void {
+        if (this.venta.metodosDePago.length === 0) return;
+
         const index = this.venta.metodosDePago.length - 1;
         const restante = this.getMontoRestanteParaMetodo(index);
-        if (!this.venta.metodosDePago[index].monto) {
-            this.venta.metodosDePago[index].monto = restante;
+
+        if (restante > 0) {
+            const metodoActual = this.venta.metodosDePago[index];
+            const montoActual = metodoActual.monto ?? 0;
+
+            if (montoActual === 0 || Math.abs(montoActual - restante) > 0.01) {
+                metodoActual.monto = restante;
+                metodoActual.valorTemporal = `${restante.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+            }
         }
     }
 
@@ -821,12 +820,14 @@ export class GenerarVentaComponent implements OnInit {
         const otrosMontos = this.venta.metodosDePago
             .filter((_, i) => i !== index)
             .reduce((sum, metodo) => sum + (metodo.monto ?? 0), 0);
-        return Math.max(this.montoCubiertoPorMetodos - otrosMontos, 0);
+
+        const restante = Math.max(this.montoCubiertoPorMetodos - otrosMontos, 0);
+
+        return restante;
     }
 
-    // === CÁLCULOS FINANCIEROS ===
 
-    // Totales
+    // === CÁLCULOS FINANCIEROS ===
     get subtotal(): number {
         return this.productosConDetalle.reduce((acc, p) => acc + p.subtotal, 0);
     }
@@ -866,7 +867,9 @@ export class GenerarVentaComponent implements OnInit {
             case 'abono':
                 return this.venta.montoAbonado ?? 0;
             case 'cashea':
-                return this.venta.montoInicial ?? 0;
+                const inicial = this.venta.montoInicial ?? 0;
+                const cuotasAdelantadas = this.resumenCashea.total;
+                return inicial + cuotasAdelantadas;
             default:
                 return 0;
         }
@@ -977,6 +980,8 @@ export class GenerarVentaComponent implements OnInit {
             this.actualizarMontoInicialCashea();
             this.generarCuotasCashea();
         }
+
+        this.venta.metodosDePago = [];
     }
 
     asignarInicialPorNivel(): void {
@@ -997,13 +1002,25 @@ export class GenerarVentaComponent implements OnInit {
         }
     }
 
+    verificarCambiosMontoCubierto(): void {
+        const montoActual = this.montoCubiertoPorMetodos;
+
+        if (Math.abs(montoActual - this.montoCubiertoAnterior) > 0.01) {
+            this.montoCubiertoAnterior = montoActual;
+            this.actualizarMontosMetodosPago();
+        }
+    }
+
     onDescuentoChange(): void {
-        console.log('Descuento cambiado a:', this.venta.descuento);
+        if (this.venta.descuento < 0) this.venta.descuento = 0;
+        if (this.venta.descuento > 100) this.venta.descuento = 100;
+
         this.actualizarProductosConDetalle();
 
         if (this.venta.formaPago === 'cashea') {
             this.actualizarMontoInicialCashea();
-            this.generarCuotasCashea(); 
+            this.generarCuotasCashea();
+            this.actualizarMontosMetodosPago();
         }
     }
 
@@ -1013,12 +1030,6 @@ export class GenerarVentaComponent implements OnInit {
 
         this.venta.montoInicial = nuevoMontoInicial;
         this.valorInicialTemporal = `${nuevoMontoInicial.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
-
-        console.log('Monto inicial actualizado por descuento:', {
-            totalConDescuento,
-            nivel: this.nivelCashea,
-            montoInicial: this.venta.montoInicial
-        });
     }
 
     onNivelCasheaChange(): void {
@@ -1065,7 +1076,6 @@ export class GenerarVentaComponent implements OnInit {
             cuotasOrdenadas
         };
     }
-
 
     get cantidadCuotas(): number {
         return this.calcularCasheaPlan(this.cantidadCuotasCashea).cuotasOrdenadas.length;
@@ -1114,6 +1124,8 @@ export class GenerarVentaComponent implements OnInit {
 
     toggleCuotaSeleccionada(index: number): void {
         const cuota = this.cuotasCashea[index];
+        const estabaSeleccionada = cuota.seleccionada;
+
         cuota.seleccionada = !cuota.seleccionada;
 
         if (cuota.seleccionada && index + 1 < this.cuotasCashea.length) {
@@ -1128,6 +1140,18 @@ export class GenerarVentaComponent implements OnInit {
         }
 
         this.actualizarResumenCashea();
+
+        this.mostrarFeedbackCambioCuota(estabaSeleccionada, cuota);
+    }
+
+    private mostrarFeedbackCambioCuota(estabaSeleccionada: boolean, cuota: CuotaCashea): void {
+        const accion = estabaSeleccionada ? 'eliminada' : 'agregada';
+        const mensaje = `Cuota ${cuota.id} ${accion}. Monto requerido actualizado.`;
+
+        this.snackBar.open(mensaje, 'Cerrar', {
+            duration: 2000,
+            panelClass: ['snackbar-info']
+        });
     }
 
     actualizarResumenCashea(): void {
@@ -1140,6 +1164,37 @@ export class GenerarVentaComponent implements OnInit {
             total,
             totalBs: this.redondear(this.obtenerEquivalenteBs(total))
         };
+
+        this.actualizarMontosMetodosPago();
+    }
+
+    private actualizarMontosMetodosPago(): void {
+        if (this.venta.metodosDePago.length === 0) return;
+
+        let montoRestante = this.montoCubiertoPorMetodos;
+
+        this.venta.metodosDePago.forEach((metodo, index) => {
+            const maximoPermitido = this.getMontoRestanteParaMetodo(index);
+
+            // Si el monto actual excede el nuevo máximo, ajustarlo
+            if ((metodo.monto ?? 0) > maximoPermitido) {
+                metodo.monto = maximoPermitido;
+                metodo.valorTemporal = `${maximoPermitido.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+            }
+
+            montoRestante -= (metodo.monto ?? 0);
+        });
+
+        this.autocompletarUltimoMetodo();
+        this.cdr.detectChanges();
+    }
+
+    private actualizarValidacionMetodosPago(): void {
+        if (this.venta.metodosDePago.length > 0 && this.restantePorMetodos > 0) {
+            this.autocompletarUltimoMetodo();
+        }
+
+        this.cdr.detectChanges();
     }
 
     get casheaBalanceValido(): boolean {
@@ -1311,9 +1366,12 @@ export class GenerarVentaComponent implements OnInit {
         const modalElement = document.getElementById('resumenVentaModal');
         if (modalElement) {
             modalElement.addEventListener('hidden.bs.modal', () => {
-                this.resetearModalVenta(); // ← limpieza aquí
+                this.resetearModalVenta();
             });
         }
+
+        // Observar cambios en montoCubiertoPorMetodos
+        this.cdr.detectChanges();
     }
 
     resetearModalVenta(): void {
@@ -1330,9 +1388,7 @@ export class GenerarVentaComponent implements OnInit {
         this.montoExcedido = false;
     }
 
-    // NOTE: Este método parece estar incompleto en el código original
     obtenerTasaBs(): number {
-
         return 1;
     }
 
