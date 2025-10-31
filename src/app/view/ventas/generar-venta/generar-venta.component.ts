@@ -604,7 +604,7 @@ export class GenerarVentaComponent implements OnInit {
 
                 // Solo información esencial para la venta
                 return {
-                    id: p.id, 
+                    id: p.id,
                     cantidad: cantidad,
                     precio: this.convertirMonto(p.precio, p.moneda, this.venta.moneda),
                     precioConIva: this.convertirMonto(p.precioConIva, p.moneda, this.venta.moneda),
@@ -977,11 +977,23 @@ export class GenerarVentaComponent implements OnInit {
         this.venta.formaPago = valor;
 
         if (valor === 'cashea') {
+            this.controlarCuotasPorNivel();
             this.actualizarMontoInicialCashea();
             this.generarCuotasCashea();
         }
 
         this.venta.metodosDePago = [];
+        this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
+    }
+
+    verificarConfiguracionCashea(): void {
+        console.log('🔍 Configuración Cashea actual:', {
+            nivel: this.nivelCashea,
+            permite6Cuotas: this.nivelPermiteCuotasExtendidas(this.nivelCashea),
+            cuotasSeleccionadas: this.cantidadCuotasCashea,
+            montoInicial: this.venta.montoInicial,
+            montoTotal: this.montoTotal
+        });
     }
 
     asignarInicialPorNivel(): void {
@@ -989,6 +1001,8 @@ export class GenerarVentaComponent implements OnInit {
         const minimo = this.calcularInicialCasheaPorNivel(totalConDescuento, this.nivelCashea);
         this.venta.montoInicial = minimo;
         this.valorInicialTemporal = `${minimo.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+
+        this.controlarCuotasPorNivel();
     }
 
     validarInicialCashea(): void {
@@ -1034,8 +1048,21 @@ export class GenerarVentaComponent implements OnInit {
 
     onNivelCasheaChange(): void {
         if (this.venta.formaPago === 'cashea') {
+            this.controlarCuotasPorNivel();
+
             this.actualizarMontoInicialCashea();
             this.generarCuotasCashea();
+        }
+    }
+
+    private controlarCuotasPorNivel(): void {
+        const nivelesConCuotasExtendidas = ['nivel3', 'nivel4', 'nivel5', 'nivel6'];
+        const nivelPermite6Cuotas = nivelesConCuotasExtendidas.includes(this.nivelCashea);
+
+        if (!nivelPermite6Cuotas) {
+            if (this.cantidadCuotasCashea !== 3) {
+                this.cantidadCuotasCashea = 3;
+            }
         }
     }
 
@@ -1098,7 +1125,8 @@ export class GenerarVentaComponent implements OnInit {
     }
 
     nivelPermiteCuotasExtendidas(nivel: string): boolean {
-        return ['nivel3', 'nivel4', 'nivel5', 'nivel6'].includes(nivel);
+        const nivelesPermitidos = ['nivel3', 'nivel4', 'nivel5', 'nivel6'];
+        return nivelesPermitidos.includes(nivel);
     }
 
     calcularInicialCasheaPorNivel(total: number, nivel: string): number {

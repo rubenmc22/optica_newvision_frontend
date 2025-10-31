@@ -346,13 +346,16 @@
                                 </select>
                             </div>
 
+                            <!-- En la sección de Cashea -->
                             <div class="col-md-2">
                                 <label class="form-label">Cuotas</label>
                                 <select class="form-select" [(ngModel)]="cantidadCuotasCashea"
                                     (change)="generarCuotasCashea()" style="margin-top: 0rem;"
                                     [disabled]="!nivelPermiteCuotasExtendidas(nivelCashea)">
                                     <option [value]="3">3 cuotas</option>
-                                    <option [value]="6">6 cuotas</option>
+                                    <option [value]="6" [disabled]="!nivelPermiteCuotasExtendidas(nivelCashea)">
+                                        6 cuotas
+                                    </option>
                                 </select>
                             </div>
 
@@ -527,6 +530,9 @@
                                             Máximo permitido: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{
                                             obtenerSimboloMoneda(venta.moneda) }}
                                         </small>
+                                          <button class="btn btn-outline-danger btn-sm" (click)="eliminarMetodo(i)" style="margin-left: 10px;">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
