@@ -16,6 +16,11 @@
     //left: 35px;
 }
 
+.nowrap {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 .panel-contexto,
 .panel-productos,
 .panel-resumen {

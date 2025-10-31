@@ -509,34 +509,55 @@
 
                             <!-- Grid de tarjetas -->
                             <div class="d-grid"
-                                style="grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 1rem;">
+                                style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;">
                                 <div *ngFor="let metodo of venta.metodosDePago; let i = index"
                                     class="border rounded p-3 shadow-sm bg-white">
-                                    <div class="d-flex flex-wrap gap-2 align-items-center">
+
+                                    <!-- Fila superior: Select + Botón eliminar -->
+                                    <div class="d-flex align-items-center gap-2 mb-2">
                                         <select class="form-select form-select-sm flex-grow-1" [(ngModel)]="metodo.tipo"
-                                            style="min-width: 140px;">
-                                            <option value="" disabled selected>Seleccionar un método</option>
-                                            <option value="efectivo">Efectivo</option>
+                                            (change)="onMetodoPagoChange(i)">
+                                            <option value="" disabled selected>Método pago</option>
+                                            <option value="efectivo">Efectivo {{
+                                                obtenerSimboloMoneda(venta.moneda) }}</option>
                                             <option value="debito">Débito</option>
                                             <option value="credito">Crédito</option>
+                                            <option value="pagomovil">Pago Móvil</option>
                                             <option value="transferencia">Transferencia</option>
                                             <option value="zelle">Zelle</option>
                                         </select>
-                                        <input type="text" class="form-control form-control-sm"
-                                            [placeholder]="'Monto en ' + obtenerSimboloMoneda(venta.moneda)"
-                                            [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
-                                            (keypress)="validarEntrada($event)" />
-                                        <small class="text-muted d-block mt-1">
-                                            Máximo permitido: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{
-                                            obtenerSimboloMoneda(venta.moneda) }}
-                                        </small>
-                                          <button class="btn btn-outline-danger btn-sm" (click)="eliminarMetodo(i)" style="margin-left: 10px;">
+
+                                        <button class="btn btn-outline-danger btn-sm" (click)="eliminarMetodo(i)"
+                                            style="height: 35px; margin-top: -7px;">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
+
+                                    <!-- Fila media: Monto ingresado -->
+                                    <div class="mb-2">
+                                        <input type="text" class="form-control form-control-sm"
+                                            [placeholder]="getPlaceholderMonto(metodo.tipo)"
+                                            [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
+                                            (keypress)="validarEntrada($event)" [disabled]="!metodo.tipo" />
+                                    </div>
+
+                                    <!-- Fila inferior: Información en 2 columnas -->
+                                    <div class="d-flex justify-content-between align-items-center small">
+                                        <!-- Conversión a Bs -->
+                                        <span
+                                            *ngIf="mostrarConversionBs(metodo.tipo) && metodo.monto && metodo.monto > 0"
+                                            class="text-info">
+                                            ⇄ {{ calcularConversionBs(metodo.monto) | number:'1.2-2' }} Bs
+                                        </span>
+
+                                        <!-- Máximo permitido -->
+                                        <span class="text-muted text-end">
+                                            Máx: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{
+                                            obtenerSimboloMoneda(venta.moneda) }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-
                             <!-- Resumen dinámico -->
                             <div *ngIf="venta.metodosDePago.length > 0" class="mt-4">
                                 <p class="mb-1">

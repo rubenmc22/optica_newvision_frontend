@@ -1243,6 +1243,57 @@ export class GenerarVentaComponent implements OnInit {
         return `${asesor.nombre} — ${asesor.cargoNombre}`;
     }
 
+    // === NUEVOS MÉTODOS PARA VALIDACIÓN Y CONVERSIÓN ===
+
+    // Método cuando cambia el tipo de método de pago
+    onMetodoPagoChange(index: number): void {
+        const metodo = this.venta.metodosDePago[index];
+
+        // Si había un monto previo y ahora seleccionó un método, mantenerlo
+        if (metodo.monto && metodo.monto > 0) {
+            this.formatearMontoMetodo(index);
+        }
+
+        // Forzar actualización de la UI
+        this.cdr.detectChanges();
+    }
+
+    // Obtener placeholder dinámico según el método
+    getPlaceholderMonto(tipoMetodo: string): string {
+        if (!tipoMetodo) {
+            return 'Ingrese un monto';
+        }
+
+        const simbolo = this.obtenerSimboloMoneda(this.venta.moneda);
+        return `Monto en ${simbolo}`;
+    }
+
+    // Determinar si mostrar conversión a bolívares
+    mostrarConversionBs(tipoMetodo: string): boolean {
+        // Mostrar conversión para débito y crédito cuando la moneda no es bolívar
+        const mostrar = (tipoMetodo === 'debito' || tipoMetodo === 'credito' || tipoMetodo === 'transferencia' || tipoMetodo === 'pagomovil') &&
+            this.venta.moneda !== 'bolivar';
+        return mostrar;
+    }
+
+    // Calcular conversión a bolívares
+    calcularConversionBs(monto: number): number {
+        if (!monto || monto <= 0) return 0;
+
+        const tasa = this.obtenerTasaActual();
+        return this.redondear(monto * tasa);
+    }
+
+    // Obtener tasa actual de conversión
+    obtenerTasaActual(): number {
+        if (this.venta.moneda === 'bolivar') {
+            return 1;
+        }
+
+        const tasa = this.tasasPorId[this.venta.moneda] || 1;
+        return tasa;
+    }
+
 
     // === MÉTODOS DE UTILIDAD ===
     redondear(valor: number): number {
@@ -1344,6 +1395,17 @@ export class GenerarVentaComponent implements OnInit {
 
     formatearMontoMetodo(index: number): void {
         const metodo = this.venta.metodosDePago[index];
+
+        // ✅ VALIDAR QUE TENGA MÉTODO SELECCIONADO
+        if (!metodo.tipo) {
+            this.snackBar.open('⚠️ Primero selecciona un método de pago', 'Cerrar', {
+                duration: 3000
+            });
+            metodo.valorTemporal = '';
+            metodo.monto = 0;
+            return;
+        }
+
         const limpio = metodo.valorTemporal?.replace(/[^\d.]/g, '').trim();
 
         if (!limpio) {
@@ -1361,6 +1423,7 @@ export class GenerarVentaComponent implements OnInit {
             return;
         }
 
+        // ✅ SIEMPRE asegurar que no exceda el máximo
         metodo.monto = Math.min(monto, maximo);
         metodo.valorTemporal = `${metodo.monto.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
     }
