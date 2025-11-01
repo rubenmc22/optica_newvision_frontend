@@ -1,11 +1,22 @@
 <div class="card shadow-sm border-0">
   <div class="card-header bg-white fw-bold text-muted">🏥 Comparativa por sede</div>
   <div class="card-body">
-    <canvas baseChart
-      [type]="'bar'"
-      [data]="chartData"
-      [options]="chartOptions"
-      style="max-height: 300px"
-    ></canvas>
+    <!-- Mostrar gráfico solo cuando hay datos -->
+    <div *ngIf="mostrarGrafico && chartData.labels && chartData.labels.length > 0">
+      <canvas baseChart
+        [type]="'bar'"
+        [data]="chartData"
+        [options]="chartOptions"
+        style="max-height: 300px"
+      ></canvas>
+    </div>
+    
+    <!-- Mensaje cuando no hay datos -->
+    <div *ngIf="!mostrarGrafico || !chartData.labels || chartData.labels.length === 0" 
+         class="text-center text-muted py-4">
+      <i class="fas fa-chart-bar fa-3x mb-3 opacity-50"></i>
+      <p class="mb-0">No hay datos disponibles para mostrar</p>
+      <small>Los datos de comparativa se mostrarán cuando haya información de múltiples sedes</small>
+    </div>
   </div>
 </div>

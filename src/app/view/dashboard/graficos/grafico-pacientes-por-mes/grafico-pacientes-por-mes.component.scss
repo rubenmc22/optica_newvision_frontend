@@ -1,6 +1,11 @@
 @use '../../../../../custom-theme.scss' as theme;
 
 
-.card-body{
+.card-body {
     //background: var(--degradado-pastel) !important;
+}
+
+.card {
+    min-height: 385px !important;
+    margin-bottom: 0px !important;
 }

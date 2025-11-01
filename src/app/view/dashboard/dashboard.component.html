@@ -45,10 +45,6 @@
                 </div>
                 <span class="small-box-footer text-white-50 d-block">Más información <i
                         class="fas fa-arrow-circle-right"></i></span>
-
-                <!--  <a href="#" class="small-box-footer">
-                    Más información <i class="fas fa-arrow-circle-right"></i>
-                </a>-->
             </div>
         </div>
 
@@ -64,31 +60,37 @@
                 </div>
                 <span class="small-box-footer text-white-50 d-block">Más información <i
                         class="fas fa-arrow-circle-right"></i></span>
-                <!-- <a href="#" class="small-box-footer">
-                    Más información <i class="fas fa-arrow-circle-right"></i>
-                </a>-->
             </div>
         </div>
     </div>
 
-    <!-- 🔹 Gráficoss -->
+    <!-- 🔹 Gráficos -->
     <div *ngIf="datosLocales" class="row g-4">
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0">
+        <div class="col-md-6 col-zoom-stack mb-4">
+            <div class="card shadow-sm border-0 h-90">
                 <div class="card-header fw-bold text-muted">📅 Distribución mensual</div>
                 <div class="card-body">
-                    <app-grafico-pacientes-por-mes [data]="datosLocales.porMes"
-                        [type]="'doughnut'"></app-grafico-pacientes-por-mes>
+                    <app-grafico-pacientes-por-mes [data]="datosLocales.porMes"></app-grafico-pacientes-por-mes>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6" *ngIf="['admin', 'gerente'].includes(rolUsuario?.key ?? '') && datosComparativa">
-            <div class="card shadow-sm border-0">
+        <div class="col-md-6 col-zoom-stack mb-4" *ngIf="puedeVerComparativa">
+            <div class="card shadow-sm border-0 h-90">
                 <div class="card-header fw-bold text-muted">🏥 Comparativa por sede</div>
                 <div class="card-body">
                     <app-grafico-comparativa-sedes [data]="datosComparativa"></app-grafico-comparativa-sedes>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensaje cuando no hay datos para gráficos -->
+    <div *ngIf="!datosLocales && totalHistorias === 0" class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay datos suficientes para mostrar los gráficos. Los gráficos se mostrarán cuando haya pacientes e historias médicas registradas.
             </div>
         </div>
     </div>

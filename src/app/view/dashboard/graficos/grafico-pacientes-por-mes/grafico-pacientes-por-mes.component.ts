@@ -11,8 +11,13 @@ import {
   templateUrl: './grafico-pacientes-por-mes.component.html',
   styleUrls: ['./grafico-pacientes-por-mes.component.scss']
 })
+
 export class GraficoPacientesPorMesComponent implements OnInit, OnChanges {
-  @Input() data: any = {}; // Más flexible para diferentes estructuras
+  @Input() data: any = {};
+
+  // ✅ Propiedades para controlar visibilidad
+  mostrarPacientes: boolean = false;
+  mostrarHistorias: boolean = false;
 
   chartPacientesType: keyof ChartTypeRegistry = 'doughnut';
   chartHistoriasType: keyof ChartTypeRegistry = 'doughnut';
@@ -116,7 +121,10 @@ export class GraficoPacientesPorMesComponent implements OnInit, OnChanges {
   private actualizarGraficos(): void {
     console.log('📊 Datos mensuales recibidos:', this.data);
     
-    if (!this.data || Object.keys(this.data).length === 0) {
+    // ✅ Verificar si hay datos de forma segura
+    const tieneDatos = this.tieneDatos();
+    
+    if (!tieneDatos) {
       console.warn('No hay datos mensuales para mostrar');
       this.mostrarGraficosVacios();
       return;
@@ -125,16 +133,21 @@ export class GraficoPacientesPorMesComponent implements OnInit, OnChanges {
     try {
       const { labels, pacientes, historias } = this.procesarDatosMensuales();
       
+      // ✅ Actualizar datos y controlar visibilidad
       this.chartPacientesData.labels = labels;
       this.chartPacientesData.datasets[0].data = pacientes;
+      this.mostrarPacientes = pacientes.some(p => p > 0);
       
       this.chartHistoriasData.labels = labels;
       this.chartHistoriasData.datasets[0].data = historias;
+      this.mostrarHistorias = historias.some(h => h > 0);
       
       console.log('✅ Gráficos mensuales actualizados:', {
         labels,
         pacientes,
-        historias
+        historias,
+        mostrarPacientes: this.mostrarPacientes,
+        mostrarHistorias: this.mostrarHistorias
       });
     } catch (error) {
       console.error('❌ Error procesando datos mensuales:', error);
@@ -142,13 +155,33 @@ export class GraficoPacientesPorMesComponent implements OnInit, OnChanges {
     }
   }
 
+  // ✅ Método seguro para verificar datos
+  private tieneDatos(): boolean {
+    if (!this.data) return false;
+    
+    if (Array.isArray(this.data)) {
+      return this.data.length > 0 && this.data.some(item => 
+        (item.pacientes && item.pacientes > 0) || 
+        (item.historias && item.historias > 0)
+      );
+    }
+    
+    if (typeof this.data === 'object') {
+      const keys = Object.keys(this.data);
+      return keys.length > 0 && keys.some(key => 
+        (this.data[key].pacientes && this.data[key].pacientes > 0) || 
+        (this.data[key].historias && this.data[key].historias > 0)
+      );
+    }
+    
+    return false;
+  }
+
   private procesarDatosMensuales(): { labels: string[], pacientes: number[], historias: number[] } {
-    // Si es un array de meses
     if (Array.isArray(this.data)) {
       return this.procesarArrayMeses(this.data);
     }
     
-    // Si es un objeto con meses como propiedades
     if (typeof this.data === 'object' && !Array.isArray(this.data)) {
       return this.procesarObjetoMeses(this.data);
     }
@@ -188,12 +221,10 @@ export class GraficoPacientesPorMesComponent implements OnInit, OnChanges {
   }
 
   private formatearNombreMes(mes: string): string {
-    // Si el mes ya está formateado, dejarlo como está
     if (mes.length > 3 && isNaN(Number(mes))) {
       return mes;
     }
     
-    // Si es un número, convertirlo a nombre del mes
     const mesNumero = parseInt(mes);
     if (!isNaN(mesNumero) && mesNumero >= 1 && mesNumero <= 12) {
       const meses = [
@@ -207,30 +238,17 @@ export class GraficoPacientesPorMesComponent implements OnInit, OnChanges {
   }
 
   private mostrarGraficosVacios(): void {
-    const mensaje = ['Sin datos'];
-    
     this.chartPacientesData = {
-      labels: mensaje,
-      datasets: [
-        {
-          label: 'Pacientes',
-          data: [1], // Un valor para que se muestre el gráfico
-          backgroundColor: ['#6c757d'],
-          hoverBackgroundColor: ['#5a6268']
-        }
-      ]
+      labels: [],
+      datasets: []
     };
-
+    
     this.chartHistoriasData = {
-      labels: mensaje,
-      datasets: [
-        {
-          label: 'Historias Médicas',
-          data: [1],
-          backgroundColor: ['#6c757d'],
-          hoverBackgroundColor: ['#5a6268']
-        }
-      ]
+      labels: [],
+      datasets: []
     };
+    
+    this.mostrarPacientes = false;
+    this.mostrarHistorias = false;
   }
 }

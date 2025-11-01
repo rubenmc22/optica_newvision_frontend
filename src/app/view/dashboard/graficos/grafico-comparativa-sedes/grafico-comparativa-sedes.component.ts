@@ -4,7 +4,7 @@ import {
   ChartData,
   ChartOptions
 } from 'chart.js';
-import { DatosPorSede  } from './../../dashboard-interface';
+import { DatosPorSede } from './../../dashboard-interface';
 
 @Component({
   selector: 'app-grafico-comparativa-sedes',
@@ -13,7 +13,8 @@ import { DatosPorSede  } from './../../dashboard-interface';
   styleUrls: ['./grafico-comparativa-sedes.component.scss']
 })
 export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
-  @Input() data: any = {}; // Más flexible
+
+  @Input() data: any = {};
 
   chartType: 'bar' = 'bar';
   chartData: ChartData<'bar'> = { labels: [], datasets: [] };
@@ -47,6 +48,9 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
     }
   };
 
+  // ✅ Agregar propiedad para controlar visibilidad
+  mostrarGrafico: boolean = false;
+
   ngOnInit(): void {
     this.actualizarGrafico();
   }
@@ -58,35 +62,50 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
   }
 
   private actualizarGrafico(): void {
-    console.log('📊 Datos recibidos:', this.data);
-    
-    if (!this.data || Object.keys(this.data).length === 0) {
-      console.warn('No hay datos para mostrar en el gráfico');
+    console.log('📊 Datos recibidos en comparativa-sedes:', this.data);
+
+    // ✅ Verificar si hay datos de forma segura
+    this.mostrarGrafico = this.tieneDatos();
+
+    if (!this.mostrarGrafico) {
+      console.warn('No hay datos para mostrar en el gráfico de comparativa');
       this.mostrarGraficoVacio();
       return;
     }
 
     try {
-      // Intentar diferentes estructuras de datos
       const { labels, datasets } = this.procesarDatos();
-      
+
       this.chartData.labels = labels;
       this.chartData.datasets = datasets;
-      
-      console.log('✅ Gráfico actualizado:', this.chartData);
+
+      console.log('✅ Gráfico de comparativa actualizado:', this.chartData);
     } catch (error) {
-      console.error('❌ Error procesando datos:', error);
+      console.error('❌ Error procesando datos de comparativa:', error);
       this.mostrarGraficoVacio();
     }
   }
 
+  // ✅ Método seguro para verificar datos
+  private tieneDatos(): boolean {
+    if (!this.data) return false;
+
+    if (Array.isArray(this.data)) {
+      return this.data.length > 0;
+    }
+
+    if (typeof this.data === 'object') {
+      return Object.keys(this.data).length > 0;
+    }
+
+    return false;
+  }
+
   private procesarDatos(): { labels: string[], datasets: any[] } {
-    // Si es un array de sedes
     if (Array.isArray(this.data)) {
       return this.procesarArraySedes(this.data);
     }
-    
-    // Si es un objeto con sedes como propiedades
+
     if (typeof this.data === 'object' && !Array.isArray(this.data)) {
       return this.procesarObjetoSedes(this.data);
     }
@@ -96,7 +115,7 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
 
   private procesarArraySedes(sedesArray: any[]): { labels: string[], datasets: any[] } {
     const labels = sedesArray.map(sede => sede.nombre || sede.sede || 'Sin nombre');
-    
+
     return {
       labels,
       datasets: [
@@ -127,7 +146,7 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
   private procesarObjetoSedes(sedesObj: Record<string, any>): { labels: string[], datasets: any[] } {
     const sedes = Object.keys(sedesObj);
     const labels = sedes;
-    
+
     return {
       labels,
       datasets: [
@@ -181,5 +200,6 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
         }
       ]
     };
+    this.mostrarGrafico = true;
   }
 }

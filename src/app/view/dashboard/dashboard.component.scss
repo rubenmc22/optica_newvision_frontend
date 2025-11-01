@@ -1,11 +1,31 @@
 @use '../../../custom-theme.scss' as theme;
 
-
-
 .card-body{
     background: var(--degradado-pastel) !important;
 }
 
 .card{
-        height: 94%;
+    height: 94%;
+}
+
+// Para zoom 125% - MUCHO más agresivo
+// Esto hará que en casi todos los laptops se vea en una columna
+@media (max-width: 1300px) {
+  .col-zoom-stack {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 1.5rem;
+  }
+}
+
+// Solo para pantallas muy grandes (> 1400px) - dos columnas
+@media (min-width: 1301px) {
+  .col-zoom-stack {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+}
+
+.h-100 {
+  height: 100%;
 }
