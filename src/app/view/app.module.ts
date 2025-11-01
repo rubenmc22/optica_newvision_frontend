@@ -30,6 +30,7 @@ import { HistoriasMedicasComponent } from './historias-medicas/historias-medicas
 import { ProductosListComponent } from './productos/productos-list/productos-list.component';
 import { GenerarVentaComponent } from './ventas/generar-venta/generar-venta.component';
 import { VentasDashboardComponent } from './ventas/ventas-dashboard.component';
+import { HistorialVentasComponent } from './ventas/historial-ventas/historial-ventas.component';
 import { PresupuestoComponent } from './ventas/presupuesto/presupuesto.component';
 import { CierreCajaComponent } from './ventas/cierre-caja/cierre-caja.component';
 import { LoaderComponent } from './../shared/loader/loader.component';
@@ -66,6 +67,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
     ProductosListComponent,
     LoaderComponent,
     GenerarVentaComponent,
+    HistorialVentasComponent,
     VentasDashboardComponent,
     PresupuestoComponent,
     CierreCajaComponent
