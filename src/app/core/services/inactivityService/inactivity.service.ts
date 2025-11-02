@@ -55,8 +55,6 @@ export class InactivityService implements OnDestroy {
 
     private handleInactivity(): void {
         if (!this.isBrowser) return;
-
-        console.log('🕐 Inactividad detectada');
         
         // Verificar si el usuario está autenticado antes de mostrar la alerta
         if (!this.authService.isAuthenticated()) {
@@ -69,10 +67,8 @@ export class InactivityService implements OnDestroy {
             '¿Deseas continuar con tu sesión?'
         ).then((keepAlive) => {
             if (keepAlive) {
-                console.log('Usuario eligió mantener la sesión');
                 this.resetTimer();
             } else {
-                console.log('Usuario eligió cerrar sesión');
                 this.forceLogout();
             }
         }).catch((error) => {
@@ -82,7 +78,6 @@ export class InactivityService implements OnDestroy {
     }
 
     private forceLogout(): void {
-        console.log('🕐 Forzando cierre de sesión por inactividad');
         
         // Detener el servicio primero
         this.stopWatching();
@@ -109,14 +104,12 @@ export class InactivityService implements OnDestroy {
     }
 
     stopWatching(): void {
-        console.log('🕐 Inactivity service stopped');
         this.isWatching = false;
         this.destroy$.next();
         this.countdown?.unsubscribe();
     }
 
     ngOnDestroy(): void {
-        console.log('🕐 Inactivity service destroyed');
         this.stopWatching();
         this.destroy$.complete();
     }
