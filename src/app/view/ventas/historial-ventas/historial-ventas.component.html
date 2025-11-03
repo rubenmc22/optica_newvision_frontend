@@ -15,19 +15,16 @@
         <!-- Filtros y búsquedas -->
         <div class="card mb-4">
             <div class="card-body">
-                <div class="row g-3">
-                    <!-- Fila 1: Búsqueda principal y selectores -->
-                    <div class="col-md-4">
+                <div class="row g-3 filtros-responsive">
+                    <!-- Fila 1: Buscador, Asesor, Especialista -->
+                    <div class="col-12 col-md-4">
                         <label class="form-label fw-semibold">🔍 Buscador</label>
                         <input type="text" class="form-control"
                             placeholder="Cédula, nombre del paciente o N° de control..."
                             [(ngModel)]="filtros.busquedaGeneral" (input)="onFiltroChange()">
-                        <!--   <div class="form-text">
-                            Puedes buscar por cédula, nombre o nro de control
-                        </div>-->
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-12 col-md-4">
                         <label class="form-label fw-semibold">👨‍💼 Asesor</label>
                         <select class="form-select" [(ngModel)]="filtros.asesor" (change)="onFiltroChange()">
                             <option value="">Todos</option>
@@ -35,7 +32,7 @@
                         </select>
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-12 col-md-4">
                         <label class="form-label fw-semibold">👨‍⚕️ Especialista</label>
                         <select class="form-select" [(ngModel)]="filtros.especialista" (change)="onFiltroChange()">
                             <option value="">Todos</option>
@@ -43,7 +40,8 @@
                         </select>
                     </div>
 
-                    <div class="col-md-2">
+                    <!-- Fila 2: Status, Rango de Fechas, Limpiar -->
+                    <div class="col-12 col-md-4">
                         <label class="form-label fw-semibold">📊 Status</label>
                         <select class="form-select" [(ngModel)]="filtros.estado" (change)="onFiltroChange()">
                             <option value="">Todos</option>
@@ -52,8 +50,8 @@
                         </select>
                     </div>
 
-                    <!-- Selector de Rango de Fechas Moderno -->
-                    <div class="col-md-2">
+                    <!-- Selector de Rango de Fechas y Botón Limpiar juntos -->
+                    <div class="col-12 col-md-4">
                         <label class="form-label fw-semibold">📅 Rango de fechas</label>
                         <div class="input-group">
                             <button class="btn btn-outline-primary" type="button" (click)="toggleDatepicker()">
@@ -63,11 +61,12 @@
                         </div>
                     </div>
 
-                    <!-- Botones de acción filtros -->
-                    <div class="col-12">
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-outline-secondary" (click)="limpiarFiltros()">
-                                <i class="bi bi-arrow-clockwise"></i> Limpiar
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold d-block text-center text-md-start"></label>
+                        <div class="d-flex justify-content-center justify-content-md-end" style="margin-top: 20px;">
+                            <button class="btn btn-outline-warning" type="button" (click)="limpiarFiltros()"
+                                title="Restablecer todos los filtros">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar filtros
                             </button>
                         </div>
                     </div>
