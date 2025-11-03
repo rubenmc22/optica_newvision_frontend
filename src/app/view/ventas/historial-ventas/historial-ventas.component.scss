@@ -2,18 +2,22 @@
 
 
 .card-header {
-    //  text-align: center;
     font-size: 1.2rem;
     background: var(--degradado-color) !important;
-    /* Fondo amarillo */
     color: var(--details-color) !important;
-    /* Texto negro */
     font-weight: bold;
     border-bottom: 2px solid var(--secondary-color);
-    /* Línea divisoria negra */
 }
 
-// En tu historial-ventas.component.scss
+.modal-header{
+    font-size: 1.2rem;
+    background: var(--degradado-color) !important;
+    color: var(--details-color) !important;
+    font-weight: bold;
+    border-bottom: 2px solid var(--secondary-color);
+
+}
+
 .modal-backdrop {
     z-index: 1040;
 }
@@ -28,7 +32,7 @@
 
     &:hover {
       //  background: var(--degradado-color) !important;
-        color: white;
+        color: white !important;
     }
 }
 
@@ -52,9 +56,6 @@
         transition: all 0.2s ease;
     }
 }
-
-
-// En tu historial-ventas.component.scss
 
 // Paginación moderna
 .pagination-moderna {
@@ -151,7 +152,7 @@
 
 // Mejorar la visualización del texto largo
 .texto-paciente {
-    max-width: 300px; // Ajusta según necesites
+    max-width: 300px; 
     word-break: break-word;
 }
 
@@ -163,7 +164,6 @@
     color: var(--primary-color) !important;
 }
 
-/* O si quieres que sea más pequeño solo cuando hay rango */
 .btn-outline-primary .fecha-display {
     font-size: 0.85rem;
 }

@@ -17,7 +17,7 @@
             <div class="card-body">
                 <div class="row g-3">
                     <!-- Fila 1: Búsqueda principal y selectores -->
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="form-label fw-semibold">🔍 Buscador</label>
                         <input type="text" class="form-control"
                             placeholder="Cédula, nombre del paciente o N° de control..."
@@ -63,15 +63,11 @@
                         </div>
                     </div>
 
-                    <!-- Botón de limpiar compacto -->
-                    <div class="col-md-1">
-                        <label class="form-label fw-semibold d-block text-center">Reiniciar</label>
-                        <div class="d-flex justify-content-center align-items-center" style="height: 38px">
-                            <button
-                                class="btn btn-outline-warning btn-sm d-flex align-items-center justify-content-center"
-                                type="button" (click)="limpiarFiltros()" title="Restablecer todos los filtros"
-                                style="width: 32px; height: 32px">
-                                <i class="bi bi-arrow-counterclockwise"></i>
+                    <!-- Botones de acción filtros -->
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-secondary" (click)="limpiarFiltros()">
+                                <i class="bi bi-arrow-clockwise"></i> Limpiar
                             </button>
                         </div>
                     </div>
