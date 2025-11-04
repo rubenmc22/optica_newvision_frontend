@@ -80,19 +80,20 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Seleccionar rango de fechas</h5>
-                        <button type="button" class="btn-close" (click)="closeDatepicker()"></button>
+                        <button type="button" class="btn-close" (click)="closeDatepicker()"
+                            style="color: white !important;"></button>
                     </div>
                     <div class="modal-body">
                         <div class="row g-3">
                             <!-- Selector de fecha única -->
                             <div class="col-12">
                                 <label class="form-label fw-semibold">📌 Fecha única</label>
-                                <input type="date" class="form-control" [(ngModel)]="fechaUnica"
-                                    (change)="onFechaUnicaChange()">
+                                <input type="date" class="form-control" [(ngModel)]="fechaUnica" [max]="maxDate"
+                                    [min]="minDate" (change)="onFechaUnicaChange()">
                                 <div class="form-text">Selecciona una fecha específica</div>
                             </div>
 
-                            <div class="col-12 text-center">
+                            <div class="col-12 text-center d-flex align-items-center justify-content-center">
                                 <hr class="my-3">
                                 <span class="text-muted">O selecciona un rango</span>
                             </div>
@@ -101,32 +102,51 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Desde</label>
                                 <input type="date" class="form-control" [max]="filtros.fechaHasta || maxDate"
-                                    [(ngModel)]="filtros.fechaDesde" (change)="onRangoChange()">
+                                    [min]="minDate" [(ngModel)]="filtros.fechaDesde" (change)="onRangoChange()">
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Hasta</label>
                                 <input type="date" class="form-control" [min]="filtros.fechaDesde || minDate"
-                                    [(ngModel)]="filtros.fechaHasta" (change)="onRangoChange()">
+                                    [max]="maxDate" [(ngModel)]="filtros.fechaHasta" (change)="onRangoChange()">
                             </div>
 
                             <!-- Presets rápidos -->
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Rangos predefinidos</label>
                                 <div class="d-flex flex-wrap gap-2">
-                                    <button class="btn btn-outline-secondary btn-sm" (click)="setRangoPreset('hoy')">
+                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'hoy'"
+                                        [class.btn-outline-secondary]="presetActivo !== 'hoy'"
+                                        (click)="setRangoPreset('hoy')">
                                         Hoy
                                     </button>
-                                    <button class="btn btn-outline-secondary btn-sm" (click)="setRangoPreset('ayer')">
+                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'ayer'"
+                                        [class.btn-outline-secondary]="presetActivo !== 'ayer'"
+                                        (click)="setRangoPreset('ayer')">
                                         Ayer
                                     </button>
-                                    <button class="btn btn-outline-secondary btn-sm" (click)="setRangoPreset('semana')">
+                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana'"
+                                        [class.btn-outline-secondary]="presetActivo !== 'semana'"
+                                        (click)="setRangoPreset('semana')">
                                         Esta semana
                                     </button>
-                                    <button class="btn btn-outline-secondary btn-sm" (click)="setRangoPreset('mes')">
+                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana_pasada'"
+                                        [class.btn-outline-secondary]="presetActivo !== 'semana_pasada'"
+                                        (click)="setRangoPreset('semana_pasada')">
+                                        Semana pasada
+                                    </button>
+                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes'"
+                                        [class.btn-outline-secondary]="presetActivo !== 'mes'"
+                                        (click)="setRangoPreset('mes')">
                                         Este mes
                                     </button>
-                                    <button class="btn btn-outline-secondary btn-sm"
+                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes_pasado'"
+                                        [class.btn-outline-secondary]="presetActivo !== 'mes_pasado'"
+                                        (click)="setRangoPreset('mes_pasado')">
+                                        Mes pasado
+                                    </button>
+                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'trimestre'"
+                                        [class.btn-outline-secondary]="presetActivo !== 'trimestre'"
                                         (click)="setRangoPreset('trimestre')">
                                         Este trimestre
                                     </button>

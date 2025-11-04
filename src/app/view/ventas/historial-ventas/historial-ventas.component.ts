@@ -11,12 +11,13 @@ export class HistorialVentasComponent implements OnInit {
   asesores: any[] = [];
   especialistas: any[] = [];
   ventasFiltradas: any[] = [];
-  ventasOriginales: any[] = []; // Para mantener una copia original
+  ventasOriginales: any[] = [];
   totalVentas: number = 0;
+  presetActivo: string = '';
 
   // Filtros optimizados
   filtros = {
-    busquedaGeneral: '', // Combina paciente, cédula y número de control
+    busquedaGeneral: '',
     asesor: '',
     especialista: '',
     fechaDesde: '',
@@ -28,9 +29,10 @@ export class HistorialVentasComponent implements OnInit {
   showDatepicker: boolean = false;
   fechaUnica: string = '';
 
+
   // Para validación de fechas
-  maxDate: string = new Date().toISOString().split('T')[0];
-  minDate: string = '2020-01-01';
+  maxDate: string = '';
+  minDate: string = '2020-01-01'
 
   // Ordenamiento
   ordenamiento = {
@@ -45,6 +47,17 @@ export class HistorialVentasComponent implements OnInit {
 
   ngOnInit() {
     this.cargarDatosIniciales();
+    this.setMaxDate();
+  }
+
+  private setMaxDate(): void {
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, '0');
+    const day = String(hoy.getDate()).padStart(2, '0');
+    this.maxDate = `${year}-${month}-${day}`;
+
+    console.log('Fecha máxima configurada:', this.maxDate);
   }
 
   cargarDatosIniciales() {
@@ -82,34 +95,18 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  onFechaUnicaChange(): void {
-    if (this.fechaUnica) {
-      this.filtros.fechaDesde = this.fechaUnica;
-      this.filtros.fechaHasta = this.fechaUnica;
-      this.filtrarVentas(); // Filtro automático
-    }
-  }
-
-  onRangoChange(): void {
-    this.fechaUnica = ''; // Limpiar fecha única cuando se usa rango
-    this.filtrarVentas(); // Filtro automático
-  }
-
   aplicarFechas(): void {
     this.closeDatepicker();
     this.filtrarVentas(); // Filtro automático
   }
 
-  limpiarFechas(): void {
-    this.filtros.fechaDesde = '';
-    this.filtros.fechaHasta = '';
-    this.fechaUnica = '';
-    this.filtrarVentas(); // Filtro automático
-  }
-
   setRangoPreset(tipo: string): void {
     const hoy = new Date();
-    const fechaDesde = new Date();
+    let fechaDesde = new Date();
+    let fechaHasta = new Date();
+
+    // Establecer el preset activo
+    this.presetActivo = tipo;
 
     switch (tipo) {
       case 'hoy':
@@ -124,45 +121,127 @@ export class HistorialVentasComponent implements OnInit {
         break;
 
       case 'semana':
-        fechaDesde.setDate(hoy.getDate() - 7);
+        const diaSemana = hoy.getDay();
+        const diffLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+
+        fechaDesde = new Date(hoy);
+        fechaDesde.setDate(hoy.getDate() + diffLunes);
+
+        fechaHasta = new Date(fechaDesde);
+        fechaHasta.setDate(fechaDesde.getDate() + 6);
+
         this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
-        this.filtros.fechaHasta = hoy.toISOString().split('T')[0];
+        this.filtros.fechaHasta = fechaHasta.toISOString().split('T')[0];
+        break;
+
+      case 'semana_pasada':
+        const diaSemanaActual = hoy.getDay();
+        const diffLunesPasado = diaSemanaActual === 0 ? -13 : -6 - diaSemanaActual;
+
+        fechaDesde = new Date(hoy);
+        fechaDesde.setDate(hoy.getDate() + diffLunesPasado);
+
+        fechaHasta = new Date(fechaDesde);
+        fechaHasta.setDate(fechaDesde.getDate() + 6);
+
+        this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
+        this.filtros.fechaHasta = fechaHasta.toISOString().split('T')[0];
         break;
 
       case 'mes':
-        fechaDesde.setMonth(hoy.getMonth() - 1);
+        fechaDesde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        fechaHasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+
         this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
-        this.filtros.fechaHasta = hoy.toISOString().split('T')[0];
+        this.filtros.fechaHasta = fechaHasta.toISOString().split('T')[0];
+        break;
+
+      case 'mes_pasado':
+        fechaDesde = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+        fechaHasta = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+
+        this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
+        this.filtros.fechaHasta = fechaHasta.toISOString().split('T')[0];
         break;
 
       case 'trimestre':
-        fechaDesde.setMonth(hoy.getMonth() - 3);
+        const trimestreActual = Math.floor(hoy.getMonth() / 3);
+        const mesInicioTrimestre = trimestreActual * 3;
+        const mesFinTrimestre = mesInicioTrimestre + 2;
+
+        fechaDesde = new Date(hoy.getFullYear(), mesInicioTrimestre, 1);
+        fechaHasta = new Date(hoy.getFullYear(), mesFinTrimestre + 1, 0);
+
         this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
-        this.filtros.fechaHasta = hoy.toISOString().split('T')[0];
+        this.filtros.fechaHasta = fechaHasta.toISOString().split('T')[0];
         break;
     }
 
-    this.fechaUnica = ''; // Limpiar fecha única
-    this.filtrarVentas(); // Filtro automático
+    this.fechaUnica = '';
+    this.filtrarVentas();
+  }
+
+  limpiarFechas(): void {
+    this.filtros.fechaDesde = '';
+    this.filtros.fechaHasta = '';
+    this.fechaUnica = '';
+    this.presetActivo = '';
+    this.filtrarVentas();
+  }
+
+  onRangoChange(): void {
+    this.presetActivo = '';
+  }
+
+  onFechaUnicaChange(): void {
+    this.presetActivo = '';
+
+    if (this.fechaUnica) {
+      // Validar que la fecha no sea futura (comparación directa de strings YYYY-MM-DD)
+      const hoy = new Date().toISOString().split('T')[0];
+
+      if (this.fechaUnica > hoy) {
+        // Si es fecha futura, resetear
+        this.fechaUnica = '';
+        this.filtros.fechaDesde = '';
+        this.filtros.fechaHasta = '';
+        alert('No puedes seleccionar fechas futuras');
+        return;
+      }
+
+      // Si la fecha es válida, establecer el rango
+      this.filtros.fechaDesde = this.fechaUnica;
+      this.filtros.fechaHasta = this.fechaUnica;
+
+      // Filtrar automáticamente
+      this.filtrarVentas();
+    } else {
+      // Si se limpia la fecha única, limpiar también los filtros
+      this.filtros.fechaDesde = '';
+      this.filtros.fechaHasta = '';
+      this.filtrarVentas();
+    }
   }
 
   getFechaDisplay(): string {
     if (this.fechaUnica) {
-      return this.formatFecha(this.fechaUnica);
+      return this.formatFechaLocal(this.fechaUnica);
     } else if (this.filtros.fechaDesde && this.filtros.fechaHasta) {
       if (this.filtros.fechaDesde === this.filtros.fechaHasta) {
-        return this.formatFecha(this.filtros.fechaDesde);
+        return this.formatFechaLocal(this.filtros.fechaDesde);
       } else {
-        return `${this.formatFecha(this.filtros.fechaDesde)} - ${this.formatFecha(this.filtros.fechaHasta)}`;
+        return `${this.formatFechaLocal(this.filtros.fechaDesde)} - ${this.formatFechaLocal(this.filtros.fechaHasta)}`;
       }
     } else {
       return 'Seleccionar fecha';
     }
   }
+  private formatFechaLocal(fechaString: string): string {
+    if (!fechaString) return '';
 
-  private formatFecha(fecha: string): string {
-    if (!fecha) return '';
-    const date = new Date(fecha);
+    const [year, month, day] = fechaString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
     return date.toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit',

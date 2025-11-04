@@ -9,7 +9,7 @@
     border-bottom: 2px solid var(--secondary-color);
 }
 
-.modal-header{
+.modal-header {
     font-size: 1.2rem;
     background: var(--degradado-color) !important;
     color: var(--details-color) !important;
@@ -31,7 +31,7 @@
     color: var(--primary-color) !important;
 
     &:hover {
-      //  background: var(--degradado-color) !important;
+         background: var(--degradado-color) !important;
         color: white !important;
     }
 }
@@ -79,6 +79,28 @@
 
     &:active {
         transform: translateY(0);
+    }
+}
+
+.btn-primary {
+    background: var(--degradado-color);
+    border: var(--degradado-color);
+    border-left: none;
+    color: #fff;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+        color: var(--details-color);
+
+        i {
+            color: var(--details-color);
+        }
+    }
+
+    i {
+        transition: all 0.2s ease;
     }
 }
 
@@ -152,7 +174,7 @@
 
 // Mejorar la visualización del texto largo
 .texto-paciente {
-    max-width: 300px; 
+    max-width: 300px;
     word-break: break-word;
 }
 
@@ -164,12 +186,24 @@
     color: var(--primary-color) !important;
 }
 
+/*.btn-outline-primary {
+    background: var(--degradado-color) !important;
+
+    &:hover {
+        background: var(--degradado-color) !important;
+    }
+}*/
+
+
+
 .btn-outline-primary .fecha-display {
     font-size: 0.85rem;
 }
 
 /* Media queries para zoom 125%+ */
-@media (max-width: 1536px) { /* 125% zoom aproximado */
+@media (max-width: 1536px) {
+
+    /* 125% zoom aproximado */
     .filtros-responsive .col-xl-1,
     .filtros-responsive .col-xl-2,
     .filtros-responsive .col-xl-3 {
@@ -178,14 +212,16 @@
     }
 }
 
-@media (max-width: 1200px) { /* 150% zoom aproximado */
+@media (max-width: 1200px) {
+
+    /* 150% zoom aproximado */
     .filtros-responsive .col-xl-1,
     .filtros-responsive .col-xl-2,
     .filtros-responsive .col-xl-3 {
         flex: 0 0 100%;
         max-width: 100%;
     }
-    
+
     .filtros-responsive .col-md-3,
     .filtros-responsive .col-md-6 {
         flex: 0 0 50%;
@@ -193,7 +229,9 @@
     }
 }
 
-@media (max-width: 768px) { /* 200% zoom o móvil */
+@media (max-width: 768px) {
+
+    /* 200% zoom o móvil */
     .filtros-responsive .col-6,
     .filtros-responsive .col-md-3,
     .filtros-responsive .col-md-6 {
