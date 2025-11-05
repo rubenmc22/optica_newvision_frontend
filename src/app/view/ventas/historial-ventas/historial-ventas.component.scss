@@ -22,6 +22,16 @@
     z-index: 1040;
 }
 
+.btn-outline-warning {
+    background: var(--details-color) !important;
+    color: black !important;
+
+    &:hover {
+        background: var(--details-color) !important;
+        color: black !important;
+    }
+}
+
 .modal {
     z-index: 1050;
 }
@@ -31,7 +41,7 @@
     color: var(--primary-color) !important;
 
     &:hover {
-         background: var(--degradado-color) !important;
+        background: var(--degradado-color) !important;
         color: white !important;
     }
 }

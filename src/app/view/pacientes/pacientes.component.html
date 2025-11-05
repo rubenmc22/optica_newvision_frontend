@@ -29,7 +29,7 @@
           <div class="filtroPaciente col-md-8">
             <label for="filtroTexto" class="form-label">🔎 Buscar paciente</label>
             <input id="filtroTexto" type="text" class="form-control" placeholder="Nombre o cédula..."
-              [(ngModel)]="filtro">
+              [(ngModel)]="filtro" (input)="aplicarFiltroTexto()" (keyup.enter)="aplicarFiltroTexto()">
           </div>
         </div>
 
@@ -106,7 +106,7 @@
                       title="Editar">
                       <i class="bi bi-pencil-square"></i>
                     </button>
-                <!--    <button class="btn btn-outline-danger btn-sm" (click)="eliminarPaciente(paciente.key)"
+                    <!--    <button class="btn btn-outline-danger btn-sm" (click)="eliminarPaciente(paciente.key)"
                       title="Eliminar">
                       <i class="bi bi-trash"></i>
                     </button>-->

@@ -383,7 +383,7 @@ export class VerPacientesComponent implements OnInit {
 
   // Métodos de carga de datos
   cargarPacientes(): void {
-     this.dataIsReady = false;
+    this.dataIsReady = false;
     this.loader.show(); // activa el loader
     this.pacientesService.getPacientes().subscribe({
       next: (data) => {
@@ -435,9 +435,9 @@ export class VerPacientesComponent implements OnInit {
           : [];
         this.actualizarPacientesPorSede();
         setTimeout(() => {
-        this.dataIsReady = true;
-        this.loader.hide();
-      }, 100); // Delay visual para evitar parpadeo
+          this.dataIsReady = true;
+          this.loader.hide();
+        }, 100); // Delay visual para evitar parpadeo
       },
       error: (err: HttpErrorResponse) => {
         this.pacientes = [];
@@ -456,18 +456,28 @@ export class VerPacientesComponent implements OnInit {
 
   actualizarPacientesPorSede(): void {
     const sedeId = this.sedeFiltro?.trim().toLowerCase();
-    this.pacientesFiltradosPorSede = sedeId && sedeId !== 'todas'
+
+    // Primero filtrar por sede
+    let pacientesFiltrados = sedeId && sedeId !== 'todas'
       ? this.pacientes.filter(p => p.sede === sedeId)
       : [...this.pacientes];
 
-    // Aplicar filtro de texto
-    const filtroText = this.filtro.trim().toLowerCase();
+    // Luego aplicar filtro de texto si existe
+    const filtroText = this.filtro?.trim().toLowerCase();
     if (filtroText) {
-      this.pacientesFiltradosPorSede = this.pacientesFiltradosPorSede.filter(p =>
-        p.informacionPersonal?.nombreCompleto?.toLowerCase().includes(filtroText) ||
-        p.informacionPersonal?.cedula?.includes(filtroText)
-      );
+      pacientesFiltrados = pacientesFiltrados.filter(p => {
+        const nombre = p.informacionPersonal?.nombreCompleto?.toLowerCase() || '';
+        const cedula = p.informacionPersonal?.cedula?.toLowerCase() || '';
+
+        return nombre.includes(filtroText) || cedula.includes(filtroText);
+      });
     }
+
+    this.pacientesFiltradosPorSede = pacientesFiltrados;
+  }
+
+  aplicarFiltroTexto(): void {
+    this.actualizarPacientesPorSede();
   }
 
   getValorOrden(obj: any, path: string): any {
