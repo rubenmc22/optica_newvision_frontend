@@ -80,7 +80,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Seleccionar rango de fechas</h5>
-                        <button type="button" class="btn-close" (click)="closeDatepicker()"
+                        <button type="button" class="btn-close btn-close-white" (click)="closeDatepicker()"
                             style="color: white !important;"></button>
                     </div>
                     <div class="modal-body">
@@ -402,3 +402,51 @@
         </div>
     </div>
 </div>
+
+
+<!-- Modal de Confirmación para Cancelar Venta -->
+<ng-template #cancelarVentaModal let-modal>
+  <div class="modal-header bg-primary text-white">
+    <h5 class="modal-title">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      Confirmar Cancelación
+    </h5>
+    <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()"></button>
+  </div>
+  
+  <div class="modal-body">
+    <!-- Cambiamos alert-warning por alert-info con fondo azul claro -->
+    <div class="alert alert-info" role="alert">
+      <h6 class="alert-heading fw-bold">¿Está seguro de que desea cancelar esta venta?</h6>
+      <p class="mb-0 mt-2">
+        <strong>Venta {{ formatNumeroVenta(selectedVenta?.id) }}</strong><br>
+        <span *ngIf="selectedVenta?.paciente?.nombre">Paciente: {{ selectedVenta.paciente.nombre }}</span><br>
+        <span *ngIf="selectedVenta?.montoTotal">Monto: {{ selectedVenta.montoTotal | currency }}</span>
+      </p>
+    </div>
+    
+    <div class="form-group mt-3">
+      <label for="motivoCancelacion" class="form-label">
+        <strong>Motivo de cancelación:</strong>
+      </label>
+      <textarea 
+        id="motivoCancelacion" 
+        class="form-control" 
+        rows="3" 
+        placeholder="Ingrese el motivo de la cancelación..."
+        [(ngModel)]="motivoCancelacion"
+        maxlength="500">
+      </textarea>
+      <small class="text-muted">{{ motivoCancelacion?.length || 0 }}/500 caracteres</small>
+    </div>
+  </div>
+  
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">
+      <i class="bi bi-x-circle me-1"></i> Cancelar
+    </button>
+    <button type="button" class="btn btn-danger" (click)="confirmarCancelacion(modal)">
+      <i class="bi bi-check-circle me-1"></i> Confirmar Cancelación
+    </button>
+  </div>
+</ng-template>

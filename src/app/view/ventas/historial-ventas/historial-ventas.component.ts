@@ -1,4 +1,8 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, HostListener, ViewChild, TemplateRef } from '@angular/core';
+import { SwalService } from '../../../core/services/swal/swal.service';
+import { HistorialVentaService } from './../historial-ventas/historial-ventas.service';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+
 
 @Component({
   selector: 'app-historial-ventas',
@@ -7,6 +11,8 @@ import { Component, OnInit, HostListener } from '@angular/core';
   styleUrls: ['./historial-ventas.component.scss']
 })
 export class HistorialVentasComponent implements OnInit {
+
+  @ViewChild('cancelarVentaModal') cancelarVentaModal!: TemplateRef<any>;
   // Propiedades para los filtros
   asesores: any[] = [];
   especialistas: any[] = [];
@@ -44,6 +50,16 @@ export class HistorialVentasComponent implements OnInit {
   paginaActual = 1;
   itemsPorPagina = 10;
   totalPaginas: number = 1;
+
+  // Propiedades para el modal confirmacion cancelar venta
+  selectedVenta: any = null;
+  motivoCancelacion: string = '';
+
+  constructor(
+    private modalService: NgbModal,
+    private swalService: SwalService, // Si tienes servicio de alertas
+    private historialVentaService: HistorialVentaService // Tu servicio de ventas
+  ) { }
 
   ngOnInit() {
     this.cargarDatosIniciales();
@@ -475,13 +491,6 @@ export class HistorialVentasComponent implements OnInit {
     // Lógica para mostrar detalle completo
   }
 
-  cancelarVenta(venta: any) {
-    console.log('Cancelar venta:', venta);
-    if (confirm('¿Está seguro de que desea cancelar esta venta?')) {
-      venta.estado = 'cancelada';
-    }
-  }
-
   generarInforme() {
     console.log('Generar informe con filtros:', this.filtros);
     // Lógica para generar informe
@@ -527,5 +536,103 @@ export class HistorialVentasComponent implements OnInit {
       'cancelada': 'bg-danger'
     };
     return clases[estado] || 'bg-secondary';
+  }
+
+  cancelarVenta(venta: any) {
+    console.log('Cancelar venta:', venta);
+
+    this.selectedVenta = venta;
+    this.motivoCancelacion = '';
+
+    // Abrir modal de confirmación
+    this.modalService.open(this.cancelarVentaModal, {
+      centered: true,
+      backdrop: 'static',
+      keyboard: false
+    });
+  }
+
+  confirmarCancelacion(modal: any) {
+    // Validar que se ingrese un motivo
+    if (!this.motivoCancelacion?.trim()) {
+      this.swalService.showWarning('Advertencia', 'Por favor ingrese el motivo de la cancelación.');
+      return;
+    }
+
+    // Cerrar modal
+    modal.close();
+
+    this.swalService.showConfirm(
+      'Confirmar Acción',
+      `¿Está completamente seguro de cancelar la venta #${this.selectedVenta.id}? Esta acción no se puede deshacer.`,
+      'Sí, Cancelar Venta',
+      'Revisar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.procesarCancelacion();
+      } else {
+        this.cancelarVenta(this.selectedVenta);
+      }
+    });
+  }
+
+  private procesarCancelacion() {
+    console.log('Procesando cancelación de venta:', this.selectedVenta.id);
+
+    // Usar el servicio simulado
+    this.historialVentaService.cancelarVenta(this.selectedVenta.id, this.motivoCancelacion).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.swalService.showSuccess('Éxito', response.message);
+
+          // Actualizar el estado localmente
+          this.selectedVenta.estado = 'cancelada';
+          this.selectedVenta.motivo_cancelacion = this.motivoCancelacion;
+          this.selectedVenta.fecha_cancelacion = response.data.fecha_cancelacion;
+
+          console.log('Venta cancelada exitosamente:', this.selectedVenta);
+        } else {
+          // Manejar respuesta con error del servicio simulado
+          this.swalService.showError('Error', response.message);
+        }
+
+        // Resetear variables
+        this.selectedVenta = null;
+        this.motivoCancelacion = '';
+      },
+      error: (error) => {
+        console.error('Error en la solicitud de cancelación:', error);
+        this.swalService.showError('Error', 'No se pudo completar la solicitud. Verifique su conexión.');
+
+        // Resetear variables incluso en error
+        this.selectedVenta = null;
+        this.motivoCancelacion = '';
+      }
+    });
+  }
+
+  // Método alternativo si no tienes servicio
+  private procesarCancelacionLocal() {
+    // Simular procesamiento
+    setTimeout(() => {
+      this.swalService.showSuccess('Éxito', 'Venta cancelada correctamente.');
+
+      // Actualizar estado localmente
+      this.selectedVenta.estado = 'cancelada';
+      this.selectedVenta.motivo_cancelacion = this.motivoCancelacion;
+      this.selectedVenta.fecha_cancelacion = new Date().toISOString();
+
+      // Resetear variables
+      this.selectedVenta = null;
+      this.motivoCancelacion = '';
+    }, 1000);
+  }
+
+  // Método para formatear el número de venta con ceros a la izquierda
+  formatNumeroVenta(id: number): string {
+    if (!id) return '#000';
+
+    // Formatear a 3 dígitos con ceros a la izquierda
+    return `#${id.toString().padStart(3, '0')}`;
   }
 }

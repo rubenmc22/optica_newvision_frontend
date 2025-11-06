@@ -196,14 +196,68 @@
     color: var(--primary-color) !important;
 }
 
-/*.btn-outline-primary {
+// Fuerza el z-index del backdrop para que esté DETRÁS del modal
+::ng-deep ngb-modal-backdrop {
+    z-index: 1040 !important;
+}
+
+::ng-deep ngb-modal-window {
+    z-index: 1050 !important;
+}
+
+// Opcional: Asegurar que el modal esté por encima
+::ng-deep .modal {
+    z-index: 1055 !important;
+}
+
+// Estilos para el modal de cancelación
+::ng-deep .modal-header.bg-primary {
     background: var(--degradado-color) !important;
+    //  background: var(--degradado-pastel) !important;
+}
+
+::ng-deep .alert-info {
+    background-color: var(--degradado-pastel) !important;
+    border-color: #bee5eb !important;
+    color: var(--primary-color) !important;
+
+    .alert-heading {
+        color: var(--primary-color) !important;
+    }
+}
+
+.btn-danger {
+    background: var(--degradado-color);
+    border: var(--degradado-color);
+    border-left: none;
+    color: #fff;
+    transition: all 0.3s ease;
 
     &:hover {
-        background: var(--degradado-color) !important;
-    }
-}*/
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+        color: var(--details-color);
 
+        i {
+            color: var(--details-color);
+        }
+    }
+
+    i {
+        transition: all 0.2s ease;
+    }
+}
+
+// Mejorar la apariencia del textarea
+::ng-deep textarea.form-control {
+    border: 1px solid #ced4da;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+    &:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+}
 
 
 .btn-outline-primary .fecha-display {
