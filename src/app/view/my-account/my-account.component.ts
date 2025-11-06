@@ -50,6 +50,8 @@ export class MyAccountComponent implements OnInit {
   selectedFile: File | null = null;
   isSavingProfile = false;
   mostrarErrorTelefono = false;
+  maxDate: string = '';
+  isFechaFutura: boolean = false;
 
   // ============================================================
   // Propiedades relacionadas con cambio de contraseña de acceso
@@ -94,6 +96,7 @@ export class MyAccountComponent implements OnInit {
     this.currentRol = this.authService.getCurrentRol() || { key: '', name: '' };
     this.currentCargo = this.authService.getCurrentCargo() || { key: '', name: '' };
     this.loadUserData();
+    this.setMaxDate(); // ← Agrega esta línea
   }
 
   // ============================================================
@@ -133,6 +136,71 @@ export class MyAccountComponent implements OnInit {
     });
   }
 
+  get tooltipMessage(): string {
+    const isDisabled = !this.isFormEdited || !this.isPersonalInfoValid();
+    const message = isDisabled
+      ? 'Complete todos los campos requeridos para habilitar el guardado'
+      : '';
+
+    console.log('=== TOOLTIP DEBUG ===');
+    console.log('isDisabled:', isDisabled);
+    console.log('isFormEdited:', this.isFormEdited);
+    console.log('isPersonalInfoValid():', this.isPersonalInfoValid());
+    console.log('Tooltip message:', message);
+    console.log('=== END DEBUG ===');
+
+    return message;
+  }
+
+  // En tu componente, después de cargar los datos
+  ngAfterViewInit(): void {
+    // Forzar detección de cambios después de que la vista se renderice
+    setTimeout(() => {
+      this.cdRef.detectChanges();
+    }, 1000);
+  }
+
+  // Tu método para verificar la validez del formulario
+  isPersonalInfoValid(): boolean {
+    const nombreValido = !!this.user.nombre?.trim() &&
+      /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(this.user.nombre);
+    const correoValido = this.generalFunctions.isValidEmail(this.user.correo);
+    const telefonoValido = this.generalFunctions.isValidPhone(this.user.telefono);
+    const fechaValida = !!this.user.fecha_nacimiento && !this.isFechaFutura;
+
+    return nombreValido && correoValido && telefonoValido && fechaValida;
+  }
+
+  private setMaxDate(): void {
+    const today = new Date();
+    this.maxDate = today.toISOString().split('T')[0];
+  }
+
+  validateFechaNacimiento(): void {
+    if (!this.user.fecha_nacimiento) {
+      this.isFechaFutura = false;
+      return;
+    }
+
+    const selectedDate = new Date(this.user.fecha_nacimiento);
+    const today = new Date();
+
+    // Resetear la hora para comparar solo fechas
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    this.isFechaFutura = selectedDate > today;
+
+    if (this.isFechaFutura) {
+      this.detectChanges();
+    }
+  }
+
+  onFechaNacimientoChange(): void {
+    this.validateFechaNacimiento();
+    this.detectChanges();
+  }
+
 
   private getDefaultUserProfile(): UserProfile {
     return {
@@ -146,6 +214,8 @@ export class MyAccountComponent implements OnInit {
       rol: ''
     };
   }
+
+
 
   private setupFieldChangeListeners(): void {
     setTimeout(() => {
@@ -182,6 +252,13 @@ export class MyAccountComponent implements OnInit {
       this.user.fecha_nacimiento !== this.originalUser.fecha_nacimiento ||
       this.user.telefono !== this.originalUser.telefono ||
       this.selectedFile !== null;
+
+    console.log('=== DEBUG CHANGES ===');
+    console.log('isFormEdited:', this.isFormEdited);
+    console.log('Original nombre:', this.originalUser.nombre);
+    console.log('Current nombre:', this.user.nombre);
+    console.log('Are different:', this.user.nombre !== this.originalUser.nombre);
+    console.log('=== END CHANGES ===');
   }
 
   getProfileImage(): string {
@@ -210,6 +287,49 @@ export class MyAccountComponent implements OnInit {
     console.warn('Error al cargar la imagen', this.user.ruta_imagen);
   }
 
+  eliminarFoto(): void {
+    this.swalService.showConfirm(
+      'Eliminar foto de perfil',
+      '¿Estás seguro de que deseas eliminar tu foto de perfil?',
+      'Eliminar',
+      'Cancelar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.eliminarFotoDelServidor();
+      }
+    });
+  }
+
+  private eliminarFotoDelServidor(): void {
+    this.isSavingProfile = true;
+
+    /* this.changeInformationService.deleteProfileImage().subscribe({
+         next: (response) => {
+             // Resetear la imagen en el frontend
+             this.user.ruta_imagen = '';
+             this.user.avatarUrl = null;
+             this.avatarPreview = null;
+             this.selectedFile = null;
+             
+             // Actualizar en el servicio de autenticación
+             this.authService.updateProfileImage('');
+             this.sharedUserService.updateUserProfile(this.user);
+             
+             // Actualizar el estado del formulario
+             this.detectChanges();
+             this.cdRef.detectChanges();
+             
+             this.isSavingProfile = false;
+             this.swalService.showSuccess('Éxito', 'Foto de perfil eliminada correctamente');
+         },
+         error: (error) => {
+             console.error('Error eliminando foto:', error);
+             this.isSavingProfile = false;
+             this.swalService.showError('Error', 'No se pudo eliminar la foto de perfil');
+         }
+     });*/
+  }
+
   validateNumberInput(event: KeyboardEvent): boolean {
     const charCode = event.key.charCodeAt(0);
     const isNumber = charCode >= 48 && charCode <= 57;
@@ -233,12 +353,30 @@ export class MyAccountComponent implements OnInit {
     this.mostrarErrorTelefono = !this.generalFunctions.isValidPhone(this.user.telefono);
   }
 
-  isPersonalInfoValid(): boolean {
-    const nombreValido = !!this.user.nombre && /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(this.user.nombre);
-    const correoValido = this.generalFunctions.isValidEmail(this.user.correo);
-    const telefonoValido = this.generalFunctions.isValidPhone(this.user.telefono);
-
-    return nombreValido && correoValido && telefonoValido;
+  getValidationStatus(): { campo: string, valido: boolean, mensaje: string }[] {
+    return [
+      {
+        campo: 'Nombre',
+        valido: !!this.user.nombre?.trim() &&
+          /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(this.user.nombre),
+        mensaje: 'Debe contener solo letras y espacios'
+      },
+      {
+        campo: 'Correo',
+        valido: this.generalFunctions.isValidEmail(this.user.correo),
+        mensaje: 'Debe ser un correo válido'
+      },
+      {
+        campo: 'Teléfono',
+        valido: this.generalFunctions.isValidPhone(this.user.telefono),
+        mensaje: 'Debe tener 11 dígitos'
+      },
+      {
+        campo: 'Fecha de Nacimiento',
+        valido: !!this.user.fecha_nacimiento,
+        mensaje: 'Debe seleccionar una fecha'
+      }
+    ];
   }
 
   onFileSelected(event: Event): void {
@@ -544,4 +682,5 @@ export class MyAccountComponent implements OnInit {
       }
     });
   }
+
 }

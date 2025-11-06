@@ -36,17 +36,31 @@
                         <div class="text-center mb-4">
                             <div class="avatar-widget">
                                 <img [src]="getProfileImage()" alt="Avatar del Usuario" class="avatar-img"
-                                    (error)="handleImageError($event)"> <!-- Cambia onerror por (error) -->
+                                    (error)="handleImageError($event)">
 
                                 <div class="avatar-overlay"
                                     [ngClass]="{'show-on-hover': avatarPreview || user.ruta_imagen}">
-                                    <label for="avatarUpload">
+                                    <label for="avatarUpload" class="avatar-action-btn" title="Cambiar foto">
                                         <i class="fas fa-camera"></i>
                                     </label>
-                                    <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
-                                        (change)="onFileSelected($event)">
+
+                                    <!-- Botón para eliminar foto (solo visible si hay foto) -->
+                                    <button *ngIf="user.ruta_imagen && !avatarPreview"
+                                        class="avatar-action-btn btn btn-danger btn-sm" (click)="eliminarFoto()"
+                                        title="Eliminar foto" type="button">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
+
+                                <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
+                                    (change)="onFileSelected($event)">
                             </div>
+
+                            <!-- Mensaje informativo -->
+                            <small class="text-muted mt-2 d-block">
+                                {{ user.ruta_imagen ?
+                                'Haz clic en la cámara para cambiar o en la papelera para eliminar' : 'Selecciona una foto de perfil' }}
+                            </small>
                         </div><br>
 
                         <!-- Formulario de Información Personal -->
@@ -66,58 +80,101 @@
                                         name="cargo" disabled [ngClass]="'disabled-input'" />
                                 </div>
 
-
                                 <!-- Campo: Nombre Completo -->
                                 <div class="form-group col-md-4">
-                                    <label for="nombreCompleto">Apellido y Nombre</label>
-                                    <input type="text" id="nombre" class="form-control" [(ngModel)]="user.nombre"
+                                    <label for="nombreCompleto" class="required">Apellido y Nombre</label>
+                                    <input type="text" id="nombre" class="form-control"
+                                        [class.is-invalid]="nombre.invalid && nombre.touched"
+                                        [class.is-valid]="nombre.valid && nombre.touched" [(ngModel)]="user.nombre"
                                         name="nombreCompleto" pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" #nombre="ngModel"
                                         required (input)="detectChanges()" />
-                                    <small *ngIf="nombre.invalid && nombre.touched" class="text-danger">
-                                        Solo se permiten letras y espacios.
-                                    </small>
+                                    <div class="invalid-feedback" *ngIf="nombre.invalid && nombre.touched">
+                                        <span *ngIf="nombre.errors?.['required']">El nombre es requerido</span>
+                                        <span *ngIf="nombre.errors?.['pattern']">Solo se permiten letras y
+                                            espacios</span>
+                                    </div>
+                                    <div class="valid-feedback" *ngIf="nombre.valid && nombre.touched">
+                                        ✓ Nombre válido
+                                    </div>
                                 </div>
                             </div>
 
                             <div class="form-row">
                                 <!-- Campo: Correo Electrónico -->
                                 <div class="form-group col-md-4">
-                                    <label for="correo">Correo Electrónico</label>
-                                    <input type="email" id="correo" class="form-control" [(ngModel)]="user.correo"
+                                    <label for="correo" class="required">Correo Electrónico</label>
+                                    <input type="email" id="correo" class="form-control"
+                                        [class.is-invalid]="correo.invalid && correo.touched"
+                                        [class.is-valid]="correo.valid && correo.touched" [(ngModel)]="user.correo"
                                         name="correo" email #correo="ngModel" required (input)="detectChanges()" />
-                                    <small *ngIf="correo.invalid && correo.touched" class="text-danger"
-                                        id="correoError">
-                                        Introduzca un correo electrónico válido.
-                                    </small>
+                                    <div class="invalid-feedback" *ngIf="correo.invalid && correo.touched">
+                                        <span *ngIf="correo.errors?.['required']">El correo es requerido</span>
+                                        <span *ngIf="correo.errors?.['email']">Introduzca un correo electrónico
+                                            válido</span>
+                                    </div>
+                                    <div class="valid-feedback" *ngIf="correo.valid && correo.touched">
+                                        ✓ Correo válido
+                                    </div>
                                 </div>
+
                                 <!-- Campo: Teléfono -->
                                 <div class="form-group col-md-4">
-                                    <label for="telefono">Teléfono</label>
-                                    <input type="tel" id="telefono" class="form-control" [(ngModel)]="user.telefono"
-                                        name="telefono" (input)="validarTelefono()" (blur)="validarTelefono()"
-                                        placeholder="Ej. 04123920817" />
-
-                                    <small *ngIf="mostrarErrorTelefono" class="text-danger" id="correoPhone">
+                                    <label for="telefono" class="required">Teléfono</label>
+                                    <input type="tel" id="telefono" class="form-control"
+                                        [class.is-invalid]="mostrarErrorTelefono"
+                                        [class.is-valid]="!mostrarErrorTelefono && user.telefono && user.telefono.length >= 11"
+                                        [(ngModel)]="user.telefono" name="telefono" (input)="validarTelefono()"
+                                        (blur)="validarTelefono()" placeholder="Ej. 0412xxxxxxx" required />
+                                    <div class="invalid-feedback" *ngIf="mostrarErrorTelefono">
                                         Introduzca un número de teléfono válido (11 dígitos).
-                                    </small>
+                                    </div>
+                                    <div class="valid-feedback"
+                                        *ngIf="!mostrarErrorTelefono && user.telefono && user.telefono.length >= 11">
+                                        ✓ Teléfono válido
+                                    </div>
                                 </div>
 
                                 <!-- Campo: Fecha de Nacimiento -->
                                 <div class="form-group col-md-4">
-                                    <label for="fechaNacimiento">Fecha de Nacimiento</label>
+                                    <label for="fechaNacimiento" class="required">Fecha de Nacimiento</label>
                                     <input type="date" id="fechaNacimiento" class="form-control"
-                                        [(ngModel)]="user.fecha_nacimiento" name="fechaNacimiento" required
-                                        (input)="detectChanges()" />
+                                        [class.is-invalid]="(fechaNacimiento.invalid || isFechaFutura) && fechaNacimiento.touched"
+                                        [class.is-valid]="fechaNacimiento.valid && !isFechaFutura && fechaNacimiento.touched"
+                                        [(ngModel)]="user.fecha_nacimiento" name="fechaNacimiento"
+                                        #fechaNacimiento="ngModel" required [max]="maxDate"
+                                        (input)="onFechaNacimientoChange()" (blur)="validateFechaNacimiento()" />
+
+                                    <div class="invalid-feedback"
+                                        *ngIf="fechaNacimiento.errors?.['required'] && fechaNacimiento.touched">
+                                        La fecha de nacimiento es requerida
+                                    </div>
+                                    <div class="invalid-feedback" *ngIf="isFechaFutura && fechaNacimiento.touched">
+                                        La fecha de nacimiento no puede ser mayor a la fecha actual
+                                    </div>
+                                    <div class="valid-feedback"
+                                        *ngIf="fechaNacimiento.valid && !isFechaFutura && fechaNacimiento.touched">
+                                        ✓ Fecha válida
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="text-right">
-                                <button type="button" class="btn btn-success"
-                                    [disabled]="!isFormEdited || !isPersonalInfoValid()"
-                                    (click)="openModal('personalInfoModal')">
-                                    Guardar Cambios
-                                </button>
+
+                            <!-- Botón con tooltip informativo -->
+                            <div class="d-flex justify-content-end mt-4">
+                                <div class="position-relative d-inline-block"
+                                    ngbTooltip="Complete todos los campos requeridos para habilitar el guardado"
+                                    placement="top" triggers="hover"
+                                    [ngbTooltip]="(!isFormEdited || !isPersonalInfoValid()) ? 'Complete todos los campos requeridos para habilitar el guardado' : ''">
+
+                                    <button type="button" class="btn btn-success btn-lg save-button"
+                                        [disabled]="!isFormEdited || !isPersonalInfoValid()"
+                                        (click)="openModal('personalInfoModal')">
+                                        <i class="fas fa-save me-2"></i>
+                                        Guardar Cambios
+                                    </button>
+                                </div>
                             </div>
+
                         </form>
                     </div>
 

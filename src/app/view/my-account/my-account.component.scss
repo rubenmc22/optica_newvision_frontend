@@ -1,8 +1,8 @@
 @use '../../../custom-theme.scss' as theme;
 
 .card {
-    width: 100%; // Siempre ocupa el ancho completo
-    margin: 1rem auto; // Centra la tarjeta si hay márgenes disponibles
+    width: 100%;
+    margin: 1rem auto;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     background-color: var(--secondary-color);
@@ -11,13 +11,109 @@
 
 .container-fluid {
     padding-left: 0;
-    padding-right: 0; // Evita espacios adicionales en los bordes de la pantalla
+    padding-right: 0;
 }
 
 .row.justify-content-center {
-    width: 100%; // Se asegura de que los elementos dentro ocupen toda la línea
+    width: 100%;
 }
 
+/* Estilos para el formulario */
+.required::after {
+    content: " *";
+    color: #dc3545;
+}
+
+.disabled-input {
+    background-color: #e9ecef;
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+/* Estados de validación */
+.is-valid {
+    border-color: #198754;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+.is-invalid {
+    border-color: #dc3545;
+    padding-right: calc(1.5em + 0.75rem);
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 3.6.4.4.4-.4'/%3e%3cpath d='M6 7v1'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+/* Botón con tooltip */
+.save-button {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.save-button:disabled {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.save-button:disabled:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    transform: none;
+    box-shadow: none;
+}
+
+.save-button:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Tooltips de angular */
+::ng-deep .tooltip {
+    z-index: 9999 !important;
+}
+
+::ng-deep .tooltip-inner {
+    background-color: #dc3545 !important;
+    color: white !important;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 0.375rem !important;
+    font-size: 0.875rem !important;
+    max-width: 300px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+::ng-deep .bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: #dc3545 !important;
+}
+
+::ng-deep .bs-tooltip-bottom .tooltip-arrow::before {
+    border-bottom-color: #dc3545 !important;
+}
+
+/* Feedback de validación */
+.invalid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+
+.valid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875em;
+    color: #198754;
+    font-weight: 500;
+}
 
 .avatar-widget {
     position: relative;
@@ -34,7 +130,7 @@
     height: 100%;
     object-fit: cover;
     position: relative;
-    z-index: 1; // Asegura que la imagen esté por encima del overlay
+    z-index: 1;
 }
 
 .avatar-overlay {
@@ -43,12 +139,12 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); // Fondo semitransparente
+    background-color: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2; // Asegura que el overlay esté por encima de la imagen
-    opacity: 1; // Visible por defecto
+    z-index: 2;
+    opacity: 1;
     transition: opacity 0.3s ease;
 
     .fa-camera {
@@ -57,12 +153,11 @@
     }
 }
 
-// Clase para ocultar el overlay cuando hay una imagen cargada
 .show-on-hover {
-    opacity: 0; // Inicialmente invisible
+    opacity: 0;
 
     &:hover {
-        opacity: 1; // Visible al hacer hover
+        opacity: 1;
     }
 }
 
@@ -70,12 +165,9 @@
     text-align: center;
     font-size: 1.2rem;
     background-color: var(--primary-color) !important;
-    /* Fondo amarillo */
     color: var(--formInput-color) !important;
-    /* Texto negro */
     font-weight: bold;
     border-bottom: 2px solid var(--secondary-color);
-    /* Línea divisoria negra */
 }
 
 .card-title {
@@ -85,9 +177,7 @@
 
 .card-body {
     background-color: var(--secondary-color);
-    /* Fondo negro */
     color: var(--primary-color);
-    /* Texto amarillo */
     padding: 1.5rem;
 }
 
@@ -97,62 +187,45 @@
     font-size: 1.5rem;
     font-weight: bold;
     background: linear-gradient(90deg, var(--primary-color));
-    /* Gradiente de amarillo a naranja */
     color: var(--secondary-color);
-    /* Texto negro */
     padding: 1rem;
     border-radius: 10px 10px 0 0;
-    /* Bordes superiores redondeados */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    /* Sombra elegante */
 }
 
 /* Estilo para las pestañas */
 .nav-tabs {
     border-bottom: 2px solid var(--primary-color);
-    /* Línea divisoria amarilla */
     background-color: var(--secondary-color);
-    /* Fondo negro para las pestañas */
     border-radius: 10px 10px 0 0;
-    /* Bordes superiores redondeados */
 }
 
 .nav-tabs .nav-item {
     flex: 1;
-    /* Las pestañas ocupan el mismo espacio */
     text-align: center;
 }
 
 .nav-tabs .nav-link {
     color: var(--primary-color);
-    /* Color amarillo para pestañas */
     font-weight: bold;
     transition: all 0.3s ease;
     background-color: transparent;
     border: none;
     border-bottom: 3px solid transparent;
-    /* Sin línea al inicio */
     padding: 0.8rem;
 }
 
 .nav-tabs .nav-link.active {
     color: var(--secondary-color);
-    /* Texto negro */
     background: var(--degradado-color);
-    /* Fondo amarillo */
     border-bottom: 3px solid var(--details-color) !important;
-    ;
-    /* Línea subrayada naranja */
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
-    /* Sombra para la pestaña activa */
 }
 
 .nav-tabs .nav-link:hover {
-    //color: black;
-    /* Naranja al pasar el ratón */
+    color: var(--primary-color);
 }
 
-/* Sombra en el contenido de las pestañas */
 .tab-content {
     padding: 1rem;
     background-color: var(--secondary-color);
@@ -164,16 +237,11 @@
 input.form-control,
 textarea.form-control,
 select.form-control {
-    /*    background-color: var(--secondary-color);
-    color: #FFFFFF;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 5px;*/
     background: rgba(255, 255, 255, 0.85);
     border: 1px solid #e1e1e1;
     color: var(--formInput-color);
     transition: all 0.3s ease;
     padding: 5px 15px;
-    //  margin-bottom: 20px;
     border-radius: 8px;
 
     &:focus {
@@ -182,12 +250,10 @@ select.form-control {
         box-shadow: 0 0 0 2px rgba(0, 120, 215, 0.2);
         outline: none;
     }
-
 }
 
 input.form-control::placeholder {
     color: var(--primary-color);
-    /* Texto placeholder amarillo */
     opacity: 0.8;
 }
 
@@ -195,7 +261,6 @@ input.form-control::placeholder {
 button.btn-success {
     background: var(--degradado-color);
     border: var(--degradado-color);
-    border-left: none;
     color: #fff;
     transition: all 0.3s ease;
 
@@ -204,7 +269,7 @@ button.btn-success {
         box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
 
         i {
-            color: #fff; // Icono azul
+            color: #fff;
         }
     }
 
@@ -215,28 +280,58 @@ button.btn-success {
 
 .disabled-input {
     background-color: #e0e0e0 !important;
-    /* Color gris */
     cursor: not-allowed;
 }
-
-/*button.btn-success:hover {
-    background-color: #e6c200;
-    color: #000000;
-    box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
-    transform: scale(1.05);
-}*/
 
 button.btn-success:active {
     background-color: #cba800;
     transform: scale(0.98);
-    /* Efecto de clic */
 }
 
-.text-danger {}
+.btn-outline-secondary {
+    background: var(--degradado-color);
+    border: var(--degradado-color);
+    color: #fff;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+
+        i {
+            color: #fff;
+        }
+    }
+
+    i {
+        transition: all 0.2s ease;
+    }
+}
+
+.form-group {
+    position: relative;
+}
+
+small.text-danger {
+    position: absolute;
+}
+
+#correoError,
+#correoPhone {
+    position: absolute;
+    bottom: -20px;
+    left: 7px;
+    text-align: left;
+}
+
+.form-row {
+    margin-bottom: 20px;
+}
 
 /* Estilos para el modal centrado */
 #personalInfoModal,
-#otpModal, #uniquePasswordModal {
+#otpModal,
+#uniquePasswordModal {
     .modal-dialog {
         &.modal-dialog-centered {
             min-height: calc(100% - 1rem);
@@ -285,7 +380,6 @@ button.btn-success:active {
     }
 
     .modal-footer {
-    //    justify-content: center;
         border-top: 1px solid rgba(0, 0, 0, 0.1);
         padding: 1rem;
         background-color: var(--secondary-color);
@@ -303,56 +397,55 @@ button.btn-success:active {
     }
 }
 
-.btn-outline-secondary {
-    background: var(--degradado-color);
-    border: var(--degradado-color);
-    border-left: none;
-    color: #fff;
+.avatar-action-btn {
+    margin: 0 2px;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
     transition: all 0.3s ease;
+    border: none;
+    background: rgba(255, 255, 255, 0.8);
 
     &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+        transform: scale(1.1);
+        background: rgba(255, 255, 255, 1);
+    }
 
-        i {
-            color: #fff; // Icono azul
+    // Estilo específico para el botón de eliminar
+    &.btn-danger {
+        background: rgba(220, 53, 69, 0.8);
+        color: white;
+
+        &:hover {
+            background: rgba(220, 53, 69, 1);
+        }
+    }
+
+    // Estilo para el label de la cámara
+    &[for="avatarUpload"] {
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.8);
         }
     }
 
     i {
-        transition: all 0.2s ease;
+        font-size: 14px;
     }
-}
-
-.form-group {
-    position: relative;
-    // min-height: 70px; // Define una altura mínima para que el mensaje no empuje el contenido
-}
-
-small.text-danger {
-    position: absolute;
-    // bottom: -20px; // Mueve el mensaje debajo del input sin afectar su altura
-    // left: 6px;
-}
-
-#correoError, #correoPhone {
-    position: absolute;
-    bottom: -20px;
-    left: 7px;
-    text-align: left;
-}
-
-
-
-.form-row {
-    margin-bottom: 20px;
 }
 
 /* Ajuste para dispositivos móviles */
 @media (max-width: 575.98px) {
 
     #personalInfoModal,
-    #otpModal, #uniquePasswordModal {
+    #otpModal,
+    #uniquePasswordModal {
         .modal-dialog {
             margin: 0.5rem auto;
         }

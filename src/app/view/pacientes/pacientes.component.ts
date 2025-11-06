@@ -475,6 +475,7 @@ export class VerPacientesComponent implements OnInit {
 
     this.pacientesFiltradosPorSede = pacientesFiltrados;
   }
+  
 
   aplicarFiltroTexto(): void {
     this.actualizarPacientesPorSede();
