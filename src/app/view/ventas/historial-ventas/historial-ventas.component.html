@@ -190,121 +190,218 @@
             </div>
         </div>
 
-        <!-- Lista de ventas -->
-        <div class="card">
+        <!-- Lista de ventas - Diseño Innovador -->
+        <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
-                <div class="list-group list-group-flush">
-                    <div *ngFor="let venta of ventasFiltradas" class="list-group-item">
-                        <!-- Encabezado de la venta - Versión Mejorada -->
-                        <div class="d-flex justify-content-between align-items-center cursor-pointer p-3 border-bottom"
-                            (click)="toggleDetalleVenta(venta.id)">
-                            <div class="d-flex align-items-center gap-3">
-                                <!-- Número de Control con mejor diseño -->
-                                <div class="bg-primary text-white rounded p-2 text-center" style="min-width: 80px;">
-                                    <div class="small">Control</div>
-                                    <strong class="fs-6">#{{venta.numeroControl}}</strong>
+                <div class="ventas-grid">
+                    <div *ngFor="let venta of ventasFiltradas" class="venta-card">
+                        <!-- Tarjeta Principal -->
+                        <div class="venta-header" (click)="toggleDetalleVenta(venta.id)">
+                            <!-- Avatar y Info Principal -->
+                            <div class="venta-avatar">
+                                <div class="avatar-circle" [ngClass]="{
+                            'avatar-success': venta.estado === 'completada',
+                            'avatar-warning': venta.estado === 'pendiente',
+                            'avatar-danger': venta.estado === 'cancelada'
+                        }">
+                                    <i class="bi" [class.bi-check-lg]="venta.estado === 'completada'"
+                                        [class.bi-clock]="venta.estado === 'pendiente'"
+                                        [class.bi-x-lg]="venta.estado === 'cancelada'"></i>
+                                </div>
+                            </div>
+
+                            <!-- Información Central -->
+                            <div class="venta-info">
+                                <div class="venta-title">
+                                    <h6 class="mb-1 fw-bold text-dark">{{venta.paciente.nombre}}</h6>
+                                    <div class="venta-meta">
+                                        <span class="meta-item">
+                                            <i class="bi bi-person-badge text-muted"></i>
+                                            CI. {{venta.paciente.cedula}}
+                                        </span>
+                                        <span class="meta-divider">•</span>
+                                        <span class="meta-item">
+                                            <i class="bi bi-calendar3 text-muted"></i>
+                                            {{venta.fecha | date:'dd/MM/yyyy'}}
+                                        </span>
+                                        <span class="meta-divider">•</span>
+                                        <span class="meta-item">
+                                            <i class="bi bi-clock text-muted"></i>
+                                            {{venta.fecha | date:'HH:mm'}}
+                                        </span>
+                                    </div>
                                 </div>
 
-                                <!-- Información del paciente -->
-                                <div class="flex-grow-1">
-                                    <!-- Nombre y cédula en línea con icono -->
-                                    <div class="d-flex align-items-center gap-2 mb-1">
-                                        <i class="bi bi-person-circle text-muted"></i>
-                                        <h6 class="mb-0 fw-semibold text-dark">
-                                            {{venta.paciente.nombre}} - CI. {{venta.paciente.cedula}}
-                                        </h6>
+                                <!-- Información Adicional -->
+                                <div class="venta-details">
+                                    <div class="detail-item">
+                                        <small class="text-muted">Control</small>
+                                        <strong class="text-primary">#{{venta.numeroControl}}</strong>
                                     </div>
-
-                                    <!-- Fecha y hora con mejor formato -->
-                                    <div class="d-flex align-items-center gap-2">
-                                        <i class="bi bi-calendar3 text-muted small"></i>
-                                        <small class="text-muted">
-                                            {{venta.fecha | date:'dd/MM/yyyy'}} a las {{venta.fecha | date:'HH:mm'}}
-                                        </small>
+                                    <div class="detail-item">
+                                        <small class="text-muted">Asesor</small>
+                                        <span class="text-dark">{{venta.asesor.nombre}}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <small class="text-muted">Forma Pago</small>
+                                        <span class="text-capitalize badge forma-pago-badge" [ngClass]="{
+                                    'forma-contado': venta.formaPago === 'contado',
+                                    'forma-cashea': venta.formaPago === 'cashea',
+                                    'forma-abono': venta.formaPago === 'abono'
+                                }">
+                                            {{venta.formaPago}}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Estado y monto alineados a la derecha -->
-                            <div class="d-flex align-items-center gap-3">
-                                <!-- Badge de estado mejorado -->
-                                <span class="badge px-3 py-2" [ngClass]="{
-                                    'bg-success': venta.estado === 'completada',
-                                    'bg-warning text-dark': venta.estado === 'pendiente',
-                                    'bg-danger': venta.estado === 'cancelada'
-                                }">
-                                    <i class="bi" [class.bi-check-circle]="venta.estado === 'completada'"
-                                        [class.bi-clock]="venta.estado === 'pendiente'"
-                                        [class.bi-x-circle]="venta.estado === 'cancelada'" class="me-1"></i>
-                                    {{venta.estado | titlecase}}
-                                </span>
-
-                                <!-- Monto con mejor formato -->
-                                <div class="text-end">
-                                    <strong class="text-primary fs-6">{{venta.montoTotal |
-                                        currency:'USD':'symbol':'1.2-2'}}</strong>
-                                    <div class="text-muted small">Total</div>
+                            <!-- Lado Derecho - Estado y Monto -->
+                            <div class="venta-sidebar">
+                                <!-- Estado -->
+                                <div class="estado-badge" [ngClass]="{
+                            'estado-completada': venta.estado === 'completada',
+                            'estado-pendiente': venta.estado === 'pendiente',
+                            'estado-cancelada': venta.estado === 'cancelada'
+                        }">
+                                    <div class="estado-dot"></div>
+                                    <span class="estado-text">{{venta.estado | titlecase}}</span>
                                 </div>
 
-                                <!-- Ícono de expandir/contraer -->
-                                <i class="bi fs-5 text-muted" [class.bi-chevron-down]="!venta.mostrarDetalle"
-                                    [class.bi-chevron-up]="venta.mostrarDetalle"></i>
+                                <!-- Monto -->
+                                <div class="monto-display">
+                                    <div class="monto-amount text-primary fw-bold">
+                                        {{venta.montoTotal | currency:'USD':'symbol':'1.2-2'}}
+                                    </div>
+                                    <div class="monto-label text-muted small">Total</div>
+                                </div>
+
+                                <!-- Ícono Expandir -->
+                                <div class="expand-icon">
+                                    <i class="bi" [class.bi-chevron-down]="!venta.mostrarDetalle"
+                                        [class.bi-chevron-up]="venta.mostrarDetalle"></i>
+                                </div>
                             </div>
                         </div>
-                        <!-- Detalle expandible -->
-                        <div *ngIf="venta.mostrarDetalle" class="mt-3 pt-3 border-top">
-                            <div class="row">
-                                <!-- Información general -->
-                                <div class="col-md-6">
-                                    <h6>Información de la Venta</h6>
-                                    <table class="table table-sm">
-                                        <tr>
-                                            <td><strong>Asesor:</strong></td>
-                                            <td>{{venta.asesor.nombre}}</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Especialista:</strong></td>
-                                            <td>{{venta.especialista?.nombre || 'N/A'}}</td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Servicios:</strong></td>
-                                            <td>
-                                                <span *ngFor="let servicio of venta.servicios"
-                                                    class="badge bg-light text-dark me-1">
-                                                    {{servicio.nombre}}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    </table>
-                                </div>
 
-                                <!-- Métodos de pago -->
-                                <div class="col-md-6">
-                                    <h6>Métodos de Pago</h6>
-                                    <div *ngFor="let metodo of venta.metodosPago" class="mb-1">
-                                        <small>
-                                            {{metodo.tipo | titlecase}}:
-                                            <strong>{{metodo.monto | currency}}</strong>
-                                            <span *ngIf="metodo.conversionBs" class="text-muted">
-                                                ({{metodo.conversionBs | number:'1.2-2'}} Bs)
-                                            </span>
-                                        </small>
+                        <!-- Panel Expandible - Diseño Moderno -->
+                        <div *ngIf="venta.mostrarDetalle" class="venta-expandible">
+                            <div class="expandible-content">
+                                <!-- Sección Superior: Resumen Rápido -->
+                                <div class="resumen-rapido">
+                                    <div class="resumen-item">
+                                        <i class="bi bi-cart-check text-primary"></i>
+                                        <div>
+                                            <small class="text-muted">Productos</small>
+                                            <div class="fw-semibold">{{venta.productos?.length || 0}} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="resumen-item">
+                                        <i class="bi bi-currency-dollar text-success"></i>
+                                        <div>
+                                            <small class="text-muted">Subtotal</small>
+                                            <div class="fw-semibold">{{venta.subtotal | number:'1.2-2'}}</div>
+                                        </div>
+                                    </div>
+                                    <div class="resumen-item">
+                                        <i class="bi bi-percent text-warning"></i>
+                                        <div>
+                                            <small class="text-muted">Descuento</small>
+                                            <div class="fw-semibold">{{venta.descuento || 0}}%</div>
+                                        </div>
+                                    </div>
+                                    <div class="resumen-item">
+                                        <i class="bi bi-cash-coin text-info"></i>
+                                        <div>
+                                            <small class="text-muted">Pagado</small>
+                                            <div class="fw-semibold">{{getTotalPagadoVenta(venta) | number:'1.2-2'}}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Acciones -->
-                            <div class="d-flex justify-content-end gap-2 mt-3">
-                                <button class="btn btn-outline-primary btn-sm" (click)="verRecibo(venta)">
-                                    <i class="bi bi-receipt"></i> Ver Recibo
-                                </button>
-                                <button *ngIf="venta.estado !== 'cancelada'" class="btn btn-outline-danger btn-sm"
-                                    (click)="cancelarVenta(venta)">
-                                    <i class="bi bi-x-circle"></i> Cancelar Venta
-                                </button>
-                                <button class="btn btn-outline-info btn-sm" (click)="verDetalleCompleto(venta)">
-                                    <i class="bi bi-eye"></i> Ver Detalle Completo
-                                </button>
+                                <!-- Sección Media: Detalles Específicos -->
+                                <div class="detalles-grid">
+                                    <!-- Métodos de Pago -->
+                                    <div class="detalle-seccion">
+                                        <h6 class="seccion-titulo">
+                                            <i class="bi bi-credit-card me-2"></i>
+                                            Métodos de Pago
+                                        </h6>
+                                        <div class="metodos-pago">
+                                            <div *ngFor="let metodo of venta.metodosPago" class="metodo-item">
+                                                <div class="metodo-icono" [ngClass]="'metodo-' + metodo.tipo">
+                                                    <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
+                                                        [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
+                                                        [class.bi-phone]="metodo.tipo === 'pagomovil'"
+                                                        [class.bi-bank]="metodo.tipo === 'transferencia'"
+                                                        [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
+                                                </div>
+                                                <div class="metodo-info">
+                                                    <span class="metodo-tipo text-capitalize">{{metodo.tipo}}</span>
+                                                    <span class="metodo-monto">{{metodo.monto | number:'1.2-2'}}</span>
+                                                </div>
+                                                <div class="metodo-conversion" *ngIf="metodo.conversionBs">
+                                                    <small class="text-muted">{{metodo.conversionBs | number:'1.2-2'}}
+                                                        Bs</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Información Adicional -->
+                                    <div class="detalle-seccion">
+                                        <h6 class="seccion-titulo">
+                                            <i class="bi bi-info-circle me-2"></i>
+                                            Información Adicional
+                                        </h6>
+                                        <div class="info-adicional">
+                                            <div class="info-item">
+                                                <span class="info-label">Especialista:</span>
+                                                <span class="info-value">{{venta.especialista?.nombre || 'No asignado'}}</span>
+                                            </div>
+                                            <div class="info-item">
+                                                <span class="info-label">Sede:</span>
+                                                <span class="info-value text-capitalize">{{venta.sede}}</span>
+                                            </div>
+                                            <div class="info-item">
+                                                <span class="info-label">Moneda:</span>
+                                                <span class="info-value text-uppercase">{{venta.moneda}}</span>
+                                            </div>
+                                            <div class="info-item" *ngIf="venta.observaciones">
+                                                <span class="info-label">Observaciones:</span>
+                                                <span class="info-value">{{venta.observaciones}}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Sección Inferior: Acciones -->
+                                <div class="acciones-venta">
+                                    <div class="acciones-left">
+                                        <span class="text-muted small">
+                                            <i class="bi bi-clock-history me-1"></i>
+                                            Creado el {{venta.fecha | date:'dd/MM/yyyy'}}
+                                        </span>
+                                    </div>
+                                    <div class="acciones-right">
+                                        <button class="btn btn-outline-primary btn-sm accion-btn"
+                                            (click)="verRecibo(venta)">
+                                            <i class="bi bi-receipt"></i>
+                                            <span>Recibo</span>
+                                        </button>
+                                        <button *ngIf="venta.estado !== 'cancelada'"
+                                            class="btn btn-outline-danger btn-sm accion-btn"
+                                            (click)="cancelarVenta(venta)">
+                                            <i class="bi bi-x-circle"></i>
+                                            <span>Cancelar</span>
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm accion-btn"
+                                            (click)="verDetalleCompleto(venta)">
+                                            <i class="bi bi-eye"></i>
+                                            <span>Detalles</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -406,47 +503,354 @@
 
 <!-- Modal de Confirmación para Cancelar Venta -->
 <ng-template #cancelarVentaModal let-modal>
-  <div class="modal-header bg-primary text-white">
-    <h5 class="modal-title">
-      <i class="bi bi-exclamation-triangle me-2"></i>
-      Confirmar Cancelación
-    </h5>
-    <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()"></button>
-  </div>
-  
-  <div class="modal-body">
-    <!-- Cambiamos alert-warning por alert-info con fondo azul claro -->
-    <div class="alert alert-info" role="alert">
-      <h6 class="alert-heading fw-bold">¿Está seguro de que desea cancelar esta venta?</h6>
-      <p class="mb-0 mt-2">
-        <strong>Venta {{ formatNumeroVenta(selectedVenta?.id) }}</strong><br>
-        <span *ngIf="selectedVenta?.paciente?.nombre">Paciente: {{ selectedVenta.paciente.nombre }}</span><br>
-        <span *ngIf="selectedVenta?.montoTotal">Monto: {{ selectedVenta.montoTotal | currency }}</span>
-      </p>
+    <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Confirmar Cancelación
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()"></button>
     </div>
-    
-    <div class="form-group mt-3">
-      <label for="motivoCancelacion" class="form-label">
-        <strong>Motivo de cancelación:</strong>
-      </label>
-      <textarea 
-        id="motivoCancelacion" 
-        class="form-control" 
-        rows="3" 
-        placeholder="Ingrese el motivo de la cancelación..."
-        [(ngModel)]="motivoCancelacion"
-        maxlength="500">
+
+    <div class="modal-body">
+        <!-- Cambiamos alert-warning por alert-info con fondo azul claro -->
+        <div class="alert alert-info" role="alert">
+            <h6 class="alert-heading fw-bold">¿Está seguro de que desea cancelar esta venta?</h6>
+            <p class="mb-0 mt-2">
+                <strong>Venta {{ formatNumeroVenta(selectedVenta?.id) }}</strong><br>
+                <span *ngIf="selectedVenta?.paciente?.nombre">Paciente: {{ selectedVenta.paciente.nombre }}</span><br>
+                <span *ngIf="selectedVenta?.montoTotal">Monto: {{ selectedVenta.montoTotal | currency }}</span>
+            </p>
+        </div>
+
+        <div class="form-group mt-3">
+            <label for="motivoCancelacion" class="form-label">
+                <strong>Motivo de cancelación:</strong>
+            </label>
+            <textarea id="motivoCancelacion" class="form-control" rows="3"
+                placeholder="Ingrese el motivo de la cancelación..." [(ngModel)]="motivoCancelacion" maxlength="500">
       </textarea>
-      <small class="text-muted">{{ motivoCancelacion?.length || 0 }}/500 caracteres</small>
+            <small class="text-muted">{{ motivoCancelacion?.length || 0 }}/500 caracteres</small>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">
+            <i class="bi bi-x-circle me-1"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-danger" (click)="confirmarCancelacion(modal)">
+            <i class="bi bi-check-circle me-1"></i> Confirmar Cancelación
+        </button>
+    </div>
+</ng-template>
+
+
+<!-- Modal de Detalle Completo de Venta - Diseño Simplificado -->
+<ng-template #detalleVentaModal let-modal>
+  <!-- Header con gradiente -->
+<div class="modal-header-detalle">
+  <div class="header-content">
+    <div class="header-icon">
+      <i class="bi bi-file-earmark-text"></i>
+    </div>
+    <div class="header-text">
+      <h5 class="modal-title">Detalle de Venta</h5>
+      <div class="header-subtitle">
+        <span class="badge badge-primary">#{{selectedVenta?.numeroControl}}</span>
+        <span class="separator">•</span>
+        <span class="fecha">{{selectedVenta?.fecha | date:'dd/MM/yyyy'}}</span>
+      </div>
     </div>
   </div>
-  
-  <div class="modal-footer">
-    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">
-      <i class="bi bi-x-circle me-1"></i> Cancelar
-    </button>
-    <button type="button" class="btn btn-danger" (click)="confirmarCancelacion(modal)">
-      <i class="bi bi-check-circle me-1"></i> Confirmar Cancelación
-    </button>
+  <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Cerrar"></button>
+</div>
+
+  <div class="modal-body-detalle">
+    <!-- Tarjeta de Información Principal -->
+    <div class="info-card principal">
+      <div class="card-header-detalle">
+        <i class="bi bi-person-circle"></i>
+        <span>Información del Paciente</span>
+      </div>
+      <div class="card-body-detalle">
+        <div class="info-grid">
+          <div class="info-item-detalle">
+            <label>Paciente</label>
+            <div class="value">{{selectedVenta?.paciente?.nombre}}</div>
+          </div>
+          <div class="info-item-detalle">
+            <label>Cédula</label>
+            <div class="value">{{selectedVenta?.paciente?.cedula}}</div>
+          </div>
+          <div class="info-item-detalle">
+            <label>Asesor</label>
+            <div class="value">{{selectedVenta?.asesorNombre}}</div>
+          </div>
+          <div class="info-item-detalle">
+            <label>Sede</label>
+            <div class="value">{{selectedVenta?.sede}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección de Formulación Clínica (si existe) -->
+    <div class="info-card formulacion" *ngIf="selectedVenta?.historiaMedica?.formulacion">
+      <div class="card-header-detalle">
+        <i class="bi bi-eyeglasses"></i>
+        <span>Formulación Clínica</span>
+      </div>
+      <div class="card-body-detalle">
+        <div class="formulacion-grid">
+          <!-- Ojo Derecho -->
+          <div class="ojo-card">
+            <div class="ojo-header ojo-derecho">
+              <i class="bi bi-eye"></i>
+              <span>Ojo Derecho (OD)</span>
+            </div>
+            <div class="ojo-params">
+              <div class="param">
+                <span class="param-label">Esfera (Esf)</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.esf || '—'}}</span>
+              </div>
+              <div class="param">
+                <span class="param-label">Cilindro (Cil)</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.cil || '—'}}</span>
+              </div>
+              <div class="param">
+                <span class="param-label">Eje</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.eje || '—'}}</span>
+              </div>
+              <div class="param">
+                <span class="param-label">Add</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.add || '—'}}</span>
+              </div>
+              <div class="param">
+                <span class="param-label">Altura</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.alt || '—'}}</span>
+              </div>
+              <div class="param">
+                <span class="param-label">DP</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.od?.dp || '—'}}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ojo Izquierdo -->
+          <div class="ojo-card">
+            <div class="ojo-header ojo-izquierdo">
+              <i class="bi bi-eye"></i>
+              <span>Ojo Izquierdo (OI)</span>
+            </div>
+            <div class="ojo-params">
+              <div class="param">
+                <span class="param-label">Esfera (Esf)</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.esf || '—'}}</span>
+              </div>
+              <div class="param">
+                <span class="param-label">Cilindro (Cil)</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.cil || '—'}}</span>
+              </div>
+              <div class="param">
+                <span class="param-label">Eje</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.eje || '—'}}</span>
+              </div>
+              <div class="param">
+                <span class="param-label">Add</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.add || '—'}}</span>
+              </div>
+              <div class="param">
+                <span class="param-label">Altura</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.alt || '—'}}</span>
+              </div>
+              <div class="param">
+                <span class="param-label">DP</span>
+                <span class="param-value">{{selectedVenta?.historiaMedica?.formulacion?.oi?.dp || '—'}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recomendaciones -->
+        <div class="recomendaciones" *ngIf="selectedVenta?.historiaMedica?.recomendaciones">
+          <div class="recomendaciones-header">
+            <i class="bi bi-stars"></i>
+            <span>Recomendaciones</span>
+          </div>
+          <div class="recomendaciones-grid">
+            <div class="recomendacion-item">
+              <span class="rec-label">Montura</span>
+              <span class="rec-value">{{selectedVenta?.historiaMedica?.recomendaciones?.montura || '—'}}</span>
+            </div>
+            <div class="recomendacion-item">
+              <span class="rec-label">Material</span>
+              <span class="rec-value">{{selectedVenta?.historiaMedica?.recomendaciones?.material || '—'}}</span>
+            </div>
+            <div class="recomendacion-item">
+              <span class="rec-label">Cristal</span>
+              <span class="rec-value">{{selectedVenta?.historiaMedica?.recomendaciones?.cristal || '—'}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjeta de Productos -->
+    <div class="info-card productos">
+      <div class="card-header-detalle">
+        <i class="bi bi-cart"></i>
+        <span>Productos y Servicios</span>
+      </div>
+      <div class="card-body-detalle">
+        <div class="productos-list">
+          <div *ngFor="let producto of selectedVenta?.productos" class="producto-item">
+            <div class="producto-info">
+              <div class="producto-nombre">{{producto.nombre}}</div>
+              <div class="producto-codigo">Código: {{producto.codigo}}</div>
+              <div class="producto-detalles">
+                <span class="cantidad">{{producto.cantidad}} und</span>
+                <span class="precio">{{producto.precio | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</span>
+                <span *ngIf="producto.aplicaIva" class="iva-badge">+IVA</span>
+              </div>
+            </div>
+            <div class="producto-totales">
+              <div class="subtotal">{{producto.subtotal | number:'1.2-2'}}</div>
+              <div class="total">{{producto.total | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjeta de Configuración de Pago -->
+    <div class="info-card pago">
+      <div class="card-header-detalle">
+        <i class="bi bi-credit-card"></i>
+        <span>Configuración de Pago</span>
+      </div>
+      <div class="card-body-detalle">
+        <div class="pago-grid">
+          <div class="pago-item">
+            <label>Forma de Pago</label>
+            <div class="value">{{selectedVenta?.formaPago}}</div>
+          </div>
+          <div class="pago-item">
+            <label>Moneda</label>
+            <div class="value">{{selectedVenta?.moneda}}</div>
+          </div>
+          <div class="pago-item">
+            <label>Descuento</label>
+            <div class="value">{{selectedVenta?.descuento || 0}}%</div>
+          </div>
+          
+          <!-- Información específica por tipo de pago -->
+          <div *ngIf="selectedVenta?.formaPago === 'cashea'" class="cashea-info">
+            <div class="pago-item">
+              <label>Nivel Cashea</label>
+              <div class="value">{{selectedVenta?.nivelCashea}}</div>
+            </div>
+            <div class="pago-item">
+              <label>Monto Inicial</label>
+              <div class="value">{{selectedVenta?.montoInicial | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
+            </div>
+            <div class="pago-item">
+              <label>Cuotas</label>
+              <div class="value">{{selectedVenta?.cantidadCuotas}} de {{selectedVenta?.montoPorCuota | number:'1.2-2'}} c/u</div>
+            </div>
+          </div>
+
+          <div *ngIf="selectedVenta?.formaPago === 'abono'" class="abono-info">
+            <div class="pago-item">
+              <label>Monto Abonado</label>
+              <div class="value">{{selectedVenta?.montoAbonado | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
+            </div>
+            <div class="pago-item">
+              <label>Saldo Pendiente</label>
+              <div class="value">{{(selectedVenta?.total - selectedVenta?.montoAbonado) | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjeta de Métodos de Pago -->
+    <div class="info-card metodos-pago-detalle" *ngIf="selectedVenta?.metodosPago?.length">
+      <div class="card-header-detalle">
+        <i class="bi bi-wallet2"></i>
+        <span>Métodos de Pago</span>
+      </div>
+      <div class="card-body-detalle">
+        <div class="metodos-grid">
+          <div *ngFor="let metodo of selectedVenta?.metodosPago" class="metodo-item-detalle">
+            <div class="metodo-icono">
+              <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
+                 [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
+                 [class.bi-phone]="metodo.tipo === 'pagomovil'"
+                 [class.bi-bank]="metodo.tipo === 'transferencia'"
+                 [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
+            </div>
+            <div class="metodo-info-detalle">
+              <div class="metodo-tipo">{{metodo.tipo}}</div>
+              <div class="metodo-monto">{{metodo.monto | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
+            </div>
+            <div class="metodo-conversion" *ngIf="metodo.conversionBs">
+              <div class="conversion-text">{{metodo.conversionBs | number:'1.2-2'}} Bs</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjeta de Resumen Financiero -->
+    <div class="info-card resumen">
+      <div class="card-header-detalle">
+        <i class="bi bi-calculator"></i>
+        <span>Resumen Financiero</span>
+      </div>
+      <div class="card-body-detalle">
+        <div class="resumen-grid">
+          <div class="resumen-item">
+            <span class="resumen-label">Subtotal</span>
+            <span class="resumen-value">{{selectedVenta?.subtotal | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</span>
+          </div>
+          <div class="resumen-item" *ngIf="selectedVenta?.totalIva">
+            <span class="resumen-label">IVA Total</span>
+            <span class="resumen-value">{{selectedVenta?.totalIva | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</span>
+          </div>
+          <div class="resumen-item" *ngIf="selectedVenta?.totalDescuento">
+            <span class="resumen-label">Descuento</span>
+            <span class="resumen-value">-{{selectedVenta?.totalDescuento | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</span>
+          </div>
+          <div class="resumen-item total">
+            <span class="resumen-label">Total</span>
+            <span class="resumen-value">{{selectedVenta?.total | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Observaciones -->
+    <div class="info-card observaciones" *ngIf="selectedVenta?.observaciones">
+      <div class="card-header-detalle">
+        <i class="bi bi-chat-left-text"></i>
+        <span>Observaciones</span>
+      </div>
+      <div class="card-body-detalle">
+        <p class="observaciones-text">{{selectedVenta?.observaciones}}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer del Modal -->
+  <div class="modal-footer-detalle">
+    <div class="footer-actions">
+      <button type="button" class="btn btn-secondary btn-detalle" (click)="modal.dismiss()">
+        <i class="bi bi-x-circle me-2"></i>
+        Cerrar
+      </button>
+      <button type="button" class="btn btn-primary btn-detalle" *ngIf="selectedVenta?.estado !== 'cancelada'">
+        <i class="bi bi-printer me-2"></i>
+        Imprimir
+      </button>
+    </div>
   </div>
 </ng-template>

@@ -13,6 +13,7 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 export class HistorialVentasComponent implements OnInit {
 
   @ViewChild('cancelarVentaModal') cancelarVentaModal!: TemplateRef<any>;
+  @ViewChild('detalleVentaModal') detalleVentaModal!: TemplateRef<any>;
   // Propiedades para los filtros
   asesores: any[] = [];
   especialistas: any[] = [];
@@ -266,61 +267,479 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   cargarVentas() {
-    // Ejemplo de datos temporales con acentos y caracteres especiales
+    // Data dummy adaptada a la estructura del template
     this.ventasOriginales = [
+      // Venta 1: Pago de contado con formulación clínica
       {
         id: 1,
         numeroControl: '001',
         paciente: {
-          nombre: 'Juan Pérez Martínez',
+          nombre: 'María González',
           cedula: '12345678'
         },
-        fecha: new Date(),
+        fecha: new Date('2024-01-15T10:30:00'),
         estado: 'completada',
-        montoTotal: 100,
+        montoTotal: 90,
         asesor: { id: 1, nombre: 'Ana García' },
         especialista: { id: 1, nombre: 'Dr. Pérez' },
-        servicios: [{ nombre: 'Consulta' }],
+        servicios: [{ nombre: 'Consulta oftalmológica' }],
         metodosPago: [
-          { tipo: 'efectivo', monto: 100, conversionBs: 200 }
+          {
+            tipo: 'efectivo',
+            monto: 90,
+            conversionBs: 19635.3
+          }
         ],
-        mostrarDetalle: false
+        mostrarDetalle: false,
+        // Información adicional para el modal de detalle
+        sede: 'guatire',
+        moneda: 'dolar',
+        formaPago: 'contado',
+        descuento: 10,
+        observaciones: 'Cliente satisfecho con la atención',
+        asesorNombre: 'Ana García',
+        productos: [
+          {
+            id: "17",
+            nombre: "Lentes de contacto mensuales",
+            codigo: "PR-000017",
+            precio: 50,
+            precioConIva: 50,
+            cantidad: 2,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 100,
+            total: 100
+          }
+        ],
+        subtotal: 100,
+        totalIva: 0,
+        totalDescuento: 10,
+        total: 90,
+        pagoCompleto: true,
+        financiado: false,
+        historiaMedica: {
+          formulacion: {
+            od: {
+              esf: "+1.25",
+              cil: "-0.50",
+              eje: 180,
+              add: "+1.75",
+              alt: "24.5",
+              dp: "62"
+            },
+            oi: {
+              esf: "+1.00",
+              cil: "-0.75",
+              eje: 170,
+              add: "+1.75",
+              alt: "24.5",
+              dp: "62"
+            }
+          },
+          recomendaciones: {
+            montura: "Metalica delgada",
+            material: "AR_AZUL",
+            cristal: "Progresivo digital"
+          }
+        }
       },
+
+      // Venta 2: Cashea con cuotas adelantadas
       {
         id: 2,
         numeroControl: '002',
         paciente: {
-          nombre: 'María López Gutiérrez',
+          nombre: 'Carlos Rodríguez',
           cedula: '87654321'
         },
-        fecha: new Date(),
-        estado: 'cancelada',
-        montoTotal: 150,
+        fecha: new Date('2024-01-16T14:20:00'),
+        estado: 'completada',
+        montoTotal: 190,
         asesor: { id: 2, nombre: 'Carlos López' },
         especialista: { id: 2, nombre: 'Dra. Martínez' },
-        servicios: [{ nombre: 'Examen' }],
+        servicios: [{ nombre: 'Examen visual completo' }],
         metodosPago: [
-          { tipo: 'debito', monto: 150, conversionBs: 300 }
+          {
+            tipo: 'debito',
+            monto: 76,
+            conversionBs: 16580.92
+          }
         ],
-        mostrarDetalle: false
+        mostrarDetalle: false,
+        // Información adicional para el modal de detalle
+        sede: 'guatire',
+        moneda: 'dolar',
+        formaPago: 'cashea',
+        descuento: 5,
+        observaciones: '',
+        asesorNombre: 'Carlos López',
+        productos: [
+          {
+            id: "18",
+            nombre: "Armazón de diseño italiano",
+            codigo: "PR-000018",
+            precio: 120,
+            precioConIva: 120,
+            cantidad: 1,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 120,
+            total: 120
+          },
+          {
+            id: "19",
+            nombre: "Lentes fotocromáticos",
+            codigo: "PR-000019",
+            precio: 80,
+            precioConIva: 80,
+            cantidad: 1,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 80,
+            total: 80
+          }
+        ],
+        subtotal: 200,
+        totalIva: 0,
+        totalDescuento: 10,
+        total: 190,
+        pagoCompleto: false,
+        financiado: true,
+        nivelCashea: "nivel3",
+        montoInicial: 76,
+        cantidadCuotas: 6,
+        montoPorCuota: 19,
+        cuotasAdelantadas: [
+          {
+            numero: 1,
+            monto: 19,
+            fechaVencimiento: "2024-02-16T00:00:00.000Z"
+          },
+          {
+            numero: 2,
+            monto: 19,
+            fechaVencimiento: "2024-03-16T00:00:00.000Z"
+          }
+        ],
+        totalAdelantado: 38,
+        historiaMedica: {
+          formulacion: {
+            od: {
+              esf: "-2.25",
+              cil: "-1.25",
+              eje: 10,
+              add: "0.00",
+              alt: "25.0",
+              dp: "64"
+            },
+            oi: {
+              esf: "-2.00",
+              cil: "-1.00",
+              eje: 170,
+              add: "0.00",
+              alt: "25.0",
+              dp: "64"
+            }
+          },
+          recomendaciones: {
+            montura: "Plástico resistente",
+            material: "FOTOCROMATICO",
+            cristal: "Visión sencilla digital"
+          }
+        }
       },
+
+      // Venta 3: Abono parcial sin formulación
       {
         id: 3,
         numeroControl: '003',
         paciente: {
-          nombre: 'José Ramírez Niño',
+          nombre: 'Laura Martínez',
           cedula: '11223344'
         },
-        fecha: new Date(),
+        fecha: new Date('2024-01-17T11:15:00'),
         estado: 'completada',
-        montoTotal: 200,
+        montoTotal: 34.68,
         asesor: { id: 3, nombre: 'María Rodríguez' },
         especialista: { id: 3, nombre: 'Dr. González' },
-        servicios: [{ nombre: 'Cirugía' }],
+        servicios: [{ nombre: 'Venta de accesorios' }],
         metodosPago: [
-          { tipo: 'credito', monto: 200, conversionBs: 400 }
+          {
+            tipo: 'efectivo',
+            monto: 20,
+            conversionBs: 20
+          }
         ],
-        mostrarDetalle: false
+        mostrarDetalle: false,
+        // Información adicional para el modal de detalle
+        sede: 'guatire',
+        moneda: 'bolivar',
+        formaPago: 'abono',
+        descuento: 0,
+        observaciones: 'Cliente pagará el resto la próxima semana',
+        asesorNombre: 'María Rodríguez',
+        productos: [
+          {
+            id: "20",
+            nombre: "Estuche para lentes",
+            codigo: "PR-000020",
+            precio: 15,
+            precioConIva: 15,
+            cantidad: 1,
+            aplicaIva: true,
+            iva: 2.4,
+            subtotal: 15,
+            total: 17.4
+          },
+          {
+            id: "21",
+            nombre: "Líquido limpiador",
+            codigo: "PR-000021",
+            precio: 8,
+            precioConIva: 9.28,
+            cantidad: 2,
+            aplicaIva: true,
+            iva: 1.28,
+            subtotal: 16,
+            total: 18.56
+          }
+        ],
+        subtotal: 31,
+        totalIva: 3.68,
+        totalDescuento: 0,
+        total: 34.68,
+        montoAbonado: 20,
+        pagoCompleto: false,
+        financiado: false
+      },
+
+      // Venta 4: Cancelada
+      {
+        id: 4,
+        numeroControl: '004',
+        paciente: {
+          nombre: 'Pedro López',
+          cedula: '55667788'
+        },
+        fecha: new Date('2024-01-18T16:45:00'),
+        estado: 'cancelada',
+        montoTotal: 65,
+        asesor: { id: 1, nombre: 'Ana García' },
+        especialista: { id: 1, nombre: 'Dr. Pérez' },
+        servicios: [{ nombre: 'Lentes de sol' }],
+        metodosPago: [],
+        mostrarDetalle: false,
+        // Información adicional para el modal de detalle
+        sede: 'guatire',
+        moneda: 'dolar',
+        formaPago: 'contado',
+        descuento: 0,
+        observaciones: '',
+        asesorNombre: 'Ana García',
+        productos: [
+          {
+            id: "22",
+            nombre: "Lentes de sol polarizados",
+            codigo: "PR-000022",
+            precio: 65,
+            precioConIva: 65,
+            cantidad: 1,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 65,
+            total: 65
+          }
+        ],
+        subtotal: 65,
+        totalIva: 0,
+        totalDescuento: 0,
+        total: 65,
+        pagoCompleto: false,
+        financiado: false,
+        motivo_cancelacion: 'Cliente cambió de opinión',
+        fecha_cancelacion: new Date('2024-01-18T17:00:00')
+      },
+
+      // Venta 5: Cashea nivel 1
+      {
+        id: 5,
+        numeroControl: '005',
+        paciente: {
+          nombre: 'Ana Silva',
+          cedula: '99887766'
+        },
+        fecha: new Date('2024-01-19T09:30:00'),
+        estado: 'completada',
+        montoTotal: 127.5,
+        asesor: { id: 2, nombre: 'Carlos López' },
+        especialista: { id: 2, nombre: 'Dra. Martínez' },
+        servicios: [{ nombre: 'Lentes de contacto anuales' }],
+        metodosPago: [
+          {
+            tipo: 'credito',
+            monto: 76.5,
+            conversionBs: 16689.255
+          }
+        ],
+        mostrarDetalle: false,
+        // Información adicional para el modal de detalle
+        sede: 'guatire',
+        moneda: 'dolar',
+        formaPago: 'cashea',
+        descuento: 15,
+        observaciones: 'Cliente preferió pagar más cuotas',
+        asesorNombre: 'Carlos López',
+        productos: [
+          {
+            id: "23",
+            nombre: "Lentes de contacto anuales",
+            codigo: "PR-000023",
+            precio: 150,
+            precioConIva: 150,
+            cantidad: 1,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 150,
+            total: 150
+          }
+        ],
+        subtotal: 150,
+        totalIva: 0,
+        totalDescuento: 22.5,
+        total: 127.5,
+        pagoCompleto: false,
+        financiado: true,
+        nivelCashea: "nivel1",
+        montoInicial: 76.5,
+        cantidadCuotas: 3,
+        montoPorCuota: 17,
+        cuotasAdelantadas: [
+          {
+            numero: 1,
+            monto: 17,
+            fechaVencimiento: "2024-02-19T00:00:00.000Z"
+          }
+        ],
+        totalAdelantado: 17,
+        historiaMedica: {
+          formulacion: {
+            od: {
+              esf: "+0.75",
+              cil: "-0.25",
+              eje: 90,
+              add: "+2.00",
+              alt: "23.5",
+              dp: "60"
+            },
+            oi: {
+              esf: "+0.50",
+              cil: "-0.50",
+              eje: 85,
+              add: "+2.00",
+              alt: "23.5",
+              dp: "60"
+            }
+          },
+          recomendaciones: {
+            montura: "Titanio ultraligero",
+            material: "BLUE_CUT",
+            cristal: "Progresivo premium"
+          }
+        }
+      },
+
+      // Venta 6: Pago mixto
+      {
+        id: 6,
+        numeroControl: '006',
+        paciente: {
+          nombre: 'Roberto Hernández',
+          cedula: '33445566'
+        },
+        fecha: new Date('2024-01-20T13:00:00'),
+        estado: 'completada',
+        montoTotal: 102.12,
+        asesor: { id: 3, nombre: 'María Rodríguez' },
+        especialista: { id: 3, nombre: 'Dr. González' },
+        servicios: [{ nombre: 'Lentes para computadora' }],
+        metodosPago: [
+          {
+            tipo: 'efectivo',
+            monto: 50,
+            conversionBs: 10908.5
+          },
+          {
+            tipo: 'debito',
+            monto: 52.12,
+            conversionBs: 11368.98
+          }
+        ],
+        mostrarDetalle: false,
+        // Información adicional para el modal de detalle
+        sede: 'guatire',
+        moneda: 'dolar',
+        formaPago: 'contado',
+        descuento: 8,
+        observaciones: 'Cliente usó dos métodos de pago',
+        asesorNombre: 'María Rodríguez',
+        productos: [
+          {
+            id: "24",
+            nombre: "Lentes para computadora",
+            codigo: "PR-000024",
+            precio: 75,
+            precioConIva: 75,
+            cantidad: 1,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 75,
+            total: 75
+          },
+          {
+            id: "25",
+            nombre: "Toallitas limpiadoras",
+            codigo: "PR-000025",
+            precio: 12,
+            precioConIva: 12,
+            cantidad: 3,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 36,
+            total: 36
+          }
+        ],
+        subtotal: 111,
+        totalIva: 0,
+        totalDescuento: 8.88,
+        total: 102.12,
+        pagoCompleto: true,
+        financiado: false,
+        historiaMedica: {
+          formulacion: {
+            od: {
+              esf: "-1.50",
+              cil: "-0.75",
+              eje: 20,
+              add: "0.00",
+              alt: "26.0",
+              dp: "66"
+            },
+            oi: {
+              esf: "-1.25",
+              cil: "-0.50",
+              eje: 160,
+              add: "0.00",
+              alt: "26.0",
+              dp: "66"
+            }
+          },
+          recomendaciones: {
+            montura: "Acetato moderno",
+            material: "AR_VERDE",
+            cristal: "Blue light filter"
+          }
+        }
       }
     ];
 
@@ -486,11 +905,6 @@ export class HistorialVentasComponent implements OnInit {
     // Lógica para mostrar recibo
   }
 
-  verDetalleCompleto(venta: any) {
-    console.log('Ver detalle completo:', venta);
-    // Lógica para mostrar detalle completo
-  }
-
   generarInforme() {
     console.log('Generar informe con filtros:', this.filtros);
     // Lógica para generar informe
@@ -628,11 +1042,33 @@ export class HistorialVentasComponent implements OnInit {
     }, 1000);
   }
 
-  // Método para formatear el número de venta con ceros a la izquierda
+  verDetalleCompleto(venta: any) {
+    console.log('Ver detalle completo:', venta);
+
+    this.selectedVenta = venta;
+
+    // Abrir modal de detalle completo
+    this.modalService.open(this.detalleVentaModal, {
+      centered: true,
+      size: 'lg', // Modal grande para mostrar toda la información
+      backdrop: true,
+      keyboard: true
+    });
+  }
+
+  // Asegúrate de tener este método para formatear números de venta
   formatNumeroVenta(id: number): string {
     if (!id) return '#000';
-
-    // Formatear a 3 dígitos con ceros a la izquierda
     return `#${id.toString().padStart(3, '0')}`;
   }
+
+  // En tu componente HistorialVentasComponent, agrega este método:
+  getTotalPagadoVenta(venta: any): number {
+    if (!venta.metodosPago || !venta.metodosPago.length) return 0;
+
+    return venta.metodosPago.reduce((total: number, pago: any) => {
+      return total + (pago.monto || 0);
+    }, 0);
+  }
+
 }

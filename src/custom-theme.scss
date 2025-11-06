@@ -28,7 +28,8 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
   --primary-color-dark: #005a9e;
   --primary-color-light: #5d9cff;
   --primary-color-rgb: 58, 123, 213;
-  --degradado-color: linear-gradient(135deg, var(--primary-color) 0%, #3E7CB1 100%);
+  // --degradado-color: linear-gradient(135deg, var(--primary-color) 0%, #3E7CB1 100%); BACKGROUND VIEJO
+  --degradado-color: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
 
   /* Degradados suaves alternativos */
   --degradado-light: linear-gradient(135deg, #8ab5f0 0%, #a8c8f5 100%);
@@ -50,7 +51,7 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
   --border-color: var(--primary-color);
   --details-color: #FFC107;
   --success-color: #38a169;
-  --font-color-form : #6c757d;
+  --font-color-form: #6c757d;
 
   // Variables de diseño
   --border-radius: 4px;
