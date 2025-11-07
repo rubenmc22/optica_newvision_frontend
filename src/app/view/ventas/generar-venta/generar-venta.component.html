@@ -241,14 +241,21 @@
                         </div>
                     </div>
 
-                    <!-- Tabla de productos -->
+                    <!-- Tabla de productos mejorada -->
                     <div *ngIf="venta.productos.length > 0" class="productos-table-container">
+                        <div class="section-header">
+                            <i class="bi bi-cart-check"></i>
+                            <h5>Productos en el Carrito</h5>
+                            <span class="badge bg-primary">{{ venta.productos.length }} producto{{
+                                venta.productos.length > 1 ? 's' : '' }}</span>
+                        </div>
+
                         <div class="table-scroll-container">
                             <table class="table-moderna">
                                 <thead>
                                     <tr>
                                         <th class="text-center">Producto</th>
-                                        <th class="text-center">Precio</th>
+                                        <th class="text-center">Precio Unitario</th>
                                         <th class="text-center">Cantidad</th>
                                         <th class="text-center">Subtotal</th>
                                         <th class="text-center">
@@ -261,37 +268,67 @@
                                 <tbody>
                                     <tr *ngFor="let p of productosConDetalle; trackBy: trackByProducto"
                                         class="producto-row">
-                                        <td class="producto-nombre">
-                                            <span class="nombre-text">{{ p.nombre }}</span>
-                                        </td>
-                                        <td class="text-center precio">
-                                            {{ p.precio | number:'1.2-2' }} {{ obtenerSimboloMoneda(p.moneda) }}
-                                        </td>
-                                        <td class="text-center cantidad-cell">
-                                            <div class="cantidad-control">
-                                                <input type="number" [ngModel]="p.cantidad ?? 1"
-                                                    (ngModelChange)="onCantidadChange(p, $event)" min="1"
-                                                    class="cantidad-input" />
-                                                <small class="stock-info">{{ p.stock }} disp.</small>
+
+                                        <!-- Columna Producto -->
+                                        <td class="producto-info">
+                                            <div class="producto-details">
+                                                <span class="producto-nombre">{{ p.nombre }}</span>
+                                                <small class="producto-codigo text-muted">{{ p.codigo }}</small>
                                             </div>
                                         </td>
+
+                                        <!-- Columna Precio -->
+                                        <td class="text-center precio">
+                                            <span class="precio-unitario">
+                                                {{ p.precio | number:'1.2-2' }} {{ obtenerSimboloMoneda(p.moneda) }}
+                                            </span>
+                                        </td>
+
+                                        <!-- Columna Cantidad -->
+                                        <td class="text-center cantidad-cell">
+                                            <div class="cantidad-control">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" [ngModel]="p.cantidad ?? 1"
+                                                        (ngModelChange)="onCantidadChange(p, $event)" min="1"
+                                                        max="{{ p.stock }}" class="form-control cantidad-input"
+                                                        [class.border-warning]="(p.cantidad ?? 1) > p.stock" />
+                                                </div>
+                                                <small class="stock-info"
+                                                    [class.text-danger]="(p.cantidad ?? 1) > p.stock"
+                                                    [class.text-muted]="(p.cantidad ?? 1) <= p.stock">
+                                                    {{ p.stock }} disponible{{ p.stock > 1 ? 's' : '' }}
+                                                </small>
+                                            </div>
+                                        </td>
+
+                                        <!-- Columna Subtotal -->
                                         <td class="text-center subtotal">
                                             {{ p.subtotal | number:'1.2-2' }} {{ obtenerSimboloMoneda(p.moneda) }}
                                         </td>
+
+                                        <!-- Columna IVA -->
                                         <td class="text-center iva">
                                             <ng-container *ngIf="p.iva && p.iva > 0; else sinIva">
-                                                {{ p.iva | number:'1.2-2' }} {{ obtenerSimboloMoneda(p.moneda) }}
+                                                <span class="iva-monto">
+                                                    {{ p.iva | number:'1.2-2' }} {{ obtenerSimboloMoneda(p.moneda) }}
+                                                </span>
                                             </ng-container>
                                             <ng-template #sinIva>
-                                                <span class="sin-iva">—</span>
+                                                <span class="sin-iva text-muted">—</span>
                                             </ng-template>
                                         </td>
-                                        <td class="text-center total fw-bold">
-                                            {{ p.total | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
+
+                                        <!-- Columna Total -->
+                                        <td class="text-center total">
+                                            <strong class="total-monto">
+                                                {{ p.total | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
+                                            </strong>
                                         </td>
+
+                                        <!-- Columna Acciones -->
                                         <td class="text-center acciones">
                                             <button class="btn-eliminar" (click)="eliminarProducto(p.id)"
-                                                title="Eliminar producto">
+                                                title="Eliminar del carrito">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </td>
@@ -435,33 +472,32 @@
                                 </div>
                             </div>
 
-                            <!-- Recomendaciones modernizadas -->
-                            <div class="recomendaciones">
-                                <div class="recomendaciones-header">
+                            <!-- Recomendaciones -->
+                            <div class="recomendaciones-section">
+                                <div class="section-header">
+                                    <h5>Recomendaciones</h5>
                                     <i class="bi bi-clipboard-check"></i>
-                                    <span>Recomendaciones</span>
                                 </div>
                                 <div class="recomendaciones-grid">
                                     <div class="recomendacion-item">
                                         <span class="rec-label">Montura</span>
-                                        <span class="rec-value">{{ historiaMedica.recomendaciones[0]?.montura ?? '—'
-                                            }}</span>
+                                        <span class="rec-value">{{ historiaMedica.recomendaciones[0].montura }}</span>
                                     </div>
                                     <div class="recomendacion-item">
                                         <span class="rec-label">Material</span>
-                                        <span class="rec-value">{{ materialesRecomendados ?? '—' }}</span>
+                                        <span class="rec-value">{{ materialesRecomendados }}</span>
                                     </div>
                                     <div class="recomendacion-item">
                                         <span class="rec-label">Cristal</span>
-                                        <span class="rec-value">{{ historiaMedica.recomendaciones[0]?.cristal?.label ??
-                                            '—' }}</span>
+                                        <span class="rec-value">{{ historiaMedica.recomendaciones[0].cristal.label
+                                            }}</span>
                                     </div>
                                 </div>
                             </div>
                         </ng-container>
 
                         <ng-template #sinFormulacion>
-                            <div class="alert alert-warning d-flex align-items-center mb-0">
+                            <div class="alert d-flex align-items-center mb-0">
                                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                                 <span>No hay formulación registrada para este paciente.</span>
                             </div>
@@ -590,12 +626,14 @@
                                     </ng-container>
                                 </div>
 
-                                <!-- Resumen Cashea -->
-                                <div class="resumen-cashea" [ngClass]="{ 'resumen-invalido': !casheaBalanceValido }">
+                                <!-- Resumen Cashea - Mensaje claro -->
+                                <div class="resumen-cashea" [ngClass]="{ 
+                                    'resumen-invalido': !casheaBalanceValido,
+                                    'resumen-completo': esPagoCompletoCashea 
+                                }">
                                     <div class="resumen-content">
                                         <span class="resumen-text">
-                                            Adelantando <strong>{{ resumenCashea.cantidad }}</strong> cuota{{
-                                            resumenCashea.cantidad > 1 ? 's' : '' }}
+                                            {{ mensajeResumenCashea }}
                                         </span>
                                         <span class="resumen-monto">
                                             {{ resumenCashea.total | number:'1.2-2' }} {{
@@ -604,6 +642,8 @@
                                                 number:'1.2-2' }} Bs)</span>
                                             <i *ngIf="!casheaBalanceValido"
                                                 class="bi bi-exclamation-triangle text-warning ms-1"></i>
+                                            <i *ngIf="esPagoCompletoCashea"
+                                                class="bi bi-check-circle text-success ms-1"></i>
                                         </span>
                                     </div>
                                 </div>
@@ -620,12 +660,6 @@
                                             [placeholder]="'Monto en ' + obtenerSimboloMoneda(venta.moneda)"
                                             [(ngModel)]="valorTemporal" (blur)="formatearMonto()"
                                             (keypress)="validarEntrada($event)" />
-
-                                        <div *ngIf="montoExcedido" class="error-message">
-                                            <i class="bi bi-exclamation-circle"></i>
-                                            El monto ingresado excede el total adeudado ({{ montoTotal | number:'1.2-2'
-                                            }} {{ obtenerSimboloMoneda(venta.moneda) }})
-                                        </div>
 
                                         <div class="progress-container">
                                             <div class="progress-label">
@@ -665,14 +699,18 @@
                         <!-- Métodos de pago - Modernizado -->
                         <div class="metodos-pago-section">
                             <div class="section-header">
-                                <label class="section-label">
-                                    <i class="bi bi-wallet2"></i>
-                                    Métodos de pago
-                                </label>
-                                <button class="btn btn-add-method" (click)="agregarMetodo()" title="Agregar método">
-                                    <i class="bi bi-plus-circle"></i>
-                                    Agregar
-                                </button>
+                                <div class="section-label-container">
+                                    <label class="section-label">
+                                        <i class="bi bi-wallet2"></i>
+                                        Métodos de pago
+                                    </label>
+                                </div>
+                                <div class="section-actions">
+                                    <button class="btn btn-add-method" (click)="agregarMetodo()" title="Agregar método">
+                                        <i class="bi bi-plus-circle"></i>
+                                        Agregar
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="metodos-grid">

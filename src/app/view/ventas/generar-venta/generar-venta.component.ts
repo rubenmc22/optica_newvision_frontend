@@ -1341,6 +1341,7 @@ export class GenerarVentaComponent implements OnInit {
             this.venta.montoAbonado = 0;
             this.valorTemporal = '';
             this.montoExcedido = false;
+            this.cdr.detectChanges();
             return;
         }
 
@@ -1351,6 +1352,8 @@ export class GenerarVentaComponent implements OnInit {
             this.venta.montoAbonado = 0;
             this.valorTemporal = '';
             this.montoExcedido = false;
+            this.cdr.detectChanges();
+
             return;
         }
 
@@ -1358,11 +1361,14 @@ export class GenerarVentaComponent implements OnInit {
 
         if (this.montoExcedido) {
             this.valorTemporal = `${adeudado.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+            this.venta.montoAbonado = adeudado;
+            this.cdr.detectChanges();
             return;
         }
 
         this.venta.montoAbonado = monto;
         this.valorTemporal = `${monto.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+        this.cdr.detectChanges();
     }
 
     formatearInicialCashea(): void {
@@ -1391,6 +1397,24 @@ export class GenerarVentaComponent implements OnInit {
 
         this.venta.montoInicial = monto;
         this.valorInicialTemporal = `${monto.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+    }
+
+
+    get esPagoCompletoCashea(): boolean {
+        if (this.venta.formaPago !== 'cashea') return false;
+
+        const inicial = this.venta.montoInicial ?? 0;
+        const totalCuotasAdelantadas = this.resumenCashea.total;
+        const totalPagado = inicial + totalCuotasAdelantadas;
+
+        return Math.abs(totalPagado - this.montoTotal) < 0.01;
+    }
+
+    get mensajeResumenCashea(): string {
+        if (this.esPagoCompletoCashea) {
+            return 'Pago completo - Sin cuotas pendientes';
+        }
+        return `Adelantando ${this.resumenCashea.cantidad} cuota${this.resumenCashea.cantidad > 1 ? 's' : ''}`;
     }
 
     formatearMontoMetodo(index: number): void {

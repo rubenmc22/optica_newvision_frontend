@@ -1,3 +1,5 @@
+@use '../../../custom-theme.scss' as theme;
+
 .small-box {
   cursor: pointer;
   transition: transform 0.2s ease-in-out;
@@ -5,5 +7,321 @@
   &:hover {
     transform: scale(1.03);
     box-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.2);
+  }
+}
+
+
+// =============================================
+// TARJETAS DE MÓDULOS MODERNAS
+// =============================================
+
+.modern-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  height: 140px;
+  
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    
+    .card-glow {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+    
+    .card-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+    
+    .card-footer i {
+      transform: translateX(4px);
+    }
+  }
+  
+  &:active {
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.card-content {
+  position: relative;
+  z-index: 2;
+  padding: 1.5rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.card-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, 
+    rgba(255,255,255,0.1) 0%, 
+    rgba(255,255,255,0.05) 100%);
+  opacity: 0;
+  transition: all 0.4s ease;
+  z-index: 1;
+}
+
+.card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  background: linear-gradient(135deg, #2c3e50, #3498db);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.card-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #495057;
+  line-height: 1.2;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.card-action {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6c757d;
+  transition: color 0.3s ease;
+}
+
+.card-footer i {
+  font-size: 0.8rem;
+  color: #6c757d;
+  transition: all 0.3s ease;
+}
+
+// Variantes de tarjetas por tipo
+.card-venta {
+  .card-icon {
+    background: linear-gradient(135deg, #17a2b8, #20c997);
+    color: white;
+  }
+  
+  &:hover {
+    border-color: #17a2b8;
+    
+    .card-action,
+    .card-footer i {
+      color: #17a2b8;
+    }
+  }
+}
+
+.card-presupuesto {
+  .card-icon {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+  }
+  
+  &:hover {
+    border-color: #28a745;
+    
+    .card-action,
+    .card-footer i {
+      color: #28a745;
+    }
+  }
+}
+
+.card-historial {
+  .card-icon {
+    background: linear-gradient(135deg, #ffc107, #fd7e14);
+    color: white;
+  }
+  
+  &:hover {
+    border-color: #ffc107;
+    
+    .card-action,
+    .card-footer i {
+      color: #ffc107;
+    }
+  }
+}
+
+.card-caja {
+  .card-icon {
+    background: linear-gradient(135deg, #dc3545, #e83e8c);
+    color: white;
+  }
+  
+  &:hover {
+    border-color: #dc3545;
+    
+    .card-action,
+    .card-footer i {
+      color: #dc3545;
+    }
+  }
+}
+
+// Efectos de partículas para hover (opcional)
+.modern-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, 
+    transparent, 
+    transparent 40%, 
+    rgba(255,255,255,0.1) 50%, 
+    transparent 60%, 
+    transparent);
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.modern-card:hover::before {
+  opacity: 1;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .modern-card {
+    height: 120px;
+  }
+  
+  .card-content {
+    padding: 1.25rem;
+    gap: 0.75rem;
+  }
+  
+  .card-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.25rem;
+  }
+  
+  .card-value {
+    font-size: 1.75rem;
+  }
+  
+  .card-label {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .modern-card {
+    height: 110px;
+  }
+  
+  .card-content {
+    padding: 1rem;
+    gap: 0.5rem;
+  }
+  
+  .card-icon {
+    width: 45px;
+    height: 45px;
+    font-size: 1.1rem;
+  }
+  
+  .card-value {
+    font-size: 1.5rem;
+  }
+  
+  .card-label {
+    font-size: 0.8rem;
+  }
+  
+  .card-footer {
+    gap: 0.25rem;
+  }
+  
+  .card-action {
+    font-size: 0.7rem;
+  }
+}
+
+// Animación de entrada escalonada
+.col-xl-3 {
+  &:nth-child(1) .modern-card { animation-delay: 0.1s; }
+  &:nth-child(2) .modern-card { animation-delay: 0.2s; }
+  &:nth-child(3) .modern-card { animation-delay: 0.3s; }
+  &:nth-child(4) .modern-card { animation-delay: 0.4s; }
+}
+
+.modern-card {
+  animation: cardSlideIn 0.6s ease-out both;
+}
+
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Modo oscuro (opcional)
+@media (prefers-color-scheme: dark) {
+  .modern-card {
+    background: #2d3748;
+    border-color: #4a5568;
+    
+    .card-label {
+      color: #e2e8f0;
+    }
+    
+    .card-action,
+    .card-footer i {
+      color: #a0aec0;
+    }
   }
 }

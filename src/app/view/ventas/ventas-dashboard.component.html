@@ -2,58 +2,82 @@
 
   <div class="row">
     <!-- Generar Venta -->
-    <div class="col-xl-3 col-md-6 mb-2">
-      <div class="small-box bg-info cursor-pointer" (click)="vista = 'venta'">
-        <div class="inner">
-          <div class="h4 fw-bold">{{ totalVentas }}</div>
-          <p>Generar Venta</p>
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="modern-card card-venta" (click)="vista = 'venta'">
+        <div class="card-content">
+          <div class="card-icon">
+            <i class="fas fa-cash-register"></i>
+          </div>
+          <div class="card-info">
+            <div class="card-value">{{ totalVentas }}</div>
+            <div class="card-label">Generar Venta</div>
+            <div class="card-footer">
+              <span class="card-action">Abrir módulo</span>
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+          <div class="card-glow"></div>
         </div>
-        <div class="icon">
-          <i class="fas fa-cash-register"></i>
-        </div>
-        <span class="small-box-footer text-white-50 d-block">Abrir módulo <i class="fas fa-arrow-circle-right"></i></span>
       </div>
     </div>
 
     <!-- Presupuesto -->
-    <div class="col-xl-3 col-md-6 mb-2">
-      <div class="small-box bg-success cursor-pointer" (click)="vista = 'presupuesto'">
-        <div class="inner">
-          <div class="h4 fw-bold">{{ totalPresupuestos }}</div>
-          <p>Presupuestos activos</p>
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="modern-card card-presupuesto" (click)="vista = 'presupuesto'">
+        <div class="card-content">
+          <div class="card-icon">
+            <i class="fas fa-file-invoice-dollar"></i>
+          </div>
+          <div class="card-info">
+            <div class="card-value">{{ totalPresupuestos }}</div>
+            <div class="card-label">Presupuestos Activos</div>
+            <div class="card-footer">
+              <span class="card-action">Abrir módulo</span>
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+          <div class="card-glow"></div>
         </div>
-        <div class="icon">
-          <i class="fas fa-file-invoice-dollar"></i>
-        </div>
-        <span class="small-box-footer text-white-50 d-block">Abrir módulo <i class="fas fa-arrow-circle-right"></i></span>
       </div>
     </div>
 
     <!-- Historial -->
-    <div class="col-xl-3 col-md-6 mb-2">
-      <div class="small-box bg-warning cursor-pointer" (click)="vista = 'historial'">
-        <div class="inner">
-          <div class="h4 fw-bold">{{ totalHistorialVentas }}</div>
-          <p>Historial de ventas</p>
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="modern-card card-historial" (click)="vista = 'historial'">
+        <div class="card-content">
+          <div class="card-icon">
+            <i class="fas fa-history"></i>
+          </div>
+          <div class="card-info">
+            <div class="card-value">{{ totalHistorialVentas }}</div>
+            <div class="card-label">Historial de Ventas</div>
+            <div class="card-footer">
+              <span class="card-action">Abrir módulo</span>
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+          <div class="card-glow"></div>
         </div>
-        <div class="icon">
-          <i class="fas fa-history"></i>
-        </div>
-        <span class="small-box-footer text-white-50 d-block">Abrir módulo <i class="fas fa-arrow-circle-right"></i></span>
       </div>
     </div>
 
     <!-- Cierre de Caja -->
-    <div class="col-xl-3 col-md-6 mb-2">
-      <div class="small-box bg-danger cursor-pointer" (click)="vista = 'caja'">
-        <div class="inner">
-          <div class="h4 fw-bold">{{ totalCierres }}</div>
-          <p>Cierre de Caja</p>
+    <div class="col-xl-3 col-md-6 mb-4">
+      <div class="modern-card card-caja" (click)="vista = 'caja'">
+        <div class="card-content">
+          <div class="card-icon">
+            <i class="fas fa-lock"></i>
+          </div>
+          <div class="card-info">
+            <div class="card-value">{{ totalCierres }}</div>
+            <div class="card-label">Cierre de Caja</div>
+            <div class="card-footer">
+              <span class="card-action">Abrir módulo</span>
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+          <div class="card-glow"></div>
         </div>
-        <div class="icon">
-          <i class="fas fa-lock"></i>
-        </div>
-        <span class="small-box-footer text-white-50 d-block">Abrir módulo <i class="fas fa-arrow-circle-right"></i></span>
       </div>
     </div>
   </div>
