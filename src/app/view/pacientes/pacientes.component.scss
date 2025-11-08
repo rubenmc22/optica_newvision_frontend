@@ -195,11 +195,12 @@
     }
     
     th {
-      padding: 1.25rem 1rem;
+      padding: 1.25rem 0.75rem;
       font-weight: 600;
       color: #495057;
-      text-align: left;
+      text-align: center;
       border-bottom: 2px solid #dee2e6;
+      vertical-align: middle;
       
       &.sortable {
         cursor: pointer;
@@ -210,9 +211,10 @@
           background-color: #f1f3f4;
         }
         
-        span {
+        .th-content {
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 0.5rem;
         }
         
@@ -220,6 +222,14 @@
           font-size: 0.875rem;
           color: #6c757d;
         }
+      }
+      
+      /* Para columnas no ordenables */
+      .th-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
       }
     }
   }
@@ -238,7 +248,7 @@
       }
       
       td {
-        padding: 1.25rem 1rem;
+        padding: 1.25rem 0.75rem;
         vertical-align: middle;
       }
     }
@@ -250,6 +260,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  text-align: left;
 }
 
 .paciente-avatar {
@@ -336,6 +347,13 @@
     color: #2e7d32;
     border: 1px solid #c8e6c9;
   }
+}
+
+.historial-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 
 /* Botones de acción */

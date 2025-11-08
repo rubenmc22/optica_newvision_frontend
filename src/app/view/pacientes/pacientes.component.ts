@@ -499,10 +499,8 @@ export class VerPacientesComponent implements OnInit {
     this.calcularPaginacion();
   }
 
-  getValorOrden(obj: any, path: string): any {
-    return path.split('.').reduce((acc, key) => acc?.[key], obj);
-  }
 
+  // Corrección del método de ordenamiento
   ordenarPor(campo: string): void {
     if (this.ordenActual === campo) {
       this.ordenAscendente = !this.ordenAscendente;
@@ -511,7 +509,8 @@ export class VerPacientesComponent implements OnInit {
       this.ordenAscendente = true;
     }
 
-    this.pacientes.sort((a, b) => {
+    // Ordenar el array correcto (pacientesFiltradosPorSede en lugar de pacientes)
+    this.pacientesFiltradosPorSede.sort((a, b) => {
       const valorA = this.getValorOrden(a, campo) ?? '';
       const valorB = this.getValorOrden(b, campo) ?? '';
 
@@ -528,6 +527,24 @@ export class VerPacientesComponent implements OnInit {
       return 0;
     });
     this.calcularPaginacion();
+  }
+
+  // Método auxiliar para obtener valores de ordenamiento
+  getValorOrden(paciente: any, campo: string): any {
+    switch (campo) {
+      case 'nombreCompleto':
+        return paciente.informacionPersonal?.nombreCompleto?.toLowerCase() || '';
+      case 'cedula':
+        return paciente.informacionPersonal?.cedula || '';
+      case 'edad':
+        return parseInt(paciente.informacionPersonal?.edad) || 0;
+      case 'genero':
+        return paciente.informacionPersonal?.genero?.toLowerCase() || '';
+      case 'fechaRegistro':
+        return new Date(paciente.fechaRegistro);
+      default:
+        return '';
+    }
   }
 
   calcularEdad(fechaNac: string): number | '--' {
