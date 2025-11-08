@@ -777,16 +777,78 @@
     background: white;
     width: 100%;
     min-height: 48px;
+    outline: none !important;
+    /* IMPORTANTE: Elimina el outline por defecto */
 
     &:focus {
-        border-color: #3498db;
-        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        border-color: #3498db !important;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1) !important;
         background: white;
     }
 
     &::placeholder {
         color: #adb5bd;
         font-size: 0.85rem;
+    }
+}
+
+/* Estilos específicos para ng-select */
+.ng-select-moderno {
+    .ng-select-container {
+        border: 2px solid #e9ecef !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 1rem !important;
+        font-size: 0.9rem !important;
+        transition: all 0.3s ease !important;
+        background: white !important;
+        min-height: 48px !important;
+        outline: none !important;
+        box-shadow: none !important;
+
+        &:focus {
+            border-color: #3498db !important;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1) !important;
+        }
+    }
+
+    &.ng-select-focused {
+        .ng-select-container {
+            border-color: #3498db !important;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1) !important;
+        }
+    }
+}
+
+/* Estilos para textarea */
+textarea.form-control-moderno {
+    resize: vertical;
+    min-height: 80px;
+
+    &:focus {
+        border-color: #3498db !important;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1) !important;
+    }
+}
+
+/* Eliminar estilos por defecto de Bootstrap */
+.form-control:focus,
+.form-select:focus {
+    border-color: #3498db !important;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1) !important;
+    outline: none !important;
+}
+
+/* Para inputs type date */
+input[type="date"].form-control-moderno {
+    &::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 3px;
+    }
+
+    &:focus {
+        border-color: #3498db !important;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1) !important;
     }
 }
 
@@ -1406,5 +1468,299 @@ textarea.form-control-moderno {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+/* =============================================
+   MODAL DE VISUALIZACIÓN MODERNO
+   ============================================= */
+
+.paciente-profile {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Header del perfil */
+.profile-header {
+    background: #ffffff;
+    color: #2c3e50;
+    padding: 2rem;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-direction: column;
+    border-bottom: 1px solid #e9ecef;
+    position: relative;
+
+    @media (min-width: 768px) {
+        flex-direction: row;
+        text-align: left;
+        justify-content: flex-start;
+    }
+}
+
+.profile-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+}
+
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 4px solid #e9ecef;
+
+    i {
+        font-size: 2.5rem;
+        color: white;
+    }
+}
+
+.profile-info {
+    .profile-name {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #2c3e50;
+        letter-spacing: -0.5px;
+    }
+}
+
+.profile-meta {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+
+    @media (min-width: 768px) {
+        justify-content: flex-start;
+    }
+}
+
+.cedula-badge-modal {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    border: 1px solid #bbdefb;
+    font-size: 0.9rem;
+}
+
+.badge-warning {
+    background: #fff3e0;
+    color: #f57c00;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    border: 1px solid #ffe0b2;
+    font-size: 0.9rem;
+}
+
+/* Secciones de información */
+.info-section {
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+/* Grid de información */
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+
+    @media (min-width: 768px) {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.info-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.info-item {
+    .info-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+
+        i {
+            color: #3498db;
+            font-size: 0.9rem;
+            width: 16px;
+            text-align: center;
+        }
+    }
+
+    .info-value {
+        color: #495057;
+        font-size: 0.95rem;
+        line-height: 1.4;
+        word-break: break-word;
+    }
+}
+
+/* Tags para listas */
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.info-tag {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1px solid #bbdefb;
+}
+
+/* Redes sociales en modal de visualización */
+.redes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.red-social-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: #e3f2fd;
+        border-color: #3498db;
+        transform: translateY(-2px);
+        text-decoration: none;
+        color: inherit;
+    }
+}
+
+.red-social-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+        font-size: 1.25rem;
+        color: white;
+    }
+}
+
+.red-social-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.red-social-platform {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.red-social-username {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.external-icon {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Estados vacíos */
+.empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    color: #6c757d;
+    text-align: center;
+
+    i {
+        font-size: 1.5rem;
+    }
+}
+
+/* Responsive para modal de visualización */
+@media (max-width: 768px) {
+    .profile-header {
+        padding: 1.5rem;
+    }
+
+    .profile-avatar {
+        width: 60px;
+        height: 60px;
+
+        i {
+            font-size: 2rem;
+        }
+    }
+
+    .profile-name {
+        font-size: 1.5rem;
+    }
+
+    .info-grid {
+        gap: 1rem;
+    }
+
+    .info-item {
+        .info-label {
+            font-size: 0.8rem;
+        }
+
+        .info-value {
+            font-size: 0.9rem;
+        }
+    }
+
+    .redes-grid {
+        grid-template-columns: 1fr;
     }
 }

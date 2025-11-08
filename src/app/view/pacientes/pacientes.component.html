@@ -672,210 +672,339 @@
   </div>
 </div>
 
-<!-- Modal para visualizar paciente -->
+<!-- Modal modernizado para visualizar paciente -->
 <div class="modal fade" id="verPacienteModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title w-100 ">
-          <i class="bi bi-person-lines-fill me-2"></i>Detalles del Paciente
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content modal-moderna">
+      <!-- Header moderno -->
+      <div class="modal-header-moderno">
+        <div class="modal-header-content">
+          <div class="modal-icon">
+            <i class="bi bi-person-lines-fill"></i>
+          </div>
+          <div class="modal-title-content">
+            <h5 class="modal-title">Detalles del Paciente</h5>
+            <p class="modal-subtitle">Información completa del paciente</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-moderno" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
 
-      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-        <div class="card p-4" style="background: var(--degradado-pastel) !important;">
-          <h4 class="text-center mb-1">{{ pacienteSeleccionado?.nombreCompleto || '---' }}</h4>
-          <div *ngIf="pacienteSeleccionado?.esMenorSinCedula" class="text-center mb-4">
-            <span class="badge bg-warning text-dark">(Paciente sin cédula)</span>
-          </div>
-          <h5 class="text-primary pb-2"><strong>👤 Datos personales</strong></h5>
-          <div class="row">
-            <!-- Columna izquierda -->
-            <div class="col-md-4">
-              <div class="mb-3">
-                <p class="text-secondary mb-1">
-                  <strong>
-                    {{ pacienteSeleccionado?.esMenorSinCedula ? 'Cédula Representante:' : 'Cédula:' }}
-                  </strong>
-                </p>
-                <p class="text-dark">{{ pacienteSeleccionado?.cedula || '---' }}</p>
-              </div>
-
-              <div class="mb-3">
-                <p class="text-secondary mb-1"><strong>Fecha de Nacimiento:</strong></p>
-                <p class="text-dark">
-                  <ng-container *ngIf="pacienteSeleccionado?.fechaNacimiento; else noFecha">
-                    {{ pacienteSeleccionado.fechaNacimiento }}
-                  </ng-container>
-                  <ng-template #noFecha>---</ng-template>
-                </p>
-              </div>
-
-              <div class="mb-3">
-                <p class="text-secondary mb-1"><strong>Ocupación:</strong></p>
-                <p class="text-dark">{{ pacienteSeleccionado?.ocupacion || '---' }}</p>
-              </div>
+      <!-- Body moderno -->
+      <div class="modal-body-moderno">
+        <div class="paciente-profile">
+          <!-- Header del perfil -->
+          <div class="profile-header">
+            <div class="profile-avatar">
+              <i class="bi bi-person-circle"></i>
             </div>
-            <!-- Columna central -->
-            <div class="col-md-4">
-              <div class="mb-3">
-                <p class="text-secondary mb-1"><strong>Teléfono:</strong></p>
-                <p class="text-dark">{{ pacienteSeleccionado?.telefono || '---' }}</p>
+            <div class="profile-info">
+              <h3 class="profile-name">{{ pacienteSeleccionado?.nombreCompleto || '---' }}</h3>
+              <div class="profile-meta">
+                <span class="cedula-badge-modal">{{ pacienteSeleccionado?.cedula || 'Sin cédula' }}</span>
+                <span *ngIf="pacienteSeleccionado?.esMenorSinCedula" class="badge-warning">
+                  <i class="bi bi-exclamation-triangle"></i>
+                  Paciente menor sin cédula
+                </span>
               </div>
-
-              <div class="mb-3">
-                <p class="text-secondary mb-1"><strong>Edad:</strong></p>
-                <p class="text-dark">{{ pacienteSeleccionado?.edad || '---' }}</p>
-              </div>
-
-              <div class="mb-3">
-                <p class="text-secondary mb-1"><strong>Género:</strong></p>
-                <p class="text-dark">{{ pacienteSeleccionado?.genero || '---' }}</p>
-              </div>
-            </div>
-
-            <!-- Columna derecha -->
-            <div class="col-md-4">
-              <div class="mb-3">
-                <p class="text-secondary mb-1"><strong>Email:</strong></p>
-                <p class="text-dark">{{ pacienteSeleccionado?.email || '---' }}</p>
-              </div>
-              <div class="mb-3">
-                <p class="text-secondary mb-1"><strong>Fecha de Registro:</strong></p>
-                <p class="text-dark">
-                  <ng-container *ngIf="pacienteSeleccionado?.fechaRegistro; else noFecha">
-                    {{ pacienteSeleccionado.fechaRegistro }}
-                  </ng-container>
-                  <ng-template #noFecha>---</ng-template>
-                </p>
-              </div>
-              <div class="mb-3">
-                <p class="text-secondary mb-1"><strong>Dirección:</strong></p>
-                <p class="text-dark">{{ pacienteSeleccionado?.direccion || '---' }}</p>
-              </div>
-            </div>
-
-          </div>
-
-
-          <!-- Sección de Historia Clínica -->
-          <div class="mt-4">
-            <h5 class="text-primary pb-2"><strong>🧬 Perfil Clínico</strong></h5>
-
-            <div class="row">
-              <!-- Columna izquierda -->
-              <div class="col-md-4">
-                <div class="mb-3">
-                  <p class="text-secondary mb-1"><strong>Usuario de lentes</strong></p>
-                  <p class="text-dark">{{ pacienteSeleccionado?.historiaClinica?.usuarioLentes || '--' }}</p>
-                </div>
-                <!-- 🔹 Patologías -->
-                <div class="mb-3">
-                  <p class="text-secondary mb-1"><strong>Patologías</strong></p>
-                  <p class="text-dark mb-1">
-                    {{ pacienteSeleccionado?.historiaClinica?.patologias?.join(', ') || 'No registrado' }}
-                  </p>
-                </div>
-
-                <div class="mb-3">
-                  <p class="text-secondary mb-1"><strong>Cirugía ocular</strong></p>
-                  <p class="text-dark">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcular || '--' }}</p>
-                </div>
-
-                <div class="mb-3">
-                  <p class="text-secondary mb-1"><strong>Traumatismo ocular</strong></p>
-                  <p class="text-dark">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcular || '--' }}</p>
-                </div>
-
-              </div>
-
-              <!-- Columna central -->
-              <div class="col-md-4">
-                <div class="mb-3">
-                  <p class="text-secondary mb-1"><strong>Fotofobia</strong></p>
-                  <p class="text-dark">{{ pacienteSeleccionado?.historiaClinica?.fotofobia || '--' }}</p>
-                </div>
-
-                <div class="mb-3">
-                  <p class="text-secondary mb-1"><strong>Patología ocular</strong></p>
-                  <p class="text-dark mb-1">
-                    {{ pacienteSeleccionado?.historiaClinica?.patologiaOcular?.join(', ') || 'No registrado' }}
-                  </p>
-                </div>
-
-                <div class="mb-3" *ngIf="pacienteSeleccionado?.historiaClinica?.cirugiaOcular === 'Sí'">
-                  <p class="text-secondary mb-1"><strong>Descripción de la cirugía</strong></p>
-                  <p class="text-dark">
-                    {{ pacienteSeleccionado?.historiaClinica?.cirugiaOcularDescripcion || 'No registrado' }}
-                  </p>
-                </div>
-
-                <div class="mb-3" *ngIf="pacienteSeleccionado?.historiaClinica?.traumatismoOcular === 'Sí'">
-                  <p class="text-secondary mb-1"><strong>Descripción del traumatismo</strong></p>
-                  <p class="text-dark">
-                    {{ pacienteSeleccionado?.historiaClinica?.traumatismoOcularDescripcion || 'No registrado' }}
-                  </p>
-                </div>
-
-              </div>
-
-              <!-- Columna derecha -->
-              <div class="col-md-4">
-                <div class="mb-3">
-                  <p class="text-secondary mb-1"><strong>Alergias</strong></p>
-                  <p class="text-dark">{{ pacienteSeleccionado?.historiaClinica?.alergicoA || '--' }}</p>
-                </div>
-
-                <!-- 🔹 Antecedentes personales -->
-                <div class="mb-3">
-                  <p class="text-secondary mb-1"><strong>Antecedentes personales</strong></p>
-                  <p class="text-dark mb-1">
-                    {{ pacienteSeleccionado?.historiaClinica?.antecedentesPersonales?.join(', ') || 'No registrado' }}
-                  </p>
-                </div>
-
-                <!-- 🔹 Antecedentes familiares -->
-                <div class="mb-3">
-                  <p class="text-secondary mb-1"><strong>Antecedentes familiares</strong></p>
-                  <p class="text-dark mb-1">
-                    {{ pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares?.join(', ') || 'No registrado' }}
-                  </p>
-                </div>
-                <!-- Uso de dispositivos electrónicos -->
-                <div class="mb-3">
-                  <p class="text-secondary mb-1"><strong>Uso de dispositivos electrónicos</strong></p>
-                  <p class="text-dark">
-                    {{ pacienteSeleccionado?.historiaClinica?.usoDispositivo || 'No registrado' }}
-                  </p>
-                </div>
-              </div>
-
             </div>
           </div>
 
-          <!-- Sección de Redes Sociales -->
-          <div class="mt-4">
-            <h5 class="text-primary pb-2"><strong>🌐 Redes Sociales</strong></h5>
-            <div *ngIf="pacienteSeleccionado?.redesSociales?.length > 0; else sinRedes">
-              <div class="d-flex flex-wrap gap-3">
-                <a *ngFor="let red of pacienteSeleccionado.redesSociales"
-                  class="badge bg-light text-dark p-3 text-decoration-none" target="_blank"
+          <!-- Sección: Datos Personales -->
+          <div class="info-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-person-vcard"></i>
+              </div>
+              <h6 class="section-title">Datos Personales</h6>
+            </div>
+
+            <div class="section-content">
+              <div class="info-grid">
+                <!-- Columna 1 -->
+                <div class="info-column">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-card-text"></i>
+                      {{ pacienteSeleccionado?.esMenorSinCedula ? 'Cédula Representante' : 'Cédula' }}
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.cedula || '---' }}</div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-calendar3"></i>
+                      Fecha de Nacimiento
+                    </div>
+                    <div class="info-value">
+                      {{ pacienteSeleccionado?.fechaNacimiento || '---' }}
+                    </div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-briefcase"></i>
+                      Ocupación
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.ocupacion || '---' }}</div>
+                  </div>
+                </div>
+
+                <!-- Columna 2 -->
+                <div class="info-column">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-telephone"></i>
+                      Teléfono
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.telefono || '---' }}</div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-person"></i>
+                      Edad
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.edad || '---' }} años</div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-gender-ambiguous"></i>
+                      Género
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.genero || '---' }}</div>
+                  </div>
+                </div>
+
+                <!-- Columna 3 -->
+                <div class="info-column">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-envelope"></i>
+                      Email
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.email || '---' }}</div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-calendar-check"></i>
+                      Fecha de Registro
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.fechaRegistro || '---' }}</div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-geo-alt"></i>
+                      Dirección
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.direccion || '---' }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección: Perfil Clínico -->
+          <div class="info-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-heart-pulse"></i>
+              </div>
+              <h6 class="section-title">Perfil Clínico</h6>
+            </div>
+
+            <div class="section-content">
+              <div class="info-grid">
+                <!-- Columna 1 -->
+                <div class="info-column">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-eyeglasses"></i>
+                      Usa Lentes
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.usuarioLentes || '---' }}</div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-heart-pulse"></i>
+                      Patologías
+                    </div>
+                    <div class="info-value tags">
+                      <ng-container
+                        *ngIf="pacienteSeleccionado?.historiaClinica?.patologias?.length; else noPatologias">
+                        <span class="info-tag"
+                          *ngFor="let patologia of pacienteSeleccionado?.historiaClinica?.patologias">
+                          {{ patologia }}
+                        </span>
+                      </ng-container>
+                      <ng-template #noPatologias>---</ng-template>
+                    </div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-scissors"></i>
+                      Cirugía Ocular
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcular || '---' }}</div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-exclamation-triangle"></i>
+                      Traumatismo Ocular
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcular || '---' }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Columna 2 -->
+                <div class="info-column">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-brightness-high"></i>
+                      Fotofobia
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.fotofobia || '---' }}</div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-eye"></i>
+                      Patología Ocular
+                    </div>
+                    <div class="info-value tags">
+                      <ng-container
+                        *ngIf="pacienteSeleccionado?.historiaClinica?.patologiaOcular?.length; else noPatologiaOcular">
+                        <span class="info-tag"
+                          *ngFor="let patologia of pacienteSeleccionado?.historiaClinica?.patologiaOcular">
+                          {{ patologia }}
+                        </span>
+                      </ng-container>
+                      <ng-template #noPatologiaOcular>---</ng-template>
+                    </div>
+                  </div>
+
+                  <div class="info-item" *ngIf="pacienteSeleccionado?.historiaClinica?.cirugiaOcular === 'Sí'">
+                    <div class="info-label">
+                      <i class="bi bi-journal-text"></i>
+                      Descripción Cirugía
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcularDescripcion || '---'
+                      }}</div>
+                  </div>
+
+                  <div class="info-item" *ngIf="pacienteSeleccionado?.historiaClinica?.traumatismoOcular === 'Sí'">
+                    <div class="info-label">
+                      <i class="bi bi-journal-text"></i>
+                      Descripción Traumatismo
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcularDescripcion ||
+                      '---' }}</div>
+                  </div>
+                </div>
+
+                <!-- Columna 3 -->
+                <div class="info-column">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-droplet"></i>
+                      Alergias
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.alergicoA || '---' }}</div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-person-heart"></i>
+                      Antecedentes Personales
+                    </div>
+                    <div class="info-value tags">
+                      <ng-container
+                        *ngIf="pacienteSeleccionado?.historiaClinica?.antecedentesPersonales?.length; else noAntecedentes">
+                        <span class="info-tag"
+                          *ngFor="let antecedente of pacienteSeleccionado?.historiaClinica?.antecedentesPersonales">
+                          {{ antecedente }}
+                        </span>
+                      </ng-container>
+                      <ng-template #noAntecedentes>---</ng-template>
+                    </div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-people"></i>
+                      Antecedentes Familiares
+                    </div>
+                    <div class="info-value tags">
+                      <ng-container
+                        *ngIf="pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares?.length; else noFamiliares">
+                        <span class="info-tag"
+                          *ngFor="let antecedente of pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares">
+                          {{ antecedente }}
+                        </span>
+                      </ng-container>
+                      <ng-template #noFamiliares>---</ng-template>
+                    </div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-laptop"></i>
+                      Uso de Dispositivos
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.usoDispositivo || '---' }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección: Redes Sociales -->
+          <div class="info-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-share"></i>
+              </div>
+              <h6 class="section-title">Redes Sociales</h6>
+            </div>
+
+            <div class="section-content">
+              <div *ngIf="pacienteSeleccionado?.redesSociales?.length > 0; else sinRedes" class="redes-grid">
+                <a *ngFor="let red of pacienteSeleccionado.redesSociales" class="red-social-card" target="_blank"
                   [href]="generarLinkRedSocial(red.platform, red.username)">
-                  <i [ngClass]="getSocialIconClass(red.platform)" class="me-2"></i>
-                  {{ red.username }}
+                  <div class="red-social-icon">
+                    <i [ngClass]="getSocialIconClass(red.platform)"></i>
+                  </div>
+                  <div class="red-social-info">
+                    <span class="red-social-platform">{{ red.platform }}</span>
+                    <span class="red-social-username">{{ red.username }}</span>
+                  </div>
+                  <i class="bi bi-box-arrow-up-right external-icon"></i>
                 </a>
-
               </div>
+              <ng-template #sinRedes>
+                <div class="empty-state">
+                  <i class="bi bi-info-circle"></i>
+                  <span>No hay redes sociales registradas</span>
+                </div>
+              </ng-template>
             </div>
-            <ng-template #sinRedes>
-              <p class="text-dark">No hay redes sociales registradas</p>
-            </ng-template>
           </div>
         </div>
       </div>
-      <div class="modal-footer ">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+
+      <!-- Footer moderno -->
+      <div class="modal-footer-moderno">
+        <button type="button" class="btn btn-secondary-moderno" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-2"></i>
           Cerrar
         </button>
       </div>
