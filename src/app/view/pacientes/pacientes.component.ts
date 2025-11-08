@@ -524,7 +524,7 @@ export class VerPacientesComponent implements OnInit {
         return this.ordenAscendente ? valorA - valorB : valorB - valorA;
       }
 
-      return 0;
+       return 0;
     });
     this.calcularPaginacion();
   }
