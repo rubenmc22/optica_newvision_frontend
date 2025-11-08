@@ -1,126 +1,246 @@
-<div *ngIf="dataIsReady" class="fade-in">
-  <div class="container mt-4">
-    <div class="card shadow-lg">
-      <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
-        <h4 class="mb-0">👨‍⚕️ Pacientes</h4>
-        <div class="ms-auto">
-          <button class="btn btn-light btn-sm" (click)="abrirModalAgregarPaciente()">
-            ➕ Agregar Paciente
-          </button>
+<div *ngIf="dataIsReady" class="fade-in mb-5">
+  <div class="container-fluid mt-4"> <!-- Cambiado a container-fluid para más ancho -->
+    <div class="card pacientes-moderno">
+      <!-- Header modernizado -->
+      <div class="card-header-moderno">
+        <div class="header-content">
+          <div class="header-icon">
+            <i class="bi bi-people-fill"></i>
+          </div>
+          <div class="header-text">
+            <h4 class="header-title">Gestión de Pacientes</h4>
+            <div class="header-subtitle">Administra y consulta la información de pacientes</div>
+          </div>
         </div>
+        <button class="btn btn-agregar-paciente" (click)="abrirModalAgregarPaciente()">
+          <i class="bi bi-person-plus"></i>
+          Agregar Paciente
+        </button>
       </div>
 
-      <div class="card-body" style="background: var(--degradado-pastel) !important;">
-        <div class="row mb-4">
-          <div class="col-md-4">
-            <label for="filtroSede" class="form-label">📍 Filtrar por sede</label>
-            <select id="filtroSede" class="form-select" [(ngModel)]="sedeFiltro" (change)="cargarPacientes()"
-              (change)="actualizarPacientesPorSede()">
-              <!-- Opción para ver todos -->
+      <!-- Cuerpo modernizado -->
+      <div class="card-body-moderno">
+        <!-- Filtros modernos -->
+        <div class="filtros-modernos">
+          <div class="filtro-item">
+            <label class="form-label-moderno">
+              <i class="bi bi-geo-alt"></i>
+              Filtrar por sede
+            </label>
+            <select class="form-select modern-select" [(ngModel)]="sedeFiltro" 
+                    (change)="cargarPacientes(); actualizarPacientesPorSede()">
               <option value="todas">Todas las sedes</option>
-
-              <!-- Opciones dinámicas desde el API -->
               <option *ngFor="let sede of sedesDisponibles" [value]="sede.key">
                 {{ sede.nombre }}
               </option>
             </select>
           </div>
 
-          <div class="filtroPaciente col-md-8">
-            <label for="filtroTexto" class="form-label">🔎 Buscar paciente</label>
-            <input id="filtroTexto" type="text" class="form-control" placeholder="Nombre o cédula..."
-              [(ngModel)]="filtro" (input)="aplicarFiltroTexto()" (keyup.enter)="aplicarFiltroTexto()">
+          <div class="filtro-item">
+            <label class="form-label-moderno">
+              <i class="bi bi-search"></i>
+              Buscar paciente
+            </label>
+            <div class="search-container">
+              <input type="text" class="form-control modern-input" 
+                     placeholder="Nombre, cédula..."
+                     [(ngModel)]="filtro" 
+                     (input)="aplicarFiltroTexto()" 
+                     (keyup.enter)="aplicarFiltroTexto()">
+              <i class="bi bi-search search-icon"></i>
+            </div>
+          </div>
+          
+          <!-- Control de registros por página -->
+          <div class="filtro-item">
+            <label class="form-label-moderno">
+              <i class="bi bi-list-ol"></i>
+              Registros por página
+            </label>
+            <select class="form-select modern-select" [(ngModel)]="registrosPorPagina" 
+                    (change)="cambiarRegistrosPorPagina()">
+              <option value="5">5 registros</option>
+              <option value="10">10 registros</option>
+              <option value="20">20 registros</option>
+              <option value="50">50 registros</option>
+            </select>
           </div>
         </div>
 
-        <div *ngIf="sedeFiltro !== sedeActiva && sedeFiltro !== 'todas'" class="alert alert-info">
-          🔒 Visualizando pacientes de otra sede. Las acciones de edición y eliminación están deshabilitadas.
+        <!-- Alerta de sede diferente -->
+        <div *ngIf="sedeFiltro !== sedeActiva && sedeFiltro !== 'todas'" class="alert-moderno alert-info">
+          <i class="bi bi-info-circle"></i>
+          <div class="alert-content">
+            <strong>Visualizando pacientes de otra sede</strong>
+            <span>Las acciones de edición y eliminación están deshabilitadas.</span>
+          </div>
         </div>
 
-        <div class="table-responsive-wrapper">
-          <table class="table table-hover table-bordered">
-            <thead class="bg-secondary text-white text-center">
-              <tr>
-                <th (click)="ordenarPor('nombreCompleto')" class="sortable">Nombre Completo
-                  <i class="bi" [ngClass]="{
-                'bi-caret-up-fill': ordenActual === 'nombreCompleto' && ordenAscendente,
-                'bi-caret-down-fill': ordenActual === 'nombreCompleto' && !ordenAscendente
-              }"></i>
-                </th>
-                <th (click)="ordenarPor('cedula')" class="sortable">Cédula
-                  <i class="bi" [ngClass]="{
-                'bi-caret-up-fill': ordenActual === 'cedula' && ordenAscendente,
-                'bi-caret-down-fill': ordenActual === 'cedula' && !ordenAscendente
-              }"></i>
-                </th>
-                <th (click)="ordenarPor('edad')" class="sortable">Edad
-                  <i class="bi" [ngClass]="{
-                'bi-caret-up-fill': ordenActual === 'edad' && ordenAscendente,
-                'bi-caret-down-fill': ordenActual === 'edad' && !ordenAscendente
-              }"></i>
-                </th>
-                <th (click)="ordenarPor('genero')" class="sortable">Género
-                  <i class="bi" [ngClass]="{
-                'bi-caret-up-fill': ordenActual === 'genero' && ordenAscendente,
-                'bi-caret-down-fill': ordenActual === 'genero' && !ordenAscendente
-              }"></i>
-                </th>
-                <th (click)="ordenarPor('fechaRegistro')" class="sortable">Fecha de Registro
-                  <i class="bi" [ngClass]="{
-                'bi-caret-up-fill': ordenActual === 'fechaRegistro' && ordenAscendente,
-                'bi-caret-down-fill': ordenActual === 'fechaRegistro' && !ordenAscendente
-              }"></i>
-                </th>
-                <th>Historial Médico</th>
-                <th>Sede</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
+        <!-- Tabla moderna con scroll -->
+        <div class="table-container-moderno">
+          <div class="table-scroll-container">
+            <table class="table-moderna pacientes">
+              <thead>
+                <tr>
+                  <th (click)="ordenarPor('nombreCompleto')" class="sortable">
+                    <span>Paciente</span>
+                    <i class="bi" [ngClass]="{
+                      'bi-caret-up-fill': ordenActual === 'nombreCompleto' && ordenAscendente,
+                      'bi-caret-down-fill': ordenActual === 'nombreCompleto' && !ordenAscendente
+                    }"></i>
+                  </th>
+                  <th (click)="ordenarPor('cedula')" class="sortable">
+                    <span>Cédula</span>
+                    <i class="bi" [ngClass]="{
+                      'bi-caret-up-fill': ordenActual === 'cedula' && ordenAscendente,
+                      'bi-caret-down-fill': ordenActual === 'cedula' && !ordenAscendente
+                    }"></i>
+                  </th>
+                  <th (click)="ordenarPor('edad')" class="sortable">
+                    <span>Edad</span>
+                    <i class="bi" [ngClass]="{
+                      'bi-caret-up-fill': ordenActual === 'edad' && ordenAscendente,
+                      'bi-caret-down-fill': ordenActual === 'edad' && !ordenAscendente
+                    }"></i>
+                  </th>
+                  <th (click)="ordenarPor('genero')" class="sortable">
+                    <span>Género</span>
+                    <i class="bi" [ngClass]="{
+                      'bi-caret-up-fill': ordenActual === 'genero' && ordenAscendente,
+                      'bi-caret-down-fill': ordenActual === 'genero' && !ordenAscendente
+                    }"></i>
+                  </th>
+                  <th (click)="ordenarPor('fechaRegistro')" class="sortable">
+                    <span>Fecha Registro</span>
+                    <i class="bi" [ngClass]="{
+                      'bi-caret-up-fill': ordenActual === 'fechaRegistro' && ordenAscendente,
+                      'bi-caret-down-fill': ordenActual === 'fechaRegistro' && !ordenAscendente
+                    }"></i>
+                  </th>
+                  <th>Historial</th>
+                  <th>Sede</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
 
-            <tbody>
-              <tr *ngFor="let paciente of pacientesFiltradosPorSede" class="text-center align-middle">
-                <td>{{ paciente.informacionPersonal.nombreCompleto }}</td>
-                <td>{{ paciente.informacionPersonal.cedula }}</td>
-                <td>{{ paciente.informacionPersonal.edad }}</td>
-                <td>{{ paciente.informacionPersonal.genero }}</td>
-                <td>{{ paciente.fechaRegistro }}</td>
-
-                <td>
-                  <button class="btn btn-info btn-sm" (click)="verHistorias(paciente)">📖 Ver
-                    Historias</button>
-                </td>
-                <td>
-                  <span class="badge" [ngClass]="{
-                'bg-primary': paciente.sede === 'guatire',
-                'bg-success': paciente.sede === 'guarenas'
-              }">{{ paciente.sede | titlecase }}</span>
-                </td>
-                <td>
-                  <button class="btn btn-outline-info btn-sm me-1" (click)="abrirModalVisualizacionPaciente(paciente)"
-                    title="Ver Paciente">
-                    <i class="bi bi-eye"></i>
-                  </button>
-
-                  <ng-container *ngIf="paciente.sede === sedeActiva">
-                    <button class="btn btn-outline-warning btn-sm me-1" (click)="editarPaciente(paciente)"
-                      title="Editar">
-                      <i class="bi bi-pencil-square"></i>
+              <tbody>
+                <tr *ngFor="let paciente of pacientesPaginados" class="paciente-row">
+                  <td class="paciente-info">
+                    <div class="paciente-avatar">
+                      <i class="bi bi-person-circle"></i>
+                    </div>
+                    <div class="paciente-details">
+                      <span class="paciente-nombre">{{ paciente.informacionPersonal.nombreCompleto }}</span>
+                      <small class="paciente-contacto">{{ paciente.informacionPersonal.telefono || 'Sin teléfono' }}</small>
+                    </div>
+                  </td>
+                  <td class="text-center">
+                    <span class="cedula-badge">{{ paciente.informacionPersonal.cedula }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="edad-badge">{{ paciente.informacionPersonal.edad }} años</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="genero-badge" [ngClass]="{
+                      'badge-masculino': paciente.informacionPersonal.genero === 'masculino',
+                      'badge-femenino': paciente.informacionPersonal.genero === 'femenino'
+                    }">
+                      {{ paciente.informacionPersonal.genero | titlecase }}
+                    </span>
+                  </td>
+                  <td class="text-center fecha-registro">
+                    {{ paciente.fechaRegistro }}
+                  </td>
+                  <td class="text-center">
+                    <button class="btn btn-historial" (click)="verHistorias(paciente)" title="Ver historial médico">
+                      <i class="bi bi-file-medical"></i>
+                      Historial
                     </button>
-                    <!--    <button class="btn btn-outline-danger btn-sm" (click)="eliminarPaciente(paciente.key)"
-                      title="Eliminar">
-                      <i class="bi bi-trash"></i>
-                    </button>-->
-                  </ng-container>
-                </td>
-              </tr>
+                  </td>
+                  <td class="text-center">
+                    <span class="sede-badge" [ngClass]="{
+                      'badge-guatire': paciente.sede === 'guatire',
+                      'badge-guarenas': paciente.sede === 'guarenas'
+                    }">
+                      <i class="bi bi-geo-alt"></i>
+                      {{ paciente.sede | titlecase }}
+                    </span>
+                  </td>
+                  <td class="text-center acciones">
+                    <div class="btn-group-acciones">
+                      <button class="btn btn-accion btn-ver" 
+                              (click)="abrirModalVisualizacionPaciente(paciente)"
+                              title="Ver detalles">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                      
+                      <ng-container *ngIf="paciente.sede === sedeActiva">
+                        <button class="btn btn-accion btn-editar" 
+                                (click)="editarPaciente(paciente)"
+                                title="Editar paciente">
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                      </ng-container>
+                    </div>
+                  </td>
+                </tr>
 
-              <tr *ngIf="dataIsReady && pacientesFiltradosPorSede.length === 0">
-                <td colspan="8" class="text-center text-dark py-4">
-                  🧐 No se encontraron pacientes que coincidan con el filtro aplicado.
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                <!-- Estado vacío -->
+                <tr *ngIf="dataIsReady && pacientesFiltradosPorSede.length === 0">
+                  <td colspan="8" class="estado-vacio">
+                    <div class="empty-state">
+                      <i class="bi bi-person-x"></i>
+                      <h4>No se encontraron pacientes</h4>
+                      <p>No hay pacientes que coincidan con el filtro aplicado.</p>
+                      <button class="btn btn-agregar-vacio" (click)="abrirModalAgregarPaciente()">
+                        <i class="bi bi-person-plus"></i>
+                        Agregar primer paciente
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Controles de paginación -->
+          <div class="paginacion-moderna" *ngIf="pacientesFiltradosPorSede.length > 0">
+            <div class="paginacion-info">
+              <span>Mostrando {{ inicioPagina }} - {{ finPagina }} de {{ totalRegistros }} pacientes</span>
+            </div>
+            
+            <div class="paginacion-controles">
+              <button class="btn-paginacion" 
+                      [disabled]="paginaActual === 1" 
+                      (click)="irAPagina(1)">
+                <i class="bi bi-chevron-double-left"></i>
+              </button>
+              
+              <button class="btn-paginacion" 
+                      [disabled]="paginaActual === 1" 
+                      (click)="irAPagina(paginaActual - 1)">
+                <i class="bi bi-chevron-left"></i>
+              </button>
+              
+              <div class="paginacion-numeros">
+                <span class="pagina-actual">{{ paginaActual }}</span>
+                <span class="separador">de</span>
+                <span class="total-paginas">{{ totalPaginas }}</span>
+              </div>
+              
+              <button class="btn-paginacion" 
+                      [disabled]="paginaActual === totalPaginas" 
+                      (click)="irAPagina(paginaActual + 1)">
+                <i class="bi bi-chevron-right"></i>
+              </button>
+              
+              <button class="btn-paginacion" 
+                      [disabled]="paginaActual === totalPaginas" 
+                      (click)="irAPagina(totalPaginas)">
+                <i class="bi bi-chevron-double-right"></i>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

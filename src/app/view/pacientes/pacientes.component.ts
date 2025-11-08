@@ -50,6 +50,15 @@ export class VerPacientesComponent implements OnInit {
   esMenorSinCedula: boolean = false;
   dataIsReady = false;
 
+  // Propiedades para paginación
+  paginaActual: number = 1;
+  registrosPorPagina: number = 10;
+  totalPaginas: number = 0;
+  totalRegistros: number = 0;
+  inicioPagina: number = 0;
+  finPagina: number = 0;
+  pacientesPaginados: any[] = [];
+
   // Redes sociales
   listaRedes: string[] = ['Facebook', 'Twitter', 'Instagram', 'LinkedIn', 'TikTok'];
   nuevaRed: string = '';
@@ -206,6 +215,7 @@ export class VerPacientesComponent implements OnInit {
     this.aplicarValidacionCondicional('traumatismoOcular', 'traumatismoOcularDescripcion', this.formPaciente);
     this.aplicarValidacionCondicional('cirugiaOcular', 'cirugiaOcularDescripcion', this.formPaciente);
     this.configurarValidacionCondicional();
+    this.calcularPaginacion();
   }
 
   private configurarValidacionCondicional(): void {
@@ -452,6 +462,9 @@ export class VerPacientesComponent implements OnInit {
         }
       }
     });
+
+    this.paginaActual = 1;
+    this.calcularPaginacion();
   }
 
   actualizarPacientesPorSede(): void {
@@ -474,11 +487,16 @@ export class VerPacientesComponent implements OnInit {
     }
 
     this.pacientesFiltradosPorSede = pacientesFiltrados;
+    this.paginaActual = 1;
+    this.calcularPaginacion();
   }
-  
+
 
   aplicarFiltroTexto(): void {
     this.actualizarPacientesPorSede();
+
+    this.paginaActual = 1;
+    this.calcularPaginacion();
   }
 
   getValorOrden(obj: any, path: string): any {
@@ -509,6 +527,7 @@ export class VerPacientesComponent implements OnInit {
 
       return 0;
     });
+    this.calcularPaginacion();
   }
 
   calcularEdad(fechaNac: string): number | '--' {
@@ -1210,5 +1229,38 @@ export class VerPacientesComponent implements OnInit {
       default:
         return '#';
     }
+  }
+
+  // Método para cambiar la cantidad de registros por página
+  cambiarRegistrosPorPagina() {
+    this.paginaActual = 1;
+    this.calcularPaginacion();
+  }
+
+  // Método para ir a una página específica
+  irAPagina(pagina: number) {
+    if (pagina >= 1 && pagina <= this.totalPaginas) {
+      this.paginaActual = pagina;
+      this.calcularPaginacion();
+    }
+  }
+
+  calcularPaginacion() {
+    this.totalRegistros = this.pacientesFiltradosPorSede.length;
+    this.totalPaginas = Math.ceil(this.totalRegistros / this.registrosPorPagina);
+
+    // Asegurar que la página actual sea válida
+    if (this.paginaActual > this.totalPaginas) {
+      this.paginaActual = this.totalPaginas || 1;
+    }
+
+    this.inicioPagina = (this.paginaActual - 1) * this.registrosPorPagina + 1;
+    this.finPagina = Math.min(this.paginaActual * this.registrosPorPagina, this.totalRegistros);
+
+    // Obtener los pacientes para la página actual
+    this.pacientesPaginados = this.pacientesFiltradosPorSede.slice(
+      (this.paginaActual - 1) * this.registrosPorPagina,
+      this.paginaActual * this.registrosPorPagina
+    );
   }
 }
