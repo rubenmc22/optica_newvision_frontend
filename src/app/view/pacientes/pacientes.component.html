@@ -248,328 +248,424 @@
   </div>
 </div>
 
-<!-- Modal para agregar/editar paciente  -->
+<!-- Modal modernizado para agregar/editar paciente -->
 <div class="modal fade" id="modalAgregarPaciente" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content border-0 shadow">
-      <div class="modal-header bg-gradient-primary text-white">
-        <h5 class="modal-title fw-semibold">
-          <i class="fas {{ modoEdicion ? 'fa-edit' : 'fa-plus' }} me-2"></i>
-          {{ modoEdicion ? 'Editar Paciente' : 'Agregar Paciente' }}
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content modal-moderna">
+      <!-- Header moderno -->
+      <div class="modal-header-moderno">
+        <div class="modal-header-content">
+          <div class="modal-icon">
+            <i class="bi {{ modoEdicion ? 'bi-person-gear' : 'bi-person-plus' }}"></i>
+          </div>
+          <div class="modal-title-content">
+            <h5 class="modal-title">{{ modoEdicion ? 'Editar Paciente' : 'Agregar Paciente' }}</h5>
+            <p class="modal-subtitle">Complete la información del paciente</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-moderno" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
 
-      <div class="card-body p-4" style="max-height: 70vh; overflow-y: auto;">
-        <form [formGroup]="formPaciente">
+      <!-- Body moderno -->
+      <div class="modal-body-moderno">
+        <form [formGroup]="formPaciente" class="form-moderno">
 
-          <!-- 👤 Datos personales -->
-          <div class="mb-4">
-            <h6 class="text-primary mb-3">👤 Datos personales</h6>
-
-            <!-- Switch para menor sin cédula -->
-            <div class="row mb-3">
-              <div class="col-md-12">
-                <div class="form-check form-switch" style="margin-left: 20px;">
-                  <input class="form-check-input" type="checkbox" id="esMenorSinCedula"
-                    formControlName="esMenorSinCedula">
-                  <label class="form-check-label fw-medium text-dark-label" for="esMenorSinCedula">
-                    ¿El paciente es menor de edad y no posee cédula?
-                  </label>
-                </div>
+          <!-- Sección: Datos Personales -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-person-vcard"></i>
               </div>
+              <h6 class="section-title">Datos Personales</h6>
             </div>
-            <div class="row g-3">
-              <!-- Nombre Completo -->
-              <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">
-                  Nombre Completo <span class="text-danger">*</span>
+
+            <div class="section-content">
+              <!-- Switch para menor sin cédula -->
+              <div class="modern-switch-container">
+                <label class="modern-switch">
+                  <input type="checkbox" formControlName="esMenorSinCedula">
+                  <span class="switch-slider"></span>
                 </label>
-                <input type="text" class="form-control border-2 py-2" formControlName="nombreCompleto"
-                  placeholder="Ej: María Fernanda López" maxlength="100">
-                <div
-                  *ngIf="formPaciente.get('nombreCompleto')?.invalid && (formPaciente.get('nombreCompleto')?.touched || formPaciente.get('nombreCompleto')?.dirty)"
-                  class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('nombreCompleto') }}
+                <span class="switch-label">¿El paciente es menor de edad y no posee cédula?</span>
+              </div>
+
+              <div class="row g-3">
+                <!-- Fila 1: Información básica -->
+                <div class="col-md-8">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-person me-2"></i>
+                      Nombre Completo <span class="required">*</span>
+                    </label>
+                    <input type="text" class="form-control-moderno" formControlName="nombreCompleto"
+                      placeholder="Ej: María Fernanda López" maxlength="100">
+                    <div class="form-error" *ngIf="showError('nombreCompleto')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('nombreCompleto') }}
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Cédula -->
-              <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">
-                  {{ formPaciente.get('esMenorSinCedula')?.value ? 'Cédula del Representante' : 'Cédula' }} <span
-                    class="text-danger">*</span>
-                </label>
-                <input type="text" class="form-control border-2 py-2" formControlName="cedula"
-                  placeholder="Ej: 12345678" minlength="6" maxlength="9">
-                <div
-                  *ngIf="formPaciente.get('cedula')?.invalid && (formPaciente.get('cedula')?.touched || formPaciente.get('cedula')?.dirty)"
-                  class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('cedula') }}
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-card-text me-2"></i>
+                      {{ formPaciente.get('esMenorSinCedula')?.value ? 'Cédula Representante' : 'Cédula' }}
+                      <span class="required">*</span>
+                    </label>
+                    <input type="text" class="form-control-moderno" formControlName="cedula" placeholder="Ej: 12345678"
+                      minlength="6" maxlength="9">
+                    <div class="form-error" *ngIf="showError('cedula')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('cedula') }}
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Teléfono -->
-              <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">
-                  Teléfono <span class="text-danger">*</span>
-                </label>
-                <input type="text" class="form-control border-2 py-2" formControlName="telefono"
-                  placeholder="Ej: 04121234567" minlength="11" maxlength="13">
-                <div
-                  *ngIf="formPaciente.get('telefono')?.invalid && (formPaciente.get('telefono')?.touched || formPaciente.get('telefono')?.dirty)"
-                  class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('telefono') }}
-                </div>
-              </div>
-
-              <!-- Email -->
-              <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">
-                  Email
-                </label>
-                <input type="email" class="form-control border-2 py-2" formControlName="email"
-                  placeholder="Ej: paciente@email.com" maxlength="100">
-                <div
-                  *ngIf="formPaciente.get('email')?.invalid && (formPaciente.get('email')?.touched || formPaciente.get('email')?.dirty)"
-                  class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('email') }}
-                </div>
-              </div>
-
-              <!-- Fecha de Nacimiento -->
-              <div class="col-md-4">
-                <label class="form-label fw-medium text-dark-label">
-                  Fecha de Nacimiento <span class="text-danger">*</span>
-                </label>
-                <input type="date" class="form-control border-2 py-2" formControlName="fechaNacimiento">
-              </div>
-
-              <!-- Ocupación -->
-              <div class="col-md-4">
-                <label class="form-label fw-medium text-dark-label">
-                  Ocupación <span class="text-danger">*</span>
-                </label>
-                <input type="text" class="form-control border-2 py-2" formControlName="ocupacion"
-                  placeholder="Ej: Profesor universitario" maxlength="60">
-                <div
-                  *ngIf="formPaciente.get('ocupacion')?.invalid && (formPaciente.get('ocupacion')?.touched || formPaciente.get('ocupacion')?.dirty)"
-                  class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('ocupacion') }}
-                </div>
-              </div>
-
-              <!-- Género -->
-              <div class="col-md-4">
-                <label class="form-label fw-medium text-dark-label">
-                  Género <span class="text-danger">*</span>
-                </label>
-                <ng-select [items]="opcionesGenero" formControlName="genero" placeholder="Seleccione..."
-                  [searchable]="false" class="border-2" required>
-                </ng-select>
-              </div>
-
-              <!-- Dirección -->
-              <div class="col-md-12">
-                <label class="form-label fw-medium text-dark-label">
-                  Dirección <span class="text-danger">*</span>
-                </label>
-                <textarea class="form-control border-2" rows="2" formControlName="direccion"
-                  placeholder="Ej: Calle 10, Quinta Cielo Azul, Guatire"></textarea>
-                <div
-                  *ngIf="formPaciente.get('direccion')?.invalid && (formPaciente.get('direccion')?.touched || formPaciente.get('direccion')?.dirty)"
-                  class="text-danger small mt-1">
-                  <i class="bi bi-exclamation-circle-fill me-1"></i> {{ getErrorMsg('direccion') }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 🧬 Perfil Clínico -->
-          <div class="mt-4">
-            <h6 class="text-primary mb-2">🧬 Perfil Clínico</h6>
-            <div class="row g-3">
-
-              <!-- Condiciones clínicas (Sí/No) -->
-              <div class="col-md-3">
-                <label class="form-label fw-medium text-dark-label">
-                  ¿Usa lentes? <span class="text-danger">*</span>
-                </label>
-                <ng-select [items]="['Sí', 'No']" formControlName="usuarioLentes" placeholder="Seleccione..."
-                  class="border-2"></ng-select>
-              </div>
-
-              <div class="col-md-3">
-                <label class="form-label fw-medium text-dark-label">
-                  ¿Tiene Fotofobia? <span class="text-danger">*</span>
-                </label>
-                <ng-select [items]="['Sí', 'No']" formControlName="fotofobia" placeholder="Seleccione..."
-                  class="border-2"></ng-select>
-              </div>
-
-              <!-- Alergias -->
-              <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">Alergias a:</label>
-                <input class="form-control border-2 py-2" formControlName="alergicoA"
-                  placeholder="Ej: Polvo, medicamentos..." />
-              </div> <br>
-
-              <!-- Uso de dispositivos -->
-              <div class="row g-2" style="margin-left: 0px; margin-right: 0px;">
-                <!-- Select principal -->
+                <!-- Fila 2: Contacto -->
                 <div class="col-md-6">
-                  <label class="form-label fw-medium text-dark-label">
-                    ¿Usa dispositivos electrónicos? <span class="text-danger">*</span>
-                  </label>
-                  <ng-select [items]="['Sí', 'No']" formControlName="usoDispositivo" placeholder="Seleccione..."
-                    class="border-2">
-                  </ng-select>
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-telephone me-2"></i>
+                      Teléfono <span class="required">*</span>
+                    </label>
+                    <input type="text" class="form-control-moderno" formControlName="telefono"
+                      placeholder="Ej: 04121234567" minlength="11" maxlength="13">
+                    <div class="form-error" *ngIf="showError('telefono')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('telefono') }}
+                    </div>
+                  </div>
                 </div>
 
-                <!-- Select secundario condicional -->
-                <div class="col-md-6 g-2" *ngIf="formPaciente.get('usoDispositivo')?.value === 'Sí'">
-                  <label class="form-label fw-medium text-dark-label">
-                    ¿Por cuánto tiempo? <span class="text-danger">*</span>
-                  </label>
-                  <ng-select [items]="intervalosHora" bindLabel="" formControlName="intervaloUso"
-                    placeholder="Seleccione intervalo" class="border-2">
-                  </ng-select>
-                  <div
-                    *ngIf="formPaciente.get('intervaloUso')?.invalid && (formPaciente.get('intervaloUso')?.touched || formPaciente.get('intervaloUso')?.dirty)"
-                    class="text-danger small mt-1">
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-envelope me-2"></i>
+                      Email
+                    </label>
+                    <input type="email" class="form-control-moderno" formControlName="email"
+                      placeholder="Ej: paciente@email.com" maxlength="100">
+                    <div class="form-error" *ngIf="showError('email')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('email') }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Fila 3: Información personal -->
+                <div class="col-md-3">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-calendar3 me-2"></i>
+                      F. Nacimiento <span class="required">*</span>
+                    </label>
+                    <input type="date" class="form-control-moderno" formControlName="fechaNacimiento">
+                  </div>
+                </div>
+
+                <div class="col-md-5">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-briefcase me-2"></i>
+                      Ocupación <span class="required">*</span>
+                    </label>
+                    <input type="text" class="form-control-moderno" formControlName="ocupacion"
+                      placeholder="Ej: Profesor universitario" maxlength="60">
+                    <div class="form-error" *ngIf="showError('ocupacion')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('ocupacion') }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-gender-ambiguous me-2"></i>
+                      Género <span class="required">*</span>
+                    </label>
+                    <ng-select [items]="opcionesGenero" formControlName="genero" placeholder="Seleccione..."
+                      [searchable]="false" class="ng-select-moderno">
+                    </ng-select>
+                  </div>
+                </div>
+
+                <!-- Fila 4: Dirección completa -->
+                <div class="col-12">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-geo-alt me-2"></i>
+                      Dirección <span class="required">*</span>
+                    </label>
+                    <textarea class="form-control-moderno" rows="2" formControlName="direccion"
+                      placeholder="Ej: Calle 10, Quinta Cielo Azul, Guatire"></textarea>
+                    <div class="form-error" *ngIf="showError('direccion')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('direccion') }}
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <!-- Traumatismo ocular -->
-              <div class="col-md-4">
-                <label class="form-label fw-medium text-dark-label">
-                  ¿Traumatismo ocular previo? <span class="text-danger">*</span>
-                </label>
-                <ng-select [items]="['Sí', 'No']" formControlName="traumatismoOcular" placeholder="Seleccione..."
-                  class="border-2"></ng-select>
+          <!-- Sección: Perfil Clínico -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-heart-pulse"></i>
               </div>
+              <h6 class="section-title">Perfil Clínico</h6>
+            </div>
 
-              <div class="col-md-8" *ngIf="formPaciente.get('traumatismoOcular')?.value === 'Sí'">
-                <label class="form-label fw-medium text-dark-label">Descripción del traumatismo</label>
-                <input class="form-control border-2 py-2" formControlName="traumatismoOcularDescripcion"
-                  placeholder="Ej: Golpe en el ojo izquierdo" />
-              </div>
+            <div class="section-content">
+              <div class="row g-3">
+                <!-- Fila 1: Condiciones básicas -->
+                <div class="col-md-3">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-eyeglasses me-2"></i>
+                      Usa Lentes <span class="required">*</span>
+                    </label>
+                    <ng-select [items]="['Sí', 'No']" formControlName="usuarioLentes" placeholder="Seleccione..."
+                      class="ng-select-moderno"></ng-select>
+                  </div>
+                </div>
 
-              <!-- Cirugía ocular -->
-              <div class="col-md-4">
-                <label class="form-label fw-medium text-dark-label">
-                  ¿Cirugía ocular previa? <span class="text-danger">*</span>
-                </label>
-                <ng-select [items]="opcionesBooleanasSimple" formControlName="cirugiaOcular" placeholder="Seleccione..."
-                  class="border-2"></ng-select>
-              </div>
+                <div class="col-md-3">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-brightness-high me-2"></i>
+                      Fotofobia <span class="required">*</span>
+                    </label>
+                    <ng-select [items]="['Sí', 'No']" formControlName="fotofobia" placeholder="Seleccione..."
+                      class="ng-select-moderno"></ng-select>
+                  </div>
+                </div>
 
-              <div class="col-md-8" *ngIf="formPaciente.get('cirugiaOcular')?.value === 'Sí'">
-                <label class="form-label fw-medium text-dark-label">Descripción de la cirugía</label>
-                <input class="form-control border-2 py-2" formControlName="cirugiaOcularDescripcion"
-                  placeholder="Ej: Extracción de catarata" />
-              </div>
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-droplet me-2"></i>
+                      Alergias
+                    </label>
+                    <input class="form-control-moderno" formControlName="alergicoA"
+                      placeholder="Ej: Polvo, medicamentos, alimentos..." />
+                  </div>
+                </div>
 
-              <!-- Selecciones múltiples -->
-              <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">Antecedentes personales</label>
-                <ng-select [items]="opcionesAntecedentesPersonales" formControlName="antecedentesPersonales"
-                  [multiple]="true" placeholder="Seleccione..." class="border-2"></ng-select>
-              </div>
+                <!-- Fila 2: Dispositivos electrónicos -->
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-laptop me-2"></i>
+                      Usa Dispositivos <span class="required">*</span>
+                    </label>
+                    <ng-select [items]="['Sí', 'No']" formControlName="usoDispositivo" placeholder="Seleccione..."
+                      class="ng-select-moderno">
+                    </ng-select>
+                  </div>
+                </div>
 
-              <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">Antecedentes familiares</label>
-                <ng-select [items]="opcionesAntecedentesFamiliares" formControlName="antecedentesFamiliares"
-                  [multiple]="true" placeholder="Seleccione..." class="border-2"></ng-select>
-              </div>
+                <div class="col-md-8" *ngIf="formPaciente.get('usoDispositivo')?.value === 'Sí'">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-clock me-2"></i>
+                      Tiempo de Uso <span class="required">*</span>
+                    </label>
+                    <ng-select [items]="intervalosHora" formControlName="intervaloUso"
+                      placeholder="Seleccione intervalo" class="ng-select-moderno">
+                    </ng-select>
+                  </div>
+                </div>
 
-              <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">Patologías generales</label>
-                <ng-select [items]="opcionesPatologias" formControlName="patologias" [multiple]="true"
-                  placeholder="Seleccione..." class="border-2"></ng-select>
-              </div>
+                <!-- Fila 3: Traumatismo ocular -->
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-exclamation-triangle me-2"></i>
+                      Traumatismo Ocular <span class="required">*</span>
+                    </label>
+                    <ng-select [items]="['Sí', 'No']" formControlName="traumatismoOcular" placeholder="Seleccione..."
+                      class="ng-select-moderno"></ng-select>
+                  </div>
+                </div>
 
-              <div class="col-md-6">
-                <label class="form-label fw-medium text-dark-label">Patologías oculares</label>
-                <ng-select [items]="opcionesPatologiaOcular" formControlName="patologiaOcular" [multiple]="true"
-                  placeholder="Seleccione..." class="border-2"></ng-select>
+                <div class="col-md-8" *ngIf="formPaciente.get('traumatismoOcular')?.value === 'Sí'">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-journal-text me-2"></i>
+                      Descripción Traumatismo
+                    </label>
+                    <input class="form-control-moderno" formControlName="traumatismoOcularDescripcion"
+                      placeholder="Ej: Golpe en ojo izquierdo durante deporte" />
+                  </div>
+                </div>
+
+                <!-- Fila 4: Cirugía ocular -->
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-scissors me-2"></i>
+                      Cirugía Ocular <span class="required">*</span>
+                    </label>
+                    <ng-select [items]="opcionesBooleanasSimple" formControlName="cirugiaOcular"
+                      placeholder="Seleccione..." class="ng-select-moderno"></ng-select>
+                  </div>
+                </div>
+
+                <div class="col-md-8" *ngIf="formPaciente.get('cirugiaOcular')?.value === 'Sí'">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-journal-text me-2"></i>
+                      Descripción Cirugía
+                    </label>
+                    <input class="form-control-moderno" formControlName="cirugiaOcularDescripcion"
+                      placeholder="Ej: Extracción de catarata en 2020" />
+                  </div>
+                </div>
+
+                <!-- Fila 5: Antecedentes -->
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-person-heart me-2"></i>
+                      Antecedentes Personales
+                    </label>
+                    <ng-select [items]="opcionesAntecedentesPersonales" formControlName="antecedentesPersonales"
+                      [multiple]="true" placeholder="Seleccione antecedentes..." class="ng-select-moderno"></ng-select>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-people me-2"></i>
+                      Antecedentes Familiares
+                    </label>
+                    <ng-select [items]="opcionesAntecedentesFamiliares" formControlName="antecedentesFamiliares"
+                      [multiple]="true" placeholder="Seleccione antecedentes..." class="ng-select-moderno"></ng-select>
+                  </div>
+                </div>
+
+                <!-- Fila 6: Patologías -->
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-heart-pulse me-2"></i>
+                      Patologías Generales
+                    </label>
+                    <ng-select [items]="opcionesPatologias" formControlName="patologias" [multiple]="true"
+                      placeholder="Seleccione patologías..." class="ng-select-moderno"></ng-select>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-eye me-2"></i>
+                      Patologías Oculares
+                    </label>
+                    <ng-select [items]="opcionesPatologiaOcular" formControlName="patologiaOcular" [multiple]="true"
+                      placeholder="Seleccione patologías..." class="ng-select-moderno"></ng-select>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- 🌐 Redes sociales -->
-          <div class="mt-4">
-            <h6 class="text-primary mb-2">🌐 Redes sociales</h6>
-            <div class="d-flex flex-wrap gap-3 mb-3 align-items-end">
-              <div class="flex-grow-1">
-                <label class="form-label fw-medium text-dark-label mb-1">Red Social</label>
-                <select class="form-select border-2 py-2" [(ngModel)]="nuevaRed" [ngModelOptions]="{standalone: true}"
-                  (change)="habilitarUsuario()">
-                  <option value="">Seleccionar</option>
-                  <option *ngFor="let red of listaRedes" [value]="red">{{ red }}</option>
-                </select>
+          <!-- Sección: Redes Sociales -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-share"></i>
               </div>
-
-              <div class="flex-grow-1">
-                <label class="form-label fw-medium text-dark-label mb-1">Usuario</label>
-                <input class="form-control border-2 py-2" type="text" placeholder="Ej: @maria.lopez"
-                  [(ngModel)]="nuevoUsuario" [ngModelOptions]="{standalone: true}"
-                  [disabled]="!usuarioInputHabilitado" />
-              </div>
-
-              <button class="btn btn-primary px-4 py-2 mt-auto" type="button"
-                (click)="addRedSocial(nuevaRed, nuevoUsuario)" [disabled]="!nuevaRed || !nuevoUsuario">
-                <i class="bi bi-plus-lg me-1"></i> Añadir
-              </button>
+              <h6 class="section-title">Redes Sociales</h6>
             </div>
 
-            <div class="table-responsive">
-              <table class="table table-borderless table-hover shadow-sm">
-                <thead class="bg-light">
-                  <tr>
-                    <th class="fw-medium text-dark-label">Red</th>
-                    <th class="fw-medium text-dark-label">Usuario</th>
-                    <th class="fw-medium text-dark-label">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let social of redesSociales.controls; let i = index">
-                    <td class="align-middle">
-                      <i [ngClass]="getSocialIconClass(social.get('platform')?.value)" class="me-2"></i>
-                      {{ social.get('platform')?.value }}
-                    </td>
-                    <td class="align-middle">{{ social.get('username')?.value }}</td>
-                    <td class="align-middle">
-                      <button class="btn btn-sm btn-outline-danger rounded-circle" (click)="removeRedSocial(i)">
+            <div class="section-content">
+              <div class="redes-sociales-moderno">
+                <div class="redes-input-container">
+                  <div class="redes-input-group">
+                    <div class="input-field">
+                      <label class="form-label-moderno">Red Social</label>
+                      <select class="form-control-moderno" [(ngModel)]="nuevaRed" [ngModelOptions]="{standalone: true}"
+                        (change)="habilitarUsuario()">
+                        <option value="">Seleccionar red</option>
+                        <option *ngFor="let red of listaRedes" [value]="red">{{ red }}</option>
+                      </select>
+                    </div>
+
+                    <div class="input-field">
+                      <label class="form-label-moderno">Usuario</label>
+                      <input class="form-control-moderno" type="text" placeholder="Ej: @maria.lopez"
+                        [(ngModel)]="nuevoUsuario" [ngModelOptions]="{standalone: true}"
+                        [disabled]="!usuarioInputHabilitado" />
+                    </div>
+
+                    <button class="btn-agregar-red" type="button" (click)="addRedSocial(nuevaRed, nuevoUsuario)"
+                      [disabled]="!nuevaRed || !nuevoUsuario">
+                      <i class="bi bi-plus-circle"></i>
+                      Agregar
+                    </button>
+                  </div>
+                </div>
+
+                <div class="redes-list-container">
+                  <div class="redes-list-header">
+                    <span>Redes agregadas</span>
+                    <span class="redes-count">{{ redesSociales.length }} redes</span>
+                  </div>
+
+                  <div class="redes-list">
+                    <div *ngFor="let social of redesSociales.controls; let i = index" class="red-social-item">
+                      <div class="red-social-info">
+                        <i [ngClass]="getSocialIconClass(social.get('platform')?.value)" class="red-social-icon"></i>
+                        <div class="red-social-details">
+                          <span class="red-social-platform">{{ social.get('platform')?.value }}</span>
+                          <span class="red-social-username">{{ social.get('username')?.value }}</span>
+                        </div>
+                      </div>
+                      <button class="btn-eliminar-red" (click)="removeRedSocial(i)">
                         <i class="bi bi-trash"></i>
                       </button>
-                    </td>
-                  </tr>
-                  <tr *ngIf="redesSociales.length === 0">
-                    <td colspan="3" class="text-center text-muted py-3">
-                      <i class="bi bi-info-circle me-2"></i> No hay redes sociales agregadas
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                    </div>
+
+                    <div *ngIf="redesSociales.length === 0" class="redes-empty-state">
+                      <i class="bi bi-info-circle"></i>
+                      <span>No hay redes sociales agregadas</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="alert alert-warning mt-4" *ngIf="formPaciente.invalid && formPaciente.touched">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i> Por favor complete todos los campos obligatorios.
+          <!-- Alerta de validación -->
+          <div class="alert-moderno alert-warning" *ngIf="formPaciente.invalid && formPaciente.touched">
+            <i class="bi bi-exclamation-triangle"></i>
+            <div class="alert-content">
+              <strong>Campos incompletos</strong>
+              <span>Por favor complete todos los campos obligatorios.</span>
+            </div>
           </div>
         </form>
       </div>
 
-      <div class="modal-footer border-0 bg-light">
-        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
-          <i class="bi bi-x-lg me-1"></i> Cancelar
+      <!-- Footer moderno -->
+      <div class="modal-footer-moderno">
+        <button type="button" class="btn btn-secondary-moderno" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-2"></i>
+          Cancelar
         </button>
-        <button type="button" class="btn btn-primary px-4"
+        <button type="button" class="btn btn-primary-moderno"
           [disabled]="cargando || !formularioModificado() || formPaciente.invalid" (click)="guardarPaciente()">
-          <i class="bi bi-check-lg me-1"></i>
+          <i class="bi bi-check-circle me-2"></i>
           {{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+          <span *ngIf="cargando" class="spinner-border spinner-border-sm ms-2"></span>
         </button>
       </div>
     </div>

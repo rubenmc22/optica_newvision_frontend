@@ -524,9 +524,15 @@ export class VerPacientesComponent implements OnInit {
         return this.ordenAscendente ? valorA - valorB : valorB - valorA;
       }
 
-       return 0;
+      return 0;
     });
     this.calcularPaginacion();
+  }
+
+  // Método auxiliar para mostrar errores
+  showError(fieldName: string): boolean {
+    const field = this.formPaciente.get(fieldName);
+    return field ? (field.invalid && (field.touched || field.dirty)) : false;
   }
 
   // Método auxiliar para obtener valores de ordenamiento

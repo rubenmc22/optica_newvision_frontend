@@ -3,599 +3,1408 @@
    ============================================= */
 
 .pacientes-moderno {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e9ecef;
-  overflow: hidden;
-  width: 100%;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+    width: 100%;
 }
 
 /* Header modernizado */
 .card-header-moderno {
-  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-  color: white;
-  padding: 1.5rem 2rem;
-  border-bottom: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  
-  .header-content {
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    color: white;
+    padding: 1.1rem 1.5rem;
+    border-bottom: none;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 1rem;
-  }
-  
-  .header-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
-    
-    i {
-      font-size: 1.5rem;
-      color: white;
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
     }
-  }
-  
-  .header-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-  
-  .header-title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    letter-spacing: -0.5px;
-  }
-  
-  .header-subtitle {
-    font-size: 0.9rem;
-    opacity: 0.9;
-    color: rgba(255, 255, 255, 0.9);
-  }
+
+    .header-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+
+        i {
+            font-size: 1.5rem;
+            color: white;
+        }
+    }
+
+    .header-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .header-title {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.5px;
+    }
+
+    .header-subtitle {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        color: rgba(255, 255, 255, 0.9);
+    }
 }
 
 .btn-agregar-paciente {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: translateY(-1px);
-  }
-  
-  i {
-    font-size: 1.1rem;
-  }
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+    }
+
+    i {
+        font-size: 1.1rem;
+    }
 }
 
 /* Cuerpo modernizado */
 .card-body-moderno {
-  padding: 2rem;
-  background: var(--degradado-pastel) !important;
+    padding: 2rem;
+    background: var(--degradado-pastel) !important;
 }
 
 /* Filtros modernos */
 .filtros-modernos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .filtro-item {
-  .form-label-moderno {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
-    color: #495057;
-    margin-bottom: 0.5rem;
-    
-    i {
-      font-size: 1rem;
-      color: var(--primary-color);
+    .form-label-moderno {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 0.5rem;
+
+        i {
+            font-size: 1rem;
+            color: var(--primary-color);
+        }
     }
-  }
 }
 
 .search-container {
-  position: relative;
-  
-  .search-icon {
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6c757d;
-    pointer-events: none;
-  }
+    position: relative;
+
+    .search-icon {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+        pointer-events: none;
+    }
 }
 
 /* Alertas modernas */
 .alert-moderno {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-  
-  &.alert-info {
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    border: 1px solid #90caf9;
-    color: #1565c0;
-    
-    i {
-      color: #1976d2;
-      font-size: 1.25rem;
-      margin-top: 0.125rem;
-    }
-  }
-  
-  .alert-content {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    
-    strong {
-      font-weight: 600;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+
+    &.alert-info {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border: 1px solid #90caf9;
+        color: #1565c0;
+
+        i {
+            color: #1976d2;
+            font-size: 1.25rem;
+            margin-top: 0.125rem;
+        }
     }
-    
-    span {
-      font-size: 0.875rem;
-      opacity: 0.9;
+
+    .alert-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+
+        strong {
+            font-weight: 600;
+        }
+
+        span {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
     }
-  }
 }
 
 /* Tabla moderna con scroll */
 .table-container-moderno {
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .table-scroll-container {
-  max-height: 600px;
-  overflow-y: auto;
-  overflow-x: auto;
+    max-height: 600px;
+    overflow-y: auto;
+    overflow-x: auto;
 }
 
 .table-moderna.pacientes {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 1000px;
-  
-  thead {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    
-    tr {
-      border-bottom: 2px solid #dee2e6;
-    }
-    
-    th {
-      padding: 1.25rem 0.75rem;
-      font-weight: 600;
-      color: #495057;
-      text-align: center;
-      border-bottom: 2px solid #dee2e6;
-      vertical-align: middle;
-      
-      &.sortable {
-        cursor: pointer;
-        user-select: none;
-        transition: background-color 0.2s ease;
-        
-        &:hover {
-          background-color: #f1f3f4;
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1000px;
+
+    thead {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+
+        tr {
+            border-bottom: 2px solid #dee2e6;
         }
-        
-        .th-content {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
+
+        th {
+            padding: 1.25rem 0.75rem;
+            font-weight: 600;
+            color: #495057;
+            text-align: center;
+            border-bottom: 2px solid #dee2e6;
+            vertical-align: middle;
+
+            &.sortable {
+                cursor: pointer;
+                user-select: none;
+                transition: background-color 0.2s ease;
+
+                &:hover {
+                    background-color: #f1f3f4;
+                }
+
+                .th-content {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                }
+
+                i {
+                    font-size: 0.875rem;
+                    color: #6c757d;
+                }
+            }
+
+            /* Para columnas no ordenables */
+            .th-content {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+            }
         }
-        
-        i {
-          font-size: 0.875rem;
-          color: #6c757d;
+    }
+
+    tbody {
+        .paciente-row {
+            border-bottom: 1px solid #f1f3f4;
+            transition: background-color 0.2s ease;
+
+            &:hover {
+                background-color: #f8f9fa;
+            }
+
+            &:last-child {
+                border-bottom: none;
+            }
+
+            td {
+                padding: 1.25rem 0.75rem;
+                vertical-align: middle;
+                text-align: center;
+
+                /* Columna Paciente - alineada a la izquierda */
+                &.paciente-info {
+                    text-align: left;
+                }
+            }
         }
-      }
-      
-      /* Para columnas no ordenables */
-      .th-content {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-      }
     }
-  }
-  
-  tbody {
-    .paciente-row {
-      border-bottom: 1px solid #f1f3f4;
-      transition: background-color 0.2s ease;
-      
-      &:hover {
-        background-color: #f8f9fa;
-      }
-      
-      &:last-child {
-        border-bottom: none;
-      }
-      
-      td {
-        padding: 1.25rem 0.75rem;
-        vertical-align: middle;
-      }
-    }
-  }
 }
 
 /* Información del paciente */
 .paciente-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-align: left;
 }
 
 .paciente-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.25rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
 }
 
 .paciente-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
 .paciente-nombre {
-  font-weight: 600;
-  color: #495057;
+    font-weight: 600;
+    color: #495057;
 }
 
 .paciente-contacto {
-  font-size: 0.875rem;
-  color: #6c757d;
+    font-size: 0.875rem;
+    color: #6c757d;
 }
 
 /* Badges modernos */
 .cedula-badge {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  padding: 0.375rem 0.75rem;
-  border-radius: 20px;
-  font-family: 'Courier New', monospace;
-  font-weight: 500;
-  color: #495057;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+    color: #495057;
 }
 
 .edad-badge {
-  background: #e8f5e8;
-  color: #2e7d32;
-  padding: 0.375rem 0.75rem;
-  border-radius: 20px;
-  font-weight: 500;
+    background: #e8f5e8;
+    color: #2e7d32;
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-weight: 500;
 }
 
 .genero-badge {
-  padding: 0.375rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  
-  &.badge-masculino {
-    background: #e3f2fd;
-    color: #1976d2;
-  }
-  
-  &.badge-femenino {
-    background: #fce4ec;
-    color: #c2185b;
-  }
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+
+    &.badge-masculino {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+
+    &.badge-femenino {
+        background: #fce4ec;
+        color: #c2185b;
+    }
 }
 
 .sede-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  
-  &.badge-guatire {
-    background: #e3f2fd;
-    color: #1976d2;
-    border: 1px solid #bbdefb;
-  }
-  
-  &.badge-guarenas {
-    background: #e8f5e8;
-    color: #2e7d32;
-    border: 1px solid #c8e6c9;
-  }
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+
+    &.badge-guatire {
+        background: #e3f2fd;
+        color: #1976d2;
+        border: 1px solid #bbdefb;
+    }
+
+    &.badge-guarenas {
+        background: #e8f5e8;
+        color: #2e7d32;
+        border: 1px solid #c8e6c9;
+    }
 }
 
-.historial-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-}
-
-/* Botones de acció */
+/* Botón de historial centrado */
 .btn-historial {
-  background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
-  border: none;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
-  }
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    margin: 0 auto;
+    width: fit-content;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+    }
 }
 
 .btn-group-acciones {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
 }
 
 .btn-accion {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  transition: all 0.2s ease;
-  
-  &.btn-ver {
-    background: #e3f2fd;
-    color: #1976d2;
-    
-    &:hover {
-      background: #1976d2;
-      color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    transition: all 0.2s ease;
+
+    &.btn-ver {
+        background: #e3f2fd;
+        color: #1976d2;
+
+        &:hover {
+            background: #1976d2;
+            color: white;
+        }
     }
-  }
-  
-  &.btn-editar {
-    background: #fff3e0;
-    color: #f57c00;
-    
-    &:hover {
-      background: #f57c00;
-      color: white;
+
+    &.btn-editar {
+        background: #fff3e0;
+        color: #f57c00;
+
+        &:hover {
+            background: #f57c00;
+            color: white;
+        }
     }
-  }
 }
 
 /* Estado vacío */
 .estado-vacio {
-  padding: 3rem !important;
+    padding: 3rem !important;
 }
 
 .empty-state {
-  text-align: center;
-  color: #6c757d;
-  
-  i {
-    font-size: 4rem;
-    color: #dee2e6;
-    margin-bottom: 1rem;
-  }
-  
-  h4 {
-    color: #495057;
-    margin-bottom: 0.5rem;
-  }
-  
-  p {
-    margin-bottom: 1.5rem;
-  }
+    text-align: center;
+    color: #6c757d;
+
+    i {
+        font-size: 4rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+    }
+
+    h4 {
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+
+    p {
+        margin-bottom: 1.5rem;
+    }
 }
 
 .btn-agregar-vacio {
-  background: var(--degradado-color);
-  border: none;
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
+    background: var(--degradado-color);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
 }
 
 /* Paginación moderna */
 .paginacion-moderna {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.25rem 1.5rem;
-  background: #f8f9fa;
-  border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
 }
 
 .paginacion-info {
-  font-size: 0.875rem;
-  color: #6c757d;
-  font-weight: 500;
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 500;
 }
 
 .paginacion-controles {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .btn-paginacion {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid #dee2e6;
-  background: white;
-  border-radius: 6px;
-  color: #495057;
-  transition: all 0.2s ease;
-  
-  &:hover:not(:disabled) {
-    background: #e9ecef;
-    border-color: #adb5bd;
-  }
-  
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 6px;
+    color: #495057;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+        background: #e9ecef;
+        border-color: #adb5bd;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
 }
 
 .paginacion-numeros {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 0.75rem;
-  font-weight: 500;
-  
-  .pagina-actual {
-    color: var(--primary-color);
-    font-size: 1.1rem;
-  }
-  
-  .separador {
-    color: #6c757d;
-  }
-  
-  .total-paginas {
-    color: #495057;
-  }
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0.75rem;
+    font-weight: 500;
+
+    .pagina-actual {
+        color: var(--primary-color);
+        font-size: 1.1rem;
+    }
+
+    .separador {
+        color: #6c757d;
+    }
+
+    .total-paginas {
+        color: #495057;
+    }
 }
 
 /* Responsive */
 @media (max-width: 1200px) {
-  .card-body-moderno {
-    padding: 1.5rem;
-  }
-  
-  .filtros-modernos {
-    grid-template-columns: 1fr 1fr;
-  }
+    .card-body-moderno {
+        padding: 1.5rem;
+    }
+
+    .filtros-modernos {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
 @media (max-width: 768px) {
-  .card-header-moderno {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1.25rem;
-  }
-  
-  .card-body-moderno {
-    padding: 1.25rem;
-  }
-  
-  .filtros-modernos {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  
-  .table-scroll-container {
-    max-height: 500px;
-  }
-  
-  .table-moderna.pacientes {
-    min-width: 900px;
-  }
-  
-  .paciente-info {
-    min-width: 200px;
-  }
-  
-  .paginacion-moderna {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-  }
-  
-  .paginacion-controles {
-    justify-content: center;
-  }
+    .card-header-moderno {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.25rem;
+    }
+
+    .card-body-moderno {
+        padding: 1.25rem;
+    }
+
+    .filtros-modernos {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .table-scroll-container {
+        max-height: 500px;
+    }
+
+    .table-moderna.pacientes {
+        min-width: 900px;
+    }
+
+    .paciente-info {
+        min-width: 200px;
+    }
+
+    .paginacion-moderna {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+
+    .paginacion-controles {
+        justify-content: center;
+    }
 }
 
 /* Animaciones */
 .fade-in {
-  opacity: 0;
-  animation: fadeIn 0.4s ease-in forwards;
+    opacity: 0;
+    animation: fadeIn 0.4s ease-in forwards;
 }
 
 @keyframes fadeIn {
-  to {
-    opacity: 1;
-  }
+    to {
+        opacity: 1;
+    }
 }
 
 .paciente-row {
-  animation: slideInUp 0.3s ease-out;
+    animation: slideInUp 0.3s ease-out;
 }
 
 @keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =============================================
+   MODAL MODERNO PARA AGREGAR/EDITAR PACIENTES
+   ============================================= */
+
+/* Modal principal */
+.modal-moderna {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+/* Header moderno */
+.modal-header-moderno {
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    color: white;
+    padding: 1.2rem;
+    border-bottom: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.modal-header-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.modal-icon {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+        font-size: 1.5rem;
+        color: white;
+    }
+}
+
+.modal-title-content {
+    .modal-title {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.5px;
+    }
+
+    .modal-subtitle {
+        margin: 0.25rem 0 0 0;
+        opacity: 0.9;
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.9);
+    }
+}
+
+.btn-close-moderno {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: rotate(90deg);
+    }
+}
+
+/* Body moderno */
+.modal-body-moderno {
+    padding: 0;
+    background: #f8fafc;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.form-moderno {
+    padding: 2rem;
+}
+
+/* Secciones del formulario */
+.form-section {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.section-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.section-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    i {
+        font-size: 1.25rem;
+        color: white;
+    }
+}
+
+.section-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.section-content {
+    padding: 1.5rem;
+}
+
+/* Grupos de formulario modernos */
+.form-group-moderno {
+    margin-bottom: 1.25rem;
+    height: 100%;
+
+    .form-label-moderno {
+        display: flex;
+        align-items: center;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+
+        i {
+            color: #3498db;
+            font-size: 0.9rem;
+            margin-right: 0.5rem;
+            width: 16px;
+            text-align: center;
+        }
+
+        .required {
+            color: #e74c3c;
+            margin-left: 0.25rem;
+            font-weight: 700;
+        }
+    }
+}
+
+.form-control-moderno {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    background: white;
+    width: 100%;
+    min-height: 48px;
+
+    &:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        background: white;
+    }
+
+    &::placeholder {
+        color: #adb5bd;
+        font-size: 0.85rem;
+    }
+}
+
+/* Ajustes específicos para diferentes tipos de campos */
+input.form-control-moderno[type="date"] {
+    padding: 0.65rem 1rem;
+}
+
+textarea.form-control-moderno {
+    min-height: 80px;
+    resize: vertical;
+}
+
+/* Mejoras en el grid para mejor distribución */
+.row.g-3 {
+    margin-bottom: 0.5rem;
+}
+
+/* Asegurar altura consistente en todos los campos */
+.col-md-3,
+.col-md-4,
+.col-md-5,
+.col-md-6,
+.col-md-8 {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Labels más compactos para campos pequeños */
+.col-md-3 .form-label-moderno,
+.col-md-4 .form-label-moderno {
+    font-size: 0.8rem;
+
+    i {
+        font-size: 0.8rem;
+    }
+}
+
+/* Campos de fecha más compactos */
+.col-md-3 .form-control-moderno {
+    padding: 0.65rem 0.75rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .form-group-moderno {
+        margin-bottom: 1rem;
+    }
+
+    .form-label-moderno {
+        font-size: 0.8rem;
+
+        i {
+            font-size: 0.8rem;
+        }
+    }
+
+    .form-control-moderno {
+        padding: 0.65rem 0.75rem;
+        min-height: 44px;
+    }
+
+    .col-md-3,
+    .col-md-4,
+    .col-md-5,
+    .col-md-6,
+    .col-md-8 {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Select moderno */
+.ng-select-moderno {
+    .ng-select-container {
+        border: 2px solid #e9ecef !important;
+        border-radius: 8px !important;
+        padding: 0.5rem 1rem !important;
+        min-height: 48px !important;
+        transition: all 0.3s ease;
+
+        &:hover {
+            border-color: #3498db !important;
+        }
+    }
+
+    &.ng-select-focused .ng-select-container {
+        border-color: #3498db !important;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1) !important;
+    }
+}
+
+/* Switch moderno */
+.modern-switch-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.modern-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+
+        &:checked+.switch-slider {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        }
+
+        &:checked+.switch-slider:before {
+            transform: translateX(24px);
+        }
+    }
+}
+
+.switch-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #bdc3c7;
+    transition: .4s;
+    border-radius: 34px;
+
+    &:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 4px;
+        bottom: 4px;
+        background: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+}
+
+.switch-label {
+    font-weight: 500;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+/* Errores de formulario */
+.form-error {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #e74c3c;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+
+    i {
+        font-size: 0.9rem;
+    }
+}
+
+/* Redes sociales modernas */
+.redes-sociales-moderno {
+    .redes-input-container {
+        margin-bottom: 1.5rem;
+    }
+
+    .redes-input-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 1rem;
+        align-items: end;
+    }
+
+    .input-field {
+        .form-label-moderno {
+            margin-bottom: 0.5rem;
+        }
+    }
+}
+
+.btn-agregar-red {
+    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    height: fit-content;
+
+    &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
+.redes-list-container {
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.redes-list-header {
+    background: #f8f9fa;
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e9ecef;
+
+    span {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .redes-count {
+        background: #3498db;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+    }
+}
+
+.redes-list {
+    padding: 0.75rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.red-social-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    background: #f8fafc;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: #e3f2fd;
+        transform: translateX(4px);
+    }
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.red-social-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.red-social-icon {
+    font-size: 1.25rem;
+    color: #3498db;
+    width: 24px;
+}
+
+.red-social-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.red-social-platform {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.red-social-username {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.btn-eliminar-red {
+    background: #e74c3c;
+    border: none;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: #c0392b;
+        transform: scale(1.1);
+    }
+}
+
+.redes-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    color: #6c757d;
+    text-align: center;
+
+    i {
+        font-size: 1.5rem;
+    }
+}
+
+/* Alertas modernas en modal */
+.alert-moderno.alert-warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border: 1px solid #ffd351;
+    color: #856404;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+    border-radius: 12px;
+    margin: 1.5rem 0;
+
+    i {
+        color: #f39c12;
+        font-size: 1.25rem;
+        margin-top: 0.125rem;
+    }
+
+    .alert-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+
+        strong {
+            font-weight: 600;
+        }
+
+        span {
+            font-size: 0.875rem;
+        }
+    }
+}
+
+/* Footer moderno */
+.modal-footer-moderno {
+    background: white;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.btn-secondary-moderno {
+    background: #6c757d;
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+
+    &:hover {
+        background: #5a6268;
+        transform: translateY(-1px);
+    }
+}
+
+.btn-primary-moderno {
+    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+
+    &:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+}
+
+/* Responsive para modal */
+@media (max-width: 768px) {
+    .modal-header-moderno {
+        padding: 1.5rem;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .modal-body-moderno {
+        max-height: 60vh;
+    }
+
+    .form-moderno {
+        padding: 1.25rem;
+    }
+
+    .section-header {
+        padding: 1rem 1.25rem;
+    }
+
+    .section-content {
+        padding: 1rem;
+    }
+
+    .redes-input-group {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    .modal-footer-moderno {
+        padding: 1.25rem;
+        flex-direction: column;
+    }
+}
+
+/* Animación para modal */
+.modal-moderna {
+    animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mejoras específicas para la sección clínica */
+.section-content .row.g-3 {
+    margin-bottom: 0.25rem;
+}
+
+/* Iconos específicos para campos clínicos */
+.bi-eyeglasses {
+    color: #3498db;
+}
+
+.bi-brightness-high {
+    color: #f39c12;
+}
+
+.bi-droplet {
+    color: #9b59b6;
+}
+
+.bi-laptop {
+    color: #2ecc71;
+}
+
+.bi-clock {
+    color: #e67e22;
+}
+
+.bi-exclamation-triangle {
+    color: #e74c3c;
+}
+
+.bi-scissors {
+    color: #95a5a6;
+}
+
+.bi-journal-text {
+    color: #34495e;
+}
+
+.bi-person-heart {
+    color: #e91e63;
+}
+
+.bi-people {
+    color: #2196f3;
+}
+
+.bi-heart-pulse {
+    color: #c2185b;
+}
+
+.bi-eye {
+    color: #009688;
+}
+
+/* Ajustes para selects condicionales */
+.col-md-8[style*="display: none"]+.col-md-8,
+.col-md-8:empty {
+    display: none;
+}
+
+/* Mejora en la transición de campos condicionales */
+.col-md-8 {
+    transition: all 0.3s ease;
+
+    &.ng-star-inserted {
+        animation: fadeInUp 0.3s ease-out;
+    }
+}
+
+/* Labels más compactos para campos clínicos */
+.section-content .form-label-moderno {
+    font-size: 0.8rem;
+    margin-bottom: 0.4rem;
+
+    i {
+        font-size: 0.8rem;
+        width: 14px;
+    }
+}
+
+/* Placeholders más descriptivos */
+.ng-select-moderno .ng-placeholder {
+    font-size: 0.85rem;
+    color: #adb5bd;
+}
+
+/* Multi-select mejorado */
+.ng-select-moderno.ng-select-multiple {
+    .ng-select-container {
+        min-height: 48px;
+        padding: 0.5rem 1rem !important;
+    }
+
+    .ng-value {
+        background: #3498db;
+        color: white;
+        border-radius: 12px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        margin: 0.125rem;
+    }
+}
+
+/* Grupos de campos relacionados */
+.field-group {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #3498db;
+}
+
+.field-group-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Responsive para sección clínica */
+@media (max-width: 768px) {
+    .section-content .row.g-3 {
+        margin-bottom: 0;
+    }
+
+    .section-content .form-group-moderno {
+        margin-bottom: 1rem;
+    }
+
+    .col-md-3,
+    .col-md-4,
+    .col-md-6,
+    .col-md-8 {
+        margin-bottom: 0.5rem;
+    }
+
+    /* En móviles, los campos condicionales ocupan toda la fila */
+    .col-md-8[ngIf] {
+        width: 100%;
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+/* Animación para campos que aparecen/desaparecen */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
