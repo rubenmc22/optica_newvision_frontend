@@ -1,22 +1,87 @@
-<div class="card shadow-sm border-0">
-  <div class="card-header bg-white fw-bold text-muted">🏥 Comparativa por sede</div>
-  <div class="card-body">
-    <!-- Mostrar gráfico solo cuando hay datos -->
-    <div *ngIf="mostrarGrafico && chartData.labels && chartData.labels.length > 0">
-      <canvas baseChart
-        [type]="'bar'"
-        [data]="chartData"
-        [options]="chartOptions"
-        style="max-height: 300px"
-      ></canvas>
+<div class="chart-card-moderno">
+  <div class="chart-header-moderno">
+    <div class="chart-title-section">
+      <div class="chart-icon">
+        <i class="fas fa-hospital"></i>
+      </div>
+      <div class="chart-title-content">
+        
+        <p class="chart-subtitle">Desempeño comparativo entre sedes</p>
+      </div>
     </div>
-    
-    <!-- Mensaje cuando no hay datos -->
-    <div *ngIf="!mostrarGrafico || !chartData.labels || chartData.labels.length === 0" 
-         class="text-center text-muted py-4">
-      <i class="fas fa-chart-bar fa-3x mb-3 opacity-50"></i>
-      <p class="mb-0">No hay datos disponibles para mostrar</p>
-      <small>Los datos de comparativa se mostrarán cuando haya información de múltiples sedes</small>
+    <div class="chart-actions-moderno">
+      <button class="btn-chart-action" (click)="exportarGrafico()" title="Descargar">
+        <i class="fas fa-download"></i>
+      </button>
+      <button class="btn-chart-action" (click)="cambiarVista()" title="Cambiar orientación">
+        <i class="fas fa-arrows-alt-h"></i>
+      </button>
+      <button class="btn-chart-action" (click)="cambiarTipoGrafico(chartType === 'bar' ? 'line' : 'bar')" 
+              title="Cambiar tipo de gráfico">
+        <i class="fas" [class.fa-chart-bar]="chartType === 'line'" [class.fa-chart-line]="chartType === 'bar'"></i>
+      </button>
+      <button class="btn-chart-action" (click)="maximizarGrafico()" title="Expandir">
+        <i class="fas fa-expand"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="chart-body-moderno">
+    <!-- Filtros y controles -->
+    <div class="chart-controls" *ngIf="mostrarGrafico && chartData.labels && chartData.labels.length > 0">
+      <div class="filtros-container">
+        <div class="filtro-grupo">
+          <label class="filtro-label">Métrica:</label>
+          <select class="filtro-select" [(ngModel)]="metricaSeleccionada" (change)="actualizarGrafico()">
+            <option value="todas">Todas las métricas</option>
+            <option value="pacientes">Solo Pacientes</option>
+            <option value="historias">Solo Historias Médicas</option>
+            <option value="ventas">Solo Ventas</option>
+            <option value="ordenes">Solo Órdenes</option>
+          </select>
+        </div>
+        <div class="filtro-grupo">
+          <span class="vista-activa">
+            <i class="fas" [class.fa-bars]="esHorizontal" [class.fa-chart-bar]="!esHorizontal"></i>
+            {{ esHorizontal ? 'Horizontal' : 'Vertical' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráfico principal -->
+    <div class="grafico-principal">
+      <div *ngIf="mostrarGrafico && chartData.labels && chartData.labels.length > 0" 
+           class="chart-container">
+        <canvas baseChart
+          [type]="chartType"
+          [data]="chartData"
+          [options]="chartOptions"
+        ></canvas>
+      </div>
+      
+      <!-- Estado vacío -->
+      <div *ngIf="!mostrarGrafico || !chartData.labels || chartData.labels.length === 0" 
+           class="empty-state">
+        <div class="empty-icon">
+          <i class="fas fa-hospital"></i>
+        </div>
+        <h4>No hay datos de comparativa</h4>
+        <p>Los datos se mostrarán cuando haya información disponible de múltiples sedes</p>
+      </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="stats-rapidas" *ngIf="mostrarGrafico && chartData.labels && chartData.labels.length > 0">
+      <div class="stat-card" *ngFor="let stat of estadisticasRapidas">
+        <div class="stat-icon" [style.background]="stat.color">
+          <i [class]="stat.icono"></i>
+        </div>
+        <div class="stat-content">
+          <span class="stat-valor">{{ stat.valor }}</span>
+          <span class="stat-label">{{ stat.label }}</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>

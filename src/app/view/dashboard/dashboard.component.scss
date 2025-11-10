@@ -1,15 +1,450 @@
-@use '../../../custom-theme.scss' as theme;
+/* =============================================
+   DASHBOARD MODERNO - SCSS MEJORADO
+   ============================================= */
 
-.card-body{
-    background: var(--degradado-pastel) !important;
+.dashboard-moderno {
+  min-height: 100vh;
+  background: transparent;
+  
+  .container-fluid {
+    max-width: 1400px;
+  }
 }
 
-.card{
-    height: 94%;
+/* Header del Dashboard */
+.dashboard-header {
+  margin-bottom: 2rem;
+  
+  .dashboard-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0;
+    
+    i {
+      color: #3498db;
+    }
+  }
+  
+  .dashboard-subtitle {
+    color: #6c757d;
+    font-size: 1rem;
+    margin: 0.5rem 0 0 0;
+  }
+  
+  .last-update {
+    background: #f8f9fa;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    color: #6c757d;
+    font-size: 0.875rem;
+    border: 1px solid #e9ecef;
+    
+    i {
+      color: #3498db;
+    }
+  }
 }
 
-// Para zoom 125% - MUCHO más agresivo
-// Esto hará que en casi todos los laptops se vea en una columna
+/* Tarjetas de Métricas */
+.metric-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+  }
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+  
+  .metric-card-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    flex: 1;
+  }
+  
+  .metric-info {
+    flex: 1;
+  }
+  
+  .metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  
+  .metric-label {
+    font-size: 1rem;
+    color: #6c757d;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+  }
+  
+  .metric-trend {
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    
+    &.trend-positive {
+      color: #27ae60;
+    }
+    
+    &.trend-negative {
+      color: #e74c3c;
+    }
+  }
+  
+  .metric-icon {
+    .icon-wrapper {
+      width: 60px;
+      height: 60px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+  }
+  
+  .metric-card-footer {
+    border-top: 1px solid #e9ecef;
+    padding-top: 1rem;
+    
+    .metric-link {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        color: #2980b9;
+        gap: 0.75rem;
+      }
+      
+      &.disabled {
+        color: #6c757d;
+        cursor: not-allowed;
+        
+        &:hover {
+          gap: 0.5rem;
+        }
+      }
+    }
+  }
+  
+  /* Variantes de color */
+  &.metric-card-primary {
+    &::before {
+      background: #3498db;
+    }
+    
+    .metric-value {
+      color: #3498db;
+    }
+    
+    .metric-icon .icon-wrapper {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+    }
+  }
+  
+  &.metric-card-success {
+    &::before {
+      background: #27ae60;
+    }
+    
+    .metric-value {
+      color: #27ae60;
+    }
+    
+    .metric-icon .icon-wrapper {
+      background: linear-gradient(135deg, #27ae60, #219653);
+    }
+  }
+  
+  &.metric-card-warning {
+    &::before {
+      background: #f39c12;
+    }
+    
+    .metric-value {
+      color: #f39c12;
+    }
+    
+    .metric-icon .icon-wrapper {
+      background: linear-gradient(135deg, #f39c12, #e67e22);
+    }
+  }
+  
+  &.metric-card-danger {
+    &::before {
+      background: #e74c3c;
+    }
+    
+    .metric-value {
+      color: #e74c3c;
+    }
+    
+    .metric-icon .icon-wrapper {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+    }
+  }
+}
+
+/* Tarjetas de Gráficos */
+.chart-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
+  .chart-card-header {
+    padding: 1.5rem 1.5rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .chart-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #2c3e50;
+      display: flex;
+      align-items: center;
+      
+      i {
+        color: #3498db;
+      }
+    }
+    
+    .chart-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .btn-chart-action {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        background: #3498db;
+        color: white;
+        border-color: #3498db;
+      }
+    }
+  }
+  
+  .chart-card-body {
+    padding: 1rem 1.5rem 1.5rem;
+    flex: 1;
+    min-height: 300px;
+  }
+}
+
+/* Estado Vacío */
+.empty-state-card {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 2px dashed #e9ecef;
+  
+  .empty-state-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 2rem;
+    color: white;
+  }
+  
+  h4 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+  
+  p {
+    color: #6c757d;
+    margin-bottom: 2rem;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .btn {
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-weight: 500;
+    background: #3498db;
+    border: none;
+    color: white;
+    
+    &:hover {
+      background: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    }
+  }
+}
+
+/* Acciones Rápidas */
+.quick-actions-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  
+  .quick-actions-title {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    
+    i {
+      color: #f39c12;
+    }
+  }
+  
+  .quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+  
+  .quick-action-btn {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    
+    &:hover {
+      background: white;
+      border-color: #3498db;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+    }
+    
+    .action-icon {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 0.75rem;
+      font-size: 1.25rem;
+      color: white;
+    }
+    
+    span {
+      display: block;
+      font-weight: 500;
+      color: #2c3e50;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+/* Stats adicionales */
+.stats-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.stat-item {
+  text-align: center;
+  
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #3498db;
+    margin-bottom: 0.5rem;
+  }
+  
+  .stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+}
+
+/* =============================================
+   COMPATIBILIDAD CON TU CÓDIGO EXISTENTE
+   ============================================= */
+
+.card {
+  height: 94%;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  
+  .card-header {
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+    font-weight: 600;
+    color: #2c3e50;
+  }
+}
+
+// Para zoom 125% - Manteniendo tu configuración original
 @media (max-width: 1300px) {
   .col-zoom-stack {
     flex: 0 0 100%;
@@ -29,3 +464,105 @@
 .h-100 {
   height: 100%;
 }
+
+.h-90 {
+  height: 90%;
+}
+
+/* =============================================
+   RESPONSIVE MEJORADO
+   ============================================= */
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    text-align: center;
+    
+    .row {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+  
+  .metric-card {
+    padding: 1.25rem;
+    
+    .metric-value {
+      font-size: 2rem;
+    }
+    
+    .metric-icon .icon-wrapper {
+      width: 50px;
+      height: 50px;
+      font-size: 1.25rem;
+    }
+  }
+  
+  .chart-card .chart-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .quick-actions-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .dashboard-title {
+    font-size: 1.5rem !important;
+  }
+  
+  .quick-actions-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .empty-state-card {
+    padding: 2rem 1rem;
+  }
+  
+  .metric-card {
+    .metric-card-content {
+      flex-direction: column;
+      gap: 1rem;
+      text-align: center;
+    }
+    
+    .metric-icon {
+      align-self: center;
+    }
+  }
+}
+
+/* =============================================
+   ANIMACIONES
+   ============================================= */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.metric-card,
+.chart-card,
+.quick-actions-card {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.metric-card:nth-child(2) { animation-delay: 0.1s; }
+.metric-card:nth-child(3) { animation-delay: 0.2s; }
+.metric-card:nth-child(4) { animation-delay: 0.3s; }

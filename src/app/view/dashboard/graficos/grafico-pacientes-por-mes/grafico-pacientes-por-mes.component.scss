@@ -1,11 +1,622 @@
-@use '../../../../../custom-theme.scss' as theme;
+// Variables para el carrusel
+$primary-color: #3498db;
+$secondary-color: #2ecc71;
+$accent-color: #e74c3c;
+$warning-color: #f39c12;
+$dark-color: #2c3e50;
+$light-bg: #f8f9fa;
+$border-radius: 16px;
+$shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+$transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
-
-.card-body {
-    //background: var(--degradado-pastel) !important;
+.graficos-carrusel {
+  position: relative;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 15px;
 }
 
-.card {
-    min-height: 385px !important;
-    margin-bottom: 0px !important;
+// Controles de navegación
+.carrusel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 15px;
+
+  .control-btn {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $dark-color;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: $transition;
+    flex-shrink: 0;
+
+    &:hover:not(:disabled) {
+      background: $primary-color;
+      color: white;
+      border-color: $primary-color;
+      transform: scale(1.05);
+    }
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+  }
+
+  .indicadores {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    .indicador {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: $transition;
+      min-width: 120px;
+      justify-content: center;
+
+      &:hover {
+        border-color: $primary-color;
+        transform: translateY(-1px);
+      }
+
+      &.active {
+        background: $primary-color;
+        border-color: $primary-color;
+        color: white;
+
+        .indicador-icono {
+          background: rgba(255, 255, 255, 0.2);
+          color: white;
+        }
+      }
+
+      .indicador-icono {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: $light-bg;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        transition: $transition;
+      }
+
+      .indicador-texto {
+        font-weight: 600;
+        font-size: 0.75rem;
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+// Contenedor principal del carrusel - TAMAÑO REDUCIDO
+.carrusel-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: $border-radius;
+  background: white;
+  box-shadow: $shadow;
+  margin-bottom: 15px;
+  height: 420px; // Altura reducida
+
+  .carrusel-track {
+    display: flex;
+    transition: $transition;
+    height: 100%;
+
+    .carrusel-slide {
+      min-width: 100%;
+      height: 100%;
+      padding: 0;
+    }
+  }
+}
+
+// Tarjeta de gráfico en carrusel - MÁS COMPACTA
+.chart-card-carrusel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background: white;
+  position: relative;
+
+  &.placeholder {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .placeholder-content {
+      text-align: center;
+      max-width: 300px;
+
+      .placeholder-icon {
+        width: 60px;
+        height: 60px;
+        background: $primary-color;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 15px;
+        font-size: 1.5rem;
+        color: white;
+      }
+
+      h3 {
+        color: $dark-color;
+        margin-bottom: 8px;
+        font-size: 1.3rem;
+      }
+
+      p {
+        color: #6c757d;
+        margin-bottom: 20px;
+        line-height: 1.4;
+        font-size: 0.9rem;
+      }
+
+      .btn-placeholder {
+        background: $primary-color;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: $transition;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0 auto;
+        font-size: 0.85rem;
+
+        &:hover {
+          background: darken($primary-color, 10%);
+          transform: translateY(-1px);
+        }
+      }
+    }
+  }
+}
+
+// Header del gráfico en carrusel - MÁS COMPACTO
+.chart-header-carrusel {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+
+  .chart-title-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .chart-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      color: white;
+
+      &.pacientes {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+      }
+
+      &.historias {
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
+      }
+    }
+
+    .chart-title-content {
+      .chart-title {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: $dark-color;
+        line-height: 1.2;
+      }
+
+      .chart-subtitle {
+        margin: 4px 0 0 0;
+        color: #6c757d;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  .chart-actions-carrusel {
+    display: flex;
+    gap: 6px;
+
+    .btn-chart-action {
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: $transition;
+
+      &:hover {
+        background: $primary-color;
+        color: white;
+        border-color: $primary-color;
+        transform: scale(1.05);
+      }
+    }
+  }
+}
+
+// Cuerpo del gráfico en carrusel - MEJOR DISTRIBUCIÓN
+.chart-body-carrusel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+
+  .chart-container-carrusel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 0; // Importante para flexbox
+
+    .chart-wrapper {
+      flex: 1;
+      position: relative;
+      min-height: 200px; // Altura reducida del gráfico
+      max-height: 220px;
+
+      canvas {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 220px;
+      }
+    }
+  }
+
+  .chart-stats-carrusel {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    padding: 15px;
+    background: $light-bg;
+    border-radius: 10px;
+    margin-top: auto;
+
+    .stat-item {
+      text-align: center;
+
+      .stat-value {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: $dark-color;
+        margin-bottom: 4px;
+        line-height: 1;
+
+        &.trend-positive {
+          color: #27ae60;
+        }
+
+        &.trend-negative {
+          color: #e74c3c;
+        }
+
+        i {
+          font-size: 0.7rem;
+          margin-right: 4px;
+        }
+      }
+
+      .stat-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+    }
+  }
+
+  .empty-chart-state-carrusel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #6c757d;
+    padding: 30px;
+
+    .empty-chart-icon {
+      width: 60px;
+      height: 60px;
+      background: $light-bg;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 15px;
+      font-size: 1.5rem;
+      color: #adb5bd;
+    }
+
+    h4 {
+      margin-bottom: 8px;
+      color: $dark-color;
+      font-size: 1.1rem;
+    }
+
+    p {
+      max-width: 250px;
+      line-height: 1.4;
+      margin: 0;
+      font-size: 0.85rem;
+    }
+  }
+}
+
+// Información del carrusel
+.carrusel-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+
+  .info-item {
+    .info-label {
+      display: block;
+      font-size: 0.75rem;
+      color: #6c757d;
+      margin-bottom: 2px;
+    }
+
+    .info-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: $dark-color;
+    }
+  }
+
+  .auto-play-controls {
+    .btn-auto-play {
+      background: $light-bg;
+      border: 2px solid #e9ecef;
+      border-radius: 18px;
+      padding: 6px 12px;
+      color: #6c757d;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: $transition;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+
+      &:hover,
+      &.active {
+        background: $primary-color;
+        color: white;
+        border-color: $primary-color;
+      }
+    }
+  }
+}
+
+// Animaciones
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.carrusel-slide {
+  animation: slideIn 0.4s ease-out;
+}
+
+// Responsive - MEJORADO
+@media (max-width: 768px) {
+  .graficos-carrusel {
+    padding: 10px;
+  }
+
+  .carrusel-controls {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 15px;
+
+    .indicadores {
+      order: -1;
+      width: 100%;
+
+      .indicador {
+        min-width: 100px;
+        padding: 6px 10px;
+
+        .indicador-texto {
+          font-size: 0.7rem;
+        }
+      }
+    }
+
+    .control-btn {
+      width: 40px;
+      height: 40px;
+      font-size: 1rem;
+    }
+  }
+
+  .carrusel-container {
+    height: 380px;
+  }
+
+  .chart-card-carrusel {
+    padding: 15px;
+  }
+
+  .chart-header-carrusel {
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 15px;
+
+    .chart-title-section {
+      flex-direction: column;
+      text-align: center;
+      gap: 8px;
+    }
+
+    .chart-icon {
+      width: 45px;
+      height: 45px;
+      font-size: 1.1rem;
+    }
+
+    .chart-title-content {
+      .chart-title {
+        font-size: 1.2rem;
+      }
+      
+      .chart-subtitle {
+        font-size: 0.85rem;
+      }
+    }
+  }
+
+  .chart-body-carrusel {
+    .chart-container-carrusel {
+      .chart-wrapper {
+        min-height: 180px;
+        max-height: 200px;
+      }
+    }
+
+    .chart-stats-carrusel {
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
+  }
+
+  .carrusel-info {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .carrusel-container {
+    height: 350px;
+  }
+
+  .chart-header-carrusel .chart-title-content .chart-title {
+    font-size: 1.1rem;
+  }
+
+  .chart-body-carrusel {
+    .chart-stats-carrusel .stat-item .stat-value {
+      font-size: 1.3rem;
+    }
+
+    .chart-container-carrusel .chart-wrapper {
+      min-height: 160px;
+      max-height: 180px;
+    }
+  }
+
+  .chart-card-carrusel.placeholder .placeholder-content {
+    max-width: 250px;
+
+    .placeholder-icon {
+      width: 50px;
+      height: 50px;
+      font-size: 1.3rem;
+    }
+
+    h3 {
+      font-size: 1.1rem;
+    }
+
+    p {
+      font-size: 0.8rem;
+    }
+  }
+}
+
+// Ajustes específicos para Chart.js
+:host ::ng-deep {
+  // Reducir el tamaño de la leyenda
+  .chart-legend {
+    font-size: 0.7rem !important;
+    
+    .legend-labels {
+      background: transparent !important;
+    }
+  }
+
+  // Tooltips más compactos
+  .chartjs-tooltip {
+    font-size: 0.75rem !important;
+    padding: 6px 10px !important;
+  }
+
+  // Asegurar que el gráfico se ajuste al contenedor
+  canvas {
+    max-height: 220px !important;
+  }
+}
+
+// Utilidades para mejor distribución
+.flex-compact {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chart-area {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.stats-area {
+  flex-shrink: 0;
+  margin-top: auto;
 }

@@ -1,97 +1,265 @@
-<div class="container-fluid px-4 mt-4">
+<div class="dashboard-moderno mb-5">
+  <div class="container-fluid px-4 py-4">
 
-    <div class="row">
-        <!-- Pacientes registrados -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="small-box bg-info">
-                <div class="inner">
-                    <div class="h4 fw-bold">{{ datosLocales?.total ?? 0 }}</div>
-                    <p>Pacientes registrados</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-user-injured"></i>
-                </div>
-                <a [routerLink]="['/pacientes']" class="small-box-footer">
-                    Más información <i class="fas fa-arrow-circle-right"></i>
-                </a>
-            </div>
+    <!-- Header del Dashboard -->
+    <div class="dashboard-header mb-4">
+      <div class="row align-items-center">
+        <div class="col">
+          <h1 class="dashboard-title">
+            <i class="fas fa-tachometer-alt me-3"></i>
+            Panel de Control
+          </h1>
+          <p class="dashboard-subtitle">Resumen general</p>
         </div>
+        <div class="col-auto">
+          <div class="last-update">
+            <i class="fas fa-sync-alt me-2"></i>
+            Actualizado: {{ fechaActual | date:'HH:mm' }}
+          </div>
+        </div>
+      </div>
+    </div>
 
-        <!-- Historias médicas -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="small-box bg-success">
-                <div class="inner">
-                    <div class="h4 fw-bold">{{ totalHistorias }}</div>
-                    <p>Historias médicas</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-file-medical"></i>
-                </div>
-                <a [routerLink]="['/pacientes-historias']" class="small-box-footer">
-                    Más información <i class="fas fa-arrow-circle-right"></i>
-                </a>
+    <!-- Tarjetas de Métricas -->
+    <div class="row g-4 mb-5">
+      <!-- Pacientes registrados -->
+      <div class="col-xl-3 col-md-6">
+        <div class="metric-card metric-card-primary">
+          <div class="metric-card-content">
+            <div class="metric-info">
+              <div class="metric-value">{{ datosLocales?.total ?? 0 }}</div>
+              <div class="metric-label">Pacientes Registrados</div>
+              <div class="metric-trend trend-positive">
+                <i class="fas fa-arrow-up"></i>
+                {{ crecimientoPacientes }}% vs mes anterior
+              </div>
             </div>
+            <div class="metric-icon">
+              <div class="icon-wrapper">
+                <i class="fas fa-user-injured"></i>
+              </div>
+            </div>
+          </div>
+          <div class="metric-card-footer">
+            <a [routerLink]="['/pacientes']" class="metric-link">
+              Ver detalles
+              <i class="fas fa-arrow-right"></i>
+            </a>
+          </div>
         </div>
+      </div>
 
-        <!-- Ventas hoy -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="small-box bg-warning">
-                <div class="inner">
-                    <div class="h4 fw-bold">{{ totalVentas }}</div>
-                    <p>Ventas hoy</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-cash-register"></i>
-                </div>
-                <span class="small-box-footer text-white-50 d-block">Más información <i
-                        class="fas fa-arrow-circle-right"></i></span>
+      <!-- Historias médicas -->
+      <div class="col-xl-3 col-md-6">
+        <div class="metric-card metric-card-success">
+          <div class="metric-card-content">
+            <div class="metric-info">
+              <div class="metric-value">{{ totalHistorias }}</div>
+              <div class="metric-label">Historias Médicas</div>
+              <div class="metric-trend trend-positive">
+                <i class="fas fa-arrow-up"></i>
+                {{ crecimientoHistorias }}% vs mes anterior
+              </div>
             </div>
+            <div class="metric-icon">
+              <div class="icon-wrapper">
+                <i class="fas fa-file-medical"></i>
+              </div>
+            </div>
+          </div>
+          <div class="metric-card-footer">
+            <a [routerLink]="['/pacientes-historias']" class="metric-link">
+              Ver detalles
+              <i class="fas fa-arrow-right"></i>
+            </a>
+          </div>
         </div>
+      </div>
 
-        <!-- Órdenes pendientes -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="small-box bg-danger">
-                <div class="inner">
-                    <div class="h4 fw-bold">{{ ordenesPendientes }}</div>
-                    <p>Órdenes pendientes</p>
-                </div>
-                <div class="icon">
-                    <i class="fas fa-clipboard-list"></i>
-                </div>
-                <span class="small-box-footer text-white-50 d-block">Más información <i
-                        class="fas fa-arrow-circle-right"></i></span>
+      <!-- Ventas hoy -->
+      <div class="col-xl-3 col-md-6">
+        <div class="metric-card metric-card-warning">
+          <div class="metric-card-content">
+            <div class="metric-info">
+              <div class="metric-value">{{ totalVentas }}</div>
+              <div class="metric-label">Ventas Hoy</div>
+              <div class="metric-trend" [class.trend-positive]="crecimientoVentas >= 0" [class.trend-negative]="crecimientoVentas < 0">
+                <i class="fas" [class.fa-arrow-up]="crecimientoVentas >= 0" [class.fa-arrow-down]="crecimientoVentas < 0"></i>
+                {{ Math.abs(crecimientoVentas) }}% vs ayer
+              </div>
             </div>
+            <div class="metric-icon">
+              <div class="icon-wrapper">
+                <i class="fas fa-cash-register"></i>
+              </div>
+            </div>
+          </div>
+          <div class="metric-card-footer">
+            <span class="metric-link disabled">
+              Más información
+              <i class="fas fa-arrow-right"></i>
+            </span>
+          </div>
         </div>
+      </div>
+
+      <!-- Órdenes pendientes -->
+      <div class="col-xl-3 col-md-6">
+        <div class="metric-card metric-card-danger">
+          <div class="metric-card-content">
+            <div class="metric-info">
+              <div class="metric-value">{{ ordenesPendientes }}</div>
+              <div class="metric-label">Órdenes Pendientes</div>
+              <div class="metric-trend" [class.trend-positive]="ordenesPendientes <= 5" [class.trend-negative]="ordenesPendientes > 5">
+                <i class="fas" [class.fa-check]="ordenesPendientes <= 5" [class.fa-exclamation]="ordenesPendientes > 5"></i>
+                {{ ordenesPendientes <= 5 ? 'Bajo' : 'Alto' }} pendiente
+              </div>
+            </div>
+            <div class="metric-icon">
+              <div class="icon-wrapper">
+                <i class="fas fa-clipboard-list"></i>
+              </div>
+            </div>
+          </div>
+          <div class="metric-card-footer">
+            <span class="metric-link disabled">
+              Más información
+              <i class="fas fa-arrow-right"></i>
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 🔹 Gráficos -->
     <div *ngIf="datosLocales" class="row g-4">
-        <div class="col-md-6 col-zoom-stack mb-4">
-            <div class="card shadow-sm border-0 h-90">
-                <div class="card-header fw-bold text-muted">📅 Distribución mensual</div>
-                <div class="card-body">
-                    <app-grafico-pacientes-por-mes [data]="datosLocales.porMes"></app-grafico-pacientes-por-mes>
-                </div>
+      <!-- Distribución mensual -->
+      <div class="col-lg-6 col-zoom-stack">
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-title">
+              <i class="fas fa-chart-bar me-2"></i>
+              Distribución Mensual
             </div>
+            <div class="chart-actions">
+              <button class="btn-chart-action" (click)="exportarGrafico('mensual')" title="Descargar">
+                <i class="fas fa-download"></i>
+              </button>
+              <button class="btn-chart-action" (click)="maximizarGrafico('mensual')" title="Expandir">
+                <i class="fas fa-expand"></i>
+              </button>
+            </div>
+          </div>
+          <div class="chart-card-body">
+            <app-grafico-pacientes-por-mes [data]="datosLocales.porMes"></app-grafico-pacientes-por-mes>
+          </div>
         </div>
+      </div>
 
-        <div class="col-md-6 col-zoom-stack mb-4" *ngIf="puedeVerComparativa">
-            <div class="card shadow-sm border-0 h-90">
-                <div class="card-header fw-bold text-muted">🏥 Comparativa por sede</div>
-                <div class="card-body">
-                    <app-grafico-comparativa-sedes [data]="datosComparativa"></app-grafico-comparativa-sedes>
-                </div>
+      <!-- Comparativa por sede -->
+      <div class="col-lg-6 col-zoom-stack" *ngIf="puedeVerComparativa">
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-title">
+              <i class="fas fa-hospital me-2"></i>
+              Comparativa por Sede
             </div>
+          <!--  <div class="chart-actions">
+              <button class="btn-chart-action" (click)="exportarGrafico('sedes')" title="Descargar">
+                <i class="fas fa-download"></i>
+              </button>
+              <button class="btn-chart-action" (click)="maximizarGrafico('sedes')" title="Expandir">
+                <i class="fas fa-expand"></i>
+              </button>
+            </div>-->
+          </div>
+          <div class="chart-card-body">
+            <app-grafico-comparativa-sedes [data]="datosComparativa"></app-grafico-comparativa-sedes>
+          </div>
         </div>
+      </div>
     </div>
 
-    <!-- Mensaje cuando no hay datos para gráficos -->
+    <!-- Mensaje cuando no hay datos -->
     <div *ngIf="!datosLocales && totalHistorias === 0" class="row mt-4">
-        <div class="col-12">
-            <div class="alert alert-info text-center">
-                <i class="fas fa-info-circle me-2"></i>
-                No hay datos suficientes para mostrar los gráficos. Los gráficos se mostrarán cuando haya pacientes e historias médicas registradas.
-            </div>
+      <div class="col-12">
+        <div class="empty-state-card">
+          <div class="empty-state-icon">
+            <i class="fas fa-chart-pie"></i>
+          </div>
+          <h4>No hay datos suficientes</h4>
+          <p>Los gráficos se mostrarán cuando haya pacientes e historias médicas registradas.</p>
+          <button class="btn btn-primary" (click)="irAPacientes()">
+            <i class="fas fa-plus me-2"></i>
+            Agregar Primer Paciente
+          </button>
         </div>
+      </div>
     </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-5" *ngIf="datosLocales">
+      <div class="col-12">
+        <div class="quick-actions-card">
+          <h5 class="quick-actions-title">
+            <i class="fas fa-bolt me-2"></i>
+            Acciones Rápidas
+          </h5>
+          <div class="quick-actions-grid">
+            <button class="quick-action-btn" (click)="nuevoPaciente()">
+              <div class="action-icon">
+                <i class="fas fa-user-plus"></i>
+              </div>
+              <span>Nuevo Paciente</span>
+            </button>
+            <button class="quick-action-btn" (click)="nuevaHistoria()">
+              <div class="action-icon">
+                <i class="fas fa-file-medical"></i>
+              </div>
+              <span>Nueva Historia</span>
+            </button>
+            <button class="quick-action-btn" (click)="agendarCita()">
+              <div class="action-icon">
+                <i class="fas fa-calendar-check"></i>
+              </div>
+              <span>Agendar Cita</span>
+            </button>
+            <button class="quick-action-btn" (click)="verReportes()">
+              <div class="action-icon">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              <span>Reportes</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats adicionales -->
+    <!--<div class="row mt-4" *ngIf="datosLocales">
+      <div class="col-12">
+        <div class="stats-card">
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value">{{ promedioEdad }}</div>
+              <div class="stat-label">Edad Promedio</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ porcentajeMujeres }}%</div>
+              <div class="stat-label">Pacientes Mujeres</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ porcentajeHombres }}%</div>
+              <div class="stat-label">Pacientes Hombres</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ sedeActual }}</div>
+              <div class="stat-label">Sede Activa</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>-->
+
+  </div>
 </div>

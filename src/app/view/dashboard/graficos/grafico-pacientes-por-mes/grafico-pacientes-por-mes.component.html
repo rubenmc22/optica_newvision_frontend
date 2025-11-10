@@ -1,53 +1,216 @@
-<div class="row">
-  <!-- Gráfico de Pacientes -->
-  <div class="col-md-6">
-    <div class="card shadow-sm border-0">
-      <div class="card-header bg-white fw-bold text-muted">👥 Pacientes</div>
-      <div class="card-body">
-        <!-- Mostrar gráfico solo cuando hay datos -->
-        <div *ngIf="mostrarPacientes && chartPacientesData.labels && chartPacientesData.labels.length > 0">
-          <canvas baseChart
-            [type]="'doughnut'"
-            [data]="chartPacientesData"
-            [options]="chartPacientesOptions"
-            style="max-height: 300px"
-          ></canvas>
+<div class="graficos-carrusel">
+  <!-- Controles de navegación -->
+  <div class="carrusel-controls">
+    <button class="control-btn prev-btn" (click)="anteriorGrafico()" [disabled]="graficoActual === 0">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+
+    <div class="indicadores">
+      <div class="indicador" *ngFor="let grafico of graficos; let i = index" [class.active]="i === graficoActual"
+        (click)="irAgrafico(i)">
+        <div class="indicador-icono">
+          <i [class]="grafico.icono"></i>
         </div>
-        
-        <!-- Mensaje cuando no hay datos -->
-        <div *ngIf="!mostrarPacientes || !chartPacientesData.labels || chartPacientesData.labels.length === 0" 
-             class="text-center text-muted py-4">
-          <i class="fas fa-users fa-3x mb-3 opacity-50"></i>
-          <p class="mb-0">No hay datos de pacientes</p>
-          <small>Los datos se mostrarán cuando haya pacientes registrados</small>
+        <span class="indicador-texto">{{ grafico.nombre }}</span>
+      </div>
+    </div>
+
+    <button class="control-btn next-btn" (click)="siguienteGrafico()" [disabled]="graficoActual === totalGraficos - 1">
+      <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+
+  <!-- Contenedor del carrusel -->
+  <div class="carrusel-container">
+    <div class="carrusel-track" [style.transform]="'translateX(-' + (graficoActual * 100) + '%)'">
+
+      <!-- Gráfico de Pacientes -->
+      <div class="carrusel-slide">
+        <div class="chart-card-carrusel">
+          <div class="chart-header-carrusel">
+            <div class="chart-title-section">
+              <div class="chart-icon pacientes">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="chart-title-content">
+                <h3 class="chart-title">Distribución de Pacientes</h3>
+                <p class="chart-subtitle">Por mes - {{ sedeActual }}</p>
+              </div>
+            </div>
+            <div class="chart-actions-carrusel">
+              <button class="btn-chart-action" (click)="exportarGrafico('pacientes')" title="Descargar">
+                <i class="fas fa-download"></i>
+              </button>
+              <button class="btn-chart-action" (click)="cambiarTipoGrafico('pacientes')" title="Cambiar tipo">
+                <i class="fas fa-chart-bar"></i>
+              </button>
+              <button class="btn-chart-action" (click)="maximizarGrafico('pacientes')" title="Expandir">
+                <i class="fas fa-expand"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="chart-body-carrusel">
+            <!-- Gráfico de Pacientes con solución para cambio de tipo -->
+            <div *ngIf="mostrarPacientes && chartPacientesData.labels && chartPacientesData.labels.length > 0"
+              class="chart-container-carrusel">
+              <div class="chart-wrapper">
+                <!-- Canvas principal -->
+                <div *ngIf="!refrescarGraficos">
+                  <canvas baseChart [type]="chartPacientesType" [data]="chartPacientesData"
+                    [options]="getChartOptions()">
+                  </canvas>
+                </div>
+                <!-- Canvas alterno para forzar recreación -->
+                <div *ngIf="refrescarGraficos">
+                  <canvas baseChart [type]="chartPacientesType" [data]="chartPacientesData"
+                    [options]="getChartOptions()">
+                  </canvas>
+                </div>
+              </div>
+
+              <div class="chart-stats-carrusel">
+                <div class="stat-item">
+                  <span class="stat-value">{{ totalPacientes }}</span>
+                  <span class="stat-label">Total</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-value">{{ promedioPacientes }}</span>
+                  <span class="stat-label">Promedio/mes</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-value" [class.trend-positive]="crecimientoPacientes >= 0"
+                    [class.trend-negative]="crecimientoPacientes < 0">
+                    <i class="fas" [class.fa-arrow-up]="crecimientoPacientes >= 0"
+                      [class.fa-arrow-down]="crecimientoPacientes < 0"></i>
+                    {{ Math.abs(crecimientoPacientes) }}%
+                  </span>
+                  <span class="stat-label">Crecimiento</span>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="!mostrarPacientes || !chartPacientesData.labels || chartPacientesData.labels.length === 0"
+              class="empty-chart-state-carrusel">
+              <div class="empty-chart-icon">
+                <i class="fas fa-users"></i>
+              </div>
+              <h4>No hay datos de pacientes</h4>
+              <p>Los datos se mostrarán cuando haya pacientes registrados en esta sede</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráfico de Historias Médicas -->
+      <div class="carrusel-slide">
+        <div class="chart-card-carrusel">
+          <div class="chart-header-carrusel">
+            <div class="chart-title-section">
+              <div class="chart-icon historias">
+                <i class="fas fa-file-medical"></i>
+              </div>
+              <div class="chart-title-content">
+                <h3 class="chart-title">Historias Médicas</h3>
+                <p class="chart-subtitle">Por mes - {{ sedeActual }}</p>
+              </div>
+            </div>
+            <div class="chart-actions-carrusel">
+              <button class="btn-chart-action" (click)="exportarGrafico('historias')" title="Descargar">
+                <i class="fas fa-download"></i>
+              </button>
+              <button class="btn-chart-action" (click)="cambiarTipoGrafico('historias')" title="Cambiar tipo">
+                <i class="fas fa-chart-bar"></i>
+              </button>
+              <button class="btn-chart-action" (click)="maximizarGrafico('historias')" title="Expandir">
+                <i class="fas fa-expand"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="chart-body-carrusel">
+            <!-- Gráfico de Historias con solución para cambio de tipo -->
+            <div *ngIf="mostrarHistorias && chartHistoriasData.labels && chartHistoriasData.labels.length > 0"
+              class="chart-container-carrusel">
+              <div class="chart-wrapper">
+                <!-- Canvas principal -->
+                <div *ngIf="!refrescarGraficos">
+                  <canvas baseChart [type]="chartHistoriasType" [data]="chartHistoriasData"
+                    [options]="getChartOptions()">
+                  </canvas>
+                </div>
+                <!-- Canvas alterno para forzar recreación -->
+                <div *ngIf="refrescarGraficos">
+                  <canvas baseChart [type]="chartHistoriasType" [data]="chartHistoriasData"
+                    [options]="getChartOptions()">
+                  </canvas>
+                </div>
+              </div>
+
+              <div class="chart-stats-carrusel">
+                <div class="stat-item">
+                  <span class="stat-value">{{ totalHistorias }}</span>
+                  <span class="stat-label">Total</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-value">{{ promedioHistorias }}</span>
+                  <span class="stat-label">Promedio/mes</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-value" [class.trend-positive]="crecimientoHistorias >= 0"
+                    [class.trend-negative]="crecimientoHistorias < 0">
+                    <i class="fas" [class.fa-arrow-up]="crecimientoHistorias >= 0"
+                      [class.fa-arrow-down]="crecimientoHistorias < 0"></i>
+                    {{ Math.abs(crecimientoHistorias) }}%
+                  </span>
+                  <span class="stat-label">Crecimiento</span>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="!mostrarHistorias || !chartHistoriasData.labels || chartHistoriasData.labels.length === 0"
+              class="empty-chart-state-carrusel">
+              <div class="empty-chart-icon">
+                <i class="fas fa-file-medical"></i>
+              </div>
+              <h4>No hay datos de historias médicas</h4>
+              <p>Los datos se mostrarán cuando haya historias médicas registradas en esta sede</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Placeholder para módulos futuros -->
+      <div class="carrusel-slide" *ngFor="let modulo of modulosFuturos; let i = index">
+        <div class="chart-card-carrusel placeholder">
+          <div class="placeholder-content">
+            <div class="placeholder-icon">
+              <i [class]="modulo.icono"></i>
+            </div>
+            <h3>{{ modulo.nombre }}</h3>
+            <p>{{ modulo.descripcion }}</p>
+            <button class="btn-placeholder" (click)="activarModulo(modulo)">
+              <i class="fas fa-plus"></i>
+              Activar Módulo
+            </button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Gráfico de Historias Médicas -->
-  <div class="col-md-6">
-    <div class="card shadow-sm border-0">
-      <div class="card-header bg-white fw-bold text-muted">📋 Historias Médicas</div>
-      <div class="card-body">
-        <!-- Mostrar gráfico solo cuando hay datos -->
-        <div *ngIf="mostrarHistorias && chartHistoriasData.labels && chartHistoriasData.labels.length > 0">
-          <canvas baseChart
-            [type]="'doughnut'" 
-            [data]="chartHistoriasData"
-            [options]="chartHistoriasOptions"
-            style="max-height: 300px"
-          ></canvas>
-        </div>
-        
-        <!-- Mensaje cuando no hay datos -->
-        <div *ngIf="!mostrarHistorias || !chartHistoriasData.labels || chartHistoriasData.labels.length === 0" 
-             class="text-center text-muted py-4">
-          <i class="fas fa-file-medical fa-3x mb-3 opacity-50"></i>
-          <p class="mb-0">No hay datos de historias médicas</p>
-          <small>Los datos se mostrarán cuando haya historias médicas registradas</small>
-        </div>
-      </div>
+  <!-- Información adicional -->
+  <div class="carrusel-info">
+    <div class="info-item">
+      <span class="info-label">Gráfico {{ graficoActual + 1 }} de {{ totalGraficos }}</span>
+      <span class="info-title">{{ graficoActual < graficos.length ? graficos[graficoActual].nombre :
+          modulosFuturos[graficoActual - graficos.length].nombre }}</span>
+    </div>
+    <div class="auto-play-controls">
+      <button class="btn-auto-play" (click)="toggleAutoPlay()" [class.active]="autoPlayActivo">
+        <i class="fas" [class.fa-pause]="autoPlayActivo" [class.fa-play]="!autoPlayActivo"></i>
+        {{ autoPlayActivo ? 'Pausar' : 'Auto-play' }}
+      </button>
     </div>
   </div>
 </div>
