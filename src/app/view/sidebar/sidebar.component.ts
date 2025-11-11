@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, OnDestroy } from '@angular/core';
+import { Component, OnInit, Input, OnDestroy, AfterViewInit } from '@angular/core';
 import { AuthService } from '../../core/services/auth/auth.service';
 import { Router } from '@angular/router';
 import { SwalService } from '../../core/services/swal/swal.service';
@@ -10,6 +10,9 @@ import { TasaCambiariaService } from '../../core/services/tasaCambiaria/tasaCamb
 import { Tasa } from '../../Interfaces/models-interface';
 import { LoaderService } from '../../shared/loader/loader.service';
 
+// Importar Bootstrap
+import * as bootstrap from 'bootstrap';
+
 @Component({
   selector: 'app-sidebar',
   standalone: false,
@@ -17,7 +20,7 @@ import { LoaderService } from '../../shared/loader/loader.service';
   styleUrls: ['./sidebar.component.scss']
 })
 
-export class SidebarComponent implements OnInit, OnDestroy {
+export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() userRoleKey: string = '';
   @Input() userRoleName: string = '';
   @Input() userName: string = '';
@@ -30,6 +33,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   selectedSubmenuLabel: string | null = null;
 
   private userSubscriptions: Subscription[] = [];
+  private userDropdown: any;
 
   constructor(
     private swalService: SwalService,
@@ -39,7 +43,6 @@ export class SidebarComponent implements OnInit, OnDestroy {
     private userStateService: UserStateService,
     private tasaCambiariaService: TasaCambiariaService,
     public loader: LoaderService
-
   ) { }
 
   menuItems = [
@@ -51,7 +54,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
     },
     {
       label: 'Datos Clínicos',
-      icon: 'fas fa-football-ball',
+      icon: 'fas fa-stethoscope',
       submenu: [
         { label: 'Pacientes', routerLink: '/pacientes', roles: ['admin', 'gerente', 'asesor-optico'] },
         { label: 'Historias Medicas', routerLink: '/pacientes-historias', roles: ['admin', 'gerente', 'asesor-optico'] }
@@ -61,46 +64,36 @@ export class SidebarComponent implements OnInit, OnDestroy {
     },
     {
       label: 'Inventario de Productos',
-      icon: 'fas fa-users',
+      icon: 'fas fa-boxes',
       routerLink: '/productos-inventario',
       roles: ['admin', 'gerente', 'asesor-optico'],
       underConstruction: false
     },
     {
       label: 'Ventas',
-      icon: 'fas fa-football-ball',
+      icon: 'fas fa-shopping-cart',
       routerLink: '/ventas',
-      /*submenu: [
-         { label: 'Generacion de ventas', routerLink: 'generar-ventas', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Historial', routerLink: 'historial-ventas', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Presupuesto', routerLink: 'presupuesto-ventas', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Cierre de caja', routerLink: 'cierre-de-caja', roles: ['admin', 'gerente'] },
-
-      ],*/
       roles: ['admin', 'gerente', 'asesor-optico'],
       underConstruction: false
     },
     {
-      label: 'Ordenes de Trabajo',
-      icon: 'fas fa-football-ball',
+      label: 'Órdenes de Trabajo',
+      icon: 'fas fa-clipboard-list',
       routerLink: '/ordenes-de-trabajo',
       roles: ['admin', 'gerente', 'asesor-optico'],
       submenu: [
-        { label: 'Ordenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Órdenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor-optico'] },
         { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor-optico'] },
         { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] }
       ],
       underConstruction: true
     },
     {
-      label: 'Administración',
-      icon: 'fas fa-user',
-      submenu: [
-        { label: 'Configurar mi Cuenta', routerLink: '/my-account', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Gestionar usuarios', routerLink: '/empleados', roles: ['admin'], underConstruction: false },
-        { label: 'Tipo de cambio', routerLink: '/Tipo-de-cambio', roles: ['admin', 'gerente', 'asesor-optico'] }
-      ],
-      roles: ['admin', 'gerente', 'asesor-optico']
+      label: 'Gestión de Usuarios',
+      icon: 'fas fa-users-cog',
+      routerLink: '/empleados',
+      roles: ['admin'],
+      underConstruction: false
     }
   ];
 
@@ -141,6 +134,68 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.obtenerTasaCambio();
   }
 
+  ngAfterViewInit(): void {
+    this.initializeBootstrapDropdowns();
+  }
+
+  private initializeBootstrapDropdowns(): void {
+    // Inicializar dropdown de usuario con Bootstrap
+    const userDropdownElement = document.getElementById('userDropdown');
+    if (userDropdownElement) {
+      this.userDropdown = new bootstrap.Dropdown(userDropdownElement);
+    }
+  }
+
+  // Método para toggle manual del dropdown
+  toggleUserDropdown(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (this.userDropdown) {
+      this.userDropdown.toggle();
+    } else {
+      // Fallback manual
+      const dropdownMenu = document.querySelector('.user-dropdown-menu');
+      if (dropdownMenu) {
+        const isShowing = dropdownMenu.classList.contains('show');
+        
+        // Cerrar todos los dropdowns primero
+        document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+          menu.classList.remove('show');
+        });
+        
+        // Abrir/cerrar el actual
+        if (!isShowing) {
+          dropdownMenu.classList.add('show');
+        }
+      }
+    }
+  }
+
+  // Cerrar dropdown cuando se hace click en un item
+  closeUserDropdown(): void {
+    if (this.userDropdown) {
+      this.userDropdown.hide();
+    } else {
+      const dropdownMenu = document.querySelector('.user-dropdown-menu');
+      if (dropdownMenu) {
+        dropdownMenu.classList.remove('show');
+      }
+    }
+  }
+
+  // Navegar a Mi Perfil
+  goToMyProfile(): void {
+    this.closeUserDropdown();
+    this.router.navigate(['/my-account']);
+  }
+
+  // Navegar a Tipo de Cambio
+  goToExchangeRate(): void {
+    this.closeUserDropdown();
+    this.router.navigate(['/Tipo-de-cambio']);
+  }
+
   markActiveFromUrl(url: string): void {
     for (const menu of this.filteredMenu) {
       if (menu.routerLink === url) {
@@ -165,6 +220,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.userSubscriptions.forEach(sub => sub.unsubscribe());
+    if (this.subsTasaCambio) {
+      this.subsTasaCambio.unsubscribe();
+    }
   }
 
   private setupSubscriptions(): void {
@@ -255,7 +313,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   toggleSubmenu(event: Event): void {
     event.preventDefault();
     const target = event.currentTarget as HTMLElement;
-    const menuLabel = target.textContent?.trim() || '';
+    const menuLabel = target.querySelector('p')?.textContent?.trim() || '';
 
     const isSameMenu = this.selectedMenuLabel === menuLabel;
 
@@ -263,58 +321,17 @@ export class SidebarComponent implements OnInit, OnDestroy {
     if (isSameMenu) {
       this.selectedMenuLabel = '';
       this.selectedSubmenuLabel = '';
-
-      const submenu = target.nextElementSibling as HTMLElement | null;
-      const icon = target.querySelector('.fas.fa-angle-left') as HTMLElement | null;
-
-      if (submenu) {
-        submenu.classList.remove('menu-open');
-        submenu.style.display = 'none';
-      }
-
-      if (icon) {
-        icon.classList.remove('fa-rotate-custom-open');
-        icon.classList.add('fa-rotate-custom');
-      }
-
+      localStorage.setItem('selectedMenuLabel', '');
+      localStorage.setItem('selectedSubmenuLabel', '');
       return;
     }
 
-    // 🧼 Cerrar todos los submenús e íconos
-    const allSubmenus = document.querySelectorAll('.nav-treeview');
-    const allIcons = document.querySelectorAll('.fas.fa-angle-left');
-
-    allSubmenus.forEach(sub => {
-      sub.classList.remove('menu-open');
-      (sub as HTMLElement).style.display = 'none';
-    });
-
-    allIcons.forEach(i => {
-      i.classList.remove('fa-rotate-custom-open');
-      i.classList.add('fa-rotate-custom');
-    });
-
     // ✅ Abrir el nuevo menú
-    const submenu = target.nextElementSibling as HTMLElement | null;
-    const icon = target.querySelector('.fas.fa-angle-left') as HTMLElement | null;
-
-    if (submenu) {
-      submenu.classList.add('menu-open');
-      submenu.style.display = 'block';
-    }
-
-    if (icon) {
-      icon.classList.remove('fa-rotate-custom');
-      icon.classList.add('fa-rotate-custom-open');
-    }
-
-    // 🟢 Marcar como activo
     this.selectedMenuLabel = menuLabel;
     this.selectedSubmenuLabel = '';
 
     localStorage.setItem('selectedMenuLabel', this.selectedMenuLabel);
     localStorage.setItem('selectedSubmenuLabel', '');
-
   }
 
   onMenuClick(event: Event, menuItem: any): void {
@@ -348,14 +365,33 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
     localStorage.setItem('selectedMenuLabel', this.selectedMenuLabel);
     localStorage.setItem('selectedSubmenuLabel', this.selectedSubmenuLabel || '');
-
   }
 
+  // 🔓 Método para abrir el modal de logout
+  openLogoutModal(event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    // Cerrar el dropdown primero
+    this.closeUserDropdown();
+    
+    // Abre el modal de logout usando Bootstrap
+    const modalElement = document.getElementById('logoutModal');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  // ✅ Método para confirmar logout
   confirmLogout(): void {
     this.authService.logout();
 
     localStorage.removeItem('selectedMenuLabel');
     localStorage.removeItem('selectedSubmenuLabel');
+    sessionStorage.removeItem('sessionStarted');
 
     this.swalService.showSuccess('Sesión cerrada', 'Tu sesión se ha cerrado exitosamente.')
       .then(() => {
@@ -395,7 +431,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   obtenerTasaCambio(): void {
     // 🧠 Solo te suscribís una vez al subject reactivo
-    this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
+    this.subsTasaCambio = this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
       this.tasaDolar = usd;
       this.tasaEuro = eur;
     });
@@ -418,5 +454,4 @@ export class SidebarComponent implements OnInit, OnDestroy {
       }
     });
   }
-
 }
