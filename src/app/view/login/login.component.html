@@ -1,75 +1,119 @@
-<div class="login-container">
+<div class="login-compact">
+  <!-- Fondo -->
   <div class="login-background">
     <img class="login-background-image" src="/assets/fondo/IMG_9792.JPG" alt="">
   </div>
-  <div class="login-logo-container">
-    <img class="login-logo" src="assets/logo/logo_1.png" alt="New Visión Logo" />
-  </div>
+
+  <!-- Tarjeta Compacta -->
   <div class="login-card-container">
-    <div class="login-card">
-      <div class="login-title">Inicie Sesión</div>
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-
-        <!-- Selector de Sede -->
-        <div class="mb-3">
-          <label for="sede" class="form-label">Sede</label>
-          <select class="form-select" id="sede" formControlName="sede">
-            <option value="">Seleccione una sede</option>
-            <option *ngFor="let s of sedes" [value]="s.key">{{ s.nombre }}</option>
-          </select>
-          <div *ngIf="isInvalidField('sede')" class="form-text text-danger">
-            <span *ngIf="loginForm.get('sede')?.hasError('required')">La sede es requerida.</span>
+    <div class="card login-card-compact">
+      <!-- Header Compacto -->
+      <div class="card-header-compact">
+        <div class="header-content">
+          <div class="header-icon">
+            <i class="bi bi-shield-lock"></i>
+          </div>
+          <div class="header-text">
+            <h4 class="header-title">Iniciar Sesión</h4>
+            <div class="header-subtitle">Accede al sistema</div>
           </div>
         </div>
-        
+      </div>
 
-        <!-- Campo Cédula -->
-        <div class="mb-3">
-          <label for="cedula" class="form-label">Cédula</label>
-          <input type="text" class="form-control" id="cedula" formControlName="cedula" placeholder="Ingrese su cédula" />
-          <div *ngIf="isInvalidField('cedula')" class="form-text text-danger">
-            <span *ngIf="loginForm.get('cedula')?.hasError('required')">La cédula es requerida.</span>
-            <span *ngIf="loginForm.get('cedula')?.hasError('pattern')">La cédula debe ser un número de hasta 8 dígitos.</span>
+      <!-- Cuerpo Compacto -->
+      <div class="card-body-compact">
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form-compact">
+
+          <!-- Campo Sede -->
+          <div class="form-group-compact">
+            <label class="form-label-compact">
+              <i class="bi bi-building"></i>
+              Sede
+            </label>
+            <div class="input-with-icon">
+              <select class="form-control-compact" formControlName="sede">
+                <option value="">Seleccione una sede</option>
+                <option *ngFor="let s of sedes" [value]="s.key">{{ s.nombre }}</option>
+              </select>
+              <i class="bi bi-chevron-down input-icon"></i>
+            </div>
+            <div *ngIf="isInvalidField('sede')" class="form-error">
+              <i class="bi bi-exclamation-circle"></i>
+              <span>La sede es requerida</span>
+            </div>
           </div>
-        </div>
 
-        <!-- Campo Contraseña -->
-        <div class="mb-3">
-          <label for="password" class="form-label">Contraseña</label>
-          <div class="input-group password-input-group">
-            <input [type]="showPassword ? 'text' : 'password'" class="form-control password-input" id="password"
-              formControlName="password" placeholder="Ingrese su contraseña" />
-            <button class="btn btn-outline-secondary password-toggle" type="button" (click)="toggleShowPassword()">
-              <i class="bi" [class.bi-eye]="!showPassword" [class.bi-eye-slash]="showPassword"></i>
-            </button>
+          <!-- Campo Cédula -->
+          <div class="form-group-compact">
+            <label class="form-label-compact">
+              <i class="bi bi-person-badge"></i>
+              Cédula
+            </label>
+            <div class="input-with-icon">
+              <input type="text" class="form-control-compact" formControlName="cedula"
+                placeholder="Ingrese su cédula" />
+              <i class="bi bi-person input-icon"></i>
+            </div>
+            <div *ngIf="isInvalidField('cedula')" class="form-error">
+              <i class="bi bi-exclamation-circle"></i>
+              <span *ngIf="loginForm.get('cedula')?.hasError('required')">La cédula es requerida</span>
+              <span *ngIf="loginForm.get('cedula')?.hasError('pattern')">Solo números, máximo 8 dígitos</span>
+            </div>
           </div>
-          <div *ngIf="isInvalidField('password')" class="form-text text-danger">
-            <span *ngIf="loginForm.get('password')?.hasError('required')">La contraseña es requerida.</span>
-            <span *ngIf="loginForm.get('password')?.hasError('minlength')">Debe tener al menos 6 caracteres.</span>
+
+          <!-- Campo Contraseña -->
+          <div class="form-group-compact">
+            <label class="form-label-compact">
+              <i class="bi bi-lock"></i>
+              Contraseña
+            </label>
+            <div class="input-with-icon">
+              <input [type]="showPassword ? 'text' : 'password'" class="form-control-compact" formControlName="password"
+                placeholder="Ingrese su contraseña" />
+              <i class="bi bi-key input-icon"></i>
+              <button type="button" class="password-toggle" (click)="toggleShowPassword()">
+                <i class="bi" [class.bi-eye]="!showPassword" [class.bi-eye-slash]="showPassword"></i>
+              </button>
+            </div>
+            <div *ngIf="isInvalidField('password')" class="form-error">
+              <i class="bi bi-exclamation-circle"></i>
+              <span *ngIf="loginForm.get('password')?.hasError('required')">La contraseña es requerida</span>
+              <span *ngIf="loginForm.get('password')?.hasError('minlength')">Mínimo 6 caracteres</span>
+            </div>
           </div>
-        </div>
 
-        <!-- Recuérdame -->
-        <div class="form-check mb-4 form-switch">
-          <input type="checkbox" class="form-check-input" id="rememberMe" formControlName="rememberMe">
-          <label class="form-check-label" for="rememberMe">Recuérdame</label>
-        </div>
+          <!-- Opciones Compactas -->
+          <div class="form-options-compact">
+            <label class="checkbox-compact">
+              <input type="checkbox" formControlName="rememberMe">
+              <span class="checkmark-compact"></span>
+              <span class="checkbox-text">Recordar mis datos</span>
+            </label>
+            <a href="/forgot-password" class="forgot-link-compact">
+              ¿Olvidó contraseña?
+            </a>
+          </div>
 
-        <!-- Botón de Ingresar -->
-        <button type="submit" class="btn btn-primary w-100 btn-ingresar" [disabled]="loginForm.invalid || isLoading">
-          <span *ngIf="!isLoading">Ingresar</span>
-          <span *ngIf="isLoading">
-            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            Ingresando...
-          </span>
-        </button>
+          <!-- Botón Compacto -->
+          <button type="submit" class="btn-login-compact" [disabled]="loginForm.invalid || isLoading"
+            [class.loading]="isLoading">
+            <span class="btn-content">
+              <span class="btn-text" *ngIf="!isLoading">Ingresar</span>
+              <span class="btn-loading" *ngIf="isLoading">
+                <span class="spinner-compact"></span>
+                Ingresando...
+              </span>
+            </span>
+            <i class="bi bi-arrow-right-short"></i>
+          </button>
 
-        <!-- ¿Olvidó su contraseña? -->
-        <button type="button" class="btn btn-link w-100 mt-2" routerLink="/forgot-password">
-          ¿Olvidó su contraseña?
-        </button>
-
-      </form>
+          <!-- Mensaje de Seguridad Compacto -->
+          <div class="security-compact">
+            <i class="bi bi-shield-check"></i>
+            <span>Conexión segura</span>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </div>
