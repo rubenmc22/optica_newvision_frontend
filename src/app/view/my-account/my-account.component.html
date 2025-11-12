@@ -1,349 +1,629 @@
-<div class="container-fluid">
+<div class="container-fluid profile-container">
     <div class="row justify-content-center">
-        <div class="col-12 col-md-10 col-lg-9">
-            <div class="card mb-5">
-                <!-- Pestañas de Navegación -->
-                <ul class="nav nav-tabs nav-justified" id="myAccountTabs" role="tablist">
+        <div class="col-12 col-xl-10">
+            <div class="card profile-card shadow-lg">
+                <!-- Encabezado modernizado -->
+                <div class="card-header-moderno">
+                    <div class="header-content">
+                        <div class="header-icon">
+                            <i class="bi bi-cart-plus"></i>
+                        </div>
+                        <div class="header-text">
+                            <h4 class="header-title">Mi Perfil</h4>
+                            <div class="header-subtitle">Gestiona tu información personal y seguridad</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pestañas de Navegación Mejoradas -->
+                <ul class="nav nav-tabs nav-justified profile-tabs" id="myAccountTabs" role="tablist">
                     <li class="nav-item">
                         <a class="nav-link active" id="edit-personal-info-tab" data-bs-toggle="tab"
                             href="#editPersonalInfo" role="tab" aria-controls="editPersonalInfo" aria-selected="true"
                             (click)="switchTab('personalInfo')">
-                            <i class="fas fa-user-edit"></i> Editar Información Personal
+                            <div class="tab-content-wrapper">
+                                <i class="fas fa-user-edit tab-icon"></i>
+                                <span class="tab-text">Información Personal</span>
+                            </div>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" id="edit-password-tab" data-bs-toggle="tab" href="#editPassword" role="tab"
                             aria-controls="editPassword" aria-selected="false" (click)="switchTab('password')">
-                            <i class="fas fa-key"></i> Editar Contraseña
+                            <div class="tab-content-wrapper">
+                                <i class="fas fa-key tab-icon"></i>
+                                <span class="tab-text">Contraseña</span>
+                            </div>
                         </a>
                     </li>
                     <li class="nav-item" *ngIf="currentRol?.key === 'admin'">
                         <a class="nav-link" id="edit-unique-password-tab" data-bs-toggle="tab"
                             href="#editUniquePassword" role="tab" aria-controls="editUniquePassword"
                             aria-selected="false" (click)="switchTab('uniquePassword')">
-                            <i class="fas fa-lock"></i> Contraseña Única
+                            <div class="tab-content-wrapper">
+                                <i class="fas fa-lock tab-icon"></i>
+                                <span class="tab-text">Contraseña Única</span>
+                            </div>
                         </a>
                     </li>
-
                 </ul>
 
                 <!-- Contenido de las Pestañas -->
-                <div class="tab-content mt-4" id="myAccountTabContent">
-                    <!-- Tab: Editar Información Personal -->
+                <div class="tab-content profile-tab-content" id="myAccountTabContent">
+
+                    <!-- Tab: Información Personal Mejorada -->
                     <div class="tab-pane fade show active" id="editPersonalInfo" role="tabpanel"
                         aria-labelledby="edit-personal-info-tab">
-                        <!-- Widget de Imagen -->
-                        <div class="text-center mb-4">
-                            <div class="avatar-widget">
-                                <img [src]="getProfileImage()" alt="Avatar del Usuario" class="avatar-img"
-                                    (error)="handleImageError($event)">
+                        <div class="personal-info-content">
+                            <!-- Sección Avatar Mejorada -->
+                            <div class="avatar-section text-center mb-5">
+                                <div class="avatar-container">
+                                    <div class="avatar-widget">
+                                        <img [src]="getProfileImage()" alt="Avatar del Usuario" class="avatar-img"
+                                            (error)="handleImageError($event)">
 
-                                <div class="avatar-overlay"
-                                    [ngClass]="{'show-on-hover': avatarPreview || user.ruta_imagen}">
-                                    <label for="avatarUpload" class="avatar-action-btn" title="Cambiar foto">
-                                        <i class="fas fa-camera"></i>
-                                    </label>
+                                        <div class="avatar-overlay"
+                                            [ngClass]="{'show-on-hover': avatarPreview || user.ruta_imagen}">
+                                            <div class="avatar-actions">
+                                                <label for="avatarUpload" class="avatar-action-btn upload-btn"
+                                                    title="Cambiar foto de perfil">
+                                                    <i class="fas fa-camera"></i>
+                                                </label>
 
-                                    <!-- Botón para eliminar foto (solo visible si hay foto) -->
-                                    <button *ngIf="user.ruta_imagen && !avatarPreview"
-                                        class="avatar-action-btn btn btn-danger btn-sm" (click)="eliminarFoto()"
-                                        title="Eliminar foto" type="button">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
+                                                <button *ngIf="user.ruta_imagen && !avatarPreview"
+                                                    class="avatar-action-btn delete-btn" (click)="eliminarFoto()"
+                                                    title="Eliminar foto de perfil" type="button">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
 
-                                <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
-                                    (change)="onFileSelected($event)">
-                            </div>
-
-                            <!-- Mensaje informativo -->
-                            <small class="text-muted mt-2 d-block">
-                                {{ user.ruta_imagen ?
-                                'Haz clic en la cámara para cambiar o en la papelera para eliminar' : 'Selecciona una foto de perfil' }}
-                            </small>
-                        </div><br>
-
-                        <!-- Formulario de Información Personal -->
-                        <form #personalInfoForm="ngForm">
-                            <div class="form-row">
-                                <!-- Campo: Cédula -->
-                                <div class="form-group col-md-4">
-                                    <label for="cedula">Cédula</label>
-                                    <input type="text" id="cedula" class="form-control" [(ngModel)]="user.cedula"
-                                        name="cedula" disabled [ngClass]="'disabled-input'" />
-                                </div>
-
-                                <!-- Campo: Cargo -->
-                                <div class="form-group col-md-4">
-                                    <label for="cargo">Cargo actual</label>
-                                    <input id="cargo" class="form-control" [(ngModel)]="userCargoSeleccionado"
-                                        name="cargo" disabled [ngClass]="'disabled-input'" />
-                                </div>
-
-                                <!-- Campo: Nombre Completo -->
-                                <div class="form-group col-md-4">
-                                    <label for="nombreCompleto" class="required">Apellido y Nombre</label>
-                                    <input type="text" id="nombre" class="form-control"
-                                        [class.is-invalid]="nombre.invalid && nombre.touched"
-                                        [class.is-valid]="nombre.valid && nombre.touched" [(ngModel)]="user.nombre"
-                                        name="nombreCompleto" pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" #nombre="ngModel"
-                                        required (input)="detectChanges()" />
-                                    <div class="invalid-feedback" *ngIf="nombre.invalid && nombre.touched">
-                                        <span *ngIf="nombre.errors?.['required']">El nombre es requerido</span>
-                                        <span *ngIf="nombre.errors?.['pattern']">Solo se permiten letras y
-                                            espacios</span>
+                                        <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
+                                            (change)="onFileSelected($event)">
                                     </div>
-                                    <div class="valid-feedback" *ngIf="nombre.valid && nombre.touched">
-                                        ✓ Nombre válido
+
+                                    <div class="avatar-info mt-3">
+                                        <p class="avatar-instructions text-muted">
+                                            {{ user.ruta_imagen ?
+                                            'Haz clic en los íconos para cambiar o eliminar tu foto' :
+                                            'Selecciona una foto para tu perfil' }}
+                                        </p>
+                                        <small class="avatar-requirements text-muted">
+                                            Formatos: JPG, PNG • Máx: 5MB
+                                        </small>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="form-row">
-                                <!-- Campo: Correo Electrónico -->
-                                <div class="form-group col-md-4">
-                                    <label for="correo" class="required">Correo Electrónico</label>
-                                    <input type="email" id="correo" class="form-control"
-                                        [class.is-invalid]="correo.invalid && correo.touched"
-                                        [class.is-valid]="correo.valid && correo.touched" [(ngModel)]="user.correo"
-                                        name="correo" email #correo="ngModel" required (input)="detectChanges()" />
-                                    <div class="invalid-feedback" *ngIf="correo.invalid && correo.touched">
-                                        <span *ngIf="correo.errors?.['required']">El correo es requerido</span>
-                                        <span *ngIf="correo.errors?.['email']">Introduzca un correo electrónico
-                                            válido</span>
-                                    </div>
-                                    <div class="valid-feedback" *ngIf="correo.valid && correo.touched">
-                                        ✓ Correo válido
+                            <!-- Formulario Mejorado -->
+                            <form #personalInfoForm="ngForm" class="personal-info-form">
+                                <div class="form-section">
+                                    <h3 class="section-title">
+                                        <i class="fas fa-id-card section-icon"></i>
+                                        Información Básica
+                                    </h3>
+
+                                    <div class="row g-3">
+                                        <!-- Campo: Cédula -->
+                                        <div class="col-md-4">
+                                            <label for="cedula" class="form-label">
+                                                <i class="fas fa-id-card input-icon"></i>
+                                                Cédula
+                                            </label>
+                                            <input type="text" id="cedula" class="form-control disabled-field"
+                                                [(ngModel)]="user.cedula" name="cedula" disabled />
+                                        </div>
+
+                                        <!-- Campo: Cargo -->
+                                        <div class="col-md-4">
+                                            <label for="cargo" class="form-label">
+                                                <i class="fas fa-briefcase input-icon"></i>
+                                                Cargo
+                                            </label>
+                                            <input id="cargo" class="form-control disabled-field"
+                                                [(ngModel)]="userCargoSeleccionado" name="cargo" disabled />
+                                        </div>
+
+                                        <!-- Campo: Nombre Completo CORREGIDO -->
+
+                                        <div class="col-md-4">
+                                            <label for="nombre" class="form-label required">
+                                                <i class="fas fa-user input-icon"></i>
+                                                Nombre Completo
+                                            </label>
+                                            <input type="text" id="nombre" class="form-control"
+                                                [(ngModel)]="user.nombre" name="nombre"
+                                                pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" #nombre="ngModel" required
+                                                (input)="detectChanges()" placeholder="Ingrese su nombre completo" />
+                                            <div class="validation-feedback">
+                                                <div class="invalid-feedback"
+                                                    *ngIf="(nombre.invalid && (nombre.touched || nombre.dirty)) || (nombre.errors?.['required'] && nombre.touched)">
+                                                    <i class="fas fa-exclamation-circle"></i>
+                                                    <span *ngIf="nombre.errors?.['required']">El nombre es
+                                                        requerido</span>
+                                                    <span *ngIf="nombre.errors?.['pattern']">Solo se permiten letras y
+                                                        espacios</span>
+                                                </div>
+                                                <div class="valid-feedback" *ngIf="nombre.valid && nombre.dirty">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    Nombre válido
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- Campo: Teléfono -->
-                                <div class="form-group col-md-4">
-                                    <label for="telefono" class="required">Teléfono</label>
-                                    <input type="tel" id="telefono" class="form-control"
-                                        [class.is-invalid]="mostrarErrorTelefono"
-                                        [class.is-valid]="!mostrarErrorTelefono && user.telefono && user.telefono.length >= 11"
-                                        [(ngModel)]="user.telefono" name="telefono" (input)="validarTelefono()"
-                                        (blur)="validarTelefono()" placeholder="Ej. 0412xxxxxxx" required />
-                                    <div class="invalid-feedback" *ngIf="mostrarErrorTelefono">
-                                        Introduzca un número de teléfono válido (11 dígitos).
-                                    </div>
-                                    <div class="valid-feedback"
-                                        *ngIf="!mostrarErrorTelefono && user.telefono && user.telefono.length >= 11">
-                                        ✓ Teléfono válido
+                                <div class="form-section">
+                                    <h3 class="section-title">
+                                        <i class="fas fa-address-book section-icon"></i>
+                                        Información de Contacto
+                                    </h3>
+
+                                    <div class="row g-3">
+                                        <!-- Campo: Correo Electrónico CORREGIDO -->
+                                        <div class="col-md-4">
+                                            <label for="correo" class="form-label required">
+                                                <i class="fas fa-envelope input-icon"></i>
+                                                Correo Electrónico
+                                            </label>
+                                            <input type="email" id="correo" class="form-control"
+                                                [(ngModel)]="user.correo" name="correo" email #correo="ngModel" required
+                                                (input)="detectChanges()" placeholder="ejemplo@correo.com" />
+                                            <div class="validation-feedback">
+                                                <div class="invalid-feedback"
+                                                    *ngIf="correo.invalid && (correo.touched || correo.dirty)">
+                                                    <i class="fas fa-exclamation-circle"></i>
+                                                    <span *ngIf="correo.errors?.['required']">El correo es
+                                                        requerido</span>
+                                                    <span *ngIf="correo.errors?.['email']">Correo electrónico
+                                                        inválido</span>
+                                                </div>
+                                                <div class="valid-feedback" *ngIf="correo.valid && correo.dirty">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    Correo válido
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Campo: Teléfono CORREGIDO -->
+                                        <div class="col-md-4">
+                                            <label for="telefono" class="form-label required">
+                                                <i class="fas fa-phone input-icon"></i>
+                                                Teléfono
+                                            </label>
+                                            <input type="tel" id="telefono" class="form-control"
+                                                [(ngModel)]="user.telefono" name="telefono" #telefonoInput="ngModel"
+                                                (input)="validarTelefono()" (blur)="validarTelefono()"
+                                                placeholder="0412 123 4567" required />
+                                            <div class="validation-feedback">
+                                                <div class="invalid-feedback"
+                                                    *ngIf="mostrarErrorTelefono && (telefonoInput.touched || telefonoInput.dirty)">
+                                                    <i class="fas fa-exclamation-circle"></i>
+                                                    Número de teléfono inválido (11 dígitos requeridos)
+                                                </div>
+                                                <div class="valid-feedback"
+                                                    *ngIf="!mostrarErrorTelefono && user.telefono && user.telefono.length >= 11 && telefonoInput.dirty">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    Teléfono válido
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Campo: Fecha de Nacimiento CORREGIDO -->
+                                        <div class="col-md-4">
+                                            <label for="fechaNacimiento" class="form-label required">
+                                                <i class="fas fa-birthday-cake input-icon"></i>
+                                                Fecha de Nacimiento
+                                            </label>
+                                            <input type="date" id="fechaNacimiento" class="form-control"
+                                                [(ngModel)]="user.fecha_nacimiento" name="fechaNacimiento"
+                                                #fechaNacimiento="ngModel" required [max]="maxDate"
+                                                (input)="onFechaNacimientoChange()"
+                                                (blur)="validateFechaNacimiento()" />
+                                            <div class="validation-feedback">
+                                                <div class="invalid-feedback"
+                                                    *ngIf="(fechaNacimiento.invalid && (fechaNacimiento.touched || fechaNacimiento.dirty)) || isFechaFutura">
+                                                    <i class="fas fa-exclamation-circle"></i>
+                                                    <span
+                                                        *ngIf="fechaNacimiento.errors?.['required'] && (fechaNacimiento.touched || fechaNacimiento.dirty)">
+                                                        La fecha de nacimiento es requerida
+                                                    </span>
+                                                    <span *ngIf="isFechaFutura">
+                                                        La fecha no puede ser futura
+                                                    </span>
+                                                </div>
+                                                <div class="valid-feedback"
+                                                    *ngIf="fechaNacimiento.valid && !isFechaFutura && fechaNacimiento.dirty">
+                                                    <i class="fas fa-check-circle"></i>
+                                                    Fecha válida
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- Campo: Fecha de Nacimiento -->
-                                <div class="form-group col-md-4">
-                                    <label for="fechaNacimiento" class="required">Fecha de Nacimiento</label>
-                                    <input type="date" id="fechaNacimiento" class="form-control"
-                                        [class.is-invalid]="(fechaNacimiento.invalid || isFechaFutura) && fechaNacimiento.touched"
-                                        [class.is-valid]="fechaNacimiento.valid && !isFechaFutura && fechaNacimiento.touched"
-                                        [(ngModel)]="user.fecha_nacimiento" name="fechaNacimiento"
-                                        #fechaNacimiento="ngModel" required [max]="maxDate"
-                                        (input)="onFechaNacimientoChange()" (blur)="validateFechaNacimiento()" />
-
-                                    <div class="invalid-feedback"
-                                        *ngIf="fechaNacimiento.errors?.['required'] && fechaNacimiento.touched">
-                                        La fecha de nacimiento es requerida
-                                    </div>
-                                    <div class="invalid-feedback" *ngIf="isFechaFutura && fechaNacimiento.touched">
-                                        La fecha de nacimiento no puede ser mayor a la fecha actual
-                                    </div>
-                                    <div class="valid-feedback"
-                                        *ngIf="fechaNacimiento.valid && !isFechaFutura && fechaNacimiento.touched">
-                                        ✓ Fecha válida
-                                    </div>
-                                </div>
-                            </div>
-
-
-                            <!-- Botón con tooltip informativo -->
-                            <div class="d-flex justify-content-end mt-4">
-                                <div class="position-relative d-inline-block"
-                                    ngbTooltip="Complete todos los campos requeridos para habilitar el guardado"
-                                    placement="top" triggers="hover"
-                                    [ngbTooltip]="(!isFormEdited || !isPersonalInfoValid()) ? 'Complete todos los campos requeridos para habilitar el guardado' : ''">
-
-                                    <button type="button" class="btn btn-success btn-lg save-button"
+                                <!-- Botón de Guardar Mejorado -->
+                                <div class="form-actions">
+                                    <button type="button" class="btn btn-save-changes btn-lg"
                                         [disabled]="!isFormEdited || !isPersonalInfoValid()"
-                                        (click)="openModal('personalInfoModal')">
+                                        (click)="openModal('personalInfoModal')"
+                                        [ngClass]="{'btn-disabled': !isFormEdited || !isPersonalInfoValid()}">
                                         <i class="fas fa-save me-2"></i>
                                         Guardar Cambios
+                                        <span class="btn-tooltip" *ngIf="!isFormEdited || !isPersonalInfoValid()">
+                                            Complete todos los campos requeridos
+                                        </span>
                                     </button>
                                 </div>
-                            </div>
-
-                        </form>
+                            </form>
+                        </div>
                     </div>
 
-                    <!-- Tab: Editar Contraseña -->
+                    <!-- Tab: Contraseña Mejorada -->
                     <div class="tab-pane fade" id="editPassword" role="tabpanel" aria-labelledby="edit-password-tab">
-                        <form #passwordForm="ngForm">
-                            <div class="form-row">
-                                <div class="form-group col-md-6 position-relative">
-                                    <label for="contrasena">Nueva Contraseña</label>
-                                    <input [type]="showPassword ? 'text' : 'password'" id="contrasena"
-                                        class="form-control" [(ngModel)]="contrasena" name="contrasena"
-                                        (input)="validatePasswords()" minlength="8"
-                                        placeholder="Ingrese su nueva contraseña" required />
-                                    <button class="btn btn-outline-secondary password-toggle position-absolute"
-                                        type="button" (click)="toggleShowPassword()"
-                                        style="right: 5px; top: 73%; transform: translateY(-50%);">
-                                        <i class="bi" [class.bi-eye]="!showPassword"
-                                            [class.bi-eye-slash]="showPassword"></i>
-                                    </button>
-                                    <small *ngIf="!passwordValid && contrasena" class="text-danger">
-                                        La contraseña debe tener al menos 8 caracteres.
-                                    </small>
-                                </div>
-
-                                <div class="form-group col-md-6 position-relative">
-                                    <label for="confirmarContrasena">Confirmar Contraseña</label>
-                                    <input [type]="showConfirmPassword ? 'text' : 'password'" id="confirmarContrasena"
-                                        class="form-control" [(ngModel)]="confirmarContrasena"
-                                        name="confirmarContrasena" (input)="validatePasswords()"
-                                        placeholder="Confirme su nueva contraseña" required />
-                                    <button class="btn btn-outline-secondary password-toggle position-absolute"
-                                        type="button" (click)="toggleShowConfirmPassword()"
-                                        style="right: 5px; top: 73%; transform: translateY(-50%);">
-                                        <i class="bi" [class.bi-eye]="!showConfirmPassword"
-                                            [class.bi-eye-slash]="showConfirmPassword"></i>
-                                    </button>
-                                    <small *ngIf="!passwordsMatch && confirmarContrasena" class="text-danger">
-                                        Las contraseñas no coinciden.
-                                    </small>
-                                </div>
+                        <div class="password-content">
+                            <div class="security-header text-center mb-4">
+                                <i class="fas fa-shield-alt security-icon"></i>
+                                <h3>Cambiar Contraseña</h3>
+                                <p class="text-muted">Actualiza tu contraseña para mantener tu cuenta segura</p>
                             </div>
 
+                            <form #passwordForm="ngForm" class="password-form">
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <div class="password-field">
+                                            <label for="contrasena" class="form-label">
+                                                <i class="fas fa-lock input-icon"></i>
+                                                Nueva Contraseña
+                                            </label>
+                                            <div class="input-group password-input-group">
+                                                <input [type]="showPassword ? 'text' : 'password'" id="contrasena"
+                                                    class="form-control" [(ngModel)]="contrasena" name="contrasena"
+                                                    (input)="validatePasswords()" minlength="8"
+                                                    placeholder="Mínimo 8 caracteres" required />
+                                                <button class="btn btn-password-toggle" type="button"
+                                                    (click)="toggleShowPassword()">
+                                                    <i class="fas" [class.fa-eye]="!showPassword"
+                                                        [class.fa-eye-slash]="showPassword"></i>
+                                                </button>
+                                            </div>
+                                            <div class="password-strength mt-2" *ngIf="contrasena">
+                                                <div class="strength-bar">
+                                                    <div class="strength-fill" [ngClass]="getPasswordStrengthClass()">
+                                                    </div>
+                                                </div>
+                                                <small class="strength-text">{{getPasswordStrengthText()}}</small>
+                                            </div>
+                                            <small *ngIf="!passwordValid && contrasena" class="text-danger mt-1">
+                                                <i class="fas fa-exclamation-circle"></i>
+                                                La contraseña debe tener al menos 8 caracteres
+                                            </small>
+                                        </div>
+                                    </div>
 
-                            <div class="text-right">
-                                <button type="button" class="btn btn-success" [disabled]="!formValid"
-                                    (click)="initiatePasswordChange()">
-                                    Cambiar Contraseña
-                                </button>
-                            </div>
-                        </form>
+                                    <div class="col-md-6">
+                                        <div class="password-field">
+                                            <label for="confirmarContrasena" class="form-label">
+                                                <i class="fas fa-lock input-icon"></i>
+                                                Confirmar Contraseña
+                                            </label>
+                                            <div class="input-group password-input-group">
+                                                <input [type]="showConfirmPassword ? 'text' : 'password'"
+                                                    id="confirmarContrasena" class="form-control"
+                                                    [(ngModel)]="confirmarContrasena" name="confirmarContrasena"
+                                                    (input)="validatePasswords()" placeholder="Repite la contraseña"
+                                                    required />
+                                                <button class="btn btn-password-toggle" type="button"
+                                                    (click)="toggleShowConfirmPassword()">
+                                                    <i class="fas" [class.fa-eye]="!showConfirmPassword"
+                                                        [class.fa-eye-slash]="showConfirmPassword"></i>
+                                                </button>
+                                            </div>
+                                            <div class="password-match mt-2" *ngIf="confirmarContrasena">
+                                                <i class="fas" [class.fa-check-circle]="passwordsMatch"
+                                                    [class.fa-times-circle]="!passwordsMatch"
+                                                    [class.text-success]="passwordsMatch"
+                                                    [class.text-danger]="!passwordsMatch"></i>
+                                                <small [class.text-success]="passwordsMatch"
+                                                    [class.text-danger]="!passwordsMatch">
+                                                    {{ passwordsMatch ? 'Las contraseñas coinciden' : 'Las contraseñas
+                                                    no coinciden' }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions mt-4">
+                                    <button type="button" class="btn btn-primary btn-change-password"
+                                        [disabled]="!formValid" (click)="initiatePasswordChange()">
+                                        <i class="fas fa-key me-2"></i>
+                                        Cambiar Contraseña
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
 
-                    <!-- Sección de Contraseña Única -->
+                    <!-- Tab: Contraseña Única Mejorada -->
                     <div class="tab-pane fade" id="editUniquePassword" role="tabpanel"
                         aria-labelledby="edit-unique-password-tab">
-                        <form #uniquePasswordForm="ngForm">
-                            <div class="form-group position-relative">
-                                <label for="uniquePassword">
-                                    Contraseña Única
-                                    <span *ngIf="!existingUniquePassword" class="text-warning">(No hay una contraseña
-                                        única creada en este momento)</span>
-                                </label>
-                                <input [type]="showUniquePassword ? 'text' : 'password'" id="uniquePassword"
-                                    class="form-control" [(ngModel)]="uniquePassword" name="uniquePassword"
-                                    (input)="validateUniquePassword()" minlength="6" maxlength="20"
-                                    placeholder="Ingrese su contraseña única" required />
-                                <button class="btn btn-outline-secondary password-toggle position-absolute"
-                                    type="button" (click)="toggleShowUniquePassword()"
-                                    style="right: 0px; top: 72%; transform: translateY(-50%);">
-                                    <i class="bi" [class.bi-eye]="!showUniquePassword"
-                                        [class.bi-eye-slash]="showUniquePassword"></i>
-                                </button>
-                                <small *ngIf="!uniquePasswordValid && uniquePassword" class="text-danger">
-                                    La contraseña debe tener entre 6 y 20 caracteres, incluyendo números y caractéres
-                                    especiales.
-                                </small>
-
+                        <div class="unique-password-content">
+                            <div class="security-header text-center mb-4">
+                                <i class="fas fa-user-lock security-icon"></i>
+                                <h3>Contraseña Única</h3>
+                                <p class="text-muted">
+                                    {{ existingUniquePassword ?
+                                    'Actualiza tu contraseña única de administrador' :
+                                    'Establece una contraseña única para funciones administrativas' }}
+                                </p>
+                                <div *ngIf="!existingUniquePassword" class="alert alert-warning mt-3">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Actualmente no hay una contraseña única configurada
+                                </div>
                             </div>
 
-                            <div class="text-right">
-                                <button type="button" class="btn btn-success" [disabled]="!uniquePasswordValid"
-                                    (click)="initiateUniquePasswordChange()">
-                                    {{ existingUniquePassword ? 'Modificar Contraseña' : 'Guardar Contraseña' }}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+                            <form #uniquePasswordForm="ngForm" class="unique-password-form">
+                                <div class="row justify-content-center">
+                                    <div class="col-md-8">
+                                        <div class="unique-password-field">
+                                            <label for="uniquePassword" class="form-label">
+                                                <i class="fas fa-lock input-icon"></i>
+                                                Contraseña Única
+                                            </label>
+                                            <div class="input-group password-input-group">
+                                                <input [type]="showUniquePassword ? 'text' : 'password'"
+                                                    id="uniquePassword" class="form-control"
+                                                    [(ngModel)]="uniquePassword" name="uniquePassword"
+                                                    (input)="validateUniquePassword()" minlength="6" maxlength="20"
+                                                    placeholder="Entre 6 y 20 caracteres" required />
+                                                <button class="btn btn-password-toggle" type="button"
+                                                    (click)="toggleShowUniquePassword()">
+                                                    <i class="fas" [class.fa-eye]="!showUniquePassword"
+                                                        [class.fa-eye-slash]="showUniquePassword"></i>
+                                                </button>
+                                            </div>
+                                            <div class="password-requirements mt-2">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    Debe incluir números y caracteres especiales
+                                                </small>
+                                            </div>
+                                            <small *ngIf="!uniquePasswordValid && uniquePassword"
+                                                class="text-danger mt-1">
+                                                <i class="fas fa-exclamation-circle"></i>
+                                                La contraseña debe tener entre 6-20 caracteres con números y especiales
+                                            </small>
+                                        </div>
 
-        <!-- Modal para Confirmación de Información Personal - Versión Centrada -->
-        <div class="modal fade" id="personalInfoModal" tabindex="-1" aria-labelledby="personalInfoModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="personalInfoModalLabel">
-                            Confirmar Información Personal
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        ¿La información ingresada es correcta? Presione confirmar para proceder.
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            Cancelar
-                        </button>
-                        <button type="button" class="btn btn-success" (click)="savePersonalInfo()"
-                            data-bs-dismiss="modal">
-                            Confirmar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal verificacion OTP -->
-        <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true"
-            data-bs-backdrop="static">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="otpModalLabel">Código OTP Requerido</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        Hemos enviado un código OTP de 6 dígitos al correo electrónico registrado.
-                        Por favor, ingréselo a continuación:
-                        <div class="form-group mt-3">
-                            <input type="text" maxlength="6" class="form-control text-center" [(ngModel)]="otpCode"
-                                name="otpCode" (keypress)="validateNumberInput($event)" placeholder="000000" />
+                                        <div class="form-actions mt-4 text-center">
+                                            <button type="button" class="btn btn-warning btn-unique-password"
+                                                [disabled]="!uniquePasswordValid"
+                                                (click)="initiateUniquePasswordChange()">
+                                                <i class="fas fa-save me-2"></i>
+                                                {{ existingUniquePassword ? 'Actualizar Contraseña' : 'Establecer
+                                                Contraseña' }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
-                        <div *ngIf="otpError" class="text-danger mt-2">{{otpError}}</div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-success" (click)="verifyOtp(otpFlow)"
-                            [disabled]="isVerifyingOtp">
-                            {{ isVerifyingOtp ? 'Verificando...' : 'Validar' }}
-                        </button>
-
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Modal de Confirmación para Contraseña Única -->
-        <div class="modal fade" id="uniquePasswordModal" tabindex="-1" aria-labelledby="confirmationModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="confirmationModalLabel">Confirmación de Cambio</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        ¿Está seguro de que desea cambiar la contraseña única? Esto requiere validación con OTP.
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-success" (click)="confirmUniquePasswordChangeRequest()"
-                            data-bs-dismiss="modal">
-                            Confirmar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
+
+    <!-- Modal para Confirmación de Información Personal - Versión Mejorada -->
+    <div class="modal fade" id="personalInfoModal" tabindex="-1" aria-labelledby="personalInfoModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-confirm">
+            <div class="modal-content modal-modern">
+                <div class="modal-header-modern">
+                    <div class="modal-icon-container success">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div class="modal-title-container">
+                        <h5 class="modal-title" id="personalInfoModalLabel">Confirmar Información</h5>
+                        <p class="modal-subtitle">Verifique que los datos sean correctos antes de guardar</p>
+                    </div>
+                    <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body-modern">
+                    <div class="confirmation-content">
+                        <div class="user-info-preview">
+                            <div class="info-item">
+                                <span class="info-label">Nombre:</span>
+                                <span class="info-value">{{user.nombre}}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Correo:</span>
+                                <span class="info-value">{{user.correo}}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Teléfono:</span>
+                                <span class="info-value">{{user.telefono}}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Fecha Nacimiento:</span>
+                                <span class="info-value">{{user.fecha_nacimiento | date:'dd/MM/yyyy'}}</span>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Esta acción actualizará su información personal en el sistema.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-modern">
+                    <button type="button" class="btn btn-secondary-modern" data-bs-dismiss="modal">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Revisar Datos
+                    </button>
+                    <button type="button" class="btn btn-success-modern" (click)="savePersonalInfo()"
+                        data-bs-dismiss="modal">
+                        <i class="fas fa-save me-2"></i>
+                        Confirmar y Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal OTP Mejorado -->
+    <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true"
+        data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content modal-modern">
+                <div class="modal-header-modern">
+                    <div class="modal-icon-container warning">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="modal-title-container">
+                        <h5 class="modal-title" id="otpModalLabel">Verificación de Seguridad</h5>
+                        <p class="modal-subtitle">Ingrese el código de verificación</p>
+                    </div>
+                    <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close"
+                        [disabled]="isVerifyingOtp">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body-modern">
+                    <div class="otp-content">
+                        <div class="otp-instructions">
+                            <i class="fas fa-envelope text-primary mb-3" style="font-size: 2rem;"></i>
+                            <p class="instruction-text">
+                                Hemos enviado un código OTP de 6 dígitos a:<br>
+                                <strong class="user-email">{{user.correo}}</strong>
+                            </p>
+                        </div>
+
+                        <div class="otp-input-container">
+                            <div class="otp-fields">
+                                <input type="text" maxlength="1" class="otp-field" [(ngModel)]="otpCodeArray[0]"
+                                    (input)="onOtpInput(0, $event)" (keydown)="onOtpKeyDown(0, $event)" #otp1>
+                                <input type="text" maxlength="1" class="otp-field" [(ngModel)]="otpCodeArray[1]"
+                                    (input)="onOtpInput(1, $event)" (keydown)="onOtpKeyDown(1, $event)" #otp2>
+                                <input type="text" maxlength="1" class="otp-field" [(ngModel)]="otpCodeArray[2]"
+                                    (input)="onOtpInput(2, $event)" (keydown)="onOtpKeyDown(2, $event)" #otp3>
+                                <input type="text" maxlength="1" class="otp-field" [(ngModel)]="otpCodeArray[3]"
+                                    (input)="onOtpInput(3, $event)" (keydown)="onOtpKeyDown(3, $event)" #otp4>
+                                <input type="text" maxlength="1" class="otp-field" [(ngModel)]="otpCodeArray[4]"
+                                    (input)="onOtpInput(4, $event)" (keydown)="onOtpKeyDown(4, $event)" #otp5>
+                                <input type="text" maxlength="1" class="otp-field" [(ngModel)]="otpCodeArray[5]"
+                                    (input)="onOtpInput(5, $event)" (keydown)="onOtpKeyDown(5, $event)" #otp6>
+                            </div>
+
+                            <div class="otp-actions mt-3">
+                                <button type="button" class="btn btn-link btn-resend-otp" (click)="resendOtp()"
+                                    [disabled]="resendCooldown > 0">
+                                    <i class="fas fa-redo me-1"></i>
+                                    Reenviar código
+                                    <span *ngIf="resendCooldown > 0">({{resendCooldown}}s)</span>
+                                </button>
+                            </div>
+
+                            <div *ngIf="otpError" class="alert alert-danger mt-3" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                {{otpError}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-modern">
+                    <button type="button" class="btn btn-secondary-modern" data-bs-dismiss="modal"
+                        [disabled]="isVerifyingOtp">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary-modern" (click)="verifyOtp(otpFlow)"
+                        [disabled]="isVerifyingOtp || !isOtpComplete()">
+                        <i class="fas" [class.fa-spinner]="isVerifyingOtp" [class.fa-check]="!isVerifyingOtp"
+                            [class.fa-spin]="isVerifyingOtp"></i>
+                        {{ isVerifyingOtp ? 'Verificando...' : 'Validar Código' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación para Contraseña Única Mejorado -->
+    <div class="modal fade" id="uniquePasswordModal" tabindex="-1" aria-labelledby="uniquePasswordModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-confirm">
+            <div class="modal-content modal-modern">
+                <div class="modal-header-modern">
+                    <div class="modal-icon-container warning">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <div class="modal-title-container">
+                        <h5 class="modal-title" id="uniquePasswordModalLabel">Confirmar Cambio</h5>
+                        <p class="modal-subtitle">Contraseña Única de Administrador</p>
+                    </div>
+                    <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body-modern">
+                    <div class="confirmation-content">
+                        <div class="security-warning">
+                            <i class="fas fa-exclamation-triangle text-warning mb-3" style="font-size: 3rem;"></i>
+                            <h6 class="warning-title">¿Está seguro de realizar este cambio?</h6>
+                            <p class="warning-text">
+                                {{ existingUniquePassword ?
+                                'Está a punto de modificar la contraseña única del sistema.' :
+                                'Está a punto de establecer una nueva contraseña única para el sistema.' }}
+                            </p>
+                        </div>
+
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            <strong>Importante:</strong> Esta acción requiere verificación OTP y afectará el acceso a
+                            funciones administrativas.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-modern">
+                    <button type="button" class="btn btn-secondary-modern" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-warning-modern" (click)="confirmUniquePasswordChangeRequest()"
+                        data-bs-dismiss="modal">
+                        <i class="fas fa-lock me-2"></i>
+                        {{ existingUniquePassword ? 'Modificar Contraseña' : 'Establecer Contraseña' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Éxito Genérico -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content modal-modern">
+                <div class="modal-body-modern text-center py-5">
+                    <div class="success-animation">
+                        <i class="fas fa-check-circle text-success" style="font-size: 4rem;"></i>
+                    </div>
+                    <h5 class="success-title mt-3">¡Operación Exitosa!</h5>
+                    <p class="success-message">{{successMessage}}</p>
+                    <button type="button" class="btn btn-success-modern mt-3" data-bs-dismiss="modal">
+                        <i class="fas fa-thumbs-up me-2"></i>
+                        Continuar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

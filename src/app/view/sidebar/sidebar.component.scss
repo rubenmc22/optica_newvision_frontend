@@ -1,3 +1,5 @@
+@use '../../../custom-theme.scss' as theme;
+
 /* ================================
    LAYOUT PRINCIPAL
    ================================ */
@@ -223,7 +225,7 @@
   bottom: 50px;
   height: calc(100vh - 60px - 50px);
   width: 260px;
-  overflow: visible; /* Mantenemos visible por defecto */
+  overflow: hidden !important;
   z-index: 1030;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
@@ -238,7 +240,7 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
-  flex-shrink: 0; /* Evita que se reduzca */
+  flex-shrink: 0;
 }
 
 .user-avatar {
@@ -288,32 +290,130 @@
 }
 
 /* ================================
-   CONTENEDOR DE MENÚ - SCROLL SOLO A PARTIR DE 125%
+   CONTENEDOR DE MENÚ - SCROLL A PARTIR DE 1024px
    ================================ */
 .sidebar {
   margin-top: 1rem !important;
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: visible; /* Por defecto sin scroll */
-  
-  nav {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: visible; /* Por defecto sin scroll */
+  overflow: hidden !important;
+}
+
+.sidebar nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+
+/* Por defecto SIN scroll - CORREGIDO SIN SCROLL X */
+.nav-sidebar {
+  flex: 1;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important; /* Aseguramos que no haya scroll horizontal */
+  padding-bottom: 0;
+  width: 100%; /* Aseguramos que ocupe el ancho completo */
+
+  /* Scrollbar personalizada - oculta por defecto */
+  &::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
   }
-  
+}
+
+/* A PARTIR DE 1024px - ACTIVAR SCROLL VERTICAL SOLAMENTE */
+@media (max-width: 1024px) {
   .nav-sidebar {
-    flex: 1;
-    overflow-y: visible; /* Por defecto sin scroll */
-    overflow-x: hidden;
-    
-    /* Sin scrollbar por defecto */
+    overflow-y: auto !important; /* Solo scroll vertical */
+    overflow-x: hidden !important; /* Sin scroll horizontal */
+    padding-bottom: 1rem;
+
+    /* Prevenir que el scroll se propague al body */
+    overscroll-behavior: contain; /* Esto evita que el scroll se propague */
+    -webkit-overflow-scrolling: touch;
+
+    /* Mostrar scrollbar solo vertical */
     &::-webkit-scrollbar {
-      width: 0;
-      background: transparent;
+      width: 6px;
     }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      transition: background 0.3s ease;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Ocultar scrollbar horizontal */
+    &::-webkit-scrollbar-horizontal {
+      display: none;
+    }
+
+    &::-webkit-scrollbar-track-piece:end {
+      background: transparent;
+      margin-bottom: 10px; 
+    }
+
+    &::-webkit-scrollbar-track-piece:start {
+      background: transparent;
+      margin-top: 10px;
+    }
+  }
+
+  /* Ajustes adicionales para pantallas pequeñas */
+  .main-sidebar {
+    height: calc(100vh - 60px - 50px);
+  }
+
+  .sidebar-user {
+    padding: 1rem 0.75rem 0.75rem;
+  }
+
+  .avatar-image {
+    width: 60px;
+    height: 60px;
+  }
+
+  .user-name {
+    font-size: 1rem;
+  }
+
+  .user-role {
+    font-size: 0.85rem;
+  }
+
+  .user-sede {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .nav-sidebar .nav-link {
+    padding: 0.6rem 0.75rem;
+    margin: 0.125rem 0.25rem;
+    font-size: 0.9rem;
+    max-width: calc(100% - 0.5rem); /* Prevenir desbordamiento horizontal */
+  }
+
+  .submenu .nav-link {
+    padding: 0.5rem 0.75rem 0.5rem 2rem;
+    max-width: calc(100% - 0.5rem); /* Prevenir desbordamiento horizontal */
+  }
+
+  /* Asegurar que los textos no causen scroll horizontal */
+  .nav-link p {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 }
 
@@ -327,6 +427,7 @@
   border: none;
   position: relative;
   overflow: hidden;
+  max-width: calc(100% - 1rem); /* Prevenir desbordamiento */
 }
 
 .nav-sidebar .nav-link::before {
@@ -369,6 +470,7 @@
   width: 20px;
   text-align: center;
   font-size: 1rem;
+  flex-shrink: 0; /* Prevenir que se reduzcan */
 }
 
 .nav-sidebar .nav-link p {
@@ -377,11 +479,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0; /* Permitir que se reduzca */
 }
 
 .arrow-icon {
   transition: transform 0.3s !important;
   font-size: 0.9rem;
+  flex-shrink: 0; /* Prevenir que se reduzca */
+  margin-left: 0.5rem;
 }
 
 .menu-open .arrow-icon {
@@ -395,12 +503,14 @@
   margin: 0 0.5rem;
   padding: 0.25rem 0;
   backdrop-filter: blur(10px);
+  max-width: calc(100% - 1rem); /* Prevenir desbordamiento */
 }
 
 .submenu .nav-link {
   padding: 0.6rem 1rem 0.6rem 2.5rem;
   margin: 0.125rem 0;
   font-size: 0.9rem;
+  max-width: 100%; /* Prevenir desbordamiento */
 }
 
 .submenu .nav-link:hover {
@@ -424,129 +534,17 @@
   font-size: 0.7rem;
   font-weight: 500;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0; /* Prevenir que se reduzca */
+  margin-left: 0.5rem;
 }
 
 /* ================================
-   MEDIA QUERIES PARA DETECTAR ZOOM 125% Y SUPERIOR
-   ================================ */
-
-/* Zoom 125% - cuando el viewport se reduce significativamente */
-@media (max-width: 1280px), (max-height: 720px) {
-  .main-sidebar {
-    overflow: hidden; /* Activar overflow hidden */
-  }
-  
-  .sidebar {
-    overflow: hidden; /* Activar overflow hidden */
-    
-    nav {
-      overflow: hidden; /* Activar overflow hidden */
-    }
-    
-    .nav-sidebar {
-      overflow-y: auto; /* Activar scroll vertical */
-      overflow-x: hidden;
-      padding-bottom: 1rem;
-      
-      /* Scrollbar personalizada para zoom */
-      &::-webkit-scrollbar {
-        width: 6px;
-      }
-      
-      &::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 3px;
-      }
-      
-      &::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.3);
-        border-radius: 3px;
-      }
-      
-      &::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.5);
-      }
-    }
-  }
-}
-
-/* Zoom 150% - ajustes más agresivos */
-@media (max-width: 1024px), (max-height: 576px) {
-  .main-sidebar {
-    height: calc(100vh - 60px - 50px);
-  }
-  
-  .sidebar-user {
-    padding: 1rem 0.75rem 0.75rem;
-  }
-  
-  .avatar-image {
-    width: 60px;
-    height: 60px;
-  }
-  
-  .user-name {
-    font-size: 1rem;
-  }
-  
-  .user-role {
-    font-size: 0.85rem;
-  }
-  
-  .user-sede {
-    font-size: 0.75rem;
-    padding: 0.4rem 0.6rem;
-  }
-  
-  .nav-sidebar .nav-link {
-    padding: 0.6rem 0.75rem;
-    margin: 0.125rem 0.25rem;
-    font-size: 0.9rem;
-  }
-  
-  .submenu .nav-link {
-    padding: 0.5rem 0.75rem 0.5rem 2rem;
-  }
-}
-
-/* Zoom 175%+ - ajustes extremos */
-@media (max-width: 800px), (max-height: 450px) {
-  .main-sidebar {
-    width: 240px; /* Reducir ligeramente el ancho */
-  }
-  
-  .sidebar-user {
-    padding: 0.75rem 0.5rem 0.5rem;
-  }
-  
-  .avatar-image {
-    width: 50px;
-    height: 50px;
-  }
-  
-  .nav-sidebar .nav-link {
-    padding: 0.5rem 0.6rem;
-    font-size: 0.85rem;
-  }
-  
-  .nav-sidebar .nav-link i {
-    font-size: 0.9rem;
-    margin-right: 0.5rem;
-  }
-  
-  .submenu .nav-link {
-    padding: 0.4rem 0.6rem 0.4rem 1.75rem;
-    font-size: 0.8rem;
-  }
-}
-
-/* ================================
-   FOOTER CON COLOR COMPLEMENTARIO
+   FOOTER
    ================================ */
 .main-footer {
   position: fixed;
   bottom: 0;
-  left: 960px !important;
+  left: 0px !important;
   right: 0;
   height: 45px;
   background: #34495e !important;
@@ -597,20 +595,43 @@
   bottom: 50px;
   background: rgba(0, 0, 0, 0.5);
   z-index: 1029;
-  
+
   &.active {
     display: block;
   }
 }
 
 /* ================================
-   RESPONSIVE COMPLETO
+   AJUSTES RESPONSIVE ADICIONALES
    ================================ */
+
+@media (max-width: 1396.36px) {
+  .main-footer {
+    left: 0px !important;
+    height: 45px !important;
+  }
+}
+
+@media (max-width: 1230px) {
+  .main-footer {
+    left: 0px !important;
+    right: 0;
+    height: 45px !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .main-footer {
+    left: 0px !important;
+    height: 45px !important;
+  }
+}
+
 @media (max-width: 768px) {
   .main-sidebar {
     left: -100%;
     width: 280px;
-    
+
     &.sidebar-open {
       left: 0;
     }
@@ -619,7 +640,7 @@
   .content-wrapper {
     margin-left: 0;
     padding: 1rem;
-    
+
     &.sidebar-pushed {
       margin-left: 280px;
     }
@@ -627,7 +648,7 @@
 
   .main-footer {
     left: 0 !important;
-    
+
     &.sidebar-pushed {
       left: 280px !important;
     }
@@ -666,7 +687,7 @@
 @media (max-width: 576px) {
   .main-sidebar {
     width: 100%;
-    
+
     &.sidebar-open {
       left: 0;
     }

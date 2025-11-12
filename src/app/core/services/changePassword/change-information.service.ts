@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { SwalService } from '../swal/swal.service';
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
-import { environment } from '../../../../environments/environment';
+import { environment } from '../../../../environments/environment.local';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
@@ -100,6 +100,9 @@ export class ChangeInformationService {
 
   // Carga de imagen de perfil
   uploadProfileImage(formData: FormData): Observable<{ message: string, image_url: string }> {
+    console.log('=== SERVICE DEBUG ===');
+    console.log('URL:', `${environment.apiUrl}/account/upload-profile-image`);
+    console.log('=== END SERVICE DEBUG ===');
     return this.http.post<{ message: string, image_url: string }>(
       `${environment.apiUrl}/account/upload-profile-image`,
       formData

@@ -20,6 +20,7 @@ import { GeneralFunctions } from '../../general-functions/general-functions';
   templateUrl: './my-account.component.html',
   styleUrls: ['./my-account.component.scss']
 })
+
 export class MyAccountComponent implements OnInit {
   // ============================================================
   // Propiedades generales del componente
@@ -58,7 +59,6 @@ export class MyAccountComponent implements OnInit {
   // ============================================================
   contrasena = '';
   confirmarContrasena = '';
-  otpCode = '';
   passwordValid = false;
   passwordsMatch = false;
   formValid = false;
@@ -76,6 +76,14 @@ export class MyAccountComponent implements OnInit {
   showUniquePassword = false;
   uniquePasswordValid = false;
   existingUniquePassword = false;
+
+  // ============================================================
+  // Nuevas propiedades requeridas para el template
+  // ============================================================
+  successMessage: string = '';
+  resendCooldown: number = 0;
+  otpCodeArray: string[] = new Array(6).fill(''); // Array para campos individuales
+  otpCode: string = ''; // Mantener string para compatibilidad con métodos existentes
 
   constructor(
     private router: Router,
@@ -96,7 +104,14 @@ export class MyAccountComponent implements OnInit {
     this.currentRol = this.authService.getCurrentRol() || { key: '', name: '' };
     this.currentCargo = this.authService.getCurrentCargo() || { key: '', name: '' };
     this.loadUserData();
-    this.setMaxDate(); // ← Agrega esta línea
+    this.setMaxDate();
+  }
+
+  ngAfterViewInit(): void {
+    // Forzar detección de cambios después de que la vista se renderice
+    setTimeout(() => {
+      this.cdRef.detectChanges();
+    }, 1000);
   }
 
   // ============================================================
@@ -152,15 +167,6 @@ export class MyAccountComponent implements OnInit {
     return message;
   }
 
-  // En tu componente, después de cargar los datos
-  ngAfterViewInit(): void {
-    // Forzar detección de cambios después de que la vista se renderice
-    setTimeout(() => {
-      this.cdRef.detectChanges();
-    }, 1000);
-  }
-
-  // Tu método para verificar la validez del formulario
   isPersonalInfoValid(): boolean {
     const nombreValido = !!this.user.nombre?.trim() &&
       /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(this.user.nombre);
@@ -201,7 +207,6 @@ export class MyAccountComponent implements OnInit {
     this.detectChanges();
   }
 
-
   private getDefaultUserProfile(): UserProfile {
     return {
       nombre: '',
@@ -214,8 +219,6 @@ export class MyAccountComponent implements OnInit {
       rol: ''
     };
   }
-
-
 
   private setupFieldChangeListeners(): void {
     setTimeout(() => {
@@ -452,6 +455,17 @@ export class MyAccountComponent implements OnInit {
     const formData = new FormData();
     formData.append('profileImage', file);
 
+    console.log('=== DEBUG UPLOAD IMAGE ===');
+    console.log('FormData field name:', 'profileImage');
+    console.log('File object:', file);
+
+    // Verificar contenido del FormData
+    console.log('FormData contents:');
+    for (let pair of (formData as any).entries()) {
+      console.log('Key:', pair[0], 'Value:', pair[1]);
+    }
+    console.log('=== END DEBUG ===');
+
     try {
       const response = await lastValueFrom(
         this.changeInformationService.uploadProfileImage(formData)
@@ -470,6 +484,10 @@ export class MyAccountComponent implements OnInit {
       return response.image_url;
     } catch (error) {
       console.error('Error subiendo imagen:', error);
+      console.error('Error completo:', error);
+      if (error.error) {
+        console.error('Error response:', error.error);
+      }
       throw error;
     }
   }
@@ -527,6 +545,11 @@ export class MyAccountComponent implements OnInit {
 
     this.otpFlow = 'password';
     this.isSendingOtp = true;
+
+    // Resetear campos OTP
+    this.resetOtpFields();
+    this.otpError = '';
+
     const userEmail = this.user.correo;
 
     this.changeInformationService.sendPasswordChangeOtp(userEmail).pipe(
@@ -549,12 +572,194 @@ export class MyAccountComponent implements OnInit {
     });
   }
 
+  // ============================================================
+  // Métodos para fortaleza de contraseña
+  // ============================================================
+
+  getPasswordStrengthClass(): string {
+    if (!this.contrasena) return '';
+
+    const strength = this.calculatePasswordStrength(this.contrasena);
+
+    switch (strength) {
+      case 'weak': return 'weak';
+      case 'medium': return 'medium';
+      case 'strong': return 'strong';
+      default: return '';
+    }
+  }
+
+  getPasswordStrengthText(): string {
+    if (!this.contrasena) return '';
+
+    const strength = this.calculatePasswordStrength(this.contrasena);
+
+    switch (strength) {
+      case 'weak': return 'Débil';
+      case 'medium': return 'Media';
+      case 'strong': return 'Fuerte';
+      default: return '';
+    }
+  }
+
+  private calculatePasswordStrength(password: string): 'weak' | 'medium' | 'strong' {
+    if (password.length < 8) return 'weak';
+
+    let score = 0;
+
+    // Longitud mínima
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+
+    // Diversidad de caracteres
+    if (/[a-z]/.test(password)) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+    if (score <= 3) return 'weak';
+    if (score <= 5) return 'medium';
+    return 'strong';
+  }
+
+  // ============================================================
+  // Métodos para OTP con campos individuales
+  // ============================================================
+
+  /**
+   * Maneja la entrada en campos OTP individuales
+   */
+  onOtpInput(index: number, event: any): void {
+    const input = event.target;
+    const value = input.value;
+
+    // Solo permitir números
+    if (!/^\d?$/.test(value)) {
+      input.value = '';
+      this.otpCodeArray[index] = '';
+      this.updateFullOtpCode();
+      return;
+    }
+
+    this.otpCodeArray[index] = value;
+    this.updateFullOtpCode();
+
+    // Auto-enfocar siguiente campo
+    if (value && index < 5) {
+      const nextInput = document.querySelectorAll('.otp-field')[index + 1] as HTMLInputElement;
+      if (nextInput) nextInput.focus();
+    }
+  }
+
+  /**
+   * Maneja teclas en campos OTP
+   */
+  onOtpKeyDown(index: number, event: KeyboardEvent): void {
+    // Manejar tecla backspace
+    if (event.key === 'Backspace') {
+      if (!this.otpCodeArray[index] && index > 0) {
+        // Si el campo actual está vacío, retroceder al anterior
+        const prevInput = document.querySelectorAll('.otp-field')[index - 1] as HTMLInputElement;
+        if (prevInput) {
+          prevInput.focus();
+          prevInput.select();
+        }
+      } else {
+        // Limpiar campo actual
+        this.otpCodeArray[index] = '';
+        this.updateFullOtpCode();
+      }
+    }
+
+    // Manejar teclas de flecha
+    if (event.key === 'ArrowLeft' && index > 0) {
+      const prevInput = document.querySelectorAll('.otp-field')[index - 1] as HTMLInputElement;
+      if (prevInput) prevInput.focus();
+      event.preventDefault();
+    }
+
+    if (event.key === 'ArrowRight' && index < 5) {
+      const nextInput = document.querySelectorAll('.otp-field')[index + 1] as HTMLInputElement;
+      if (nextInput) nextInput.focus();
+      event.preventDefault();
+    }
+  }
+
+  /**
+   * Actualiza el código OTP completo concatenando los campos individuales
+   */
+  private updateFullOtpCode(): void {
+    this.otpCode = this.otpCodeArray.join('');
+    this.cdRef.detectChanges();
+  }
+
+  /**
+   * Verifica si todos los campos OTP están completos
+   */
+  isOtpComplete(): boolean {
+    return this.otpCodeArray.every(char => char !== '');
+  }
+
+  /**
+   * Reenvía el código OTP
+   */
+  resendOtp(): void {
+    if (this.resendCooldown > 0) return;
+
+    this.isSendingOtp = true;
+    this.resendCooldown = 60; // 60 segundos de cooldown
+
+    // Resetear campos OTP
+    this.otpCodeArray = new Array(6).fill('');
+    this.otpCode = '';
+    this.otpError = '';
+
+    // Enviar OTP
+    this.changeInformationService.sendPasswordChangeOtp(this.user.correo).pipe(
+      finalize(() => this.isSendingOtp = false)
+    ).subscribe({
+      next: (response) => {
+        if (response.message === 'ok') {
+          this.snackBar.open('Código OTP reenviado', 'Cerrar', {
+            duration: 3000,
+            panelClass: ['success-snackbar']
+          });
+
+          // Iniciar cuenta regresiva
+          const countdown = setInterval(() => {
+            this.resendCooldown--;
+            if (this.resendCooldown <= 0) {
+              clearInterval(countdown);
+            }
+            this.cdRef.detectChanges();
+          }, 1000);
+        }
+      },
+      error: (error: HttpErrorResponse) => {
+        const errorMsg = error.error?.message || 'No se pudo reenviar el OTP';
+        this.swalService.showError('Error', errorMsg);
+        this.resendCooldown = 0;
+      }
+    });
+  }
+
+  /**
+   * Muestra modal de éxito
+   */
+  showSuccessModal(message: string): void {
+    this.successMessage = message;
+    this.openModal('successModal');
+  }
+
+  /**
+   * Actualizado para usar otpCode (string) que se sincroniza con otpCodeArray
+   */
   verifyOtp(flow: 'password' | 'uniquePassword'): void {
     this.otpError = '';
 
     if (!this.otpCode || this.otpCode.length !== 6 || !/^\d+$/.test(this.otpCode)) {
       this.otpError = 'Ingrese un código OTP válido de 6 dígitos numéricos';
-      this.otpCode = '';
+      this.resetOtpFields();
       return;
     }
 
@@ -578,12 +783,12 @@ export class MyAccountComponent implements OnInit {
           }
         } else {
           this.otpError = 'Código OTP incorrecto. Intente nuevamente.';
-          this.otpCode = '';
+          this.resetOtpFields();
         }
       },
       error: (error) => {
         this.otpError = error.error?.message || 'Error al verificar el OTP';
-        this.otpCode = '';
+        this.resetOtpFields();
       }
     });
   }
@@ -616,10 +821,22 @@ export class MyAccountComponent implements OnInit {
     });
   }
 
+  /**
+   * Método auxiliar para resetear campos OTP
+   */
+  private resetOtpFields(): void {
+    this.otpCodeArray = new Array(6).fill('');
+    this.otpCode = '';
+    this.cdRef.detectChanges();
+  }
+
+  /**
+   * Actualizado para resetear ambos formatos de OTP
+   */
   private resetPasswordFields(): void {
     this.contrasena = '';
     this.confirmarContrasena = '';
-    this.otpCode = '';
+    this.resetOtpFields();
     this.passwordValid = false;
     this.passwordsMatch = false;
     this.formValid = false;
@@ -652,6 +869,10 @@ export class MyAccountComponent implements OnInit {
       panelClass: ['info-snackbar']
     });
 
+    // Resetear campos OTP
+    this.resetOtpFields();
+    this.otpError = '';
+
     this.isVerifyingOtp = true;
     this.changeInformationService.sendPasswordChangeOtp(this.user.correo).pipe(
       finalize(() => this.isVerifyingOtp = false)
@@ -665,16 +886,18 @@ export class MyAccountComponent implements OnInit {
     });
   }
 
+  /**
+   * Actualizado para usar otpCode (string)
+   */
   saveUniquePasswordToDatabase(): void {
     this.changeInformationService.changeUniquePassword(this.user.correo, this.uniquePassword, this.otpCode).pipe(
       finalize(() => this.isChangingPassword = false)
     ).subscribe({
       next: () => {
-        this.swalService.showSuccess('Éxito', 'Contraseña única guardada correctamente.')
-          .then(() => {
-            this.uniquePassword = '';
-            this.existingUniquePassword = true;
-          });
+        this.showSuccessModal('Contraseña única guardada correctamente.');
+        this.uniquePassword = '';
+        this.existingUniquePassword = true;
+        this.resetOtpFields();
       },
       error: (error: HttpErrorResponse) => {
         const errorMsg = error.error?.message || 'Error al cambiar la contraseña única';
@@ -682,5 +905,4 @@ export class MyAccountComponent implements OnInit {
       }
     });
   }
-
 }

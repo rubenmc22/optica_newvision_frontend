@@ -1,3 +1,4 @@
+@use '../../../custom-theme.scss' as theme;
 /* =============================================
    MÓDULO DE PACIENTES MODERNO CON PAGINACIÓN
    ============================================= */
@@ -13,7 +14,7 @@
 
 /* Header modernizado */
 .card-header-moderno {
-    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    background: var(--degradado-color) !important;
     color: white;
     padding: 1.1rem 1.5rem;
     border-bottom: none;
@@ -617,7 +618,7 @@
 
 /* Header moderno */
 .modal-header-moderno {
-    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    background: var(--degradado-color) !important;
     color: white;
     padding: 1.2rem;
     border-bottom: none;
