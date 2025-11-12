@@ -1772,8 +1772,6 @@ export class HistoriasMedicasComponent implements OnInit {
         <div class="header-info">
           <p><strong>Fecha de creación:</strong> ${this.formatearFecha(this.historiaSeleccionada?.auditoria?.fechaCreacion)}</p>
           <p><strong>N° Historia:</strong> ${this.historiaSeleccionada?.nHistoria || 'N/A'}</p>
-          <p><strong>Paciente:</strong> ${this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'No especificado'}</p>
-          <p><strong>Cédula:</strong> ${this.pacienteSeleccionado?.informacionPersonal?.cedula || 'No especificado'}</p>
         </div>
       </div>
 

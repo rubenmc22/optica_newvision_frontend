@@ -19,6 +19,7 @@ import { DynamicModalComponent } from './../../shared/dynamic-modal/dynamic-moda
   styleUrls: ['./empleados.component.scss'],
   encapsulation: ViewEncapsulation.None
 })
+
 export class EmpleadosComponent implements OnInit {
   // ==================== VARIABLES DEL COMPONENTE ====================
   @ViewChild(DynamicModalComponent, { static: false }) dynamicModal!: DynamicModalComponent;
@@ -29,6 +30,10 @@ export class EmpleadosComponent implements OnInit {
   filteredEmployees: any[] = [];
   roles: { id: string, nombre: string }[] = [];
   positions: { id: string, nombre: string }[] = [];
+
+  // Variables para ordenamiento
+  ordenActual: string = 'nombre';
+  ordenAscendente: boolean = true;
 
   // Formularios y controles
   employeeForm: FormGroup;
@@ -64,6 +69,46 @@ export class EmpleadosComponent implements OnInit {
   ngOnInit(): void {
     this.loadEmployees();
     this.loadRolesAndPositions();
+  }
+
+  // ==================== MÉTODOS DE ORDENAMIENTO ====================
+  /**
+   * Ordena los empleados por una columna específica
+   * @param columna Columna por la cual ordenar
+   */
+  ordenarPor(columna: string): void {
+    if (this.ordenActual === columna) {
+      // Si ya está ordenado por esta columna, invertir el orden
+      this.ordenAscendente = !this.ordenAscendente;
+    } else {
+      // Si es una nueva columna, ordenar ascendente por defecto
+      this.ordenActual = columna;
+      this.ordenAscendente = true;
+    }
+
+    this.filteredEmployees.sort((a, b) => {
+      let valorA = a[columna];
+      let valorB = b[columna];
+
+      // Manejar valores nulos o undefined
+      if (valorA == null) valorA = '';
+      if (valorB == null) valorB = '';
+
+      // Convertir a minúsculas para ordenamiento case-insensitive si son strings
+      if (typeof valorA === 'string') valorA = valorA.toLowerCase();
+      if (typeof valorB === 'string') valorB = valorB.toLowerCase();
+
+      let resultado = 0;
+
+      if (valorA < valorB) {
+        resultado = -1;
+      } else if (valorA > valorB) {
+        resultado = 1;
+      }
+
+      // Invertir el resultado si el orden es descendente
+      return this.ordenAscendente ? resultado : -resultado;
+    });
   }
 
   // ==================== MÉTODOS DE CARGA DE DATOS ====================
@@ -193,7 +238,6 @@ export class EmpleadosComponent implements OnInit {
     this.validateField(employee, field === 'cargoNombre' ? 'cargo' : 'rol');
   }
 
-
   // ==================== MÉTODOS DE CRUD EMPLEADOS ====================
   /**
    * Agrega un nuevo empleado
@@ -212,10 +256,9 @@ export class EmpleadosComponent implements OnInit {
 
     this.empleadosService.addEmployees(payload).subscribe({
       next: () => {
-
         this.empleadosService.getAllEmpleados().subscribe((empleados) => {
-          this.employees = [...empleados]; // 🔄 Reemplazo con spread para minimizar cambio de referencia
-          this.filterEmployees();          // Mantienes filtros activos
+          this.employees = [...empleados];
+          this.filterEmployees();
         });
         this.isLoading = false;
 
@@ -293,71 +336,10 @@ export class EmpleadosComponent implements OnInit {
     employee.modified = true;
   }
 
-
   /**
    * Guarda los cambios de un empleado editado
    * @param index Índice del empleado editado
    */
-  /* saveEmployeeChanges(index: number): void {
-     const emp = this.employees[index];
-     console.log('RDMC emp', emp);
-     let errors: string[] = [];
- 
-     // Validar cédula solo si ha cambiado
-     if (emp.document !== emp.originalValues.document) {
-       if (!emp.document || emp.document.toString().length < 8 || emp.document.toString().length > 9) {
-         errors.push('La cédula debe tener entre 8 y 9 dígitos.');
-       }
-     }
- 
-     // Validar nombre solo si ha cambiado
-     if (emp.name !== emp.originalValues.name) {
-       if (!emp.name || emp.name.trim().length === 0) {
-         errors.push('El nombre es requerido.');
-       }
-     }
- 
-     // Validar cargo solo si ha cambiado
-     if (emp.position !== emp.originalValues.position) {
-       if (!emp.position) {
-         errors.push('Debe seleccionar un cargo.');
-       }
-     }
- 
-     // Validar rol solo si ha cambiado
-     if (emp.role !== emp.originalValues.role) {
-       if (!emp.role) {
-         errors.push('Debe seleccionar un rol.');
-       }
-     }
- 
-     // Si hay errores, mostrar todas las alertas juntas y detener el proceso
-     if (errors.length > 0) {
-       this.snackBar.open(errors.join(' '), 'Cerrar', {
-         duration: 5000,
-         panelClass: ['info-snackbar']
-       });
-       return;
-     }
- 
-     // Enviar la actualización al backend
-     const updatedEmployee = { ...emp }; // Copia del objeto sin originalValues
-     delete updatedEmployee.originalValues;
-     delete updatedEmployee.editing;
- 
-     console.log('RDMC updatedEmployee', updatedEmployee);
- 
-     this.empleadosService.actualizarEmpleado(updatedEmployee).subscribe(() => {
-       emp.editing = false;
-       this.swalService.showSuccess('¡Actualización exitosa!', 'Se ha modificado el usuario correctamente.');
-       this.filterEmployees();
-     }, error => {
-       console.error('Error al actualizar empleado:', error);
-       this.swalService.showError('Error!', 'Hubo un problema al intentar actualizar el usuario.');
-     });
-   }*/
-
-
   updateEmployee(index: number): void {
     const emp = this.employees[index];
     console.log('RDMC emp', emp);
@@ -386,7 +368,6 @@ export class EmpleadosComponent implements OnInit {
         this.swalService.showError('Error!', 'Hubo un problema al intentar actualizar el usuario.');
       }
     });
-
   }
 
   private buildEmployeePayload(emp: any): any {
@@ -399,12 +380,10 @@ export class EmpleadosComponent implements OnInit {
     };
   }
 
-
   private formatDate(date: string | Date): string {
     const d = new Date(date);
     return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
   }
-
 
   private validateEmployeeChanges(emp: any): string[] {
     const errors: string[] = [];
@@ -546,10 +525,11 @@ export class EmpleadosComponent implements OnInit {
    */
   badgeClass(role: string): string {
     switch (role) {
-      case 'Administrador': return 'bg-success';
-      case 'Gerente': return 'bg-primary';
-      case 'Asesor Optico': return 'bg-info';
-      default: return 'bg-secondary';
+      case 'Administrador': return 'badge-admin';
+      case 'Gerente': return 'badge-gerente';
+      case 'Asesor Optico': return 'badge-asesor';
+      case 'Médico': return 'badge-medico';
+      default: return 'badge-default';
     }
   }
 
@@ -582,12 +562,6 @@ export class EmpleadosComponent implements OnInit {
 
   onFieldChange(employee: Empleado, field: keyof Empleado): void {
     employee.modified = true;
-
-    // Si quieres validar también:
     this.validateField(employee, field);
   }
-
-
-
-
 }
