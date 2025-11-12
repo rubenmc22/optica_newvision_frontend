@@ -9,7 +9,7 @@ export class AlertService {
 
   showMessage(message: string): void {
     this.snackBar.open('✅ Tasas actualizadas correctamente desde BCV', 'Cerrar', {
-      duration: 3000,
+      duration: 1000000,
       panelClass: ['snackbar-success', 'custom-snackbar', 'snackbar-with-margin'],
       verticalPosition: 'top', // Cambiar a 'bottom'
       horizontalPosition: 'center' // Centrar horizontalmente

@@ -305,9 +305,12 @@ export class HistoriasMedicasComponent implements OnInit {
       // Tu lógica original sigue igual aquí
       this.sedesDisponibles = (sedes.sedes ?? [])
         .map(s => ({
-          ...s,
           key: s.key?.trim().toLowerCase() || '',
-          nombre: s.nombre?.trim() || ''
+          nombre: s.nombre?.trim() || '',
+          direccion: s.direccion || s.direccion_fiscal || '',
+          direccion_fiscal: s.direccion_fiscal || '',
+          telefono: s.telefono || s.telefono_contacto || '',
+          email: s.email || s.correo_contacto || '',
         }))
         .sort((a, b) =>
           a.nombre.replace(/^sede\s+/i, '').localeCompare(
@@ -1548,5 +1551,1064 @@ export class HistoriasMedicasComponent implements OnInit {
     const cedula = String(item.informacionPersonal?.cedula).toLowerCase();
 
     return nombre.includes(texto) || cedula.includes(texto);
+  }
+
+  getValorFormateado(valor: any): string {
+    if (valor === null || valor === undefined || valor === '' || valor === 'null') {
+      return '—';
+    }
+
+    // Si es un objeto, intenta extraer el valor
+    if (typeof valor === 'object' && valor !== null) {
+      // Para objetos de formularios reactivos
+      if (valor.value !== undefined) {
+        return this.formatNumeroOptico(valor.value);
+      }
+      // Para objetos con propiedad label
+      if (valor.label !== undefined) {
+        return this.formatNumeroOptico(valor.label);
+      }
+      // Para otros objetos, mostrar string
+      return '—';
+    }
+
+    return this.formatNumeroOptico(valor);
+  }
+
+  private formatNumeroOptico(valor: any): string {
+    if (valor === null || valor === undefined || valor === '') {
+      return '—';
+    }
+
+    // Convertir a número si es posible
+    const numValor = parseFloat(valor);
+
+    if (!isNaN(numValor)) {
+      // Formatear números ópticos con signo
+      if (numValor > 0) {
+        return `+${numValor}`;
+      } else if (numValor < 0) {
+        return numValor.toString();
+      } else {
+        return '0.00';
+      }
+    }
+
+    // Si no es número, devolver el string original
+    return valor.toString();
+  }
+
+  getValorClass(valor: any): string {
+    if (valor === null || valor === undefined || valor === '') {
+      return 'empty-cell';
+    }
+
+    let numValor: number;
+
+    // Extraer valor numérico de objetos
+    if (typeof valor === 'object' && valor !== null) {
+      if (valor.value !== undefined) {
+        numValor = parseFloat(valor.value);
+      } else if (valor.label !== undefined) {
+        numValor = parseFloat(valor.label);
+      } else {
+        return '';
+      }
+    } else {
+      numValor = parseFloat(valor);
+    }
+
+    if (isNaN(numValor)) {
+      return '';
+    }
+
+    // Clases para valores ópticos
+    if (numValor > 0) {
+      return 'valor-positivo';
+    } else if (numValor < 0) {
+      return 'valor-negativo';
+    } else {
+      return 'valor-cero';
+    }
+  }
+
+  // Función para verificar si hay datos en los exámenes
+  tieneDatosExamen(examen: any): boolean {
+    if (!examen) return false;
+
+    // Verificar si al menos un campo tiene datos
+    const campos = Object.values(examen);
+    return campos.some(campo => {
+      if (campo === null || campo === undefined || campo === '') {
+        return false;
+      }
+
+      // Si es objeto, verificar si tiene valores
+      if (typeof campo === 'object') {
+        return Object.values(campo).some(subCampo =>
+          subCampo !== null && subCampo !== undefined && subCampo !== ''
+        );
+      }
+
+      return true;
+    });
+  }
+
+  private generarInfoSede(): string {
+    const sedeKey = this.sedePacienteSeleccionado || this.sedeActiva;
+
+    // Buscar la sede en las sedes disponibles que ya cargaste
+    const sede = this.sedesDisponibles.find(s =>
+      s.key?.toLowerCase() === sedeKey?.toLowerCase()
+    );
+
+    if (sede) {
+      // Usar los datos reales de la sede
+      const direccion = sede.direccion_fiscal || 'Dirección no especificada';
+      const telefono = sede.telefono || 'Teléfono no disponible';
+      const email = sede.email || 'Email no disponible';
+
+      return `
+      <div class="contacto-sede">
+        <div class="direccion-linea">${direccion}</div>
+        <div class="contacto-linea">
+          <span class="telefono">${telefono}</span> | 
+          <span class="email">${email}</span>
+        </div>
+      </div>
+    `;
+    }
+
+    // Fallback si no encuentra la sede
+    return `
+    <div class="contacto-sede">
+      <div class="direccion-linea">Sede no especificada</div>
+    </div>
+  `;
+  }
+
+  private obtenerNombreSede(): string {
+    const sedeKey = this.sedePacienteSeleccionado || this.sedeActiva;
+
+    // Buscar la sede en las sedes disponibles
+    const sede = this.sedesDisponibles.find(s =>
+      s.key?.toLowerCase() === sedeKey?.toLowerCase()
+    );
+
+    // Usar el nombre de la sede del servicio
+    if (sede?.nombre) {
+      return sede.nombre.toUpperCase();
+    }
+
+    // Si no hay nombre, usar la key con formato
+    if (sedeKey) {
+      return `SEDE ${sedeKey.toUpperCase()}`;
+    }
+
+    return 'SEDE PRINCIPAL';
+  }
+
+  imprimirHistoriaMedica() {
+    // Mostrar loading mientras se genera
+    this.cargando = true;
+
+    setTimeout(() => {
+      try {
+        const printContent = this.generarContenidoImpresion();
+        const ventana = window.open('', '_blank', 'width=1000,height=700');
+
+        if (ventana) {
+          ventana.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Historia Médica - ${this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'Paciente'}</title>
+              <meta charset="utf-8">
+              <style>
+                ${this.obtenerEstilosImpresion()}
+              </style>
+            </head>
+            <body onload="window.print(); window.onafterprint = function() { setTimeout(() => window.close(), 100); }">
+              ${printContent}
+            </body>
+          </html>
+        `);
+          ventana.document.close();
+
+          // Manejar el cierre de la ventana después de imprimir
+          ventana.onbeforeunload = () => {
+            this.cargando = false;
+          };
+        } else {
+          this.cargando = false;
+          this.swalService.showError('Error', 'No se pudo abrir la ventana de impresión. Verifica los bloqueadores de ventanas emergentes.');
+        }
+      } catch (error) {
+        this.cargando = false;
+        console.error('Error al imprimir:', error);
+        this.swalService.showError('Error', 'Ocurrió un error al generar la impresión.');
+      }
+    }, 500);
+  }
+
+  private generarContenidoImpresion(): string {
+    const fechaActual = new Date().toLocaleDateString('es-ES');
+    const horaActual = new Date().toLocaleTimeString('es-ES');
+
+    return `
+    <div class="print-container">
+      <!-- Encabezado de impresión -->
+      </br>
+      <div class="print-header">
+        <div class="header-institucion">
+          <h1>ÓPTICA NEW VISION LENS 2020</h1>
+          <div class="info-contacto">
+            ${this.generarInfoSede()}
+          </div>
+
+          </br>
+          <p class="subtitle">Historia Médica</p>
+        </div>
+        <div class="header-info">
+          <p><strong>Fecha de creación:</strong> ${this.formatearFecha(this.historiaSeleccionada?.auditoria?.fechaCreacion)}</p>
+          <p><strong>N° Historia:</strong> ${this.historiaSeleccionada?.nHistoria || 'N/A'}</p>
+          <p><strong>Paciente:</strong> ${this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'No especificado'}</p>
+          <p><strong>Cédula:</strong> ${this.pacienteSeleccionado?.informacionPersonal?.cedula || 'No especificado'}</p>
+        </div>
+      </div>
+
+      <!-- Información del paciente -->
+      <div class="seccion-print no-break">
+        <div class="seccion-header-print">
+          <h2>INFORMACIÓN DEL PACIENTE</h2>
+        </div>
+        <div class="info-paciente-grid">
+          <div class="info-item">
+            <label>Nombre completo:</label>
+            <span>${this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'No especificado'}</span>
+          </div>
+          <div class="info-item">
+            <label>Cédula de identidad:</label>
+            <span>${this.pacienteSeleccionado?.informacionPersonal?.cedula || 'No especificado'}</span>
+          </div>
+          <div class="info-item">
+            <label>Edad:</label>
+            <span>${this.calcularEdad(this.pacienteSeleccionado?.informacionPersonal?.fechaNacimiento)} años</span>
+          </div>
+          <div class="info-item">
+            <label>Teléfono:</label>
+            <span>${this.pacienteSeleccionado?.informacionPersonal?.telefono || 'No especificado'}</span>
+          </div>
+          <div class="info-item">
+            <label>Ocupación:</label>
+            <span>${this.pacienteSeleccionado?.informacionPersonal?.ocupacion || 'No especificado'}</span>
+          </div>
+          <div class="info-item full-width">
+            <label>Dirección:</label>
+            <span>${this.pacienteSeleccionado?.informacionPersonal?.direccion || 'No especificado'}</span>
+          </div>
+          <div class="info-item full-width">
+            <label>Motivo de consulta:</label>
+            <span>${this.getMotivoVisual()}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historia Clínica -->
+      <div class="seccion-print no-break">
+        <div class="seccion-header-print">
+          <h2>HISTORIA CLÍNICA</h2>
+        </div>
+        <div class="datos-grid-print">
+          <div class="dato-item-print">
+            <label>Usa lentes:</label>
+            <span>${this.pacienteSeleccionado?.historiaClinica?.usuarioLentes || 'No especificado'}</span>
+          </div>
+          <div class="dato-item-print">
+            <label>Cristal actual:</label>
+            <span>${this.historiaSeleccionada?.datosConsulta?.tipoCristalActual || 'No especificado'}</span>
+          </div>
+          <div class="dato-item-print">
+            <label>Última graduación:</label>
+            <span>${this.historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion ? this.formatearFecha(this.historiaSeleccionada.datosConsulta.fechaUltimaGraduacion) : 'No especificado'}</span>
+          </div>
+          <div class="dato-item-print">
+            <label>Fotofobia:</label>
+            <span>${this.pacienteSeleccionado?.historiaClinica?.fotofobia || 'No especificado'}</span>
+          </div>
+          <div class="dato-item-print">
+            <label>Alergias:</label>
+            <span>${this.pacienteSeleccionado?.historiaClinica?.alergicoA || 'No especificado'}</span>
+          </div>
+          <div class="dato-item-print">
+            <label>Cirugía ocular:</label>
+            <span>${this.pacienteSeleccionado?.historiaClinica?.cirugiaOcular || 'No especificado'}</span>
+          </div>
+          <div class="dato-item-print">
+            <label>Tipo de cirugía:</label>
+            <span>${this.pacienteSeleccionado?.historiaClinica?.cirugiaOcularDescripcion || 'No especificada'}</span>
+          </div>
+          <div class="dato-item-print">
+            <label>Traumatismo ocular:</label>
+            <span>${this.pacienteSeleccionado?.historiaClinica?.traumatismoOcular || 'No especificado'}</span>
+          </div>
+          <div class="dato-item-print">
+            <label>Uso de dispositivos:</label>
+            <span>${this.pacienteSeleccionado?.historiaClinica?.usoDispositivo || 'No especificado'}</span>
+          </div>
+        </div>
+
+          <!-- Antecedentes en filas -->
+        <div class="antecedentes-filas">
+          <div class="fila-antecedente">
+            <label class="label-antecedente">Antecedentes Personales:</label>
+            <div class="tags-fila">
+              ${(this.pacienteSeleccionado?.historiaClinica?.antecedentesPersonales ?? []).length > 0 ?
+        this.pacienteSeleccionado.historiaClinica.antecedentesPersonales.map(ant =>
+          `<span class="tag-fila">${ant}</span>`
+        ).join('') :
+        '<span class="tag-fila empty">No reportados</span>'
+      }
+            </div>
+          </div>
+
+          <div class="fila-antecedente">
+            <label class="label-antecedente">Antecedentes Familiares:</label>
+            <div class="tags-fila">
+              ${(this.pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares ?? []).length > 0 ?
+        this.pacienteSeleccionado.historiaClinica.antecedentesFamiliares.map(ant =>
+          `<span class="tag-fila">${ant}</span>`
+        ).join('') :
+        '<span class="tag-fila empty">No reportados</span>'
+      }
+            </div>
+          </div>
+
+          <div class="fila-antecedente">
+            <label class="label-antecedente">Patologías Generales:</label>
+            <div class="tags-fila">
+              ${(this.pacienteSeleccionado?.historiaClinica?.patologias ?? []).length > 0 ?
+        this.pacienteSeleccionado.historiaClinica.patologias.map(pat =>
+          `<span class="tag-fila">${pat}</span>`
+        ).join('') :
+        '<span class="tag-fila empty">No reportados</span>'
+      }
+            </div>
+          </div>
+
+          <div class="fila-antecedente">
+            <label class="label-antecedente">Patologías Oculares:</label>
+            <div class="tags-fila">
+              ${(this.pacienteSeleccionado?.historiaClinica?.patologiaOcular ?? []).length > 0 ?
+        this.pacienteSeleccionado.historiaClinica.patologiaOcular.map(pat =>
+          `<span class="tag-fila">${pat}</span>`
+        ).join('') :
+        '<span class="tag-fila empty">No reportados</span>'
+      }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exámenes Oculares -->
+      ${this.generarExamenesImpresion()}
+
+      <!-- Diagnóstico y Tratamiento -->
+      <div class="seccion-print no-break">
+        <div class="seccion-header-print">
+          <h2>DIAGNÓSTICO Y TRATAMIENTO</h2>
+        </div>
+        <div class="diagnostico-grid-print">
+          <div class="diagnostico-item-print">
+            <label>Diagnóstico:</label>
+            <div class="diagnostico-content">
+              ${this.historiaSeleccionada?.diagnosticoTratamiento?.diagnostico || 'No especificado'}
+            </div>
+          </div>
+          <div class="diagnostico-item-print">
+            <label>Tratamiento:</label>
+            <div class="diagnostico-content">
+              ${this.historiaSeleccionada?.diagnosticoTratamiento?.tratamiento || 'No especificado'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recomendaciones -->
+      ${this.generarRecomendacionesImpresion()}
+
+      <!-- Firmas -->
+      <div class="seccion-print no-break">
+        <div class="seccion-header-print">
+          <h2>FIRMAS Y AUTORIZACIONES</h2>
+        </div>
+        <div class="firmas-grid-print">
+          <div class="firma-item-print">
+            <div class="firma-label-print">Firma del Paciente</div>
+            <div class="firma-space-print"></div>
+            <div class="firma-info-print">
+              <div>Nombre: ${this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto}</div>
+              <div>C.I: ${this.pacienteSeleccionado?.informacionPersonal?.cedula}</div>
+            </div>
+          </div>
+
+          <div class="firma-item-print">
+            <div class="firma-label-print">Firma del Especialista</div>
+            <div class="firma-space-print"></div>
+            <div class="firma-info-print">
+              <div>${this.historiaSeleccionada?.datosConsulta?.medico?.nombre || 'No disponible'}</div>
+              <div>C.I: ${this.historiaSeleccionada?.datosConsulta?.medico?.cedula || 'No disponible'}</div>
+              <div>${this.historiaSeleccionada?.datosConsulta?.medico?.cargo || 'No disponible'}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="asesor-responsable-print">
+          <div class="firma-label-print">Asesor Responsable</div>
+          <div class="firma-info-print">
+            <div>${this.historiaSeleccionada?.auditoria?.creadoPor?.nombre || 'Nombre del asesor'}</div>
+            <div>C.I: ${this.historiaSeleccionada?.auditoria?.creadoPor?.cedula || 'Cedula'}</div>
+            <div>${this.historiaSeleccionada?.auditoria?.creadoPor?.cargo || 'No disponible'}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pie de página -->
+      <div class="print-footer">
+        <p>Documento generado automáticamente por Optica New Vision Lens 2020</p>
+      </div>
+    </div>
+  `;
+  }
+
+  private generarExamenesImpresion(): string {
+    if (!this.historiaSeleccionada?.examenOcular) {
+      return '';
+    }
+
+    return `
+    <div class="seccion-print page-break">
+      <div class="seccion-header-print">
+        <h2>EXÁMENES OCULARES</h2>
+      </div>
+
+      <!-- Lensometría -->
+      ${this.historiaSeleccionada.examenOcular.lensometria ? `
+      <div class="examen-subseccion-print">
+        <h3>Lensometría</h3>
+        <table class="tabla-print">
+          <thead>
+            <tr>
+              <th>Ojo</th>
+              <th>ESF</th>
+              <th>CIL</th>
+              <th>EJE</th>
+              <th>ADD</th>
+              <th>AV Lejos</th>
+              <th>AV Lejos BI</th>
+              <th>AV Cerca</th>
+              <th>AV Cerca BI</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>OD</strong></td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.esf_od)}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.cil_od)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.lensometria.eje_od || '—'}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.add_od)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.lensometria.av_lejos_od || '—'}</td>
+              <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.lensometria.av_lejos_bi || '—'}</td>
+              <td>${this.historiaSeleccionada.examenOcular.lensometria.av_cerca_od || '—'}</td>
+              <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.lensometria.av_cerca_bi || '—'}</td>
+            </tr>
+            <tr>
+              <td><strong>OI</strong></td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.esf_oi)}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.cil_oi)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.lensometria.eje_oi || '—'}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.add_oi)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.lensometria.av_lejos_oi || '—'}</td>
+              <td>${this.historiaSeleccionada.examenOcular.lensometria.av_cerca_oi || '—'}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
+      <!-- AVSC - AVAE - OTROS -->
+      ${this.historiaSeleccionada.examenOcular.avsc_avae_otros ? `
+      <div class="examen-subseccion-print">
+        <h3>AVSC - AVAE - OTROS</h3>
+        <table class="tabla-print">
+          <thead>
+            <tr>
+              <th>Ojo</th>
+              <th>AVSC</th>
+              <th>AVSC BI</th>
+              <th>AVAE</th>
+              <th>OTROS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>OD</strong></td>
+              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avsc_od || '—'}</td>
+              <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avsc_bi || '—'}</td>
+              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avae_od || '—'}</td>
+              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.otros_od || '—'}</td>
+            </tr>
+            <tr>
+              <td><strong>OI</strong></td>
+              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avsc_oi || '—'}</td>
+              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avae_oi || '—'}</td>
+              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.otros_oi || '—'}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
+      <!-- Hora de evaluación -->
+      ${this.horaEvaluacion ? `
+      <div class="hora-evaluacion-print">
+        <strong>Hora de evaluación:</strong> ${this.horaEvaluacion}
+      </div>
+      ` : ''}
+
+      <!-- Refracción -->
+      ${this.historiaSeleccionada.examenOcular.refraccion ? `
+      <div class="examen-subseccion-print">
+        <h3>Refracción</h3>
+        <table class="tabla-print">
+          <thead>
+            <tr>
+              <th>Ojo</th>
+              <th>ESF</th>
+              <th>CIL</th>
+              <th>EJE</th>
+              <th>ADD</th>
+              <th>AVCCL</th>
+              <th>AVCCL BI</th>
+              <th>AVCCC</th>
+              <th>AVCCC BI</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>OD</strong></td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.esf_od)}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.cil_od)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccion.eje_od || '—'}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.add_od)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccion.avccl_od || '—'}</td>
+              <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.refraccion.avccl_bi || '—'}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccion.avccc_od || '—'}</td>
+              <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.refraccion.avccc_bi || '—'}</td>
+            </tr>
+            <tr>
+              <td><strong>OI</strong></td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.esf_oi)}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.cil_oi)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccion.eje_oi || '—'}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.add_oi)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccion.avccl_oi || '—'}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccion.avccc_oi || '—'}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+
+      <!-- Refracción Final -->
+      ${this.historiaSeleccionada.examenOcular.refraccionFinal ? `
+      <div class="examen-subseccion-print">
+        <h3>Refracción Final</h3>
+        <table class="tabla-print">
+          <thead>
+            <tr>
+              <th>Ojo</th>
+              <th>ESF</th>
+              <th>CIL</th>
+              <th>EJE</th>
+              <th>ADD</th>
+              <th>ALT</th>
+              <th>DP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>OD</strong></td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.esf_od)}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.cil_od)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.eje_od || '—'}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.add_od)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.alt_od || '—'}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.dp_od || '—'}</td>
+            </tr>
+            <tr>
+              <td><strong>OI</strong></td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.esf_oi)}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.cil_oi)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.eje_oi || '—'}</td>
+              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.add_oi)}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.alt_oi || '—'}</td>
+              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.dp_oi || '—'}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      ` : ''}
+    </div>
+  `;
+  }
+
+  private generarRecomendacionesImpresion(): string {
+    if (!this.historiaSeleccionada?.recomendaciones || this.historiaSeleccionada.recomendaciones.length === 0) {
+      return '';
+    }
+
+    const recomendacionesHTML = this.historiaSeleccionada.recomendaciones.map((rec, index) => `
+    <div class="recomendacion-item-print">
+      <div class="recomendacion-header-print">
+        <h4>Lente #${index + 1}</h4>
+      </div>
+      <div class="recomendacion-content-print">
+        <div class="recomendacion-field">
+          <label>Tipo de cristal:</label>
+          <span>${rec.cristal?.label || 'No especificado'}</span>
+        </div>
+        <div class="recomendacion-field">
+          <label>Material:</label>
+          <span>${this.getMaterialLabel(rec.material)}</span>
+        </div>
+        <div class="recomendacion-field">
+          <label>Montura sugerida:</label>
+          <span>${rec.montura || 'No especificada'}</span>
+        </div>
+        <div class="recomendacion-field full-width">
+          <label>Observaciones:</label>
+          <span>${rec.observaciones || 'Sin observaciones'}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+    return `
+    <div class="seccion-print no-break">
+      <div class="seccion-header-print">
+        <h2>RECOMENDACIONES DE LENTES</h2>
+      </div>
+      ${recomendacionesHTML}
+    </div>
+  `;
+  }
+
+  private obtenerEstilosImpresion(): string {
+    return `
+    /* Reset para impresión */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 12pt;
+      line-height: 1.4;
+      color: #000;
+      margin: 0;
+      padding: 15px;
+      background: white;
+    }
+    
+    .print-container {
+      max-width: 100%;
+    }
+    
+    /* Encabezado */
+    .print-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #000;
+    }
+    
+    .header-institucion h1 {
+      font-size: 18pt;
+      margin-bottom: 5px;
+      color: #2c3e50;
+    }
+    
+    .header-institucion .subtitle {
+      font-size: 11pt;
+      color: #666;
+    }
+    
+    .contacto-sede {
+      margin-top: 8px;
+      font-size: 9pt;
+      line-height: 1.3;
+    }
+
+    .direccion-linea {
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 2px;
+    }
+
+    .contacto-linea {
+      color: #666;
+    }
+
+    .contacto-linea .telefono {
+      color: #27ae60;
+    }
+
+    .contacto-linea .email {
+      color: #e74c3c;
+    }
+    
+    .header-info {
+      text-align: right;
+      font-size: 10pt;
+    }
+    
+    /* Secciones */
+    .seccion-print {
+      margin-bottom: 25px;
+      page-break-inside: avoid;
+    }
+    
+    .seccion-header-print {
+      background: #f8f9fa;
+      color: #2c3e50;
+      padding: 10px 15px;
+      margin-bottom: 15px;
+      border-left: 4px solid #3498db;
+    }
+    
+    .seccion-header-print h2 {
+      font-size: 14pt;
+      margin: 0;
+      font-weight: bold;
+    }
+    
+    /* Información del paciente */
+    .info-paciente-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 10px;
+      margin: 15px 0;
+    }
+    
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .info-item.full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .info-item label {
+      font-weight: bold;
+      font-size: 10pt;
+      margin-bottom: 3px;
+      color: #2c3e50;
+    }
+    
+    .info-item span {
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      padding: 8px;
+      min-height: auto;
+      font-size: 10pt;
+    }
+    
+    /* Datos grid */
+    .datos-grid-print {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin: 15px 0;
+    }
+    
+    .dato-item-print {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .dato-item-print label {
+      font-weight: bold;
+      font-size: 10pt;
+      margin-bottom: 3px;
+      color: #2c3e50;
+    }
+    
+    .dato-item-print span {
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      padding: 8px;
+      min-height: auto;
+      font-size: 10pt;
+    }
+    
+    /* Antecedentes en filas */
+    .antecedentes-filas {
+      margin: 15px 0;
+    }
+    
+    .fila-antecedente {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      page-break-inside: avoid;
+    }
+    
+    .label-antecedente {
+      font-weight: bold;
+      font-size: 10pt;
+      color: #2c3e50;
+      min-width: 180px;
+      margin-right: 15px;
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+    
+    .tags-fila {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex: 1;
+    }
+    
+    .tag-fila {
+      background: #e9ecef;
+      border: 1px solid #ced4da;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 9pt;
+      white-space: nowrap;
+    }
+    
+    .tag-fila.empty {
+      font-style: italic;
+      color: #6c757d;
+      background: #f8f9fa;
+    }
+    
+    /* Tablas */
+    .tabla-print {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 9pt;
+    }
+    
+    .tabla-print th,
+    .tabla-print td {
+      border: 1px solid #000;
+      padding: 6px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    
+    .tabla-print th {
+      background: #f8f9fa;
+      font-weight: bold;
+    }
+    
+    .tabla-print .merged-cell-print {
+      background: #e9ecef;
+      font-weight: bold;
+    }
+    
+    .tabla-print td:first-child {
+      font-weight: bold;
+      background: #f8f9fa;
+    }
+    
+    /* Exámenes */
+    .examen-subseccion-print {
+      margin-bottom: 20px;
+    }
+    
+    .examen-subseccion-print h3 {
+      font-size: 12pt;
+      margin-bottom: 8px;
+      color: #2c3e50;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+    }
+    
+    .hora-evaluacion-print {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      padding: 8px 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 10pt;
+    }
+    
+    /* Diagnóstico */
+    .diagnostico-grid-print {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin: 15px 0;
+    }
+    
+    .diagnostico-item-print label {
+      font-weight: bold;
+      font-size: 10pt;
+      margin-bottom: 5px;
+      display: block;
+      color: #2c3e50;
+    }
+    
+    .diagnostico-content {
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      padding: 10px;
+      min-height: 60px;
+      font-size: 10pt;
+    }
+    
+    /* Recomendaciones */
+    .recomendacion-item-print {
+      border: 1px solid #ddd;
+      padding: 12px;
+      margin: 10px 0;
+      page-break-inside: avoid;
+    }
+    
+    .recomendacion-header-print h4 {
+      font-size: 11pt;
+      margin-bottom: 8px;
+      color: #2c3e50;
+    }
+    
+    .recomendacion-content-print {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    
+    .recomendacion-field {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .recomendacion-field.full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .recomendacion-field label {
+      font-weight: bold;
+      font-size: 9pt;
+      margin-bottom: 3px;
+      color: #2c3e50;
+    }
+    
+    .recomendacion-field span {
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      padding: 6px;
+      font-size: 9pt;
+    }
+    
+    /* Firmas */
+    .firmas-grid-print {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin: 20px 0;
+    }
+    
+    .firma-item-print {
+      text-align: center;
+    }
+    
+    .firma-label-print {
+      font-weight: bold;
+      margin-bottom: 10px;
+      font-size: 11pt;
+    }
+    
+    .firma-space-print {
+      height: 60px;
+      border-bottom: 1px solid #000;
+      margin-bottom: 10px;
+    }
+    
+    .firma-info-print {
+      font-size: 9pt;
+      color: #666;
+    }
+    
+    .firma-info-print div {
+      margin-bottom: 2px;
+    }
+    
+    .asesor-responsable-print {
+      text-align: center;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      margin-top: 20px;
+    }
+    
+    /* Pie de página */
+    .print-footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+      font-size: 9pt;
+      color: #666;
+    }
+    
+    /* Control de saltos de página */
+    .page-break {
+      page-break-before: always;
+    }
+    
+    .no-break {
+      page-break-inside: avoid;
+    }
+    
+    @media print {
+      @page {
+        margin: 1cm;
+        size: A4;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      
+      .print-container {
+        padding: 0;
+      }
+      
+      /* Mejorar legibilidad en impresión */
+      * {
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+      }
+      
+      .page-break {
+        page-break-before: always;
+      }
+      
+      .no-break {
+        page-break-inside: avoid;
+      }
+    }
+  `;
   }
 }
