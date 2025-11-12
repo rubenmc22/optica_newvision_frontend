@@ -122,15 +122,15 @@ export class TasaComponent implements OnInit {
         });
 
         this.snackBar.open('✅ Tasas actualizadas correctamente desde BCV', 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-success']
+          duration: 1000000,
+          panelClass: ['snackbar-success', 'custom-snackbar', 'snackbar-with-margin']
         });
         this.cdRef.detectChanges();
       },
       error: () => {
         this.snackBar.open('❌ Error al actualizar tasas desde BCV', 'Cerrar', {
           duration: 3000,
-          panelClass: ['snackbar-warning']
+          panelClass: ['snackbar-warning', 'custom-snackbar', 'snackbar-with-margin']
         });
       }
     });

@@ -26,7 +26,7 @@
   left: 0;
   right: 0;
   height: 60px;
-  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%) !important;
+  background: var(--degradado-color) !important;
   border-bottom: none;
   z-index: 1035;
   display: flex;
@@ -219,7 +219,7 @@
    SIDEBAR CON SCROLL INTERNO CONDICIONAL
    ================================ */
 .main-sidebar {
-  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%) !important;
+  background: var(--degradado-color) !important;
   position: fixed;
   top: 60px;
   bottom: 50px;
@@ -311,9 +311,11 @@
 .nav-sidebar {
   flex: 1;
   overflow-y: hidden !important;
-  overflow-x: hidden !important; /* Aseguramos que no haya scroll horizontal */
+  overflow-x: hidden !important;
+  /* Aseguramos que no haya scroll horizontal */
   padding-bottom: 0;
-  width: 100%; /* Aseguramos que ocupe el ancho completo */
+  width: 100%;
+  /* Aseguramos que ocupe el ancho completo */
 
   /* Scrollbar personalizada - oculta por defecto */
   &::-webkit-scrollbar {
@@ -325,12 +327,15 @@
 /* A PARTIR DE 1024px - ACTIVAR SCROLL VERTICAL SOLAMENTE */
 @media (max-width: 1024px) {
   .nav-sidebar {
-    overflow-y: auto !important; /* Solo scroll vertical */
-    overflow-x: hidden !important; /* Sin scroll horizontal */
+    overflow-y: auto !important;
+    /* Solo scroll vertical */
+    overflow-x: hidden !important;
+    /* Sin scroll horizontal */
     padding-bottom: 1rem;
 
     /* Prevenir que el scroll se propague al body */
-    overscroll-behavior: contain; /* Esto evita que el scroll se propague */
+    overscroll-behavior: contain;
+    /* Esto evita que el scroll se propague */
     -webkit-overflow-scrolling: touch;
 
     /* Mostrar scrollbar solo vertical */
@@ -360,7 +365,7 @@
 
     &::-webkit-scrollbar-track-piece:end {
       background: transparent;
-      margin-bottom: 10px; 
+      margin-bottom: 10px;
     }
 
     &::-webkit-scrollbar-track-piece:start {
@@ -400,12 +405,14 @@
     padding: 0.6rem 0.75rem;
     margin: 0.125rem 0.25rem;
     font-size: 0.9rem;
-    max-width: calc(100% - 0.5rem); /* Prevenir desbordamiento horizontal */
+    max-width: calc(100% - 0.5rem);
+    /* Prevenir desbordamiento horizontal */
   }
 
   .submenu .nav-link {
     padding: 0.5rem 0.75rem 0.5rem 2rem;
-    max-width: calc(100% - 0.5rem); /* Prevenir desbordamiento horizontal */
+    max-width: calc(100% - 0.5rem);
+    /* Prevenir desbordamiento horizontal */
   }
 
   /* Asegurar que los textos no causen scroll horizontal */
@@ -427,7 +434,8 @@
   border: none;
   position: relative;
   overflow: hidden;
-  max-width: calc(100% - 1rem); /* Prevenir desbordamiento */
+  max-width: calc(100% - 1rem);
+  /* Prevenir desbordamiento */
 }
 
 .nav-sidebar .nav-link::before {
@@ -470,7 +478,8 @@
   width: 20px;
   text-align: center;
   font-size: 1rem;
-  flex-shrink: 0; /* Prevenir que se reduzcan */
+  flex-shrink: 0;
+  /* Prevenir que se reduzcan */
 }
 
 .nav-sidebar .nav-link p {
@@ -482,13 +491,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0; /* Permitir que se reduzca */
+  min-width: 0;
+  /* Permitir que se reduzca */
 }
 
 .arrow-icon {
   transition: transform 0.3s !important;
   font-size: 0.9rem;
-  flex-shrink: 0; /* Prevenir que se reduzca */
+  flex-shrink: 0;
+  /* Prevenir que se reduzca */
   margin-left: 0.5rem;
 }
 
@@ -503,14 +514,16 @@
   margin: 0 0.5rem;
   padding: 0.25rem 0;
   backdrop-filter: blur(10px);
-  max-width: calc(100% - 1rem); /* Prevenir desbordamiento */
+  max-width: calc(100% - 1rem);
+  /* Prevenir desbordamiento */
 }
 
 .submenu .nav-link {
   padding: 0.6rem 1rem 0.6rem 2.5rem;
   margin: 0.125rem 0;
   font-size: 0.9rem;
-  max-width: 100%; /* Prevenir desbordamiento */
+  max-width: 100%;
+  /* Prevenir desbordamiento */
 }
 
 .submenu .nav-link:hover {
@@ -534,7 +547,8 @@
   font-size: 0.7rem;
   font-weight: 500;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  flex-shrink: 0; /* Prevenir que se reduzca */
+  flex-shrink: 0;
+  /* Prevenir que se reduzca */
   margin-left: 0.5rem;
 }
 
@@ -726,7 +740,7 @@
 }
 
 .modal-header-moderno {
-  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+  background: var(--degradado-color);
   color: white;
   padding: 1.5rem;
   border-bottom: none;
@@ -827,7 +841,7 @@
 }
 
 .btn-primary-moderno {
-  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+  background: var(--degradado-color);
   border: none;
   color: white;
   padding: 0.75rem 1.5rem;

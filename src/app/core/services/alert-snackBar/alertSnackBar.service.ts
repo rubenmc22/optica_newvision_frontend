@@ -5,13 +5,14 @@ import { MatSnackBar } from '@angular/material/snack-bar';
   providedIn: 'root',
 })
 export class AlertService {
-  constructor(private snackBar: MatSnackBar) {}
+  constructor(private snackBar: MatSnackBar) { }
 
   showMessage(message: string): void {
-    this.snackBar.open(message, 'Cerrar', {
-      duration: 3000, // Dura 3 segundos
-      horizontalPosition: 'center', // Centrado horizontalmente
-      verticalPosition: 'top', // Mostrado en la parte superior
+    this.snackBar.open('✅ Tasas actualizadas correctamente desde BCV', 'Cerrar', {
+      duration: 1000000,
+      panelClass: ['snackbar-success', 'custom-snackbar', 'snackbar-with-margin'],
+      verticalPosition: 'top', // Cambiar a 'bottom'
+      horizontalPosition: 'center' // Centrar horizontalmente
     });
   }
 }

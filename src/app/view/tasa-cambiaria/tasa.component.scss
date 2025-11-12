@@ -1,126 +1,691 @@
 @use '../../../custom-theme.scss' as theme;
 
-.popover-custom {
-    position: absolute;
-    top: 10px;
-    right: 10px;
+/* =============================================
+   MÓDULO DE TASAS DE CAMBIO MODERNO
+   ============================================= */
+
+.container-fluid {
+    padding: 2rem 1rem;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: auto;
+}
+
+.pacientes-moderno {
     background: white;
-    padding: 8px;
-    border-radius: 6px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    width: 160px;
-    z-index: 1000;
-}
-
-.popover-custom input {
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    overflow: hidden;
     width: 100%;
-    text-align: center;
 }
 
-.menu {
-    width: 30%;
-}
+/* Header modernizado */
+.card-header-moderno {
+    background: var(--degradado-color) !important;
+    color: white;
+    padding: 1.1rem 1.5rem;
+    border-bottom: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 
-.bi-arrow-repeat {
-    font-size: 1.7rem;
-    /* ✅ Aumenta el tamaño del ícono */
-    position: relative;
-    top: -3px;
-    /* ✅ Lo mueve ligeramente hacia abajo */
-}
-
-small.text-muted {
-    font-size: 12px;
-}
-
-/* ✅ Quitar flechas de incremento/decremento */
-.no-spinner::-webkit-outer-spin-button,
-.no-spinner::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
-.no-spinner {
-    -moz-appearance: textfield;
-}
-
-
-//Modal historial
-.modal-content {
-    border: none;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-
-    .modal-header {
-        padding: 1.25rem 1.5rem;
-        background: var(--degradado-color) !important;
-        color: white;
-        font-weight: bold;
+    .header-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
     }
 
-    .modal-body {
-        padding: 1.5rem;
-        font-size: 1rem;
+    .header-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
 
-        .form-label {
-            font-weight: 500;
-            margin-bottom: 0.5rem;
+        i {
+            font-size: 1.5rem;
+            color: white;
         }
     }
 
-    .btn {
-        background: var(--degradado-color);
-        border: var(--degradado-color);
-        border-left: none;
-        color: #fff;
-        transition: all 0.3s ease;
+    .header-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .header-title {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.5px;
+    }
+
+    .header-subtitle {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        color: rgba(255, 255, 255, 0.9);
     }
 }
 
-.btn-primary {
-    background: var(--degradado-color);
-    border: var(--degradado-color);
+.btn-agregar-paciente {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
 
     &:hover {
-        background: var(--primary-color) !important;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+    }
+
+    i {
+        font-size: 1.1rem;
     }
 }
 
-
-
-.modal-backdrop {
-    z-index: 1040 !important;
-    opacity: 0.5 !important; // 🔹 Ajustamos opacidad para mejor visualización
+/* Cuerpo modernizado */
+.card-body-moderno {
+    padding: 2rem;
+  //  background: var(--degradado-pastel) !important;
 }
 
-.btn-success.btn-sm:hover {
-  box-shadow: 0 0 8px rgba(0, 128, 0, 0.3);
-  transform: scale(1.02);
-  transition: all 0.2s ease-in-out;
+/* Grid de tasas */
+.tasas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
 }
 
-.card-primary {
-    background: var(--degradado-pastel) !important;
+.tasa-card {
+    position: relative;
 }
 
-.card-header {
-    //  text-align: center;
-    font-size: 1.2rem;
-    background: var(--degradado-color) !important;
-    /* Fondo amarillo */
-    color: var(--details-color) !important;
-    /* Texto negro */
-    font-weight: bold;
-    border-bottom: 2px solid var(--secondary-color);
-    /* Línea divisoria negra */
+.tasa-card-content {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+    height: 100%;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    &.tasa-manual {
+        border-left: 4px solid #ff6b6b;
+    }
 }
 
-.btn-light{
-    // background: var(--details-color) !important;
-    // border: var(--details-color) !important;
-     //col;
+/* Header de la tasa */
+.tasa-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+
+    .tasa-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+
+        .tasa-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+        }
+
+        .tasa-title {
+            .tasa-name {
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+                color: #2c3e50;
+                font-size: 1.1rem;
+            }
+
+            .tasa-badge {
+                padding: 0.25rem 0.75rem;
+                border-radius: 20px;
+                font-size: 0.75rem;
+                font-weight: 600;
+
+                &.manual {
+                    background: #fff5f5;
+                    color: #e53e3e;
+                }
+
+                &.bcv,
+                &.automatico {
+                    background: #f0fff4;
+                    color: #38a169;
+                }
+            }
+        }
+    }
+}
+
+/* Acciones de tasa */
+.tasa-actions {
+    position: relative;
+
+    .btn-action-menu {
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #718096;
+        transition: all 0.3s ease;
+
+        &:hover {
+            background: #edf2f7;
+            color: #4a5568;
+        }
+    }
+
+    .action-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        padding: 0.5rem;
+        min-width: 200px;
+        z-index: 1000;
+        border: 1px solid #e2e8f0;
+
+        .menu-item {
+            width: 100%;
+            background: none;
+            border: none;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-radius: 8px;
+            color: #4a5568;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+
+            &:hover:not(:disabled) {
+                background: #f7fafc;
+                color: #2d3748;
+            }
+
+            &:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+        }
+
+        .menu-divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 0.25rem 0;
+        }
+    }
+}
+
+/* Sección de valor */
+.tasa-value-section {
+    margin-bottom: 1.5rem;
+
+    .current-tasa {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+
+        .tasa-amount {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #2d3748;
+            line-height: 1;
+        }
+
+        .tasa-symbol {
+            font-size: 1.5rem;
+            color: #718096;
+            font-weight: 600;
+        }
+    }
+
+    .loading-tasa {
+        display: flex;
+        align-items: center;
+        color: #718096;
+        font-size: 1.1rem;
+        gap: 0.5rem;
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+    }
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Información BCV */
+.bcv-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f7fafc;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+
+    .bcv-label {
+        color: #718096;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .bcv-value {
+        font-weight: 600;
+        color: #2d3748;
+    }
 }
 
 .bcv-unavailable {
-   color: #b03a48 !important;  // 🍷 Rojo vino
-  font-weight: 500;
+    color: #e53e3e !important;
+    font-weight: 500;
 }
+
+/* Footer de tasa */
+.tasa-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .last-update {
+        color: #718096;
+        font-size: 0.85rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .auto-update-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+
+            input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+
+                &:checked+.toggle-slider {
+                    background: #48bb78;
+                }
+
+                &:checked+.toggle-slider:before {
+                    transform: translateX(20px);
+                }
+            }
+
+            .toggle-slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: #cbd5e0;
+                transition: .4s;
+                border-radius: 24px;
+
+                &:before {
+                    position: absolute;
+                    content: "";
+                    height: 18px;
+                    width: 18px;
+                    left: 3px;
+                    bottom: 3px;
+                    background: white;
+                    transition: .4s;
+                    border-radius: 50%;
+                }
+            }
+        }
+
+        .toggle-label {
+            font-size: 0.85rem;
+            color: #718096;
+            font-weight: 500;
+        }
+    }
+}
+
+/* Popover de tasa */
+.tasa-popover {
+    position: absolute;
+    top: 80px;
+    right: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    padding: 1.5rem;
+    min-width: 280px;
+    z-index: 1050;
+    border: 1px solid #e2e8f0;
+
+    .popover-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+
+        h6 {
+            margin: 0;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .popover-close {
+            background: none;
+            border: none;
+            color: #718096;
+            padding: 0.25rem;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+
+            &:hover {
+                background: #f7fafc;
+                color: #4a5568;
+            }
+        }
+    }
+
+    .popover-body {
+        .form-control-modern {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+
+            &:focus {
+                border-color: #3498db;
+                box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+            }
+        }
+
+        .btn-modern-save {
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+            }
+        }
+    }
+}
+
+/* ================================
+   MODAL MODERNO
+   ================================ */
+
+.modern-modal {
+    .modern-modal-content {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+    }
+
+    .modern-modal-header {
+        background: var(--degradado-color) !important;
+        border: none;
+        padding: 1rem 1rem;
+
+        .modal-title-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: white;
+
+            .modal-icon {
+                font-size: 1.5rem;
+                opacity: 0.9;
+            }
+
+            .modal-title {
+                margin: 0;
+                font-weight: 700;
+            }
+
+            .modal-subtitle {
+                margin: 0;
+                opacity: 0.9;
+                font-size: 0.9rem;
+                color: rgba(255, 255, 255, 0.9);
+            }
+        }
+
+        .btn-close-modern {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.3s ease;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+        }
+    }
+
+    .modern-modal-body {
+        padding: 2rem;
+
+        .table-container {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .modern-table {
+            width: 100%;
+            border-collapse: collapse;
+
+            thead {
+                background: #f7fafc;
+
+                th {
+                    padding: 1rem;
+                    font-weight: 600;
+                    color: #4a5568;
+                    border-bottom: 1px solid #e2e8f0;
+                }
+            }
+
+            tbody {
+                .table-row {
+                    transition: all 0.3s ease;
+
+                    &:hover {
+                        background: #f7fafc;
+                    }
+
+                    td {
+                        padding: 1rem;
+                        border-bottom: 1px solid #e2e8f0;
+
+                        &.user-cell {
+                            font-weight: 500;
+                            color: #2d3748;
+                        }
+
+                        &.date-cell {
+                            color: #718096;
+                        }
+
+                        &.value-cell {
+                            font-size: 1.1rem;
+                            color: #48bb78;
+                        }
+                    }
+                }
+            }
+        }
+
+        .method-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+
+            &.manual {
+                background: #fff5f5;
+                color: #e53e3e;
+            }
+
+            &.bcv {
+                background: #f0fff4;
+                color: #38a169;
+            }
+        }
+    }
+
+    .modern-modal-footer {
+        border-top: 1px solid #e2e8f0;
+        padding: 1.5rem 2rem;
+
+        .btn-modern-secondary {
+            background: #718096;
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+
+            &:hover {
+                background: #4a5568;
+                transform: translateY(-2px);
+            }
+        }
+    }
+}
+
+/* ================================
+   UTILIDADES
+   ================================ */
+
+.no-spinner {
+    -moz-appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+}
+
+.fade-in {
+    opacity: 0;
+    animation: fadeIn 0.4s ease-in forwards;
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .card-body-moderno {
+        padding: 1.5rem;
+    }
+
+    .tasas-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .card-header-moderno {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.25rem;
+    }
+
+    .card-body-moderno {
+        padding: 1.25rem;
+    }
+
+    .tasas-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tasa-card-content {
+        padding: 1.25rem;
+    }
+
+    .tasa-card-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .tasa-actions {
+        align-self: flex-end;
+    }
+}
+
+/* Snackbar con margen superior */

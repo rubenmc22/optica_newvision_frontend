@@ -496,3 +496,20 @@ body {
   outline: 2px solid #3498db;
   outline-offset: 2px;
 }
+
+/* Para subir el snackbar desde la parte inferior */
+.custom-snackbar {
+  position: fixed !important;
+  bottom: 100px !important; /* Ajusta este valor según necesites */
+  z-index: 1000 !important;
+}
+
+/* O si prefieres usar margin-bottom */
+.snackbar-with-margin {
+  margin-bottom: 100px !important; /* Aumenta este valor */
+}
+
+/* Otra alternativa - modificar el overlay pane */
+.cdk-overlay-pane {
+  margin-bottom: 100px !important;
+}
