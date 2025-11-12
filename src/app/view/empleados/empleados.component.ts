@@ -22,9 +22,6 @@ import { DynamicModalComponent } from './../../shared/dynamic-modal/dynamic-moda
 
 export class EmpleadosComponent implements OnInit {
   // ==================== VARIABLES DEL COMPONENTE ====================
-  @ViewChild(DynamicModalComponent, { static: false }) dynamicModal!: DynamicModalComponent;
-
-  // Datos de empleados y listas
   selectedEmployee!: any;
   employees: any[] = [];
   filteredEmployees: any[] = [];
@@ -35,9 +32,9 @@ export class EmpleadosComponent implements OnInit {
   ordenActual: string = 'nombre';
   ordenAscendente: boolean = true;
 
-  // Formularios y controles
-  employeeForm: FormGroup;
-  modalFields: any[] = [];
+  // Formulario interno
+  empleadoForm: FormGroup;
+  isLoadingForm: boolean = false;
 
   // Filtros y búsqueda
   searchQuery: string = '';
@@ -45,8 +42,6 @@ export class EmpleadosComponent implements OnInit {
   selectedRole: string | null = null;
 
   // Estado y UI
-  avatarPreview: string | ArrayBuffer | null = null;
-  mostrarRedesSociales: boolean = false;
   isLoading = true;
 
   constructor(
@@ -56,19 +51,230 @@ export class EmpleadosComponent implements OnInit {
     private swalService: SwalService,
     private snackBar: MatSnackBar,
   ) {
-    // Inicialización del formulario
-    this.employeeForm = this.fb.group({
-      name: ['', Validators.required],
-      document: ['', [Validators.required, Validators.pattern(/^[0-9]+$/)]],
-      position: ['', Validators.required],
-      role: ['', Validators.required]
-    });
+    // Inicialización del formulario interno
+    this.empleadoForm = this.createEmpleadoForm();
   }
 
   // ==================== CICLO DE VIDA ====================
   ngOnInit(): void {
     this.loadEmployees();
     this.loadRolesAndPositions();
+  }
+
+  // ==================== FORMULARIO INTERNO ====================
+  
+  /**
+   * Crea el formulario para agregar empleados
+   */
+  private createEmpleadoForm(): FormGroup {
+    return this.fb.group({
+      nombre: ['', [
+        Validators.required, 
+        Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/),
+        Validators.maxLength(100)
+      ]],
+      cedula: ['', [
+        Validators.required,
+        Validators.pattern(/^\d{6,9}$/),
+        Validators.minLength(6),
+        Validators.maxLength(9)
+      ]],
+      email: ['', [
+        Validators.required,
+        Validators.email,
+        Validators.maxLength(100)
+      ]],
+      telefono: ['', [
+        Validators.pattern(/^[\d\s+\-()]+$/),
+        Validators.maxLength(13)
+      ]],
+      cargoId: ['', Validators.required],
+      rolId: ['', Validators.required]
+    });
+  }
+
+  /**
+   * Abre el modal interno para agregar empleado
+   */
+  openDynamicModal(): void {
+    // Resetear el formulario
+    this.empleadoForm.reset();
+    this.isLoadingForm = false;
+
+    // Verificar que tenemos los datos necesarios
+    if (this.positions.length === 0 || this.roles.length === 0) {
+      this.loadRolesAndPositions();
+      setTimeout(() => {
+        if (this.positions.length > 0 && this.roles.length > 0) {
+          this.openModal();
+        } else {
+          this.swalService.showError('Error', 'No se pudieron cargar los datos necesarios.');
+        }
+      }, 1000);
+    } else {
+      this.openModal();
+    }
+  }
+
+  /**
+   * Abre el modal físicamente
+   */
+  private openModal(): void {
+    const modalElement = document.getElementById('agregarEmpleadoModal');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  /**
+   * Cierra el modal de agregar empleado
+   */
+  cerrarModalAgregar(): void {
+    const modalElement = document.getElementById('agregarEmpleadoModal');
+    if (modalElement) {
+      const modal = bootstrap.Modal.getInstance(modalElement);
+      modal?.hide();
+    }
+    this.empleadoForm.reset();
+  }
+
+  /**
+   * Maneja el envío del formulario
+   */
+  onSubmitEmpleado(): void {
+    if (this.empleadoForm.invalid) {
+      this.markFormGroupTouched(this.empleadoForm);
+      return;
+    }
+
+    this.isLoadingForm = true;
+    const formData = this.empleadoForm.value;
+
+    const payload = {
+      rolId: formData.rolId,
+      cargoId: formData.cargoId,
+      cedula: formData.cedula.toString(),
+      nombre: formData.nombre.trim(),
+      email: formData.email,
+      phone: formData.telefono || ''
+    };
+
+    this.empleadosService.addEmployees(payload).subscribe({
+      next: () => {
+        this.isLoadingForm = false;
+        this.cerrarModalAgregar();
+        
+        // Recargar la lista de empleados
+        this.loadEmployees();
+        
+        this.swalService.showSuccess('¡Éxito!', 'Empleado agregado correctamente.');
+      },
+      error: (err) => {
+        this.isLoadingForm = false;
+        const msg = err.message?.trim() || '';
+
+        if (msg === 'El numero de cedula ya esta registrado.') {
+          this.empleadoForm.get('cedula')?.setErrors({ 'duplicated': true });
+          this.swalService.showError('Error', 'La cédula ya está registrada en el sistema.');
+        } else {
+          this.swalService.showError('Error', 'No se pudo agregar el empleado. Por favor, intenta nuevamente.');
+        }
+
+        console.error('Error al agregar empleado:', err);
+      }
+    });
+  }
+
+  // ==================== HELPERS DE VALIDACIÓN ====================
+
+  /**
+   * Marca todos los campos como touched para mostrar errores
+   */
+  private markFormGroupTouched(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
+      } else {
+        control?.markAsTouched();
+      }
+    });
+  }
+
+  /**
+   * Verifica si un campo tiene error
+   */
+  showError(controlName: string): boolean {
+    const control = this.empleadoForm.get(controlName);
+    return control ? (control.invalid && control.touched) : false;
+  }
+
+  /**
+   * Obtiene el mensaje de error para un campo
+   */
+  getErrorMsg(controlName: string): string {
+    const control = this.empleadoForm.get(controlName);
+    if (!control || !control.errors) return '';
+
+    const errors = control.errors;
+
+    if (errors['required']) return 'Este campo es requerido';
+    if (errors['email']) return 'Correo electrónico inválido';
+    if (errors['pattern']) {
+      switch (controlName) {
+        case 'nombre': return 'Solo se permiten letras y espacios';
+        case 'cedula': return 'Debe contener solo números (6-9 dígitos)';
+        case 'telefono': return 'Formato de teléfono inválido';
+        default: return 'Formato inválido';
+      }
+    }
+    if (errors['minlength']) return `Mínimo ${errors['minlength'].requiredLength} caracteres`;
+    if (errors['maxlength']) return `Máximo ${errors['maxlength'].requiredLength} caracteres`;
+    if (errors['duplicated']) return 'Esta cédula ya está registrada';
+
+    return 'Campo inválido';
+  }
+
+  // ==================== MÉTODOS ADICIONALES PARA EL FORMULARIO ====================
+
+  /**
+   * Calcula el progreso de completitud del formulario
+   */
+  getFormProgress(): number {
+    const totalFields = this.getTotalFields();
+    const completedFields = this.getCompletedFields();
+    return totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0;
+  }
+
+  /**
+   * Obtiene el número total de campos obligatorios
+   */
+  getTotalFields(): number {
+    return Object.keys(this.empleadoForm.controls).filter(key => {
+      const control = this.empleadoForm.get(key);
+      return control?.validator?.(control) ? true : false;
+    }).length;
+  }
+
+  /**
+   * Obtiene el número de campos completados
+   */
+  getCompletedFields(): number {
+    return Object.keys(this.empleadoForm.controls).filter(key => {
+      const control = this.empleadoForm.get(key);
+      const hasValidator = control?.validator?.(control);
+      return hasValidator && control?.valid && control?.value;
+    }).length;
+  }
+
+  /**
+   * Resetea el formulario
+   */
+  resetForm(): void {
+    this.empleadoForm.reset();
+    // Marcar como untouched para limpiar errores
+    this.empleadoForm.markAsUntouched();
   }
 
   // ==================== MÉTODOS DE ORDENAMIENTO ====================
@@ -99,7 +305,7 @@ export class EmpleadosComponent implements OnInit {
       if (typeof valorB === 'string') valorB = valorB.toLowerCase();
 
       let resultado = 0;
-
+      
       if (valorA < valorB) {
         resultado = -1;
       } else if (valorA > valorB) {
@@ -188,43 +394,6 @@ export class EmpleadosComponent implements OnInit {
   }
 
   /**
-   * Abre el modal dinámico para agregar un nuevo empleado
-   */
-  openDynamicModal(): void {
-    this.dynamicModal.modalTitle = 'Agregar Nuevo Empleado';
-    this.dynamicModal.showRequiredMessage = true;
-    this.dynamicModal.onSubmit = this.addEmployee.bind(this);
-    this.mostrarRedesSociales = false;
-
-    this.modalFields = [
-      {
-        name: 'name', label: 'Nombre Completo', type: 'text', required: true, cols: 6,
-        errorMessage: 'Solo se permiten letras', validation: [Validators.required, Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/)]
-      },
-      {
-        name: 'cedula', label: 'Documento de Identidad', type: 'number', required: true, cols: 6,
-        errorMessage: 'Debe ser numérico entre 6 y 9 dígitos', validation: [Validators.required, Validators.pattern(/^\d{6,9}$/)]
-      },
-      {
-        name: 'email', label: 'Correo Electrónico', type: 'email', required: true, cols: 6,
-        errorMessage: 'Correo inválido', validation: [Validators.required, Validators.email]
-      },
-      {
-        name: 'position', label: 'Cargo', type: 'select',
-        options: this.positions.map(pos => ({ value: pos.id, label: pos.nombre })),
-        required: true, cols: 3, errorMessage: 'Cargo requerido'
-      },
-      {
-        name: 'role', label: 'Rol en Sistema', type: 'select',
-        options: this.roles.map(rol => ({ value: rol.id, label: rol.nombre })),
-        required: true, cols: 3, errorMessage: 'Rol requerido'
-      }
-    ];
-
-    this.dynamicModal.openModal();
-  }
-
-  /**
    * Cierra un modal dado su ID
    * @param id ID del modal a cerrar
    */
@@ -233,56 +402,9 @@ export class EmpleadosComponent implements OnInit {
     if (el) bootstrap.Modal.getInstance(el)?.hide();
   }
 
-  onSelectChange(employee: any, field: 'cargoNombre' | 'rolNombre'): void {
-    employee.modified = true;
-    this.validateField(employee, field === 'cargoNombre' ? 'cargo' : 'rol');
-  }
-
   // ==================== MÉTODOS DE CRUD EMPLEADOS ====================
   /**
-   * Agrega un nuevo empleado
-   * @param employee Datos del empleado a agregar
-   */
-  addEmployee(employee: any): void {
-    const payload = {
-      rolId: employee.role,
-      cargoId: employee.position,
-      cedula: employee.cedula.toString(),
-      nombre: employee.name,
-      email: employee.email || '',
-      phone: employee.phone || ''
-    };
-    this.isLoading = true;
-
-    this.empleadosService.addEmployees(payload).subscribe({
-      next: () => {
-        this.empleadosService.getAllEmpleados().subscribe((empleados) => {
-          this.employees = [...empleados];
-          this.filterEmployees();
-        });
-        this.isLoading = false;
-
-        this.cerrarModal('dynamicModal');
-        this.swalService.showSuccess('¡Registro exitoso!', 'Usuario registrado correctamente.');
-      },
-      error: (err) => {
-        this.isLoading = false;
-        const msg = err.message?.trim() || '';
-
-        if (msg === 'El numero de cedula ya esta registrado.') {
-          this.swalService.showError('Cédula ya registrada', 'Por favor, ingresa una diferente.');
-        } else {
-          this.cerrarModal('dynamicModal');
-          this.swalService.showError('Error inesperado', msg || 'Hubo un problema al registrar el usuario.');
-        }
-
-        console.error('Error al agregar empleado:', err);
-      }
-    });
-  }
-
-  /**
-   * Elimina un empleado con confirmación
+   * Elimina un empleado con confirmación moderna
    * @param index Índice del empleado a eliminar
    */
   deleteEmployee(index: number): void {
@@ -325,6 +447,7 @@ export class EmpleadosComponent implements OnInit {
       employee.cargoNombre = selected.nombre;
     }
     employee.modified = true;
+    this.validateField(employee, 'cargo');
   }
 
   onRolChange(employee: any, rolId: string): void {
@@ -334,6 +457,7 @@ export class EmpleadosComponent implements OnInit {
       employee.rolNombre = selected.nombre;
     }
     employee.modified = true;
+    this.validateField(employee, 'rol');
   }
 
   /**
@@ -380,32 +504,27 @@ export class EmpleadosComponent implements OnInit {
     };
   }
 
-  private formatDate(date: string | Date): string {
-    const d = new Date(date);
-    return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
-  }
-
   private validateEmployeeChanges(emp: any): string[] {
     const errors: string[] = [];
 
     const hasChanged = (field: keyof typeof emp) => emp[field] !== emp.originalValues[field];
 
-    if (hasChanged('document')) {
-      const doc = emp.document?.toString() ?? '';
-      if (doc.length < 8 || doc.length > 9) {
-        errors.push('La cédula debe tener entre 8 y 9 dígitos.');
+    if (hasChanged('cedula')) {
+      const doc = emp.cedula?.toString() ?? '';
+      if (doc.length < 6 || doc.length > 9) {
+        errors.push('La cédula debe tener entre 6 y 9 dígitos.');
       }
     }
 
-    if (hasChanged('name') && (!emp.name || emp.name.trim().length === 0)) {
+    if (hasChanged('nombre') && (!emp.nombre || emp.nombre.trim().length === 0)) {
       errors.push('El nombre es requerido.');
     }
 
-    if (hasChanged('position') && !emp.position) {
+    if (hasChanged('cargoId') && !emp.cargoId) {
       errors.push('Debe seleccionar un cargo.');
     }
 
-    if (hasChanged('role') && !emp.role) {
+    if (hasChanged('rolId') && !emp.rolId) {
       errors.push('Debe seleccionar un rol.');
     }
 
@@ -465,8 +584,8 @@ export class EmpleadosComponent implements OnInit {
 
     switch (field) {
       case 'cedula':
-        employee.errors.cedula = !employee.cedula || employee.cedula.toString().length < 8 || employee.cedula.toString().length > 9
-          ? 'La cédula debe tener entre 8 y 9 dígitos'
+        employee.errors.cedula = !employee.cedula || employee.cedula.toString().length < 6 || employee.cedula.toString().length > 9
+          ? 'La cédula debe tener entre 6 y 9 dígitos'
           : '';
         break;
       case 'nombre':
@@ -557,11 +676,16 @@ export class EmpleadosComponent implements OnInit {
   }
 
   trackByEmployeeId(index: number, emp: Empleado): string {
-    return emp.id;
+    return emp.cedula;
   }
 
   onFieldChange(employee: Empleado, field: keyof Empleado): void {
     employee.modified = true;
-    this.validateField(employee, field);
+    this.validateField(employee, field as string);
+  }
+
+  onSelectChange(employee: any, field: 'cargoNombre' | 'rolNombre'): void {
+    employee.modified = true;
+    this.validateField(employee, field === 'cargoNombre' ? 'cargo' : 'rol');
   }
 }

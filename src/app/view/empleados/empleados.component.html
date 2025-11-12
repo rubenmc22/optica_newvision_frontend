@@ -407,3 +407,201 @@
         </div>
     </div>
 </div>
+
+
+<!-- Modal para agregar empleado -->
+<div class="modal fade" id="agregarEmpleadoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content modal-moderna">
+      <!-- Header moderno -->
+      <div class="modal-header-moderno">
+        <div class="modal-header-content">
+          <div class="modal-icon">
+            <i class="bi bi-person-plus"></i>
+          </div>
+          <div class="modal-title-content">
+            <h5 class="modal-title">Agregar Nuevo Empleado</h5>
+            <p class="modal-subtitle">Complete la información del empleado</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-moderno" data-bs-dismiss="modal" aria-label="Close" (click)="cerrarModalAgregar()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <!-- Body moderno -->
+      <div class="modal-body-moderno">
+        <form [formGroup]="empleadoForm" class="form-moderno" (ngSubmit)="onSubmitEmpleado()">
+
+          <!-- Sección: Información Personal -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-person-vcard"></i>
+              </div>
+              <h6 class="section-title">Información Personal</h6>
+            </div>
+
+            <div class="section-content">
+              <div class="row g-3">
+                <!-- Fila 1: Información básica -->
+                <div class="col-md-8">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-person me-2"></i>
+                      Nombre Completo <span class="required">*</span>
+                    </label>
+                    <input type="text" class="form-control-moderno" formControlName="nombre"
+                      placeholder="Ej: María Fernanda López" maxlength="100">
+                    <div class="form-error" *ngIf="showError('nombre')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('nombre') }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-card-text me-2"></i>
+                      Cédula <span class="required">*</span>
+                    </label>
+                    <input type="text" class="form-control-moderno" formControlName="cedula" 
+                      placeholder="Ej: 12345678" maxlength="9">
+                    <div class="form-error" *ngIf="showError('cedula')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('cedula') }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Fila 2: Contacto -->
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-envelope me-2"></i>
+                      Correo Electrónico <span class="required">*</span>
+                    </label>
+                    <input type="email" class="form-control-moderno" formControlName="email"
+                      placeholder="Ej: empleado&#64;empresa.com" maxlength="100">
+                    <div class="form-error" *ngIf="showError('email')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('email') }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-telephone me-2"></i>
+                      Teléfono
+                    </label>
+                    <input type="text" class="form-control-moderno" formControlName="telefono"
+                      placeholder="Ej: 04121234567" maxlength="13">
+                    <div class="form-error" *ngIf="showError('telefono')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('telefono') }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección: Información Laboral -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-briefcase"></i>
+              </div>
+              <h6 class="section-title">Información Laboral</h6>
+            </div>
+
+            <div class="section-content">
+              <div class="row g-3">
+                <!-- Fila 1: Cargo y Rol -->
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-person-badge me-2"></i>
+                      Cargo <span class="required">*</span>
+                    </label>
+                    <select class="form-control-moderno" formControlName="cargoId">
+                      <option value="">Seleccionar cargo</option>
+                      <option *ngFor="let pos of positions" [value]="pos.id">{{ pos.nombre }}</option>
+                    </select>
+                    <div class="form-error" *ngIf="showError('cargoId')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('cargoId') }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-person-gear me-2"></i>
+                      Rol en Sistema <span class="required">*</span>
+                    </label>
+                    <select class="form-control-moderno" formControlName="rolId">
+                      <option value="">Seleccionar rol</option>
+                      <option *ngFor="let rol of roles" [value]="rol.id">{{ rol.nombre }}</option>
+                    </select>
+                    <div class="form-error" *ngIf="showError('rolId')">
+                      <i class="bi bi-exclamation-circle"></i>
+                      {{ getErrorMsg('rolId') }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Indicador de progreso -->
+          <div class="form-progress" *ngIf="getFormProgress() > 0">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="getFormProgress()"></div>
+            </div>
+            <div class="progress-text">
+              <span>{{ getFormProgress() }}% completado</span>
+              <span>{{ getCompletedFields() }}/{{ getTotalFields() }} campos</span>
+            </div>
+          </div>
+
+          <!-- Alertas de estado -->
+          <div class="alert-moderno alert-warning" *ngIf="empleadoForm.invalid && empleadoForm.touched">
+            <i class="bi bi-exclamation-triangle"></i>
+            <div class="alert-content">
+              <strong>Formulario incompleto</strong>
+              <span>Complete todos los campos obligatorios marcados con <span class="required">*</span></span>
+            </div>
+          </div>
+
+          <div class="alert-moderno alert-info" *ngIf="isLoadingForm">
+            <i class="bi bi-arrow-repeat spinner-icon"></i>
+            <div class="alert-content">
+              <strong>Guardando empleado</strong>
+              <span>Estamos procesando la información...</span>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Footer moderno -->
+      <div class="modal-footer-moderno">
+        <button type="button" class="btn btn-secondary-moderno" data-bs-dismiss="modal" (click)="cerrarModalAgregar()">
+          <i class="bi bi-x-circle me-2"></i>
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-primary-moderno"
+          [disabled]="isLoadingForm || empleadoForm.invalid" 
+          (click)="onSubmitEmpleado()">
+          <i class="bi bi-check-circle me-2"></i>
+          {{ isLoadingForm ? 'Guardando...' : 'Guardar Empleado' }}
+          <span *ngIf="isLoadingForm" class="spinner-border spinner-border-sm ms-2"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
