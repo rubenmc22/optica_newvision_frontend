@@ -24,8 +24,8 @@ export class ProductosListComponent implements OnInit {
     @Output() onCerrar = new EventEmitter<void>();
 
     // CONSTANTES
-    private readonly PRODUCTOS_POR_PAGINA = 12;
-    private readonly RANGO_PAGINACION = 3;
+     readonly PRODUCTOS_POR_PAGINA = 12;
+    readonly RANGO_PAGINACION = 3;
     readonly IVA = 0.16;
 
     // ESTADO DEL COMPONENTE
@@ -182,12 +182,10 @@ export class ProductosListComponent implements OnInit {
     }
 
     cargarPagina(pagina: number): void {
-        this.paginaActual = pagina;
-        this.productoService.getProductosPorPagina(pagina, this.PRODUCTOS_POR_PAGINA)
-            .subscribe(res => {
-                this.productos = this.actualizarEstadoPorStock(res);
-            });
-    }
+    this.paginaActual = pagina;
+    // Solo actualiza la página actual, no hace falta llamar al servicio
+    // ya que los productos ya están cargados y solo estamos paginando localmente
+}
 
     private iniciarCarga(): void {
         this.tareasPendientes = 0;
@@ -465,23 +463,23 @@ export class ProductosListComponent implements OnInit {
     }
 
     // =========== PAGINACIÓN ===========
-    get productosPaginados(): Producto[] {
-        const inicio = (this.paginaActual - 1) * this.PRODUCTOS_POR_PAGINA;
-        return this.productosFiltrados.slice(inicio, inicio + this.PRODUCTOS_POR_PAGINA);
-    }
+  get productosPaginados(): Producto[] {
+    const inicio = (this.paginaActual - 1) * this.PRODUCTOS_POR_PAGINA;
+    return this.productosFiltrados.slice(inicio, inicio + this.PRODUCTOS_POR_PAGINA);
+}
 
-    get totalPaginas(): number {
-        return Math.ceil(this.productosFiltrados.length / this.PRODUCTOS_POR_PAGINA);
-    }
+get totalPaginas(): number {
+    return Math.ceil(this.productosFiltrados.length / this.PRODUCTOS_POR_PAGINA);
+}
+
+get paginasVisibles(): number[] {
+    const inicio = Math.max(this.paginaActual - this.RANGO_PAGINACION, 1);
+    const fin = Math.min(inicio + this.RANGO_PAGINACION * 2, this.totalPaginas);
+    return Array.from({ length: fin - inicio + 1 }, (_, i) => inicio + i);
+}
 
     get paginas(): number[] {
         return Array.from({ length: this.totalPaginas }, (_, i) => i + 1);
-    }
-
-    get paginasVisibles(): number[] {
-        const inicio = Math.max(this.paginaActual - this.RANGO_PAGINACION, 1);
-        const fin = Math.min(inicio + this.RANGO_PAGINACION * 2, this.totalPaginas);
-        return Array.from({ length: fin - inicio + 1 }, (_, i) => inicio + i);
     }
 
     // =========== UTILIDADES ===========

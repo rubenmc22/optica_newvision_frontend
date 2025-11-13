@@ -20,7 +20,7 @@
 
       <!-- Cuerpo modernizado -->
       <div class="card-body-moderno">
-        <!-- Filtros modernos -->
+        <!-- Filtros modernos mejorados -->
         <div class="filtros-modernos">
           <div class="filtro-item">
             <label class="form-label-moderno">
@@ -133,7 +133,7 @@
           </button>
         </div>
 
-        <!-- Catálogo de productos moderno -->
+        <!-- Catálogo de productos moderno MEJORADO -->
         <div class="productos-grid" *ngIf="productosFiltrados.length > 0">
           <div class="producto-card" *ngFor="let producto of productosPaginados" (click)="abrirModal('ver', producto)"
             (keydown.enter)="abrirModal('ver', producto)" (keydown.space)="abrirModal('ver', producto)" tabindex="0"
@@ -144,7 +144,7 @@
                 [alt]="producto.nombre" />
 
               <div class="producto-overlay">
-                <span>Ver detalles del producto</span>
+                <span>Ver detalles</span>
               </div>
 
               <div class="producto-badges">
@@ -217,27 +217,59 @@
           </div>
         </div>
 
-        <!-- Paginación moderna -->
+        <!-- Paginación moderna MEJORADA -->
         <div class="paginacion-moderna" *ngIf="productosFiltrados.length > 0 && totalPaginas > 1">
           <div class="paginacion-info">
-            <span>Mostrando {{ (paginaActual - 1) * 12 + 1 }} -
-              {{ paginaActual * 12 > productosFiltrados.length ? productosFiltrados.length : paginaActual * 12 }}
-              de {{ productosFiltrados.length }} productos</span>
+            <span>
+              Mostrando 
+              {{ (paginaActual - 1) * PRODUCTOS_POR_PAGINA + 1 }} - 
+              {{ 
+                paginaActual * PRODUCTOS_POR_PAGINA > productosFiltrados.length 
+                  ? productosFiltrados.length 
+                  : paginaActual * PRODUCTOS_POR_PAGINA 
+              }} 
+              de {{ productosFiltrados.length }} productos
+            </span>
           </div>
 
           <div class="paginacion-controles">
-            <button class="btn-paginacion" [disabled]="paginaActual === 1" (click)="cargarPagina(paginaActual - 1)">
+            <!-- Botón anterior -->
+            <button class="btn-paginacion" 
+                    [disabled]="paginaActual === 1" 
+                    (click)="cargarPagina(paginaActual - 1)">
               <i class="bi bi-chevron-left"></i>
             </button>
 
-            <div class="paginacion-numeros">
-              <span class="pagina-actual">{{ paginaActual }}</span>
-              <span class="separador">de</span>
-              <span class="total-paginas">{{ totalPaginas }}</span>
-            </div>
+            <!-- Primera página -->
+            <button *ngIf="paginaActual > RANGO_PAGINACION + 1" 
+                    class="btn-paginacion"
+                    (click)="cargarPagina(1)">
+              1
+            </button>
 
-            <button class="btn-paginacion" [disabled]="paginaActual === totalPaginas"
-              (click)="cargarPagina(paginaActual + 1)">
+            <span *ngIf="paginaActual > RANGO_PAGINACION + 1" class="paginacion-ellipsis">...</span>
+
+            <!-- Páginas visibles -->
+            <button *ngFor="let pagina of paginasVisibles" 
+                    class="btn-paginacion"
+                    [class.pagina-activa]="pagina === paginaActual"
+                    (click)="cargarPagina(pagina)">
+              {{ pagina }}
+            </button>
+
+            <span *ngIf="paginaActual < totalPaginas - RANGO_PAGINACION" class="paginacion-ellipsis">...</span>
+
+            <!-- Última página -->
+            <button *ngIf="paginaActual < totalPaginas - RANGO_PAGINACION" 
+                    class="btn-paginacion"
+                    (click)="cargarPagina(totalPaginas)">
+              {{ totalPaginas }}
+            </button>
+
+            <!-- Botón siguiente -->
+            <button class="btn-paginacion" 
+                    [disabled]="paginaActual === totalPaginas" 
+                    (click)="cargarPagina(paginaActual + 1)">
               <i class="bi bi-chevron-right"></i>
             </button>
           </div>
@@ -246,6 +278,7 @@
     </div>
   </div>
 </div>
+
 
 <!-- Modal Agregar/Ver/Editar Modernizado -->
 <div class="modal-overlay modal-catalogo" *ngIf="mostrarModal">
