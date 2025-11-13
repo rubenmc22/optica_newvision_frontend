@@ -7,14 +7,15 @@ import { BehaviorSubject } from 'rxjs';
 export class LoaderService {
   private loadingSubject = new BehaviorSubject<boolean>(false);
   public loading$ = this.loadingSubject.asObservable();
-  
-  private minLoadingTime = 1000; // 3 segundos mínimo
+
+  private minLoadingTime = 1000;
   private loadingStartTime = 0;
   private isCurrentlyLoading = false;
 
   show() {
     this.loadingStartTime = Date.now();
     this.isCurrentlyLoading = true;
+    this.lockScroll();
     this.loadingSubject.next(true);
   }
 
@@ -25,26 +26,59 @@ export class LoaderService {
     const remainingTime = this.minLoadingTime - elapsedTime;
 
     if (remainingTime > 0) {
-      // Si no ha pasado el tiempo mínimo, esperar el resto
       setTimeout(() => {
         this.isCurrentlyLoading = false;
+        this.unlockScroll();
         this.loadingSubject.next(false);
       }, remainingTime);
     } else {
-      // Si ya pasó el tiempo mínimo, ocultar inmediatamente
       this.isCurrentlyLoading = false;
+      this.unlockScroll();
       this.loadingSubject.next(false);
     }
   }
 
-  // Método para forzar el cierre inmediato (en caso de errores)
   forceHide() {
     this.isCurrentlyLoading = false;
+    this.unlockScroll();
     this.loadingSubject.next(false);
   }
 
-  // Método para verificar si está cargando
   isLoading(): boolean {
     return this.isCurrentlyLoading;
+  }
+
+  // ==================== MÉTODOS PARA BLOQUEAR SCROLL ====================
+  private lockScroll(): void {
+    const body = document.body;
+
+    const scrollY = window.scrollY || document.documentElement.scrollTop;
+    body.style.top = `-${scrollY}px`;
+
+    body.style.position = 'fixed';
+    body.style.width = '100%';
+    body.style.overflowY = 'scroll';
+  }
+
+  private unlockScroll(): void {
+    const body = document.body;
+    const scrollY = parseInt(body.style.top || '0');
+
+    body.style.position = '';
+    body.style.top = '';
+    body.style.width = '';
+    body.style.overflowY = '';
+
+    if (scrollY) {
+      window.scrollTo(0, Math.abs(scrollY));
+    }
+  }
+
+  public lockBodyScroll(): void {
+    this.lockScroll();
+  }
+
+  public unlockBodyScroll(): void {
+    this.unlockScroll();
   }
 }

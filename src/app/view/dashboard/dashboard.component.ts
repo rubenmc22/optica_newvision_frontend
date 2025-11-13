@@ -5,6 +5,8 @@ import { HistoriaMedicaService } from '../../core/services/historias-medicas/his
 import { PacienteGrafico } from './../pacientes/paciente-interface';
 import { DatosPorSede } from './dashboard-interface';
 import { forkJoin } from 'rxjs';
+import { finalize } from 'rxjs/operators';
+import { LoaderService } from '../../shared/loader/loader.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -15,6 +17,7 @@ import { forkJoin } from 'rxjs';
 export class DashboardComponent implements OnInit, OnDestroy {
   rolUsuario: Rol | null = null;
   sedeActual: string = '';
+    isLoading: boolean = false;
 
   // Métricas generales
   totalHistorias: number = 0;
@@ -46,7 +49,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private pacientesService: PacientesService,
-    private historiasService: HistoriaMedicaService
+    private historiasService: HistoriaMedicaService,
+    private loader: LoaderService
   ) { }
 
   ngOnInit(): void {
@@ -70,10 +74,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   cargarPacientesYHistorias(): void {
+    this.isLoading = true;
+    this.loader.show(); // Mostrar loader
+
     forkJoin({
       pacientes: this.pacientesService.getPacientes(),
       historias: this.historiasService.getHistoriasMedicasAll()
-    }).subscribe({
+    }).pipe(
+      finalize(() => {
+        this.isLoading = false;
+        this.loader.hide(); // Ocultar loader al finalizar
+      })
+    ).subscribe({
       next: ({ pacientes, historias }) => {
         this.pacientes = Array.isArray(pacientes.pacientes)
           ? pacientes.pacientes.map((p: any): PacienteGrafico => ({
@@ -99,9 +111,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.error('Error al cargar datos:', err);
         this.pacientes = [];
         this.totalHistorias = 0;
+        this.loader.forceHide(); // Forzar ocultar loader en error
       }
     });
   }
+
 
   cargarDatosGraficos(historias: any[]): void {
     const agrupadoPorSede: Record<string, { pacientes: number; ventas: number; ordenes: number; historias: number }> = {};
@@ -263,7 +277,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Exporta un gráfico (función placeholder)
    */
   exportarGrafico(tipo: string): void {
-   // console.log(`Exportando gráfico: ${tipo}`);
+    // console.log(`Exportando gráfico: ${tipo}`);
     // Implementación futura para exportar gráficos
     alert(`Funcionalidad de exportar ${tipo} en desarrollo`);
   }
@@ -272,7 +286,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Maximiza un gráfico (función placeholder)
    */
   maximizarGrafico(tipo: string): void {
-   // console.log(`Maximizando gráfico: ${tipo}`);
+    // console.log(`Maximizando gráfico: ${tipo}`);
     // Implementación futura para vista ampliada
     alert(`Vista ampliada de ${tipo} en desarrollo`);
   }
@@ -282,27 +296,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
    */
   irAPacientes(): void {
     // Navegar a la página de pacientes
-   // console.log('Navegando a pacientes');
+    // console.log('Navegando a pacientes');
   }
 
   nuevoPaciente(): void {
     // Navegar a crear nuevo paciente
-  //  console.log('Creando nuevo paciente');
+    //  console.log('Creando nuevo paciente');
   }
 
   nuevaHistoria(): void {
     // Navegar a crear nueva historia
- //   console.log('Creando nueva historia médica');
+    //   console.log('Creando nueva historia médica');
   }
 
   agendarCita(): void {
     // Navegar a agendar cita
- //   console.log('Agendando cita');
+    //   console.log('Agendando cita');
   }
 
   verReportes(): void {
     // Navegar a reportes
-   // console.log('Viendo reportes');
+    // console.log('Viendo reportes');
   }
 
   /**

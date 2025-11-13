@@ -4,6 +4,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Modal } from 'bootstrap';
 import { Tasa, HistorialTasa } from '../../Interfaces/models-interface';
 import { ChangeDetectorRef } from '@angular/core';
+import { LoaderService } from '../../shared/loader/loader.service';
 
 @Component({
   selector: 'app-ver-atletas',
@@ -37,13 +38,30 @@ export class TasaComponent implements OnInit {
   constructor(
     private tasaService: TasaCambiariaService,
     private snackBar: MatSnackBar,
-    private cdRef: ChangeDetectorRef
+    private cdRef: ChangeDetectorRef,
+    private loader: LoaderService
   ) { }
 
   // ==================== CICLO DE VIDA ====================
   ngOnInit(): void {
-    this.cargarTasas();
-    this.cargarReferenciaBCV();
+    this.cargarDatosIniciales();
+  }
+
+  // ==================== MÉTODOS DE CARGA INICIAL ====================
+  private cargarDatosIniciales(): void {
+    this.loader.show();
+
+    const cargas = [
+      this.cargarTasas(),
+      this.cargarReferenciaBCV()
+    ];
+
+    Promise.allSettled(cargas).then(() => {
+      this.loader.hide();
+    }).catch((error) => {
+      console.error('Error en carga inicial:', error);
+      this.loader.forceHide();
+    });
   }
 
   // ==================== MÉTODOS DE CARGA INICIAL ====================

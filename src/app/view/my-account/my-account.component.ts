@@ -12,6 +12,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { environment } from '../../../environments/environment';
 import * as bootstrap from 'bootstrap';
 import { GeneralFunctions } from '../../general-functions/general-functions';
+import { LoaderService } from '../../shared/loader/loader.service';
 
 
 @Component({
@@ -93,7 +94,8 @@ export class MyAccountComponent implements OnInit {
     private sharedUserService: SharedUserService,
     private snackBar: MatSnackBar,
     private cdRef: ChangeDetectorRef,
-    private generalFunctions: GeneralFunctions
+    private generalFunctions: GeneralFunctions,
+    private loader: LoaderService
   ) { }
 
   // ============================================================
@@ -118,38 +120,51 @@ export class MyAccountComponent implements OnInit {
   // Métodos generales y de utilidad
   // ============================================================
   private loadUserData(): void {
+    this.loader.show(); // Mostrar loader al cargar datos
+
     const cedula = this.authService.getCurrentUser()?.cedula?.trim();
     console.log('cedula', cedula);
     if (!cedula) {
       console.warn('No se encontró cédula en la sesión');
       this.user = this.getDefaultUserProfile();
+      this.loader.hide(); // Ocultar loader si hay error
       return;
     }
 
-    this.changeInformationService.getUsuarioPorCedula(cedula).subscribe(usuario => {
-      if (!usuario) {
-        console.warn('No se encontró usuario en la API');
-        this.user = this.getDefaultUserProfile();
-        return;
+    this.changeInformationService.getUsuarioPorCedula(cedula).subscribe({
+      next: (usuario) => {
+        if (!usuario) {
+          console.warn('No se encontró usuario en la API');
+          this.user = this.getDefaultUserProfile();
+          return;
+        }
+
+        this.user = {
+          nombre: usuario.nombre?.trim() || '',
+          cedula: usuario.cedula?.trim() || '',
+          cargo: usuario.cargo?.id || '',
+          correo: usuario.correo?.trim() || '',
+          telefono: usuario.telefono?.trim() || '',
+          fecha_nacimiento: usuario.fecha_nacimiento || null,
+          avatarUrl: usuario.avatar_url || null,
+          ruta_imagen: usuario.ruta_imagen || null,
+          rol: usuario.rol?.id || ''
+        };
+
+        this.originalUser = { ...this.user };
+        this.sharedUserService.updateUserProfile(this.user);
+        this.userCargoSeleccionado = usuario.cargo?.id || '';
+      },
+      error: (error) => {
+        console.error('Error cargando datos del usuario:', error);
+        this.loader.forceHide(); // Forzar ocultar loader en error
+      },
+      complete: () => {
+        this.loader.hide(); // Ocultar loader al completar
       }
-
-      this.user = {
-        nombre: usuario.nombre?.trim() || '',
-        cedula: usuario.cedula?.trim() || '',
-        cargo: usuario.cargo?.id || '',
-        correo: usuario.correo?.trim() || '',
-        telefono: usuario.telefono?.trim() || '',
-        fecha_nacimiento: usuario.fecha_nacimiento || null,
-        avatarUrl: usuario.avatar_url || null,
-        ruta_imagen: usuario.ruta_imagen || null,
-        rol: usuario.rol?.id || ''
-      };
-
-      this.originalUser = { ...this.user };
-      this.sharedUserService.updateUserProfile(this.user);
-      this.userCargoSeleccionado = usuario.cargo?.id || '';
     });
   }
+
 
   get tooltipMessage(): string {
     const isDisabled = !this.isFormEdited || !this.isPersonalInfoValid();
