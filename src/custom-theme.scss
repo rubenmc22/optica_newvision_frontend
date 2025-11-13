@@ -513,3 +513,23 @@ body {
 .cdk-overlay-pane {
   margin-bottom: 100px !important;
 }
+
+.form-control-moderno {
+  background: #f8fdff;
+  border-radius: 3px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+  
+  &:focus {
+    background: #f0f9ff; // Color de fondo al hacer focus
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.1); // Sombra sutil
+    outline: none;
+  }
+}
+
+.form-group-moderno .ng-select.ng-select-single .ng-select-container{
+    height: 48px !important;
+    top: 2px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}

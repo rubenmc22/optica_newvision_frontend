@@ -221,55 +221,47 @@
         <div class="paginacion-moderna" *ngIf="productosFiltrados.length > 0 && totalPaginas > 1">
           <div class="paginacion-info">
             <span>
-              Mostrando 
-              {{ (paginaActual - 1) * PRODUCTOS_POR_PAGINA + 1 }} - 
-              {{ 
-                paginaActual * PRODUCTOS_POR_PAGINA > productosFiltrados.length 
-                  ? productosFiltrados.length 
-                  : paginaActual * PRODUCTOS_POR_PAGINA 
-              }} 
+              Mostrando
+              {{ (paginaActual - 1) * PRODUCTOS_POR_PAGINA + 1 }} -
+              {{
+              paginaActual * PRODUCTOS_POR_PAGINA > productosFiltrados.length
+              ? productosFiltrados.length
+              : paginaActual * PRODUCTOS_POR_PAGINA
+              }}
               de {{ productosFiltrados.length }} productos
             </span>
           </div>
 
           <div class="paginacion-controles">
             <!-- Botón anterior -->
-            <button class="btn-paginacion" 
-                    [disabled]="paginaActual === 1" 
-                    (click)="cargarPagina(paginaActual - 1)">
+            <button class="btn-paginacion" [disabled]="paginaActual === 1" (click)="cargarPagina(paginaActual - 1)">
               <i class="bi bi-chevron-left"></i>
             </button>
 
             <!-- Primera página -->
-            <button *ngIf="paginaActual > RANGO_PAGINACION + 1" 
-                    class="btn-paginacion"
-                    (click)="cargarPagina(1)">
+            <button *ngIf="paginaActual > RANGO_PAGINACION + 1" class="btn-paginacion" (click)="cargarPagina(1)">
               1
             </button>
 
             <span *ngIf="paginaActual > RANGO_PAGINACION + 1" class="paginacion-ellipsis">...</span>
 
             <!-- Páginas visibles -->
-            <button *ngFor="let pagina of paginasVisibles" 
-                    class="btn-paginacion"
-                    [class.pagina-activa]="pagina === paginaActual"
-                    (click)="cargarPagina(pagina)">
+            <button *ngFor="let pagina of paginasVisibles" class="btn-paginacion"
+              [class.pagina-activa]="pagina === paginaActual" (click)="cargarPagina(pagina)">
               {{ pagina }}
             </button>
 
             <span *ngIf="paginaActual < totalPaginas - RANGO_PAGINACION" class="paginacion-ellipsis">...</span>
 
             <!-- Última página -->
-            <button *ngIf="paginaActual < totalPaginas - RANGO_PAGINACION" 
-                    class="btn-paginacion"
-                    (click)="cargarPagina(totalPaginas)">
+            <button *ngIf="paginaActual < totalPaginas - RANGO_PAGINACION" class="btn-paginacion"
+              (click)="cargarPagina(totalPaginas)">
               {{ totalPaginas }}
             </button>
 
             <!-- Botón siguiente -->
-            <button class="btn-paginacion" 
-                    [disabled]="paginaActual === totalPaginas" 
-                    (click)="cargarPagina(paginaActual + 1)">
+            <button class="btn-paginacion" [disabled]="paginaActual === totalPaginas"
+              (click)="cargarPagina(paginaActual + 1)">
               <i class="bi bi-chevron-right"></i>
             </button>
           </div>
@@ -315,122 +307,122 @@
         <!-- Body moderno -->
         <div class="modal-body-moderno">
           <div class="container-fluid">
-         <!-- Sección: Imagen y Datos Principales -->
-<!-- Sección: Imagen y Datos Principales -->
-<div class="form-section">
-  <div class="section-header">
-    <div class="section-icon">
-      <i class="bi bi-image"></i>
-    </div>
-    <h6 class="section-title">Imagen y Datos Principales</h6>
-  </div>
-
-  <div class="section-content">
-    <div class="campos-principales-grid">
-
-      <!-- Sección de imagen -->
-      <div class="seccion-imagen">
-        <div class="avatar-widget">
-          <img [src]="getProfileImage()" (error)="handleImageError($event)" class="avatar-img"
-            alt="Imagen del producto" />
-          <div class="avatar-overlay show-on-hover" *ngIf="modoModal !== 'ver'">
-            <label for="avatarUpload" class="btn-imagen">
-              <i class="bi bi-camera"></i>
-            </label>
-            <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
-              (change)="onFileSelected($event)" />
-          </div>
-        </div>
-        <small class="text-muted text-center">Imagen del producto</small>
-      </div>
-
-      <!-- Sección de campos principales -->
-      <div class="seccion-campos-principales">
-
-        <!-- Fila 1: Nombre y Stock en línea -->
-        <div class="fila-nombre-stock">
-
-          <!-- Nombre del producto -->
-          <div class="form-group-moderno">
-            <label class="form-label-moderno">
-              <i class="bi bi-tag"></i>
-              Nombre del Producto <span class="required">*</span>
-            </label>
-            <input type="text" class="form-control-moderno" [(ngModel)]="producto.nombre" name="nombre"
-              required [disabled]="esSoloLectura" placeholder="Ingrese el nombre del producto">
-          </div>
-
-          <!-- Stock -->
-          <div class="form-group-moderno">
-            <label class="form-label-moderno">
-              <i class="bi bi-box"></i>
-              Stock <span class="required">*</span>
-            </label>
-            <input type="number" class="form-control-moderno" [(ngModel)]="producto.stock" name="stock"
-              required min="0" [disabled]="esSoloLectura" placeholder="0" (focus)="limpiarSiCero('stock')"
-              (input)="limpiarCeroInicial($event, 'stock')" (blur)="restaurarCeroSiVacio('stock')">
-          </div>
-        </div>
-
-        <!-- Fila 2: IVA y Precio en línea - MEJORADO -->
-        <div class="fila-iva-precio">
-
-          <!-- IVA Switch - MÁS ANCHO -->
-          <div class="grupo-iva" *ngIf="modoModal !== 'ver'">
-            <div class="switch-iva-container">
-              <label class="modern-switch">
-                <input type="checkbox" [(ngModel)]="producto.aplicaIva" name="aplicaIva"
-                  (change)="sincronizarPrecio()">
-                <span class="switch-slider"></span>
-              </label>
-              <span class="switch-label">¿Aplica IVA?</span>
-            </div>
-          </div>
-
-          <!-- Precio con Selector de Moneda - MÁS COMPACTO -->
-          <div class="form-group-moderno grupo-precio">
-            <label class="form-label-moderno">
-              <i class="bi bi-currency-dollar"></i>
-              {{ producto.aplicaIva ? 'Precio + IVA' : 'Precio' }} <span class="required">*</span>
-            </label>
-
-            <div class="selector-moneda-innovador">
-              <!-- Campo de precio -->
-              <div class="campo-precio">
-                <input type="number" class="form-control-moderno precio-input-innovador"
-                  [ngModel]="producto.aplicaIva ? producto.precioConIva : producto.precio"
-                  [name]="producto.aplicaIva ? 'precioConIva' : 'precio'" required min="0"
-                  placeholder="0.00" [disabled]="esSoloLectura" (focus)="limpiarSiCero('precio')"
-                  (input)="limpiarCeroInicial($event, 'precio')" (blur)="restaurarCeroSiVacio('precio')">
+            <!-- Sección: Imagen y Datos Principales -->
+            <!-- Sección: Imagen y Datos Principales -->
+            <div class="form-section">
+              <div class="section-header">
+                <div class="section-icon">
+                  <i class="bi bi-image"></i>
+                </div>
+                <h6 class="section-title">Imagen y Datos Principales</h6>
               </div>
 
-              <!-- Selector de moneda tipo cards - MÁS COMPACTO -->
-              <div class="selector-monedas-cards" [class.disabled]="esSoloLectura">
-                <div class="moneda-card" *ngFor="let monedaItem of moneda"
-                  [class.selected]="producto.moneda === monedaItem.id" [class.disabled]="esSoloLectura"
-                  (click)="!esSoloLectura && seleccionarMoneda(monedaItem.id)">
+              <div class="section-content">
+                <div class="campos-principales-grid">
 
-                  <div class="moneda-icono">
-                    <i class="bi" [ngClass]="getMonedaIcon(monedaItem.alias)"></i>
+                  <!-- Sección de imagen -->
+                  <div class="seccion-imagen">
+                    <div class="avatar-widget">
+                      <img [src]="getProfileImage()" (error)="handleImageError($event)" class="avatar-img"
+                        alt="Imagen del producto" />
+                      <div class="avatar-overlay show-on-hover" *ngIf="modoModal !== 'ver'">
+                        <label for="avatarUpload" class="btn-imagen">
+                          <i class="bi bi-camera"></i>
+                        </label>
+                        <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
+                          (change)="onFileSelected($event)" />
+                      </div>
+                    </div>
+                    <small class="text-muted text-center">Imagen del producto</small>
                   </div>
 
-                  <div class="moneda-info">
-                    <span class="moneda-nombre">{{ monedaItem.alias }}</span>
-                  </div>
+                  <!-- Sección de campos principales -->
+                  <div class="seccion-campos-principales">
 
-                  <div class="moneda-seleccionado" *ngIf="producto.moneda === monedaItem.id">
-                    <i class="bi bi-check-circle-fill"></i>
+                    <!-- Fila 1: Nombre y Stock en línea -->
+                    <div class="fila-nombre-stock">
+
+                      <!-- Nombre del producto -->
+                      <div class="form-group-moderno">
+                        <label class="form-label-moderno">
+                          <i class="bi bi-tag"></i>
+                          Nombre del Producto <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-control-moderno" [(ngModel)]="producto.nombre" name="nombre"
+                          required [disabled]="esSoloLectura" placeholder="Ingrese el nombre del producto">
+                      </div>
+
+                      <!-- Stock -->
+                      <div class="form-group-moderno">
+                        <label class="form-label-moderno">
+                          <i class="bi bi-box"></i>
+                          Stock <span class="required">*</span>
+                        </label>
+                        <input type="number" class="form-control-moderno" [(ngModel)]="producto.stock" name="stock"
+                          required min="0" [disabled]="esSoloLectura" placeholder="0" (focus)="limpiarSiCero('stock')"
+                          (input)="limpiarCeroInicial($event, 'stock')" (blur)="restaurarCeroSiVacio('stock')">
+                      </div>
+                    </div>
+
+                    <!-- Fila 2: IVA y Precio en línea - MEJORADO -->
+                    <div class="fila-iva-precio">
+
+                      <!-- IVA Switch - MÁS ANCHO -->
+                      <div class="grupo-iva" *ngIf="modoModal !== 'ver'">
+                        <div class="switch-iva-container">
+                          <label class="modern-switch">
+                            <input type="checkbox" [(ngModel)]="producto.aplicaIva" name="aplicaIva"
+                              (change)="sincronizarPrecio()">
+                            <span class="switch-slider"></span>
+                          </label>
+                          <span class="switch-label">¿Aplica IVA?</span>
+                        </div>
+                      </div>
+
+                      <!-- Precio con Selector de Moneda - MÁS COMPACTO -->
+                      <div class="form-group-moderno grupo-precio">
+                        <label class="form-label-moderno">
+                          <i class="bi bi-currency-dollar"></i>
+                          {{ producto.aplicaIva ? 'Precio + IVA' : 'Precio' }} <span class="required">*</span>
+                        </label>
+
+                        <div class="selector-moneda-innovador">
+                          <!-- Campo de precio -->
+                          <div class="campo-precio">
+                            <input type="number" class="form-control-moderno precio-input-innovador"
+                              [ngModel]="producto.aplicaIva ? producto.precioConIva : producto.precio"
+                              [name]="producto.aplicaIva ? 'precioConIva' : 'precio'" required min="0"
+                              placeholder="0.00" [disabled]="esSoloLectura" (focus)="limpiarSiCero('precio')"
+                              (input)="limpiarCeroInicial($event, 'precio')" (blur)="restaurarCeroSiVacio('precio')">
+                          </div>
+
+                          <!-- Selector de moneda tipo cards - MÁS COMPACTO -->
+                          <div class="selector-monedas-cards" [class.disabled]="esSoloLectura">
+                            <div class="moneda-card" *ngFor="let monedaItem of moneda"
+                              [class.selected]="producto.moneda === monedaItem.id" [class.disabled]="esSoloLectura"
+                              (click)="!esSoloLectura && seleccionarMoneda(monedaItem.id)">
+
+                              <div class="moneda-icono">
+                                <i class="bi" [ngClass]="getMonedaIcon(monedaItem.alias)"></i>
+                              </div>
+
+                              <div class="moneda-info">
+                                <span class="moneda-nombre">{{ monedaItem.alias }}</span>
+                              </div>
+
+                              <div class="moneda-seleccionado" *ngIf="producto.moneda === monedaItem.id">
+                                <i class="bi bi-check-circle-fill"></i>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
             <!-- Sección: Características del Producto -->
             <div class="form-section">
