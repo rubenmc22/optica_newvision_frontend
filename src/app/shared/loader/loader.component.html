@@ -1,6 +1,31 @@
 <div *ngIf="loader.loading$ | async" class="spinner-overlay">
   <div class="spinner-container">
-    <div class="custom-spinner" role="status"></div>
-    <p class="loading-text">Cargando...</p>
+    <!-- Spinner principal con gradiente -->
+    <div class="modern-spinner">
+      <div class="spinner-core"></div>
+      <div class="spinner-orbits">
+        <div class="orbit orbit-1"></div>
+        <div class="orbit orbit-2"></div>
+        <div class="orbit orbit-3"></div>
+      </div>
+      <div class="spinner-pulse"></div>
+    </div>
+    
+    <!-- Texto con animación -->
+    <div class="loading-content">
+      <p class="loading-text">Cargando</p>
+      <div class="loading-dots">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+    </div>
+    
+    <!-- Elementos decorativos flotantes -->
+    <div class="floating-elements">
+      <div class="floating-element element-1"></div>
+      <div class="floating-element element-2"></div>
+      <div class="floating-element element-3"></div>
+    </div>
   </div>
 </div>

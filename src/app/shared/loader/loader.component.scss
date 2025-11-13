@@ -1,4 +1,12 @@
-@use '../../../custom-theme.scss' as theme;
+@import '../../../custom-theme.scss';
+
+// Variables de color - puedes ajustar estos valores según tu tema
+$primary-color: #3498db;
+$primary-light: #5dade2;
+$primary-lighter: #85c1e9;
+$text-color: #2c3e50;
+$background-light: rgba(255, 255, 255, 0.95);
+$background-lighter: rgba(248, 250, 252, 0.98);
 
 :host {
   position: absolute;
@@ -6,11 +14,11 @@
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 999;
+  z-index: 9999;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.8); // fondo semitransparente
+  background: transparent;
   pointer-events: none;
 }
 
@@ -20,71 +28,335 @@
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 999;
-  backdrop-filter: blur(4px);
-  background-color: rgba(255, 255, 255, 0.5);
+  z-index: 9999;
+  backdrop-filter: blur(8px);
+  background: linear-gradient(135deg, $background-light 0%, $background-lighter 100%);
   display: flex;
   justify-content: center;
   align-items: center;
   pointer-events: none;
+  animation: overlayFadeIn 0.4s ease-out;
 }
 
 .spinner-container {
   text-align: center;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.custom-spinner {
-  width: 4.5rem; // tamaño ampliado
-  height: 4.5rem;
+  animation: containerSlideIn 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative;
-  display: inline-block;
-  overflow: hidden;
-  transform-origin: center;
 }
 
-.custom-spinner::before {
-  content: '';
+/* Spinner principal moderno */
+.modern-spinner {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 2rem;
+}
+
+.spinner-core {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    $primary-color 0%,
+    $primary-light 25%,
+    $primary-lighter 50%,
+    $primary-light 75%,
+    $primary-color 100%
+  );
+  animation: spin 1.2s linear infinite;
+  position: relative;
+  z-index: 2;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba($primary-color, 0.1);
+  }
+}
+
+/* Órbitas animadas */
+.spinner-orbits {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.orbit {
+  position: absolute;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  animation: orbitRotate 3s linear infinite;
+  
+  &.orbit-1 {
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    border-top-color: rgba($primary-color, 0.6);
+    animation-delay: 0s;
+  }
+  
+  &.orbit-2 {
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
+    border-right-color: rgba($primary-color, 0.4);
+    animation-delay: -1s;
+  }
+  
+  &.orbit-3 {
+    top: -30px;
+    left: -30px;
+    right: -30px;
+    bottom: -30px;
+    border-bottom-color: rgba($primary-color, 0.2);
+    animation-delay: -2s;
+  }
+}
+
+/* Efecto de pulso */
+.spinner-pulse {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: conic-gradient(
-    var(--primary-color) 0deg 30deg,
-    lighten(#3a7bd5, 20%) 30deg 60deg,
-    lighten(#3a7bd5, 40%) 60deg 90deg,
-    lighten(#3a7bd5, 20%) 90deg 120deg,
-    var(--primary-color) 120deg 150deg,
-    lighten(#3a7bd5, 20%) 150deg 180deg,
-    lighten(#3a7bd5, 40%) 180deg 210deg,
-    lighten(#3a7bd5, 20%) 210deg 240deg,
-    var(--primary-color) 240deg 270deg,
-    lighten(#3a7bd5, 20%) 270deg 300deg,
-    lighten(#3a7bd5, 40%) 300deg 330deg,
-    lighten(#3a7bd5, 20%) 330deg 360deg
-  );
-  animation: spin 1s linear infinite;
+  background: rgba($primary-color, 0.1);
+  animation: pulse 2s ease-in-out infinite;
+  z-index: 1;
+}
+
+/* Contenido de carga */
+.loading-content {
+  margin-top: 1.5rem;
 }
 
 .loading-text {
-  margin-top: 14px;
-  font-size: 18px;
-  color: #333;
-  font-weight: 500;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: $text-color;
+  margin-bottom: 1rem;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, $text-color 0%, $primary-color 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
+/* Puntos animados */
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $primary-color;
+  animation: dotBounce 1.4s ease-in-out infinite both;
+  
+  &:nth-child(1) { animation-delay: -0.32s; }
+  &:nth-child(2) { animation-delay: -0.16s; }
+  &:nth-child(3) { animation-delay: 0s; }
+}
+
+/* Elementos flotantes decorativos */
+.floating-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.floating-element {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba($primary-color, 0.1);
+  animation: float 6s ease-in-out infinite;
+  
+  &.element-1 {
+    width: 20px;
+    height: 20px;
+    top: 20%;
+    left: 10%;
+    animation-delay: 0s;
+  }
+  
+  &.element-2 {
+    width: 15px;
+    height: 15px;
+    top: 60%;
+    right: 15%;
+    animation-delay: -2s;
+  }
+  
+  &.element-3 {
+    width: 25px;
+    height: 25px;
+    bottom: 30%;
+    left: 20%;
+    animation-delay: -4s;
+  }
+}
+
+/* ========== ANIMACIONES ========== */
 @keyframes spin {
-  0%   { transform: rotate(0deg); }
+  0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to   { opacity: 1; transform: scale(1); }
+@keyframes orbitRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
+@keyframes pulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% { 
+    transform: scale(1.1);
+    opacity: 0.3;
+  }
+}
+
+@keyframes dotBounce {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-20px) rotate(120deg);
+  }
+  66% {
+    transform: translateY(10px) rotate(240deg);
+  }
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+}
+
+@keyframes containerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes overlayFadeOut {
+  from {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+  to {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+  .modern-spinner {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1.5rem;
+  }
+  
+  .loading-text {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .orbit {
+    &.orbit-1 {
+      top: -8px;
+      left: -8px;
+      right: -8px;
+      bottom: -8px;
+    }
+    
+    &.orbit-2 {
+      top: -16px;
+      left: -16px;
+      right: -16px;
+      bottom: -16px;
+    }
+    
+    &.orbit-3 {
+      top: -24px;
+      left: -24px;
+      right: -24px;
+      bottom: -24px;
+    }
+  }
+  
+  .loading-content {
+    margin-top: 1rem;
+  }
+}
+
+/* ========== TEMA OSCURO ========== */
+@media (prefers-color-scheme: dark) {
+  .spinner-overlay {
+    background: linear-gradient(135deg, rgba(30, 30, 40, 0.95) 0%, rgba(45, 45, 60, 0.98) 100%);
+  }
+  
+  .spinner-core::after {
+    background: #2d2d3c;
+    box-shadow: 0 0 20px rgba($primary-color, 0.2);
+  }
+  
+  .loading-text {
+    background: linear-gradient(135deg, #e0e0e0 0%, $primary-color 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* ========== TRANSICIONES DE SALIDA ========== */
 .spinner-overlay.ng-hide {
   display: none !important;
+}
+
+.spinner-overlay.ng-leave {
+  animation: overlayFadeOut 0.3s ease-in forwards;
 }

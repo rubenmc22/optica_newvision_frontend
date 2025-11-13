@@ -8,6 +8,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ModalService } from './../../core/services/modal/modal.service';
 import { EmpleadosService } from './../../core/services/empleados/empleados.service';
 import { SwalService } from '../../core/services/swal/swal.service';
+import { LoaderService } from './../../shared/loader/loader.service';
 
 // Componentes
 import { DynamicModalComponent } from './../../shared/dynamic-modal/dynamic-modal.component';
@@ -50,6 +51,8 @@ export class EmpleadosComponent implements OnInit {
     private empleadosService: EmpleadosService,
     private swalService: SwalService,
     private snackBar: MatSnackBar,
+    private loader: LoaderService
+
   ) {
     // Inicialización del formulario interno
     this.empleadoForm = this.createEmpleadoForm();
@@ -57,19 +60,32 @@ export class EmpleadosComponent implements OnInit {
 
   // ==================== CICLO DE VIDA ====================
   ngOnInit(): void {
-    this.loadEmployees();
-    this.loadRolesAndPositions();
+    this.loadInitialData();
+  }
+
+  private loadInitialData(): void {
+    this.loader.show();
+
+    const loadPromises = [
+      this.loadEmployees(),
+      this.loadRolesAndPositions()
+    ];
+
+    Promise.allSettled(loadPromises).then((results) => {
+      console.log('Carga inicial completada', results);
+      // FALTA ESTA LÍNEA CRÍTICA:
+      this.loader.hide(); // ← AÑADIR ESTA LÍNEA
+    }).catch((error) => {
+      console.error('Error en carga inicial:', error);
+      this.loader.forceHide();
+    });
   }
 
   // ==================== FORMULARIO INTERNO ====================
-  
-  /**
-   * Crea el formulario para agregar empleados
-   */
   private createEmpleadoForm(): FormGroup {
     return this.fb.group({
       nombre: ['', [
-        Validators.required, 
+        Validators.required,
         Validators.pattern(/^[A-Za-zÁÉÍÓÚáéíóúñÑ\s]+$/),
         Validators.maxLength(100)
       ]],
@@ -93,15 +109,10 @@ export class EmpleadosComponent implements OnInit {
     });
   }
 
-  /**
-   * Abre el modal interno para agregar empleado
-   */
   openDynamicModal(): void {
-    // Resetear el formulario
     this.empleadoForm.reset();
     this.isLoadingForm = false;
 
-    // Verificar que tenemos los datos necesarios
     if (this.positions.length === 0 || this.roles.length === 0) {
       this.loadRolesAndPositions();
       setTimeout(() => {
@@ -116,9 +127,6 @@ export class EmpleadosComponent implements OnInit {
     }
   }
 
-  /**
-   * Abre el modal físicamente
-   */
   private openModal(): void {
     const modalElement = document.getElementById('agregarEmpleadoModal');
     if (modalElement) {
@@ -127,9 +135,6 @@ export class EmpleadosComponent implements OnInit {
     }
   }
 
-  /**
-   * Cierra el modal de agregar empleado
-   */
   cerrarModalAgregar(): void {
     const modalElement = document.getElementById('agregarEmpleadoModal');
     if (modalElement) {
@@ -139,9 +144,6 @@ export class EmpleadosComponent implements OnInit {
     this.empleadoForm.reset();
   }
 
-  /**
-   * Maneja el envío del formulario
-   */
   onSubmitEmpleado(): void {
     if (this.empleadoForm.invalid) {
       this.markFormGroupTouched(this.empleadoForm);
@@ -164,10 +166,9 @@ export class EmpleadosComponent implements OnInit {
       next: () => {
         this.isLoadingForm = false;
         this.cerrarModalAgregar();
-        
-        // Recargar la lista de empleados
+
         this.loadEmployees();
-        
+
         this.swalService.showSuccess('¡Éxito!', 'Empleado agregado correctamente.');
       },
       error: (err) => {
@@ -187,10 +188,6 @@ export class EmpleadosComponent implements OnInit {
   }
 
   // ==================== HELPERS DE VALIDACIÓN ====================
-
-  /**
-   * Marca todos los campos como touched para mostrar errores
-   */
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach(key => {
       const control = formGroup.get(key);
@@ -202,17 +199,11 @@ export class EmpleadosComponent implements OnInit {
     });
   }
 
-  /**
-   * Verifica si un campo tiene error
-   */
   showError(controlName: string): boolean {
     const control = this.empleadoForm.get(controlName);
     return control ? (control.invalid && control.touched) : false;
   }
 
-  /**
-   * Obtiene el mensaje de error para un campo
-   */
   getErrorMsg(controlName: string): string {
     const control = this.empleadoForm.get(controlName);
     if (!control || !control.errors) return '';
@@ -237,19 +228,12 @@ export class EmpleadosComponent implements OnInit {
   }
 
   // ==================== MÉTODOS ADICIONALES PARA EL FORMULARIO ====================
-
-  /**
-   * Calcula el progreso de completitud del formulario
-   */
   getFormProgress(): number {
     const totalFields = this.getTotalFields();
     const completedFields = this.getCompletedFields();
     return totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0;
   }
 
-  /**
-   * Obtiene el número total de campos obligatorios
-   */
   getTotalFields(): number {
     return Object.keys(this.empleadoForm.controls).filter(key => {
       const control = this.empleadoForm.get(key);
@@ -257,9 +241,6 @@ export class EmpleadosComponent implements OnInit {
     }).length;
   }
 
-  /**
-   * Obtiene el número de campos completados
-   */
   getCompletedFields(): number {
     return Object.keys(this.empleadoForm.controls).filter(key => {
       const control = this.empleadoForm.get(key);
@@ -268,9 +249,6 @@ export class EmpleadosComponent implements OnInit {
     }).length;
   }
 
-  /**
-   * Resetea el formulario
-   */
   resetForm(): void {
     this.empleadoForm.reset();
     // Marcar como untouched para limpiar errores
@@ -278,16 +256,11 @@ export class EmpleadosComponent implements OnInit {
   }
 
   // ==================== MÉTODOS DE ORDENAMIENTO ====================
-  /**
-   * Ordena los empleados por una columna específica
-   * @param columna Columna por la cual ordenar
-   */
   ordenarPor(columna: string): void {
     if (this.ordenActual === columna) {
-      // Si ya está ordenado por esta columna, invertir el orden
       this.ordenAscendente = !this.ordenAscendente;
+
     } else {
-      // Si es una nueva columna, ordenar ascendente por defecto
       this.ordenActual = columna;
       this.ordenAscendente = true;
     }
@@ -296,31 +269,25 @@ export class EmpleadosComponent implements OnInit {
       let valorA = a[columna];
       let valorB = b[columna];
 
-      // Manejar valores nulos o undefined
       if (valorA == null) valorA = '';
       if (valorB == null) valorB = '';
 
-      // Convertir a minúsculas para ordenamiento case-insensitive si son strings
       if (typeof valorA === 'string') valorA = valorA.toLowerCase();
       if (typeof valorB === 'string') valorB = valorB.toLowerCase();
 
       let resultado = 0;
-      
+
       if (valorA < valorB) {
         resultado = -1;
       } else if (valorA > valorB) {
         resultado = 1;
       }
 
-      // Invertir el resultado si el orden es descendente
       return this.ordenAscendente ? resultado : -resultado;
     });
   }
 
   // ==================== MÉTODOS DE CARGA DE DATOS ====================
-  /**
-   * Carga la lista de empleados desde el servicio
-   */
   private loadEmployees(): void {
     this.isLoading = true;
     this.empleadosService.getAllEmpleados().subscribe((empleados: Empleado[]) => {
@@ -334,9 +301,6 @@ export class EmpleadosComponent implements OnInit {
     });
   }
 
-  /**
-   * Carga los roles y cargos disponibles desde el servicio
-   */
   private loadRolesAndPositions(): void {
     this.empleadosService.getRoles().subscribe({
       next: (roles) => {
@@ -360,19 +324,14 @@ export class EmpleadosComponent implements OnInit {
   }
 
   // ==================== MÉTODOS DE MODALES ====================
-  /**
-   * Abre el modal para ver detalles de un empleado
-   * @param employee Empleado a mostrar en el modal
-   */
   openViewModal(employee: any): void {
     const rawDate = employee.fechaNacimiento;
 
-    // Evita el parseo UTC usando componentes separados
     let date: Date | null = null;
 
     if (typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
       const [year, month, day] = rawDate.split('-').map(Number);
-      date = new Date(year, month - 1, day); // Local time
+      date = new Date(year, month - 1, day);
     } else {
       date = new Date(rawDate);
     }
@@ -393,20 +352,13 @@ export class EmpleadosComponent implements OnInit {
     }
   }
 
-  /**
-   * Cierra un modal dado su ID
-   * @param id ID del modal a cerrar
-   */
   private cerrarModal(id: string): void {
     const el = document.getElementById(id);
     if (el) bootstrap.Modal.getInstance(el)?.hide();
   }
 
   // ==================== MÉTODOS DE CRUD EMPLEADOS ====================
-  /**
-   * Elimina un empleado con confirmación moderna
-   * @param index Índice del empleado a eliminar
-   */
+
   deleteEmployee(index: number): void {
     const employeeId = this.employees[index].cedula;
 
@@ -430,10 +382,6 @@ export class EmpleadosComponent implements OnInit {
     });
   }
 
-  /**
-   * Activa el modo edición para un empleado
-   * @param index Índice del empleado a editar
-   */
   toggleEdit(index: number): void {
     this.employees.forEach(emp => emp.editing = false);
     this.employees[index].editing = true;
@@ -460,10 +408,6 @@ export class EmpleadosComponent implements OnInit {
     this.validateField(employee, 'rol');
   }
 
-  /**
-   * Guarda los cambios de un empleado editado
-   * @param index Índice del empleado editado
-   */
   updateEmployee(index: number): void {
     const emp = this.employees[index];
     console.log('RDMC emp', emp);
@@ -531,10 +475,6 @@ export class EmpleadosComponent implements OnInit {
     return errors;
   }
 
-  /**
-   * Cancela la edición de un empleado
-   * @param index Índice del empleado en edición
-   */
   cancelEdit(index: number): void {
     if (this.employees[index].originalValues) {
       Object.assign(this.employees[index], this.employees[index].originalValues);
@@ -544,9 +484,6 @@ export class EmpleadosComponent implements OnInit {
   }
 
   // ==================== MÉTODOS DE FILTRADO ====================
-  /**
-   * Filtra los empleados según los criterios de búsqueda
-   */
   filterEmployees(): void {
     this.filteredEmployees = this.employees.filter(emp => {
       const matchesSearch = !this.searchQuery ||
@@ -560,26 +497,17 @@ export class EmpleadosComponent implements OnInit {
     });
   }
 
-  /**
-   * Limpia la barra de búsqueda
-   */
   clearSearch(): void {
     this.searchQuery = '';
     this.filterEmployees();
   }
 
   // ==================== MÉTODOS DE VALIDACIÓN ====================
-  /**
-   * Valida un campo específico de un empleado
-   * @param employee Empleado a validar
-   * @param field Campo a validar
-   */
   validateField(employee: any, field: string): void {
     if (!employee.errors) {
       employee.errors = {};
     }
 
-    // Marcar el empleado como modificado
     employee.modified = true;
 
     switch (field) {
@@ -601,25 +529,15 @@ export class EmpleadosComponent implements OnInit {
         break;
     }
 
-    // Si hay errores, el usuario no podrá guardar cambios
     employee.hasErrors = Object.values(employee.errors).some(error => error !== '');
   }
 
-  /**
-   * Valida que solo se ingresen números en un campo
-   * @param event Evento del teclado
-   * @returns True si es un número, false si no
-   */
   validateNumber(event: any): boolean {
     const charCode = (event.which) ? event.which : event.keyCode;
     return !(charCode > 31 && (charCode < 48 || charCode > 57));
   }
 
   // ==================== MÉTODOS DE ESTADO ====================
-  /**
-   * Cambia el estado de un empleado (activo/inactivo)
-   * @param employee Empleado a modificar
-   */
   toggleStatus(employee: Empleado): void {
     const originalStatus = employee.estatus;
     employee.loading = true;
@@ -637,11 +555,6 @@ export class EmpleadosComponent implements OnInit {
   }
 
   // ==================== MÉTODOS DE UI/HELPERS ====================
-  /**
-   * Obtiene la clase CSS para el badge según el rol
-   * @param role Rol del empleado
-   * @returns Clase CSS correspondiente
-   */
   badgeClass(role: string): string {
     switch (role) {
       case 'Administrador': return 'badge-admin';
@@ -652,10 +565,6 @@ export class EmpleadosComponent implements OnInit {
     }
   }
 
-  /**
-   * Maneja errores al cargar imágenes de perfil
-   * @param event Evento de error
-   */
   handleImageError(event: Event): void {
     const img = event.target as HTMLImageElement;
     if (img && img.tagName === 'IMG') {
@@ -664,10 +573,6 @@ export class EmpleadosComponent implements OnInit {
     }
   }
 
-  /**
-   * Obtiene la URL de la imagen de perfil
-   * @returns URL de la imagen o la imagen por defecto
-   */
   getProfileImage(): string {
     if (this.selectedEmployee?.avatarUrl && this.selectedEmployee.avatarUrl.trim() !== '') {
       return this.selectedEmployee.avatarUrl;

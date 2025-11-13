@@ -10,4 +10,5 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 })
 export class LoaderComponent {
   constructor(public loader: LoaderService) {}
+  
 }
