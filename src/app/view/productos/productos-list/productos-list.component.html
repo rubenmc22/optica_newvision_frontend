@@ -1,488 +1,539 @@
-<div class="container mt-4">
-  <div class="card mb-5">
-    <!-- Header principal -->
-    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
-      <h4 class="mb-0">📦 Catálogo de productos</h4>
-      <div class="ms-auto">
-        <button (click)="abrirModal('agregar')" class="btn btn-light btn-sm">➕ Agregar producto</button>
-      </div>
-    </div>
-
-    <div class="card-body" style="background: var(--degradado-pastel) !important;">
-      <div class="row mb-4">
-        <!-- Filtro por sede -->
-        <div class="col-md-2">
-          <label for="filtroSede" class="form-label">📍 Filtrar por sede</label>
-          <select [(ngModel)]="sedeFiltro" (change)="actualizarPacientesPorSede()" class="form-select">
-            <option value="">Todas las sedes</option>
-            <option *ngFor="let sede of sedesDisponibles" [value]="sede.key ? sede.key.toLowerCase() : ''">
-              {{ sede.nombre }}
-            </option>
-          </select>
+<div *ngIf="dataIsReady" class="fade-in mb-5">
+  <div class="container-fluid mt-4">
+    <div class="card productos-moderno">
+      <!-- Header modernizado -->
+      <div class="card-header-moderno">
+        <div class="header-content">
+          <div class="header-icon">
+            <i class="bi bi-box-seam"></i>
+          </div>
+          <div class="header-text">
+            <h4 class="header-title">Catálogo de Productos</h4>
+            <div class="header-subtitle">Administra y consulta el inventario de productos</div>
+          </div>
         </div>
-
-        <!-- Buscador -->
-        <div class="col-md-4">
-          <label for="filtroBusqueda" class="form-label">🔎 Productos</label>
-          <input id="filtroBusqueda" type="text" class="form-control"
-            placeholder="Buscar por nombre, código, marca, modelo, proveedor, material o color"
-            [(ngModel)]="filtroBusqueda" />
-        </div>
-
-        <!-- Filtro por categoría -->
-        <div class="col-md-2">
-          <label for="tipo" class="form-label">🧬 Categoría</label>
-          <select id="tipo" class="form-select" [(ngModel)]="tipoSeleccionado">
-            <option value="">Todas</option>
-            <option *ngFor="let tipo of categoriasProducto" [value]="tipo.toLowerCase()">{{ tipo }}</option>
-          </select>
-        </div>
-
-        <!-- Filtro por estado -->
-        <div class="col-md-2">
-          <label for="estado" class="form-label">📦 Estado</label>
-          <select id="estado" class="form-select" [(ngModel)]="estadoSeleccionado">
-            <option [ngValue]="null">Todos</option>
-            <option [ngValue]="true">Activos</option>
-            <option [ngValue]="false">Inactivos</option>
-          </select>
-        </div>
-
-        <!-- Botón de limpieza -->
-        <div class="col-md-2">
-          <label class="form-label mb-1 d-block opacity-0">Espacio</label>
-          <button class="btn btn-sm w-100 limpiar-filtros-btn" (click)="limpiarFiltros()">
-            <i class="bi bi-eraser-fill me-1"></i> Reiniciar
-          </button>
-        </div>
+        <button class="btn btn-agregar-producto" (click)="abrirModal('agregar')">
+          <i class="bi bi-plus-circle"></i>
+          Agregar Producto
+        </button>
       </div>
 
-      <!-- Alerta por sede distinta -->
-      <div *ngIf="sedeFiltro !== sedeActiva && sedeFiltro !== 'todas'" class="alert alert-info">
-        🔒 Visualizando productos de otra sede. Las acciones de edición, eliminación y carga están deshabilitadas.
-      </div>
+      <!-- Cuerpo modernizado -->
+      <div class="card-body-moderno">
+        <!-- Filtros modernos -->
+        <div class="filtros-modernos">
+          <div class="filtro-item">
+            <label class="form-label-moderno">
+              <i class="bi bi-geo-alt"></i>
+              Filtrar por sede
+            </label>
+            <select class="form-select modern-select" [(ngModel)]="sedeFiltro" (change)="actualizarPacientesPorSede()">
+              <option value="">Todas las sedes</option>
+              <option *ngFor="let sede of sedesDisponibles" [value]="sede.key ? sede.key.toLowerCase() : ''">
+                {{ sede.nombre }}
+              </option>
+            </select>
+          </div>
 
-      <!-- Encabezado interactivo con orden por stock descendente por defecto -->
-      <div
-        class="mt-4 mb-3 px-3 py-2 bg-white rounded shadow-sm d-flex align-items-center justify-content-between border-start border-3 border-primary animate__animated animate__fadeInDown tarjeta-clickable"
-        role="button" tabindex="0" (click)="ordenarPorStock()" (keydown.enter)="ordenarPorStock()"
-        (keydown.space)="ordenarPorStock()" title="Haz clic para ordenar los productos por stock disponible">
-        <div class="d-flex align-items-center gap-3">
-          <i class="fas fa-list-alt text-primary fs-4"></i>
-          <div>
-            <h5 class="mb-0 fw-bold text-primary">Listado de productos</h5>
-            <small class="text-muted">
-              {{
-              productosFiltrados.length > 0
-              ? 'Mostrando ' + productosFiltrados.length + ' disponibles'
-              : 'No hay productos disponibles 😕'
-              }}
-            </small>
+          <div class="filtro-item">
+            <label class="form-label-moderno">
+              <i class="bi bi-search"></i>
+              Buscar producto
+            </label>
+            <div class="search-container">
+              <input type="text" class="form-control modern-input" placeholder="Nombre, código, marca, modelo..."
+                [(ngModel)]="filtroBusqueda">
+              <i class="bi bi-search search-icon"></i>
+            </div>
+          </div>
+
+          <div class="filtro-item">
+            <label class="form-label-moderno">
+              <i class="bi bi-grid"></i>
+              Categoría
+            </label>
+            <select class="form-select modern-select" [(ngModel)]="tipoSeleccionado">
+              <option value="">Todas</option>
+              <option *ngFor="let tipo of categoriasProducto" [value]="tipo.toLowerCase()">
+                {{ tipo }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filtro-item">
+            <label class="form-label-moderno">
+              <i class="bi bi-circle"></i>
+              Estado
+            </label>
+            <select class="form-select modern-select" [(ngModel)]="estadoSeleccionado">
+              <option [ngValue]="null">Todos</option>
+              <option [ngValue]="true">Activos</option>
+              <option [ngValue]="false">Inactivos</option>
+            </select>
+          </div>
+
+          <div class="filtro-item">
+            <button class="btn btn-limpiar-filtros" (click)="limpiarFiltros()">
+              <i class="bi bi-arrow-clockwise"></i>
+              Limpiar Filtros
+            </button>
           </div>
         </div>
 
-        <div class="d-flex align-items-center gap-2 text-muted" style="color: var(--details-color) !important;">
-          <i class="bi" [ngClass]="{
-      'bi-sort-numeric-down': !ordenStockAscendente,
-      'bi-sort-numeric-up': ordenStockAscendente
-    }"></i>
-          <span class="small fw-bold text-primary">
-            Ordenar por stock {{ ordenStockAscendente ? '(ascendente)' : '(descendente)' }}
-          </span>
+        <!-- Alerta de sede diferente -->
+        <div *ngIf="sedeFiltro !== sedeActiva && sedeFiltro !== 'todas'" class="alert-moderno alert-info">
+          <i class="bi bi-info-circle"></i>
+          <div class="alert-content">
+            <strong>Visualizando productos de otra sede</strong>
+            <span>Las acciones de edición y eliminación están deshabilitadas.</span>
+          </div>
         </div>
-      </div>
 
-      <!-- Catálogo vacío en la sede visualizada -->
-      <div *ngIf="productosVisualizados.length === 0" class="text-center text-muted py-5">
-        <i class="fas fa-box-open fa-2x mb-2"></i>
-        <p class="mb-0">Aún no hay productos registrados en esta sede.</p>
-        <small class="text-muted">Haz clic en “Agregar producto” para comenzar.</small>
-      </div>
+        <!-- Encabezado interactivo moderno -->
+        <div class="seccion-header-moderno" (click)="ordenarPorStock()" (keydown.enter)="ordenarPorStock()"
+          (keydown.space)="ordenarPorStock()" tabindex="0" role="button">
+          <div class="seccion-icon">
+            <i class="bi bi-list-ul"></i>
+          </div>
+          <div class="seccion-content">
+            <h5 class="seccion-title">Listado de Productos</h5>
+            <p class="seccion-subtitle">
+              {{ productosFiltrados.length > 0
+              ? 'Mostrando ' + productosFiltrados.length + ' productos disponibles'
+              : 'No hay productos disponibles' }}
+            </p>
+          </div>
+          <div class="seccion-badge">
+            <i class="bi" [ngClass]="{
+              'bi-sort-numeric-down': !ordenStockAscendente,
+              'bi-sort-numeric-up': ordenStockAscendente
+            }"></i>
+            <span>Ordenar por stock {{ ordenStockAscendente ? '(ascendente)' : '(descendente)' }}</span>
+          </div>
+        </div>
 
-      <!-- Filtros activos pero sin coincidencias -->
-      <div *ngIf="productosVisualizados.length > 0 && productosFiltrados.length === 0"
-        class="text-center text-muted py-5">
-        <i class="fas fa-search-minus fa-2x mb-2"></i>
-        <p class="mb-0">No hay productos que coincidan con los filtros actuales.</p>
-        <small class="text-muted">Prueba ajustando los criterios de búsqueda.</small>
-      </div>
+        <!-- Estados vacíos -->
+        <div *ngIf="productosVisualizados.length === 0" class="empty-state">
+          <i class="bi bi-box"></i>
+          <h4>No hay productos registrados</h4>
+          <p>Aún no hay productos registrados en esta sede.</p>
+          <button class="btn btn-agregar-vacio" (click)="abrirModal('agregar')">
+            <i class="bi bi-plus-circle"></i>
+            Agregar primer producto
+          </button>
+        </div>
 
+        <div *ngIf="productosVisualizados.length > 0 && productosFiltrados.length === 0" class="empty-state">
+          <i class="bi bi-search"></i>
+          <h4>No se encontraron productos</h4>
+          <p>No hay productos que coincidan con los filtros aplicados.</p>
+          <button class="btn btn-limpiar-filtros" (click)="limpiarFiltros()">
+            <i class="bi bi-arrow-clockwise"></i>
+            Limpiar filtros
+          </button>
+        </div>
 
-      <!-- Catálogo de productos -->
-      <div class="row" *ngIf="productosFiltrados.length > 0">
-        <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3" *ngFor="let producto of productosPaginados">
-          <div class="card border-0 shadow-sm h-100 rounded-3 overflow-hidden tarjeta-clickable" role="button"
-            tabindex="0" (click)="abrirModal('ver', producto)" (keydown.enter)="abrirModal('ver', producto)"
-            (keydown.space)="abrirModal('ver', producto)">
+        <!-- Catálogo de productos moderno -->
+        <div class="productos-grid" *ngIf="productosFiltrados.length > 0">
+          <div class="producto-card" *ngFor="let producto of productosPaginados" (click)="abrirModal('ver', producto)"
+            (keydown.enter)="abrirModal('ver', producto)" (keydown.space)="abrirModal('ver', producto)" tabindex="0"
+            role="button">
 
-            <div class="position-relative contenedor-imagen">
-              <img [src]="producto.imagenUrl" (error)="onImageError($event)" class="card-img-top"
-                [alt]="producto.nombre" style="height: 180px; object-fit: cover;" />
+            <div class="producto-imagen-container">
+              <img [src]="producto.imagenUrl" (error)="onImageError($event)" class="producto-imagen"
+                [alt]="producto.nombre" />
 
-              <!-- Overlay hover -->
-              <div class="overlay-hover">
+              <div class="producto-overlay">
                 <span>Ver detalles del producto</span>
               </div>
 
-              <!-- Estado -->
-              <span class="position-absolute top-0 start-0 m-2 px-2 py-1 rounded text-white small fw-bold" [ngClass]="{
-              'bg-success': producto.activo && producto.stock > 0,
-              'bg-secondary': !producto.activo
-              }">
-                {{ producto.activo ? 'Activo' : 'Inactivo' }}
-              </span>
-
-              <!-- Código del producto -->
-              <span class="position-absolute top-0 end-0 m-2 px-2 py-1 rounded bg-dark text-white small">
-                {{ producto.codigo }}
-              </span>
+              <div class="producto-badges">
+                <span class="badge estado-badge" [ngClass]="{
+                  'estado-activo': producto.activo && producto.stock > 0,
+                  'estado-inactivo': !producto.activo
+                }">
+                  {{ producto.activo ? 'Activo' : 'Inactivo' }}
+                </span>
+                <span class="badge codigo-badge">
+                  {{ producto.codigo }}
+                </span>
+              </div>
             </div>
 
-            <div class="card-body py-3 d-flex flex-column">
-              <h6 class="fw-semibold text-truncate mb-2">
+            <div class="producto-content">
+              <h6 class="producto-nombre">
                 {{ producto.marca }} · {{ producto.nombre }}
               </h6>
 
-              <!-- Precios -->
-              <div class="mb-3">
+              <div class="producto-precio">
                 <ng-container *ngIf="!esMonedaBolivar(producto.moneda); else soloBs">
-                  <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="fs-5 fw-bold text-primary">
-                      {{ getSimboloMoneda(producto.moneda) }}
+                  <div class="precio-principal">
+                    <span class="precio-moneda">{{ getSimboloMoneda(producto.moneda) }}</span>
+                    <span class="precio-valor">
                       {{ producto.aplicaIva ? (producto.precioConIva | number:'1.2-2') : (producto.precio |
                       number:'1.2-2') }}
                     </span>
                   </div>
-
-                  <div class="d-flex align-items-center gap-2 text-muted small">
-                    <i class="fas fa-exchange-alt"></i>
+                  <div class="precio-conversion">
+                    <i class="bi bi-arrow-left-right"></i>
                     <span>Bs {{ getPrecioBs(producto) | number:'1.2-2' }}</span>
                   </div>
                 </ng-container>
 
                 <ng-template #soloBs>
-                  <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="fs-5 fw-bold text-primary">
-                      Bs {{ producto.precio | number:'1.2-2' }}
+                  <div class="precio-principal">
+                    <span class="precio-moneda">Bs</span>
+                    <span class="precio-valor">
+                      {{ producto.precio | number:'1.2-2' }}
                     </span>
                   </div>
                 </ng-template>
               </div>
 
-              <!-- Stock -->
-              <div class="d-flex align-items-center gap-2 mb-3">
-                <i class="fas fa-box text-secondary"></i>
-                <span class="fw-medium" [ngClass]="{
-                    'text-success': producto.stock > 5,
-                    'text-warning': producto.stock < 5 && producto.stock > 0,
-                    'text-danger': producto.stock === 0
-                  }">
+              <div class="producto-stock">
+                <i class="bi bi-box"></i>
+                <span class="stock-cantidad" [ngClass]="{
+                  'stock-alto': producto.stock > 5,
+                  'stock-bajo': producto.stock <= 5 && producto.stock > 0,
+                  'stock-agotado': producto.stock === 0
+                }">
                   {{ producto.stock }} unidades
                 </span>
-                <span *ngIf="producto.stock < 5 && producto.stock > 0"
-                  class="badge bg-warning text-dark animate__animated animate__pulse animate__infinite">
+                <span *ngIf="producto.stock <= 5 && producto.stock > 0" class="badge stock-alerta">
                   ¡Stock bajo!
                 </span>
-                <span *ngIf="producto.stock === 0"
-                  class="badge bg-danger text-white animate__animated animate__flash animate__infinite">
+                <span *ngIf="producto.stock === 0" class="badge stock-agotado">
                   Agotado
                 </span>
               </div>
 
-              <!-- Botón Editar (detiene propagación) -->
-              <div class="mt-auto pt-2 d-flex justify-content-end" *ngIf="producto.sede === sedeActiva">
-                <button class="btn btn-sm btn-light text-warning border border-warning"
-                  (click)="abrirModal('editar', producto); $event.stopPropagation()">
-                  ✏️ Editar
+              <div class="producto-actions" *ngIf="producto.sede === sedeActiva">
+                <button class="btn btn-editar" (click)="abrirModal('editar', producto); $event.stopPropagation()">
+                  <i class="bi bi-pencil"></i>
+                  Editar
                 </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Paginación -->
-      <nav *ngIf="totalPaginas > 1" class="mt-4">
-        <ul class="pagination justify-content-center flex-wrap">
-          <li class="page-item" [class.disabled]="paginaActual === 1">
-            <button class="page-link" (click)="cargarPagina(paginaActual - 1)">◀</button>
-          </li>
-          <li class="page-item" *ngFor="let pagina of paginasVisibles" [class.active]="paginaActual === pagina">
-            <button class="page-link" (click)="cargarPagina(pagina)">
-              {{ pagina }}
+        <!-- Paginación moderna -->
+        <div class="paginacion-moderna" *ngIf="productosFiltrados.length > 0 && totalPaginas > 1">
+          <div class="paginacion-info">
+            <span>Mostrando {{ (paginaActual - 1) * 12 + 1 }} -
+              {{ paginaActual * 12 > productosFiltrados.length ? productosFiltrados.length : paginaActual * 12 }}
+              de {{ productosFiltrados.length }} productos</span>
+          </div>
+
+          <div class="paginacion-controles">
+            <button class="btn-paginacion" [disabled]="paginaActual === 1" (click)="cargarPagina(paginaActual - 1)">
+              <i class="bi bi-chevron-left"></i>
             </button>
-          </li>
-          <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
-            <button class="page-link" (click)="cargarPagina(paginaActual + 1)">▶</button>
-          </li>
-        </ul>
-      </nav>
+
+            <div class="paginacion-numeros">
+              <span class="pagina-actual">{{ paginaActual }}</span>
+              <span class="separador">de</span>
+              <span class="total-paginas">{{ totalPaginas }}</span>
+            </div>
+
+            <button class="btn-paginacion" [disabled]="paginaActual === totalPaginas"
+              (click)="cargarPagina(paginaActual + 1)">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Modal Agregar/Ver/Editar -->
+<!-- Modal Agregar/Ver/Editar Modernizado -->
 <div class="modal-overlay modal-catalogo" *ngIf="mostrarModal">
   <div class="modal d-block" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-ancho-custom">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-lg">
 
-      <form #formProducto="ngForm" class="modal-content border-0 shadow" (ngSubmit)="guardarProducto()">
+      <form #formProducto="ngForm" class="modal-content modal-moderna" (ngSubmit)="guardarProducto()">
 
-        <!-- Header -->
-        <div class="modal-header bg-gradient-primary text-white py-2 px-3">
-          <h5 class="modal-title fw-semibold">
-            <i [ngClass]="[
-              'fas',
-              'me-2',
-              modoModal === 'agregar' ? 'fa-plus' :
-              modoModal === 'editar' ? 'fa-edit' : 'fa-eye'
-            ]"></i>
-
-            {{
-            modoModal === 'agregar' ? 'Agregar Producto' :
-            modoModal === 'editar' ? 'Editar Producto' : 'Detalles del Producto'
-            }}
-          </h5>
-          <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="cerrarModal()"></button>
+        <!-- Header moderno -->
+        <div class="modal-header-moderno">
+          <div class="modal-header-content">
+            <div class="modal-icon">
+              <i class="bi" [ngClass]="{
+                'bi-plus-circle': modoModal === 'agregar',
+                'bi-pencil': modoModal === 'editar',
+                'bi-eye': modoModal === 'ver'
+              }"></i>
+            </div>
+            <div class="modal-title-content">
+              <h5 class="modal-title">
+                {{ modoModal === 'ver' ? 'Detalles del Producto' : (modoModal === 'editar' ? 'Editar Producto' :
+                'Agregar Producto') }}
+              </h5>
+              <p class="modal-subtitle">
+                {{ modoModal === 'ver' ? 'Información completa del producto' : 'Complete la información del producto' }}
+              </p>
+            </div>
+          </div>
+          <button type="button" class="btn-close-moderno" (click)="cerrarModal()" aria-label="Close">
+            <i class="bi bi-x-lg"></i>
+          </button>
         </div>
 
-        <!-- Cuerpo del modal con scroll -->
-        <div class="modal-body p-4">
+        <!-- Body moderno -->
+        <div class="modal-body-moderno">
           <div class="container-fluid">
-            <!-- Fila superior: Imagen + Datos -->
-            <div class="row g-4 mb-4">
-              <!-- Imagen del producto -->
-              <div class="col-md-5">
-                <div class="card shadow-sm border-0 h-100">
-                  <div class="card-body d-flex flex-column align-items-center justify-content-center">
-                    <div class="position-relative">
-                      <img [src]="getProfileImage()" alt="Avatar del Producto" class="rounded-circle border img-fluid"
-                        style="width: 220px; height: 220px; object-fit: cover;" (error)="handleImageError($event)" />
-                      <div class="position-absolute bottom-0 end-0" *ngIf="modoModal !== 'ver'">
-                        <label for="avatarUpload" class="btn btn-sm btn-light border rounded-circle shadow">
-                          <i class="fas fa-camera"></i>
-                        </label>
-                        <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
-                          (change)="onFileSelected($event)" />
-                      </div>
-                    </div>
-                    <small class="text-muted mt-2">Imagen del producto</small>
-                  </div>
-                </div>
-              </div>
+         <!-- Sección: Imagen y Datos Principales -->
+<!-- Sección: Imagen y Datos Principales -->
+<div class="form-section">
+  <div class="section-header">
+    <div class="section-icon">
+      <i class="bi bi-image"></i>
+    </div>
+    <h6 class="section-title">Imagen y Datos Principales</h6>
+  </div>
 
-              <!-- Datos del producto -->
-              <div class="col-md-7">
-                <div class="card shadow-sm border-0 h-100">
-                  <div class="card-body">
-                    <h6 class="fw-bold text-primary mb-3">
-                      <i class="fas fa-box-open me-2"></i> Datos del producto
-                    </h6>
+  <div class="section-content">
+    <div class="campos-principales-grid">
 
-                    <div class="row g-4">
-                      <!-- Nombre del producto -->
-                      <div class="col-md-8">
-                        <div class="form-floating">
-                          <input type="text" class="form-control" id="nombreProducto" [(ngModel)]="producto.nombre"
-                            name="nombre" required [disabled]="esSoloLectura" placeholder="Nombre del producto">
-                          <label for="nombreProducto">🏷️ Nombre del producto</label>
-                        </div>
-                      </div>
+      <!-- Sección de imagen -->
+      <div class="seccion-imagen">
+        <div class="avatar-widget">
+          <img [src]="getProfileImage()" (error)="handleImageError($event)" class="avatar-img"
+            alt="Imagen del producto" />
+          <div class="avatar-overlay show-on-hover" *ngIf="modoModal !== 'ver'">
+            <label for="avatarUpload" class="btn-imagen">
+              <i class="bi bi-camera"></i>
+            </label>
+            <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
+              (change)="onFileSelected($event)" />
+          </div>
+        </div>
+        <small class="text-muted text-center">Imagen del producto</small>
+      </div>
 
-                      <!-- Stock -->
-                      <div class="col-md-4">
-                        <div class="form-floating">
-                          <input type="number" class="form-control" id="stock" [(ngModel)]="producto.stock"
-                            [value]="producto.stock === 0 ? null : producto.stock"
-                            (focus)="producto.stock === 0 ? producto.stock = null : null" name="stock" required min="0"
-                            [disabled]="esSoloLectura" placeholder="Stock" (focus)="limpiarSiCero('stock')"
-                            (input)="limpiarCeroInicial($event, 'stock')" (blur)="restaurarCeroSiVacio('stock')" />
-                          <label for="stock">📦 Stock</label>
-                        </div>
-                      </div>
+      <!-- Sección de campos principales -->
+      <div class="seccion-campos-principales">
 
-                      <!-- Switch IVA con sincronización -->
-                      <div class="col-md-3" *ngIf="modoModal !== 'ver'">
-                        <label class="form-label fw-semibold">¿Aplica IVA?</label>
-                        <div class="form-check form-switch">
-                          <input class="form-check-input" type="checkbox" id="aplicaIva"
-                            [(ngModel)]="producto.aplicaIva" name="aplicaIva" (change)="sincronizarPrecio()" />
-                        </div>
-                      </div>
+        <!-- Fila 1: Nombre y Stock en línea -->
+        <div class="fila-nombre-stock">
 
-                      <!-- Campo de precio editable -->
-                      <div class="col-md-5" *ngIf="modoModal !== 'ver' && !producto.aplicaIva">
-                        <div class="form-floating">
-                          <input type="number" class="form-control" id="precio" [(ngModel)]="producto.precio"
-                            [value]="producto.precio === 0 ? null : producto.precio"
-                            (focus)="producto.precio === 0 ? producto.precio = null : null" name="precio" required
-                            min="0" placeholder="Precio" />
-                          <label for="precio">💵 Precio</label>
-                        </div>
-                      </div>
+          <!-- Nombre del producto -->
+          <div class="form-group-moderno">
+            <label class="form-label-moderno">
+              <i class="bi bi-tag"></i>
+              Nombre del Producto <span class="required">*</span>
+            </label>
+            <input type="text" class="form-control-moderno" [(ngModel)]="producto.nombre" name="nombre"
+              required [disabled]="esSoloLectura" placeholder="Ingrese el nombre del producto">
+          </div>
 
-                      <div class="col-md-5" *ngIf="modoModal !== 'ver' && producto.aplicaIva">
-                        <div class="form-floating">
-                          <input type="number" class="form-control" id="precioConIva"
-                            [(ngModel)]="producto.precioConIva"
-                            [value]="producto.precioConIva === 0 ? null : producto.precioConIva"
-                            (focus)="producto.precioConIva === 0 ? producto.precioConIva = null : null"
-                            name="precioConIva" required min="0" placeholder="Precio + IVA" />
-                          <label for="precioConIva">💵 Precio + IVA</label>
-                        </div>
-                      </div>
+          <!-- Stock -->
+          <div class="form-group-moderno">
+            <label class="form-label-moderno">
+              <i class="bi bi-box"></i>
+              Stock <span class="required">*</span>
+            </label>
+            <input type="number" class="form-control-moderno" [(ngModel)]="producto.stock" name="stock"
+              required min="0" [disabled]="esSoloLectura" placeholder="0" (focus)="limpiarSiCero('stock')"
+              (input)="limpiarCeroInicial($event, 'stock')" (blur)="restaurarCeroSiVacio('stock')">
+          </div>
+        </div>
 
-                      <!-- Precio sin IVA en modo ver -->
-                      <div class="col-md-4" *ngIf="modoModal === 'ver'">
-                        <div class="form-floating">
-                          <input type="number" class="form-control" [value]="producto.precio" disabled />
-                          <label>💵 Precio</label>
-                        </div>
-                      </div>
+        <!-- Fila 2: IVA y Precio en línea - MEJORADO -->
+        <div class="fila-iva-precio">
 
-                      <!-- Precio con IVA en modo ver (solo si aplica IVA) -->
-                      <div class="col-md-4" *ngIf="modoModal === 'ver' && producto.aplicaIva">
-                        <div class="form-floating">
-                          <input type="number" class="form-control" [value]="producto.precioConIva" disabled />
-                          <label>💵 Precio + IVA</label>
-                        </div>
-                      </div>
-
-                      <!-- Moneda -->
-                      <div class="col-md-4">
-                        <ng-select [items]="moneda" bindLabel="alias" bindValue="id" [(ngModel)]="producto.moneda"
-                          name="moneda" [searchable]="false" [clearable]="true" [disabled]="esSoloLectura"
-                          ngbTooltip="Moneda" placement="top-start">
-                        </ng-select>
-                      </div>
-                    </div>
-
-                    <!-- Nota informativa sobre sede -->
-                    <div class="w-100 text-start mt-3 px-2" *ngIf="modoModal === 'agregar'">
-                      <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 py-2 px-3 small rounded-3">
-                        <i class="bi bi-info-circle-fill text-warning fs-5" style="color: red !important;"></i>
-                        <div>
-                          Los productos registrados estarán disponibles únicamente en la sede actual del sistema:
-                          <strong class="text-uppercase">{{ sedeActiva }}</strong>.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+          <!-- IVA Switch - MÁS ANCHO -->
+          <div class="grupo-iva" *ngIf="modoModal !== 'ver'">
+            <div class="switch-iva-container">
+              <label class="modern-switch">
+                <input type="checkbox" [(ngModel)]="producto.aplicaIva" name="aplicaIva"
+                  (change)="sincronizarPrecio()">
+                <span class="switch-slider"></span>
+              </label>
+              <span class="switch-label">¿Aplica IVA?</span>
             </div>
+          </div>
 
+          <!-- Precio con Selector de Moneda - MÁS COMPACTO -->
+          <div class="form-group-moderno grupo-precio">
+            <label class="form-label-moderno">
+              <i class="bi bi-currency-dollar"></i>
+              {{ producto.aplicaIva ? 'Precio + IVA' : 'Precio' }} <span class="required">*</span>
+            </label>
 
-            <!-- Resto del formulario -->
-            <div class="card shadow-sm border-0 h-100">
-              <div class="card-body">
-                <h6 class="fw-bold text-primary mb-3">
-                  <i class="fas fa-box-open me-2"></i> Caracteristicas del producto
-                </h6>
+            <div class="selector-moneda-innovador">
+              <!-- Campo de precio -->
+              <div class="campo-precio">
+                <input type="number" class="form-control-moderno precio-input-innovador"
+                  [ngModel]="producto.aplicaIva ? producto.precioConIva : producto.precio"
+                  [name]="producto.aplicaIva ? 'precioConIva' : 'precio'" required min="0"
+                  placeholder="0.00" [disabled]="esSoloLectura" (focus)="limpiarSiCero('precio')"
+                  (input)="limpiarCeroInicial($event, 'precio')" (blur)="restaurarCeroSiVacio('precio')">
+              </div>
+
+              <!-- Selector de moneda tipo cards - MÁS COMPACTO -->
+              <div class="selector-monedas-cards" [class.disabled]="esSoloLectura">
+                <div class="moneda-card" *ngFor="let monedaItem of moneda"
+                  [class.selected]="producto.moneda === monedaItem.id" [class.disabled]="esSoloLectura"
+                  (click)="!esSoloLectura && seleccionarMoneda(monedaItem.id)">
+
+                  <div class="moneda-icono">
+                    <i class="bi" [ngClass]="getMonedaIcon(monedaItem.alias)"></i>
+                  </div>
+
+                  <div class="moneda-info">
+                    <span class="moneda-nombre">{{ monedaItem.alias }}</span>
+                  </div>
+
+                  <div class="moneda-seleccionado" *ngIf="producto.moneda === monedaItem.id">
+                    <i class="bi bi-check-circle-fill"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+            <!-- Sección: Características del Producto -->
+            <div class="form-section">
+              <div class="section-header">
+                <div class="section-icon">
+                  <i class="bi bi-gear"></i>
+                </div>
+                <h6 class="section-title">Características del Producto</h6>
+              </div>
+
+              <div class="section-content">
                 <div class="row g-3">
+                  <!-- Categoría -->
                   <div class="col-md-4">
-                    <ng-select [items]="categoriasProducto" [(ngModel)]="producto.categoria" name="categoria"
-                      [searchable]="true" [clearable]="true" placeholder="📚 Indique una categoría "
-                      [disabled]="esSoloLectura" ngbTooltip="Categoría del producto" placement="top-start">
-                    </ng-select>
-                  </div>
-
-                  <div class="col-md-4">
-                    <div class="form-floating">
-                      <input type="text" class="form-control" id="marca" placeholder="🏷️ Marca"
-                        [(ngModel)]="producto.marca" name="marca" required [disabled]="esSoloLectura">
-                      <label for="marca">🏷️ Marca</label>
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-grid"></i>
+                        Categoría <span class="required">*</span>
+                      </label>
+                      <ng-select [items]="categoriasProducto" [(ngModel)]="producto.categoria" name="categoria"
+                        [searchable]="true" [disabled]="esSoloLectura" placeholder="Seleccione categoría"
+                        class="ng-select-moderno">
+                      </ng-select>
                     </div>
                   </div>
 
+                  <!-- Marca -->
                   <div class="col-md-4">
-                    <div class="form-floating">
-                      <input type="text" class="form-control" id="modelo" placeholder="🧠 Modelo"
-                        [(ngModel)]="producto.modelo" name="modelo" [disabled]="esSoloLectura">
-                      <label for="modelo">🧠 Modelo</label>
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-building"></i>
+                        Marca <span class="required">*</span>
+                      </label>
+                      <input type="text" class="form-control-moderno" [(ngModel)]="producto.marca" name="marca" required
+                        [disabled]="esSoloLectura" placeholder="Marca del producto">
                     </div>
                   </div>
 
+                  <!-- Modelo -->
                   <div class="col-md-4">
-                    <div class="form-floating">
-                      <input type="text" class="form-control" id="proveedor" placeholder="🚚 Proveedor"
-                        [(ngModel)]="producto.proveedor" name="proveedor" [disabled]="esSoloLectura">
-                      <label for="proveedor">🚚 Proveedor</label>
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-cpu"></i>
+                        Modelo
+                      </label>
+                      <input type="text" class="form-control-moderno" [(ngModel)]="producto.modelo" name="modelo"
+                        [disabled]="esSoloLectura" placeholder="Modelo del producto">
                     </div>
                   </div>
 
+                  <!-- Proveedor -->
                   <div class="col-md-4">
-                    <div class="form-floating">
-                      <input type="text" class="form-control" id="material" placeholder="🧵 Material"
-                        [(ngModel)]="producto.material" name="material" required [disabled]="esSoloLectura">
-                      <label for="material">🧵 Material</label>
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-truck"></i>
+                        Proveedor
+                      </label>
+                      <input type="text" class="form-control-moderno" [(ngModel)]="producto.proveedor" name="proveedor"
+                        [disabled]="esSoloLectura" placeholder="Proveedor del producto">
                     </div>
                   </div>
 
+                  <!-- Material -->
                   <div class="col-md-4">
-                    <div class="form-floating">
-                      <input type="text" class="form-control" id="color" placeholder="🎨 Color"
-                        [(ngModel)]="producto.color" name="color" [disabled]="esSoloLectura">
-                      <label for="color">🎨 Color</label>
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-palette"></i>
+                        Material <span class="required">*</span>
+                      </label>
+                      <input type="text" class="form-control-moderno" [(ngModel)]="producto.material" name="material"
+                        required [disabled]="esSoloLectura" placeholder="Material del producto">
                     </div>
                   </div>
 
+                  <!-- Color -->
+                  <div class="col-md-4">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-droplet"></i>
+                        Color
+                      </label>
+                      <input type="text" class="form-control-moderno" [(ngModel)]="producto.color" name="color"
+                        [disabled]="esSoloLectura" placeholder="Color del producto">
+                    </div>
+                  </div>
+
+                  <!-- Descripción -->
                   <div class="col-12">
-                    <div class="form-floating">
-                      <textarea class="form-control" id="descripcion" placeholder="📝 Descripción"
-                        [(ngModel)]="producto.descripcion" name="descripcion" style="height: 100px"
-                        [disabled]="esSoloLectura"></textarea>
-                      <label for="descripcion">📝 Descripción</label>
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-text-paragraph"></i>
+                        Descripción
+                      </label>
+                      <textarea class="form-control-moderno" rows="3" [(ngModel)]="producto.descripcion"
+                        name="descripcion" [disabled]="esSoloLectura"
+                        placeholder="Descripción detallada del producto..."></textarea>
                     </div>
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
 
-        <!-- Footer -->
-        <div
-          class="modal-footer flex-wrap justify-content-between align-items-center gap-3 border-0 bg-body-tertiary rounded-bottom shadow-sm py-3 px-4"
-          style="color: beige;">
-
-          <!-- Estatus -->
-          <div class="estatus-wrapper d-flex flex-column gap-1">
-
-            <!-- Línea superior: solo el título -->
-            <label class="form-label mb-1 fw-semibold" style="color: #212529;"> 🆔 Estatus
-              <span data-bs-toggle="tooltip" title="Estado del producto" class="text-muted small ms-1">🛈</span>
-            </label>
-
-            <!-- Línea inferior: badge + switch -->
-            <div class="d-flex align-items-center gap-2" style="margin-left: 25px !important;">
-              <div class="form-check form-switch m-0">
-                <input class="form-check-input" type="checkbox" id="estadoSwitch" [(ngModel)]="producto.activo"
-                  name="activo" [disabled]="esSoloLectura">
-              </div>
-              <span class="badge px-3 py-2" [class.bg-success]="producto.activo"
-                [class.bg-secondary]="!producto.activo">
+        <!-- Footer moderno -->
+        <div class="modal-footer-moderno">
+          <!-- Estado -->
+          <div class="estado-container">
+            <label class="form-label-moderno mb-2">Estatus del Producto</label>
+            <div class="d-flex align-items-center gap-2">
+              <label class="modern-switch">
+                <input type="checkbox" [(ngModel)]="producto.activo" name="activo" [disabled]="esSoloLectura">
+                <span class="switch-slider"></span>
+              </label>
+              <span class="estado-text" [ngClass]="{'activo': producto.activo, 'inactivo': !producto.activo}">
                 {{ producto.activo ? 'Activo' : 'Inactivo' }}
               </span>
             </div>
           </div>
 
           <!-- Botones -->
-          <div class="acciones-wrapper d-flex flex-wrap gap-2">
-            <button *ngIf="modoModal === 'ver'" type="button" class="btn btn-outline-secondary border px-4 py-2"
-              (click)="cerrarModal()">
-              <i class="bi bi-x-lg me-1"></i> Cerrar
+          <div class="modal-actions">
+            <button *ngIf="modoModal === 'ver'" type="button" class="btn btn-secondary-moderno" (click)="cerrarModal()">
+              <i class="bi bi-x-circle me-2"></i>
+              Cerrar
             </button>
 
             <ng-container *ngIf="modoModal !== 'ver'">
-              <button type="button" class="btn btn-outline-secondary px-4 py-2" (click)="cerrarModal()">
-                <i class="bi bi-x-lg me-1"></i> Cancelar
+              <button type="button" class="btn btn-secondary-moderno" (click)="cerrarModal()">
+                <i class="bi bi-x-circle me-2"></i>
+                Cancelar
               </button>
-              <button type="submit" class="btn btn-primary px-4 py-2 shadow-sm"
-                [disabled]="botonGuardarDeshabilitado()">
-                <i class="bi bi-check-lg me-1"></i> {{ modoModal === 'editar' ? 'Actualizar' : 'Guardar' }}
+              <button type="submit" class="btn btn-primary-moderno" [disabled]="botonGuardarDeshabilitado()">
+                <i class="bi bi-check-circle me-2"></i>
+                {{ modoModal === 'editar' ? 'Actualizar' : 'Guardar' }}
+                <span *ngIf="cargando" class="spinner-border spinner-border-sm ms-2"></span>
               </button>
             </ng-container>
           </div>

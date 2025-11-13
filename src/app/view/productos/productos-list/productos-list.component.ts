@@ -585,7 +585,7 @@ export class ProductosListComponent implements OnInit {
 
         const imagenCambiada = this.imagenSeleccionada !== null;
         const modificado = JSON.stringify(productoActual) !== JSON.stringify(productoBase) || imagenCambiada;
-        console.log('¿Formulario modificado?', modificado);
+      //  console.log('¿Formulario modificado?', modificado);
 
         return JSON.stringify(productoActual) !== JSON.stringify(productoBase) || imagenCambiada;
     }
@@ -607,10 +607,10 @@ export class ProductosListComponent implements OnInit {
     }
 
     botonGuardarDeshabilitado(): boolean {
-        console.log('Evaluando estado del botón');
+      //  console.log('Evaluando estado del botón');
         if (this.cargando) return true;
 
-        console.log('Evaluando estado del botón 2');
+       // console.log('Evaluando estado del botón 2');
         if (this.modoModal === 'editar') {
             return !this.formularioModificado() || !this.formularioValido();
         }
@@ -679,4 +679,41 @@ export class ProductosListComponent implements OnInit {
             this.producto.precio = this.producto.precioConIva;
         }
     }
+
+    // Métodos para el selector de moneda innovador
+    seleccionarMoneda(monedaId: string) {
+        this.producto.moneda = monedaId;
+    }
+
+    getMonedaIcon(monedaAlias: string): string {
+        const iconMap: { [key: string]: string } = {
+            'USD': 'bi-currency-dollar',
+            'EUR': 'bi-currency-euro',
+            'Bs': 'bi-cash', // Cambié a 'bi-cash' para bolívares (más apropiado)
+            'VES': 'bi-cash', // Por si usas VES
+            'COP': 'bi-currency-dollar',
+            'PEN': 'bi-currency-dollar',
+            'MXN': 'bi-currency-dollar',
+            'ARS': 'bi-currency-dollar'
+        };
+       // console.log('monedaAlias 1', monedaAlias);
+        //  console.log('iconMap', iconMap);
+        return iconMap[monedaAlias] || 'bi-currency-dollar';
+    }
+
+    getMonedaSymbol(monedaAlias: string): string {
+     //   console.log('monedaAlias 2 ', monedaAlias);
+        const symbolMap: { [key: string]: string } = {
+            'USD': '$',
+            'EUR': '€',
+            'Bs': 'Bolivar',
+            'VES': 'Bs',
+            'COP': '$',
+            'PEN': 'S/',
+            'MXN': '$',
+            'ARS': '$'
+        };
+        return symbolMap[monedaAlias] || '$';
+    }
+
 }
