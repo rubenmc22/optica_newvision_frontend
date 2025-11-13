@@ -9,7 +9,7 @@
           </div>
           <div class="header-text">
             <h4 class="header-title">Catálogo de Productos</h4>
-            <div class="header-subtitle">Administra y consulta el inventario de productos</div>
+            <div class="header-subtitle">Administra el inventario de productos</div>
           </div>
         </div>
         <button class="btn btn-agregar-producto" (click)="abrirModal('agregar')">
@@ -358,9 +358,10 @@
                           <i class="bi bi-box"></i>
                           Stock <span class="required">*</span>
                         </label>
-                        <input type="number" class="form-control-moderno" [(ngModel)]="producto.stock" name="stock"
-                          required min="0" [disabled]="esSoloLectura" placeholder="0" (focus)="limpiarSiCero('stock')"
-                          (input)="limpiarCeroInicial($event, 'stock')" (blur)="restaurarCeroSiVacio('stock')">
+                        <!-- Campo Stock mejorado -->
+                        <input type="text" class="form-control-moderno" [(ngModel)]="producto.stock" name="stock"
+                          required min="0" [disabled]="esSoloLectura" placeholder="0" (input)="soloNumerosStock($event)"
+                          (blur)="formatearStock($event)">
                       </div>
                     </div>
 
@@ -387,13 +388,12 @@
                         </label>
 
                         <div class="selector-moneda-innovador">
-                          <!-- Campo de precio -->
+                          <!-- Campo de precio  -->
                           <div class="campo-precio">
-                            <input type="number" class="form-control-moderno precio-input-innovador"
-                              [ngModel]="producto.aplicaIva ? producto.precioConIva : producto.precio"
-                              [name]="producto.aplicaIva ? 'precioConIva' : 'precio'" required min="0"
-                              placeholder="0.00" [disabled]="esSoloLectura" (focus)="limpiarSiCero('precio')"
-                              (input)="limpiarCeroInicial($event, 'precio')" (blur)="restaurarCeroSiVacio('precio')">
+                            <input type="text" class="form-control-moderno precio-input-innovador"
+                              [value]="getPrecioDisplay()" (input)="onPrecioInput($event)" (blur)="onPrecioBlur()"
+                              (focus)="onPrecioFocus()" name="precioActual" required placeholder="0,00"
+                              [disabled]="esSoloLectura">
                           </div>
 
                           <!-- Selector de moneda tipo cards - MÁS COMPACTO -->

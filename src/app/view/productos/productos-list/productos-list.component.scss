@@ -364,7 +364,7 @@
 
 .productos-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 1.25rem;
     margin-bottom: 2rem;
 }
@@ -785,7 +785,7 @@
 .modal-header-moderno {
     background: var(--degradado-color) !important;
     color: white;
-    padding: 1.1rem;
+    padding: 0.7rem;
     border-bottom: none;
     display: flex;
     justify-content: space-between;
@@ -954,7 +954,7 @@ textarea.form-control-moderno {
         transition: all 0.3s ease !important;
         background: white !important;
         min-height: 50px !important;
-       
+
         font-weight: 500;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         display: flex;
@@ -1042,13 +1042,13 @@ textarea.form-control-moderno {
 
 /* Estados de validación */
 .form-control-moderno.ng-invalid.ng-touched {
-   // border-color: #e74c3c !important;
-  //  box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.15) !important;
+    // border-color: #e74c3c !important;
+    //  box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.15) !important;
 }
 
 .form-control-moderno.ng-valid.ng-touched {
-  //  border-color: #27ae60 !important;
-  //  box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.15) !important;
+    //  border-color: #27ae60 !important;
+    //  box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.15) !important;
 }
 
 /* Switch moderno */
@@ -1290,10 +1290,37 @@ textarea.form-control-moderno {
     max-width: 200px;
 
     &.disabled {
-        opacity: 0.6;
+        opacity: 0.9 !important; 
         pointer-events: none;
+        
+        // Mejorar la visualización en modo disabled
+        .moneda-card {
+            background-color: #f8f9fa !important;
+            border-color: #dee2e6 !important;
+            
+            .moneda-info .moneda-nombre {
+                font-weight: 600; 
+                color: #495057; 
+            }
+            
+            .moneda-icono i {
+                opacity: 1; 
+                filter: contrast(1.2); 
+            }
+            
+            &.selected {
+                background-color: #e9ecef !important;
+                border-color: #adb5bd !important;
+                
+                .moneda-info .moneda-nombre {
+                    color: #212529; // Color aún más oscuro
+                    font-weight: 700;
+                }
+            }
+        }
     }
 }
+
 
 .moneda-card {
     position: relative;
@@ -1419,7 +1446,7 @@ textarea.form-control-moderno {
 /* Footer modal moderno */
 .modal-footer-moderno {
     background: white;
-    padding: 1rem;
+    padding: 0.7rem;
     border-top: 1px solid #e9ecef;
     display: flex;
     justify-content: space-between;
@@ -1551,11 +1578,16 @@ textarea.form-control-moderno {
 /* =============================================
    MEJORAS RESPONSIVE
    ============================================= */
-
 @media (max-width: 1200px) {
     .productos-grid {
         grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
         gap: 1rem;
+    }
+}
+
+@media (max-width: 1024px) {
+    .modal-dialog {
+        max-width: 800px !important;
     }
 }
 
@@ -1631,7 +1663,7 @@ textarea.form-control-moderno {
     }
 
     .selector-monedas-cards {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 0.4rem;
         max-width: 100%;
     }
@@ -1805,5 +1837,35 @@ textarea.form-control-moderno {
 
     &::-webkit-scrollbar-thumb:hover {
         background: #a8a8a8;
+    }
+}
+
+.precio-input-innovador {
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    &[type=number] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+
+    &::placeholder {
+        color: #6c757d !important;
+        font-weight: 400;
+        opacity: 0.7;
+    }
+
+    &:not(:focus):placeholder-shown {
+        color: #6c757d;
+        font-weight: 400;
+    }
+
+    &:not(:placeholder-shown) {
+        color: #545252 !important;
+        font-weight: 700;
     }
 }

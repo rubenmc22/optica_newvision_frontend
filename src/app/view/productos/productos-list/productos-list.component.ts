@@ -24,9 +24,11 @@ export class ProductosListComponent implements OnInit {
     @Output() onCerrar = new EventEmitter<void>();
 
     // CONSTANTES
-     readonly PRODUCTOS_POR_PAGINA = 12;
+    readonly PRODUCTOS_POR_PAGINA = 12;
     readonly RANGO_PAGINACION = 3;
     readonly IVA = 0.16;
+    precioInputTemporal: string = '';
+    estaEditandoPrecio: boolean = false;
 
     // ESTADO DEL COMPONENTE
     productos: Producto[] = [];
@@ -182,10 +184,10 @@ export class ProductosListComponent implements OnInit {
     }
 
     cargarPagina(pagina: number): void {
-    this.paginaActual = pagina;
-    // Solo actualiza la página actual, no hace falta llamar al servicio
-    // ya que los productos ya están cargados y solo estamos paginando localmente
-}
+        this.paginaActual = pagina;
+        // Solo actualiza la página actual, no hace falta llamar al servicio
+        // ya que los productos ya están cargados y solo estamos paginando localmente
+    }
 
     private iniciarCarga(): void {
         this.tareasPendientes = 0;
@@ -463,20 +465,20 @@ export class ProductosListComponent implements OnInit {
     }
 
     // =========== PAGINACIÓN ===========
-  get productosPaginados(): Producto[] {
-    const inicio = (this.paginaActual - 1) * this.PRODUCTOS_POR_PAGINA;
-    return this.productosFiltrados.slice(inicio, inicio + this.PRODUCTOS_POR_PAGINA);
-}
+    get productosPaginados(): Producto[] {
+        const inicio = (this.paginaActual - 1) * this.PRODUCTOS_POR_PAGINA;
+        return this.productosFiltrados.slice(inicio, inicio + this.PRODUCTOS_POR_PAGINA);
+    }
 
-get totalPaginas(): number {
-    return Math.ceil(this.productosFiltrados.length / this.PRODUCTOS_POR_PAGINA);
-}
+    get totalPaginas(): number {
+        return Math.ceil(this.productosFiltrados.length / this.PRODUCTOS_POR_PAGINA);
+    }
 
-get paginasVisibles(): number[] {
-    const inicio = Math.max(this.paginaActual - this.RANGO_PAGINACION, 1);
-    const fin = Math.min(inicio + this.RANGO_PAGINACION * 2, this.totalPaginas);
-    return Array.from({ length: fin - inicio + 1 }, (_, i) => inicio + i);
-}
+    get paginasVisibles(): number[] {
+        const inicio = Math.max(this.paginaActual - this.RANGO_PAGINACION, 1);
+        const fin = Math.min(inicio + this.RANGO_PAGINACION * 2, this.totalPaginas);
+        return Array.from({ length: fin - inicio + 1 }, (_, i) => inicio + i);
+    }
 
     get paginas(): number[] {
         return Array.from({ length: this.totalPaginas }, (_, i) => i + 1);
@@ -583,7 +585,7 @@ get paginasVisibles(): number[] {
 
         const imagenCambiada = this.imagenSeleccionada !== null;
         const modificado = JSON.stringify(productoActual) !== JSON.stringify(productoBase) || imagenCambiada;
-      //  console.log('¿Formulario modificado?', modificado);
+        //  console.log('¿Formulario modificado?', modificado);
 
         return JSON.stringify(productoActual) !== JSON.stringify(productoBase) || imagenCambiada;
     }
@@ -595,49 +597,32 @@ get paginasVisibles(): number[] {
             'material', 'stock', 'precio', 'moneda'
         ];
 
-        return camposObligatorios.every(campo => {
+        const valido = camposObligatorios.every(campo => {
             const valor = this.producto?.[campo];
 
             if (typeof valor === 'boolean') return true;
             if (typeof valor === 'number') return valor >= 0;
             return valor !== undefined && valor !== null && `${valor}`.trim().length > 0;
         });
+
+        // Validación adicional para precio cuando aplica IVA
+        if (this.producto.aplicaIva) {
+            return valido && (this.producto.precioConIva !== undefined && this.producto.precioConIva >= 0);
+        }
+
+        return valido;
     }
 
     botonGuardarDeshabilitado(): boolean {
-      //  console.log('Evaluando estado del botón');
+        //  console.log('Evaluando estado del botón');
         if (this.cargando) return true;
 
-       // console.log('Evaluando estado del botón 2');
+        // console.log('Evaluando estado del botón 2');
         if (this.modoModal === 'editar') {
             return !this.formularioModificado() || !this.formularioValido();
         }
 
         return !this.formularioValido();
-    }
-
-    limpiarSiCero(campo: 'stock' | 'precio'): void {
-        if (this.producto[campo] === 0) {
-            this.producto[campo] = null;
-        }
-    }
-
-    limpiarCeroInicial(event: Event, campo: 'stock' | 'precio'): void {
-        const input = event.target as HTMLInputElement;
-        const valor = input.value;
-
-        // Si empieza con 0 y tiene más dígitos, lo limpiamos
-        if (/^0\d+/.test(valor)) {
-            const limpio = valor.replace(/^0+/, '');
-            this.producto[campo] = Number(limpio);
-        }
-    }
-
-    restaurarCeroSiVacio(campo: 'stock' | 'precio'): void {
-        const valor = this.producto[campo];
-        if (valor === null || valor === undefined || valor === '') {
-            this.producto[campo] = 0;
-        }
     }
 
     actualizarPacientesPorSede(): void {
@@ -661,21 +646,14 @@ get paginasVisibles(): number[] {
         if (!this.producto.aplicaIva) {
             this.producto.precioConIva = undefined;
         } else {
-            this.calcularPrecioSinIva();
+            // Si hay precio base, calcular precio con IVA
+            if (this.producto.precio && this.producto.precio > 0) {
+                this.producto.precioConIva = Number((this.producto.precio * (1 + this.IVA)).toFixed(2));
+            } else {
+                this.producto.precioConIva = 0;
+            }
         }
-    }
-
-    calcularPrecioSinIva(): void {
-        const conIva = this.producto.precioConIva ?? 0;
-        this.producto.precio = +(conIva / (1 + this.IVA)).toFixed(2);
-    }
-
-    sincronizarPrecio(): void {
-        if (this.producto.aplicaIva) {
-            this.producto.precioConIva = this.producto.precio;
-        } else {
-            this.producto.precio = this.producto.precioConIva;
-        }
+        this.onPrecioBlur(); // Aplica formato
     }
 
     // Métodos para el selector de moneda innovador
@@ -687,20 +665,18 @@ get paginasVisibles(): number[] {
         const iconMap: { [key: string]: string } = {
             'USD': 'bi-currency-dollar',
             'EUR': 'bi-currency-euro',
-            'Bs': 'bi-cash', // Cambié a 'bi-cash' para bolívares (más apropiado)
-            'VES': 'bi-cash', // Por si usas VES
+            'Bs': 'bi-cash',
+            'VES': 'bi-cash',
             'COP': 'bi-currency-dollar',
             'PEN': 'bi-currency-dollar',
             'MXN': 'bi-currency-dollar',
             'ARS': 'bi-currency-dollar'
         };
-       // console.log('monedaAlias 1', monedaAlias);
-        //  console.log('iconMap', iconMap);
+
         return iconMap[monedaAlias] || 'bi-currency-dollar';
     }
 
     getMonedaSymbol(monedaAlias: string): string {
-     //   console.log('monedaAlias 2 ', monedaAlias);
         const symbolMap: { [key: string]: string } = {
             'USD': '$',
             'EUR': '€',
@@ -714,4 +690,128 @@ get paginasVisibles(): number[] {
         return symbolMap[monedaAlias] || '$';
     }
 
+    // =========== MANEJO DE PRECIO MEJORADO ===========
+    getPrecioDisplay(): string {
+        if (this.estaEditandoPrecio && this.precioInputTemporal !== '') {
+            return this.precioInputTemporal;
+        }
+
+        const precio = this.producto.aplicaIva ? this.producto.precioConIva : this.producto.precio;
+
+        if (!precio || precio === 0) {
+            return '';
+        }
+
+        return precio.toFixed(2).replace('.', ',');
+    }
+
+    onPrecioFocus(): void {
+        this.estaEditandoPrecio = true;
+
+        const precioActual = this.producto.aplicaIva ? this.producto.precioConIva : this.producto.precio;
+
+        if (precioActual === 0 || !precioActual) {
+            this.precioInputTemporal = '';
+        } else {
+            const valorFormateado = precioActual.toFixed(2).replace('.', ',');
+            if (valorFormateado.endsWith(',00')) {
+                this.precioInputTemporal = valorFormateado.replace(',00', '');
+            } else {
+                this.precioInputTemporal = valorFormateado;
+            }
+        }
+    }
+
+    onPrecioInput(event: Event): void {
+        const input = event.target as HTMLInputElement;
+        let valor = input.value;
+
+        valor = valor.replace(/[^\d,]/g, '');
+
+        const partes = valor.split(',');
+        if (partes.length > 2) {
+            valor = partes[0] + ',' + partes.slice(1).join('');
+        }
+
+        if (partes.length === 2 && partes[1].length > 2) {
+            valor = partes[0] + ',' + partes[1].substring(0, 2);
+        }
+
+        this.precioInputTemporal = valor;
+
+        if (valor === '' || valor === ',') {
+            this.actualizarPrecioModelo(0);
+        } else {
+            const numero = parseFloat(valor.replace(',', '.')) || 0;
+            this.actualizarPrecioModelo(numero);
+        }
+    }
+
+    onPrecioBlur(): void {
+        this.estaEditandoPrecio = false;
+
+        let precio = this.producto.aplicaIva ? this.producto.precioConIva : this.producto.precio;
+
+        if (precio === null || precio === undefined || isNaN(precio)) {
+            precio = 0;
+        }
+
+        precio = Number(parseFloat(precio.toString()).toFixed(2));
+        this.actualizarPrecioModelo(precio);
+
+        this.precioInputTemporal = '';
+    }
+
+    private actualizarPrecioModelo(valor: number): void {
+        if (this.producto.aplicaIva) {
+            this.producto.precioConIva = valor;
+        } else {
+            this.producto.precio = valor;
+        }
+    }
+
+    sincronizarPrecio(): void {
+        if (this.producto.aplicaIva && this.producto.precio) {
+            this.producto.precioConIva = Number((this.producto.precio * (1 + this.IVA)).toFixed(2));
+        } else if (!this.producto.aplicaIva) {
+            this.producto.precioConIva = undefined;
+        }
+        this.estaEditandoPrecio = false;
+        this.precioInputTemporal = '';
+        this.onPrecioBlur();
+    }
+
+    /**
+ * Formatea el precio (método faltante)
+ */
+    formatearPrecio(): void {
+        this.onPrecioBlur();
+    }
+
+    calcularPrecioSinIva(): void {
+        if (this.producto.precioConIva && this.producto.precioConIva > 0) {
+            this.producto.precio = Number((this.producto.precioConIva / (1 + this.IVA)).toFixed(2));
+        }
+        this.onPrecioBlur();
+    }
+
+    soloNumerosStock(event: Event): void {
+        const input = event.target as HTMLInputElement;
+        input.value = input.value.replace(/[^0-9]/g, '');
+
+        if (input.value && !isNaN(Number(input.value))) {
+            this.producto.stock = Number(input.value);
+        } else {
+            this.producto.stock = 0;
+        }
+    }
+
+    formatearStock(event: Event): void {
+        const input = event.target as HTMLInputElement;
+
+        if (!input.value || input.value === '') {
+            this.producto.stock = 0;
+            input.value = '0';
+        }
+    }
 }
