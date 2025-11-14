@@ -1,8 +1,8 @@
 import { Component, OnInit, HostListener, ViewChild, TemplateRef } from '@angular/core';
+import { FormBuilder, FormGroup, FormArray, Validators, AbstractControl } from '@angular/forms';
 import { SwalService } from '../../../core/services/swal/swal.service';
 import { HistorialVentaService } from './../historial-ventas/historial-ventas.service';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-
 
 @Component({
   selector: 'app-historial-ventas',
@@ -14,6 +14,8 @@ export class HistorialVentasComponent implements OnInit {
 
   @ViewChild('cancelarVentaModal') cancelarVentaModal!: TemplateRef<any>;
   @ViewChild('detalleVentaModal') detalleVentaModal!: TemplateRef<any>;
+  @ViewChild('editarVentaModal') editarVentaModal!: TemplateRef<any>;
+
   // Propiedades para los filtros
   asesores: any[] = [];
   especialistas: any[] = [];
@@ -36,7 +38,6 @@ export class HistorialVentasComponent implements OnInit {
   showDatepicker: boolean = false;
   fechaUnica: string = '';
 
-
   // Para validación de fechas
   maxDate: string = '';
   minDate: string = '2020-01-01'
@@ -56,15 +57,30 @@ export class HistorialVentasComponent implements OnInit {
   selectedVenta: any = null;
   motivoCancelacion: string = '';
 
+  // Nuevas propiedades para edición de ventas
+  editarVentaForm!: FormGroup;
+  monedaActual: string = 'USD';
+
   constructor(
     private modalService: NgbModal,
-    private swalService: SwalService, // Si tienes servicio de alertas
-    private historialVentaService: HistorialVentaService // Tu servicio de ventas
+    private swalService: SwalService,
+    private historialVentaService: HistorialVentaService,
+    private fb: FormBuilder
   ) { }
 
   ngOnInit() {
     this.cargarDatosIniciales();
     this.setMaxDate();
+
+    // Suscribirse a cambios en el monto abonado
+    this.editarVentaForm.get('montoAbonado')?.valueChanges.subscribe(() => {
+      // Forzar actualización de la UI
+    });
+
+    // Suscribirse a cambios en los métodos de pago
+    this.metodosPagoArray.valueChanges.subscribe(() => {
+      // Forzar actualización de la UI
+    });
   }
 
   private setMaxDate(): void {
@@ -73,8 +89,12 @@ export class HistorialVentasComponent implements OnInit {
     const month = String(hoy.getMonth() + 1).padStart(2, '0');
     const day = String(hoy.getDate()).padStart(2, '0');
     this.maxDate = `${year}-${month}-${day}`;
-
     console.log('Fecha máxima configurada:', this.maxDate);
+  }
+
+  // Getter para el FormArray de métodos de pago
+  get metodosPagoArray(): FormArray {
+    return this.editarVentaForm.get('metodosPago') as FormArray;
   }
 
   cargarDatosIniciales() {
@@ -106,7 +126,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   @HostListener('document:keydown.escape', ['$event'])
-  onEscapeKey(event: KeyboardEvent): void {
+  onEscapeKey(event: any): void {
     if (this.showDatepicker) {
       this.closeDatepicker();
     }
@@ -114,7 +134,7 @@ export class HistorialVentasComponent implements OnInit {
 
   aplicarFechas(): void {
     this.closeDatepicker();
-    this.filtrarVentas(); // Filtro automático
+    this.filtrarVentas();
   }
 
   setRangoPreset(tipo: string): void {
@@ -122,7 +142,6 @@ export class HistorialVentasComponent implements OnInit {
     let fechaDesde = new Date();
     let fechaHasta = new Date();
 
-    // Establecer el preset activo
     this.presetActivo = tipo;
 
     switch (tipo) {
@@ -214,11 +233,9 @@ export class HistorialVentasComponent implements OnInit {
     this.presetActivo = '';
 
     if (this.fechaUnica) {
-      // Validar que la fecha no sea futura (comparación directa de strings YYYY-MM-DD)
       const hoy = new Date().toISOString().split('T')[0];
 
       if (this.fechaUnica > hoy) {
-        // Si es fecha futura, resetear
         this.fechaUnica = '';
         this.filtros.fechaDesde = '';
         this.filtros.fechaHasta = '';
@@ -226,14 +243,10 @@ export class HistorialVentasComponent implements OnInit {
         return;
       }
 
-      // Si la fecha es válida, establecer el rango
       this.filtros.fechaDesde = this.fechaUnica;
       this.filtros.fechaHasta = this.fechaUnica;
-
-      // Filtrar automáticamente
       this.filtrarVentas();
     } else {
-      // Si se limpia la fecha única, limpiar también los filtros
       this.filtros.fechaDesde = '';
       this.filtros.fechaHasta = '';
       this.filtrarVentas();
@@ -253,6 +266,7 @@ export class HistorialVentasComponent implements OnInit {
       return 'Seleccionar fecha';
     }
   }
+
   private formatFechaLocal(fechaString: string): string {
     if (!fechaString) return '';
 
@@ -267,9 +281,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   cargarVentas() {
-    // Data dummy adaptada a la estructura del template
     this.ventasOriginales = [
-      // Venta 1: Pago de contado con formulación clínica
       {
         id: 1,
         numeroControl: '001',
@@ -291,7 +303,6 @@ export class HistorialVentasComponent implements OnInit {
           }
         ],
         mostrarDetalle: false,
-        // Información adicional para el modal de detalle
         sede: 'guatire',
         moneda: 'dolar',
         formaPago: 'contado',
@@ -344,8 +355,6 @@ export class HistorialVentasComponent implements OnInit {
           }
         }
       },
-
-      // Venta 2: Cashea con cuotas adelantadas
       {
         id: 2,
         numeroControl: '002',
@@ -367,7 +376,6 @@ export class HistorialVentasComponent implements OnInit {
           }
         ],
         mostrarDetalle: false,
-        // Información adicional para el modal de detalle
         sede: 'guatire',
         moneda: 'dolar',
         formaPago: 'cashea',
@@ -449,8 +457,6 @@ export class HistorialVentasComponent implements OnInit {
           }
         }
       },
-
-      // Venta 3: Abono parcial sin formulación
       {
         id: 3,
         numeroControl: '003',
@@ -472,7 +478,6 @@ export class HistorialVentasComponent implements OnInit {
           }
         ],
         mostrarDetalle: false,
-        // Información adicional para el modal de detalle
         sede: 'guatire',
         moneda: 'bolivar',
         formaPago: 'abono',
@@ -513,8 +518,6 @@ export class HistorialVentasComponent implements OnInit {
         pagoCompleto: false,
         financiado: false
       },
-
-      // Venta 4: Cancelada
       {
         id: 4,
         numeroControl: '004',
@@ -530,7 +533,6 @@ export class HistorialVentasComponent implements OnInit {
         servicios: [{ nombre: 'Lentes de sol' }],
         metodosPago: [],
         mostrarDetalle: false,
-        // Información adicional para el modal de detalle
         sede: 'guatire',
         moneda: 'dolar',
         formaPago: 'contado',
@@ -560,8 +562,6 @@ export class HistorialVentasComponent implements OnInit {
         motivo_cancelacion: 'Cliente cambió de opinión',
         fecha_cancelacion: new Date('2024-01-18T17:00:00')
       },
-
-      // Venta 5: Cashea nivel 1
       {
         id: 5,
         numeroControl: '005',
@@ -583,7 +583,6 @@ export class HistorialVentasComponent implements OnInit {
           }
         ],
         mostrarDetalle: false,
-        // Información adicional para el modal de detalle
         sede: 'guatire',
         moneda: 'dolar',
         formaPago: 'cashea',
@@ -648,8 +647,6 @@ export class HistorialVentasComponent implements OnInit {
           }
         }
       },
-
-      // Venta 6: Pago mixto
       {
         id: 6,
         numeroControl: '006',
@@ -676,7 +673,6 @@ export class HistorialVentasComponent implements OnInit {
           }
         ],
         mostrarDetalle: false,
-        // Información adicional para el modal de detalle
         sede: 'guatire',
         moneda: 'dolar',
         formaPago: 'contado',
@@ -759,28 +755,23 @@ export class HistorialVentasComponent implements OnInit {
 
     return texto
       .toLowerCase()
-      .normalize('NFD') // Descompone los caracteres acentuados
-      .replace(/[\u0300-\u036f]/g, ''); // Elimina los diacríticos
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
   }
 
   private filtrarVentas(): void {
     this.ventasFiltradas = this.ventasOriginales.filter(venta => {
-      // Filtro de búsqueda general (paciente, cédula, número de control)
       const coincideBusqueda = !this.filtros.busquedaGeneral ||
         this.normalizarTexto(venta.paciente?.nombre).includes(this.normalizarTexto(this.filtros.busquedaGeneral)) ||
         venta.paciente?.cedula?.includes(this.filtros.busquedaGeneral) ||
         venta.numeroControl?.toString().includes(this.filtros.busquedaGeneral);
 
-      // Filtro de asesor
       const coincideAsesor = !this.filtros.asesor || venta.asesor?.id == this.filtros.asesor;
 
-      // Filtro de especialista
       const coincideEspecialista = !this.filtros.especialista || venta.especialista?.id == this.filtros.especialista;
 
-      // Filtro de estado
       const coincideEstado = !this.filtros.estado || venta.estado === this.filtros.estado;
 
-      // Filtro de fechas
       let coincideFechas = true;
       if (this.filtros.fechaDesde || this.filtros.fechaHasta) {
         const fechaVenta = new Date(venta.fecha);
@@ -797,51 +788,41 @@ export class HistorialVentasComponent implements OnInit {
 
     this.totalVentas = this.ventasFiltradas.length;
     this.totalPaginas = Math.ceil(this.totalVentas / this.itemsPorPagina);
-    this.paginaActual = 1; // Resetear a primera página al filtrar
+    this.paginaActual = 1;
   }
-
-  // Agrega estos métodos a tu componente existente
 
   // Método para cambiar items por página
   cambiarItemsPorPagina(): void {
-    this.paginaActual = 1; // Volver a la primera página
+    this.paginaActual = 1;
     this.totalPaginas = Math.ceil(this.totalVentas / this.itemsPorPagina);
-    // Si estás cargando datos paginados del backend, aquí harías la llamada
   }
 
   // Método mejorado para obtener rango de páginas (más inteligente)
   getRangoPaginas(): number[] {
     this.totalPaginas = Math.ceil(this.totalVentas / this.itemsPorPagina);
 
-    // Si hay pocas páginas, mostrar todas
     if (this.totalPaginas <= 7) {
       return Array.from({ length: this.totalPaginas }, (_, i) => i + 1);
     }
 
-    // Lógica para páginas largas (mostrar primera, última y alrededor de la actual)
     const paginas: number[] = [];
     const paginaInicio = Math.max(2, this.paginaActual - 1);
     const paginaFin = Math.min(this.totalPaginas - 1, this.paginaActual + 1);
 
-    // Siempre primera página
     paginas.push(1);
 
-    // Agregar puntos suspensivos si es necesario
     if (paginaInicio > 2) {
-      paginas.push(-1); // -1 representa "..."
+      paginas.push(-1);
     }
 
-    // Agregar páginas alrededor de la actual
     for (let i = paginaInicio; i <= paginaFin; i++) {
       paginas.push(i);
     }
 
-    // Agregar puntos suspensivos si es necesario
     if (paginaFin < this.totalPaginas - 1) {
-      paginas.push(-1); // -1 representa "..."
+      paginas.push(-1);
     }
 
-    // Siempre última página
     if (this.totalPaginas > 1) {
       paginas.push(this.totalPaginas);
     }
@@ -874,7 +855,6 @@ export class HistorialVentasComponent implements OnInit {
 
   cambiarOrden() {
     this.ordenamiento.ascendente = !this.ordenamiento.ascendente;
-    // Lógica para reordenar las ventas
     this.ventasFiltradas.sort((a, b) => {
       const factor = this.ordenamiento.ascendente ? 1 : -1;
 
@@ -902,22 +882,18 @@ export class HistorialVentasComponent implements OnInit {
 
   verRecibo(venta: any) {
     console.log('Ver recibo:', venta);
-    // Lógica para mostrar recibo
   }
 
   generarInforme() {
     console.log('Generar informe con filtros:', this.filtros);
-    // Lógica para generar informe
   }
 
   // Método auxiliar para formatear el nombre (opcional)
   getNombreFormateado(nombreCompleto: string): string {
     if (!nombreCompleto) return '';
 
-    // Divide el nombre completo en partes
     const partes = nombreCompleto.split(' ');
 
-    // Toma el primer nombre y el último apellido
     if (partes.length >= 2) {
       const primerNombre = partes[0];
       const ultimoApellido = partes[partes.length - 1];
@@ -958,7 +934,6 @@ export class HistorialVentasComponent implements OnInit {
     this.selectedVenta = venta;
     this.motivoCancelacion = '';
 
-    // Abrir modal de confirmación
     this.modalService.open(this.cancelarVentaModal, {
       centered: true,
       backdrop: 'static',
@@ -967,13 +942,11 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   confirmarCancelacion(modal: any) {
-    // Validar que se ingrese un motivo
     if (!this.motivoCancelacion?.trim()) {
       this.swalService.showWarning('Advertencia', 'Por favor ingrese el motivo de la cancelación.');
       return;
     }
 
-    // Cerrar modal
     modal.close();
 
     this.swalService.showConfirm(
@@ -993,24 +966,20 @@ export class HistorialVentasComponent implements OnInit {
   private procesarCancelacion() {
     console.log('Procesando cancelación de venta:', this.selectedVenta.id);
 
-    // Usar el servicio simulado
     this.historialVentaService.cancelarVenta(this.selectedVenta.id, this.motivoCancelacion).subscribe({
       next: (response) => {
         if (response.success) {
           this.swalService.showSuccess('Éxito', response.message);
 
-          // Actualizar el estado localmente
           this.selectedVenta.estado = 'cancelada';
           this.selectedVenta.motivo_cancelacion = this.motivoCancelacion;
           this.selectedVenta.fecha_cancelacion = response.data.fecha_cancelacion;
 
           console.log('Venta cancelada exitosamente:', this.selectedVenta);
         } else {
-          // Manejar respuesta con error del servicio simulado
           this.swalService.showError('Error', response.message);
         }
 
-        // Resetear variables
         this.selectedVenta = null;
         this.motivoCancelacion = '';
       },
@@ -1018,7 +987,6 @@ export class HistorialVentasComponent implements OnInit {
         console.error('Error en la solicitud de cancelación:', error);
         this.swalService.showError('Error', 'No se pudo completar la solicitud. Verifique su conexión.');
 
-        // Resetear variables incluso en error
         this.selectedVenta = null;
         this.motivoCancelacion = '';
       }
@@ -1027,16 +995,13 @@ export class HistorialVentasComponent implements OnInit {
 
   // Método alternativo si no tienes servicio
   private procesarCancelacionLocal() {
-    // Simular procesamiento
     setTimeout(() => {
       this.swalService.showSuccess('Éxito', 'Venta cancelada correctamente.');
 
-      // Actualizar estado localmente
       this.selectedVenta.estado = 'cancelada';
       this.selectedVenta.motivo_cancelacion = this.motivoCancelacion;
       this.selectedVenta.fecha_cancelacion = new Date().toISOString();
 
-      // Resetear variables
       this.selectedVenta = null;
       this.motivoCancelacion = '';
     }, 1000);
@@ -1047,22 +1012,19 @@ export class HistorialVentasComponent implements OnInit {
 
     this.selectedVenta = venta;
 
-    // Abrir modal de detalle completo
     this.modalService.open(this.detalleVentaModal, {
       centered: true,
-      size: 'lg', // Modal grande para mostrar toda la información
+      size: 'lg',
       backdrop: true,
       keyboard: true
     });
   }
 
-  // Asegúrate de tener este método para formatear números de venta
   formatNumeroVenta(id: number): string {
     if (!id) return '#000';
     return `#${id.toString().padStart(3, '0')}`;
   }
 
-  // En tu componente HistorialVentasComponent, agrega este método:
   getTotalPagadoVenta(venta: any): number {
     if (!venta.metodosPago || !venta.metodosPago.length) return 0;
 
@@ -1071,4 +1033,460 @@ export class HistorialVentasComponent implements OnInit {
     }, 0);
   }
 
+  // ========== MÉTODOS PARA EDICIÓN DE VENTAS ==========
+
+  // Método para determinar si mostrar el botón de edición
+  mostrarBotonEditar(venta: any): boolean {
+    if (!venta || venta.estado === 'cancelada') {
+      return false;
+    }
+
+    const esAbonoConDeuda = venta.formaPago === 'abono' &&
+      venta.montoAbonado < venta.total;
+
+    return esAbonoConDeuda;
+  }
+
+  // Método para editar venta
+  editarVenta(venta: any): void {
+    this.selectedVenta = venta;
+
+    // Usar el método corregido
+    this.reinicializarFormularioConDeuda();
+
+    this.modalService.open(this.editarVentaModal, {
+      centered: true,
+      size: 'lg',
+      backdrop: 'static'
+    });
+  }
+
+  // CORRECCIÓN: Reinicializar el formulario con la deuda actual
+  reinicializarFormularioConDeuda() {
+    const montoDeuda = this.calcularMontoDeuda();
+
+    console.log('Reinicializando formulario con deuda:', montoDeuda); // DEBUG
+
+    // Si el formulario ya existe, actualiza el valor
+    if (this.editarVentaForm) {
+      this.editarVentaForm.patchValue({
+        montoAbonado: montoDeuda,
+        observaciones: this.selectedVenta.observaciones || ''
+      });
+
+      // Limpiar métodos de pago anteriores
+      this.metodosPagoArray.clear();
+
+      // Agregar métodos de pago existentes si los hay
+      if (this.selectedVenta.metodosPago && this.selectedVenta.metodosPago.length > 0) {
+        this.selectedVenta.metodosPago.forEach((metodo: any) => {
+          this.agregarMetodoPagoExistente(metodo);
+        });
+      } else {
+        // Agregar un método vacío por defecto
+        this.agregarMetodoPago();
+      }
+    } else {
+      // Si no existe, crear el formulario
+      this.inicializarFormulario();
+    }
+
+    // Actualizar validadores
+    this.editarVentaForm.get('montoAbonado')?.setValidators([
+      Validators.required,
+      Validators.min(0),
+      Validators.max(this.selectedVenta.total)
+    ]);
+    this.editarVentaForm.get('montoAbonado')?.updateValueAndValidity();
+  }
+
+  // CORRECCIÓN: Calcular monto de deuda correctamente
+  calcularMontoDeuda(): number {
+    if (!this.selectedVenta) return 0;
+
+    const total = this.selectedVenta.total || 0;
+    const abonado = this.selectedVenta.montoAbonado || 0;
+    const deuda = total - abonado;
+
+    return Math.max(0, deuda);
+  }
+
+  validarMontoMaximo(value: number) {
+    if (value === null || value === undefined) return;
+
+    const montoDeuda = this.calcularMontoDeuda();
+
+    if (value > montoDeuda) {
+      console.log('Ajustando monto automáticamente de', value, 'a', montoDeuda);
+
+      this.editarVentaForm.patchValue({
+        montoAbonado: montoDeuda
+      }, { emitEvent: false });
+    }
+  }
+
+  private agregarMetodoPagoExistente(metodo: any): void {
+    const metodoGroup = this.fb.group({
+      tipo: [metodo.tipo || '', Validators.required],
+      monto: [metodo.monto || 0, [Validators.required]]
+    });
+    this.metodosPagoArray.push(metodoGroup);
+  }
+
+  removerMetodoPago(index: number): void {
+    this.metodosPagoArray.removeAt(index);
+  }
+
+  calcularTotalMetodosPago(): number {
+    return this.metodosPagoArray.controls.reduce((total, control) => {
+      return total + (control.get('monto')?.value || 0);
+    }, 0);
+  }
+
+  mostrarResumenCambio(): boolean {
+    const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value;
+    return montoAbonado !== null && montoAbonado !== undefined && montoAbonado !== this.selectedVenta?.montoAbonado;
+  }
+
+  guardarEdicionVenta(modal: any): void {
+    if (this.editarVentaForm.invalid) {
+      this.marcarControlesComoSucios(this.editarVentaForm);
+      this.swalService.showWarning('Advertencia', 'Por favor complete todos los campos requeridos correctamente.');
+      return;
+    }
+
+    const formValue = this.editarVentaForm.value;
+    const totalMetodosPago = this.calcularTotalMetodosPago();
+
+    if (Math.abs(totalMetodosPago - formValue.montoAbonado) > 0.01) {
+      // Usar toLocaleString en lugar del pipe currency
+      const totalMetodosStr = totalMetodosPago.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+      const montoAbonadoStr = formValue.montoAbonado.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+
+      this.swalService.showWarning('Advertencia',
+        `La suma de los métodos de pago (${totalMetodosStr}) no coincide con el monto abonado (${montoAbonadoStr}).`);
+      return;
+    }
+
+    // Formatear los valores para el mensaje de confirmación
+    const nuevoMontoStr = formValue.montoAbonado.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+    const nuevoSaldoStr = (this.selectedVenta.total - formValue.montoAbonado).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+
+    this.swalService.showConfirm(
+      'Confirmar Edición',
+      `¿Está seguro de actualizar el abono de esta venta?<br>
+     <strong>Nuevo monto abonado:</strong> ${nuevoMontoStr}<br>
+     <strong>Nuevo saldo pendiente:</strong> ${nuevoSaldoStr}`,
+      'Sí, Guardar Cambios',
+      'Revisar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.procesarEdicionVenta(modal, formValue);
+      }
+    });
+  }
+
+  private procesarEdicionVenta(modal: any, formData: any): void {
+    const datosActualizados = {
+      id: this.selectedVenta.id,
+      montoAbonado: formData.montoAbonado,
+      observaciones: formData.observaciones,
+      metodosPago: formData.metodosPago,
+      fechaActualizacion: new Date().toISOString()
+    };
+
+    /*  this.historialVentaService.actualizarVentaAbono(datosActualizados).subscribe({
+        next: (response) => {
+          if (response.success) {
+            this.swalService.showSuccess('Éxito', 'Venta actualizada correctamente.');
+  
+            this.actualizarVentaLocal(response.data);
+  
+            modal.close();
+  
+            this.generarNuevoRecibo(response.data);
+          } else {
+            this.swalService.showError('Error', response.message);
+          }
+        },
+        error: (error) => {
+          console.error('Error al actualizar venta:', error);
+          this.swalService.showError('Error', 'No se pudo actualizar la venta. Verifique su conexión.');
+        }
+      });*/
+  }
+
+  private actualizarVentaLocal(ventaActualizada: any): void {
+    const index = this.ventasOriginales.findIndex(v => v.id === ventaActualizada.id);
+    if (index !== -1) {
+      this.ventasOriginales[index] = { ...this.ventasOriginales[index], ...ventaActualizada };
+    }
+
+    const indexFiltrado = this.ventasFiltradas.findIndex(v => v.id === ventaActualizada.id);
+    if (indexFiltrado !== -1) {
+      this.ventasFiltradas[indexFiltrado] = { ...this.ventasFiltradas[indexFiltrado], ...ventaActualizada };
+    }
+  }
+
+  private generarNuevoRecibo(venta: any): void {
+    console.log('Generando nuevo recibo para venta:', venta);
+  }
+
+  private marcarControlesComoSucios(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      if (control instanceof FormGroup) {
+        this.marcarControlesComoSucios(control);
+      } else if (control instanceof FormArray) {
+        control.controls.forEach((arrayControl: AbstractControl) => {
+          if (arrayControl instanceof FormGroup) {
+            this.marcarControlesComoSucios(arrayControl);
+          } else {
+            arrayControl.markAsTouched();
+          }
+        });
+      } else {
+        control?.markAsTouched();
+      }
+    });
+  }
+
+  getMontoRestanteParaMetodo(index: number): number {
+    const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value || 0;
+    const totalOtrosMetodos = this.metodosPagoArray.controls.reduce((total, control, i) => {
+      if (i !== index) {
+        return total + (control.get('monto')?.value || 0);
+      }
+      return total;
+    }, 0);
+
+    return Math.max(0, montoAbonado - totalOtrosMetodos);
+  }
+
+  getMontoMaximo(): number {
+    return this.calcularMontoDeuda();
+  }
+
+  calcularDiferenciaMetodos(): number {
+    const totalMetodos = this.calcularTotalMetodosPago();
+    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+    const montoDeuda = this.calcularMontoDeuda();
+
+    const totalRequerido = montoDeuda + montoAbonado;
+
+    return Math.abs(totalMetodos - totalRequerido);
+  }
+
+  validarPagoCompleto(): boolean {
+    const totalMetodos = this.calcularTotalMetodosPago();
+    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+    const montoDeuda = this.calcularMontoDeuda();
+    const totalRequerido = montoDeuda + montoAbonado;
+
+    return Math.abs(totalMetodos - totalRequerido) < 0.01;
+  }
+
+  calcularPorcentajeAbonado(): number {
+    if (!this.selectedVenta || !this.selectedVenta.total) return 0;
+
+    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
+    const nuevoMontoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+
+    const totalAbonado = montoAbonadoAnterior + nuevoMontoAbonado;
+
+    let porcentaje = (totalAbonado / this.selectedVenta.total) * 100;
+
+    porcentaje = Math.min(porcentaje, 100);
+
+    return Math.round(porcentaje);
+  }
+
+  getMontosProgreso(): string {
+    if (!this.selectedVenta) return '$0.00 / $0.00';
+
+    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
+    const nuevoMontoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+    const totalAbonado = montoAbonadoAnterior + nuevoMontoAbonado;
+
+    return `${this.formatearMoneda(totalAbonado)} / ${this.formatearMoneda(this.selectedVenta.total)}`;
+  }
+
+  onMontoAbonadoChange() {
+    setTimeout(() => {
+      this.calcularPorcentajeAbonado();
+    });
+  }
+
+  abrirModalEdicion(venta: any) {
+    this.selectedVenta = venta;
+    this.reinicializarFormularioConDeuda();
+  }
+
+  inicializarFormulario() {
+    const montoDeuda = this.calcularMontoDeuda();
+
+    this.editarVentaForm = this.fb.group({
+      montoAbonado: [montoDeuda, [
+        Validators.required,
+        Validators.min(0),
+        Validators.max(this.selectedVenta?.total || 0)
+      ]],
+      metodosPago: this.fb.array([]),
+      observaciones: ['']
+    });
+
+    this.agregarMetodoPago();
+
+    this.editarVentaForm.get('montoAbonado')?.valueChanges.subscribe(value => {
+      this.validarMontoMaximo(value);
+    });
+
+    this.metodosPagoArray.valueChanges.subscribe(() => {
+    });
+  }
+
+  getMontoMaximoPermitido(): number {
+    return this.calcularMontoDeuda();
+  }
+
+  // CORRECCIÓN: Determinar moneda según tipo de pago
+  actualizarMonedaPorMetodoPago(tipoPago: string) {
+    switch (tipoPago) {
+      case 'efectivo':
+        // Efectivo puede ser USD o EUR - mantener la actual o usar USD por defecto
+        if (this.monedaActual !== 'USD' && this.monedaActual !== 'EUR') {
+          this.monedaActual = 'USD';
+        }
+        break;
+      case 'pagomovil':
+      case 'transferencia':
+      case 'debito':
+      case 'credito':
+        this.monedaActual = 'Bs';
+        break;
+      case 'zelle':
+        this.monedaActual = 'USD';
+        break;
+      default:
+        // Mantener moneda actual si no se reconoce el tipo
+        break;
+    }
+  }
+
+  // CORRECCIÓN: Obtener símbolo de moneda
+  getSimboloMoneda(): string {
+    switch (this.monedaActual) {
+      case 'USD': return '$';
+      case 'EUR': return '€';
+      case 'Bs': return 'Bs';
+      default: return '$';
+    }
+  }
+
+  // CORRECCIÓN: Formatear moneda dinámicamente
+  formatearMoneda(monto: number): string {
+    if (monto === null || monto === undefined) return this.getSimboloMoneda() + '0.00';
+
+    switch (this.monedaActual) {
+      case 'USD':
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(monto);
+
+      case 'EUR':
+        return new Intl.NumberFormat('de-DE', {
+          style: 'currency',
+          currency: 'EUR',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(monto);
+
+      case 'Bs':
+        // Para Bolívares, usar formato personalizado
+        return `Bs ${monto.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+
+      default:
+        return '$' + monto.toFixed(2);
+    }
+  }
+
+  // CORRECCIÓN: Para usar en pipes de Angular
+  getMonedaParaPipe(): string {
+    switch (this.monedaActual) {
+      case 'USD': return 'USD';
+      case 'EUR': return 'EUR';
+      case 'Bs': return ' Bs'; // Los pipes de Angular no tienen BS, usar USD como base
+      default: return 'USD';
+    }
+  }
+
+  // CORRECCIÓN: Convertir montos si es necesario (para cálculos internos)
+  convertirMontoSiEsNecesario(monto: number): number {
+    // Aquí puedes implementar la lógica de conversión de divisas
+    // Por ahora devolvemos el mismo monto
+    return monto;
+  }
+
+  // CORRECCIÓN: Cuando se agrega un nuevo método de pago
+  agregarMetodoPago(): void {
+    const metodoGroup = this.fb.group({
+      tipo: ['', Validators.required],
+      monto: [0, [Validators.required]]
+    });
+
+    this.metodosPagoArray.push(metodoGroup);
+
+    // Suscribirse a cambios del tipo de pago
+    const index = this.metodosPagoArray.length - 1;
+    metodoGroup.get('tipo')?.valueChanges.subscribe(tipo => {
+      this.onMetodoPagoChange(index);
+    });
+  }
+
+  // Función para verificar si hay algún método de pago en efectivo seleccionado
+  hayMetodoEfectivoSeleccionado(): boolean {
+    if (!this.metodosPagoArray || this.metodosPagoArray.length === 0) {
+      return false;
+    }
+
+    // Verificar si algún método de pago es efectivo
+    const hayEfectivo = this.metodosPagoArray.controls.some(control =>
+      control.get('tipo')?.value === 'efectivo'
+    );
+
+    // Solo mostrar si hay efectivo Y la moneda actual es USD o EUR
+    return hayEfectivo && (this.monedaActual === 'USD' || this.monedaActual === 'EUR');
+  }
+
+  // También actualiza la función onMetodoPagoChange para manejar mejor los cambios
+  onMetodoPagoChange(index: number) {
+    const metodoControl = this.metodosPagoArray.at(index);
+    const tipoPago = metodoControl?.get('tipo')?.value;
+
+    switch (tipoPago) {
+      case 'efectivo':
+        // Mantener USD/EUR actual, no cambiar automáticamente
+        if (this.monedaActual !== 'USD' && this.monedaActual !== 'EUR') {
+          this.monedaActual = 'USD'; // Default a USD si no está en USD/EUR
+        }
+        break;
+      case 'pagomovil':
+      case 'transferencia':
+      case 'debito':
+      case 'credito':
+        this.monedaActual = 'BS';
+        break;
+      case 'zelle':
+        this.monedaActual = 'USD';
+        break;
+      default:
+        // Si se deselecciona un método, mantener moneda actual
+        break;
+    }
+  }
 }
+
+

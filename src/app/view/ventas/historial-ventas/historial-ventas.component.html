@@ -1,568 +1,573 @@
 <div class="card contenedor-generar-venta" style="margin-bottom: 0rem;">
-    <!-- Header del módulo -->
-    <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
-        <h4 class="mb-0"> Historial de Ventas </h4>
-        <div class="ms-auto">
-            <button class="btn btn-light btn-sm" (click)="generarInforme()">
-                <i class="bi bi-file-earmark-excel"></i> Generar Informe
-            </button>
+  <!-- Header modernizado del módulo -->
+  <div class="card-header-moderno">
+    <div class="header-content">
+      <div class="header-icon">
+        <i class="bi bi-clock-history"></i>
+      </div>
+      <div class="header-text">
+        <h4 class="header-title">Historial de Ventas</h4>
+        <div class="header-subtitle">Consulta y gestiona el historial completo de transacciones</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-excel-moderno" (click)="generarInforme()">
+        <i class="bi bi-file-earmark-excel"></i>
+        <span>Generar Informe</span>
+      </button>
+    </div>
+  </div>
+
+
+  <div class="card-body">
+    <!-- Filtros y búsquedas -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="row g-3 filtros-responsive">
+          <!-- Fila 1: Buscador, Asesor, Especialista -->
+          <div class="col-12 col-md-4">
+            <label class="form-label fw-semibold">🔍 Buscador</label>
+            <input type="text" class="form-control" placeholder="Cédula, nombre del paciente o N° de control..."
+              [(ngModel)]="filtros.busquedaGeneral" (input)="onFiltroChange()">
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label fw-semibold">👨‍💼 Asesor</label>
+            <select class="form-select" [(ngModel)]="filtros.asesor" (change)="onFiltroChange()">
+              <option value="">Todos</option>
+              <option *ngFor="let asesor of asesores" [value]="asesor.id">{{asesor.nombre}}</option>
+            </select>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label fw-semibold">👨‍⚕️ Especialista</label>
+            <select class="form-select" [(ngModel)]="filtros.especialista" (change)="onFiltroChange()">
+              <option value="">Todos</option>
+              <option *ngFor="let esp of especialistas" [value]="esp.id">{{esp.nombre}}</option>
+            </select>
+          </div>
+
+          <!-- Fila 2: Status, Rango de Fechas, Limpiar -->
+          <div class="col-12 col-md-4">
+            <label class="form-label fw-semibold">📊 Status</label>
+            <select class="form-select" [(ngModel)]="filtros.estado" (change)="onFiltroChange()">
+              <option value="">Todos</option>
+              <option value="completada">✅ Completada</option>
+              <option value="cancelada">❌ Cancelada</option>
+            </select>
+          </div>
+
+          <!-- Selector de Rango de Fechas y Botón Limpiar juntos -->
+          <div class="col-12 col-md-4">
+            <label class="form-label fw-semibold">📅 Rango de fechas</label>
+            <div class="input-group">
+              <button class="btn btn-outline-primary" type="button" (click)="toggleDatepicker()">
+                <i class="bi bi-calendar-range me-1"></i>
+                <span class="fecha-display">{{ getFechaDisplay() }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <label class="form-label fw-semibold d-block text-center text-md-start"></label>
+            <div class="d-flex justify-content-center justify-content-md-end" style="margin-top: 20px;">
+              <button class="btn btn-outline-warning" type="button" (click)="limpiarFiltros()"
+                title="Restablecer todos los filtros">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar filtros
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
 
+    <!-- Modal de Datepicker Flotante -->
+    <div class="modal fade show" [class.d-block]="showDatepicker" tabindex="-1" *ngIf="showDatepicker">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Seleccionar rango de fechas</h5>
+            <button type="button" class="btn-close btn-close-white" (click)="closeDatepicker()"
+              style="color: white !important;"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <!-- Selector de fecha única -->
+              <div class="col-12">
+                <label class="form-label fw-semibold">📌 Fecha única</label>
+                <input type="date" class="form-control" [(ngModel)]="fechaUnica" [max]="maxDate" [min]="minDate"
+                  (change)="onFechaUnicaChange()">
+                <div class="form-text">Selecciona una fecha específica</div>
+              </div>
 
+              <div class="col-12 text-center d-flex align-items-center justify-content-center">
+                <hr class="my-3">
+                <span class="text-muted">O selecciona un rango</span>
+              </div>
 
-    <div class="card-body">
-        <!-- Filtros y búsquedas -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="row g-3 filtros-responsive">
-                    <!-- Fila 1: Buscador, Asesor, Especialista -->
-                    <div class="col-12 col-md-4">
-                        <label class="form-label fw-semibold">🔍 Buscador</label>
-                        <input type="text" class="form-control"
-                            placeholder="Cédula, nombre del paciente o N° de control..."
-                            [(ngModel)]="filtros.busquedaGeneral" (input)="onFiltroChange()">
-                    </div>
+              <!-- Rango de fechas -->
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Desde</label>
+                <input type="date" class="form-control" [max]="filtros.fechaHasta || maxDate" [min]="minDate"
+                  [(ngModel)]="filtros.fechaDesde" (change)="onRangoChange()">
+              </div>
 
-                    <div class="col-12 col-md-4">
-                        <label class="form-label fw-semibold">👨‍💼 Asesor</label>
-                        <select class="form-select" [(ngModel)]="filtros.asesor" (change)="onFiltroChange()">
-                            <option value="">Todos</option>
-                            <option *ngFor="let asesor of asesores" [value]="asesor.id">{{asesor.nombre}}</option>
-                        </select>
-                    </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Hasta</label>
+                <input type="date" class="form-control" [min]="filtros.fechaDesde || minDate" [max]="maxDate"
+                  [(ngModel)]="filtros.fechaHasta" (change)="onRangoChange()">
+              </div>
 
-                    <div class="col-12 col-md-4">
-                        <label class="form-label fw-semibold">👨‍⚕️ Especialista</label>
-                        <select class="form-select" [(ngModel)]="filtros.especialista" (change)="onFiltroChange()">
-                            <option value="">Todos</option>
-                            <option *ngFor="let esp of especialistas" [value]="esp.id">{{esp.nombre}}</option>
-                        </select>
-                    </div>
-
-                    <!-- Fila 2: Status, Rango de Fechas, Limpiar -->
-                    <div class="col-12 col-md-4">
-                        <label class="form-label fw-semibold">📊 Status</label>
-                        <select class="form-select" [(ngModel)]="filtros.estado" (change)="onFiltroChange()">
-                            <option value="">Todos</option>
-                            <option value="completada">✅ Completada</option>
-                            <option value="cancelada">❌ Cancelada</option>
-                        </select>
-                    </div>
-
-                    <!-- Selector de Rango de Fechas y Botón Limpiar juntos -->
-                    <div class="col-12 col-md-4">
-                        <label class="form-label fw-semibold">📅 Rango de fechas</label>
-                        <div class="input-group">
-                            <button class="btn btn-outline-primary" type="button" (click)="toggleDatepicker()">
-                                <i class="bi bi-calendar-range me-1"></i>
-                                <span class="fecha-display">{{ getFechaDisplay() }}</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="col-12 col-md-4">
-                        <label class="form-label fw-semibold d-block text-center text-md-start"></label>
-                        <div class="d-flex justify-content-center justify-content-md-end" style="margin-top: 20px;">
-                            <button class="btn btn-outline-warning" type="button" (click)="limpiarFiltros()"
-                                title="Restablecer todos los filtros">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar filtros
-                            </button>
-                        </div>
-                    </div>
+              <!-- Presets rápidos -->
+              <div class="col-12">
+                <label class="form-label fw-semibold">Rangos predefinidos</label>
+                <div class="d-flex flex-wrap gap-2">
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'hoy'"
+                    [class.btn-outline-secondary]="presetActivo !== 'hoy'" (click)="setRangoPreset('hoy')">
+                    Hoy
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'ayer'"
+                    [class.btn-outline-secondary]="presetActivo !== 'ayer'" (click)="setRangoPreset('ayer')">
+                    Ayer
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana'"
+                    [class.btn-outline-secondary]="presetActivo !== 'semana'" (click)="setRangoPreset('semana')">
+                    Esta semana
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana_pasada'"
+                    [class.btn-outline-secondary]="presetActivo !== 'semana_pasada'"
+                    (click)="setRangoPreset('semana_pasada')">
+                    Semana pasada
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes'"
+                    [class.btn-outline-secondary]="presetActivo !== 'mes'" (click)="setRangoPreset('mes')">
+                    Este mes
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes_pasado'"
+                    [class.btn-outline-secondary]="presetActivo !== 'mes_pasado'"
+                    (click)="setRangoPreset('mes_pasado')">
+                    Mes pasado
+                  </button>
+                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'trimestre'"
+                    [class.btn-outline-secondary]="presetActivo !== 'trimestre'" (click)="setRangoPreset('trimestre')">
+                    Este trimestre
+                  </button>
                 </div>
+              </div>
             </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="limpiarFechas()">
+              <i class="bi bi-x-circle me-1"></i> Limpiar
+            </button>
+            <button type="button" class="btn btn-primary" (click)="aplicarFechas()">
+              <i class="bi bi-check-circle me-1"></i> Aplicar
+            </button>
+          </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Modal de Datepicker Flotante -->
-        <div class="modal fade show" [class.d-block]="showDatepicker" tabindex="-1" *ngIf="showDatepicker">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Seleccionar rango de fechas</h5>
-                        <button type="button" class="btn-close btn-close-white" (click)="closeDatepicker()"
-                            style="color: white !important;"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="row g-3">
-                            <!-- Selector de fecha única -->
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">📌 Fecha única</label>
-                                <input type="date" class="form-control" [(ngModel)]="fechaUnica" [max]="maxDate"
-                                    [min]="minDate" (change)="onFechaUnicaChange()">
-                                <div class="form-text">Selecciona una fecha específica</div>
-                            </div>
+    <!-- Overlay para cerrar al hacer click fuera -->
+    <div class="modal-backdrop fade show" *ngIf="showDatepicker" (click)="closeDatepicker()"></div>
 
-                            <div class="col-12 text-center d-flex align-items-center justify-content-center">
-                                <hr class="my-3">
-                                <span class="text-muted">O selecciona un rango</span>
-                            </div>
+    <!-- Controles de ordenamiento -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div class="d-flex align-items-center gap-2">
+        <span class="text-muted">Ordenar por:</span>
+        <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="ordenamiento.campo">
+          <option value="fecha">Fecha</option>
+          <option value="numeroControl">N° Control</option>
+          <option value="montoTotal">Monto Total</option>
+          <option value="paciente">Paciente</option>
+        </select>
+        <button class="btn btn-outline-secondary btn-sm" (click)="cambiarOrden()">
+          <i class="bi" [class.bi-arrow-up]="ordenamiento.ascendente"
+            [class.bi-arrow-down]="!ordenamiento.ascendente"></i>
+        </button>
+      </div>
 
-                            <!-- Rango de fechas -->
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Desde</label>
-                                <input type="date" class="form-control" [max]="filtros.fechaHasta || maxDate"
-                                    [min]="minDate" [(ngModel)]="filtros.fechaDesde" (change)="onRangoChange()">
-                            </div>
+      <div class="text-muted">
+        Mostrando {{ventasFiltradas.length}} de {{totalVentas}} ventas
+      </div>
+    </div>
 
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Hasta</label>
-                                <input type="date" class="form-control" [min]="filtros.fechaDesde || minDate"
-                                    [max]="maxDate" [(ngModel)]="filtros.fechaHasta" (change)="onRangoChange()">
-                            </div>
-
-                            <!-- Presets rápidos -->
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">Rangos predefinidos</label>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'hoy'"
-                                        [class.btn-outline-secondary]="presetActivo !== 'hoy'"
-                                        (click)="setRangoPreset('hoy')">
-                                        Hoy
-                                    </button>
-                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'ayer'"
-                                        [class.btn-outline-secondary]="presetActivo !== 'ayer'"
-                                        (click)="setRangoPreset('ayer')">
-                                        Ayer
-                                    </button>
-                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana'"
-                                        [class.btn-outline-secondary]="presetActivo !== 'semana'"
-                                        (click)="setRangoPreset('semana')">
-                                        Esta semana
-                                    </button>
-                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana_pasada'"
-                                        [class.btn-outline-secondary]="presetActivo !== 'semana_pasada'"
-                                        (click)="setRangoPreset('semana_pasada')">
-                                        Semana pasada
-                                    </button>
-                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes'"
-                                        [class.btn-outline-secondary]="presetActivo !== 'mes'"
-                                        (click)="setRangoPreset('mes')">
-                                        Este mes
-                                    </button>
-                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes_pasado'"
-                                        [class.btn-outline-secondary]="presetActivo !== 'mes_pasado'"
-                                        (click)="setRangoPreset('mes_pasado')">
-                                        Mes pasado
-                                    </button>
-                                    <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'trimestre'"
-                                        [class.btn-outline-secondary]="presetActivo !== 'trimestre'"
-                                        (click)="setRangoPreset('trimestre')">
-                                        Este trimestre
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" (click)="limpiarFechas()">
-                            <i class="bi bi-x-circle me-1"></i> Limpiar
-                        </button>
-                        <button type="button" class="btn btn-primary" (click)="aplicarFechas()">
-                            <i class="bi bi-check-circle me-1"></i> Aplicar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Overlay para cerrar al hacer click fuera -->
-        <div class="modal-backdrop fade show" *ngIf="showDatepicker" (click)="closeDatepicker()"></div>
-
-        <!-- Controles de ordenamiento -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="d-flex align-items-center gap-2">
-                <span class="text-muted">Ordenar por:</span>
-                <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="ordenamiento.campo">
-                    <option value="fecha">Fecha</option>
-                    <option value="numeroControl">N° Control</option>
-                    <option value="montoTotal">Monto Total</option>
-                    <option value="paciente">Paciente</option>
-                </select>
-                <button class="btn btn-outline-secondary btn-sm" (click)="cambiarOrden()">
-                    <i class="bi" [class.bi-arrow-up]="ordenamiento.ascendente"
-                        [class.bi-arrow-down]="!ordenamiento.ascendente"></i>
-                </button>
-            </div>
-
-            <div class="text-muted">
-                Mostrando {{ventasFiltradas.length}} de {{totalVentas}} ventas
-            </div>
-        </div>
-
-        <!-- Lista de ventas - Diseño Innovador -->
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-0">
-                <div class="ventas-grid">
-                    <div *ngFor="let venta of ventasFiltradas" class="venta-card">
-                        <!-- Tarjeta Principal -->
-                        <div class="venta-header" (click)="toggleDetalleVenta(venta.id)">
-                            <!-- Avatar y Info Principal -->
-                            <div class="venta-avatar">
-                                <div class="avatar-circle" [ngClass]="{
+    <!-- Lista de ventas - Diseño Innovador -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+        <div class="ventas-grid">
+          <div *ngFor="let venta of ventasFiltradas" class="venta-card">
+            <!-- Tarjeta Principal -->
+            <div class="venta-header" (click)="toggleDetalleVenta(venta.id)">
+              <!-- Avatar y Info Principal -->
+              <div class="venta-avatar">
+                <div class="avatar-circle" [ngClass]="{
                             'avatar-success': venta.estado === 'completada',
                             'avatar-warning': venta.estado === 'pendiente',
                             'avatar-danger': venta.estado === 'cancelada'
                         }">
-                                    <i class="bi" [class.bi-check-lg]="venta.estado === 'completada'"
-                                        [class.bi-clock]="venta.estado === 'pendiente'"
-                                        [class.bi-x-lg]="venta.estado === 'cancelada'"></i>
-                                </div>
-                            </div>
+                  <i class="bi" [class.bi-check-lg]="venta.estado === 'completada'"
+                    [class.bi-clock]="venta.estado === 'pendiente'" [class.bi-x-lg]="venta.estado === 'cancelada'"></i>
+                </div>
+              </div>
 
-                            <!-- Información Central -->
-                            <div class="venta-info">
-                                <div class="venta-title">
-                                    <h6 class="mb-1 fw-bold text-dark">{{venta.paciente.nombre}}</h6>
-                                    <div class="venta-meta">
-                                        <span class="meta-item">
-                                            <i class="bi bi-person-badge text-muted"></i>
-                                            CI. {{venta.paciente.cedula}}
-                                        </span>
-                                        <span class="meta-divider">•</span>
-                                        <span class="meta-item">
-                                            <i class="bi bi-calendar3 text-muted"></i>
-                                            {{venta.fecha | date:'dd/MM/yyyy'}}
-                                        </span>
-                                        <span class="meta-divider">•</span>
-                                        <span class="meta-item">
-                                            <i class="bi bi-clock text-muted"></i>
-                                            {{venta.fecha | date:'HH:mm'}}
-                                        </span>
-                                    </div>
-                                </div>
+              <!-- Información Central -->
+              <div class="venta-info">
+                <div class="venta-title">
+                  <h6 class="mb-1 fw-bold text-dark">{{venta.paciente.nombre}}</h6>
+                  <div class="venta-meta">
+                    <span class="meta-item">
+                      <i class="bi bi-person-badge text-muted"></i>
+                      CI. {{venta.paciente.cedula}}
+                    </span>
+                    <span class="meta-divider">•</span>
+                    <span class="meta-item">
+                      <i class="bi bi-calendar3 text-muted"></i>
+                      {{venta.fecha | date:'dd/MM/yyyy'}}
+                    </span>
+                    <span class="meta-divider">•</span>
+                    <span class="meta-item">
+                      <i class="bi bi-clock text-muted"></i>
+                      {{venta.fecha | date:'HH:mm'}}
+                    </span>
+                  </div>
+                </div>
 
-                                <!-- Información Adicional -->
-                                <div class="venta-details">
-                                    <div class="detail-item">
-                                        <small class="text-muted">Control</small>
-                                        <strong class="text-primary">#{{venta.numeroControl}}</strong>
-                                    </div>
-                                    <div class="detail-item">
-                                        <small class="text-muted">Asesor</small>
-                                        <span class="text-dark">{{venta.asesor.nombre}}</span>
-                                    </div>
-                                    <div class="detail-item">
-                                        <small class="text-muted">Forma Pago</small>
-                                        <span class="text-capitalize badge forma-pago-badge" [ngClass]="{
+                <!-- Información Adicional -->
+                <div class="venta-details">
+                  <div class="detail-item">
+                    <small class="text-muted">Control</small>
+                    <strong class="text-primary">#{{venta.numeroControl}}</strong>
+                  </div>
+                  <div class="detail-item">
+                    <small class="text-muted">Asesor</small>
+                    <span class="text-dark">{{venta.asesor.nombre}}</span>
+                  </div>
+                  <div class="detail-item">
+                    <small class="text-muted">Forma Pago</small>
+                    <span class="text-capitalize badge forma-pago-badge" [ngClass]="{
                                     'forma-contado': venta.formaPago === 'contado',
                                     'forma-cashea': venta.formaPago === 'cashea',
                                     'forma-abono': venta.formaPago === 'abono'
                                 }">
-                                            {{venta.formaPago}}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                      {{venta.formaPago}}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-                            <!-- Lado Derecho - Estado y Monto -->
-                            <div class="venta-sidebar">
-                                <!-- Estado -->
-                                <div class="estado-badge" [ngClass]="{
+              <!-- Lado Derecho - Estado y Monto -->
+              <div class="venta-sidebar">
+                <!-- Estado -->
+                <div class="estado-badge" [ngClass]="{
                             'estado-completada': venta.estado === 'completada',
                             'estado-pendiente': venta.estado === 'pendiente',
                             'estado-cancelada': venta.estado === 'cancelada'
                         }">
-                                    <div class="estado-dot"></div>
-                                    <span class="estado-text">{{venta.estado | titlecase}}</span>
-                                </div>
+                  <div class="estado-dot"></div>
+                  <span class="estado-text">{{venta.estado | titlecase}}</span>
+                </div>
 
-                                <!-- Monto -->
-                                <div class="monto-display">
-                                    <div class="monto-amount text-primary fw-bold">
-                                        {{venta.montoTotal | currency:'USD':'symbol':'1.2-2'}}
-                                    </div>
-                                    <div class="monto-label text-muted small">Total</div>
-                                </div>
+                <!-- Monto -->
+                <div class="monto-display">
+                  <div class="monto-amount text-primary fw-bold">
+                    {{venta.montoTotal | currency:'USD':'symbol':'1.2-2'}}
+                  </div>
+                  <div class="monto-label text-muted small">Total</div>
+                </div>
 
-                                <!-- Ícono Expandir -->
-                                <div class="expand-icon">
-                                    <i class="bi" [class.bi-chevron-down]="!venta.mostrarDetalle"
-                                        [class.bi-chevron-up]="venta.mostrarDetalle"></i>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Ícono Expandir -->
+                <div class="expand-icon">
+                  <i class="bi" [class.bi-chevron-down]="!venta.mostrarDetalle"
+                    [class.bi-chevron-up]="venta.mostrarDetalle"></i>
+                </div>
+              </div>
+            </div>
 
-                        <!-- Panel Expandible - Diseño Moderno -->
-                        <div *ngIf="venta.mostrarDetalle" class="venta-expandible">
-                            <div class="expandible-content">
-                                <!-- Sección Superior: Resumen Rápido -->
-                                <div class="resumen-rapido">
-                                    <div class="resumen-item">
-                                        <i class="bi bi-cart-check text-primary"></i>
-                                        <div>
-                                            <small class="text-muted">Productos</small>
-                                            <div class="fw-semibold">{{venta.productos?.length || 0}} items</div>
-                                        </div>
-                                    </div>
-                                    <div class="resumen-item">
-                                        <i class="bi bi-currency-dollar text-success"></i>
-                                        <div>
-                                            <small class="text-muted">Subtotal</small>
-                                            <div class="fw-semibold">{{venta.subtotal | number:'1.2-2'}}</div>
-                                        </div>
-                                    </div>
-                                    <div class="resumen-item">
-                                        <i class="bi bi-percent text-warning"></i>
-                                        <div>
-                                            <small class="text-muted">Descuento</small>
-                                            <div class="fw-semibold">{{venta.descuento || 0}}%</div>
-                                        </div>
-                                    </div>
-                                    <div class="resumen-item">
-                                        <i class="bi bi-cash-coin text-info"></i>
-                                        <div>
-                                            <small class="text-muted">Pagado</small>
-                                            <div class="fw-semibold">{{getTotalPagadoVenta(venta) | number:'1.2-2'}}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Sección Media: Detalles Específicos -->
-                                <div class="detalles-grid">
-                                    <!-- Métodos de Pago -->
-                                    <div class="detalle-seccion">
-                                        <h6 class="seccion-titulo">
-                                            <i class="bi bi-credit-card me-2"></i>
-                                            Métodos de Pago
-                                        </h6>
-                                        <div class="metodos-pago">
-                                            <div *ngFor="let metodo of venta.metodosPago" class="metodo-item">
-                                                <div class="metodo-icono" [ngClass]="'metodo-' + metodo.tipo">
-                                                    <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
-                                                        [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
-                                                        [class.bi-phone]="metodo.tipo === 'pagomovil'"
-                                                        [class.bi-bank]="metodo.tipo === 'transferencia'"
-                                                        [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
-                                                </div>
-                                                <div class="metodo-info">
-                                                    <span class="metodo-tipo text-capitalize">{{metodo.tipo}}</span>
-                                                    <span class="metodo-monto">{{metodo.monto | number:'1.2-2'}}</span>
-                                                </div>
-                                                <div class="metodo-conversion" *ngIf="metodo.conversionBs">
-                                                    <small class="text-muted">{{metodo.conversionBs | number:'1.2-2'}}
-                                                        Bs</small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Información Adicional -->
-                                    <div class="detalle-seccion">
-                                        <h6 class="seccion-titulo">
-                                            <i class="bi bi-info-circle me-2"></i>
-                                            Información Adicional
-                                        </h6>
-                                        <div class="info-adicional">
-                                            <div class="info-item">
-                                                <span class="info-label">Especialista:</span>
-                                                <span class="info-value">{{venta.especialista?.nombre || 'No asignado'}}</span>
-                                            </div>
-                                            <div class="info-item">
-                                                <span class="info-label">Sede:</span>
-                                                <span class="info-value text-capitalize">{{venta.sede}}</span>
-                                            </div>
-                                            <div class="info-item">
-                                                <span class="info-label">Moneda:</span>
-                                                <span class="info-value text-uppercase">{{venta.moneda}}</span>
-                                            </div>
-                                            <div class="info-item" *ngIf="venta.observaciones">
-                                                <span class="info-label">Observaciones:</span>
-                                                <span class="info-value">{{venta.observaciones}}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Sección Inferior: Acciones -->
-                                <div class="acciones-venta">
-                                    <div class="acciones-left">
-                                        <span class="text-muted small">
-                                            <i class="bi bi-clock-history me-1"></i>
-                                            Creado el {{venta.fecha | date:'dd/MM/yyyy'}}
-                                        </span>
-                                    </div>
-                                    <div class="acciones-right">
-                                        <button class="btn btn-outline-primary btn-sm accion-btn"
-                                            (click)="verRecibo(venta)">
-                                            <i class="bi bi-receipt"></i>
-                                            <span>Recibo</span>
-                                        </button>
-                                        <button *ngIf="venta.estado !== 'cancelada'"
-                                            class="btn btn-outline-danger btn-sm accion-btn"
-                                            (click)="cancelarVenta(venta)">
-                                            <i class="bi bi-x-circle"></i>
-                                            <span>Cancelar</span>
-                                        </button>
-                                        <button class="btn btn-outline-info btn-sm accion-btn"
-                                            (click)="verDetalleCompleto(venta)">
-                                            <i class="bi bi-eye"></i>
-                                            <span>Detalles</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Panel Expandible - Diseño Moderno -->
+            <div *ngIf="venta.mostrarDetalle" class="venta-expandible">
+              <div class="expandible-content">
+                <!-- Sección Superior: Resumen Rápido -->
+                <div class="resumen-rapido">
+                  <div class="resumen-item">
+                    <i class="bi bi-cart-check text-primary"></i>
+                    <div>
+                      <small class="text-muted">Productos</small>
+                      <div class="fw-semibold">{{venta.productos?.length || 0}} items</div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Paginación Moderna -->
-        <div class="d-flex justify-content-between align-items-center mt-4 p-3 bg-light rounded-3">
-            <!-- Información de resultados -->
-            <div class="d-flex align-items-center gap-3">
-                <span class="text-muted">
-                    <strong>{{ ventasFiltradas.length }}</strong> resultados
-                </span>
-                <div class="vr"></div>
-                <span class="text-muted">
-                    Página <strong>{{ paginaActual }}</strong> de <strong>{{ totalPaginas }}</strong>
-                </span>
-            </div>
-
-            <!-- Controles de paginación centrados -->
-            <div class="d-flex align-items-center gap-2">
-                <!-- Botón Anterior -->
-                <button class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
-                    (click)="cambiarPagina(paginaActual - 1)" [disabled]="paginaActual === 1"
-                    [class.btn-outline-secondary]="paginaActual === 1">
-                    <i class="bi bi-chevron-left"></i>
-                    <span class="d-none d-sm-inline">Anterior</span>
-                </button>
-
-                <!-- Selector de página rápida -->
-                <div class="input-group input-group-sm" style="width: 120px;">
-                    <span class="input-group-text bg-white">Pág.</span>
-                    <select class="form-select" [(ngModel)]="paginaActual" (change)="cambiarPagina(paginaActual)">
-                        <option *ngFor="let pagina of getRangoPaginas()" [value]="pagina">
-                            {{ pagina }}
-                        </option>
-                    </select>
-                </div>
-
-                <!-- Botón Siguiente -->
-                <button class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
-                    (click)="cambiarPagina(paginaActual + 1)" [disabled]="paginaActual === totalPaginas"
-                    [class.btn-outline-secondary]="paginaActual === totalPaginas">
-                    <span class="d-none d-sm-inline">Siguiente</span>
-                    <i class="bi bi-chevron-right"></i>
-                </button>
-            </div>
-
-            <!-- Controles adicionales a la derecha -->
-            <div class="d-flex align-items-center gap-3">
-                <!-- Selector de items por página -->
-                <div class="d-flex align-items-center gap-2">
-                    <span class="text-muted small">Mostrar:</span>
-                    <select class="form-select form-select-sm" style="width: 80px;" [(ngModel)]="itemsPorPagina"
-                        (change)="cambiarItemsPorPagina()">
-                        <option value="5">5</option>
-                        <option value="10">10</option>
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <!-- Paginación Móvil (solo se muestra en pantallas pequeñas) -->
-        <div class="d-lg-none mt-3">
-            <div class="card">
-                <div class="card-body py-2">
-                    <div class="row align-items-center">
-                        <div class="col-4">
-                            <button
-                                class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
-                                (click)="cambiarPagina(paginaActual - 1)" [disabled]="paginaActual === 1">
-                                <i class="bi bi-chevron-left"></i>
-                                <span>Ant</span>
-                            </button>
-                        </div>
-                        <div class="col-4 text-center">
-                            <span class="text-muted small">
-                                {{ paginaActual }}/{{ totalPaginas }}
-                            </span>
-                        </div>
-                        <div class="col-4">
-                            <button
-                                class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
-                                (click)="cambiarPagina(paginaActual + 1)" [disabled]="paginaActual === totalPaginas">
-                                <span>Sig</span>
-                                <i class="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
+                  </div>
+                  <div class="resumen-item">
+                    <i class="bi bi-currency-dollar text-success"></i>
+                    <div>
+                      <small class="text-muted">Subtotal</small>
+                      <div class="fw-semibold">{{venta.subtotal | number:'1.2-2'}}</div>
                     </div>
+                  </div>
+                  <div class="resumen-item">
+                    <i class="bi bi-percent text-warning"></i>
+                    <div>
+                      <small class="text-muted">Descuento</small>
+                      <div class="fw-semibold">{{venta.descuento || 0}}%</div>
+                    </div>
+                  </div>
+                  <div class="resumen-item">
+                    <i class="bi bi-cash-coin text-info"></i>
+                    <div>
+                      <small class="text-muted">Pagado</small>
+                      <div class="fw-semibold">{{getTotalPagadoVenta(venta) | number:'1.2-2'}}
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                <!-- Sección Media: Detalles Específicos -->
+                <div class="detalles-grid">
+                  <!-- Métodos de Pago -->
+                  <div class="detalle-seccion">
+                    <h6 class="seccion-titulo">
+                      <i class="bi bi-credit-card me-2"></i>
+                      Métodos de Pago
+                    </h6>
+                    <div class="metodos-pago">
+                      <div *ngFor="let metodo of venta.metodosPago" class="metodo-item">
+                        <div class="metodo-icono" [ngClass]="'metodo-' + metodo.tipo">
+                          <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
+                            [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
+                            [class.bi-phone]="metodo.tipo === 'pagomovil'"
+                            [class.bi-bank]="metodo.tipo === 'transferencia'"
+                            [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
+                        </div>
+                        <div class="metodo-info">
+                          <span class="metodo-tipo text-capitalize">{{metodo.tipo}}</span>
+                          <span class="metodo-monto">{{metodo.monto | number:'1.2-2'}}</span>
+                        </div>
+                        <div class="metodo-conversion" *ngIf="metodo.conversionBs">
+                          <small class="text-muted">{{metodo.conversionBs | number:'1.2-2'}}
+                            Bs</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Información Adicional -->
+                  <div class="detalle-seccion">
+                    <h6 class="seccion-titulo">
+                      <i class="bi bi-info-circle me-2"></i>
+                      Información Adicional
+                    </h6>
+                    <div class="info-adicional">
+                      <div class="info-item">
+                        <span class="info-label">Especialista:</span>
+                        <span class="info-value">{{venta.especialista?.nombre || 'No asignado'}}</span>
+                      </div>
+                      <div class="info-item">
+                        <span class="info-label">Sede:</span>
+                        <span class="info-value text-capitalize">{{venta.sede}}</span>
+                      </div>
+                      <div class="info-item">
+                        <span class="info-label">Moneda:</span>
+                        <span class="info-value text-uppercase">{{venta.moneda}}</span>
+                      </div>
+                      <div class="info-item" *ngIf="venta.observaciones">
+                        <span class="info-label">Observaciones:</span>
+                        <span class="info-value">{{venta.observaciones}}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sección Inferior: Acciones -->
+                <div class="acciones-venta">
+                  <div class="acciones-left">
+                    <span class="text-muted small">
+                      <i class="bi bi-clock-history me-1"></i>
+                      Creado el {{venta.fecha | date:'dd/MM/yyyy'}}
+                    </span>
+                  </div>
+                  <div class="acciones-right">
+                    <!-- Botón de Editar (solo para abonos con deuda pendiente) -->
+                    <button *ngIf="mostrarBotonEditar(venta)" class="btn btn-outline-warning btn-sm accion-btn"
+                      (click)="editarVenta(venta)">
+                      <i class="bi bi-pencil"></i>
+                      <span>Editar</span>
+                    </button>
+
+                    <button class="btn btn-outline-primary btn-sm accion-btn" (click)="verRecibo(venta)">
+                      <i class="bi bi-receipt"></i>
+                      <span>Recibo</span>
+                    </button>
+                    <button *ngIf="venta.estado !== 'cancelada'" class="btn btn-outline-danger btn-sm accion-btn"
+                      (click)="cancelarVenta(venta)">
+                      <i class="bi bi-x-circle"></i>
+                      <span>Cancelar</span>
+                    </button>
+                    <button class="btn btn-outline-info btn-sm accion-btn" (click)="verDetalleCompleto(venta)">
+                      <i class="bi bi-eye"></i>
+                      <span>Detalles</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
         </div>
+      </div>
     </div>
+
+    <!-- Paginación Moderna -->
+    <div class="d-flex justify-content-between align-items-center mt-4 p-3 bg-light rounded-3">
+      <!-- Información de resultados -->
+      <div class="d-flex align-items-center gap-3">
+        <span class="text-muted">
+          <strong>{{ ventasFiltradas.length }}</strong> resultados
+        </span>
+        <div class="vr"></div>
+        <span class="text-muted">
+          Página <strong>{{ paginaActual }}</strong> de <strong>{{ totalPaginas }}</strong>
+        </span>
+      </div>
+
+      <!-- Controles de paginación centrados -->
+      <div class="d-flex align-items-center gap-2">
+        <!-- Botón Anterior -->
+        <button class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+          (click)="cambiarPagina(paginaActual - 1)" [disabled]="paginaActual === 1"
+          [class.btn-outline-secondary]="paginaActual === 1">
+          <i class="bi bi-chevron-left"></i>
+          <span class="d-none d-sm-inline">Anterior</span>
+        </button>
+
+        <!-- Selector de página rápida -->
+        <div class="input-group input-group-sm" style="width: 120px;">
+          <span class="input-group-text bg-white">Pág.</span>
+          <select class="form-select" [(ngModel)]="paginaActual" (change)="cambiarPagina(paginaActual)">
+            <option *ngFor="let pagina of getRangoPaginas()" [value]="pagina">
+              {{ pagina }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Botón Siguiente -->
+        <button class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+          (click)="cambiarPagina(paginaActual + 1)" [disabled]="paginaActual === totalPaginas"
+          [class.btn-outline-secondary]="paginaActual === totalPaginas">
+          <span class="d-none d-sm-inline">Siguiente</span>
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+
+      <!-- Controles adicionales a la derecha -->
+      <div class="d-flex align-items-center gap-3">
+        <!-- Selector de items por página -->
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-muted small">Mostrar:</span>
+          <select class="form-select form-select-sm" style="width: 80px;" [(ngModel)]="itemsPorPagina"
+            (change)="cambiarItemsPorPagina()">
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paginación Móvil (solo se muestra en pantallas pequeñas) -->
+    <div class="d-lg-none mt-3">
+      <div class="card">
+        <div class="card-body py-2">
+          <div class="row align-items-center">
+            <div class="col-4">
+              <button
+                class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
+                (click)="cambiarPagina(paginaActual - 1)" [disabled]="paginaActual === 1">
+                <i class="bi bi-chevron-left"></i>
+                <span>Ant</span>
+              </button>
+            </div>
+            <div class="col-4 text-center">
+              <span class="text-muted small">
+                {{ paginaActual }}/{{ totalPaginas }}
+              </span>
+            </div>
+            <div class="col-4">
+              <button
+                class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
+                (click)="cambiarPagina(paginaActual + 1)" [disabled]="paginaActual === totalPaginas">
+                <span>Sig</span>
+                <i class="bi bi-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 
 <!-- Modal de Confirmación para Cancelar Venta -->
 <ng-template #cancelarVentaModal let-modal>
-    <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            Confirmar Cancelación
-        </h5>
-        <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()"></button>
+  <div class="modal-header bg-primary text-white">
+    <h5 class="modal-title">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      Confirmar Cancelación
+    </h5>
+    <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()"></button>
+  </div>
+
+  <div class="modal-body">
+    <!-- Cambiamos alert-warning por alert-info con fondo azul claro -->
+    <div class="alert alert-info" role="alert">
+      <h6 class="alert-heading fw-bold">¿Está seguro de que desea cancelar esta venta?</h6>
+      <p class="mb-0 mt-2">
+        <strong>Venta {{ formatNumeroVenta(selectedVenta?.id) }}</strong><br>
+        <span *ngIf="selectedVenta?.paciente?.nombre">Paciente: {{ selectedVenta.paciente.nombre }}</span><br>
+        <span *ngIf="selectedVenta?.montoTotal">Monto: {{ selectedVenta.montoTotal | currency }}</span>
+      </p>
     </div>
 
-    <div class="modal-body">
-        <!-- Cambiamos alert-warning por alert-info con fondo azul claro -->
-        <div class="alert alert-info" role="alert">
-            <h6 class="alert-heading fw-bold">¿Está seguro de que desea cancelar esta venta?</h6>
-            <p class="mb-0 mt-2">
-                <strong>Venta {{ formatNumeroVenta(selectedVenta?.id) }}</strong><br>
-                <span *ngIf="selectedVenta?.paciente?.nombre">Paciente: {{ selectedVenta.paciente.nombre }}</span><br>
-                <span *ngIf="selectedVenta?.montoTotal">Monto: {{ selectedVenta.montoTotal | currency }}</span>
-            </p>
-        </div>
-
-        <div class="form-group mt-3">
-            <label for="motivoCancelacion" class="form-label">
-                <strong>Motivo de cancelación:</strong>
-            </label>
-            <textarea id="motivoCancelacion" class="form-control" rows="3"
-                placeholder="Ingrese el motivo de la cancelación..." [(ngModel)]="motivoCancelacion" maxlength="500">
+    <div class="form-group mt-3">
+      <label for="motivoCancelacion" class="form-label">
+        <strong>Motivo de cancelación:</strong>
+      </label>
+      <textarea id="motivoCancelacion" class="form-control" rows="3"
+        placeholder="Ingrese el motivo de la cancelación..." [(ngModel)]="motivoCancelacion" maxlength="500">
       </textarea>
-            <small class="text-muted">{{ motivoCancelacion?.length || 0 }}/500 caracteres</small>
-        </div>
+      <small class="text-muted">{{ motivoCancelacion?.length || 0 }}/500 caracteres</small>
     </div>
+  </div>
 
-    <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">
-            <i class="bi bi-x-circle me-1"></i> Cancelar
-        </button>
-        <button type="button" class="btn btn-danger" (click)="confirmarCancelacion(modal)">
-            <i class="bi bi-check-circle me-1"></i> Confirmar Cancelación
-        </button>
-    </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">
+      <i class="bi bi-x-circle me-1"></i> Cancelar
+    </button>
+    <button type="button" class="btn btn-danger" (click)="confirmarCancelacion(modal)">
+      <i class="bi bi-check-circle me-1"></i> Confirmar Cancelación
+    </button>
+  </div>
 </ng-template>
 
 
 <!-- Modal de Detalle Completo de Venta - Diseño Simplificado -->
 <ng-template #detalleVentaModal let-modal>
   <!-- Header con gradiente -->
-<div class="modal-header-detalle">
-  <div class="header-content">
-    <div class="header-icon">
-      <i class="bi bi-file-earmark-text"></i>
-    </div>
-    <div class="header-text">
-      <h5 class="modal-title">Detalle de Venta</h5>
-      <div class="header-subtitle">
-        <span class="badge badge-primary">#{{selectedVenta?.numeroControl}}</span>
-        <span class="separator">•</span>
-        <span class="fecha">{{selectedVenta?.fecha | date:'dd/MM/yyyy'}}</span>
+  <div class="modal-header-detalle">
+    <div class="header-content">
+      <div class="header-icon">
+        <i class="bi bi-file-earmark-text"></i>
+      </div>
+      <div class="header-text">
+        <h5 class="modal-title">Detalle de Venta</h5>
+        <div class="header-subtitle">
+          <span class="badge badge-primary">#{{selectedVenta?.numeroControl}}</span>
+          <span class="separator">•</span>
+          <span class="fecha">{{selectedVenta?.fecha | date:'dd/MM/yyyy'}}</span>
+        </div>
       </div>
     </div>
+    <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Cerrar"></button>
   </div>
-  <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Cerrar"></button>
-</div>
 
   <div class="modal-body-detalle">
     <!-- Tarjeta de Información Principal -->
@@ -708,13 +713,15 @@
               <div class="producto-codigo">Código: {{producto.codigo}}</div>
               <div class="producto-detalles">
                 <span class="cantidad">{{producto.cantidad}} und</span>
-                <span class="precio">{{producto.precio | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</span>
+                <span class="precio">{{producto.precio | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' :
+                  'BS'}}</span>
                 <span *ngIf="producto.aplicaIva" class="iva-badge">+IVA</span>
               </div>
             </div>
             <div class="producto-totales">
               <div class="subtotal">{{producto.subtotal | number:'1.2-2'}}</div>
-              <div class="total">{{producto.total | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
+              <div class="total">{{producto.total | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' :
+                'BS'}}</div>
             </div>
           </div>
         </div>
@@ -741,7 +748,7 @@
             <label>Descuento</label>
             <div class="value">{{selectedVenta?.descuento || 0}}%</div>
           </div>
-          
+
           <!-- Información específica por tipo de pago -->
           <div *ngIf="selectedVenta?.formaPago === 'cashea'" class="cashea-info">
             <div class="pago-item">
@@ -750,22 +757,26 @@
             </div>
             <div class="pago-item">
               <label>Monto Inicial</label>
-              <div class="value">{{selectedVenta?.montoInicial | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
+              <div class="value">{{selectedVenta?.montoInicial | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ?
+                'USD' : 'BS'}}</div>
             </div>
             <div class="pago-item">
               <label>Cuotas</label>
-              <div class="value">{{selectedVenta?.cantidadCuotas}} de {{selectedVenta?.montoPorCuota | number:'1.2-2'}} c/u</div>
+              <div class="value">{{selectedVenta?.cantidadCuotas}} de {{selectedVenta?.montoPorCuota | number:'1.2-2'}}
+                c/u</div>
             </div>
           </div>
 
           <div *ngIf="selectedVenta?.formaPago === 'abono'" class="abono-info">
             <div class="pago-item">
               <label>Monto Abonado</label>
-              <div class="value">{{selectedVenta?.montoAbonado | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
+              <div class="value">{{selectedVenta?.montoAbonado | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ?
+                'USD' : 'BS'}}</div>
             </div>
             <div class="pago-item">
               <label>Saldo Pendiente</label>
-              <div class="value">{{(selectedVenta?.total - selectedVenta?.montoAbonado) | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
+              <div class="value">{{(selectedVenta?.total - selectedVenta?.montoAbonado) | number:'1.2-2'}}
+                {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
             </div>
           </div>
         </div>
@@ -783,14 +794,14 @@
           <div *ngFor="let metodo of selectedVenta?.metodosPago" class="metodo-item-detalle">
             <div class="metodo-icono">
               <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
-                 [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
-                 [class.bi-phone]="metodo.tipo === 'pagomovil'"
-                 [class.bi-bank]="metodo.tipo === 'transferencia'"
-                 [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
+                [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
+                [class.bi-phone]="metodo.tipo === 'pagomovil'" [class.bi-bank]="metodo.tipo === 'transferencia'"
+                [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
             </div>
             <div class="metodo-info-detalle">
               <div class="metodo-tipo">{{metodo.tipo}}</div>
-              <div class="metodo-monto">{{metodo.monto | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
+              <div class="metodo-monto">{{metodo.monto | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' :
+                'BS'}}</div>
             </div>
             <div class="metodo-conversion" *ngIf="metodo.conversionBs">
               <div class="conversion-text">{{metodo.conversionBs | number:'1.2-2'}} Bs</div>
@@ -810,19 +821,23 @@
         <div class="resumen-grid">
           <div class="resumen-item">
             <span class="resumen-label">Subtotal</span>
-            <span class="resumen-value">{{selectedVenta?.subtotal | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</span>
+            <span class="resumen-value">{{selectedVenta?.subtotal | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar'
+              ? 'USD' : 'BS'}}</span>
           </div>
           <div class="resumen-item" *ngIf="selectedVenta?.totalIva">
             <span class="resumen-label">IVA Total</span>
-            <span class="resumen-value">{{selectedVenta?.totalIva | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</span>
+            <span class="resumen-value">{{selectedVenta?.totalIva | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar'
+              ? 'USD' : 'BS'}}</span>
           </div>
           <div class="resumen-item" *ngIf="selectedVenta?.totalDescuento">
             <span class="resumen-label">Descuento</span>
-            <span class="resumen-value">-{{selectedVenta?.totalDescuento | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</span>
+            <span class="resumen-value">-{{selectedVenta?.totalDescuento | number:'1.2-2'}} {{selectedVenta?.moneda ===
+              'dolar' ? 'USD' : 'BS'}}</span>
           </div>
           <div class="resumen-item total">
             <span class="resumen-label">Total</span>
-            <span class="resumen-value">{{selectedVenta?.total | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</span>
+            <span class="resumen-value">{{selectedVenta?.total | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ?
+              'USD' : 'BS'}}</span>
           </div>
         </div>
       </div>
@@ -850,6 +865,323 @@
       <button type="button" class="btn btn-primary btn-detalle" *ngIf="selectedVenta?.estado !== 'cancelada'">
         <i class="bi bi-printer me-2"></i>
         Imprimir
+      </button>
+    </div>
+  </div>
+</ng-template>
+
+
+<!-- Modal de Edición de Venta con Abono - CON MONEDA DINÁMICA -->
+<ng-template #editarVentaModal let-modal>
+  <div class="modal-content">
+    <!-- Header compacto -->
+    <div class="modal-header-compact">
+      <div class="header-content">
+        <div class="header-icon">
+          <i class="bi bi-pencil-square"></i>
+        </div>
+        <div class="header-text">
+          <h5 class="modal-title">Actualizar Abono</h5>
+          <div class="header-subtitle">
+            <span class="badge">#{{selectedVenta?.numeroControl}}</span>
+            <span class="separator">•</span>
+            <span>{{selectedVenta?.paciente?.nombre}}</span>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()" aria-label="Cerrar"></button>
+    </div>
+
+    <div class="modal-body-compact">
+      <!-- Resumen rápido en línea -->
+      <div class="resumen-rapido">
+        <div class="resumen-item">
+          <div class="resumen-icon">
+            <i class="bi bi-cash"></i>
+          </div>
+          <div class="resumen-content">
+            <small>Total Venta</small>
+            <div class="resumen-valor">{{selectedVenta?.total | currency:getMonedaParaPipe():'symbol':'1.2-2'}}</div>
+          </div>
+        </div>
+        <div class="resumen-item">
+          <div class="resumen-icon">
+            <i class="bi bi-wallet2"></i>
+          </div>
+          <div class="resumen-content">
+            <small>Abonado</small>
+            <div class="resumen-valor">{{selectedVenta?.montoAbonado | currency:getMonedaParaPipe():'symbol':'1.2-2'}}
+            </div>
+          </div>
+        </div>
+        <div class="resumen-item">
+          <div class="resumen-icon">
+            <i class="bi bi-clock"></i>
+          </div>
+          <div class="resumen-content">
+            <small>Pendiente</small>
+            <div class="resumen-valor">{{calcularMontoDeuda() | currency:getMonedaParaPipe():'symbol':'1.2-2'}}</div>
+          </div>
+        </div>
+      </div>
+
+      <form [formGroup]="editarVentaForm" (ngSubmit)="guardarEdicionVenta(modal)">
+        <!-- Sección principal compacta -->
+        <div class="seccion-compacta">
+          <div class="seccion-header">
+            <i class="bi bi-cash-coin"></i>
+            <span class="seccion-titulo">Monto del Abono</span>
+          </div>
+
+          <div class="form-grid-compact">
+            <!-- Monto abonado - CON MONEDA DINÁMICA -->
+            <div class="form-group-compact">
+              <label class="form-label-compact">
+                <i class="bi bi-currency-dollar"></i>
+                Nuevo monto
+              </label>
+              <div class="input-group-compact">
+                <input type="number" class="form-control form-control-compact" formControlName="montoAbonado"
+                  step="0.01" min="0" [max]="getMontoMaximoPermitido()" placeholder="0.00"
+                  (input)="onMontoAbonadoChange()">
+                <span class="input-suffix">{{ getSimboloMoneda() }}</span>
+              </div>
+              <div class="input-hint">
+                Máx: {{ getMontoMaximoPermitido() | currency:getMonedaParaPipe():'symbol':'1.2-2' }} (Deuda pendiente)
+              </div>
+
+              <!-- Validaciones compactas -->
+              <div *ngIf="editarVentaForm.get('montoAbonado')?.invalid && editarVentaForm.get('montoAbonado')?.touched"
+                class="error-compact">
+                <i class="bi bi-exclamation-circle"></i>
+                <span *ngIf="editarVentaForm.get('montoAbonado')?.errors?.['required']">Requerido</span>
+                <span *ngIf="editarVentaForm.get('montoAbonado')?.errors?.['min']">Mínimo: {{ getSimboloMoneda()
+                  }}0</span>
+                <span *ngIf="editarVentaForm.get('montoAbonado')?.errors?.['max']">Excede la deuda pendiente</span>
+              </div>
+            </div>
+
+            <!-- Barra de progreso inline - CON MONEDA DINÁMICA -->
+            <div class="form-group-compact">
+              <label class="form-label-compact">
+                <i class="bi bi-graph-up"></i>
+                Progreso Total
+              </label>
+              <div class="progreso-compact">
+                <div class="progreso-info">
+                  <span class="progreso-porcentaje">{{ calcularPorcentajeAbonado() }}%</span>
+                  <span class="progreso-montos">
+                    {{ (selectedVenta?.montoAbonado || 0) + (editarVentaForm.get('montoAbonado')?.value || 0) |
+                    currency:getMonedaParaPipe():'symbol':'1.2-2' }} /
+                    {{ selectedVenta?.total | currency:getMonedaParaPipe():'symbol':'1.2-2' }}
+                  </span>
+                </div>
+                <div class="progress-bar-compact">
+                  <div class="progress-fill" [style.width.%]="calcularPorcentajeAbonado()"></div>
+                </div>
+
+                <div class="progreso-desglose" style="font-size: 0.75rem; color: #6c757d; margin-top: 0.5rem;">
+                  <div style="display: flex; justify-content: space-between;">
+                    <span>Abonado anterior: {{selectedVenta?.montoAbonado || 0 |
+                      currency:getMonedaParaPipe():'symbol':'1.2-2'}}</span>
+                    <span>Nuevo abono: {{editarVentaForm.get('montoAbonado')?.value || 0 |
+                      currency:getMonedaParaPipe():'symbol':'1.2-2'}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Métodos de pago compactos - DISEÑO MEJORADO -->
+        <div class="seccion-compacta">
+          <div class="seccion-header with-action">
+            <div class="header-content">
+              <i class="bi bi-wallet2"></i>
+              <span class="seccion-titulo">Métodos de Pago</span>
+            </div>
+            <button type="button" class="btn btn-action-compact" (click)="agregarMetodoPago()"
+              [disabled]="metodosPagoArray.length >= 3">
+              <i class="bi bi-plus-lg"></i>
+              Agregar Método
+            </button>
+          </div>
+
+          <div formArrayName="metodosPago" class="metodos-grid-compact">
+            <div *ngFor="let metodo of metodosPagoArray.controls; let i = index" [formGroupName]="i"
+              class="metodo-item-compact">
+
+              <!-- Header del método de pago -->
+              <div class="metodo-header-compact">
+                <div class="metodo-tipo-container">
+                  <label class="metodo-label">
+                    <i class="bi bi-credit-card"></i>
+                    Tipo de pago
+                  </label>
+                  <select class="form-select form-select-compact metodo-select" formControlName="tipo"
+                    (change)="onMetodoPagoChange(i)">
+                    <option value="" disabled selected>Seleccionar método...</option>
+                    <option value="efectivo">💵 Efectivo</option>
+                    <option value="debito">💳 Débito</option>
+                    <option value="credito">🔄 Crédito</option>
+                    <option value="transferencia">🏦 Transferencia</option>
+                    <option value="pagomovil">📱 Pago Móvil</option>
+                    <option value="zelle">🌐 Zelle</option>
+                  </select>
+                </div>
+
+                <div class="metodo-monto-container">
+                  <label class="metodo-label">
+                    <i class="bi bi-cash-coin"></i>
+                    Monto
+                  </label>
+                  <div class="metodo-monto-compact">
+                    <input type="number" class="form-control form-control-compact metodo-input" formControlName="monto"
+                      step="0.01" min="0" placeholder="0.00" [title]="'Monto en ' + getSimboloMoneda()">
+                    <span class="monto-suffix">{{ getSimboloMoneda() }}</span>
+                  </div>
+                </div>
+
+                <div class="metodo-actions">
+                  <button type="button" class="btn btn-icon-compact btn-remove" (click)="removerMetodoPago(i)"
+                    [disabled]="metodosPagoArray.length === 1" title="Eliminar método de pago">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Indicador de moneda según tipo -->
+              <div class="metodo-currency-indicator" *ngIf="metodo.get('tipo')?.value">
+                <span class="currency-badge" [ngClass]="{
+          'currency-usd': monedaActual === 'USD',
+          'currency-eur': monedaActual === 'EUR', 
+          'currency-bs': monedaActual === 'BS'
+        }">
+                  <i class="bi" [class.bi-currency-dollar]="monedaActual === 'USD'"
+                    [class.bi-currency-euro]="monedaActual === 'EUR'"
+                    [class.bi-currency-exchange]="monedaActual === 'BS'"></i>
+                  {{ getSimboloMoneda() }} -
+                  <span *ngIf="monedaActual === 'USD'">Dólares Americanos</span>
+                  <span *ngIf="monedaActual === 'EUR'">Euros</span>
+                  <span *ngIf="monedaActual === 'BS'">Bolívares</span>
+                </span>
+              </div>
+
+              <!-- Validación compacta mejorada -->
+              <div *ngIf="metodo.invalid && metodo.touched" class="error-compact">
+                <div class="error-content">
+                  <i class="bi bi-exclamation-triangle"></i>
+                  <div class="error-messages">
+                    <span *ngIf="metodo.get('tipo')?.errors?.['required']">• Seleccione un tipo de pago</span>
+                    <span *ngIf="metodo.get('monto')?.errors?.['required']">• Ingrese el monto</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Selector de moneda para efectivo - SOLO CUANDO SE SELECCIONA EFECTIVO -->
+          <div *ngIf="hayMetodoEfectivoSeleccionado()" class="moneda-selector-container">
+            <div class="moneda-selector-header">
+              <i class="bi bi-currency-exchange"></i>
+              <span>Moneda para Efectivo</span>
+            </div>
+            <div class="moneda-selector-buttons">
+              <button type="button" class="moneda-btn" [class.moneda-active]="monedaActual === 'USD'"
+                (click)="monedaActual = 'USD'">
+                <span class="moneda-symbol">$</span>
+                <span class="moneda-info">
+                  <strong>USD</strong>
+                  <small>Dólar Americano</small>
+                </span>
+              </button>
+
+              <button type="button" class="moneda-btn" [class.moneda-active]="monedaActual === 'EUR'"
+                (click)="monedaActual = 'EUR'">
+                <span class="moneda-symbol">€</span>
+                <span class="moneda-info">
+                  <strong>EUR</strong>
+                  <small>Euro</small>
+                </span>
+              </button>
+            </div>
+            <div class="moneda-hint">
+              <i class="bi bi-info-circle"></i>
+              Solo aplica para pagos en efectivo
+            </div>
+          </div>
+
+          <!-- Resumen de métodos en línea -->
+          <div *ngIf="metodosPagoArray.length > 0" class="resumen-metodos-compact">
+            <div class="resumen-header">
+              <i class="bi bi-calculator"></i>
+              <span>Resumen de Pagos</span>
+            </div>
+            <div class="resumen-linea">
+              <span class="resumen-label">Total métodos:</span>
+              <strong class="resumen-valor">{{ calcularTotalMetodosPago() |
+                currency:getMonedaParaPipe():'symbol':'1.2-2' }}</strong>
+            </div>
+            <div class="resumen-linea" [class.resumen-warning]="!validarPagoCompleto()">
+              <span class="resumen-label">Diferencia:</span>
+              <strong class="resumen-valor">
+                {{ calcularDiferenciaMetodos() | currency:getMonedaParaPipe():'symbol':'1.2-2' }}
+                <i *ngIf="!validarPagoCompleto()" class="bi bi-exclamation-triangle warning-icon"></i>
+              </strong>
+            </div>
+            <div class="resumen-hint" *ngIf="!validarPagoCompleto()">
+              <i class="bi bi-lightbulb"></i>
+              Los métodos de pago deben cubrir la deuda ({{ calcularMontoDeuda() |
+              currency:getMonedaParaPipe():'symbol':'1.2-2' }})
+              + nuevo abono ({{ editarVentaForm.get('montoAbonado')?.value || 0 |
+              currency:getMonedaParaPipe():'symbol':'1.2-2' }})
+            </div>
+          </div>
+        </div>
+
+        <!-- Observaciones compactas -->
+        <div class="seccion-compacta">
+          <div class="seccion-header">
+            <i class="bi bi-chat-left-text"></i>
+            <span class="seccion-titulo">Observaciones (Opcional)</span>
+          </div>
+          <textarea class="form-control form-control-compact" formControlName="observaciones" rows="2"
+            placeholder="Observaciones sobre el abono..."></textarea>
+        </div>
+
+        <!-- Resumen de cambios (solo si hay cambios) - CON MONEDA DINÁMICA -->
+        <div class="seccion-compacta" *ngIf="mostrarResumenCambio()">
+          <div class="resumen-cambios">
+            <div class="cambio-item">
+              <span class="cambio-label">Abono anterior:</span>
+              <span class="cambio-valor">{{selectedVenta?.montoAbonado |
+                currency:getMonedaParaPipe():'symbol':'1.2-2'}}</span>
+            </div>
+            <div class="cambio-item">
+              <span class="cambio-label">Nuevo abono:</span>
+              <span class="cambio-valor text-success">{{editarVentaForm.get('montoAbonado')?.value |
+                currency:getMonedaParaPipe():'symbol':'1.2-2'}}</span>
+            </div>
+            <div class="cambio-item cambio-total">
+              <span class="cambio-label">Nuevo saldo:</span>
+              <span class="cambio-valor">{{selectedVenta?.total - editarVentaForm.get('montoAbonado')?.value |
+                currency:getMonedaParaPipe():'symbol':'1.2-2'}}</span>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Footer compacto -->
+    <div class="modal-footer-compact">
+      <button type="button" class="btn btn-secondary btn-compact" (click)="modal.dismiss()">
+        <i class="bi bi-x-circle"></i>
+        Cancelar
+      </button>
+      <button type="button" class="btn btn-warning btn-compact" (click)="guardarEdicionVenta(modal)"
+        [disabled]="!editarVentaForm.valid || !validarPagoCompleto()">
+        <i class="bi bi-check-circle"></i>
+        Guardar Cambios
       </button>
     </div>
   </div>
