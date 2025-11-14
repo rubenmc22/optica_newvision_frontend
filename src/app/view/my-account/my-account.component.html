@@ -329,8 +329,7 @@
                                                     [class.text-danger]="!passwordsMatch"></i>
                                                 <small [class.text-success]="passwordsMatch"
                                                     [class.text-danger]="!passwordsMatch">
-                                                    {{ passwordsMatch ? 'Las contraseñas coinciden' : 'Las contraseñas
-                                                    no coinciden' }}
+                                                    {{ passwordsMatch ? 'Las contraseñas coinciden' : 'Las contraseñas no coinciden' }}
                                                 </small>
                                             </div>
                                         </div>
@@ -404,8 +403,7 @@
                                                 [disabled]="!uniquePasswordValid"
                                                 (click)="initiateUniquePasswordChange()">
                                                 <i class="fas fa-save me-2"></i>
-                                                {{ existingUniquePassword ? 'Actualizar Contraseña' : 'Establecer
-                                                Contraseña' }}
+                                                {{ existingUniquePassword ? 'Actualizar Contraseña' : 'Establecer Contraseña' }}
                                             </button>
                                         </div>
                                     </div>
@@ -482,7 +480,7 @@
     <!-- Modal OTP Mejorado -->
     <div class="modal fade" id="otpModal" tabindex="-1" aria-labelledby="otpModalLabel" aria-hidden="true"
         data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content modal-modern">
                 <div class="modal-header-modern">
                     <div class="modal-icon-container warning">

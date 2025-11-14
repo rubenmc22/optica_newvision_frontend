@@ -1,152 +1,296 @@
 /* ==================== */
-/* ESTILOS PARA POPUP CON FONDO DIFUMINADO */
+/* VARIABLES CON TU TEMA */
 /* ==================== */
-.custom-popup-class {
+:root {
+  --swal-primary: #3a7bd5;
+  --swal-primary-dark: #005a9e;
+  --swal-primary-light: #5d9cff;
+  --swal-success: #38a169;
+  --swal-warning: #f39c12;
+  --swal-error: #e74c3c;
+  --swal-info: #17a2b8;
+  --swal-background: var(--degradado-color);
+  --swal-text: white;
+  --swal-text-light: rgba(255, 255, 255, 0.9);
+  --swal-border: var(--primary-color);
+  --swal-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  --swal-card-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* ==================== */
+/* POPUP BASE MODERNO */
+/* ==================== */
+.swal-modern-popup {
   position: relative;
   border-radius: 16px !important;
-  padding: 30px !important;
+  padding: 2.5rem 2rem 2rem !important;
   overflow: hidden !important;
-  max-width: 420px !important;
+  max-width: 480px !important;
   width: 90vw !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15) !important;
-  /* Fondo temporal para debug */
-  background: rgba(0, 0, 0, 0.3) !important;
-
-  /* Fondo difuminado - Versión corregida */
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: var(--swal-shadow) !important;
+  background: var(--swal-background) !important;
+  backdrop-filter: blur(20px);
+  
+  /* Overlay para mejorar legibilidad del contenido */
   &::before {
-    content: '';
-    position: absolute;
-    top: -10px;
-    left: -10px;
-    right: -10px;
-    bottom: -10px;
-    background: url('../../../../assets/fondo/IMG_9789.JPG') center/cover no-repeat;
-    background-attachment: fixed;
-    filter: blur(4px) brightness(0.9);
-    z-index: -2;
-  }
-
-  /* Overlay para mejorar legibilidad */
-  &::after {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.3);
     z-index: -1;
-  }
-
-  /* Contenido */
-  .popup-content {
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Título */
-  .custom-title-class {
-    color: white !important;
-    font-size: 28px !important;
-    font-weight: 700 !important;
-    margin: 0 auto 25px auto !important;
-    text-align: center !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-    position: relative !important;
-    
-    &:after {
-      content: '';
-      position: absolute;
-      bottom: -15px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 50%;
-      height: 3px;
-      background: linear-gradient(90deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.2) 100%);
-    }
-  }
-
-  /* Mensaje */
-  .custom-content-class {
-    color: white !important;
-    font-size: 16px !important;
-    line-height: 1.5 !important;
-    text-align: center !important;
-    margin-bottom: 30px !important;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
-  }
-
-  /* Botón principal */
-  .custom-confirm-button-class {
-    background: linear-gradient(135deg, rgba(0,120,215,0.9) 0%, rgba(0,78,140,0.9) 100%) !important;
-    color: white !important;
-    font-weight: 600 !important;
-    padding: 14px !important;
-    border-radius: 8px !important;
-    border: none !important;
-    width: 100% !important;
-    font-size: 16px !important;
-    margin: 15px 0 !important;
-    transition: all 0.3s ease !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-    backdrop-filter: blur(4px);
-
-    &:hover {
-      transform: translateY(-2px) !important;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4) !important;
-    }
-  }
-
-  /* Botón secundario */
-  .custom-cancel-button-class {
-    background: rgba(58, 58, 58, 0.9) !important;
-    color: white !important;
-    border: none !important;
-    padding: 12px !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    font-size: 16px !important;
-    margin: 10px 0 !important;
-    transition: all 0.3s ease !important;
-    backdrop-filter: blur(4px);
-
-    &:hover {
-      background: rgba(74, 74, 74, 0.9) !important;
-      transform: translateY(-2px) !important;
-    }
+    border-radius: 16px;
   }
 }
 
 /* ==================== */
-/* VERSIÓN PARA ERRORES */
+/* COMPONENTES SWAL */
 /* ==================== */
-.error-popup {
-  .custom-title-class {
-    color: #ffcdd2 !important;
-    
-    &:after {
-      background: linear-gradient(90deg, rgba(255,205,210,0.8) 0%, rgba(255,205,210,0.2) 100%);
-    }
+.swal-modern-title {
+  color: var(--swal-text) !important;
+  font-size: 1.75rem !important;
+  font-weight: 700 !important;
+  margin: 0 auto 1.5rem auto !important;
+  text-align: center !important;
+  letter-spacing: -0.5px;
+  position: relative !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  
+  &:after {
+    content: '';
+    position: absolute;
+    bottom: -0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 2px;
+  }
+}
+
+.swal-modern-content {
+  color: var(--swal-text-light) !important;
+  font-size: 1rem !important;
+  line-height: 1.6 !important;
+  text-align: center !important;
+  margin-bottom: 2rem !important;
+  font-weight: 400;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== */
+/* BOTONES MODERNOS */
+/* ==================== */
+.swal-modern-confirm {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  padding: 0.875rem 2rem !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  font-size: 0.95rem !important;
+  margin: 0.5rem !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+  min-width: 120px;
+  backdrop-filter: blur(10px);
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
   }
   
-  .custom-confirm-button-class {
-    background: linear-gradient(135deg, rgba(198,40,40,0.9) 0%, rgba(142,0,0,0.9) 100%) !important;
-    
-    &:hover {
-      background: linear-gradient(135deg, rgba(198,40,40,1) 0%, rgba(142,0,0,1) 100%) !important;
-    }
+  &:active {
+    transform: translateY(0) !important;
+  }
+}
+
+.swal-modern-cancel {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: var(--swal-text-light) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  padding: 0.875rem 2rem !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  margin: 0.5rem !important;
+  transition: all 0.3s ease !important;
+  min-width: 120px;
+  backdrop-filter: blur(10px);
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-2px) !important;
+    color: white !important;
+  }
+}
+
+.swal-modern-close {
+  color: var(--swal-text-light) !important;
+  font-size: 1.5rem !important;
+  transition: all 0.3s ease !important;
+  
+  &:hover {
+    color: white !important;
+    transform: rotate(90deg);
   }
 }
 
 /* ==================== */
-/* ESTILOS PARA LOADING */
+/* VARIANTES DE BOTONES */
 /* ==================== */
-.transparent-popup {
+.success-btn {
+  background: linear-gradient(135deg, var(--swal-success) 0%, #48bb78 100%) !important;
+  border: 1px solid rgba(72, 187, 120, 0.3) !important;
+  
+  &:hover {
+    background: linear-gradient(135deg, #48bb78 0%, #68d391 100%) !important;
+  }
+}
+
+.warning-btn {
+  background: linear-gradient(135deg, var(--swal-warning) 0%, #f6ad55 100%) !important;
+  border: 1px solid rgba(246, 173, 85, 0.3) !important;
+  
+  &:hover {
+    background: linear-gradient(135deg, #f6ad55 0%, #fbd38d 100%) !important;
+  }
+}
+
+.error-btn {
+  background: linear-gradient(135deg, var(--swal-error) 0%, #fc8181 100%) !important;
+  border: 1px solid rgba(252, 129, 129, 0.3) !important;
+  
+  &:hover {
+    background: linear-gradient(135deg, #fc8181 0%, #feb2b2 100%) !important;
+  }
+}
+
+.info-btn {
+  background: linear-gradient(135deg, var(--swal-info) 0%, #20c997 100%) !important;
+  border: 1px solid rgba(32, 201, 151, 0.3) !important;
+  
+  &:hover {
+    background: linear-gradient(135deg, #20c997 0%, #38d9a9 100%) !important;
+  }
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, var(--swal-primary) 0%, var(--swal-primary-light) 100%) !important;
+  border: 1px solid rgba(93, 156, 255, 0.3) !important;
+  
+  &:hover {
+    background: linear-gradient(135deg, var(--swal-primary-light) 0%, #7ab1ff 100%) !important;
+  }
+}
+
+/* ==================== */
+/* VARIANTES DE POPUP */
+/* ==================== */
+.success-popup {
+  .swal-modern-title:after {
+    background: var(--swal-success) !important;
+  }
+}
+
+.error-popup {
+  .swal-modern-title:after {
+    background: var(--swal-error) !important;
+  }
+}
+
+.warning-popup {
+  .swal-modern-title:after {
+    background: var(--swal-warning) !important;
+  }
+}
+
+.info-popup {
+  .swal-modern-title:after {
+    background: var(--swal-info) !important;
+  }
+}
+
+.confirm-popup {
+  .swal-modern-title:after {
+    background: var(--swal-primary) !important;
+  }
+}
+
+.inactivity-popup {
+  .swal-modern-title:after {
+    background: var(--swal-warning) !important;
+  }
+}
+
+/* ==================== */
+/* ALERTA DE INACTIVIDAD */
+/* ==================== */
+.inactivity-content {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.inactivity-icon {
+  font-size: 3rem;
+  color: var(--swal-warning);
+  margin-bottom: 1rem;
+  text-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+  
+  i {
+    animation: pulse 2s infinite;
+  }
+}
+
+.inactivity-text {
+  color: var(--swal-text-light);
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.countdown-container {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 1rem 0;
+  backdrop-filter: blur(10px);
+}
+
+.countdown-number {
+  color: var(--swal-warning);
+  font-size: 2rem;
+  font-weight: 700;
+  display: block;
+  text-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
+}
+
+.countdown-label {
+  color: var(--swal-text-light);
+  font-size: 0.9rem;
+}
+
+.session-closed-content {
+  text-align: center;
+  color: var(--swal-text-light);
+  font-size: 1.1rem;
+}
+
+/* ==================== */
+/* LOADING APOLLO MEJORADO */
+/* ==================== */
+.apollo-loading-popup {
   background: transparent !important;
   box-shadow: none !important;
   max-width: 100% !important;
   margin: 0 !important;
+  border: none !important;
 }
 
 .apollo-loading-container {
@@ -155,45 +299,65 @@
   margin: 0 !important;
   background: transparent !important;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-height: 300px;
+}
+
+.apollo-loading-card {
+  background: var(--swal-card-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 3rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .apollo-loading-logo {
-  width: 300px;
+  width: 120px;
   height: auto;
-  filter: drop-shadow(0 0 12px rgba(255, 193, 7, 0.7));
-  margin-bottom: 20px;
-  animation: pulse 1.5s infinite alternate;
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.8));
+  margin-bottom: 1.5rem;
+  animation: pulse 2s infinite alternate;
+}
+
+.apollo-loading-text {
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.apollo-loading-bar-container {
+  width: 200px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0 auto;
 }
 
 .apollo-loading-bar {
-  width: 200px;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 0 auto;
-  position: relative;
-  overflow: hidden;
-
-  &::after {
-    content: '';
-    position: absolute;
-    height: 100%;
-    width: 50%;
-    background: var(--primary-color, #0078d7);
-    animation: loading 1.5s ease-in-out infinite;
-  }
+  height: 100%;
+  width: 50%;
+  background: linear-gradient(90deg, var(--swal-primary), white);
+  animation: loading 1.5s ease-in-out infinite;
+  border-radius: 2px;
 }
 
-.apollo-loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 4px solid rgba(255, 193, 7, 0.2);
-  border-top-color: var(--primary-color, #0078d7);
-  border-radius: 50%;
-  margin: 20px auto;
-  animation: spin 1s linear infinite;
+/* ==================== */
+/* BARRA DE PROGRESO */
+/* ==================== */
+.swal-modern-progress-bar {
+  height: 4px !important;
+  border-radius: 2px !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  
+  .swal2-timer-progress-bar {
+    background: linear-gradient(90deg, var(--swal-primary), var(--swal-primary-light)) !important;
+    border-radius: 2px !important;
+  }
 }
 
 /* ==================== */
@@ -205,17 +369,25 @@
 }
 
 @keyframes pulse {
-  0% { transform: scale(0.95); opacity: 0.9; }
-  100% { transform: scale(1.05); opacity: 1; }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
+  0% { 
+    transform: scale(0.95); 
+    opacity: 0.8; 
+  }
+  100% { 
+    transform: scale(1.05); 
+    opacity: 1; 
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { 
+    opacity: 0; 
+    transform: translateY(-20px) scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
 }
 
 /* ==================== */
@@ -227,14 +399,38 @@
 
 .swal2-backdrop {
   background: rgba(0, 0, 0, 0.7) !important;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
 }
 
-/* ======================== */
-/* ALERTA DE INACTIVIDAD */
-/* ======================== */
-#countdown {
-  color: var(--countdown-color, #ff5555);
-  font-size: 1.5em;
-  font-weight: bold;
+/* ==================== */
+/* RESPONSIVE */
+/* ==================== */
+@media (max-width: 768px) {
+  .swal-modern-popup {
+    padding: 2rem 1.5rem 1.5rem !important;
+    margin: 1rem !important;
+  }
+  
+  .swal-modern-title {
+    font-size: 1.5rem !important;
+  }
+  
+  .swal-modern-content {
+    font-size: 0.95rem !important;
+  }
+  
+  .swal-modern-confirm,
+  .swal-modern-cancel {
+    padding: 0.75rem 1.5rem !important;
+    font-size: 0.9rem !important;
+    min-width: 100px;
+  }
+  
+  .apollo-loading-card {
+    padding: 2rem;
+  }
+  
+  .apollo-loading-logo {
+    width: 80px;
+  }
 }

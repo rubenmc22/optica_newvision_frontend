@@ -3,96 +3,97 @@ import Swal from 'sweetalert2';
 import { SweetAlertResult, SweetAlertOptions } from 'sweetalert2';
 
 @Injectable({
-  providedIn: 'root' // Hace que el servicio esté disponible en toda la aplicación
+  providedIn: 'root'
 })
-
 export class SwalService {
+  
   constructor() { }
 
   /**
-   * Muestra una alerta de éxito.
-   * @param title Título de la alerta.
-   * @param text Mensaje de la alerta.
+   * Muestra una alerta de éxito moderna
    */
-  showSuccess(title: string, text: string): Promise<any> {
+  showSuccess(title: string, text: string, timer: number = 3000): Promise<any> {
     return Swal.fire({
-      icon: 'success', // Ícono de éxito
-      title: title, // Título de la alerta
-      text: text, // Mensaje de la alerta
-      confirmButtonText: 'Aceptar', // Texto del botón de confirmación
-      timer: 3000, // Cierra automáticamente la alerta después de 3 segundos
-      timerProgressBar: true, // Muestra una barra de progreso
+      icon: 'success',
+      title: title,
+      text: text,
+      confirmButtonText: 'Aceptar',
+      timer: timer,
+      timerProgressBar: true,
       customClass: {
-        popup: 'custom-popup-class',
-        title: 'custom-title-class',
-        htmlContainer: 'custom-content-class',
-        confirmButton: 'custom-confirm-button-class'
+        popup: 'swal-modern-popup success-popup',
+        title: 'swal-modern-title',
+        htmlContainer: 'swal-modern-content',
+        confirmButton: 'swal-modern-confirm success-btn',
+        closeButton: 'swal-modern-close',
+        timerProgressBar: 'swal-modern-progress-bar'
       },
-      buttonsStyling: false, // Desactiva los estilos por defecto de los botones
+      buttonsStyling: false,
       showClass: {
-        popup: 'animate__animated animate__fadeInDown' // Animación de entrada
+        popup: 'animate__animated animate__fadeInDown animate__faster'
       },
       hideClass: {
-        popup: 'animate__animated animate__fadeOutUp' // Animación de salida
+        popup: 'animate__animated animate__fadeOutUp animate__faster'
       }
     });
   }
 
   /**
-   * Muestra una alerta de error.
-   * @param title Título de la alerta.
-   * @param text Mensaje de la alerta.
+   * Muestra una alerta de error moderna
    */
-  showError(title: string, text: string): Promise<any> {
+  showError(title: string, text: string, timer: number = 5000): Promise<any> {
     return Swal.fire({
-      icon: 'error', // Ícono de error
-      title: title, // Título de la alerta
-      text: text, // Mensaje de la alerta
-      confirmButtonText: 'Aceptar', // Texto del botón de confirmación
-      timer: 30000000, // Cierra automáticamente la alerta después de 3 segundos
+      icon: 'error',
+      title: title,
+      text: text,
+      confirmButtonText: 'Aceptar',
+      timer: timer,
+      timerProgressBar: true,
       customClass: {
-        popup: 'custom-popup-class',
-        title: 'custom-title-class',
-        htmlContainer: 'custom-content-class', // Usa htmlContainer en lugar de content
-        confirmButton: 'custom-confirm-button-class'
+        popup: 'swal-modern-popup error-popup',
+        title: 'swal-modern-title',
+        htmlContainer: 'swal-modern-content',
+        confirmButton: 'swal-modern-confirm error-btn',
+        closeButton: 'swal-modern-close',
+        timerProgressBar: 'swal-modern-progress-bar'
       },
-      buttonsStyling: false, // Desactiva los estilos por defecto de los botones
+      buttonsStyling: false,
       showClass: {
-        popup: 'animate__animated animate__shakeX' // Animación de entrada
+        popup: 'animate__animated animate__shakeX'
       },
       hideClass: {
-        popup: 'animate__animated animate__fadeOutUp' // Animación de salida
+        popup: 'animate__animated animate__fadeOutUp animate__faster'
       }
     });
   }
 
   /**
-   * Muestra una alerta de advertencia.
-   * @param title Título de la alerta.
-   * @param text Mensaje de la alerta.
+   * Muestra una alerta de advertencia moderna
    */
-  showWarning(title: string, content: string, isHtml: boolean = false): Promise<any> {
+  showWarning(title: string, content: string, isHtml: boolean = false, timer: number = 4000): Promise<any> {
     const config: SweetAlertOptions = {
       icon: 'warning',
       title: title,
       confirmButtonText: 'Aceptar',
-      timer: 3000,
+      timer: timer,
+      timerProgressBar: true,
       customClass: {
-        popup: 'custom-popup-class',
-        title: 'custom-title-class',
-        htmlContainer: 'custom-content-class',
-        confirmButton: 'custom-confirm-button-class'
+        popup: 'swal-modern-popup warning-popup',
+        title: 'swal-modern-title',
+        htmlContainer: 'swal-modern-content',
+        confirmButton: 'swal-modern-confirm warning-btn',
+        closeButton: 'swal-modern-close',
+        timerProgressBar: 'swal-modern-progress-bar'
       },
       buttonsStyling: false,
       showClass: {
         popup: 'animate__animated animate__wobble'
       },
       hideClass: {
-        popup: 'animate__animated animate__fadeOutUp'
+        popup: 'animate__animated animate__fadeOutUp animate__faster'
       }
     };
 
-    // Usar html o text según corresponda
     if (isHtml) {
       config.html = content;
     } else {
@@ -102,6 +103,69 @@ export class SwalService {
     return Swal.fire(config);
   }
 
+  /**
+   * Muestra una alerta de información moderna
+   */
+  showInfo(title: string, text: string): Promise<any> {
+    return Swal.fire({
+      icon: 'info',
+      title: title,
+      html: text,
+      confirmButtonText: 'Aceptar',
+      customClass: {
+        popup: 'swal-modern-popup info-popup',
+        title: 'swal-modern-title',
+        htmlContainer: 'swal-modern-content',
+        confirmButton: 'swal-modern-confirm info-btn',
+        closeButton: 'swal-modern-close'
+      },
+      buttonsStyling: false,
+      showClass: {
+        popup: 'animate__animated animate__fadeInDown animate__faster'
+      },
+      hideClass: {
+        popup: 'animate__animated animate__fadeOutUp animate__faster'
+      }
+    });
+  }
+
+  /**
+   * Muestra una alerta de confirmación moderna
+   */
+  showConfirm(
+    title: string, 
+    htmlContent: string, 
+    confirmButtonText: string = 'Confirmar', 
+    cancelButtonText: string = 'Cancelar'
+  ): Promise<SweetAlertResult> {
+    return Swal.fire({
+      icon: 'question',
+      title: title,
+      html: htmlContent,
+      showCancelButton: true,
+      confirmButtonText: confirmButtonText,
+      cancelButtonText: cancelButtonText,
+      customClass: {
+        popup: 'swal-modern-popup confirm-popup',
+        title: 'swal-modern-title',
+        htmlContainer: 'swal-modern-content',
+        confirmButton: 'swal-modern-confirm primary-btn',
+        cancelButton: 'swal-modern-cancel',
+        closeButton: 'swal-modern-close'
+      },
+      buttonsStyling: false,
+      showClass: {
+        popup: 'animate__animated animate__fadeInDown animate__faster'
+      },
+      hideClass: {
+        popup: 'animate__animated animate__fadeOutUp animate__faster'
+      }
+    });
+  }
+
+  /**
+   * Alerta de inactividad moderna
+   */
   showInactivityWarning(
     title: string,
     text: string,
@@ -113,19 +177,31 @@ export class SwalService {
 
       Swal.fire({
         title: title,
-        html: `<p class="custom-content-class">
-                 ${text}<br><br>
-                 <strong id="countdown">${timerDuration / 1000}</strong> segundos restantes
-               </p>`,
-        iconHtml: '<i class="bi bi-exclamation-triangle-fill  text-warning"></i>', // Usando un icono personalizado acorde
+        html: `
+          <div class="inactivity-content">
+            <div class="inactivity-icon">
+              <i class="bi bi-clock-history"></i>
+            </div>
+            <div class="inactivity-text">
+              ${text}
+            </div>
+            <div class="countdown-container">
+              <strong id="countdown" class="countdown-number">${timerDuration / 1000}</strong>
+              <span class="countdown-label">segundos restantes</span>
+            </div>
+          </div>
+        `,
         showCancelButton: true,
         confirmButtonText: 'Mantener sesión',
         cancelButtonText: 'Cerrar sesión',
         customClass: {
-          popup: 'custom-popup-class', // Fondo consistente
-          title: 'custom-title-class', // Título ajustado
-          confirmButton: 'custom-confirm-button-class', // Botón confirmar
-          cancelButton: 'custom-cancel-button-class' // Botón cancelar
+          popup: 'swal-modern-popup inactivity-popup',
+          title: 'swal-modern-title',
+          htmlContainer: 'swal-modern-content',
+          confirmButton: 'swal-modern-confirm success-btn',
+          cancelButton: 'swal-modern-cancel',
+          closeButton: 'swal-modern-close',
+          timerProgressBar: 'swal-modern-progress-bar'
         },
         allowOutsideClick: false,
         timer: timerDuration,
@@ -145,123 +221,92 @@ export class SwalService {
       }).then((result) => {
         if (result.isConfirmed) {
           confirmed = true;
-          resolve(true); // Usuario eligió mantener sesión
+          resolve(true);
         } else if (result.isDismissed && result.dismiss === Swal.DismissReason.cancel) {
           confirmed = true;
-          resolve(false); // Usuario eligió cerrar sesión
+          resolve(false);
         }
 
-        // Si se cierra por timer
         if (!confirmed && Swal.isVisible()) {
-          Swal.fire({
-            title: 'Sesión cerrada',
-            html: '<p class="custom-content-class">Has sido desconectado por inactividad</p>',
-            icon: 'info',
-            customClass: {
-              popup: 'custom-popup-class', // Fondo consistente
-              title: 'custom-title-class' // Título acorde
-            },
-            timer: 3000,
-            showConfirmButton: false
-          });
+          this.showSessionClosed();
           resolve(false);
         }
       });
     });
   }
 
+  /**
+   * Alerta de sesión cerrada
+   */
+  private showSessionClosed(): void {
+    Swal.fire({
+      title: 'Sesión cerrada',
+      html: '<div class="session-closed-content">Has sido desconectado por inactividad</div>',
+      icon: 'info',
+      timer: 3000,
+      showConfirmButton: false,
+      customClass: {
+        popup: 'swal-modern-popup info-popup',
+        title: 'swal-modern-title',
+        htmlContainer: 'swal-modern-content',
+        timerProgressBar: 'swal-modern-progress-bar'
+      }
+    });
+  }
 
   /**
-   * Muestra una alerta de confirmación.
-   * @param title Título de la alerta.
-   * @param text Mensaje de la alerta.
-   * @returns Una promesa que resuelve `true` si el usuario confirma, o `false` si cancela.
+   * Loading moderno con diseño Apollo mejorado
    */
-  showConfirm(title: string, htmlContent: string, confirmButtonText: string, cancelButtonText: string): Promise<SweetAlertResult> {
-    return Swal.fire({
-      icon: 'question', // Ícono de pregunta
-      title: title, // Título de la alerta
-      html: htmlContent, // Cambiado a 'html' para aceptar contenido HTML
-      showCancelButton: true, // Muestra un botón de cancelar
-      confirmButtonText: confirmButtonText, // Texto del botón de confirmación
-      cancelButtonText: cancelButtonText, // Texto del botón de cancelación
-      customClass: {
-        popup: 'custom-popup-class',
-        title: 'custom-title-class',
-        htmlContainer: 'custom-content-class',
-        confirmButton: 'custom-confirm-button-class',
-        cancelButton: 'custom-cancel-button-class'
-      },
-      buttonsStyling: false, // Desactiva los estilos por defecto de los botones
-      showClass: {
-        popup: 'animate__animated animate__fadeInDown' // Animación de entrada
-      },
-      hideClass: {
-        popup: 'animate__animated animate__fadeOutUp' // Animación de salida
-      }
-    });
-  }
-
-
-  showInfo(title: string, text: string): Promise<any> {
-    return Swal.fire({
-      icon: 'info',
-      title: title,
-      html: text, // Usamos html para permitir formato
-      confirmButtonText: 'Aceptar',
-      customClass: {
-        popup: 'custom-popup-class',
-        title: 'custom-title-class',
-        htmlContainer: 'custom-content-class',
-        confirmButton: 'custom-confirm-button-class'
-      },
-      buttonsStyling: false,
-      showClass: {
-        popup: 'animate__animated animate__fadeInDown'
-      },
-      hideClass: {
-        popup: 'animate__animated animate__fadeOutUp'
-      }
-    });
-  }
-
-  // Método para abrir un indicar de carga (showLoading)
-  showLoadingAlert(): void {
-    Swal.fire({
-      title: 'Procesando...',
-      allowOutsideClick: false, // Evita que el usuario cierre la alerta al hacer clic fuera de ella
-      didOpen: () => {
-        Swal.showLoading(); // Activa el indicador de carga
-      }
-    });
-  }
-
-  showApolloLoading() {
+  showApolloLoading(): void {
     Swal.fire({
       html: `
         <div class="apollo-loading-container">
-          <img src="assets/android-chrome-512x512.png" 
-               class="apollo-loading-logo">
-          <div class="apollo-loading-bar"></div>
+          <div class="apollo-loading-card">
+            <img src="assets/android-chrome-512x512.png" 
+                 class="apollo-loading-logo">
+            <div class="apollo-loading-text">Cargando...</div>
+            <div class="apollo-loading-bar-container">
+              <div class="apollo-loading-bar"></div>
+            </div>
+          </div>
         </div>
       `,
       showConfirmButton: false,
       allowOutsideClick: false,
-      background: 'transparent',
-      backdrop: 'rgba(0,0,0,0.85)',
+      background: 'rgba(0,0,0,0.85)',
       width: 'auto',
       padding: '0',
       showClass: {
         popup: 'animate__animated animate__fadeIn'
       },
       customClass: {
-        popup: 'transparent-popup' // Clase adicional para controlar el popup
+        popup: 'apollo-loading-popup'
       }
     });
   }
 
-  // Método para cerrar cualquier alerta activa
+  /**
+   * Loading básico moderno
+   */
+  showLoadingAlert(title: string = 'Procesando...'): void {
+    Swal.fire({
+      title: title,
+      allowOutsideClick: false,
+      customClass: {
+        popup: 'swal-modern-popup loading-popup',
+        title: 'swal-modern-title',
+        htmlContainer: 'swal-modern-content'
+      },
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+  }
+
+  /**
+   * Cierra cualquier alerta activa
+   */
   closeLoading(): void {
-    Swal.close(); // SweetAlert2 proporciona este método para cerrar alertas activas
+    Swal.close();
   }
 }
