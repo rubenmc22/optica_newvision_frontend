@@ -144,7 +144,7 @@ $warn: mat.m2-get-color-from-palette($warn-palette, 'default');
 /* Estilos para el campo de texto cuando está en foco */
 .mat-mdc-text-field-wrapper:focus-within,
 .mat-mdc-text-field-wrapper .mat-mdc-form-field-infix:focus-within {
-  border-color: var(--border-color);
+  border-color: var(--border-color) !important;
   /* Mantener borde amarillo cuando está en focus */
 }
 
@@ -533,3 +533,30 @@ body {
     top: 2px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
+
+
+
+    // En tu componente de recuperación de contraseña
+    :host {
+        // Sobrescribir específicamente los colores de focus
+        --mdc-outlined-text-field-focus-outline-color: #3b82f6;
+        --mdc-outlined-text-field-focus-label-text-color: #3b82f6;
+
+        .modern-form-field {
+            &.mat-form-field-appearance-outline {
+                .mat-form-field-outline-thick {
+                    color: #3b82f6 !important;
+                }
+
+                &.mat-focused {
+                    .mat-form-field-outline-thick {
+                        border-color: #3b82f6 !important;
+                    }
+
+                    .mat-form-field-label {
+                        color: #3b82f6 !important;
+                    }
+                }
+            }
+        }
+    }
