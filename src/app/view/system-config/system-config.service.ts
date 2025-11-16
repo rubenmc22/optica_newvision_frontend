@@ -71,20 +71,60 @@ export class SystemConfigService {
       ultimaActualizacion: new Date().toISOString()
     };
 
-    // Guardar localmente inmediatamente para mejor UX
+    console.log(`🔄 Cambiando moneda del sistema a: ${nuevaMoneda}`);
+
+    // Guardar localmente inmediatamente
     this.saveConfig(nuevoConfig);
 
-    // Guardar en el backend con el formato correcto
+    // Guardar en el backend
     return this.actualizarMonedaBaseBackend(nuevaMoneda).pipe(
       tap({
         next: (response) => {
-          console.log('Moneda guardada en backend:', response);
+          console.log('✅ Moneda guardada en backend:', response);
+          // Emitir evento específico para cambio de moneda
+          this.notificarCambioMoneda(nuevaMoneda);
         },
         error: (error) => {
-          console.error('Error guardando en backend, pero cambios aplicados localmente:', error);
+          console.error('❌ Error guardando en backend:', error);
+          // Aún así notificar el cambio local
+          this.notificarCambioMoneda(nuevaMoneda);
         }
       })
     );
+  }
+
+  private notificarCambioMoneda(nuevaMoneda: string): void {
+    // El config$ ya se actualiza automáticamente, pero podemos emitir un evento específico si es necesario
+    console.log(`📢 Moneda del sistema cambiada a: ${nuevaMoneda}`);
+  }
+
+  /**
+   * Convierte un monto entre monedas
+   */
+  convertirMonto(monto: number, monedaOrigen: string, monedaDestino?: string): number {
+    if (!monedaDestino) {
+      monedaDestino = this.getMonedaPrincipal();
+    }
+
+    if (monedaOrigen === monedaDestino) return monto;
+
+    try {
+      const tasaOrigen = this.getTasaPorId(monedaOrigen);
+      const tasaDestino = this.getTasaPorId(monedaDestino);
+
+      console.log(`💰 Conversión: ${monto} ${monedaOrigen} → ${monedaDestino}`);
+      console.log(`💰 Tasas: ${monedaOrigen}=${tasaOrigen}Bs, ${monedaDestino}=${tasaDestino}Bs`);
+
+      const montoEnBs = monto * tasaOrigen;
+      const resultado = montoEnBs / tasaDestino;
+
+      console.log(`💰 Resultado: ${resultado.toFixed(2)} ${monedaDestino}`);
+
+      return Number(resultado.toFixed(this.getConfig().decimales));
+    } catch (error) {
+      console.error('❌ Error en conversión de moneda:', error);
+      return monto;
+    }
   }
 
   /**
@@ -224,28 +264,6 @@ export class SystemConfigService {
    */
   getSimboloMonedaPrincipal(): string {
     return this.getConfig().simboloMoneda;
-  }
-
-  /**
-   * Convierte un monto entre monedas usando las tasas del servicio existente
-   */
-  convertirMonto(monto: number, monedaOrigen: string, monedaDestino?: string): number {
-    if (!monedaDestino) {
-      monedaDestino = this.getMonedaPrincipal();
-    }
-
-    if (monedaOrigen === monedaDestino) return monto;
-
-    const tasaOrigen = this.getTasaPorId(monedaOrigen);
-    const tasaDestino = this.getTasaPorId(monedaDestino);
-
-    // Convertir a la moneda base (VES) primero
-    const montoEnVes = monedaOrigen.toLowerCase() === 'ves' ? monto : monto * tasaOrigen;
-
-    // Convertir de VES a moneda destino
-    const resultado = monedaDestino.toLowerCase() === 'ves' ? montoEnVes : montoEnVes / tasaDestino;
-
-    return Number(resultado.toFixed(this.getConfig().decimales));
   }
 
   /**

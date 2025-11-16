@@ -149,9 +149,9 @@
 
               <div class="producto-badges">
                 <span class="badge estado-badge" [ngClass]="{
-                  'estado-activo': producto.activo && producto.stock > 0,
-                  'estado-inactivo': !producto.activo
-                }">
+          'estado-activo': producto.activo && producto.stock > 0,
+          'estado-inactivo': !producto.activo
+        }">
                   {{ producto.activo ? 'Activo' : 'Inactivo' }}
                 </span>
                 <span class="badge codigo-badge">
@@ -165,38 +165,37 @@
                 {{ producto.marca }} · {{ producto.nombre }}
               </h6>
 
+              <!-- SECCIÓN DE PRECIOS  -->
               <div class="producto-precio">
-                <ng-container *ngIf="!esMonedaBolivar(producto.moneda); else soloBs">
-                  <div class="precio-principal">
-                    <span class="precio-moneda">{{ getSimboloMoneda(producto.moneda) }}</span>
-                    <span class="precio-valor">
-                      {{ producto.aplicaIva ? (producto.precioConIva | number:'1.2-2') : (producto.precio |
-                      number:'1.2-2') }}
-                    </span>
-                  </div>
-                  <div class="precio-conversion">
-                    <i class="bi bi-arrow-left-right"></i>
-                    <span>Bs {{ getPrecioBs(producto) | number:'1.2-2' }}</span>
-                  </div>
-                </ng-container>
+                <!-- Precio principal (ya convertido a moneda del sistema) -->
+                <div class="precio-principal">
+                  <span class="precio-moneda">{{ getSimboloMonedaActual() }}</span>
+                  <span class="precio-valor">
+                    {{ getPrecioParaMostrar(producto) | number:'1.2-2' }}
+                  </span>
+                </div>
 
-                <ng-template #soloBs>
-                  <div class="precio-principal">
-                    <span class="precio-moneda">Bs</span>
-                    <span class="precio-valor">
-                      {{ producto.precio | number:'1.2-2' }}
-                    </span>
-                  </div>
-                </ng-template>
+                <!-- Referencia en Bs (convertido desde el precio actual) -->
+                <div class="precio-conversion">
+                  <i class="bi bi-arrow-left-right"></i>
+                  <span>
+                    Bs {{ getPrecioBs(producto) | number:'1.0-0' }}
+                  </span>
+
+                  <!-- Mostrar precio base si aplica IVA -->
+                  <!--<small class="conversion-info" *ngIf="producto.aplicaIva">
+                    ({{ getSimboloMonedaActual() }}{{ getPrecioBaseParaReferencia(producto) | number:'1.2-2' }})
+                  </small>-->
+                </div>
               </div>
 
               <div class="producto-stock">
                 <i class="bi bi-box"></i>
                 <span class="stock-cantidad" [ngClass]="{
-                  'stock-alto': producto.stock > 5,
-                  'stock-bajo': producto.stock <= 5 && producto.stock > 0,
-                  'stock-agotado': producto.stock === 0
-                }">
+          'stock-alto': producto.stock > 5,
+          'stock-bajo': producto.stock <= 5 && producto.stock > 0,
+          'stock-agotado': producto.stock === 0
+        }">
                   {{ producto.stock }} unidades
                 </span>
                 <span *ngIf="producto.stock <= 5 && producto.stock > 0" class="badge stock-alerta">
@@ -397,7 +396,7 @@
                           </div>
 
                           <!-- Selector de moneda tipo cards - MÁS COMPACTO -->
-                          <div class="selector-monedas-cards" [class.disabled]="esSoloLectura">
+                          <!-- <div class="selector-monedas-cards" [class.disabled]="esSoloLectura">
                             <div class="moneda-card" *ngFor="let monedaItem of moneda"
                               [class.selected]="producto.moneda === monedaItem.id" [class.disabled]="esSoloLectura"
                               (click)="!esSoloLectura && seleccionarMoneda(monedaItem.id)">
@@ -414,7 +413,7 @@
                                 <i class="bi bi-check-circle-fill"></i>
                               </div>
                             </div>
-                          </div>
+                          </div>-->
                         </div>
                       </div>
 
@@ -563,6 +562,7 @@
             </ng-container>
           </div>
         </div>
+
       </form>
     </div>
   </div>

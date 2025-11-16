@@ -11,13 +11,17 @@ export interface Producto {
   stock: number;
   categoria: string;
   proveedor: string;
-  aplicaIva: boolean;        
-  precioConIva?: number;      
-  precio: number;            
+  aplicaIva: boolean;
+  precioConIva?: number;
+  precio: number;
   activo: boolean;
   descripcion?: string;
   imagenUrl?: string;
   fechaIngreso: string;
+  precioOriginal?: number;
+  monedaOriginal?: string;
+  tasaConversion?: number;
+  fechaConversion?: string;
 }
 
 export interface ProductoDto {
@@ -33,21 +37,24 @@ export interface ProductoDto {
   stock: number;
   categoria: string;
   proveedor: string;
-  aplicaIva: boolean;         
-  precioConIva?: number;      
-  precio: number;             
+  aplicaIva: boolean;
+  precioConIva?: number;
+  precio: number;
   activo: boolean;
   descripcion?: string;
   imagen_url?: string;
   created_at: string;
+  precioOriginal?: number;
+  monedaOriginal?: string;
+  tasaConversion?: number;
 }
 
 
 export interface MonedaVisual {
-  id: string;         // ID real del backend (dolar, euro, bolivar)
-  alias: string;      // Alias visual (USD, EUR, Bs)
-  simbolo: string;    // $, €, Bs
-  nombre: string;     // Nombre completo
-  valor: number;      // Tasa de cambio
+  id: string;
+  alias: string;
+  simbolo: string;
+  nombre: string;
+  valor: number;
 }
 

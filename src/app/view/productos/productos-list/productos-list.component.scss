@@ -4,6 +4,49 @@
    MÓDULO DE PRODUCTOS MODERNO - DISEÑO VISUAL MEJORADO
    ============================================= */
 
+   /* Estilos para la sección de precios */
+.precio-principal {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.precio-moneda {
+  font-weight: 600;
+  color: #2c5530;
+}
+
+.precio-valor {
+  font-size: 1.1em;
+  font-weight: 700;
+  color: #2c5530;
+}
+
+.precio-conversion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85em;
+  color: #6c757d;
+}
+
+.conversion-info {
+  font-size: 0.75em;
+  color: #8b9cb1;
+  font-style: italic;
+}
+
+/* Debug temporal */
+.debug-info {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  padding: 8px;
+  border-radius: 4px;
+  margin: 5px 0;
+  font-size: 0.8em;
+}
+
 .productos-moderno {
     background: white;
     border-radius: 12px;

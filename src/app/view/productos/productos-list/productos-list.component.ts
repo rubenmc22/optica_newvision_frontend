@@ -1,17 +1,17 @@
-import { Component, OnInit, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
-import { Producto, ProductoDto, MonedaVisual } from '../producto.model';
+import { Component, OnInit, Output, EventEmitter, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { Producto, MonedaVisual } from '../producto.model';
 import { Sede } from '../../../view/login/login-interface';
 import { ProductoService } from '../producto.service';
 import { TasaCambiariaService } from '../../../core/services/tasaCambiaria/tasaCambiaria.service';
-import { Tasa } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
-import { Observable, of, forkJoin, map } from 'rxjs';
+import { Observable, of, forkJoin } from 'rxjs';
 import { switchMap, take, catchError } from 'rxjs/operators';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import { UserStateService } from '../../../core/services/userState/user-state-service';
-
+import { ProductoConversionService } from './producto-conversion.service';
+import { SystemConfigService } from '../../system-config/system-config.service';
 
 @Component({
     selector: 'app-productos-list',
@@ -19,8 +19,7 @@ import { UserStateService } from '../../../core/services/userState/user-state-se
     templateUrl: './productos-list.component.html',
     styleUrls: ['./productos-list.component.scss']
 })
-
-export class ProductosListComponent implements OnInit {
+export class ProductosListComponent implements OnInit, OnDestroy {
     @Output() onCerrar = new EventEmitter<void>();
 
     // CONSTANTES
@@ -48,17 +47,14 @@ export class ProductosListComponent implements OnInit {
     estadoSeleccionado: boolean = true;
     sedeActiva: string = '';
     sedeFiltro: string = this.sedeActiva;
-    filtro: string = '';
-    categoriaAbierto = false;
     ordenarPorStockActivo: boolean = false;
     ordenStockAscendente: boolean = true;
-
 
     // CATÁLOGO
     categoriasProducto: string[] = ['Monturas', 'Lentes', 'Líquidos', 'Estuches', 'Misceláneos', 'Lentes de contacto'];
     moneda: MonedaVisual[] = [];
 
-    //MODAL
+    // MODAL
     avatarPreview: string | null = null;
     user: any = { ruta_imagen: '' };
     esSoloLectura: boolean = false;
@@ -67,13 +63,21 @@ export class ProductosListComponent implements OnInit {
     imagenSeleccionada: File | null = null;
 
     // TASAS DE CAMBIO
-    tasaDolar = 0;
-    tasaEuro = 0;
+    tasasActuales = { usd: 0, eur: 0 };
+
+    // SUSCRIPCIONES
+    private configSubscription: any;
+    private tasasSubscription: any;
+
+    // MONEDA DEL SISTEMA
+    monedaSistema: string = 'USD';
+    simboloMonedaSistema: string = '$';
 
     constructor(
         private productoService: ProductoService,
         private tasaCambiariaService: TasaCambiariaService,
-        //    private fb: FormBuilder,
+        private productoConversionService: ProductoConversionService,
+        private systemConfigService: SystemConfigService,
         private swalService: SwalService,
         private userStateService: UserStateService,
         private snackBar: MatSnackBar,
@@ -85,14 +89,42 @@ export class ProductosListComponent implements OnInit {
     // =========== LIFECYCLE HOOKS ===========
     ngOnInit(): void {
         this.cargarDatosIniciales();
+        this.suscribirCambiosConfiguracion();
         this.productoOriginal = { ...this.producto };
+    }
+
+    ngOnDestroy(): void {
+        if (this.configSubscription) {
+            this.configSubscription.unsubscribe();
+        }
+        if (this.tasasSubscription) {
+            this.tasasSubscription.unsubscribe();
+        }
+    }
+
+    private suscribirCambiosConfiguracion(): void {
+        this.configSubscription = this.systemConfigService.config$.subscribe(config => {
+            this.monedaSistema = config.monedaPrincipal;
+            this.simboloMonedaSistema = config.simboloMoneda;
+            this.actualizarProductosPorCambioMoneda();
+        });
+
+        this.tasasSubscription = this.systemConfigService.getTasasActuales().subscribe(tasas => {
+            this.tasasActuales = tasas;
+            this.actualizarConversionesProductos();
+        });
     }
 
     private cargarDatosIniciales(): void {
         this.iniciarCarga();
         this.tareaIniciada();
-        this.obtenerTasasCambio();
-        this.cargarProductosYSedes(); // delega la lógica
+        this.obtenerConfiguracionSistema();
+        this.cargarProductosYSedes();
+    }
+
+    private obtenerConfiguracionSistema(): void {
+        this.monedaSistema = this.systemConfigService.getMonedaPrincipal();
+        this.simboloMonedaSistema = this.systemConfigService.getSimboloMonedaPrincipal();
     }
 
     // =========== GESTIÓN DE DATOS ===========
@@ -101,7 +133,7 @@ export class ProductosListComponent implements OnInit {
         this.tareaIniciada();
 
         forkJoin({
-            productosResponse: this.productoService.getProductos().pipe(take(1)), // ✅ capturamos el objeto completo
+            productosResponse: this.productoService.getProductos().pipe(take(1)),
             sedes: this.authService.getSedes().pipe(
                 take(1),
                 catchError(error => {
@@ -125,7 +157,13 @@ export class ProductosListComponent implements OnInit {
                 })
             )
         }).subscribe(({ productosResponse, sedes, user }) => {
-            this.productos = productosResponse.productos ?? [];
+            this.productos = this.productoConversionService.convertirListaProductosAmonedaSistema(
+                productosResponse.productos ?? []
+            );
+
+            // ✅ CORREGIR PRODUCTOS INCONSISTENTES
+            this.corregirProductosInconsistentes();
+
             this.ordenarPorStock();
 
             this.sedesDisponibles = (sedes.sedes ?? [])
@@ -152,78 +190,114 @@ export class ProductosListComponent implements OnInit {
         });
     }
 
+    /**
+     * Corregir productos con precios inconsistentes
+     */
+    private corregirProductosInconsistentes(): void {
+        const productosInconsistentes = this.productos.filter(producto => 
+            !producto.aplicaIva && 
+            producto.precioConIva && 
+            producto.precio !== producto.precioConIva
+        );
 
-    private obtenerTasasCambio(): void {
-        this.tasaCambiariaService.getTasaActual().subscribe({
-            next: (res: { tasas: Tasa[] }) => {
-                const monedasVisuales: MonedaVisual[] = res.tasas.map(t => ({
-                    id: t.id?.toLowerCase() ?? '',
-                    alias: t.id === 'dolar' ? 'USD' : t.id === 'euro' ? 'EUR' : 'Bs',
-                    simbolo: t.simbolo?.trim() ?? '',
-                    nombre: t.nombre?.trim() ?? '',
-                    valor: t.valor ?? 0
-                }));
+        if (productosInconsistentes.length > 0) {
+            console.log('🔧 Corrigiendo productos inconsistentes:', productosInconsistentes.length);
+            
+            this.productos = this.productos.map(producto => {
+                if (!producto.aplicaIva && producto.precioConIva && producto.precio !== producto.precioConIva) {
+                    return {
+                        ...producto,
+                        precio: producto.precioConIva
+                    };
+                }
+                return producto;
+            });
+        }
+    }
 
-                // Guardar tasas específicas si las necesitas
-                this.tasaDolar = monedasVisuales.find(m => m.id === 'dolar')?.valor ?? 0;
-                this.tasaEuro = monedasVisuales.find(m => m.id === 'euro')?.valor ?? 0;
+    private actualizarProductosPorCambioMoneda(): void {
+        if (this.productos.length > 0) {
+            this.productos = this.productoConversionService.actualizarPreciosPorCambioMoneda(this.productos);
+            this.snackBar.open(
+                `✅ Precios actualizados a ${this.simboloMonedaSistema} (${this.monedaSistema})`,
+                'Cerrar',
+                { duration: 3000, panelClass: ['snackbar-success'] }
+            );
+            this.cdr.detectChanges();
+        }
+    }
 
-                // Guardar lista completa para el ng-select
-                this.moneda = monedasVisuales;
-            },
-            error: () => {
-                this.tasaDolar = 0;
-                this.tasaEuro = 0;
-                this.moneda = [
-                    { id: 'dolar', alias: 'USD', simbolo: '$', nombre: 'Dólar', valor: 0 },
-                    { id: 'euro', alias: 'EUR', simbolo: '€', nombre: 'Euro', valor: 0 },
-                    { id: 'bolivar', alias: 'Bs', simbolo: 'Bs', nombre: 'Bolívar', valor: 1 }
-                ];
+    private actualizarConversionesProductos(): void {
+        if (this.productos.length > 0) {
+            const productosNecesitanConversion = this.productos.filter(p =>
+                this.productoConversionService.necesitaReconversion(p)
+            );
+            if (productosNecesitanConversion.length > 0) {
+                this.productos = this.productoConversionService.actualizarPreciosPorCambioMoneda(this.productos);
             }
-        });
+        }
     }
 
-    cargarPagina(pagina: number): void {
-        this.paginaActual = pagina;
-        // Solo actualiza la página actual, no hace falta llamar al servicio
-        // ya que los productos ya están cargados y solo estamos paginando localmente
+    // =========== MÉTODOS PARA PRECIOS ===========
+    getPrecioParaMostrar(producto: Producto): number {
+        return producto.aplicaIva ?
+            (producto.precioConIva || producto.precio) :
+            producto.precio;
     }
 
-    private iniciarCarga(): void {
-        this.tareasPendientes = 0;
-        this.loader.show();
+    getPrecioBs(producto: Producto): number {
+        const precioParaMostrar = this.getPrecioParaMostrar(producto);
+        const precioEnBs = this.systemConfigService.convertirMonto(
+            precioParaMostrar,
+            producto.moneda,
+            'VES'
+        );
+        return precioEnBs;
     }
 
-    private tareaIniciada(): void {
-        this.tareasPendientes++;
-        this.dataIsReady = false;
+    getPrecioBaseParaReferencia(producto: Producto): number {
+        return producto.aplicaIva ? producto.precio : 0;
     }
 
-    private tareaFinalizada(): void {
+    getSimboloMoneda(monedaId: string): string {
+        if (monedaId === this.monedaSistema) {
+            return this.simboloMonedaSistema;
+        }
+        const id = this.normalizarMoneda(monedaId);
+        return this.moneda.find(m => m.id === id)?.simbolo ?? '';
+    }
 
-        this.tareasPendientes--;
-        if (this.tareasPendientes <= 0) {
-            setTimeout(() => this.loader.hide(), 300); // Delay visual
-            this.dataIsReady = true;
+    getSimboloMonedaActual(): string {
+        return this.simboloMonedaSistema;
+    }
+
+    esMonedaBolivar(moneda: string): boolean {
+        if (!moneda) return false;
+        const monedaNormalizada = moneda.toLowerCase();
+        return monedaNormalizada === 'bolivar' || monedaNormalizada === 'ves' || monedaNormalizada === 'bs';
+    }
+
+    private normalizarMoneda(moneda: string): string {
+        switch (moneda?.toLowerCase()) {
+            case 'usd': return 'dolar';
+            case 'eur': return 'euro';
+            case 'bs': return 'bolivar';
+            default: return moneda?.toLowerCase() ?? 'bolivar';
         }
     }
 
     // =========== GESTIÓN DE MODAL ===========
     abrirModal(modo: 'agregar' | 'editar' | 'ver', producto?: Producto): void {
-        // Clonado profundo para evitar referencias compartidas
         const base = producto
             ? JSON.parse(JSON.stringify(producto))
             : this.crearProductoVacio();
 
-        // Normalización defensiva de moneda
-        const monedaNormalizada = this.normalizarMoneda(base.moneda);
         const productoFinal: Producto = {
             ...base,
-            moneda: monedaNormalizada,
-            id: base.id ?? crypto.randomUUID(), // ← blindaje obligatorio
+            moneda: this.monedaSistema,
+            id: base.id ?? crypto.randomUUID(),
         };
 
-        // Asignación de estado visual y funcional
         this.producto = { ...productoFinal };
         this.productoOriginal = modo === 'editar' ? { ...productoFinal } : null;
         this.productoSeleccionado = modo === 'editar' ? { ...productoFinal } : undefined;
@@ -232,7 +306,6 @@ export class ProductosListComponent implements OnInit {
         this.mostrarModal = true;
         this.avatarPreview = '';
         this.imagenSeleccionada = null;
-
 
         setTimeout(() => {
             this.cdr.detectChanges?.();
@@ -264,7 +337,7 @@ export class ProductosListComponent implements OnInit {
         if (this.cargando) return;
         this.cargando = true;
 
-        const producto = this.productoSeguro;
+        const producto = this.productoConversionService.prepararNuevoProducto(this.productoSeguro);
         const formData = new FormData();
 
         formData.append('nombre', producto.nombre);
@@ -279,8 +352,6 @@ export class ProductosListComponent implements OnInit {
         formData.append('activo', producto.activo ? 'true' : 'false');
         formData.append('descripcion', producto.descripcion ?? '');
         formData.append('fechaIngreso', producto.fechaIngreso);
-
-        // ✅ IVA logic simplificada
         formData.append('aplicaIva', producto.aplicaIva.toString());
 
         if (producto.aplicaIva) {
@@ -300,7 +371,7 @@ export class ProductosListComponent implements OnInit {
             })
         ).subscribe({
             next: ({ productos }) => {
-                this.productos = productos;
+                this.productos = this.productoConversionService.convertirListaProductosAmonedaSistema(productos);
                 this.cargando = false;
                 this.cerrarModal();
             },
@@ -330,8 +401,6 @@ export class ProductosListComponent implements OnInit {
         formData.append('activo', producto.activo ? 'true' : 'false');
         formData.append('descripcion', producto.descripcion ?? '');
         formData.append('fechaIngreso', producto.fechaIngreso ?? '');
-
-        // ✅ IVA logic simplificada
         formData.append('aplicaIva', producto.aplicaIva.toString());
 
         if (producto.aplicaIva) {
@@ -339,7 +408,6 @@ export class ProductosListComponent implements OnInit {
         }
 
         formData.append('precio', producto.precio?.toString() ?? '0');
-
 
         if (this.imagenSeleccionada) {
             formData.append('imagen', this.imagenSeleccionada);
@@ -382,7 +450,6 @@ export class ProductosListComponent implements OnInit {
         } else {
             const titulo = operacion === 'agregar' ? 'No se pudo agregar el producto' : 'No se pudo actualizar el producto';
             const detalle = msg.length > 0 ? msg : 'Ocurrió un error inesperado.';
-
             this.swalService.showError(titulo, detalle);
         }
     }
@@ -444,18 +511,9 @@ export class ProductosListComponent implements OnInit {
     get productosVisualizados(): Producto[] {
         const sede = this.sedeFiltro?.trim().toLowerCase();
         if (!sede || sede === 'todas') {
-            return this.productos; // ← mostrar todos los productos
+            return this.productos;
         }
         return this.productos.filter(p => p.sede?.toLowerCase() === sede);
-    }
-
-
-    ngOnChanges() {
-        if (this.mostrarModal) {
-            document.body.classList.add('modal-open');
-        } else {
-            document.body.classList.remove('modal-open');
-        }
     }
 
     ordenarPorStock(): void {
@@ -478,10 +536,6 @@ export class ProductosListComponent implements OnInit {
         const inicio = Math.max(this.paginaActual - this.RANGO_PAGINACION, 1);
         const fin = Math.min(inicio + this.RANGO_PAGINACION * 2, this.totalPaginas);
         return Array.from({ length: fin - inicio + 1 }, (_, i) => inicio + i);
-    }
-
-    get paginas(): number[] {
-        return Array.from({ length: this.totalPaginas }, (_, i) => i + 1);
     }
 
     // =========== UTILIDADES ===========
@@ -521,35 +575,6 @@ export class ProductosListComponent implements OnInit {
         };
     }
 
-
-    actualizarEstadoPorStock(productos: Producto[]): Producto[] {
-        return productos.map(p => p.stock === 0 ? { ...p, activo: false } : p);
-    }
-
-    private normalizarMoneda(moneda: string): string {
-        switch (moneda?.toLowerCase()) {
-            case 'usd': return 'dolar';
-            case 'eur': return 'euro';
-            case 'bs': return 'bolivar';
-            default: return moneda?.toLowerCase() ?? 'bolivar';
-        }
-    }
-
-    esMonedaBolivar(moneda: string): boolean {
-        return this.normalizarMoneda(moneda) === 'bolivar';
-    }
-
-    getPrecioBs(producto: Producto): number {
-        const monedaId = this.normalizarMoneda(producto.moneda);
-        const tasa = this.moneda.find(m => m.id === monedaId)?.valor ?? 1;
-        return producto.precio * tasa;
-    }
-
-    getSimboloMoneda(monedaId: string): string {
-        const id = this.normalizarMoneda(monedaId);
-        return this.moneda.find(m => m.id === id)?.simbolo ?? '';
-    }
-
     getProfileImage(): string {
         return this.avatarPreview || this.producto?.imagenUrl || 'assets/avatar-placeholder.avif';
     }
@@ -579,17 +604,12 @@ export class ProductosListComponent implements OnInit {
         const productoActual = { ...this.producto };
         const productoBase = { ...this.productoOriginal };
 
-        // Ignorar campos que no afectan la lógica visual
         delete productoActual.imagenUrl;
         delete productoBase.imagenUrl;
 
         const imagenCambiada = this.imagenSeleccionada !== null;
-        const modificado = JSON.stringify(productoActual) !== JSON.stringify(productoBase) || imagenCambiada;
-        //  console.log('¿Formulario modificado?', modificado);
-
         return JSON.stringify(productoActual) !== JSON.stringify(productoBase) || imagenCambiada;
     }
-
 
     formularioValido(): boolean {
         const camposObligatorios = [
@@ -599,13 +619,11 @@ export class ProductosListComponent implements OnInit {
 
         const valido = camposObligatorios.every(campo => {
             const valor = this.producto?.[campo];
-
             if (typeof valor === 'boolean') return true;
             if (typeof valor === 'number') return valor >= 0;
             return valor !== undefined && valor !== null && `${valor}`.trim().length > 0;
         });
 
-        // Validación adicional para precio cuando aplica IVA
         if (this.producto.aplicaIva) {
             return valido && (this.producto.precioConIva !== undefined && this.producto.precioConIva >= 0);
         }
@@ -614,27 +632,18 @@ export class ProductosListComponent implements OnInit {
     }
 
     botonGuardarDeshabilitado(): boolean {
-        //  console.log('Evaluando estado del botón');
         if (this.cargando) return true;
-
-        // console.log('Evaluando estado del botón 2');
         if (this.modoModal === 'editar') {
             return !this.formularioModificado() || !this.formularioValido();
         }
-
         return !this.formularioValido();
     }
 
     actualizarPacientesPorSede(): void {
-        //  this.limpiarDatos();
         const sedeId = this.sedeFiltro?.trim().toLowerCase();
         this.productosFiltradosPorSede = !sedeId
             ? [...this.productos]
             : this.productos.filter(p => p.sede === sedeId);
-    }
-
-    obtenerSedeDesdePaciente(productos: Producto): string {
-        return productos?.sede?.toLowerCase() || '';
     }
 
     onImageError(event: Event): void {
@@ -646,48 +655,13 @@ export class ProductosListComponent implements OnInit {
         if (!this.producto.aplicaIva) {
             this.producto.precioConIva = undefined;
         } else {
-            // Si hay precio base, calcular precio con IVA
             if (this.producto.precio && this.producto.precio > 0) {
                 this.producto.precioConIva = Number((this.producto.precio * (1 + this.IVA)).toFixed(2));
             } else {
                 this.producto.precioConIva = 0;
             }
         }
-        this.onPrecioBlur(); // Aplica formato
-    }
-
-    // Métodos para el selector de moneda innovador
-    seleccionarMoneda(monedaId: string) {
-        this.producto.moneda = monedaId;
-    }
-
-    getMonedaIcon(monedaAlias: string): string {
-        const iconMap: { [key: string]: string } = {
-            'USD': 'bi-currency-dollar',
-            'EUR': 'bi-currency-euro',
-            'Bs': 'bi-cash',
-            'VES': 'bi-cash',
-            'COP': 'bi-currency-dollar',
-            'PEN': 'bi-currency-dollar',
-            'MXN': 'bi-currency-dollar',
-            'ARS': 'bi-currency-dollar'
-        };
-
-        return iconMap[monedaAlias] || 'bi-currency-dollar';
-    }
-
-    getMonedaSymbol(monedaAlias: string): string {
-        const symbolMap: { [key: string]: string } = {
-            'USD': '$',
-            'EUR': '€',
-            'Bs': 'Bolivar',
-            'VES': 'Bs',
-            'COP': '$',
-            'PEN': 'S/',
-            'MXN': '$',
-            'ARS': '$'
-        };
-        return symbolMap[monedaAlias] || '$';
+        this.onPrecioBlur();
     }
 
     // =========== MANEJO DE PRECIO MEJORADO ===========
@@ -697,17 +671,14 @@ export class ProductosListComponent implements OnInit {
         }
 
         const precio = this.producto.aplicaIva ? this.producto.precioConIva : this.producto.precio;
-
         if (!precio || precio === 0) {
             return '';
         }
-
         return precio.toFixed(2).replace('.', ',');
     }
 
     onPrecioFocus(): void {
         this.estaEditandoPrecio = true;
-
         const precioActual = this.producto.aplicaIva ? this.producto.precioConIva : this.producto.precio;
 
         if (precioActual === 0 || !precioActual) {
@@ -727,7 +698,6 @@ export class ProductosListComponent implements OnInit {
         let valor = input.value;
 
         valor = valor.replace(/[^\d,]/g, '');
-
         const partes = valor.split(',');
         if (partes.length > 2) {
             valor = partes[0] + ',' + partes.slice(1).join('');
@@ -749,7 +719,6 @@ export class ProductosListComponent implements OnInit {
 
     onPrecioBlur(): void {
         this.estaEditandoPrecio = false;
-
         let precio = this.producto.aplicaIva ? this.producto.precioConIva : this.producto.precio;
 
         if (precio === null || precio === undefined || isNaN(precio)) {
@@ -758,7 +727,6 @@ export class ProductosListComponent implements OnInit {
 
         precio = Number(parseFloat(precio.toString()).toFixed(2));
         this.actualizarPrecioModelo(precio);
-
         this.precioInputTemporal = '';
     }
 
@@ -781,9 +749,6 @@ export class ProductosListComponent implements OnInit {
         this.onPrecioBlur();
     }
 
-    /**
- * Formatea el precio (método faltante)
- */
     formatearPrecio(): void {
         this.onPrecioBlur();
     }
@@ -808,10 +773,32 @@ export class ProductosListComponent implements OnInit {
 
     formatearStock(event: Event): void {
         const input = event.target as HTMLInputElement;
-
         if (!input.value || input.value === '') {
             this.producto.stock = 0;
             input.value = '0';
+        }
+    }
+
+    // =========== CARGA ===========
+    cargarPagina(pagina: number): void {
+        this.paginaActual = pagina;
+    }
+
+    private iniciarCarga(): void {
+        this.tareasPendientes = 0;
+        this.loader.show();
+    }
+
+    private tareaIniciada(): void {
+        this.tareasPendientes++;
+        this.dataIsReady = false;
+    }
+
+    private tareaFinalizada(): void {
+        this.tareasPendientes--;
+        if (this.tareasPendientes <= 0) {
+            setTimeout(() => this.loader.hide(), 300);
+            this.dataIsReady = true;
         }
     }
 }
