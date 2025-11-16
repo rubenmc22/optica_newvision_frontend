@@ -3,6 +3,12 @@ import { FormBuilder, FormGroup, FormArray, Validators, AbstractControl } from '
 import { SwalService } from '../../../core/services/swal/swal.service';
 import { HistorialVentaService } from './../historial-ventas/historial-ventas.service';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { Tasa } from '../../../Interfaces/models-interface';
+import { GenerarVentaService } from './../generar-venta/generar-venta.service';
+import { take } from 'rxjs/operators';
+
+
+
 
 @Component({
   selector: 'app-historial-ventas',
@@ -10,6 +16,7 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
   templateUrl: './historial-ventas.component.html',
   styleUrls: ['./historial-ventas.component.scss']
 })
+
 export class HistorialVentasComponent implements OnInit {
 
   @ViewChild('cancelarVentaModal') cancelarVentaModal!: TemplateRef<any>;
@@ -59,28 +66,34 @@ export class HistorialVentasComponent implements OnInit {
 
   // Nuevas propiedades para edición de ventas
   editarVentaForm!: FormGroup;
-  monedaActual: string = 'USD';
+  monedaEfectivo: string = 'USD'; // Solo para el selector de moneda en efectivo en el modal
+
+  //Propiedades para tasas de cambio
+  tasasPorId: { [key: string]: number } = {};
+  tasasDisponibles: any[] = [];
+  monedasDisponibles: any[] = [];
+
+  // Mapeos de monedas
+  private readonly idMap: Record<string, string> = {
+    usd: 'dolar',
+    ves: 'bolivar',
+    bs: 'bolivar',
+    eur: 'euro',
+    $: 'dolar',
+    '€': 'euro'
+  };
 
   constructor(
     private modalService: NgbModal,
     private swalService: SwalService,
     private historialVentaService: HistorialVentaService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private generarVentaService: GenerarVentaService,
   ) { }
 
   ngOnInit() {
     this.cargarDatosIniciales();
     this.setMaxDate();
-
-    // Suscribirse a cambios en el monto abonado
-    this.editarVentaForm.get('montoAbonado')?.valueChanges.subscribe(() => {
-      // Forzar actualización de la UI
-    });
-
-    // Suscribirse a cambios en los métodos de pago
-    this.metodosPagoArray.valueChanges.subscribe(() => {
-      // Forzar actualización de la UI
-    });
   }
 
   private setMaxDate(): void {
@@ -97,25 +110,50 @@ export class HistorialVentasComponent implements OnInit {
     return this.editarVentaForm.get('metodosPago') as FormArray;
   }
 
-  cargarDatosIniciales() {
-    // Cargar lista de asesores (ejemplo)
+  private cargarDatosIniciales(): void {
+    // Cargar lista de asesores 
     this.asesores = [
       { id: 1, nombre: 'Ana García' },
       { id: 2, nombre: 'Carlos López' },
       { id: 3, nombre: 'María Rodríguez' }
     ];
 
-    // Cargar lista de especialistas (ejemplo)
+    // Cargar lista de especialistas 
     this.especialistas = [
       { id: 1, nombre: 'Dr. Pérez' },
       { id: 2, nombre: 'Dra. Martínez' },
       { id: 3, nombre: 'Dr. González' }
     ];
 
-    // Aquí cargarías las ventas desde tu servicio
-    this.cargarVentas();
-  }
+    // Cargar tasas de cambio desde el servicio
+    this.generarVentaService.getTasas().pipe(take(1)).subscribe({
+      next: (tasasResponse) => {
+        const tasas = tasasResponse.tasas ?? [];
+        this.tasasDisponibles = tasas;
+        this.monedasDisponibles = tasas;
 
+        // CORRECCIÓN: Mapear correctamente las tasas
+        this.tasasPorId = {
+          'dolar': tasas.find(t => t.id === 'dolar')?.valor || 36.5,
+          'euro': tasas.find(t => t.id === 'euro')?.valor || 39.2,
+          'bolivar': 1
+        };
+
+        console.log('Tasas de cambio cargadas:', this.tasasPorId);
+        this.cargarVentas();
+      },
+      error: (error) => {
+        console.error('Error al cargar tasas de cambio:', error);
+        // Valores por defecto
+        this.tasasPorId = {
+          'dolar': 36.5,
+          'euro': 39.2,
+          'bolivar': 1
+        };
+        this.cargarVentas();
+      }
+    });
+  }
   // Métodos para el datepicker moderno
   toggleDatepicker(): void {
     this.showDatepicker = !this.showDatepicker;
@@ -135,6 +173,10 @@ export class HistorialVentasComponent implements OnInit {
   aplicarFechas(): void {
     this.closeDatepicker();
     this.filtrarVentas();
+  }
+
+  getMonedaVenta(): string {
+    return this.selectedVenta?.moneda || 'dolar';
   }
 
   setRangoPreset(tipo: string): void {
@@ -291,6 +333,7 @@ export class HistorialVentasComponent implements OnInit {
         },
         fecha: new Date('2024-01-15T10:30:00'),
         estado: 'completada',
+        estadoPago: 'completado', // ✅ NUEVO: Estado del pago
         montoTotal: 90,
         asesor: { id: 1, nombre: 'Ana García' },
         especialista: { id: 1, nombre: 'Dr. Pérez' },
@@ -364,6 +407,7 @@ export class HistorialVentasComponent implements OnInit {
         },
         fecha: new Date('2024-01-16T14:20:00'),
         estado: 'completada',
+        estadoPago: 'parcial', // ✅ NUEVO: Estado del pago
         montoTotal: 190,
         asesor: { id: 2, nombre: 'Carlos López' },
         especialista: { id: 2, nombre: 'Dra. Martínez' },
@@ -466,15 +510,16 @@ export class HistorialVentasComponent implements OnInit {
         },
         fecha: new Date('2024-01-17T11:15:00'),
         estado: 'completada',
-        montoTotal: 34.68,
+        estadoPago: 'parcial', // ✅ NUEVO: Estado del pago
+        montoTotal: 52500.32,
         asesor: { id: 3, nombre: 'María Rodríguez' },
         especialista: { id: 3, nombre: 'Dr. González' },
         servicios: [{ nombre: 'Venta de accesorios' }],
         metodosPago: [
           {
             tipo: 'efectivo',
-            monto: 20,
-            conversionBs: 20
+            monto: 30000,
+            conversionBs: 30000
           }
         ],
         mostrarDetalle: false,
@@ -489,32 +534,32 @@ export class HistorialVentasComponent implements OnInit {
             id: "20",
             nombre: "Estuche para lentes",
             codigo: "PR-000020",
-            precio: 15,
-            precioConIva: 15,
+            precio: 26000,
+            precioConIva: 30000,
             cantidad: 1,
             aplicaIva: true,
-            iva: 2.4,
-            subtotal: 15,
-            total: 17.4
+            iva: 4000,
+            subtotal: 26000,
+            total: 30000
           },
           {
             id: "21",
             nombre: "Líquido limpiador",
             codigo: "PR-000021",
-            precio: 8,
-            precioConIva: 9.28,
+            precio: 10000,
+            precioConIva: 11200,
             cantidad: 2,
             aplicaIva: true,
-            iva: 1.28,
-            subtotal: 16,
-            total: 18.56
+            iva: 1200,
+            subtotal: 20000,
+            total: 22500.32
           }
         ],
-        subtotal: 31,
-        totalIva: 3.68,
+        subtotal: 46000,
+        totalIva: 5200,
         totalDescuento: 0,
-        total: 34.68,
-        montoAbonado: 20,
+        total: 52500.32,
+        montoAbonado: 30000,
         pagoCompleto: false,
         financiado: false
       },
@@ -527,6 +572,7 @@ export class HistorialVentasComponent implements OnInit {
         },
         fecha: new Date('2024-01-18T16:45:00'),
         estado: 'cancelada',
+        estadoPago: 'cancelado', // ✅ NUEVO: Estado del pago
         montoTotal: 65,
         asesor: { id: 1, nombre: 'Ana García' },
         especialista: { id: 1, nombre: 'Dr. Pérez' },
@@ -571,6 +617,7 @@ export class HistorialVentasComponent implements OnInit {
         },
         fecha: new Date('2024-01-19T09:30:00'),
         estado: 'completada',
+        estadoPago: 'parcial', // ✅ NUEVO: Estado del pago
         montoTotal: 127.5,
         asesor: { id: 2, nombre: 'Carlos López' },
         especialista: { id: 2, nombre: 'Dra. Martínez' },
@@ -656,6 +703,7 @@ export class HistorialVentasComponent implements OnInit {
         },
         fecha: new Date('2024-01-20T13:00:00'),
         estado: 'completada',
+        estadoPago: 'completado', // ✅ NUEVO: Estado del pago
         montoTotal: 102.12,
         asesor: { id: 3, nombre: 'María Rodríguez' },
         especialista: { id: 3, nombre: 'Dr. González' },
@@ -736,6 +784,180 @@ export class HistorialVentasComponent implements OnInit {
             cristal: "Blue light filter"
           }
         }
+      },
+      // ✅ NUEVAS VENTAS ADICIONALES CON DIFERENTES MONEDAS
+      {
+        id: 7,
+        numeroControl: '007',
+        paciente: {
+          nombre: 'Elena Castillo',
+          cedula: '44556677'
+        },
+        fecha: new Date('2024-01-21T10:00:00'),
+        estado: 'completada',
+        estadoPago: 'parcial', // Abono en Euros
+        montoTotal: 85,
+        asesor: { id: 1, nombre: 'Ana García' },
+        especialista: { id: 1, nombre: 'Dr. Pérez' },
+        servicios: [{ nombre: 'Lentes progresivos' }],
+        metodosPago: [
+          {
+            tipo: 'efectivo',
+            monto: 40,
+            conversionBs: 1568 // 40 EUR * 39.2
+          }
+        ],
+        mostrarDetalle: false,
+        sede: 'guatire',
+        moneda: 'euro',
+        formaPago: 'abono',
+        descuento: 0,
+        observaciones: 'Cliente pagará el resto en 15 días',
+        asesorNombre: 'Ana García',
+        productos: [
+          {
+            id: "26",
+            nombre: "Lentes progresivos premium",
+            codigo: "PR-000026",
+            precio: 85,
+            precioConIva: 85,
+            cantidad: 1,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 85,
+            total: 85
+          }
+        ],
+        subtotal: 85,
+        totalIva: 0,
+        totalDescuento: 0,
+        total: 85,
+        montoAbonado: 40,
+        pagoCompleto: false,
+        financiado: false
+      },
+      {
+        id: 8,
+        numeroControl: '008',
+        paciente: {
+          nombre: 'Miguel Ángel Rojas',
+          cedula: '88990011'
+        },
+        fecha: new Date('2024-01-22T14:30:00'),
+        estado: 'completada',
+        estadoPago: 'parcial', // Abono en Dólares
+        montoTotal: 200,
+        asesor: { id: 2, nombre: 'Carlos López' },
+        especialista: { id: 2, nombre: 'Dra. Martínez' },
+        servicios: [{ nombre: 'Armazón + Cristales' }],
+        metodosPago: [
+          {
+            tipo: 'transferencia',
+            monto: 100,
+            conversionBs: 3650 // 100 USD * 36.5
+          }
+        ],
+        mostrarDetalle: false,
+        sede: 'guatire',
+        moneda: 'dolar',
+        formaPago: 'abono',
+        descuento: 0,
+        observaciones: 'Saldo pendiente por transferir',
+        asesorNombre: 'Carlos López',
+        productos: [
+          {
+            id: "27",
+            nombre: "Armazón de titanio",
+            codigo: "PR-000027",
+            precio: 120,
+            precioConIva: 120,
+            cantidad: 1,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 120,
+            total: 120
+          },
+          {
+            id: "28",
+            nombre: "Cristales anti-reflejo",
+            codigo: "PR-000028",
+            precio: 80,
+            precioConIva: 80,
+            cantidad: 1,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 80,
+            total: 80
+          }
+        ],
+        subtotal: 200,
+        totalIva: 0,
+        totalDescuento: 0,
+        total: 200,
+        montoAbonado: 100,
+        pagoCompleto: false,
+        financiado: false
+      },
+      {
+        id: 9,
+        numeroControl: '009',
+        paciente: {
+          nombre: 'Sofía Mendoza',
+          cedula: '22334455'
+        },
+        fecha: new Date('2024-01-23T11:45:00'),
+        estado: 'completada',
+        estadoPago: 'completado', // Pago completo en Bolívares
+        montoTotal: 75000,
+        asesor: { id: 3, nombre: 'María Rodríguez' },
+        especialista: { id: 3, nombre: 'Dr. González' },
+        servicios: [{ nombre: 'Consulta + Lentes de contacto' }],
+        metodosPago: [
+          {
+            tipo: 'pagomovil',
+            monto: 75000,
+            conversionBs: 75000
+          }
+        ],
+        mostrarDetalle: false,
+        sede: 'guatire',
+        moneda: 'bolivar',
+        formaPago: 'contado',
+        descuento: 5,
+        observaciones: 'Pago completo vía Pago Móvil',
+        asesorNombre: 'María Rodríguez',
+        productos: [
+          {
+            id: "29",
+            nombre: "Consulta especializada",
+            codigo: "PR-000029",
+            precio: 25000,
+            precioConIva: 25000,
+            cantidad: 1,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 25000,
+            total: 25000
+          },
+          {
+            id: "30",
+            nombre: "Lentes de contacto trimestrales",
+            codigo: "PR-000030",
+            precio: 50000,
+            precioConIva: 50000,
+            cantidad: 1,
+            aplicaIva: false,
+            iva: 0,
+            subtotal: 50000,
+            total: 50000
+          }
+        ],
+        subtotal: 75000,
+        totalIva: 0,
+        totalDescuento: 3750,
+        total: 71250,
+        pagoCompleto: true,
+        financiado: false
       }
     ];
 
@@ -1047,11 +1269,9 @@ export class HistorialVentasComponent implements OnInit {
     return esAbonoConDeuda;
   }
 
-  // Método para editar venta
   editarVenta(venta: any): void {
     this.selectedVenta = venta;
 
-    // Usar el método corregido
     this.reinicializarFormularioConDeuda();
 
     this.modalService.open(this.editarVentaModal, {
@@ -1061,80 +1281,14 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  // CORRECCIÓN: Reinicializar el formulario con la deuda actual
-  reinicializarFormularioConDeuda() {
-    const montoDeuda = this.calcularMontoDeuda();
-
-    console.log('Reinicializando formulario con deuda:', montoDeuda); // DEBUG
-
-    // Si el formulario ya existe, actualiza el valor
-    if (this.editarVentaForm) {
-      this.editarVentaForm.patchValue({
-        montoAbonado: montoDeuda,
-        observaciones: this.selectedVenta.observaciones || ''
-      });
-
-      // Limpiar métodos de pago anteriores
-      this.metodosPagoArray.clear();
-
-      // Agregar métodos de pago existentes si los hay
-      if (this.selectedVenta.metodosPago && this.selectedVenta.metodosPago.length > 0) {
-        this.selectedVenta.metodosPago.forEach((metodo: any) => {
-          this.agregarMetodoPagoExistente(metodo);
-        });
-      } else {
-        // Agregar un método vacío por defecto
-        this.agregarMetodoPago();
-      }
-    } else {
-      // Si no existe, crear el formulario
-      this.inicializarFormulario();
-    }
-
-    // Actualizar validadores
-    this.editarVentaForm.get('montoAbonado')?.setValidators([
-      Validators.required,
-      Validators.min(0),
-      Validators.max(this.selectedVenta.total)
-    ]);
-    this.editarVentaForm.get('montoAbonado')?.updateValueAndValidity();
-  }
-
-  // CORRECCIÓN: Calcular monto de deuda correctamente
-  calcularMontoDeuda(): number {
-    if (!this.selectedVenta) return 0;
-
-    const total = this.selectedVenta.total || 0;
-    const abonado = this.selectedVenta.montoAbonado || 0;
-    const deuda = total - abonado;
-
-    return Math.max(0, deuda);
-  }
-
-  validarMontoMaximo(value: number) {
-    if (value === null || value === undefined) return;
-
-    const montoDeuda = this.calcularMontoDeuda();
-
-    if (value > montoDeuda) {
-      console.log('Ajustando monto automáticamente de', value, 'a', montoDeuda);
-
-      this.editarVentaForm.patchValue({
-        montoAbonado: montoDeuda
-      }, { emitEvent: false });
-    }
-  }
-
-  private agregarMetodoPagoExistente(metodo: any): void {
-    const metodoGroup = this.fb.group({
-      tipo: [metodo.tipo || '', Validators.required],
-      monto: [metodo.monto || 0, [Validators.required]]
-    });
-    this.metodosPagoArray.push(metodoGroup);
-  }
-
   removerMetodoPago(index: number): void {
     this.metodosPagoArray.removeAt(index);
+
+    setTimeout(() => {
+      this.metodosPagoArray.controls.forEach((control, i) => {
+        this.validarMontoMetodoPago(i);
+      });
+    });
   }
 
   calcularTotalMetodosPago(): number {
@@ -1149,6 +1303,12 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   guardarEdicionVenta(modal: any): void {
+
+    // Primero forzar validación de todos los métodos
+    this.metodosPagoArray.controls.forEach((control, index) => {
+      this.validarMontoMetodoPago(index);
+    });
+
     if (this.editarVentaForm.invalid) {
       this.marcarControlesComoSucios(this.editarVentaForm);
       this.swalService.showWarning('Advertencia', 'Por favor complete todos los campos requeridos correctamente.');
@@ -1159,7 +1319,7 @@ export class HistorialVentasComponent implements OnInit {
     const totalMetodosPago = this.calcularTotalMetodosPago();
 
     if (Math.abs(totalMetodosPago - formValue.montoAbonado) > 0.01) {
-      // Usar toLocaleString en lugar del pipe currency
+
       const totalMetodosStr = totalMetodosPago.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
       const montoAbonadoStr = formValue.montoAbonado.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
 
@@ -1251,69 +1411,20 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  getMontoRestanteParaMetodo(index: number): number {
-    const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value || 0;
-    const totalOtrosMetodos = this.metodosPagoArray.controls.reduce((total, control, i) => {
-      if (i !== index) {
-        return total + (control.get('monto')?.value || 0);
-      }
-      return total;
-    }, 0);
-
-    return Math.max(0, montoAbonado - totalOtrosMetodos);
-  }
-
   getMontoMaximo(): number {
     return this.calcularMontoDeuda();
-  }
-
-  calcularDiferenciaMetodos(): number {
-    const totalMetodos = this.calcularTotalMetodosPago();
-    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
-    const montoDeuda = this.calcularMontoDeuda();
-
-    const totalRequerido = montoDeuda + montoAbonado;
-
-    return Math.abs(totalMetodos - totalRequerido);
-  }
-
-  validarPagoCompleto(): boolean {
-    const totalMetodos = this.calcularTotalMetodosPago();
-    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
-    const montoDeuda = this.calcularMontoDeuda();
-    const totalRequerido = montoDeuda + montoAbonado;
-
-    return Math.abs(totalMetodos - totalRequerido) < 0.01;
-  }
-
-  calcularPorcentajeAbonado(): number {
-    if (!this.selectedVenta || !this.selectedVenta.total) return 0;
-
-    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
-    const nuevoMontoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
-
-    const totalAbonado = montoAbonadoAnterior + nuevoMontoAbonado;
-
-    let porcentaje = (totalAbonado / this.selectedVenta.total) * 100;
-
-    porcentaje = Math.min(porcentaje, 100);
-
-    return Math.round(porcentaje);
-  }
-
-  getMontosProgreso(): string {
-    if (!this.selectedVenta) return '$0.00 / $0.00';
-
-    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
-    const nuevoMontoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
-    const totalAbonado = montoAbonadoAnterior + nuevoMontoAbonado;
-
-    return `${this.formatearMoneda(totalAbonado)} / ${this.formatearMoneda(this.selectedVenta.total)}`;
   }
 
   onMontoAbonadoChange() {
     setTimeout(() => {
       this.calcularPorcentajeAbonado();
+      this.ajustarMontosMetodosPago();
+    });
+  }
+
+  ajustarMontosMetodosPago(): void {
+    this.metodosPagoArray.controls.forEach((control, index) => {
+      this.validarMontoMetodoPago(index);
     });
   }
 
@@ -1345,148 +1456,517 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  getMontoMaximoPermitido(): number {
-    return this.calcularMontoDeuda();
-  }
-
-  // CORRECCIÓN: Determinar moneda según tipo de pago
-  actualizarMonedaPorMetodoPago(tipoPago: string) {
-    switch (tipoPago) {
-      case 'efectivo':
-        // Efectivo puede ser USD o EUR - mantener la actual o usar USD por defecto
-        if (this.monedaActual !== 'USD' && this.monedaActual !== 'EUR') {
-          this.monedaActual = 'USD';
-        }
-        break;
-      case 'pagomovil':
-      case 'transferencia':
-      case 'debito':
-      case 'credito':
-        this.monedaActual = 'Bs';
-        break;
-      case 'zelle':
-        this.monedaActual = 'USD';
-        break;
-      default:
-        // Mantener moneda actual si no se reconoce el tipo
-        break;
-    }
-  }
-
-  // CORRECCIÓN: Obtener símbolo de moneda
-  getSimboloMoneda(): string {
-    switch (this.monedaActual) {
-      case 'USD': return '$';
-      case 'EUR': return '€';
-      case 'Bs': return 'Bs';
-      default: return '$';
-    }
-  }
-
-  // CORRECCIÓN: Formatear moneda dinámicamente
-  formatearMoneda(monto: number): string {
-    if (monto === null || monto === undefined) return this.getSimboloMoneda() + '0.00';
-
-    switch (this.monedaActual) {
-      case 'USD':
-        return new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        }).format(monto);
-
-      case 'EUR':
-        return new Intl.NumberFormat('de-DE', {
-          style: 'currency',
-          currency: 'EUR',
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        }).format(monto);
-
-      case 'Bs':
-        // Para Bolívares, usar formato personalizado
-        return `Bs ${monto.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
-
-      default:
-        return '$' + monto.toFixed(2);
-    }
-  }
-
-  // CORRECCIÓN: Para usar en pipes de Angular
-  getMonedaParaPipe(): string {
-    switch (this.monedaActual) {
-      case 'USD': return 'USD';
-      case 'EUR': return 'EUR';
-      case 'Bs': return ' Bs'; // Los pipes de Angular no tienen BS, usar USD como base
-      default: return 'USD';
-    }
-  }
-
-  // CORRECCIÓN: Convertir montos si es necesario (para cálculos internos)
-  convertirMontoSiEsNecesario(monto: number): number {
-    // Aquí puedes implementar la lógica de conversión de divisas
-    // Por ahora devolvemos el mismo monto
-    return monto;
-  }
-
-  // CORRECCIÓN: Cuando se agrega un nuevo método de pago
   agregarMetodoPago(): void {
     const metodoGroup = this.fb.group({
       tipo: ['', Validators.required],
-      monto: [0, [Validators.required]]
+      monto: [0, [Validators.required, Validators.min(0)]]
     });
 
     this.metodosPagoArray.push(metodoGroup);
 
-    // Suscribirse a cambios del tipo de pago
+    // Suscribirse a cambios del monto
     const index = this.metodosPagoArray.length - 1;
+    metodoGroup.get('monto')?.valueChanges.subscribe(value => {
+      if (value !== null && value !== undefined) {
+        this.validarMontoMetodoPago(index);
+      }
+    });
+
     metodoGroup.get('tipo')?.valueChanges.subscribe(tipo => {
       this.onMetodoPagoChange(index);
     });
   }
 
-  // Función para verificar si hay algún método de pago en efectivo seleccionado
-  hayMetodoEfectivoSeleccionado(): boolean {
-    if (!this.metodosPagoArray || this.metodosPagoArray.length === 0) {
-      return false;
-    }
+  private agregarMetodoPagoExistente(metodo: any): void {
+    const metodoGroup = this.fb.group({
+      tipo: [metodo.tipo || '', Validators.required],
+      monto: [metodo.monto || 0, [Validators.required, Validators.min(0)]]
+    });
 
-    // Verificar si algún método de pago es efectivo
-    const hayEfectivo = this.metodosPagoArray.controls.some(control =>
-      control.get('tipo')?.value === 'efectivo'
-    );
+    const index = this.metodosPagoArray.length;
+    this.metodosPagoArray.push(metodoGroup);
 
-    // Solo mostrar si hay efectivo Y la moneda actual es USD o EUR
-    return hayEfectivo && (this.monedaActual === 'USD' || this.monedaActual === 'EUR');
+    metodoGroup.get('monto')?.valueChanges.subscribe(value => {
+      if (value !== null && value !== undefined) {
+        this.validarMontoMetodoPago(index);
+      }
+    });
   }
 
-  // También actualiza la función onMetodoPagoChange para manejar mejor los cambios
-  onMetodoPagoChange(index: number) {
+  getSimboloMonedaVenta(): string {
+    const moneda = this.getMonedaVenta();
+    switch (moneda) {
+      case 'dolar': return '$';
+      case 'euro': return '€';
+      case 'bolivar': return 'Bs. ';
+      default: return '$';
+    }
+  }
+
+  getSimboloMonedaParaVenta(venta: any): string {
+    const moneda = venta?.moneda || 'dolar';
+    switch (moneda) {
+      case 'dolar': return '$';
+      case 'euro': return '€';
+      case 'bolivar': return 'Bs.';
+      default: return '$';
+    }
+  }
+
+  getMonedaParaPipeVenta(): string {
+    const moneda = this.getMonedaVenta();
+    switch (moneda) {
+      case 'dolar': return 'USD';
+      case 'euro': return 'EUR';
+      case 'bolivar': return 'Bs';
+      default: return 'USD';
+    }
+  }
+
+  calcularMontoDeuda(): number {
+    if (!this.selectedVenta) return 0;
+
+    const total = this.selectedVenta.total || 0;
+    const abonado = this.selectedVenta.montoAbonado || 0;
+    const deuda = total - abonado;
+
+    return Math.max(0, deuda);
+  }
+
+  calcularPorcentajeAbonado(): number {
+    if (!this.selectedVenta || !this.selectedVenta.total) return 0;
+
+    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
+    const nuevoMontoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+
+    const totalAbonado = montoAbonadoAnterior + nuevoMontoAbonado;
+
+    let porcentaje = (totalAbonado / this.selectedVenta.total) * 100;
+    porcentaje = Math.min(porcentaje, 100);
+
+    return Math.round(porcentaje);
+  }
+
+  // CORRECCIÓN: Obtener monto máximo permitido en moneda de venta
+  getMontoMaximoPermitido(): number {
+    return this.calcularMontoDeuda();
+  }
+
+  reinicializarFormularioConDeuda() {
+    const montoDeuda = this.calcularMontoDeuda();
+
+    console.log('Reinicializando formulario con deuda:', montoDeuda, 'Moneda:', this.getMonedaVenta());
+
+    if (this.editarVentaForm) {
+      this.editarVentaForm.patchValue({
+        montoAbonado: montoDeuda,
+        observaciones: this.selectedVenta.observaciones || ''
+      });
+
+      this.metodosPagoArray.clear();
+
+      if (this.selectedVenta.metodosPago && this.selectedVenta.metodosPago.length > 0) {
+        this.selectedVenta.metodosPago.forEach((metodo: any) => {
+          this.agregarMetodoPagoExistente(metodo);
+        });
+      } else {
+        this.agregarMetodoPago();
+      }
+    } else {
+      this.inicializarFormulario();
+    }
+
+    this.editarVentaForm.get('montoAbonado')?.setValidators([
+      Validators.required,
+      Validators.min(0),
+      Validators.max(this.selectedVenta.total)
+    ]);
+    this.editarVentaForm.get('montoAbonado')?.updateValueAndValidity();
+  }
+
+  validarMontoMaximo(value: number) {
+    if (value === null || value === undefined) return;
+
+    const montoDeuda = this.calcularMontoDeuda();
+
+    if (value > montoDeuda) {
+      console.log('Ajustando monto automáticamente de', value, 'a', montoDeuda);
+
+      this.editarVentaForm.patchValue({
+        montoAbonado: montoDeuda
+      }, { emitEvent: false });
+    }
+  }
+
+  // CORRECCIÓN: Obtener montos de progreso en moneda de venta
+  getMontosProgreso(): string {
+    if (!this.selectedVenta) return '$0.00 / $0.00';
+
+    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
+    const nuevoMontoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+    const totalAbonado = montoAbonadoAnterior + nuevoMontoAbonado;
+
+    const simbolo = this.getSimboloMonedaVenta();
+    return `${simbolo}${totalAbonado.toFixed(2)} / ${simbolo}${this.selectedVenta.total.toFixed(2)}`;
+  }
+
+
+
+
+
+
+
+
+
+
+  getSimboloMonedaMetodo(tipoPago: string): string {
+    switch (tipoPago) {
+      case 'efectivo':
+        // Para efectivo, usar la moneda seleccionada en el selector
+        return this.getSimboloMonedaEfectivo();
+      case 'pagomovil':
+      case 'transferencia':
+      case 'debito':
+      case 'credito':
+        return 'Bs. '; // Siempre bolívares para métodos locales
+      case 'zelle':
+        return '$'; // Siempre dólares para Zelle
+      default:
+        return this.getSimboloMonedaVenta();
+    }
+  }
+
+  // CORRECCIÓN: Obtener símbolo para efectivo basado en selector
+  getSimboloMonedaEfectivo(): string {
+    switch (this.monedaEfectivo) {
+      case 'USD': return '$';
+      case 'EUR': return '€';
+      case 'Bs': return 'Bs. ';
+      default: return '$';
+    }
+  }
+
+  // CORRECCIÓN: Obtener moneda para método específico
+  getMonedaParaMetodo(index: number): string {
     const metodoControl = this.metodosPagoArray.at(index);
     const tipoPago = metodoControl?.get('tipo')?.value;
 
     switch (tipoPago) {
       case 'efectivo':
-        // Mantener USD/EUR actual, no cambiar automáticamente
-        if (this.monedaActual !== 'USD' && this.monedaActual !== 'EUR') {
-          this.monedaActual = 'USD'; // Default a USD si no está en USD/EUR
-        }
-        break;
+        return this.monedaEfectivo.toLowerCase() === 'bs' ? 'bolivar' :
+          this.monedaEfectivo.toLowerCase() === 'eur' ? 'euro' : 'dolar';
       case 'pagomovil':
       case 'transferencia':
       case 'debito':
       case 'credito':
-        this.monedaActual = 'BS';
-        break;
+        return 'bolivar';
       case 'zelle':
-        this.monedaActual = 'USD';
-        break;
+        return 'dolar';
       default:
-        // Si se deselecciona un método, mantener moneda actual
-        break;
+        return this.getMonedaVenta();
     }
   }
+
+  // CORRECCIÓN: Función de conversión corregida
+  convertirMonto(monto: number, origen: string, destino: string): number {
+    if (origen === destino) return this.redondear(monto);
+
+    const tasas = {
+      bolivar: 1,
+      dolar: this.tasasPorId['dolar'] ?? 0,
+      euro: this.tasasPorId['euro'] ?? 0
+    };
+
+    let montoEnBs: number;
+
+    switch (origen) {
+      case 'dolar':
+        montoEnBs = monto * tasas.dolar;
+        break;
+      case 'euro':
+        montoEnBs = monto * tasas.euro;
+        break;
+      case 'bolivar':
+        montoEnBs = monto;
+        break;
+      default:
+        montoEnBs = monto;
+    }
+
+    // Luego convertir de bolívares a la moneda destino
+    let resultado: number;
+
+    switch (destino) {
+      case 'dolar':
+        resultado = montoEnBs / tasas.dolar;
+        break;
+      case 'euro':
+        resultado = montoEnBs / tasas.euro;
+        break;
+      case 'bolivar':
+        resultado = montoEnBs;
+        break;
+      default:
+        resultado = montoEnBs;
+    }
+
+    return this.redondear(resultado);
+  }
+
+  // CORRECCIÓN: Obtener monto máximo en la moneda del método
+  getMontoMaximoParaMetodo(index: number): number {
+    const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value || 0;
+    const monedaVenta = this.getMonedaVenta();
+    const monedaMetodo = this.getMonedaParaMetodo(index);
+
+    // Convertir el monto abonado (en moneda de venta) a la moneda del método
+    let montoMaximoEnMonedaMetodo = this.convertirMonto(montoAbonado, monedaVenta, monedaMetodo);
+
+    // Restar los otros métodos de pago ya ingresados
+    const otrosMetodosEnMonedaMetodo = this.metodosPagoArray.controls.reduce((total, control, i) => {
+      if (i !== index) {
+        const montoOtro = control.get('monto')?.value || 0;
+        const monedaOtro = this.getMonedaParaMetodo(i);
+        // Convertir el monto del otro método a la moneda del método actual
+        const montoConvertido = this.convertirMonto(montoOtro, monedaOtro, monedaMetodo);
+        return total + montoConvertido;
+      }
+      return total;
+    }, 0);
+
+    montoMaximoEnMonedaMetodo = Math.max(0, montoMaximoEnMonedaMetodo - otrosMetodosEnMonedaMetodo);
+
+    return this.redondear(montoMaximoEnMonedaMetodo);
+  }
+
+  // CORRECCIÓN: Validar monto del método de pago
+  validarMontoMetodoPago(index: number): void {
+    const metodoControl = this.metodosPagoArray.at(index);
+    const montoIngresado = metodoControl?.get('monto')?.value || 0;
+    const montoMaximo = this.getMontoMaximoParaMetodo(index);
+
+    console.log(`Validando método ${index}: Ingresado=${montoIngresado}, Máximo=${montoMaximo}, Moneda=${this.getMonedaParaMetodo(index)}`);
+
+    if (montoIngresado > montoMaximo) {
+      console.log(`Ajustando monto del método ${index} de ${montoIngresado} a ${montoMaximo}`);
+
+      metodoControl.patchValue({
+        monto: montoMaximo
+      }, { emitEvent: false });
+    }
+  }
+
+  obtenerTasaConversion(monedaOrigen: string, monedaDestino: string): number {
+    if (monedaOrigen === monedaDestino) return 1;
+
+    const tasas = {
+      bolivar: 1,
+      dolar: this.tasasPorId['dolar'] ?? 0,
+      euro: this.tasasPorId['euro'] ?? 0
+    };
+
+    const tasaOrigen = tasas[monedaOrigen as keyof typeof tasas] || 1;
+    const tasaDestino = tasas[monedaDestino as keyof typeof tasas] || 1;
+
+    return tasaOrigen / tasaDestino;
+  }
+
+  // CORRECCIÓN: Calcular total de métodos de pago en moneda de venta
+  calcularTotalMetodosPagoEnMonedaVenta(): number {
+    let total = 0;
+
+    this.metodosPagoArray.controls.forEach((control, index) => {
+      const monto = control.get('monto')?.value || 0;
+      const monedaMetodo = this.getMonedaParaMetodo(index);
+      const monedaVenta = this.getMonedaVenta();
+
+      const montoEnMonedaVenta = this.convertirMonto(monto, monedaMetodo, monedaVenta);
+      total += montoEnMonedaVenta;
+    });
+
+    return total;
+  }
+
+  // CORRECCIÓN: Calcular conversión para método específico
+  getConversionParaMetodo(index: number): number {
+    const metodoControl = this.metodosPagoArray.at(index);
+    const monto = metodoControl?.get('monto')?.value || 0;
+    const monedaMetodo = this.getMonedaParaMetodo(index);
+    const monedaVenta = this.getMonedaVenta();
+
+    return this.convertirMonto(monto, monedaMetodo, monedaVenta);
+  }
+
+  mostrarConversionParaMetodo(index: number): boolean {
+    const monedaMetodo = this.getMonedaParaMetodo(index);
+    const monedaVenta = this.getMonedaVenta();
+    return monedaMetodo !== monedaVenta;
+  }
+
+  mostrarConversionBs(): boolean {
+    return this.getMonedaVenta() !== 'bolivar';
+  }
+
+  getConversionBs(monto: number): number {
+    const monedaVenta = this.getMonedaVenta();
+
+    if (monedaVenta === 'bolivar') {
+      return monto;
+    }
+
+    const tasa = this.tasasPorId[monedaVenta] || 1;
+    return this.redondear(monto * tasa);
+  }
+
+  obtenerEquivalenteBs(monto: number): number {
+    const moneda = this.getMonedaVenta();
+    const tasa = this.tasasPorId?.[moneda] ?? 1;
+    return moneda === 'bolivar' ? monto : monto * tasa;
+  }
+
+  // CORRECCIÓN: Redondear números
+  private redondear(valor: number, decimales: number = 2): number {
+    return Math.round(valor * Math.pow(10, decimales)) / Math.pow(10, decimales);
+  }
+
+  // CORRECCIÓN: Al cambiar método de pago
+  onMetodoPagoChange(index: number) {
+    const metodoControl = this.metodosPagoArray.at(index);
+    const tipoPago = metodoControl?.get('tipo')?.value;
+
+    console.log(`Método ${index} cambiado a: ${tipoPago}, Símbolo: ${this.getSimboloParaMetodo(index)}`);
+
+    // Resetear monto si el tipo de pago cambia
+    metodoControl.patchValue({
+      monto: 0
+    });
+  }
+
+  // CORRECCIÓN: Calcular diferencia en moneda de venta
+  calcularDiferenciaMetodos(): number {
+    const totalMetodosEnMonedaVenta = this.calcularTotalMetodosPagoEnMonedaVenta();
+    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+
+    return Math.abs(totalMetodosEnMonedaVenta - montoAbonado);
+  }
+
+  // CORRECCIÓN: Validar pago completo en moneda de venta
+  validarPagoCompleto(): boolean {
+    const totalMetodosEnMonedaVenta = this.calcularTotalMetodosPagoEnMonedaVenta();
+    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+
+    return Math.abs(totalMetodosEnMonedaVenta - montoAbonado) < 0.01;
+  }
+
+  // CORRECCIÓN: Obtener símbolo para método específico
+  getSimboloParaMetodo(index: number): string {
+    const metodoControl = this.metodosPagoArray.at(index);
+    const tipoPago = metodoControl?.get('tipo')?.value;
+    return this.getSimboloMonedaMetodo(tipoPago);
+  }
+
+  // CORRECCIÓN: Verificar si hay efectivo para mostrar selector
+  hayMetodoEfectivoSeleccionado(): boolean {
+    if (!this.metodosPagoArray || this.metodosPagoArray.length === 0) {
+      return false;
+    }
+
+    return this.metodosPagoArray.controls.some(control =>
+      control.get('tipo')?.value === 'efectivo'
+    );
+  }
+
+  getMontoRestanteParaMetodo(index: number): number {
+    const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value || 0;
+    const monedaVenta = this.getMonedaVenta();
+
+    // Calcular total de otros métodos convertidos a moneda de venta
+    const totalOtrosMetodos = this.metodosPagoArray.controls.reduce((total, control, i) => {
+      if (i !== index) {
+        const monto = control.get('monto')?.value || 0;
+        const monedaMetodo = this.getMonedaParaMetodo(i);
+        const montoEnMonedaVenta = this.convertirMonto(monto, monedaMetodo, monedaVenta);
+        return total + montoEnMonedaVenta;
+      }
+      return total;
+    }, 0);
+
+    const restanteEnMonedaVenta = Math.max(0, montoAbonado - totalOtrosMetodos);
+
+    // Convertir a la moneda del método específico
+    const monedaMetodo = this.getMonedaParaMetodo(index);
+    return this.convertirMonto(restanteEnMonedaVenta, monedaVenta, monedaMetodo);
+  }
+
+  // Método para calcular la deuda restante después del nuevo abono
+  calcularDeudaRestante(): number {
+    if (!this.selectedVenta) return 0;
+
+    const totalVenta = this.selectedVenta.total || 0;
+    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
+    const nuevoAbono = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+
+    const deudaRestante = totalVenta - (montoAbonadoAnterior + nuevoAbono);
+
+    return Math.max(0, deudaRestante);
+  }
+
+  getDeudaPendiente(venta: any): number {
+    if (!venta) return 0;
+
+    if (venta.formaPago === 'contado' && venta.pagoCompleto) {
+      return 0; // Pago completado
+    }
+
+    if (venta.formaPago === 'abono') {
+      const total = venta.total || 0;
+      const abonado = venta.montoAbonado || 0;
+      return Math.max(0, total - abonado);
+    }
+
+    if (venta.formaPago === 'cashea' && venta.financiado) {
+      const total = venta.total || 0;
+      const adelantado = venta.totalAdelantado || 0;
+      return Math.max(0, total - adelantado);
+    }
+
+    return 0;
+  }
+
+  // Método para obtener el estatus de pago
+  getEstatusPago(venta: any): string {
+    if (venta.estado === 'cancelada') {
+      return 'Cancelado';
+    }
+
+    const deuda = this.getDeudaPendiente(venta);
+
+    if (deuda === 0) {
+      return 'Pago completado';
+    } else {
+      return 'Pendiente por pago';
+    }
+  }
+
+
+  // Método para obtener la clase CSS del estatus de pago (actualizado)
+  getEstatusPagoClase(venta: any): string {
+    const estatus = venta.estadoPago || this.getEstatusPago(venta);
+
+    switch (estatus) {
+      case 'completado':
+      case 'Pago completado':
+        return 'estatus-completado';
+      case 'parcial':
+      case 'Pendiente por pago':
+        return 'estatus-pendiente';
+      case 'cancelado':
+      case 'Cancelado':
+        return 'estatus-cancelado';
+      default: return 'estatus-pendiente';
+    }
+  }
+
 }
 
 
