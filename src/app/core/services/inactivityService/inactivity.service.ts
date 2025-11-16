@@ -29,7 +29,6 @@ export class InactivityService implements OnDestroy {
         }
         
         this.isWatching = true;
-        console.log('🕐 Inactivity service started');
         this.resetTimer();
 
         // Escucha eventos que reinicien el temporizador
@@ -58,7 +57,6 @@ export class InactivityService implements OnDestroy {
         
         // Verificar si el usuario está autenticado antes de mostrar la alerta
         if (!this.authService.isAuthenticated()) {
-            console.log('Usuario ya no está autenticado, saltando advertencia');
             return;
         }
 

@@ -735,7 +735,7 @@ export class GenerarVentaComponent implements OnInit {
         const payload = this.payloadBuilder.construirCompleto();
         this.loader.show();
 
-        console.log('payload', payload);
+       // console.log('payload', payload);
 
         /* this.generarVentaService.crearVenta(payload).subscribe({
              next: (response) => {
@@ -984,16 +984,6 @@ export class GenerarVentaComponent implements OnInit {
 
         this.venta.metodosDePago = [];
         this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
-    }
-
-    verificarConfiguracionCashea(): void {
-        console.log('🔍 Configuración Cashea actual:', {
-            nivel: this.nivelCashea,
-            permite6Cuotas: this.nivelPermiteCuotasExtendidas(this.nivelCashea),
-            cuotasSeleccionadas: this.cantidadCuotasCashea,
-            montoInicial: this.venta.montoInicial,
-            montoTotal: this.montoTotal
-        });
     }
 
     asignarInicialPorNivel(): void {

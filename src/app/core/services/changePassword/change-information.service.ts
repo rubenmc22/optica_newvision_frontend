@@ -100,9 +100,6 @@ export class ChangeInformationService {
 
   // Carga de imagen de perfil
   uploadProfileImage(formData: FormData): Observable<{ message: string, image_url: string }> {
-    console.log('=== SERVICE DEBUG ===');
-    console.log('URL:', `${environment.apiUrl}/account/upload-profile-image`);
-    console.log('=== END SERVICE DEBUG ===');
     return this.http.post<{ message: string, image_url: string }>(
       `${environment.apiUrl}/account/upload-profile-image`,
       formData

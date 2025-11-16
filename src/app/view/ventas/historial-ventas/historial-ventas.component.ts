@@ -102,7 +102,7 @@ export class HistorialVentasComponent implements OnInit {
     const month = String(hoy.getMonth() + 1).padStart(2, '0');
     const day = String(hoy.getDate()).padStart(2, '0');
     this.maxDate = `${year}-${month}-${day}`;
-    console.log('Fecha máxima configurada:', this.maxDate);
+    //console.log('Fecha máxima configurada:', this.maxDate);
   }
 
   // Getter para el FormArray de métodos de pago
@@ -139,7 +139,7 @@ export class HistorialVentasComponent implements OnInit {
           'bolivar': 1
         };
 
-        console.log('Tasas de cambio cargadas:', this.tasasPorId);
+        // console.log('Tasas de cambio cargadas:', this.tasasPorId);
         this.cargarVentas();
       },
       error: (error) => {
@@ -1103,11 +1103,11 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   verRecibo(venta: any) {
-    console.log('Ver recibo:', venta);
+    // console.log('Ver recibo:', venta);
   }
 
   generarInforme() {
-    console.log('Generar informe con filtros:', this.filtros);
+    //console.log('Generar informe con filtros:', this.filtros);
   }
 
   // Método auxiliar para formatear el nombre (opcional)
@@ -1151,7 +1151,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   cancelarVenta(venta: any) {
-    console.log('Cancelar venta:', venta);
+    //console.log('Cancelar venta:', venta);
 
     this.selectedVenta = venta;
     this.motivoCancelacion = '';
@@ -1186,7 +1186,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private procesarCancelacion() {
-    console.log('Procesando cancelación de venta:', this.selectedVenta.id);
+    // console.log('Procesando cancelación de venta:', this.selectedVenta.id);
 
     this.historialVentaService.cancelarVenta(this.selectedVenta.id, this.motivoCancelacion).subscribe({
       next: (response) => {
@@ -1197,7 +1197,7 @@ export class HistorialVentasComponent implements OnInit {
           this.selectedVenta.motivo_cancelacion = this.motivoCancelacion;
           this.selectedVenta.fecha_cancelacion = response.data.fecha_cancelacion;
 
-          console.log('Venta cancelada exitosamente:', this.selectedVenta);
+          //  console.log('Venta cancelada exitosamente:', this.selectedVenta);
         } else {
           this.swalService.showError('Error', response.message);
         }
@@ -1230,7 +1230,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   verDetalleCompleto(venta: any) {
-    console.log('Ver detalle completo:', venta);
+    //   console.log('Ver detalle completo:', venta);
 
     this.selectedVenta = venta;
 
@@ -1389,7 +1389,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private generarNuevoRecibo(venta: any): void {
-    console.log('Generando nuevo recibo para venta:', venta);
+    //   console.log('Generando nuevo recibo para venta:', venta);
   }
 
   private marcarControlesComoSucios(formGroup: FormGroup): void {
@@ -1555,7 +1555,7 @@ export class HistorialVentasComponent implements OnInit {
   reinicializarFormularioConDeuda() {
     const montoDeuda = this.calcularMontoDeuda();
 
-    console.log('Reinicializando formulario con deuda:', montoDeuda, 'Moneda:', this.getMonedaVenta());
+    // console.log('Reinicializando formulario con deuda:', montoDeuda, 'Moneda:', this.getMonedaVenta());
 
     if (this.editarVentaForm) {
       this.editarVentaForm.patchValue({
@@ -1590,7 +1590,7 @@ export class HistorialVentasComponent implements OnInit {
     const montoDeuda = this.calcularMontoDeuda();
 
     if (value > montoDeuda) {
-      console.log('Ajustando monto automáticamente de', value, 'a', montoDeuda);
+      // console.log('Ajustando monto automáticamente de', value, 'a', montoDeuda);
 
       this.editarVentaForm.patchValue({
         montoAbonado: montoDeuda
@@ -1745,10 +1745,10 @@ export class HistorialVentasComponent implements OnInit {
     const montoIngresado = metodoControl?.get('monto')?.value || 0;
     const montoMaximo = this.getMontoMaximoParaMetodo(index);
 
-    console.log(`Validando método ${index}: Ingresado=${montoIngresado}, Máximo=${montoMaximo}, Moneda=${this.getMonedaParaMetodo(index)}`);
+    // console.log(`Validando método ${index}: Ingresado=${montoIngresado}, Máximo=${montoMaximo}, Moneda=${this.getMonedaParaMetodo(index)}`);
 
     if (montoIngresado > montoMaximo) {
-      console.log(`Ajustando monto del método ${index} de ${montoIngresado} a ${montoMaximo}`);
+      //console.log(`Ajustando monto del método ${index} de ${montoIngresado} a ${montoMaximo}`);
 
       metodoControl.patchValue({
         monto: montoMaximo
@@ -1834,7 +1834,7 @@ export class HistorialVentasComponent implements OnInit {
     const metodoControl = this.metodosPagoArray.at(index);
     const tipoPago = metodoControl?.get('tipo')?.value;
 
-    console.log(`Método ${index} cambiado a: ${tipoPago}, Símbolo: ${this.getSimboloParaMetodo(index)}`);
+    //console.log(`Método ${index} cambiado a: ${tipoPago}, Símbolo: ${this.getSimboloParaMetodo(index)}`);
 
     // Resetear monto si el tipo de pago cambia
     metodoControl.patchValue({

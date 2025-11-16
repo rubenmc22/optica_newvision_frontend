@@ -161,7 +161,6 @@ export class ProductosListComponent implements OnInit, OnDestroy {
                 productosResponse.productos ?? []
             );
 
-            // ✅ CORREGIR PRODUCTOS INCONSISTENTES
             this.corregirProductosInconsistentes();
 
             this.ordenarPorStock();
@@ -194,15 +193,15 @@ export class ProductosListComponent implements OnInit, OnDestroy {
      * Corregir productos con precios inconsistentes
      */
     private corregirProductosInconsistentes(): void {
-        const productosInconsistentes = this.productos.filter(producto => 
-            !producto.aplicaIva && 
-            producto.precioConIva && 
+        const productosInconsistentes = this.productos.filter(producto =>
+            !producto.aplicaIva &&
+            producto.precioConIva &&
             producto.precio !== producto.precioConIva
         );
 
         if (productosInconsistentes.length > 0) {
-            console.log('🔧 Corrigiendo productos inconsistentes:', productosInconsistentes.length);
-            
+           // console.log('🔧 Corrigiendo productos inconsistentes:', productosInconsistentes.length);
+
             this.productos = this.productos.map(producto => {
                 if (!producto.aplicaIva && producto.precioConIva && producto.precio !== producto.precioConIva) {
                     return {
@@ -274,7 +273,10 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     esMonedaBolivar(moneda: string): boolean {
         if (!moneda) return false;
         const monedaNormalizada = moneda.toLowerCase();
-        return monedaNormalizada === 'bolivar' || monedaNormalizada === 'ves' || monedaNormalizada === 'bs';
+        return monedaNormalizada === 'bolivar' ||
+            monedaNormalizada === 'ves' ||
+            monedaNormalizada === 'bs' ||
+            monedaNormalizada === 'bolívar';
     }
 
     private normalizarMoneda(moneda: string): string {
@@ -674,7 +676,8 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         if (!precio || precio === 0) {
             return '';
         }
-        return precio.toFixed(2).replace('.', ',');
+
+        return precio.toFixed(2).replace(',', '.'); 
     }
 
     onPrecioFocus(): void {
@@ -684,9 +687,9 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         if (precioActual === 0 || !precioActual) {
             this.precioInputTemporal = '';
         } else {
-            const valorFormateado = precioActual.toFixed(2).replace('.', ',');
-            if (valorFormateado.endsWith(',00')) {
-                this.precioInputTemporal = valorFormateado.replace(',00', '');
+            const valorFormateado = precioActual.toFixed(2).replace(',', '.');
+            if (valorFormateado.endsWith('.00')) {
+                this.precioInputTemporal = valorFormateado.replace('.00', '');
             } else {
                 this.precioInputTemporal = valorFormateado;
             }
@@ -697,22 +700,24 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         const input = event.target as HTMLInputElement;
         let valor = input.value;
 
-        valor = valor.replace(/[^\d,]/g, '');
-        const partes = valor.split(',');
+        valor = valor.replace(/[^\d.,]/g, '');
+        valor = valor.replace(',', '.');
+
+        const partes = valor.split('.');
         if (partes.length > 2) {
-            valor = partes[0] + ',' + partes.slice(1).join('');
+            valor = partes[0] + '.' + partes.slice(1).join('');
         }
 
         if (partes.length === 2 && partes[1].length > 2) {
-            valor = partes[0] + ',' + partes[1].substring(0, 2);
+            valor = partes[0] + '.' + partes[1].substring(0, 2);
         }
 
         this.precioInputTemporal = valor;
 
-        if (valor === '' || valor === ',') {
+        if (valor === '' || valor === '.') {
             this.actualizarPrecioModelo(0);
         } else {
-            const numero = parseFloat(valor.replace(',', '.')) || 0;
+            const numero = parseFloat(valor) || 0;
             this.actualizarPrecioModelo(numero);
         }
     }

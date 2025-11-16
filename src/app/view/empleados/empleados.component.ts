@@ -72,7 +72,7 @@ export class EmpleadosComponent implements OnInit {
     ];
 
     Promise.allSettled(loadPromises).then((results) => {
-      console.log('Carga inicial completada', results);
+      //console.log('Carga inicial completada', results);
       // FALTA ESTA LÍNEA CRÍTICA:
       this.loader.hide(); // ← AÑADIR ESTA LÍNEA
     }).catch((error) => {
@@ -291,7 +291,7 @@ export class EmpleadosComponent implements OnInit {
   private loadEmployees(): void {
     this.isLoading = true;
     this.empleadosService.getAllEmpleados().subscribe((empleados: Empleado[]) => {
-      console.log('Empleados', empleados);
+   //   console.log('Empleados', empleados);
       this.employees = empleados;
       this.filteredEmployees = [...this.employees];
       this.isLoading = false;
@@ -410,7 +410,6 @@ export class EmpleadosComponent implements OnInit {
 
   updateEmployee(index: number): void {
     const emp = this.employees[index];
-    console.log('RDMC emp', emp);
     const errors = this.validateEmployeeChanges(emp);
 
     if (errors.length > 0) {
@@ -422,8 +421,6 @@ export class EmpleadosComponent implements OnInit {
     }
 
     const updatedEmployee = this.buildEmployeePayload(emp);
-
-    console.log('RDMC updatedEmployee', updatedEmployee);
 
     this.empleadosService.actualizarEmpleado(updatedEmployee).subscribe({
       next: () => {

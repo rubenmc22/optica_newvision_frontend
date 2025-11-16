@@ -16,8 +16,8 @@ export class HistorialVentaService {
    * @returns Observable con la respuesta simulada
    */
   cancelarVenta(ventaId: number, motivo: string): Observable<any> {
-    console.log('Cancelando venta:', { ventaId, motivo });
-    
+    //console.log('Cancelando venta:', { ventaId, motivo });
+
     // Simular una respuesta exitosa del API
     const respuestaSimulada = {
       success: true,
@@ -32,7 +32,7 @@ export class HistorialVentaService {
 
     // Simular delay de red (1-2 segundos)
     const delayTime = Math.random() * 1000 + 1000;
-    
+
     return of(respuestaSimulada).pipe(
       delay(delayTime)
     );
@@ -42,8 +42,8 @@ export class HistorialVentaService {
    * Versión alternativa que simula un error (para testing)
    */
   cancelarVentaConError(ventaId: number, motivo: string): Observable<any> {
-    console.log('Cancelando venta (simulando error):', { ventaId, motivo });
-    
+    //console.log('Cancelando venta (simulando error):', { ventaId, motivo });
+
     // Simular un error del API
     const errorSimulado = {
       success: false,
@@ -53,7 +53,7 @@ export class HistorialVentaService {
 
     // Simular delay de red
     const delayTime = Math.random() * 1000 + 1000;
-    
+
     return of(errorSimulado).pipe(
       delay(delayTime)
     );

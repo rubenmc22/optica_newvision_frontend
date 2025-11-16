@@ -27,12 +27,10 @@ export class ProductoConversionService {
     convertirProductoAmonedaSistema(producto: any): any {
         const monedaSistema = this.configService.getMonedaPrincipal();
 
-        // Si el producto ya está en la moneda del sistema y no tiene monedaOriginal, mantenerlo
         if (producto.moneda === monedaSistema && !producto.monedaOriginal) {
             return producto;
         }
 
-        // Determinar moneda original y precio base
         const monedaOriginal = producto.monedaOriginal || producto.moneda;
         const precioBase = producto.precioOriginal || producto.precio;
 
@@ -94,7 +92,7 @@ export class ProductoConversionService {
      * Actualiza los precios cuando cambia la moneda del sistema
      */
     actualizarPreciosPorCambioMoneda(productos: any[]): any[] {
-        console.log('🔄 Actualizando precios por cambio de moneda del sistema');
+        //console.log('🔄 Actualizando precios por cambio de moneda del sistema');
         return this.convertirListaProductosAmonedaSistema(productos);
     }
 
@@ -139,35 +137,23 @@ export class ProductoConversionService {
      * Obtiene el precio en bolívares como referencia
      */
     getPrecioEnBs(producto: any): number {
-        // ✅ Validar con aplicaIva: si es true usar precioConIva, si no usar precio
-        const precioParaConversion = producto.precioConIva;
-
+        const precioParaConversion = producto.aplicaIva ?
+            (producto.precioConIva || producto.precio) :
+            producto.precio;
 
         const monedaOriginal = producto.monedaOriginal || producto.moneda;
 
-        console.log('🔍 Calculando precio en Bs (CORREGIDO):');
-        console.log('  - Producto:', producto.nombre);
-        console.log('  - Aplica IVA:', producto.aplicaIva);
-        console.log('  - Precio base:', producto.precio);
-        console.log('  - Precio con IVA:', producto.precioConIva);
-        console.log('  - Precio usado para conversión:', precioParaConversion);
-        console.log('  - Moneda original:', monedaOriginal);
-
-        // ✅ Conversión directa a Bs
         const precioEnBs = this.convertirDirectoABs(precioParaConversion, monedaOriginal);
 
-        console.log('  - Precio en Bs:', precioEnBs);
         return precioEnBs;
     }
+
     /**
     * Conversión directa a bolívares
     */
     private convertirDirectoABs(monto: number, monedaOrigen: string): number {
         const tasa = this.configService.getTasaPorId(monedaOrigen);
-        // console.log(`  - Tasa ${monedaOrigen} a Bs:`, tasa);
-
         const resultado = monto * tasa;
-        //console.log(`  - Resultado: ${monto} × ${tasa} = ${resultado}`);
 
         return Number(resultado.toFixed(2));
     }

@@ -167,7 +167,6 @@
 
               <!-- SECCIÓN DE PRECIOS  -->
               <div class="producto-precio">
-                <!-- Precio principal (ya convertido a moneda del sistema) -->
                 <div class="precio-principal">
                   <span class="precio-moneda">{{ getSimboloMonedaActual() }}</span>
                   <span class="precio-valor">
@@ -175,17 +174,11 @@
                   </span>
                 </div>
 
-                <!-- Referencia en Bs (convertido desde el precio actual) -->
-                <div class="precio-conversion">
+                <div class="precio-conversion" *ngIf="!esMonedaBolivar(monedaSistema)">
                   <i class="bi bi-arrow-left-right"></i>
                   <span>
-                    Bs {{ getPrecioBs(producto) | number:'1.0-0' }}
+                    Bs {{ getPrecioBs(producto) | number:'1.2-2' }}
                   </span>
-
-                  <!-- Mostrar precio base si aplica IVA -->
-                  <!--<small class="conversion-info" *ngIf="producto.aplicaIva">
-                    ({{ getSimboloMonedaActual() }}{{ getPrecioBaseParaReferencia(producto) | number:'1.2-2' }})
-                  </small>-->
                 </div>
               </div>
 
@@ -383,7 +376,8 @@
                       <div class="form-group-moderno grupo-precio">
                         <label class="form-label-moderno">
                           <i class="bi bi-currency-dollar"></i>
-                          {{ producto.aplicaIva ? 'Precio + IVA' : 'Precio' }} <span class="required">*</span>
+                          {{ producto.aplicaIva ? 'Precio en ' + getSimboloMonedaActual() + ' + IVA' : 'Precio en ' +
+                          getSimboloMonedaActual() }} <span class="required">*</span>
                         </label>
 
                         <div class="selector-moneda-innovador">

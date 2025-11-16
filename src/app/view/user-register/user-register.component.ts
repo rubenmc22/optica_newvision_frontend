@@ -222,7 +222,7 @@ export class UserRegisterComponent implements OnInit {
         // Si acepta los términos, procedemos con el registro
         this.registerUser();
       } else {
-        console.log('El usuario canceló la operación.');
+      //  console.log('El usuario canceló la operación.');
       }
     });
 
@@ -237,7 +237,7 @@ export class UserRegisterComponent implements OnInit {
       acceptedTerms: true
     };
 
-    console.log('Datos del formulario:', formData);
+    //console.log('Datos del formulario:', formData);
 
     const isMinor = formData.isMinor;
 

@@ -71,8 +71,6 @@ export class SystemConfigService {
       ultimaActualizacion: new Date().toISOString()
     };
 
-    console.log(`🔄 Cambiando moneda del sistema a: ${nuevaMoneda}`);
-
     // Guardar localmente inmediatamente
     this.saveConfig(nuevoConfig);
 
@@ -80,7 +78,6 @@ export class SystemConfigService {
     return this.actualizarMonedaBaseBackend(nuevaMoneda).pipe(
       tap({
         next: (response) => {
-          console.log('✅ Moneda guardada en backend:', response);
           // Emitir evento específico para cambio de moneda
           this.notificarCambioMoneda(nuevaMoneda);
         },
@@ -95,7 +92,6 @@ export class SystemConfigService {
 
   private notificarCambioMoneda(nuevaMoneda: string): void {
     // El config$ ya se actualiza automáticamente, pero podemos emitir un evento específico si es necesario
-    console.log(`📢 Moneda del sistema cambiada a: ${nuevaMoneda}`);
   }
 
   /**
@@ -111,14 +107,8 @@ export class SystemConfigService {
     try {
       const tasaOrigen = this.getTasaPorId(monedaOrigen);
       const tasaDestino = this.getTasaPorId(monedaDestino);
-
-      console.log(`💰 Conversión: ${monto} ${monedaOrigen} → ${monedaDestino}`);
-      console.log(`💰 Tasas: ${monedaOrigen}=${tasaOrigen}Bs, ${monedaDestino}=${tasaDestino}Bs`);
-
       const montoEnBs = monto * tasaOrigen;
       const resultado = montoEnBs / tasaDestino;
-
-      console.log(`💰 Resultado: ${resultado.toFixed(2)} ${monedaDestino}`);
 
       return Number(resultado.toFixed(this.getConfig().decimales));
     } catch (error) {
@@ -175,11 +165,9 @@ export class SystemConfigService {
   obtenerConfigDesdeBackend(): void {
     this.obtenerMonedaBaseBackend().subscribe({
       next: (response) => {
-        console.log('Respuesta del backend:', response);
 
         if (response && response.moneda_base) {
           const monedaPrincipal = this.convertirMonedaDesdeBackend(response.moneda_base);
-          console.log('Moneda convertida:', monedaPrincipal);
 
           const nuevoConfig: SystemConfig = {
             ...this.getConfig(),
@@ -189,7 +177,6 @@ export class SystemConfigService {
           };
 
           this.saveConfig(nuevoConfig);
-          console.log('Configuración actualizada desde backend:', nuevoConfig);
         }
       },
       error: (error) => {
@@ -232,7 +219,7 @@ export class SystemConfigService {
         return tasasActuales.eur;
       case 'bolivar':
       case 'ves':
-        return 1; // Bolívar es la base
+        return 1;
       default:
         return 1;
     }

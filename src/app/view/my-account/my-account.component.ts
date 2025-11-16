@@ -123,7 +123,6 @@ export class MyAccountComponent implements OnInit {
     this.loader.show(); // Mostrar loader al cargar datos
 
     const cedula = this.authService.getCurrentUser()?.cedula?.trim();
-    console.log('cedula', cedula);
     if (!cedula) {
       console.warn('No se encontró cédula en la sesión');
       this.user = this.getDefaultUserProfile();
@@ -171,13 +170,6 @@ export class MyAccountComponent implements OnInit {
     const message = isDisabled
       ? 'Complete todos los campos requeridos para habilitar el guardado'
       : '';
-
-    console.log('=== TOOLTIP DEBUG ===');
-    console.log('isDisabled:', isDisabled);
-    console.log('isFormEdited:', this.isFormEdited);
-    console.log('isPersonalInfoValid():', this.isPersonalInfoValid());
-    console.log('Tooltip message:', message);
-    console.log('=== END DEBUG ===');
 
     return message;
   }
@@ -270,13 +262,6 @@ export class MyAccountComponent implements OnInit {
       this.user.fecha_nacimiento !== this.originalUser.fecha_nacimiento ||
       this.user.telefono !== this.originalUser.telefono ||
       this.selectedFile !== null;
-
-    console.log('=== DEBUG CHANGES ===');
-    console.log('isFormEdited:', this.isFormEdited);
-    console.log('Original nombre:', this.originalUser.nombre);
-    console.log('Current nombre:', this.user.nombre);
-    console.log('Are different:', this.user.nombre !== this.originalUser.nombre);
-    console.log('=== END CHANGES ===');
   }
 
   getProfileImage(): string {
@@ -470,16 +455,8 @@ export class MyAccountComponent implements OnInit {
     const formData = new FormData();
     formData.append('profileImage', file);
 
-    console.log('=== DEBUG UPLOAD IMAGE ===');
-    console.log('FormData field name:', 'profileImage');
-    console.log('File object:', file);
-
-    // Verificar contenido del FormData
-    console.log('FormData contents:');
     for (let pair of (formData as any).entries()) {
-      console.log('Key:', pair[0], 'Value:', pair[1]);
     }
-    console.log('=== END DEBUG ===');
 
     try {
       const response = await lastValueFrom(

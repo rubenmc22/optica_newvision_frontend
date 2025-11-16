@@ -155,7 +155,7 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
   }
 
   actualizarGrafico(): void {
-    console.log('📊 Datos recibidos en comparativa-sedes:', this.data);
+    //console.log('📊 Datos recibidos en comparativa-sedes:', this.data);
 
     this.mostrarGrafico = this.tieneDatos();
 
@@ -173,7 +173,7 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
       // Actualizar estadísticas rápidas
       this.actualizarEstadisticasRapidas();
 
-      console.log('✅ Gráfico de comparativa actualizado:', this.chartData);
+   //   console.log('✅ Gráfico de comparativa actualizado:', this.chartData);
     } catch (error) {
       console.error('❌ Error procesando datos de comparativa:', error);
       this.mostrarGraficoVacio();
@@ -395,7 +395,7 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
 
   // Métodos públicos para las acciones
   exportarGrafico(): void {
-    console.log('Exportando gráfico de comparativa');
+  //  console.log('Exportando gráfico de comparativa');
     alert('Funcionalidad de exportación en desarrollo');
   }
 
@@ -415,7 +415,7 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
   }
 
   maximizarGrafico(): void {
-    console.log('Maximizando gráfico de comparativa');
+    //console.log('Maximizando gráfico de comparativa');
     alert('Vista ampliada en desarrollo');
   }
 }
