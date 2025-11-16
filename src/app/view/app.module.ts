@@ -34,6 +34,7 @@ import { HistorialVentasComponent } from './ventas/historial-ventas/historial-ve
 import { PresupuestoComponent } from './ventas/presupuesto/presupuesto.component';
 import { CierreCajaComponent } from './ventas/cierre-caja/cierre-caja.component';
 import { LoaderComponent } from './../shared/loader/loader.component';
+import { SystemConfigComponent } from './system-config/system-config.component';
 
 
 
@@ -70,7 +71,8 @@ import { NgSelectModule } from '@ng-select/ng-select';
     HistorialVentasComponent,
     VentasDashboardComponent,
     PresupuestoComponent,
-    CierreCajaComponent
+    CierreCajaComponent,
+    SystemConfigComponent
   ],
   imports: [
     NgChartsModule,

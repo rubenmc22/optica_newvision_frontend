@@ -16,6 +16,7 @@ import { VerPacientesComponent } from './view/pacientes/pacientes.component';
 import { HistoriasMedicasComponent } from './view/historias-medicas/historias-medicas.component';
 import { ProductosListComponent } from './view/productos/productos-list/productos-list.component';
 import { VentasDashboardComponent } from './view/ventas/ventas-dashboard.component';
+import { SystemConfigComponent } from './view/system-config/system-config.component';
 
 // Nombre de la óptica (constante global)
 const OPTICA_NAME = 'Óptica New Vision';
@@ -106,6 +107,11 @@ export const appRoutes: Routes = [
         path: 'ventas',
         component: VentasDashboardComponent,
         title: getFullTitle('Ventas')
+      },
+        {
+        path: 'configuracion-sistema',
+        component: SystemConfigComponent,
+        title: getFullTitle('Configuración del sistema')
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'prefix' }
     ]

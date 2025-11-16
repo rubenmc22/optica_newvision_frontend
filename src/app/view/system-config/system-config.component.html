@@ -1,0 +1,155 @@
+<div class="config-container">
+  <!-- Header -->
+  <div class="config-header">
+    <div class="header-content">
+      <i class="header-icon bi bi-sliders"></i>
+      <div class="header-text">
+        <h1 class="header-title">Configuración del Sistema</h1>
+        <p class="header-subtitle">Administra los ajustes generales de la aplicación</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pestañas de Navegación -->
+  <div class="tabs-navigation">
+    <div class="tabs-container">
+      <button class="tab-button active" data-tab="moneda">
+        <i class="bi bi-currency-exchange"></i>
+        Moneda Principal
+      </button>
+      <button class="tab-button" data-tab="general" disabled>
+        <i class="bi bi-gear"></i>
+        Configuración General
+      </button>
+      <button class="tab-button" data-tab="avanzada" disabled>
+        <i class="bi bi-tools"></i>
+        Configuración Avanzada
+      </button>
+    </div>
+  </div>
+
+  <!-- Contenido de Pestañas -->
+  <div class="tab-content">
+    
+    <!-- Pestaña: Moneda Principal -->
+    <div class="tab-pane active" id="moneda-tab">
+      <div class="config-grid">
+        
+        <!-- Configuración de Moneda -->
+        <div class="config-section">
+          <div class="section-header">
+            <div class="section-icon">
+              <i class="bi bi-currency-dollar"></i>
+            </div>
+            <div class="section-info">
+              <h3>Moneda del Sistema</h3>
+              <p>Define la moneda principal para nuevas transacciones</p>
+            </div>
+          </div>
+
+          <div class="section-body">
+            <div class="form-group-modern">
+              <label class="form-label-modern">Moneda Principal</label>
+              <p class="form-description-modern">
+                Esta será la moneda predeterminada para todas las nuevas ventas, productos y reportes del sistema.
+              </p>
+              
+              <div class="moneda-options">
+                <div *ngFor="let moneda of monedas" 
+                     class="moneda-option" 
+                     [class.moneda-active]="config.monedaPrincipal === moneda.codigo"
+                     (click)="seleccionarMoneda(moneda.codigo)">
+                  <div class="moneda-symbol">{{moneda.simbolo}}</div>
+                  <div class="moneda-info">
+                    <span class="moneda-name">{{moneda.nombre}}</span>
+                    <span class="moneda-code">{{moneda.codigo}}</span>
+                  </div>
+                  <div class="moneda-check" *ngIf="config.monedaPrincipal === moneda.codigo">
+                    <i class="bi bi-check-circle-fill"></i>
+                  </div>
+                </div>
+              </div>
+
+              <div class="current-config">
+                <div class="config-badge">
+                  <i class="bi bi-info-circle"></i>
+                  <div class="badge-content">
+                    <strong>Configuración Actual:</strong>
+                    <span>{{config.simboloMoneda}} {{getNombreMoneda(config.monedaPrincipal)}}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Información de la Configuración -->
+        <div class="info-section">
+          <div class="info-card-modern">
+            <div class="info-header">
+              <i class="bi bi-lightbulb"></i>
+              <h4>¿Cómo funciona?</h4>
+            </div>
+            <div class="info-content">
+              <div class="info-item-modern">
+                <i class="bi bi-archive"></i>
+                <div>
+                  <strong>Ventas Existentes</strong>
+                  <p>Conservan su moneda original para mantener la integridad histórica de los datos.</p>
+                </div>
+              </div>
+              <div class="info-item-modern">
+                <i class="bi bi-plus-square"></i>
+                <div>
+                  <strong>Nuevas Transacciones</strong>
+                  <p>Se crearán automáticamente en la moneda principal seleccionada.</p>
+                </div>
+              </div>
+              <div class="info-item-modern">
+                <i class="bi bi-arrow-left-right"></i>
+                <div>
+                  <strong>Conversión Automática</strong>
+                  <p>Los montos se convierten en tiempo real usando las tasas configuradas.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Acciones Rápidas -->
+          <div class="actions-card">
+            <div class="actions-header">
+              <i class="bi bi-lightning"></i>
+              <h4>Acciones Rápidas</h4>
+            </div>
+            <div class="actions-content">
+              <button class="btn-action" (click)="resetConfig()">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                <span>Restablecer Configuración</span>
+                <small>Vuelve a los valores predeterminados</small>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Otras pestañas (para futuro) -->
+    <div class="tab-pane" id="general-tab">
+      <div class="coming-soon">
+        <i class="bi bi-gear"></i>
+        <h3>Configuración General</h3>
+        <p>Próximamente estarán disponibles más opciones de configuración</p>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="avanzada-tab">
+      <div class="coming-soon">
+        <i class="bi bi-tools"></i>
+        <h3>Configuración Avanzada</h3>
+        <p>Opciones avanzadas estarán disponibles en futuras actualizaciones</p>
+      </div>
+    </div>
+
+  </div>
+</div>

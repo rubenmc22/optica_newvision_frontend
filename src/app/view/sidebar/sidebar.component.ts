@@ -196,6 +196,13 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(['/Tipo-de-cambio']);
   }
 
+   // Navegar a Configuración del sistema
+  goToSystemConfig(): void {
+    this.closeUserDropdown();
+    this.router.navigate(['/configuracion-sistema']);
+  }
+  
+
   markActiveFromUrl(url: string): void {
     for (const menu of this.filteredMenu) {
       if (menu.routerLink === url) {
