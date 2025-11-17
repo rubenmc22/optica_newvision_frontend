@@ -1432,6 +1432,97 @@
     }
 }
 
+// Selector de moneda mejorado
+.moneda-selector-container {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin: 1rem 1.5rem;
+
+    .moneda-selector-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        color: #475569;
+
+        i {
+            color: #64748b;
+        }
+    }
+
+    .moneda-selector-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+
+        @media (max-width: 480px) {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .moneda-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        background: white;
+        transition: all 0.3s ease;
+        cursor: pointer;
+
+        &:hover {
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+        }
+
+        &.moneda-active {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+        }
+
+        .moneda-symbol {
+            font-size: 1.5rem;
+            font-weight: 700;
+            width: 40px;
+            text-align: center;
+        }
+
+        .moneda-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+
+            strong {
+                font-size: 0.9rem;
+                color: #1e293b;
+            }
+
+            small {
+                font-size: 0.75rem;
+                color: #64748b;
+            }
+        }
+    }
+
+    .moneda-hint {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: #64748b;
+
+        i {
+            font-size: 0.75rem;
+        }
+    }
+}
+
 // Resumen métodos
 .resumen-metodos {
     background: #f8f9fa;

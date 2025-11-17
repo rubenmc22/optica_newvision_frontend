@@ -224,21 +224,6 @@
                                 </ng-template>
                             </ng-select>
                         </div>
-
-                        <div class="moneda-selector">
-                            <label class="form-label-moderno">
-                                <i class="bi bi-currency-exchange"></i>
-                                Moneda
-                            </label>
-                            <ng-select id="selectorMoneda" [items]="monedasDisponibles" bindLabel="nombre"
-                                bindValue="id" [(ngModel)]="venta.moneda" (change)="actualizarProductosConDetalle()"
-                                [clearable]="false" [searchable]="false" placeholder="Moneda"
-                                class="modern-ng-select compact">
-                                <ng-template ng-option-tmp let-item="item">
-                                    {{ item.nombre }} ({{ item.simbolo }})
-                                </ng-template>
-                            </ng-select>
-                        </div>
                     </div>
 
                     <!-- Tabla de productos mejorada -->
@@ -280,8 +265,13 @@
                                         <!-- Columna Precio -->
                                         <td class="text-center precio">
                                             <span class="precio-unitario">
-                                                {{ p.precio | number:'1.2-2' }} {{ obtenerSimboloMoneda(p.moneda) }}
+                                                {{ getPrecioParaMostrar(p) | number:'1.2-2' }} {{
+                                                getSimboloMonedaActual() }}
                                             </span>
+                                            <!-- Referencia en Bs si no es bolívar -->
+                                            <small *ngIf="!esMonedaBolivar(monedaSistema)" class="text-muted d-block">
+                                                Bs {{ getPrecioEnBs(p) | number:'1.2-2' }}
+                                            </small>
                                         </td>
 
                                         <!-- Columna Cantidad -->
@@ -303,14 +293,15 @@
 
                                         <!-- Columna Subtotal -->
                                         <td class="text-center subtotal">
-                                            {{ p.subtotal | number:'1.2-2' }} {{ obtenerSimboloMoneda(p.moneda) }}
+                                            {{ p.subtotal | number:'1.2-2' }} {{ getSimboloMonedaActual() }}
                                         </td>
+
 
                                         <!-- Columna IVA -->
                                         <td class="text-center iva">
                                             <ng-container *ngIf="p.iva && p.iva > 0; else sinIva">
                                                 <span class="iva-monto">
-                                                    {{ p.iva | number:'1.2-2' }} {{ obtenerSimboloMoneda(p.moneda) }}
+                                                    {{ p.iva | number:'1.2-2' }} {{ getSimboloMonedaActual() }}
                                                 </span>
                                             </ng-container>
                                             <ng-template #sinIva>
@@ -321,7 +312,7 @@
                                         <!-- Columna Total -->
                                         <td class="text-center total">
                                             <strong class="total-monto">
-                                                {{ p.total | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
+                                                {{ p.total | number:'1.2-2' }} {{ getSimboloMonedaActual() }}
                                             </strong>
                                         </td>
 
@@ -345,7 +336,7 @@
                                 <i class="bi bi-receipt"></i>
                                 <span class="resumen-label">Monto total:</span>
                                 <span class="monto-valor">
-                                    {{ totalProductos | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
+                                    {{ totalProductos | number:'1.2-2' }} {{ getSimboloMonedaActual() }}
                                 </span>
                             </div>
                             <button class="btn-generar-venta" (click)="abrirModalResumen()">
@@ -528,7 +519,7 @@
                                 <label class="form-label">Descuento (%)</label>
                                 <div class="input-with-hint">
                                     <input type="number" class="form-control modern-input" [(ngModel)]="venta.descuento"
-                                        min="0" max="100" (ngModelChange)="onDescuentoChange()" />
+                                        min="0" max="100" (ngModelChange)="onDescuentoChange()" style="margin-bottom: 0rem !important; height: 50px !important;" />
                                     <small class="hint-text">
                                         <i class="bi bi-lightbulb"></i> Afecta el <strong>Monto total</strong>
                                     </small>
@@ -713,14 +704,46 @@
                                 </div>
                             </div>
 
+                            <!-- Selector de moneda para efectivo - SOLO PARA EFECTIVO -->
+                            <div *ngIf="hayMetodoEfectivoSeleccionado()" class="moneda-selector-container">
+                                <div class="moneda-selector-header">
+                                    <i class="bi bi-currency-exchange"></i>
+                                    <span>Moneda para Pagos en Efectivo</span>
+                                </div>
+                                <div class="moneda-selector-buttons">
+                                    <button type="button" class="moneda-btn"
+                                        [class.moneda-active]="monedaEfectivo === 'USD'"
+                                        (click)="cambiarMonedaEfectivo('USD')">
+                                        <span class="moneda-symbol">$</span>
+                                        <span class="moneda-info">
+                                            <strong>USD</strong>
+                                            <small>Dólar Americano</small>
+                                        </span>
+                                    </button>
+
+                                    <button type="button" class="moneda-btn"
+                                        [class.moneda-active]="monedaEfectivo === 'EUR'"
+                                        (click)="cambiarMonedaEfectivo('EUR')">
+                                        <span class="moneda-symbol">€</span>
+                                        <span class="moneda-info">
+                                            <strong>EUR</strong>
+                                            <small>Euro</small>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="moneda-hint">
+                                    <i class="bi bi-info-circle"></i>
+                                    <span>Esta selección aplica a todos los pagos en efectivo</span>
+                                </div>
+                            </div>
+
                             <div class="metodos-grid">
                                 <div *ngFor="let metodo of venta.metodosDePago; let i = index" class="metodo-card">
                                     <div class="metodo-header">
                                         <select class="form-select modern-select compact" [(ngModel)]="metodo.tipo"
                                             (change)="onMetodoPagoChange(i)">
                                             <option value="" disabled selected>Método pago</option>
-                                            <option value="efectivo">Efectivo {{ obtenerSimboloMoneda(venta.moneda) }}
-                                            </option>
+                                            <option value="efectivo">Efectivo</option>
                                             <option value="debito">Débito</option>
                                             <option value="credito">Crédito</option>
                                             <option value="pagomovil">Pago Móvil</option>
@@ -736,18 +759,26 @@
                                         <input type="text" class="form-control modern-input compact"
                                             [placeholder]="getPlaceholderMonto(metodo.tipo)"
                                             [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
-                                            (keypress)="validarEntrada($event)" [disabled]="!metodo.tipo" />
+                                            (input)="onMontoInputChange(i, $event)" (keypress)="validarEntrada($event)"
+                                            [disabled]="!metodo.tipo" />
                                     </div>
 
                                     <div class="metodo-footer">
                                         <span
                                             *ngIf="mostrarConversionBs(metodo.tipo) && metodo.monto && metodo.monto > 0"
                                             class="conversion-text">
-                                            ⇄ {{ calcularConversionBs(metodo.monto) | number:'1.2-2' }} Bs
+                                            ⇄ {{ calcularConversionBs(metodo.monto, metodo.tipo) | number:'1.2-2' }} Bs
                                         </span>
+
                                         <span class="maximo-text">
                                             Máx: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{
-                                            obtenerSimboloMoneda(venta.moneda) }}
+                                            getSimboloMonedaActual() }}
+
+                                            <!-- Mostrar equivalente en Bs si el método está en bolívares -->
+                                            <span *ngIf="getMonedaParaMetodo(metodo.tipo) === 'bolivar'"
+                                                class="conversion-text">
+                                                ⇄ {{ getMontoRestanteParaMetodoEnBs(i) | number:'1.2-2' }} Bs
+                                            </span>
                                         </span>
                                     </div>
                                 </div>
@@ -760,10 +791,9 @@
                                         <span class="stat-label">Total pagado:</span>
                                         <span class="stat-value">
                                             {{ redondear(totalPagadoPorMetodos) | number:'1.2-2' }} {{
-                                            obtenerSimboloMoneda(venta.moneda) }}
-                                            <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                ⇄ {{ redondear(obtenerEquivalenteBs(totalPagadoPorMetodos)) |
-                                                number:'1.2-2' }} Bs
+                                            getSimboloMonedaActual() }}
+                                            <span class="conversion-text">
+                                                ⇄ {{ redondear(totalPagadoPorMetodosEnBs) | number:'1.2-2' }} Bs
                                             </span>
                                         </span>
                                     </div>
@@ -771,7 +801,11 @@
                                         <span class="stat-label">Monto requerido:</span>
                                         <span class="stat-value">
                                             {{ redondear(montoCubiertoPorMetodos) | number:'1.2-2' }} {{
-                                            obtenerSimboloMoneda(venta.moneda) }}
+                                            getSimboloMonedaActual() }}
+                                            <span class="conversion-text">
+                                                ⇄ {{ redondear(obtenerEquivalenteBs(montoCubiertoPorMetodos)) |
+                                                number:'1.2-2' }} Bs
+                                            </span>
                                             <span *ngIf="venta.formaPago === 'cashea' && resumenCashea.total > 0"
                                                 class="detail-text">
                                                 (Inicial: {{ redondear(venta.montoInicial ?? 0) | number:'1.2-2' }} +
@@ -783,8 +817,8 @@
                                         <span class="stat-label">Restante:</span>
                                         <span class="stat-value">
                                             {{ redondear(restantePorMetodos) | number:'1.2-2' }} {{
-                                            obtenerSimboloMoneda(venta.moneda) }}
-                                            <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
+                                            getSimboloMonedaActual() }}
+                                            <span class="conversion-text">
                                                 ⇄ {{ redondear(obtenerEquivalenteBs(restantePorMetodos)) |
                                                 number:'1.2-2' }} Bs
                                             </span>
@@ -797,9 +831,9 @@
                                     <div class="progress modern-progress large">
                                         <div class="progress-bar" role="progressbar" [style.width.%]="progresoMetodos"
                                             [ngClass]="{
-                                            'progress-complete': progresoMetodos === 100 && restantePorMetodos === 0,
-                                            'progress-partial': progresoMetodos < 100
-                                        }">
+                                                'progress-complete': progresoMetodos === 100 && restantePorMetodos === 0,
+                                                'progress-partial': progresoMetodos < 100
+                                            }">
                                             {{ progresoMetodos }}%
                                         </div>
                                     </div>
@@ -954,10 +988,13 @@
                                     <span class="metodo-tipo">{{ metodo.tipo | titlecase }}</span>
                                     <span class="metodo-monto">
                                         {{ redondear(metodo.monto ?? 0) | number:'1.2-2' }} {{
-                                        obtenerSimboloMoneda(venta.moneda) }}
-                                        <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                            ⇄ {{ redondear(obtenerEquivalenteBs(metodo.monto ?? 0)) | number:'1.2-2' }}
-                                            Bs
+                                        obtenerSimboloMoneda(getMonedaParaMetodo(metodo.tipo)) }}
+
+                                        <!-- SOLO mostrar conversión si NO está en bolívares -->
+                                        <span *ngIf="getMonedaParaMetodo(metodo.tipo) !== 'bolivar'"
+                                            class="conversion-text">
+                                            ⇄ {{ redondear(calcularConversionBs(metodo.monto ?? 0, metodo.tipo)) |
+                                            number:'1.2-2' }} Bs
                                         </span>
                                     </span>
                                 </div>

@@ -1,6 +1,6 @@
 export interface VentaDto {
     pacienteId?: string;
-    moneda: 'bolivar' | 'dolar' | 'euro';
+moneda: string;
     formaPago: string;
     productos: ProductoVentaDto[];
     impuesto: number;
