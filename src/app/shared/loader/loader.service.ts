@@ -16,7 +16,11 @@ export class LoaderService {
     this.loadingStartTime = Date.now();
     this.isCurrentlyLoading = true;
     this.lockScroll();
-    this.loadingSubject.next(true);
+    
+    // SOLO CAMBIO: Agregar setTimeout aquí
+    setTimeout(() => {
+      this.loadingSubject.next(true);
+    });
   }
 
   hide() {
@@ -29,19 +33,31 @@ export class LoaderService {
       setTimeout(() => {
         this.isCurrentlyLoading = false;
         this.unlockScroll();
-        this.loadingSubject.next(false);
+        
+        // SOLO CAMBIO: Agregar setTimeout aquí
+        setTimeout(() => {
+          this.loadingSubject.next(false);
+        });
       }, remainingTime);
     } else {
       this.isCurrentlyLoading = false;
       this.unlockScroll();
-      this.loadingSubject.next(false);
+      
+      // SOLO CAMBIO: Agregar setTimeout aquí
+      setTimeout(() => {
+        this.loadingSubject.next(false);
+      });
     }
   }
 
   forceHide() {
     this.isCurrentlyLoading = false;
     this.unlockScroll();
-    this.loadingSubject.next(false);
+    
+    // SOLO CAMBIO: Agregar setTimeout aquí
+    setTimeout(() => {
+      this.loadingSubject.next(false);
+    });
   }
 
   isLoading(): boolean {

@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, OnInit, Input, OnDestroy, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { AuthService } from '../../core/services/auth/auth.service';
 import { Router } from '@angular/router';
 import { SwalService } from '../../core/services/swal/swal.service';
@@ -42,7 +42,8 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
     private sharedUserService: SharedUserService,
     private userStateService: UserStateService,
     private tasaCambiariaService: TasaCambiariaService,
-    public loader: LoaderService
+    public loader: LoaderService,
+    private cdRef: ChangeDetectorRef
   ) { }
 
   menuItems = [
@@ -100,7 +101,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
   filteredMenu: any[] = [];
 
   ngOnInit(): void {
-    // 🧠 Restaurar selección previa desde localStorage
+    //Restaurar selección previa desde localStorage
     const savedMenu = localStorage.getItem('selectedMenuLabel');
     const savedSubmenu = localStorage.getItem('selectedSubmenuLabel');
 
@@ -116,17 +117,18 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       this.selectedSubmenuLabel = null;
     }
 
-    // 📍 Marcar activo según URL actual
+    //Marcar activo según URL actual
     const currentUrl = this.router.url;
     this.markActiveFromUrl(currentUrl);
 
-    // 💱 Obtener tasas de cambio
+    //Obtener tasas de cambio
     this.subsTasaCambio = this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
       this.tasaDolar = usd;
       this.tasaEuro = eur;
+      this.cdRef.detectChanges();
     });
 
-    // ⚙️ Inicializar menú y datos
+    //Inicializar menú y datos
     this.initializeMenu();
     this.initializeUserData();
     this.setupSubscriptions();
@@ -135,7 +137,10 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.initializeBootstrapDropdowns();
+    setTimeout(() => {
+      this.initializeBootstrapDropdowns();
+      this.cdRef.detectChanges();
+    });
   }
 
   private initializeBootstrapDropdowns(): void {
@@ -150,7 +155,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
   toggleUserDropdown(event: Event): void {
     event.preventDefault();
     event.stopPropagation();
-    
+
     if (this.userDropdown) {
       this.userDropdown.toggle();
     } else {
@@ -158,12 +163,12 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       const dropdownMenu = document.querySelector('.user-dropdown-menu');
       if (dropdownMenu) {
         const isShowing = dropdownMenu.classList.contains('show');
-        
+
         // Cerrar todos los dropdowns primero
         document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
           menu.classList.remove('show');
         });
-        
+
         // Abrir/cerrar el actual
         if (!isShowing) {
           dropdownMenu.classList.add('show');
@@ -196,12 +201,12 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
     this.router.navigate(['/Tipo-de-cambio']);
   }
 
-   // Navegar a Configuración del sistema
+  // Navegar a Configuración del sistema
   goToSystemConfig(): void {
     this.closeUserDropdown();
     this.router.navigate(['/configuracion-sistema']);
   }
-  
+
 
   markActiveFromUrl(url: string): void {
     for (const menu of this.filteredMenu) {
@@ -240,6 +245,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
         if (profile.ruta_imagen) {
           this.profileImage = this.sharedUserService.getFullImageUrl(profile.ruta_imagen);
         }
+        this.cdRef.detectChanges();
       }
     });
 
@@ -251,6 +257,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
         if (authData.user.ruta_imagen) {
           this.profileImage = this.sharedUserService.getFullImageUrl(authData.user.ruta_imagen);
         }
+        this.cdRef.detectChanges();
       }
     });
 
@@ -287,6 +294,8 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       localStorage.setItem('selectedMenuLabel', 'Dashboard');
       localStorage.setItem('selectedSubmenuLabel', '');
     }
+
+    this.cdRef.detectChanges();
   }
 
   handleImageError(event: Event): void {
@@ -294,7 +303,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!target) return;
 
     target.src = 'assets/default-photo.png';
-    this.profileImage = 'assets/default-photo.png'; // Actualiza la referencia
+    this.profileImage = 'assets/default-photo.png';
   }
 
   private initializeMenu(): void {
@@ -324,7 +333,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
 
     const isSameMenu = this.selectedMenuLabel === menuLabel;
 
-    // 🔁 Si el mismo menú está activo, cerrarlo
+    //Si el mismo menú está activo, cerrarlo
     if (isSameMenu) {
       this.selectedMenuLabel = '';
       this.selectedSubmenuLabel = '';
@@ -333,7 +342,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
-    // ✅ Abrir el nuevo menú
+    //Abrir el nuevo menú
     this.selectedMenuLabel = menuLabel;
     this.selectedSubmenuLabel = '';
 
@@ -374,16 +383,16 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
     localStorage.setItem('selectedSubmenuLabel', this.selectedSubmenuLabel || '');
   }
 
-  // 🔓 Método para abrir el modal de logout
+  //Método para abrir el modal de logout
   openLogoutModal(event?: Event): void {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    
+
     // Cerrar el dropdown primero
     this.closeUserDropdown();
-    
+
     // Abre el modal de logout usando Bootstrap
     const modalElement = document.getElementById('logoutModal');
     if (modalElement) {
@@ -392,7 +401,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  // ✅ Método para confirmar logout
+  //Método para confirmar logout
   confirmLogout(): void {
     this.authService.logout();
 
@@ -437,13 +446,13 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   obtenerTasaCambio(): void {
-    // 🧠 Solo te suscribís una vez al subject reactivo
+    //Solo te suscribís una vez al subject reactivo
     this.subsTasaCambio = this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
       this.tasaDolar = usd;
       this.tasaEuro = eur;
     });
 
-    // 🚀 Inicializás las tasas desde el backend, pero sin reasignar directamente
+    //Inicializás las tasas desde el backend, pero sin reasignar directamente
     this.tasaCambiariaService.getTasaActual().subscribe({
       next: (res: { tasas: Tasa[] }) => {
         const dolar = res.tasas.find(t => t.id === 'dolar');
@@ -452,7 +461,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
         const usd = dolar?.valor ?? 0;
         const eur = euro?.valor ?? 0;
 
-        // 🔁 Propagás solo vía setTasas()
+        //Propagás solo vía setTasas()
         this.tasaCambiariaService.setTasas(usd, eur);
       },
       error: () => {
