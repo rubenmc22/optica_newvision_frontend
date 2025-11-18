@@ -441,13 +441,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // === MÉTODOS DE PAGO ===
     agregarMetodo(): void {
-        this.venta.metodosDePago.push({
-            tipo: '',
-            monto: 0,
-            valorTemporal: '',
-            referencia: '',
-            banco: ''
-        });
+        this.venta.metodosDePago.push({ tipo: '', monto: 0, valorTemporal: '' });
     }
 
     eliminarMetodo(index: number): void {
@@ -513,6 +507,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             metodo.valorTemporal = `${montoFinal.toFixed(2)} ${this.obtenerSimboloMoneda(monedaMetodo)}`;
         }
 
+        // ASIGNAR EL MONTO FINAL (que nunca excederá el máximo)
         metodo.monto = montoFinal;
 
         // Mostrar advertencia si el usuario intentó exceder el máximo
@@ -1105,24 +1100,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (!tipoMetodo) return 'Ingrese un monto';
 
         if (this.esMetodoEnBolivares(tipoMetodo)) {
-            return 'Monto en Bs';
+            return 'Monto exacto en Bs';
         }
 
         const monedaMetodo = this.getMonedaParaMetodo(tipoMetodo);
         const simbolo = this.obtenerSimboloMoneda(monedaMetodo);
         return `Monto en ${simbolo}`;
-    }
-
-    // Método para manejar el foco en el campo banco
-    onBancoFocus(index: number): void {
-        // Si el campo está vacío, mostrar todos los bancos
-        const metodo = this.venta.metodosDePago[index];
-        if (!metodo.banco) {
-            // Forzar la actualización de la lista
-            setTimeout(() => {
-                this.cdr.detectChanges();
-            }, 0);
-        }
     }
 
     // === MÉTODOS DE VENTA ===
@@ -1339,100 +1322,5 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             case 'contado': return 'Progreso del pago total';
             default: return 'Progreso del pago';
         }
-    }
-
-    // === MÉTODOS PARA REFERENCIA Y BANCO ===
-    necesitaReferencia(tipoMetodo: string): boolean {
-        const metodosConReferencia = ['pagomovil', 'transferencia'];
-        return metodosConReferencia.includes(tipoMetodo);
-    }
-
-    necesitaBanco(tipoMetodo: string): boolean {
-        const metodosConBanco = ['pagomovil', 'transferencia'];
-        return metodosConBanco.includes(tipoMetodo);
-    }
-
-    // Lista de bancos disponibles
-    // En tu componente TypeScript
-    get bancosDisponibles(): any[] {
-        return [
-            { codigo: '0102', nombre: 'Banco de Venezuela' },
-            { codigo: '0134', nombre: 'Banesco' },
-            { codigo: '0104', nombre: 'Venezolano de Crédito' },
-            { codigo: '0105', nombre: 'Mercantil' },
-            { codigo: '0114', nombre: 'Bancaribe' },
-            { codigo: '0115', nombre: 'BOD' },
-            { codigo: '0116', nombre: 'Banco Plaza' },
-            { codigo: '0128', nombre: 'Banco Caribe' },
-            { codigo: '0108', nombre: 'Banco Provincial' },
-            { codigo: '0118', nombre: 'Banco del Sur' },
-            { codigo: '0121', nombre: 'Bancamiga' },
-            { codigo: '0151', nombre: '100% Banco' },
-            { codigo: '0156', nombre: 'Banco del Tesoro' },
-            { codigo: '0157', nombre: 'Banco Bicentenario' },
-            { codigo: '0163', nombre: 'Banco Fondo Común' },
-            { codigo: '0166', nombre: 'Banco Agrícola de Venezuela' },
-            { codigo: '0168', nombre: 'Bancrecer' },
-            { codigo: '0169', nombre: 'Mi Banco' },
-            { codigo: '0171', nombre: 'Banco Activo' },
-            { codigo: '0172', nombre: 'Bancamiga' },
-            { codigo: '0173', nombre: 'Banco Internacional de Desarrollo' },
-            { codigo: '0174', nombre: 'Banco Plaza' },
-            { codigo: '0175', nombre: 'Banco de la Fuerza Armada Nacional Bolivariana' },
-            { codigo: '0177', nombre: 'Banco del Tesoro' },
-            { codigo: '0191', nombre: 'Banco Nacional de Crédito' },
-            { codigo: '0000', nombre: 'Otro' }
-        ];
-    }
-
-    onBancoChange(codigoBanco: string, index: number): void {
-    const metodo = this.venta.metodosDePago[index];
-    const bancoSeleccionado = this.bancosDisponibles.find(b => b.codigo === codigoBanco);
-    
-    if (bancoSeleccionado) {
-        metodo.bancoCodigo = bancoSeleccionado.codigo;
-        metodo.bancoNombre = bancoSeleccionado.nombre;
-        metodo.banco = `${bancoSeleccionado.codigo} - ${bancoSeleccionado.nombre}`; 
-    } else {
-        metodo.bancoCodigo = '';
-        metodo.bancoNombre = '';
-        metodo.banco = '';
-    }
-}
-
-    // Método para formatear la visualización
-    getBancoDisplay(banco: any): string {
-        if (!banco) return '';
-        if (typeof banco === 'string') return banco;
-        return `${banco.codigo} - ${banco.nombre}`;
-    }
-
-    // Método de búsqueda personalizado
-    filtrarBancos(term: string, item: any): boolean {
-        if (!term) return true;
-
-        const termLower = term.toLowerCase().trim();
-        const codigo = item.codigo?.toLowerCase() || '';
-        const nombre = item.nombre?.toLowerCase() || '';
-        const display = `${item.codigo} - ${item.nombre}`.toLowerCase();
-
-        return codigo.includes(termLower) ||
-            nombre.includes(termLower) ||
-            display.includes(termLower);
-    }
-
-    // Método para limpiar campos cuando cambia el tipo de método
-    onTipoMetodoChange(index: number): void {
-        const metodo = this.venta.metodosDePago[index];
-
-        // Limpiar campos específicos si ya no son necesarios
-        if (!this.necesitaReferencia(metodo.tipo)) {
-            metodo.referencia = '';
-        }
-        if (!this.necesitaBanco(metodo.tipo)) {
-            metodo.banco = '';
-        }
-
-        this.onMetodoPagoChange(index);
     }
 }

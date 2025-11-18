@@ -1,6 +1,6 @@
 export interface VentaDto {
     pacienteId?: string;
-    moneda: string;
+moneda: string;
     formaPago: string;
     productos: ProductoVentaDto[];
     impuesto: number;
@@ -29,17 +29,13 @@ export interface ProductoVentaDto {
 export interface MetodoPago {
     tipo: string;
     monto: number;
-    valorTemporal: string;
-    referencia?: string;
-    banco?: string;
-    bancoCodigo?: string;
-    bancoNombre?: string;
+    valorTemporal?: string;
 }
 
 export interface ProductoVenta {
     id: string;
     nombre: string;
-    codigo: string;
+    codigo: string; 
     precio: number;
     precioConIva: number;
     aplicaIva: boolean;
