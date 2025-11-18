@@ -981,6 +981,23 @@
             font-size: 1.1rem;
         }
     }
+
+    .btn-detalle:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        position: relative;
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: inherit;
+        }
+    }
 }
 
 // Componentes modernos
@@ -1627,7 +1644,6 @@
 }
 
 .detalle-contado,
-.detalle-cashea,
 .detalle-abono {
     .detalle-item {
         display: flex;
@@ -1639,6 +1655,40 @@
         &:last-child {
             border-bottom: none;
         }
+    }
+}
+
+// Estilos para los detalles de pago
+.detalle-cashea {
+    .highlight-item {
+        background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin: 0.5rem 0;
+        border-left: 4px solid #28a745;
+
+        .detalle-label {
+            font-weight: 600;
+            color: #2e7d32;
+        }
+
+        .highlight-value {
+            font-weight: 700;
+            color: #1b5e20;
+            font-size: 1.1rem;
+
+            .conversion-text {
+                font-weight: 600;
+            }
+        }
+    }
+
+    .detail-text {
+        display: block;
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+        font-style: italic;
     }
 }
 
@@ -2131,21 +2181,21 @@ input:checked+.slider:before {
 
 //Ng select bancos
 :host {
-  display: block;
-  position: relative;
+    display: block;
+    position: relative;
 }
 
 :host ::ng-deep .modern-ng-select.compact {
-  position: relative;
+    position: relative;
 }
 
 :host ::ng-deep .modern-ng-select.compact .ng-dropdown-panel {
-  z-index: 15500 !important;
-  position: absolute !important;
+    z-index: 15500 !important;
+    position: absolute !important;
 }
 
 :host ::ng-deep .ng-select.ng-select-opened .ng-select-container {
-  z-index: 15510;
+    z-index: 15510;
 }
 
 ::ng-deep {

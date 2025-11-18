@@ -774,6 +774,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.venta.formaPago = valor;
 
         if (valor === 'cashea') {
+            this.venta.moneda = 'dolar';
             this.controlarCuotasPorNivel();
             this.actualizarMontoInicialCashea();
             this.generarCuotasCashea();
@@ -823,14 +824,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.valorInicialTemporal = `${nuevoMontoInicial.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
     }
 
-    onNivelCasheaChange(): void {
-        if (this.venta.formaPago === 'cashea') {
-            this.controlarCuotasPorNivel();
-            this.actualizarMontoInicialCashea();
-            this.generarCuotasCashea();
-        }
-    }
-
     private controlarCuotasPorNivel(): void {
         const nivelesConCuotasExtendidas = ['nivel3', 'nivel4', 'nivel5', 'nivel6'];
         const nivelPermite6Cuotas = nivelesConCuotasExtendidas.includes(this.nivelCashea);
@@ -840,6 +833,20 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 this.cantidadCuotasCashea = 3;
             }
         }
+    }
+
+    get puedeCambiarMoneda(): boolean {
+        return this.venta.formaPago !== 'cashea';
+    }
+
+    // Método para verificar si Cashea está configurado correctamente
+    get casheaConfiguradoCorrectamente(): boolean {
+        if (this.venta.formaPago !== 'cashea') return true;
+
+        const inicialMinima = this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
+        const inicialActual = this.venta.montoInicial ?? 0;
+
+        return inicialActual >= inicialMinima;
     }
 
     calcularCasheaPlan(numeroCuotas: number): {
@@ -918,6 +925,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     generarCuotasCashea(): void {
+        // Asegurar que Cashea siempre use dólares
+        if (this.venta.formaPago === 'cashea') {
+            this.venta.moneda = 'dolar';
+        }
+
         const plan = this.calcularCasheaPlan(this.cantidadCuotasCashea);
         this.cuotasCashea = plan.cuotasOrdenadas.map((cuota, index) => ({
             ...cuota,
@@ -958,6 +970,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
     }
 
+    // En el método que actualiza el resumen Cashea
     actualizarResumenCashea(): void {
         const seleccionadas = this.cuotasCashea.filter(c => c.seleccionada);
         const total = seleccionadas.reduce((sum, c) => sum + c.monto, 0);
@@ -967,6 +980,20 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             total,
             totalBs: this.redondear(this.obtenerEquivalenteBs(total))
         };
+
+        // Forzar recálculo de validación
+        this.cdr.detectChanges();
+    }
+
+    // En el método que maneja cambios en el nivel Cashea
+    onNivelCasheaChange(): void {
+        if (this.venta.formaPago === 'cashea') {
+            // Asegurar que Cashea use dólares
+            this.venta.moneda = 'dolar';
+            this.controlarCuotasPorNivel();
+            this.actualizarMontoInicialCashea();
+            this.generarCuotasCashea();
+        }
     }
 
     get casheaBalanceValido(): boolean {
@@ -1386,19 +1413,19 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     onBancoChange(codigoBanco: string, index: number): void {
-    const metodo = this.venta.metodosDePago[index];
-    const bancoSeleccionado = this.bancosDisponibles.find(b => b.codigo === codigoBanco);
-    
-    if (bancoSeleccionado) {
-        metodo.bancoCodigo = bancoSeleccionado.codigo;
-        metodo.bancoNombre = bancoSeleccionado.nombre;
-        metodo.banco = `${bancoSeleccionado.codigo} - ${bancoSeleccionado.nombre}`; 
-    } else {
-        metodo.bancoCodigo = '';
-        metodo.bancoNombre = '';
-        metodo.banco = '';
+        const metodo = this.venta.metodosDePago[index];
+        const bancoSeleccionado = this.bancosDisponibles.find(b => b.codigo === codigoBanco);
+
+        if (bancoSeleccionado) {
+            metodo.bancoCodigo = bancoSeleccionado.codigo;
+            metodo.bancoNombre = bancoSeleccionado.nombre;
+            metodo.banco = `${bancoSeleccionado.codigo} - ${bancoSeleccionado.nombre}`;
+        } else {
+            metodo.bancoCodigo = '';
+            metodo.bancoNombre = '';
+            metodo.banco = '';
+        }
     }
-}
 
     // Método para formatear la visualización
     getBancoDisplay(banco: any): string {
@@ -1434,5 +1461,76 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         this.onMetodoPagoChange(index);
+    }
+
+    // Método para verificar si se puede generar la venta
+    get puedeGenerarVenta(): boolean {
+        // Verificar que hay productos
+        if (this.venta.productos.length === 0) {
+            return false;
+        }
+
+        // Verificar que el monto cubierto por métodos sea suficiente
+        const montoCubierto = this.totalPagadoPorMetodos;
+        const montoRequerido = this.montoCubiertoPorMetodos;
+
+        // Usar comparación con tolerancia para decimales
+        const diferencia = Math.abs(montoCubierto - montoRequerido);
+        const pagoCompleto = diferencia < 0.01;
+
+        // Verificar condiciones específicas por forma de pago
+        switch (this.venta.formaPago) {
+            case 'contado':
+                return pagoCompleto;
+
+            case 'abono':
+                // Para abono, debe cubrir exactamente el monto abonado
+                return pagoCompleto && (this.venta.montoAbonado ?? 0) > 0;
+
+            case 'cashea':
+                // Para Cashea, debe cubrir inicial + cuotas seleccionadas
+                const inicialCubierto = pagoCompleto;
+                const tieneInicialValida = (this.venta.montoInicial ?? 0) >=
+                    this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
+                return inicialCubierto && tieneInicialValida;
+
+            default:
+                return false;
+        }
+    }
+
+    // Mensaje de estado para el botón
+    get mensajeEstadoBoton(): string {
+        if (this.venta.productos.length === 0) {
+            return 'Agrega productos para continuar';
+        }
+
+        const montoCubierto = this.totalPagadoPorMetodos;
+        const montoRequerido = this.montoCubiertoPorMetodos;
+        const diferencia = montoRequerido - montoCubierto;
+
+        if (diferencia > 0.01) {
+            return `Faltan ${this.redondear(diferencia)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+        }
+
+        if (Math.abs(montoCubierto - montoRequerido) < 0.01) {
+            return 'Listo para generar venta';
+        }
+
+        return 'Monto excedido, ajusta los métodos de pago';
+    }
+
+    // En tu componente TypeScript
+    get totalPagadoCashea(): number {
+        if (this.venta.formaPago !== 'cashea') return 0;
+
+        const inicial = this.venta.montoInicial ?? 0;
+        const cuotasAdelantadas = this.resumenCashea.total;
+
+        return this.redondear(inicial + cuotasAdelantadas);
+    }
+
+    get totalPagadoCasheaBs(): number {
+        return this.redondear(this.obtenerEquivalenteBs(this.totalPagadoCashea));
     }
 }
