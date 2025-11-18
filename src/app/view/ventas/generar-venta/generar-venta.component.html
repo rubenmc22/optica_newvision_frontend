@@ -1132,23 +1132,23 @@
                 </div>
             </div>
 
-            <!-- Footer con acciones mejorado - CORREGIDO: Ahora está fuera del modal-body -->
+            <!-- Footer con acciones mejorado -->
             <div class="modal-footer-recibo">
                 <div class="footer-actions">
                     <!-- Botón Cerrar a la izquierda -->
-                    <button type="button" class="btn btn-outline-secondary btn-detalle" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-outline-secondary btn-detalle" (click)="cerrarModalRecibo()">
                         <i class="bi bi-x-circle me-2"></i>
                         Cerrar
                     </button>
 
                     <!-- Grupo de acciones a la derecha -->
                     <div class="action-buttons" *ngIf="urlRecibo && !generandoRecibo">
-                        <!-- Descargar PDF -->
-                        <a [href]="urlRecibo" download="recibo-{{ informacionVenta?.numeroVenta }}.pdf"
-                            class="btn btn-success btn-detalle btn-action">
-                            <i class="bi bi-download me-2"></i>
-                            Descargar PDF
-                        </a>
+                        <!-- Compartir -->
+                        <button type="button" class="btn btn-primary btn-detalle btn-action"
+                            (click)="compartirReciboSimple()">
+                            <i class="bi bi-share me-2"></i>
+                            Compartir/Descargar
+                        </button>
 
                         <!-- Imprimir -->
                         <button type="button" class="btn btn-primary btn-detalle btn-action" (click)="imprimirRecibo()">

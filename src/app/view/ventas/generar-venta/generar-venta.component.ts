@@ -1466,10 +1466,315 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    // Método para cerrar el modal del recibo - MEJORADO
+    // Método para imprimir el recibo - CORREGIDO
+    imprimirRecibo(): void {
+        if (!this.urlRecibo) {
+            this.swalService.showError('Error', 'No hay recibo disponible para imprimir');
+            return;
+        }
+
+        const iframe = document.querySelector('.recibo-iframe') as HTMLIFrameElement;
+
+        if (iframe && iframe.contentWindow) {
+            // Mostrar loading usando el método que sí existe
+            this.swalService.showLoadingAlert('Preparando impresión...');
+
+            const tryPrint = () => {
+                try {
+                    iframe.contentWindow!.focus();
+                    setTimeout(() => {
+                        iframe.contentWindow!.print();
+                        // Cerrar loading usando el método correcto
+                        this.swalService.closeLoading();
+                    }, 1000);
+                } catch (error) {
+                    console.error('Error al imprimir:', error);
+                    this.swalService.closeLoading();
+                    this.swalService.showError('Error', 'No se pudo abrir la ventana de impresión');
+                }
+            };
+
+            // Verificar si el iframe está cargado
+            if (iframe.contentDocument?.readyState === 'complete') {
+                tryPrint();
+            } else {
+                iframe.onload = tryPrint;
+                // Timeout de seguridad
+                setTimeout(() => {
+                    tryPrint();
+                }, 5000);
+            }
+        } else {
+            // Fallback: abrir en nueva ventana
+            this.imprimirReciboFallback();
+        }
+    }
+
+    // Método fallback para imprimir - CORREGIDO
+    private imprimirReciboFallback(): void {
+        const printWindow = window.open(this.urlRecibo, '_blank');
+        if (printWindow) {
+            printWindow.onload = () => {
+                printWindow.focus();
+                setTimeout(() => {
+                    printWindow.print();
+                }, 1000);
+            };
+        } else {
+            this.swalService.showError('Error', 'No se pudo abrir la ventana de impresión. Por favor, permite ventanas emergentes.');
+        }
+    }
+
+    // Método para descargar el PDF - CORREGIDO
+    descargarPDF(): void {
+        if (!this.urlRecibo) {
+            this.swalService.showError('Error', 'No hay recibo disponible para descargar');
+            return;
+        }
+
+        // Mostrar loading
+        this.swalService.showLoadingAlert('Preparando descarga...');
+
+        // Crear enlace de descarga
+        const link = document.createElement('a');
+        link.href = this.urlRecibo;
+        link.download = `recibo-${this.informacionVenta?.numeroVenta || 'venta'}.pdf`;
+        link.target = '_blank';
+
+        // Simular click para descargar
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Cerrar loading después de un breve delay
+        setTimeout(() => {
+            this.swalService.closeLoading();
+            this.swalService.showSuccess('Éxito', 'El recibo se está descargando');
+        }, 1000);
+    }
+
+    compartirRecibo(): void {
+        this.swalService.showConfirm(
+            'Compartir Recibo',
+            `
+        <div class="text-center">
+            <p class="mb-4">Elige cómo quieres compartir el recibo:</p>
+            <div class="row g-3">
+                <div class="col-6">
+                    <button class="btn btn-success w-100 p-3 compartir-btn" data-tipo="whatsapp">
+                        <i class="bi bi-whatsapp fs-4"></i>
+                        <div class="small mt-1">WhatsApp</div>
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button class="btn btn-primary w-100 p-3 compartir-btn" data-tipo="email">
+                        <i class="bi bi-envelope fs-4"></i>
+                        <div class="small mt-1">Email</div>
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button class="btn btn-info w-100 p-3 compartir-btn" data-tipo="enlace">
+                        <i class="bi bi-link fs-4"></i>
+                        <div class="small mt-1">Copiar Enlace</div>
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button class="btn btn-secondary w-100 p-3 compartir-btn" data-tipo="descargar">
+                        <i class="bi bi-download fs-4"></i>
+                        <div class="small mt-1">Solo Descargar</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        `,
+            'Cerrar',
+            'Cancelar'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                console.log('Modal de compartir cerrado');
+            }
+        });
+
+        // Agregar event listeners CORREGIDO
+        setTimeout(() => {
+            const buttons = document.querySelectorAll('.compartir-btn');
+            buttons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // CORRECCIÓN: Usar la sintaxis correcta para dataset
+                    const tipo = (e.currentTarget as HTMLElement).dataset['tipo'];
+                    if (tipo) {
+                        this.procesarCompartir(tipo);
+                        this.swalService.closeLoading();
+                    }
+                });
+            });
+        }, 100);
+    }
+
+    // Versión alternativa más simple para compartir
+    compartirReciboSimple(): void {
+        this.swalService.showInfo(
+            'Compartir Recibo',
+            `
+        <div class="text-center">
+            <p class="mb-3">Opciones para compartir:</p>
+            <div class="d-grid gap-2">
+                <button class="btn btn-success compartir-btn-simple" data-tipo="whatsapp">
+                    <i class="bi bi-whatsapp me-2"></i>Compartir por WhatsApp
+                </button>
+                <button class="btn btn-primary compartir-btn-simple" data-tipo="email">
+                    <i class="bi bi-envelope me-2"></i>Enviar por Email
+                </button>
+                <button class="btn btn-info compartir-btn-simple" data-tipo="enlace">
+                    <i class="bi bi-link me-2"></i>Copiar Enlace
+                </button>
+                <button class="btn btn-secondary compartir-btn-simple" data-tipo="descargar">
+                    <i class="bi bi-download me-2"></i>Descargar PDF
+                </button>
+            </div>
+        </div>
+        `
+        );
+
+        // Agregar event listeners CORREGIDO
+        setTimeout(() => {
+            const buttons = document.querySelectorAll('.compartir-btn-simple');
+            buttons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // CORRECCIÓN: Usar la sintaxis correcta para dataset
+                    const tipo = (e.currentTarget as HTMLElement).dataset['tipo'];
+                    if (tipo) {
+                        this.procesarCompartir(tipo);
+                        this.swalService.closeLoading();
+                    }
+                });
+            });
+        }, 100);
+    }
+
+    // Procesar la opción de compartir seleccionada - CORREGIDO
+    private procesarCompartir(tipo: string): void {
+        switch (tipo) {
+            case 'whatsapp':
+                this.compartirWhatsApp();
+                break;
+            case 'email':
+                this.compartirEmail();
+                break;
+            case 'enlace':
+                this.copiarEnlace();
+                break;
+            case 'descargar':
+                this.descargarPDF();
+                break;
+        }
+    }
+
+    // Compartir por WhatsApp - CORREGIDO
+    compartirWhatsApp(): void {
+        if (!this.urlRecibo) {
+            this.swalService.showError('Error', 'No hay recibo disponible para compartir');
+            return;
+        }
+
+        const numeroVenta = this.informacionVenta?.numeroVenta || 'N/A';
+        const mensaje = `¡Hola! Te comparto el recibo de la venta ${numeroVenta}. Puedes verlo aquí: ${this.urlRecibo}`;
+
+        // Codificar el mensaje para URL
+        const mensajeCodificado = encodeURIComponent(mensaje);
+        const urlWhatsApp = `https://wa.me/?text=${mensajeCodificado}`;
+
+        window.open(urlWhatsApp, '_blank');
+        this.swalService.showSuccess('Éxito', 'Redirigiendo a WhatsApp...');
+    }
+
+    // Compartir por Email - CORREGIDO
+    compartirEmail(): void {
+        if (!this.urlRecibo) {
+            this.swalService.showError('Error', 'No hay recibo disponible para compartir');
+            return;
+        }
+
+        const numeroVenta = this.informacionVenta?.numeroVenta || 'N/A';
+        const asunto = `Recibo de Venta ${numeroVenta}`;
+        const cuerpo = `Hola,\n\nTe comparto el recibo de la venta ${numeroVenta}.\nPuedes verlo en el siguiente enlace: ${this.urlRecibo}\n\nSaludos cordiales.`;
+
+        const mailtoLink = `mailto:?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+
+        window.location.href = mailtoLink;
+    }
+
+    // Copiar enlace al portapapeles - CORREGIDO
+    async copiarEnlace(): Promise<void> {
+        if (!this.urlRecibo) {
+            this.swalService.showError('Error', 'No hay enlace disponible para copiar');
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(this.urlRecibo);
+            this.swalService.showSuccess('Éxito', 'Enlace copiado al portapapeles');
+        } catch (error) {
+            // Fallback para navegadores antiguos
+            const textArea = document.createElement('textarea');
+            textArea.value = this.urlRecibo;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+
+            this.swalService.showSuccess('Éxito', 'Enlace copiado al portapapeles');
+        }
+    }
+
+    // Método alternativo para descargas más robustas - CORREGIDO
+    async descargarPDFAvanzado(): Promise<void> {
+        if (!this.urlRecibo) {
+            this.swalService.showError('Error', 'No hay recibo disponible para descargar');
+            return;
+        }
+
+        try {
+            this.swalService.showLoadingAlert('Descargando recibo...');
+
+            // Usar fetch para obtener el PDF
+            const response = await fetch(this.urlRecibo);
+            if (!response.ok) throw new Error('Error al obtener el PDF');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `recibo-${this.informacionVenta?.numeroVenta || 'venta'}.pdf`;
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Liberar recursos
+            window.URL.revokeObjectURL(url);
+
+            this.swalService.closeLoading();
+            this.swalService.showSuccess('Éxito', 'Recibo descargado correctamente');
+
+        } catch (error) {
+            this.swalService.closeLoading();
+            console.error('Error en descarga:', error);
+            this.swalService.showError('Error', 'No se pudo descargar el recibo');
+        }
+    }
+
+    // === MÉTODOS PARA EL MODAL DE RECIBO ===
+
+    // Método para cerrar el modal del recibo
     cerrarModalRecibo(): void {
         this.mostrarModalRecibo = false;
         this.ventaGenerada = false;
+        this.urlRecibo = '';
+        this.errorGeneracion = '';
 
         // Pequeño delay antes de resetear para mejor UX
         setTimeout(() => {
@@ -1478,7 +1783,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 300);
     }
 
-    // Método para resetear la venta - MANTENIDO
+    // Método para resetear la venta (si no lo tienes)
     private resetearVenta(): void {
         this.venta = {
             productos: [],
@@ -1503,37 +1808,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.actualizarProductosConDetalle();
     }
 
-    // Método para imprimir el recibo - MEJORADO
-    imprimirRecibo(): void {
-        const iframe = document.querySelector('.recibo-iframe') as HTMLIFrameElement;
-        if (iframe && iframe.contentWindow) {
-            // Esperar a que el iframe esté listo
-            const tryPrint = () => {
-                try {
-                    iframe.contentWindow!.print();
-                } catch (error) {
-                    // Si falla, intentar después de un breve delay
-                    setTimeout(() => {
-                        iframe.contentWindow!.print();
-                    }, 500);
-                }
-            };
 
-            if (iframe.contentDocument?.readyState === 'complete') {
-                tryPrint();
-            } else {
-                iframe.onload = tryPrint;
-            }
-        }
-    }
-
-    // Método para compartir el recibo - MANTENIDO
-    compartirRecibo(): void {
-        this.swalService.showInfo(
-            'Compartir Recibo',
-            'Esta funcionalidad estará disponible próximamente. Por ahora puedes descargar el PDF.'
-        );
-    }
     // === VALIDACIONES ===
     validarEntrada(event: KeyboardEvent): void {
         const tecla = event.key;
