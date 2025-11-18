@@ -919,8 +919,6 @@
                                             number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
                                         </span>
                                     </div>
-
-                                    <!-- Adelanto de cuotas (si aplica) -->
                                     <div *ngIf="resumenCashea.cantidad > 0" class="detalle-item">
                                         <span class="detalle-label">Adelanto:</span>
                                         <span class="detalle-value">
@@ -934,49 +932,21 @@
                                         </span>
                                     </div>
 
-                                    <!-- Total pagado (Inicial + Adelanto) -->
-                                    <div class="detalle-item" [ngClass]="{'highlight-item': totalPagadoCashea > 0}">
-                                        <span class="detalle-label">
-                                            <i class="bi bi-cash-coin text-success me-1"></i>
-                                            Total pagado:
-                                        </span>
-                                        <span class="detalle-value highlight-value">
-                                            {{ totalPagadoCashea | number:'1.2-2' }} {{
-                                            obtenerSimboloMoneda(venta.moneda) }}
-                                            <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                ⇄ {{ totalPagadoCasheaBs | number:'1.2-2' }} Bs
-                                            </span>
-                                            <small class="detail-text">
-                                                (Inicial + {{ resumenCashea.cantidad > 0 ? resumenCashea.cantidad + '
-                                                cuota(s)' : 'sin adelanto' }})
-                                            </small>
-                                        </span>
-                                    </div>
-
-                                    <!-- Total adeudado (solo si no está pagado completamente) -->
-                                    <div *ngIf="totalPagadoCashea < montoTotal" class="detalle-item">
-                                        <span class="detalle-label">Total adeudado:</span>
-                                        <span class="detalle-value">
-                                            {{ redondearDosDecimales(montoTotal - totalPagadoCashea) | number:'1.2-2' }}
-                                            {{
-                                            obtenerSimboloMoneda(venta.moneda) }}
-                                            <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                ⇄ {{ redondearDosDecimales(obtenerEquivalenteBs(montoTotal -
-                                                totalPagadoCashea)) |
-                                                number:'1.2-2' }} Bs
-                                            </span>
-                                        </span>
-                                    </div>
-
-                                    <!-- Indicador de pago completo -->
-                                    <div *ngIf="totalPagadoCashea >= montoTotal" class="detalle-item">
-                                        <span class="detalle-label">Estado:</span>
-                                        <span class="detalle-value text-success">
-                                            <i class="bi bi-check-circle-fill me-1"></i>
-                                            Pago completo
-                                            <small class="detail-text">(Sin cuotas pendientes)</small>
-                                        </span>
-                                    </div>
+                                    <!-- Versión compacta del total pagado -->
+<div class="detalle-item total-pagado-item">
+    <span class="detalle-label">Total a pagar ahora:</span>
+    <span class="detalle-value total-pagado-value">
+        <strong>{{ totalPagadoCashea | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}</strong>
+        <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
+            ⇄ {{ totalPagadoCasheaBs | number:'1.2-2' }} Bs
+        </span>
+        <small class="detail-text">
+            (Inicial {{ redondearDosDecimales(venta.montoInicial) | number:'1.2-2' }} 
+            + {{ resumenCashea.cantidad }} cuota{{ resumenCashea.cantidad > 1 ? 's' : '' }} 
+            {{ resumenCashea.total | number:'1.2-2' }})
+        </small>
+    </span>
+</div>
                                 </div>
                             </div>
 
