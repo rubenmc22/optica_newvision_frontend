@@ -100,6 +100,25 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     cuotasCashea: CuotaCashea[] = [];
     valorInicialTemporal = '';
 
+    // === PROPIEDADES ADICIONALES PARA GENERACIÓN DE VENTA ===
+    generandoVenta: boolean = false;
+    generandoRecibo: boolean = false;
+    ventaGenerada: boolean = false;
+    urlRecibo: string = '';
+    informacionVenta: any = null;
+    errorGeneracion: string = '';
+
+    // === PROPIEDADES PARA CONTROL DE TAMAÑO DEL MODAL ===
+    tamanoModalRecibo: 'xl' = 'xl';
+    anchoPersonalizado: string = '1100px';
+    altoPersonalizado: string = '700px';
+
+    mostrarControlesPersonalizados: boolean = false;
+
+
+    // Modal para mostrar el recibo
+    mostrarModalRecibo: boolean = false;
+
     venta: VentaDto = {
         productos: [],
         moneda: 'dolar',
@@ -1174,10 +1193,347 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    generarVenta(): void {
-        // Lógica de generación de venta...
+    // === MÉTODO DE GENERACIÓN DE VENTA MEJORADO ===
+    async generarVenta(): Promise<void> {
+        // Validaciones iniciales
+        if (!this.puedeGenerarVenta) {
+            this.swalService.showWarning(
+                'No se puede generar la venta',
+                'Verifica que todos los campos estén completos y los montos sean correctos.'
+            );
+            return;
+        }
+
+        if (this.generandoVenta) {
+            return; // Evitar múltiples clics
+        }
+
+        try {
+            // Resetear estados
+            this.generandoVenta = true;
+            this.generandoRecibo = false;
+            this.ventaGenerada = false;
+            this.errorGeneracion = '';
+            this.urlRecibo = '';
+
+            // Mostrar loader inicial
+            this.loader.showWithMessage('Iniciando proceso de venta...');
+
+            // 1. Preparar datos de la venta
+            const datosVenta = this.prepararDatosVenta();
+
+            console.log('Datos de venta a enviar:', datosVenta);
+
+            // 2. Generar venta (simulación mientras el API no está listo)
+            await this.simularGeneracionVenta(datosVenta);
+
+            // 3. Obtener recibo
+            await this.obtenerReciboVenta();
+
+            // 4. Mostrar éxito y recibo
+            this.mostrarRecibo();
+
+        } catch (error) {
+            this.manejarErrorGeneracion(error);
+        } finally {
+            this.generandoVenta = false;
+            this.loader.hide();
+        }
     }
 
+    // Método para preparar los datos de la venta - MANTENIDO
+    private prepararDatosVenta(): any {
+        return {
+            productos: this.venta.productos.map(p => ({
+                id: p.id,
+                nombre: p.nombre,
+                codigo: p.codigo,
+                precio: p.precio,
+                precioConIva: p.precioConIva,
+                cantidad: p.cantidad,
+                aplicaIva: p.aplicaIva,
+                moneda: p.moneda
+            })),
+            paciente: this.pacienteSeleccionado ? {
+                id: this.pacienteSeleccionado.key,
+                nombre: this.pacienteSeleccionado.informacionPersonal?.nombreCompleto,
+                cedula: this.pacienteSeleccionado.informacionPersonal?.cedula
+            } : null,
+            asesor: this.asesorSeleccionado ? {
+                id: this.asesorSeleccionado,
+                nombre: this.getResumenAsesor()
+            } : null,
+            configuracion: {
+                moneda: this.venta.moneda,
+                formaPago: this.venta.formaPago,
+                descuento: this.venta.descuento,
+                impuesto: this.venta.impuesto,
+                observaciones: this.venta.observaciones,
+                montoInicial: this.venta.montoInicial,
+                numeroCuotas: this.venta.numeroCuotas,
+                montoAbonado: this.venta.montoAbonado
+            },
+            metodosPago: this.venta.metodosDePago.map(m => ({
+                tipo: m.tipo,
+                monto: m.monto,
+                referencia: m.referencia,
+                banco: m.banco,
+                moneda: this.getMonedaParaMetodo(m.tipo)
+            })),
+            cashea: this.venta.formaPago === 'cashea' ? {
+                nivel: this.nivelCashea,
+                cantidadCuotas: this.cantidadCuotasCashea,
+                cuotasAdelantadas: this.resumenCashea.cantidad,
+                montoAdelantado: this.resumenCashea.total
+            } : null,
+            totales: {
+                subtotal: this.totalProductos,
+                descuento: this.venta.descuento ? (this.totalProductos * (this.venta.descuento / 100)) : 0,
+                iva: this.productosConDetalle.reduce((sum, p) => sum + (p.iva || 0), 0),
+                total: this.montoTotal
+            }
+        };
+    }
+
+    // Simulación de generación de venta - MANTENIDO
+    private async simularGeneracionVenta(datosVenta: any): Promise<void> {
+        this.loader.updateMessage('Procesando transacción...');
+
+        // Simular delay de red
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        this.loader.updateMessage('Validando métodos de pago...');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        this.loader.updateMessage('Registrando venta en el sistema...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Simular respuesta exitosa del API
+        return Promise.resolve();
+    }
+
+    // Método para obtener el recibo - MEJORADO
+    private async obtenerReciboVenta(): Promise<void> {
+        this.generandoRecibo = true;
+        this.loader.updateMessage('Generando comprobante de pago...');
+
+        try {
+            // Simular generación de PDF
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            // URL de ejemplo del recibo (en producción vendrá del API)
+            this.urlRecibo = 'https://example.com/recibos/venta-001.pdf';
+            this.informacionVenta = {
+                numeroVenta: 'V-' + Date.now(),
+                fecha: new Date().toLocaleDateString('es-VE'),
+                hora: new Date().toLocaleTimeString('es-VE'),
+                estado: 'Completada'
+            };
+
+            this.generandoRecibo = false;
+            this.ventaGenerada = true;
+        } catch (error) {
+            this.generandoRecibo = false;
+            throw error;
+        }
+    }
+
+    // Método simplificado - solo para personalizado
+    aplicarTamanoPersonalizado(ancho: string, alto: string): void {
+        // Validar formato del ancho
+        if (!ancho.match(/^\d+(px|%|vw|vh)$/)) {
+            this.swalService.showWarning('Formato inválido', 'El ancho debe ser en px, %, vw o vh (ej: 1100px)');
+            return;
+        }
+
+        // Validar formato del alto
+        if (!alto.match(/^\d+(px|%|vw|vh)$/)) {
+            this.swalService.showWarning('Formato inválido', 'El alto debe ser en px, %, vw o vh (ej: 700px)');
+            return;
+        }
+
+        this.anchoPersonalizado = ancho;
+        this.altoPersonalizado = alto;
+        this.tamanoModalRecibo = 'xl'; // Siempre mantenemos XL como tipo
+
+        setTimeout(() => {
+            this.ajustarDimensionesModal();
+        }, 50);
+    }
+
+    // Método simplificado para ajustar dimensiones
+    private ajustarDimensionesModal(): void {
+        if (!this.mostrarModalRecibo) return;
+
+        setTimeout(() => {
+            const modalDialog = document.querySelector('#reciboModal .modal-dialog') as HTMLElement;
+            const iframe = document.querySelector('.recibo-iframe') as HTMLIFrameElement;
+
+            if (modalDialog) {
+                // Para XL fijo
+                modalDialog.style.maxWidth = '1100px';
+                modalDialog.style.width = '1100px';
+                modalDialog.style.maxHeight = '90vh';
+            }
+
+            if (iframe) {
+                // Para XL fijo
+                iframe.style.height = '700px';
+
+                // Si hay tamaño personalizado, aplicar esas dimensiones al iframe
+                if (this.mostrarControlesPersonalizados) {
+                    iframe.style.height = this.altoPersonalizado;
+                }
+            }
+        }, 100);
+    }
+
+    // Método simplificado para obtener la altura del iframe
+    getAlturaIframe(): string {
+        return this.mostrarControlesPersonalizados ? this.altoPersonalizado : '700px';
+    }
+
+    // Método simplificado para obtener el ancho del modal
+    getAnchoModal(): string {
+        return this.mostrarControlesPersonalizados ? this.anchoPersonalizado : '1100px';
+    }
+
+    // Método para mostrar/ocultar controles personalizados
+    toggleControlesPersonalizados(): void {
+        this.mostrarControlesPersonalizados = !this.mostrarControlesPersonalizados;
+        if (this.mostrarControlesPersonalizados) {
+            setTimeout(() => {
+                this.ajustarDimensionesModal();
+            }, 50);
+        }
+    }
+    // Método para mostrar el recibo - ACTUALIZADO
+    private mostrarRecibo(): void {
+        this.loader.updateMessage('¡Venta generada exitosamente!');
+
+        // Resetear a tamaño por defecto
+        //this.tamanoModalRecibo = 'lg';
+
+        setTimeout(() => {
+            this.loader.hide();
+            this.mostrarModalRecibo = true;
+
+            // Ajustar dimensiones después de que el modal se muestre
+            setTimeout(() => {
+                this.ajustarDimensionesModal();
+            }, 100);
+
+            this.cdr.detectChanges();
+            this.cerrarModalResumen();
+        }, 1000);
+    }
+
+    // Nuevo método para cerrar modal de resumen
+    private cerrarModalResumen(): void {
+        const modalElement = document.getElementById('resumenVentaModal');
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+        }
+    }
+
+    // Manejo de errores - MANTENIDO
+    private manejarErrorGeneracion(error: any): void {
+        console.error('Error al generar venta:', error);
+
+        this.errorGeneracion = error?.message || 'Ocurrió un error inesperado al generar la venta';
+
+        this.swalService.showError(
+            'Error en la transacción',
+            this.obtenerMensajeError(error)
+        );
+    }
+
+    // Método para obtener mensajes de error específicos - MANTENIDO
+    private obtenerMensajeError(error: any): string {
+        if (error?.status === 400) {
+            return 'Los datos de la venta son inválidos. Verifica la información.';
+        } else if (error?.status === 402) {
+            return 'Error en el procesamiento de pago. Verifica los métodos de pago.';
+        } else if (error?.status === 409) {
+            return 'Ya existe una venta con estos datos.';
+        } else if (error?.status === 503) {
+            return 'El servicio de ventas no está disponible temporalmente. Intenta nuevamente.';
+        } else {
+            return 'No se pudo completar la transacción. Intenta nuevamente.';
+        }
+    }
+
+    // Método para cerrar el modal del recibo - MEJORADO
+    cerrarModalRecibo(): void {
+        this.mostrarModalRecibo = false;
+        this.ventaGenerada = false;
+
+        // Pequeño delay antes de resetear para mejor UX
+        setTimeout(() => {
+            this.resetearVenta();
+            this.cdr.detectChanges();
+        }, 300);
+    }
+
+    // Método para resetear la venta - MANTENIDO
+    private resetearVenta(): void {
+        this.venta = {
+            productos: [],
+            moneda: 'dolar',
+            formaPago: 'contado',
+            descuento: 0,
+            impuesto: 16,
+            observaciones: '',
+            montoInicial: 0,
+            numeroCuotas: 0,
+            montoAbonado: 0,
+            metodosDePago: []
+        };
+
+        this.pacienteSeleccionado = null;
+        this.productoSeleccionado = null;
+        this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
+        this.cuotasCashea = [];
+        this.valorInicialTemporal = '';
+        this.valorTemporal = '';
+
+        this.actualizarProductosConDetalle();
+    }
+
+    // Método para imprimir el recibo - MEJORADO
+    imprimirRecibo(): void {
+        const iframe = document.querySelector('.recibo-iframe') as HTMLIFrameElement;
+        if (iframe && iframe.contentWindow) {
+            // Esperar a que el iframe esté listo
+            const tryPrint = () => {
+                try {
+                    iframe.contentWindow!.print();
+                } catch (error) {
+                    // Si falla, intentar después de un breve delay
+                    setTimeout(() => {
+                        iframe.contentWindow!.print();
+                    }, 500);
+                }
+            };
+
+            if (iframe.contentDocument?.readyState === 'complete') {
+                tryPrint();
+            } else {
+                iframe.onload = tryPrint;
+            }
+        }
+    }
+
+    // Método para compartir el recibo - MANTENIDO
+    compartirRecibo(): void {
+        this.swalService.showInfo(
+            'Compartir Recibo',
+            'Esta funcionalidad estará disponible próximamente. Por ahora puedes descargar el PDF.'
+        );
+    }
     // === VALIDACIONES ===
     validarEntrada(event: KeyboardEvent): void {
         const tecla = event.key;

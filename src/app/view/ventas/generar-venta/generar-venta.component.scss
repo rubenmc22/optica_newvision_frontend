@@ -2399,3 +2399,614 @@ input:checked+.slider:before {
         }
     }
 }
+
+
+/*
+** Modal recibo de pago - Estilos mejorados
+*/
+#reciboModal {
+    .modal-dialog.modal-custom {
+        transition: all 0.3s ease-in-out;
+        margin: 2vh auto;
+        max-height: 95vh;
+
+        &.modal-dialog-centered {
+            display: flex;
+            align-items: flex-start;
+            min-height: calc(100% - 3.5rem);
+        }
+    }
+
+    .modal-content {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        max-height: 95vh;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+
+    /* ===== HEADER MODERNIZADO ===== */
+    .modal-header-recibo {
+        background: var(--degradado-color) !important;
+        color: white;
+        padding: 1.75rem 2rem;
+        border-bottom: none;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            position: relative;
+            z-index: 2;
+            flex: 1;
+        }
+
+        .btn-close-custom {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 2;
+            align-self: flex-start;
+
+            i {
+                font-size: 1.25rem;
+                transition: transform 0.2s ease;
+            }
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.25);
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+                i {
+                    transform: scale(1.1);
+                }
+            }
+
+            &:active {
+                transform: translateY(0);
+                background: rgba(255, 255, 255, 0.2);
+            }
+        }
+    }
+
+    /* ===== INFORMACIÓN DE VENTA MEJORADA ===== */
+    .venta-info-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid #dee2e6;
+        position: relative;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--degradado-color) !important;
+        }
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+        align-items: start;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        text-align: center;
+    }
+
+    .info-item .info-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #495057;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .info-item .info-label i {
+        font-size: 1rem;
+        color: var(--details-color) !important;
+    }
+
+    .info-item .info-value {
+        font-size: 1.125rem;
+        font-weight: 500;
+        color: #212529;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    @media (max-width: 1200px) {
+        .info-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .info-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .info-item {
+            text-align: left;
+        }
+
+        .info-item .info-label {
+            justify-content: flex-start;
+        }
+
+        .info-item .info-value {
+            justify-content: flex-start;
+        }
+    }
+
+    /* Badge de estado mejorado */
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 2px solid transparent;
+
+        &.status-completed {
+            background: var(--degradado-color) !important;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            border-color: var(--details-color) !important;
+        }
+    }
+
+    /* ===== CUERPO DEL MODAL ===== */
+    .modal-body {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        background: #fafbfc;
+
+        .p-3 {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 1.5rem !important;
+        }
+    }
+
+    .recibo-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .recibo-iframe {
+        border: none;
+        border-radius: 8px;
+        background: white;
+        transition: height 0.3s ease;
+        min-height: 500px;
+    }
+
+    /* ===== FOOTER MEJORADO ===== */
+    .modal-footer-recibo {
+        padding: 1.5rem;
+        background: linear-gradient(to bottom, #f8f9fa, #ffffff);
+        border-top: 1px solid #e9ecef;
+        border-radius: 0 0 12px 12px;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+
+        .footer-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+
+            @media (max-width: 576px) {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+
+            @media (max-width: 576px) {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+        }
+
+        .btn-detalle {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            min-width: 140px;
+            position: relative;
+            overflow: hidden;
+
+            &::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+                transition: left 0.5s ease;
+            }
+
+            &:hover::before {
+                left: 100%;
+            }
+
+            i {
+                font-size: 1.1rem;
+                margin-right: 0.5rem;
+            }
+
+            // Estados hover y focus
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+
+            &:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            }
+
+            &:focus {
+                outline: none;
+                box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+            }
+        }
+
+        // Botón Cerrar
+        .btn-outline-secondary {
+            border-color: #6c757d;
+            color: #6c757d;
+            background: white;
+
+            &:hover {
+                background: #6c757d;
+                border-color: #6c757d;
+                color: white;
+                transform: translateY(-2px);
+            }
+        }
+
+        // Botón Descargar
+        .btn-success {
+            background: var(--degradado-color) !important;
+            border: none;
+            color: white;
+
+            &:hover {
+                background: var(--degradado-color) !important;
+                color: var(--details-color) !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        // Botón Imprimir
+        .btn-primary {
+            background: var(--degradado-color) !important;
+            border: none;
+            color: white;
+
+            &:hover {
+                background: var(--degradado-color) !important;
+                color: var(--details-color) !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        // Estados deshabilitados
+        .btn-detalle:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+
+            &::before {
+                display: none;
+            }
+
+            &:hover {
+                transform: none !important;
+                box-shadow: none !important;
+            }
+        }
+
+        // Efecto de carga para botones
+        .btn-loading {
+            position: relative;
+            color: transparent;
+
+            &::after {
+                content: '';
+                position: absolute;
+                width: 16px;
+                height: 16px;
+                border: 2px solid transparent;
+                border-top: 2px solid currentColor;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+        }
+    }
+
+    // Animación de spin
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+}
+
+// Backdrop mejorado
+.modal-backdrop.show {
+    opacity: 0.6;
+    background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+}
+
+// Responsive mejorado
+@media (max-width: 768px) {
+    #reciboModal {
+        .modal-dialog.modal-custom {
+            margin: 1vh auto;
+            max-width: 98vw !important;
+        }
+
+        .modal-header-recibo {
+            padding: 1.25rem 1.5rem;
+
+            .header-content {
+                gap: 1rem;
+            }
+
+            .header-icon {
+                width: 50px;
+                height: 50px;
+
+                i {
+                    font-size: 1.75rem;
+                }
+            }
+
+            .header-text {
+                gap: 0.25rem;
+            }
+
+            .header-title {
+                font-size: 1.5rem;
+            }
+
+            .header-subtitle {
+                font-size: 0.9rem;
+            }
+
+            .btn-close-custom {
+                width: 36px;
+                height: 36px;
+
+                i {
+                    font-size: 1.1rem;
+                }
+            }
+        }
+
+        .venta-info-card {
+            padding: 1.25rem 1.5rem;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+
+        .info-item {
+            .info-label {
+                font-size: 0.85rem;
+            }
+
+            .info-value {
+                font-size: 1rem;
+            }
+        }
+
+        .modal-footer-recibo {
+            padding: 1rem;
+
+            .footer-actions {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .action-buttons {
+                width: 100%;
+                justify-content: stretch;
+
+                .btn-detalle {
+                    flex: 1;
+                    min-width: auto;
+                }
+            }
+
+            .btn-detalle {
+                padding: 0.75rem 1rem;
+                font-size: 0.85rem;
+
+                i {
+                    font-size: 1rem;
+                    margin-right: 0.375rem;
+                }
+            }
+        }
+
+        .modal-body .p-3 {
+            padding: 1rem !important;
+        }
+    }
+}
+
+@media (max-width: 576px) {
+    #reciboModal {
+        .modal-header-recibo {
+            padding: 1rem 1.25rem;
+
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.75rem;
+            }
+
+            .header-icon {
+                width: 55px;
+                height: 55px;
+            }
+
+            .header-title {
+                font-size: 1.375rem;
+            }
+
+            .header-subtitle {
+                font-size: 0.875rem;
+            }
+        }
+
+        .venta-info-card {
+            padding: 1rem 1.25rem;
+        }
+    }
+}
+
+// Efectos de transición suave
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+// Animaciones de entrada
+.modal.show .modal-header-recibo {
+    animation: slideInDown 0.5s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.venta-info-card {
+    animation: fadeInUp 0.5s ease-out 0.2s both;
+}
+
+@keyframes fadeInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+// Mejoras de accesibilidad
+@media (prefers-reduced-motion: reduce) {
+    #reciboModal {
+        .btn-detalle {
+            transition: none;
+
+            &::before {
+                display: none;
+            }
+
+            &:hover {
+                transform: none;
+            }
+        }
+    }
+
+    .modal.fade .modal-dialog {
+        transition: none;
+    }
+
+    .modal.show .modal-header-recibo,
+    .venta-info-card {
+        animation: none;
+    }
+}

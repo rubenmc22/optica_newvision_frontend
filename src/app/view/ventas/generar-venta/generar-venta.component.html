@@ -933,20 +933,23 @@
                                     </div>
 
                                     <!-- Versión compacta del total pagado -->
-<div class="detalle-item total-pagado-item">
-    <span class="detalle-label">Total a pagar ahora:</span>
-    <span class="detalle-value total-pagado-value">
-        <strong>{{ totalPagadoCashea | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}</strong>
-        <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-            ⇄ {{ totalPagadoCasheaBs | number:'1.2-2' }} Bs
-        </span>
-        <small class="detail-text">
-            (Inicial {{ redondearDosDecimales(venta.montoInicial) | number:'1.2-2' }} 
-            + {{ resumenCashea.cantidad }} cuota{{ resumenCashea.cantidad > 1 ? 's' : '' }} 
-            {{ resumenCashea.total | number:'1.2-2' }})
-        </small>
-    </span>
-</div>
+                                    <div class="detalle-item total-pagado-item">
+                                        <span class="detalle-label">Total a pagar ahora:</span>
+                                        <span class="detalle-value total-pagado-value">
+                                            <strong>{{ totalPagadoCashea | number:'1.2-2' }} {{
+                                                obtenerSimboloMoneda(venta.moneda) }}</strong>
+                                            <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
+                                                ⇄ {{ totalPagadoCasheaBs | number:'1.2-2' }} Bs
+                                            </span>
+                                            <small class="detail-text">
+                                                (Inicial {{ redondearDosDecimales(venta.montoInicial) | number:'1.2-2'
+                                                }}
+                                                + {{ resumenCashea.cantidad }} cuota{{ resumenCashea.cantidad > 1 ? 's'
+                                                : '' }}
+                                                {{ resumenCashea.total | number:'1.2-2' }})
+                                            </small>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1017,18 +1020,147 @@
             <!-- Footer modernizado -->
             <div class="modal-footer-detalle">
                 <div class="footer-actions">
-                    <button type="button" class="btn btn-secondary btn-detalle" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-secondary btn-detalle" data-bs-dismiss="modal"
+                        [disabled]="generandoVenta">
                         <i class="bi bi-x-circle me-2"></i>
-                        Cancelar
+                        {{ generandoVenta ? 'Cancelando...' : 'Cancelar' }}
                     </button>
                     <button type="button" class="btn btn-success btn-detalle" (click)="generarVenta()"
-                        [disabled]="!puedeGenerarVenta" [title]="mensajeEstadoBoton">
-                        <i class="bi bi-check-circle me-2"></i>
-                        Confirmar y Generar Venta
-                        <span *ngIf="!puedeGenerarVenta" class="ms-1">({{ mensajeEstadoBoton }})</span>
+                        [disabled]="!puedeGenerarVenta || generandoVenta" [title]="mensajeEstadoBoton">
+                        <i class="bi" [class.bi-check-circle]="!generandoVenta"
+                            [class.bi-hourglass-split]="generandoVenta" class="me-2"></i>
+                        {{ generandoVenta ? 'Procesando...' : 'Confirmar y Generar Venta' }}
+                        <span *ngIf="!puedeGenerarVenta && !generandoVenta" class="ms-1">({{ mensajeEstadoBoton
+                            }})</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+
+
+
+<!-- Modal para mostrar el recibo - XL -->
+<div class="modal fade" id="reciboModal" [class.show]="mostrarModalRecibo"
+    [style.display]="mostrarModalRecibo ? 'block' : 'none'" [class.d-block]="mostrarModalRecibo" tabindex="-1"
+    aria-labelledby="reciboModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+
+    <div class="modal-dialog modal-dialog-centered modal-xl-custom">
+        <div class="modal-content">
+
+            <div class="modal-header-recibo">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <div class="header-text">
+                        <h4 class="header-title">¡Venta Generada Exitosamente!</h4>
+                        <div class="header-subtitle">Recibo digital de la transacción completada</div>
+                    </div>
+                </div>
+
+                <!-- Botón cerrar - CORREGIDO: Ahora está alineado correctamente -->
+                <button type="button" class="btn-close-custom" (click)="cerrarModalRecibo()" title="Cerrar recibo">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="modal-body p-0">
+                <!-- Información de la venta - Mejorada -->
+                <div class="venta-info-card">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="bi bi-receipt me-1"></i>
+                                N° de Venta
+                            </div>
+                            <div class="info-value">{{ informacionVenta?.numeroVenta }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="bi bi-calendar me-1"></i>
+                                Fecha
+                            </div>
+                            <div class="info-value">{{ informacionVenta?.fecha }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="bi bi-clock me-1"></i>
+                                Hora
+                            </div>
+                            <div class="info-value">{{ informacionVenta?.hora }}</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Estado
+                            </div>
+                            <div class="info-value">
+                                <span class="status-badge status-completed">{{ informacionVenta?.estado }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contenedor del recibo -->
+                    <div class="p-3">
+                        <!-- Loading mientras carga el recibo -->
+                        <div *ngIf="generandoRecibo" class="text-center py-5">
+                            <div class="spinner-border text-success mb-3" role="status">
+                                <span class="visually-hidden">Generando recibo...</span>
+                            </div>
+                            <h5 class="text-success">Generando comprobante de pago...</h5>
+                            <p class="text-muted">Estamos preparando tu recibo digital</p>
+                        </div>
+
+                        <!-- Iframe para mostrar el PDF -->
+                        <div *ngIf="urlRecibo && !generandoRecibo" class="recibo-container">
+                            <iframe [src]="urlRecibo | safeUrl" width="100%" [style.height]="getAlturaIframe()"
+                                frameborder="0" class="recibo-iframe w-100">
+                                Tu navegador no soporta la visualización de PDFs.
+                                <a [href]="urlRecibo" target="_blank">Descargar recibo</a>
+                            </iframe>
+                        </div>
+
+                        <!-- Mensaje de error -->
+                        <div *ngIf="errorGeneracion" class="alert alert-danger text-center">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            {{ errorGeneracion }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer con acciones mejorado - CORREGIDO: Ahora está fuera del modal-body -->
+            <div class="modal-footer-recibo">
+                <div class="footer-actions">
+                    <!-- Botón Cerrar a la izquierda -->
+                    <button type="button" class="btn btn-outline-secondary btn-detalle" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>
+                        Cerrar
+                    </button>
+
+                    <!-- Grupo de acciones a la derecha -->
+                    <div class="action-buttons" *ngIf="urlRecibo && !generandoRecibo">
+                        <!-- Descargar PDF -->
+                        <a [href]="urlRecibo" download="recibo-{{ informacionVenta?.numeroVenta }}.pdf"
+                            class="btn btn-success btn-detalle btn-action">
+                            <i class="bi bi-download me-2"></i>
+                            Descargar PDF
+                        </a>
+
+                        <!-- Imprimir -->
+                        <button type="button" class="btn btn-primary btn-detalle btn-action" (click)="imprimirRecibo()">
+                            <i class="bi bi-printer me-2"></i>
+                            Imprimir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Backdrop del modal -->
+<div class="modal-backdrop fade show" *ngIf="mostrarModalRecibo"></div>

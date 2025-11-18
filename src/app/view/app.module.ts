@@ -33,6 +33,7 @@ import { VentasDashboardComponent } from './ventas/ventas-dashboard.component';
 import { HistorialVentasComponent } from './ventas/historial-ventas/historial-ventas.component';
 import { PresupuestoComponent } from './ventas/presupuesto/presupuesto.component';
 import { CierreCajaComponent } from './ventas/cierre-caja/cierre-caja.component';
+import { SafeUrlPipe } from './ventas/generar-venta/safe-url.pipe';
 import { LoaderComponent } from './../shared/loader/loader.component';
 import { SystemConfigComponent } from './system-config/system-config.component';
 
@@ -72,6 +73,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
     VentasDashboardComponent,
     PresupuestoComponent,
     CierreCajaComponent,
+
     SystemConfigComponent
   ],
   imports: [
@@ -85,6 +87,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
     BrowserAnimationsModule,
     NgbTooltipModule,
     NgxSkeletonLoaderModule,
+    SafeUrlPipe,
 
     RouterModule.forRoot(appRoutes, {
       onSameUrlNavigation: 'reload',
