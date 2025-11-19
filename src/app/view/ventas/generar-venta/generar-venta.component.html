@@ -741,6 +741,7 @@
                             <div class="metodos-grid">
                                 <div *ngFor="let metodo of venta.metodosDePago; let i = index" class="metodo-card">
                                     <div class="metodo-header">
+                                        <!-- 1. Select de métodos de pago -->
                                         <select class="form-select modern-select compact" [(ngModel)]="metodo.tipo"
                                             (change)="onTipoMetodoChange(i)">
                                             <option value="" disabled selected>Método pago</option>
@@ -757,27 +758,12 @@
                                     </div>
 
                                     <div class="metodo-body">
-                                        <!-- Campo de monto -->
-                                        <input type="text" class="form-control modern-input compact"
-                                            [placeholder]="getPlaceholderMonto(metodo.tipo)"
-                                            [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
-                                            (keypress)="validarEntrada($event)" [disabled]="!metodo.tipo" />
-
-                                        <!-- Campo de referencia (solo para pagomovil y transferencia) -->
-                                        <div *ngIf="necesitaReferencia(metodo.tipo)" class="campo-adicional">
-                                            <label class="form-label compact-label">N° de Referencia</label>
-                                            <input type="text" class="form-control modern-input compact"
-                                                [(ngModel)]="metodo.referencia" placeholder="Ej: 123456789"
-                                                maxlength="20" />
-                                        </div>
-
-                                        <!-- Campo de banco con código y nombre -->
+                                        <!-- 2. Banco -->
                                         <div *ngIf="necesitaBanco(metodo.tipo)" class="campo-adicional">
                                             <label class="form-label compact-label">
                                                 <i class="bi bi-bank"></i>
                                                 Banco
                                             </label>
-
                                             <ng-select [items]="bancosDisponibles" bindLabel="nombre" bindValue="codigo"
                                                 [(ngModel)]="metodo.bancoCodigo" (change)="onBancoChange($event, i)"
                                                 [searchable]="true" [clearable]="true" [selectOnTab]="true"
@@ -803,15 +789,24 @@
                                                 </ng-template>
                                             </ng-select>
                                         </div>
+
+                                        <!-- 3. Referencia -->
+                                        <div *ngIf="necesitaReferencia(metodo.tipo)" class="campo-adicional">
+                                            <label class="form-label compact-label">N° de Referencia</label>
+                                            <input type="text" class="form-control modern-input compact"
+                                                [(ngModel)]="metodo.referencia" placeholder="Ej: 123456789"
+                                                maxlength="20" />
+                                        </div>
+
+                                        <!-- 4. Monto -->
+                                        <input type="text" class="form-control modern-input compact"
+                                            [placeholder]="getPlaceholderMonto(metodo.tipo)"
+                                            [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
+                                            (keypress)="validarEntrada($event)" [disabled]="!metodo.tipo" />
                                     </div>
 
                                     <div class="metodo-footer">
-                                        <span
-                                            *ngIf="mostrarConversionBs(metodo.tipo) && metodo.monto && metodo.monto > 0"
-                                            class="conversion-text">
-                                            ⇄ {{ calcularConversionBs(metodo.monto, metodo.tipo) | number:'1.2-2' }} Bs
-                                        </span>
-
+                                        <!-- 5. Lbl de máximo -->
                                         <span class="maximo-text">
                                             Máx: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{
                                             getSimboloMonedaActual() }}
@@ -820,12 +815,15 @@
                                                 ⇄ {{ getMontoRestanteParaMetodoEnBs(i) | number:'1.2-2' }} Bs
                                             </span>
                                         </span>
+
+                                        <span
+                                            *ngIf="mostrarConversionBs(metodo.tipo) && metodo.monto && metodo.monto > 0"
+                                            class="conversion-text">
+                                            ⇄ {{ calcularConversionBs(metodo.monto, metodo.tipo) | number:'1.2-2' }} Bs
+                                        </span>
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Resumen métodos de pago -->
-                            <!-- ... código existente ... -->
                         </div>
                     </div>
                 </div>

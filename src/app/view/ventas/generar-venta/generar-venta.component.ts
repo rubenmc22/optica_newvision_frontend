@@ -1999,19 +1999,55 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    // === MÉTODOS PARA REFERENCIA Y BANCO ===
-    necesitaReferencia(tipoMetodo: string): boolean {
-        const metodosConReferencia = ['pagomovil', 'transferencia'];
-        return metodosConReferencia.includes(tipoMetodo);
+    // En la interfaz VentaDto, asegúrate de que los métodos de pago tengan las propiedades correctas
+    metodosDePago: Array<{
+        tipo: string;
+        monto: number;
+        valorTemporal: string;
+        referencia: string;
+        bancoCodigo?: string;
+        bancoNombre?: string;
+        banco?: string;
+    }> = [];
+
+    // Método para manejar el cambio de banco
+    onBancoChange(codigoBanco: string, index: number): void {
+        const metodo = this.venta.metodosDePago[index];
+        const bancoSeleccionado = this.bancosDisponibles.find(b => b.codigo === codigoBanco);
+
+        if (bancoSeleccionado) {
+            metodo.bancoCodigo = bancoSeleccionado.codigo;
+            metodo.bancoNombre = bancoSeleccionado.nombre;
+            metodo.banco = `${bancoSeleccionado.codigo} - ${bancoSeleccionado.nombre}`;
+        } else {
+            metodo.bancoCodigo = '';
+            metodo.bancoNombre = '';
+            metodo.banco = '';
+        }
     }
 
-    necesitaBanco(tipoMetodo: string): boolean {
-        const metodosConBanco = ['pagomovil', 'transferencia'];
-        return metodosConBanco.includes(tipoMetodo);
+    // Método para formatear la visualización del banco
+    getBancoDisplay(banco: any): string {
+        if (!banco) return '';
+        if (typeof banco === 'string') return banco;
+        return `${banco.codigo} - ${banco.nombre}`;
     }
 
-    // Lista de bancos disponibles
-    // En tu componente TypeScript
+    // Método de búsqueda personalizado para bancos (igual que para productos)
+    filtrarBancos(term: string, item: any): boolean {
+        if (!term) return true;
+
+        const termLower = term.toLowerCase().trim();
+        const codigo = item.codigo?.toLowerCase() || '';
+        const nombre = item.nombre?.toLowerCase() || '';
+        const display = `${item.codigo} - ${item.nombre}`.toLowerCase();
+
+        return codigo.includes(termLower) ||
+            nombre.includes(termLower) ||
+            display.includes(termLower);
+    }
+
+    // Lista de bancos disponibles (igual estructura que productos)
     get bancosDisponibles(): any[] {
         return [
             { codigo: '0102', nombre: 'Banco de Venezuela' },
@@ -2043,42 +2079,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         ];
     }
 
-    onBancoChange(codigoBanco: string, index: number): void {
-        const metodo = this.venta.metodosDePago[index];
-        const bancoSeleccionado = this.bancosDisponibles.find(b => b.codigo === codigoBanco);
-
-        if (bancoSeleccionado) {
-            metodo.bancoCodigo = bancoSeleccionado.codigo;
-            metodo.bancoNombre = bancoSeleccionado.nombre;
-            metodo.banco = `${bancoSeleccionado.codigo} - ${bancoSeleccionado.nombre}`;
-        } else {
-            metodo.bancoCodigo = '';
-            metodo.bancoNombre = '';
-            metodo.banco = '';
-        }
-    }
-
-    // Método para formatear la visualización
-    getBancoDisplay(banco: any): string {
-        if (!banco) return '';
-        if (typeof banco === 'string') return banco;
-        return `${banco.codigo} - ${banco.nombre}`;
-    }
-
-    // Método de búsqueda personalizado
-    filtrarBancos(term: string, item: any): boolean {
-        if (!term) return true;
-
-        const termLower = term.toLowerCase().trim();
-        const codigo = item.codigo?.toLowerCase() || '';
-        const nombre = item.nombre?.toLowerCase() || '';
-        const display = `${item.codigo} - ${item.nombre}`.toLowerCase();
-
-        return codigo.includes(termLower) ||
-            nombre.includes(termLower) ||
-            display.includes(termLower);
-    }
-
     // Método para limpiar campos cuando cambia el tipo de método
     onTipoMetodoChange(index: number): void {
         const metodo = this.venta.metodosDePago[index];
@@ -2088,11 +2088,25 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             metodo.referencia = '';
         }
         if (!this.necesitaBanco(metodo.tipo)) {
+            metodo.bancoCodigo = '';
+            metodo.bancoNombre = '';
             metodo.banco = '';
         }
 
         this.onMetodoPagoChange(index);
     }
+
+    // Métodos auxiliares para determinar qué campos mostrar
+    necesitaReferencia(tipoMetodo: string): boolean {
+        const metodosConReferencia = ['pagomovil', 'transferencia'];
+        return metodosConReferencia.includes(tipoMetodo);
+    }
+
+    necesitaBanco(tipoMetodo: string): boolean {
+        const metodosConBanco = ['pagomovil', 'transferencia'];
+        return metodosConBanco.includes(tipoMetodo);
+    }
+
 
     // Método para verificar si se puede generar la venta
     get puedeGenerarVenta(): boolean {
