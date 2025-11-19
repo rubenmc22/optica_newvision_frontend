@@ -37,6 +37,50 @@ export interface MetodoPago {
     bancoObject?: { codigo: string; nombre: string }; // objeto real
 }
 
+export interface DatosRecibo {
+    numeroVenta: string;
+    fecha: string;
+    hora: string;
+    sede: {
+        nombre: string;
+        direccion: string;
+        telefono: string;
+        email: string;
+        rif: string;
+    };
+    cliente: {
+        nombre: string;
+        cedula: string;
+        telefono: string;
+        direccion: string;
+    };
+    productos: Array<{
+        codigo: string;
+        nombre: string;
+        cantidad: number;
+        precioUnitario: number;
+        descuento: number;
+        subtotal: number;
+        aplicaIva: boolean;
+    }>;
+    metodosPago: Array<{
+        tipo: string;
+        monto: number;
+        referencia?: string;
+        banco?: string;
+        moneda: string;
+    }>;
+    totales: {
+        subtotal: number;
+        descuento: number;
+        iva: number;
+        total: number;
+        totalPagado: number;
+    };
+    vendedor: string;
+    observaciones?: string;
+}
+
 export interface ProductoVenta {
     id: string;
     nombre: string;

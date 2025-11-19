@@ -15,7 +15,7 @@ import { PacientesService } from '../../../core/services/pacientes/pacientes.ser
 import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
 import { Paciente } from '../../pacientes/paciente-interface';
 import { HistoriaMedica } from './../../historias-medicas/historias_medicas-interface';
-import { VentaDto, ProductoVenta, ProductoVentaCalculado, CuotaCashea } from '../venta-interfaz';
+import { VentaDto, ProductoVenta, ProductoVentaCalculado, CuotaCashea, DatosRecibo } from '../venta-interfaz';
 import { Empleado, User } from '../../../Interfaces/models-interface';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { trigger, transition, style, animate } from '@angular/animations';
@@ -105,7 +105,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     generandoRecibo: boolean = false;
     ventaGenerada: boolean = false;
     urlRecibo: string = '';
-    informacionVenta: any = null;
     errorGeneracion: string = '';
 
     // === PROPIEDADES PARA CONTROL DE TAMAÑO DEL MODAL ===
@@ -118,6 +117,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // Modal para mostrar el recibo
     mostrarModalRecibo: boolean = false;
+    datosRecibo: any = null;
+    currentYear: number = new Date().getFullYear();
+    informacionVenta: any = null;
 
     venta: VentaDto = {
         productos: [],
@@ -1181,52 +1183,52 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     // === MÉTODO DE GENERACIÓN DE VENTA MEJORADO ===
-    async generarVenta(): Promise<void> {
-        // Validaciones iniciales
-        if (!this.puedeGenerarVenta) {
-            this.swalService.showWarning(
-                'No se puede generar la venta',
-                'Verifica que todos los campos estén completos y los montos sean correctos.'
-            );
-            return;
-        }
-
-        if (this.generandoVenta) {
-            return; // Evitar múltiples clics
-        }
-
-        try {
-            // Resetear estados
-            this.generandoVenta = true;
-            this.generandoRecibo = false;
-            this.ventaGenerada = false;
-            this.errorGeneracion = '';
-            this.urlRecibo = '';
-
-            // Mostrar loader inicial
-            this.loader.showWithMessage('Iniciando proceso de venta...');
-
-            // 1. Preparar datos de la venta
-            const datosVenta = this.prepararDatosVenta();
-
-            console.log('Datos de venta a enviar:', datosVenta);
-
-            // 2. Generar venta (simulación mientras el API no está listo)
-            await this.simularGeneracionVenta(datosVenta);
-
-            // 3. Obtener recibo
-            await this.obtenerReciboVenta();
-
-            // 4. Mostrar éxito y recibo
-            this.mostrarRecibo();
-
-        } catch (error) {
-            this.manejarErrorGeneracion(error);
-        } finally {
-            this.generandoVenta = false;
-            this.loader.hide();
-        }
-    }
+    /* async generarVenta(): Promise<void> {
+         // Validaciones iniciales
+         if (!this.puedeGenerarVenta) {
+             this.swalService.showWarning(
+                 'No se puede generar la venta',
+                 'Verifica que todos los campos estén completos y los montos sean correctos.'
+             );
+             return;
+         }
+ 
+         if (this.generandoVenta) {
+             return; // Evitar múltiples clics
+         }
+ 
+         try {
+             // Resetear estados
+             this.generandoVenta = true;
+             this.generandoRecibo = false;
+             this.ventaGenerada = false;
+             this.errorGeneracion = '';
+             this.urlRecibo = '';
+ 
+             // Mostrar loader inicial
+             this.loader.showWithMessage('Iniciando proceso de venta...');
+ 
+             // 1. Preparar datos de la venta
+             const datosVenta = this.prepararDatosVenta();
+ 
+             console.log('Datos de venta a enviar:', datosVenta);
+ 
+             // 2. Generar venta (simulación mientras el API no está listo)
+             await this.simularGeneracionVenta(datosVenta);
+ 
+             // 3. Obtener recibo
+             await this.obtenerReciboVenta();
+ 
+             // 4. Mostrar éxito y recibo
+             this.mostrarRecibo();
+ 
+         } catch (error) {
+             this.manejarErrorGeneracion(error);
+         } finally {
+             this.generandoVenta = false;
+             this.loader.hide();
+         }
+     }*/
 
     // Método para preparar los datos de la venta - MANTENIDO
     private prepararDatosVenta(): any {
@@ -1426,29 +1428,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 1000);
     }
 
-    // Nuevo método para cerrar modal de resumen
-    private cerrarModalResumen(): void {
-        const modalElement = document.getElementById('resumenVentaModal');
-        if (modalElement) {
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) {
-                modal.hide();
-            }
-        }
-    }
-
-    // Manejo de errores - MANTENIDO
-    private manejarErrorGeneracion(error: any): void {
-        console.error('Error al generar venta:', error);
-
-        this.errorGeneracion = error?.message || 'Ocurrió un error inesperado al generar la venta';
-
-        this.swalService.showError(
-            'Error en la transacción',
-            this.obtenerMensajeError(error)
-        );
-    }
-
     // Método para obtener mensajes de error específicos - MANTENIDO
     private obtenerMensajeError(error: any): string {
         if (error?.status === 400) {
@@ -1461,78 +1440,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return 'El servicio de ventas no está disponible temporalmente. Intenta nuevamente.';
         } else {
             return 'No se pudo completar la transacción. Intenta nuevamente.';
-        }
-    }
-
-    // Método alternativo usando window.open - MÁS CONFIABLE
-    imprimirRecibo(): void {
-        if (!this.urlRecibo) {
-            this.swalService.showError('Error', 'No hay recibo disponible para imprimir');
-            return;
-        }
-
-        this.swalService.showLoadingAlert('Abriendo recibo para impresión...');
-
-        try {
-            // Abrir en nueva ventana
-            const printWindow = window.open(this.urlRecibo, '_blank', 'width=800,height=600');
-
-            if (!printWindow) {
-                this.swalService.closeLoading();
-                this.swalService.showError(
-                    'Ventana bloqueada',
-                    'Por favor, permite ventanas emergentes para imprimir.'
-                );
-                return;
-            }
-
-            // Esperar a que la ventana cargue
-            const checkLoad = setInterval(() => {
-                try {
-                    if (printWindow.closed) {
-                        clearInterval(checkLoad);
-                        this.swalService.closeLoading();
-                        return;
-                    }
-
-                    if (printWindow.document.readyState === 'complete') {
-                        clearInterval(checkLoad);
-
-                        // Pequeño delay antes de imprimir
-                        setTimeout(() => {
-                            try {
-                                printWindow.focus();
-                                printWindow.print();
-                                this.swalService.closeLoading();
-
-                                // 🔄 IMPORTANTE: No cerrar la ventana automáticamente
-                                // Dejar que el usuario decida cuándo cerrarla
-
-                            } catch (printError) {
-                                console.error('Error al imprimir:', printError);
-                                this.swalService.closeLoading();
-                                this.swalService.showInfo(
-                                    'PDF listo',
-                                    'El recibo está abierto. Usa Ctrl+P para imprimir manualmente.'
-                                );
-                            }
-                        }, 1000);
-                    }
-                } catch (error) {
-                    clearInterval(checkLoad);
-                    this.swalService.closeLoading();
-                }
-            }, 500);
-
-            // Timeout
-            setTimeout(() => {
-                clearInterval(checkLoad);
-                this.swalService.closeLoading();
-            }, 10000);
-
-        } catch (error) {
-            this.swalService.closeLoading();
-            this.manejarErrorImpresion(error);
         }
     }
 
@@ -1564,34 +1471,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 window.open(this.urlRecibo, '_blank');
             }
         });
-    }
-
-    // Método para descargar el PDF - CORREGIDO
-    descargarPDF(): void {
-        if (!this.urlRecibo) {
-            this.swalService.showError('Error', 'No hay recibo disponible para descargar');
-            return;
-        }
-
-        // Mostrar loading
-        this.swalService.showLoadingAlert('Preparando descarga...');
-
-        // Crear enlace de descarga
-        const link = document.createElement('a');
-        link.href = this.urlRecibo;
-        link.download = `recibo-${this.informacionVenta?.numeroVenta || 'venta'}.pdf`;
-        link.target = '_blank';
-
-        // Simular click para descargar
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // Cerrar loading después de un breve delay
-        setTimeout(() => {
-            this.swalService.closeLoading();
-            this.swalService.showSuccess('Éxito', 'El recibo se está descargando');
-        }, 1000);
     }
 
     compartirRecibo(): void {
@@ -1713,62 +1592,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    // Compartir por WhatsApp - CORREGIDO
-    compartirWhatsApp(): void {
-        if (!this.urlRecibo) {
-            this.swalService.showError('Error', 'No hay recibo disponible para compartir');
-            return;
-        }
-
-        const numeroVenta = this.informacionVenta?.numeroVenta || 'N/A';
-        const mensaje = `¡Hola! Te comparto el recibo de la venta ${numeroVenta}. Puedes verlo aquí: ${this.urlRecibo}`;
-
-        // Codificar el mensaje para URL
-        const mensajeCodificado = encodeURIComponent(mensaje);
-        const urlWhatsApp = `https://wa.me/?text=${mensajeCodificado}`;
-
-        window.open(urlWhatsApp, '_blank');
-        this.swalService.showSuccess('Éxito', 'Redirigiendo a WhatsApp...');
-    }
-
-    // Compartir por Email - CORREGIDO
-    compartirEmail(): void {
-        if (!this.urlRecibo) {
-            this.swalService.showError('Error', 'No hay recibo disponible para compartir');
-            return;
-        }
-
-        const numeroVenta = this.informacionVenta?.numeroVenta || 'N/A';
-        const asunto = `Recibo de Venta ${numeroVenta}`;
-        const cuerpo = `Hola,\n\nTe comparto el recibo de la venta ${numeroVenta}.\nPuedes verlo en el siguiente enlace: ${this.urlRecibo}\n\nSaludos cordiales.`;
-
-        const mailtoLink = `mailto:?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
-
-        window.location.href = mailtoLink;
-    }
-
-    // Copiar enlace al portapapeles - CORREGIDO
-    async copiarEnlace(): Promise<void> {
-        if (!this.urlRecibo) {
-            this.swalService.showError('Error', 'No hay enlace disponible para copiar');
-            return;
-        }
-
-        try {
-            await navigator.clipboard.writeText(this.urlRecibo);
-            this.swalService.showSuccess('Éxito', 'Enlace copiado al portapapeles');
-        } catch (error) {
-            // Fallback para navegadores antiguos
-            const textArea = document.createElement('textarea');
-            textArea.value = this.urlRecibo;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-
-            this.swalService.showSuccess('Éxito', 'Enlace copiado al portapapeles');
-        }
-    }
 
     // Método alternativo para descargas más robustas - CORREGIDO
     async descargarPDFAvanzado(): Promise<void> {
@@ -1807,48 +1630,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.swalService.showError('Error', 'No se pudo descargar el recibo');
         }
     }
-
-    // === MÉTODOS PARA EL MODAL DE RECIBO ===
-
-    // Método para cerrar el modal del recibo
-    cerrarModalRecibo(): void {
-        this.mostrarModalRecibo = false;
-        this.ventaGenerada = false;
-        this.urlRecibo = '';
-        this.errorGeneracion = '';
-
-        // Pequeño delay antes de resetear para mejor UX
-        setTimeout(() => {
-            this.resetearVenta();
-            this.cdr.detectChanges();
-        }, 300);
-    }
-
-    // Método para resetear la venta (si no lo tienes)
-    private resetearVenta(): void {
-        this.venta = {
-            productos: [],
-            moneda: 'dolar',
-            formaPago: 'contado',
-            descuento: 0,
-            impuesto: 16,
-            observaciones: '',
-            montoInicial: 0,
-            numeroCuotas: 0,
-            montoAbonado: 0,
-            metodosDePago: []
-        };
-
-        this.pacienteSeleccionado = null;
-        this.productoSeleccionado = null;
-        this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
-        this.cuotasCashea = [];
-        this.valorInicialTemporal = '';
-        this.valorTemporal = '';
-
-        this.actualizarProductosConDetalle();
-    }
-
 
     // === VALIDACIONES ===
     validarEntrada(event: KeyboardEvent): void {
@@ -2312,7 +2093,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return { valido: true, mensaje: 'Método completo' };
     }
 
-    // Mensaje de estado para el botón
     // Mensaje de estado para el botón - MEJORADO
     get mensajeEstadoBoton(): string {
         if (this.venta.productos.length === 0) {
@@ -2354,32 +2134,618 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.redondear(this.obtenerEquivalenteBs(this.totalPagadoCashea));
     }
 
+    // === MÉTODOS DE VENTA Y RECIBO ===
+    async generarVenta(): Promise<void> {
+        if (!this.puedeGenerarVenta) {
+            this.swalService.showWarning(
+                'No se puede generar la venta',
+                'Verifica que todos los campos estén completos y los montos sean correctos.'
+            );
+            return;
+        }
 
+        if (this.generandoVenta) {
+            return;
+        }
 
+        try {
+            this.generandoVenta = true;
+            this.loader.showWithMessage('Procesando venta...');
 
+            // Simular proceso de venta
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Métodos para los títulos e iconos
-    getTituloMetodo(tipo: string): string {
-        const titulos: { [key: string]: string } = {
-            'efectivo': 'Pago en Efectivo',
-            'debito': 'Tarjeta de Débito',
-            'credito': 'Tarjeta de Crédito',
-            'pagomovil': 'Pago Móvil',
-            'transferencia': 'Transferencia Bancaria',
-            'zelle': 'Transferencia Zelle'
-        };
-        return titulos[tipo] || 'Método de Pago';
+            // Mostrar recibo automáticamente
+            this.mostrarReciboAutomatico();
+
+        } catch (error) {
+            console.error('Error al generar venta:', error);
+            this.manejarErrorGeneracion(error);
+        } finally {
+            this.generandoVenta = false;
+            this.loader.hide();
+        }
     }
 
-    getIconoMetodo(tipo: string): string {
-        const iconos: { [key: string]: string } = {
-            'efectivo': 'bi bi-cash-coin',
-            'debito': 'bi bi-credit-card',
-            'credito': 'bi bi-credit-card-2-front',
-            'pagomovil': 'bi bi-phone',
-            'transferencia': 'bi bi-bank',
-            'zelle': 'bi bi-globe-americas'
+    // === MÉTODOS DE RECIBO ===
+    generarReciboHTML(datos: any): string {
+        if (!datos) {
+            datos = this.crearDatosReciboDummy();
+        }
+
+        return `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Recibo - ${datos.numeroVenta}</title>
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: 'Arial', sans-serif;
+                    font-size: 12px;
+                    line-height: 1.4;
+                    color: #333;
+                    background: white;
+                    padding: 10px;
+                }
+                
+                .recibo-container {
+                    max-width: 80mm;
+                    margin: 0 auto;
+                    border: 1px solid #ddd;
+                    padding: 12px;
+                    background: white;
+                }
+                
+                .header {
+                    text-align: center;
+                    border-bottom: 2px solid #2c5aa0;
+                    padding-bottom: 8px;
+                    margin-bottom: 12px;
+                }
+                
+                .logo {
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #2c5aa0;
+                    margin-bottom: 4px;
+                }
+                
+                .sede-info {
+                    font-size: 9px;
+                    color: #666;
+                    margin-bottom: 3px;
+                }
+                
+                .titulo {
+                    font-size: 13px;
+                    font-weight: bold;
+                    margin: 8px 0;
+                    text-transform: uppercase;
+                }
+                
+                .info-venta {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 6px;
+                    margin-bottom: 12px;
+                    font-size: 9px;
+                }
+                
+                .info-item {
+                    display: flex;
+                    justify-content: space-between;
+                }
+                
+                .info-label {
+                    font-weight: 500;
+                    color: #666;
+                }
+                
+                .info-value {
+                    font-weight: 600;
+                }
+                
+                .tabla-productos {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 12px;
+                    font-size: 8px;
+                }
+                
+                .tabla-productos th {
+                    background: #f8f9fa;
+                    border: 1px solid #ddd;
+                    padding: 3px;
+                    text-align: left;
+                    font-weight: 600;
+                }
+                
+                .tabla-productos td {
+                    border: 1px solid #ddd;
+                    padding: 3px;
+                }
+                
+                .metodos-pago {
+                    margin-bottom: 12px;
+                }
+                
+                .metodo-item {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 2px;
+                    font-size: 9px;
+                }
+                
+                .totales {
+                    border-top: 2px solid #2c5aa0;
+                    padding-top: 8px;
+                    margin-bottom: 12px;
+                }
+                
+                .total-item {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 4px;
+                    font-size: 10px;
+                }
+                
+                .total-final {
+                    font-size: 12px;
+                    font-weight: bold;
+                    color: #2c5aa0;
+                    border-top: 1px solid #ddd;
+                    padding-top: 4px;
+                }
+                
+                .footer {
+                    text-align: center;
+                    border-top: 1px solid #ddd;
+                    padding-top: 8px;
+                    font-size: 8px;
+                    color: #666;
+                }
+                
+                .gracias {
+                    font-weight: 600;
+                    margin-bottom: 4px;
+                    color: #2c5aa0;
+                }
+                
+                @media print {
+                    body {
+                        padding: 0;
+                        margin: 0;
+                    }
+                    
+                    .recibo-container {
+                        border: none;
+                        padding: 8px;
+                        max-width: 100%;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="recibo-container">
+                <div class="header">
+                    <div class="logo">NEW VISION LENS</div>
+                    <div class="sede-info">${datos.sede.nombre}</div>
+                    <div class="sede-info">${datos.sede.direccion}</div>
+                    <div class="sede-info">Tel: ${datos.sede.telefono}</div>
+                    <div class="sede-info">RIF: ${datos.sede.rif}</div>
+                    
+                    <div class="titulo">RECIBO DE VENTA</div>
+                </div>
+                
+                <div class="info-venta">
+                    <div class="info-item">
+                        <span class="info-label">Recibo #:</span>
+                        <span class="info-value">${datos.numeroVenta}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Fecha:</span>
+                        <span class="info-value">${datos.fecha}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Hora:</span>
+                        <span class="info-value">${datos.hora}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Vendedor:</span>
+                        <span class="info-value">${datos.vendedor}</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 12px;">
+                    <div style="font-weight: 600; margin-bottom: 4px; font-size: 10px;">CLIENTE:</div>
+                    <div style="font-size: 9px;">
+                        <div><strong>Nombre:</strong> ${datos.cliente.nombre}</div>
+                        <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
+                        <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
+                    </div>
+                </div>
+                
+                <table class="tabla-productos">
+                    <thead>
+                        <tr>
+                            <th>Descripción</th>
+                            <th>Cant</th>
+                            <th>P.Unit</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${datos.productos.map((producto: any) => `
+                            <tr>
+                                <td>${producto.nombre}</td>
+                                <td style="text-align: center;">${producto.cantidad}</td>
+                                <td style="text-align: right;">${this.formatearMoneda(producto.precioUnitario)}</td>
+                                <td style="text-align: right;">${this.formatearMoneda(producto.subtotal)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                
+                <div class="metodos-pago">
+                    <div style="font-weight: 600; margin-bottom: 4px; font-size: 10px;">MÉTODOS DE PAGO:</div>
+                    ${datos.metodosPago.map((metodo: any) => `
+                        <div class="metodo-item">
+                            <span>${this.formatearTipoPago(metodo.tipo)} ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}</span>
+                            <span>${this.formatearMoneda(metodo.monto)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="totales">
+                    <div class="total-item">
+                        <span>Subtotal:</span>
+                        <span>${this.formatearMoneda(datos.totales.subtotal)}</span>
+                    </div>
+                    <div class="total-item">
+                        <span>Descuento:</span>
+                        <span>${this.formatearMoneda(datos.totales.descuento)}</span>
+                    </div>
+                    <div class="total-item">
+                        <span>IVA:</span>
+                        <span>${this.formatearMoneda(datos.totales.iva)}</span>
+                    </div>
+                    <div class="total-item total-final">
+                        <span>TOTAL PAGADO:</span>
+                        <span>${this.formatearMoneda(datos.totales.totalPagado)}</span>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <div class="gracias">¡Gracias por su compra!</div>
+                    <div>Conserve este recibo para cualquier reclamo</div>
+                    <div style="margin-top: 6px;">${new Date().getFullYear()} © New Vision Lens</div>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+    }
+
+    // === OPCIONES DE RECIBO ===
+    imprimirRecibo(): void {
+        const datos = this.datosRecibo || this.crearDatosReciboDummy();
+        const htmlContent = this.generarReciboHTML(datos);
+
+        const ventanaImpresion = window.open('', '_blank', 'width=400,height=600');
+
+        if (!ventanaImpresion) {
+            this.swalService.showError('Error', 'No se pudo abrir la ventana de impresión. Permite ventanas emergentes.');
+            return;
+        }
+
+        ventanaImpresion.document.write(htmlContent);
+        ventanaImpresion.document.close();
+
+        setTimeout(() => {
+            try {
+                ventanaImpresion.focus();
+                ventanaImpresion.print();
+            } catch (error) {
+                console.error('Error al imprimir:', error);
+                this.swalService.showInfo(
+                    'Recibo listo',
+                    'El recibo se ha generado. Usa Ctrl+P para imprimir manualmente.'
+                );
+            }
+        }, 500);
+    }
+
+    // === MÉTODOS AUXILIARES ===
+    formatearMoneda(monto: number | null | undefined): string {
+        // Validar que el monto sea un número válido
+        if (monto === null || monto === undefined || isNaN(monto)) {
+            return '$0.00';
+        }
+
+        // Asegurarse de que es un número
+        const montoNumerico = Number(monto);
+
+        if (isNaN(montoNumerico)) {
+            return '$0.00';
+        }
+
+        return `$${montoNumerico.toFixed(2)}`;
+    }
+
+    private manejarErrorGeneracion(error: any): void {
+        console.error('Error al generar venta:', error);
+        const mensaje = error?.message || 'Ocurrió un error inesperado al generar la venta';
+        this.swalService.showError('Error en la transacción', mensaje);
+    }
+
+    private cerrarModalResumen(): void {
+        const modalElement = document.getElementById('resumenVentaModal');
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // === MÉTODOS DEL RECIBO ===
+
+    /**
+     * Muestra el modal de recibo automáticamente después de generar la venta
+     */
+    private mostrarReciboAutomatico(): void {
+        this.loader.updateMessage('¡Venta generada exitosamente!');
+
+        // Crear datos del recibo
+        this.datosRecibo = this.crearDatosReciboDummy();
+        this.informacionVenta = {
+            numeroVenta: this.datosRecibo.numeroVenta,
+            fecha: this.datosRecibo.fecha,
+            hora: this.datosRecibo.hora,
+            estado: 'Completada'
         };
-        return iconos[tipo] || 'bi bi-wallet';
+
+        setTimeout(() => {
+            this.loader.hide();
+            this.mostrarModalRecibo = true;
+            this.ventaGenerada = true;
+            this.cerrarModalResumen();
+            this.cdr.detectChanges();
+        }, 1000);
+    }
+
+    /**
+     * Cierra el modal de recibo y resetea la venta
+     */
+    cerrarModalRecibo(): void {
+        this.mostrarModalRecibo = false;
+        this.ventaGenerada = false;
+        this.datosRecibo = null;
+
+        setTimeout(() => {
+            this.resetearVenta();
+            this.cdr.detectChanges();
+        }, 300);
+    }
+
+    /**
+     * Formatea el tipo de pago para mostrar en el recibo
+     */
+    formatearTipoPago(tipo: string): string {
+        const tipos: { [key: string]: string } = {
+            'efectivo': 'EFECTIVO',
+            'debito': 'T. DÉBITO',
+            'credito': 'T. CRÉDITO',
+            'pagomovil': 'PAGO MÓVIL',
+            'transferencia': 'TRANSFERENCIA',
+            'zelle': 'ZELLE'
+        };
+        return tipos[tipo] || tipo.toUpperCase();
+    }
+
+    /**
+     * Crea datos de ejemplo para el recibo
+     */
+    private crearDatosReciboDummy(): any {
+        const fechaActual = new Date();
+
+        const productos = this.venta?.productos || [];
+        const paciente = this.pacienteSeleccionado || {
+            informacionPersonal: {
+                nombreCompleto: 'CLIENTE GENERAL',
+                cedula: 'N/A',
+                telefono: 'N/A'
+            }
+        };
+
+        const subtotal = this.totalProductos || 0;
+        const descuento = this.venta?.descuento ? (subtotal * (this.venta.descuento / 100)) : 0;
+        const iva = this.productosConDetalle?.reduce((sum, p) => sum + (p.iva || 0), 0) || 0;
+        const total = this.montoTotal || 0;
+        const totalPagado = this.totalPagadoPorMetodos || 0;
+
+        return {
+            numeroVenta: 'V-' + Date.now(),
+            fecha: fechaActual.toLocaleDateString('es-VE'),
+            hora: fechaActual.toLocaleTimeString('es-VE'),
+            vendedor: this.getResumenAsesor() || 'Ruben Dario Martinez Castro — Gerente',
+            cliente: {
+                nombre: paciente.informacionPersonal?.nombreCompleto || 'CLIENTE GENERAL',
+                cedula: paciente.informacionPersonal?.cedula || 'N/A',
+                telefono: paciente.informacionPersonal?.telefono || 'N/A'
+            },
+            productos: productos.map(p => ({
+                nombre: p.nombre || 'Lentes de prueba',
+                cantidad: p.cantidad || 1,
+                precioUnitario: p.precio || 25.09,
+                subtotal: (p.precio || 25.09) * (p.cantidad || 1)
+            })),
+            metodosPago: (this.venta?.metodosDePago || []).map(m => ({
+                tipo: m.tipo || 'efectivo',
+                monto: m.monto || 29.00
+            })),
+            totales: {
+                subtotal: subtotal,
+                descuento: descuento,
+                iva: iva,
+                total: total,
+                totalPagado: totalPagado
+            }
+        };
+    }
+
+    /**
+     * Resetea toda la venta después de cerrar el recibo
+     */
+    private resetearVenta(): void {
+        this.venta = {
+            productos: [],
+            moneda: 'dolar',
+            formaPago: 'contado',
+            descuento: 0,
+            impuesto: 16,
+            observaciones: '',
+            montoInicial: 0,
+            numeroCuotas: 0,
+            montoAbonado: 0,
+            metodosDePago: []
+        };
+
+        this.pacienteSeleccionado = null;
+        this.productoSeleccionado = null;
+        this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
+        this.cuotasCashea = [];
+        this.valorInicialTemporal = '';
+        this.valorTemporal = '';
+
+        this.actualizarProductosConDetalle();
+    }
+
+
+    /**
+ * Descarga el recibo como PDF
+ */
+    descargarPDF(): void {
+        const datos = this.datosRecibo || this.crearDatosReciboDummy();
+        const htmlContent = this.generarReciboHTML(datos);
+
+        const ventana = window.open('', '_blank', 'width=400,height=600');
+
+        if (!ventana) {
+            this.swalService.showError('Error', 'No se pudo abrir la ventana para descargar.');
+            return;
+        }
+
+        ventana.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Recibo_${datos.numeroVenta}_PDF</title>
+            <style>
+                body { margin: 0; padding: 10px; background: white; }
+                .download-header { text-align: center; padding: 20px; background: #28a745; color: white; }
+                @media print { .download-header { display: none; } }
+            </style>
+            <script>window.onload = () => window.print();</script>
+        </head>
+        <body>
+            <div class="download-header">
+                <h3>📥 Descargando Recibo...</h3>
+            </div>
+            ${htmlContent}
+        </body>
+        </html>
+    `);
+        ventana.document.close();
+
+        this.swalService.showInfo('Descargar PDF', 'Se ha abierto una ventana para descargar el recibo.');
+    }
+
+    /**
+     * Comparte por WhatsApp
+     */
+    compartirWhatsApp(): void {
+        const datos = this.datosRecibo || this.crearDatosReciboDummy();
+        const mensaje = `¡Hola! Te comparto el recibo de la venta ${datos.numeroVenta} por un total de ${this.formatearMoneda(datos.totales.totalPagado)}. ¡Gracias por tu compra!`;
+        const urlWhatsApp = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+
+        window.open(urlWhatsApp, '_blank');
+        this.swalService.showSuccess('Éxito', 'Redirigiendo a WhatsApp...');
+    }
+
+    /**
+     * Comparte por Email
+     */
+    compartirEmail(): void {
+        const datos = this.datosRecibo || this.crearDatosReciboDummy();
+        const asunto = `Recibo de Venta ${datos.numeroVenta}`;
+        const cuerpo = `Hola,\n\nTe comparto los detalles de la venta ${datos.numeroVenta}:\n- Total: ${this.formatearMoneda(datos.totales.totalPagado)}\n- Fecha: ${datos.fecha}\n- Cliente: ${datos.cliente.nombre}\n\n¡Gracias por tu preferencia!`;
+
+        const mailtoLink = `mailto:?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+        window.location.href = mailtoLink;
+    }
+
+    /**
+     * Copia enlace del recibo
+     */
+    async copiarEnlace(): Promise<void> {
+        const datos = this.datosRecibo || this.crearDatosReciboDummy();
+        const texto = `Recibo de Venta ${datos.numeroVenta} - Total: ${this.formatearMoneda(datos.totales.totalPagado)} - Fecha: ${datos.fecha}`;
+
+        try {
+            await navigator.clipboard.writeText(texto);
+            this.swalService.showSuccess('Éxito', 'Información del recibo copiada al portapapeles');
+        } catch (error) {
+            console.error('Error al copiar:', error);
+            this.swalService.showError('Error', 'No se pudo copiar la información');
+        }
+    }
+
+
+
+    getProductosSeguros(): any[] {
+        return this.datosRecibo?.productos || [];
+    }
+
+    getMetodosPagoSeguros(): any[] {
+        return this.datosRecibo?.metodosPago || [];
+    }
+
+    getSubtotalSeguro(): number {
+        return this.datosRecibo?.totales?.subtotal || 0;
+    }
+
+    getDescuentoSeguro(): number {
+        return this.datosRecibo?.totales?.descuento || 0;
+    }
+
+    getIvaSeguro(): number {
+        return this.datosRecibo?.totales?.iva || 0;
+    }
+
+    getTotalPagadoSeguro(): number {
+        return this.datosRecibo?.totales?.totalPagado || 0;
     }
 }

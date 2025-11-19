@@ -1131,118 +1131,219 @@
 
 
 
-<!-- Modal para mostrar el recibo - XL -->
+
+<!-- Modal de Recibo -->
 <div class="modal fade" id="reciboModal" [class.show]="mostrarModalRecibo"
-    [style.display]="mostrarModalRecibo ? 'block' : 'none'" [class.d-block]="mostrarModalRecibo" tabindex="-1"
-    aria-labelledby="reciboModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-
-    <div class="modal-dialog modal-dialog-centered modal-xl-custom">
-        <div class="modal-content">
-
-            <div class="modal-header-recibo">
-                <div class="header-content">
-                    <div class="header-icon">
-                        <i class="bi bi-check-circle-fill"></i>
-                    </div>
-                    <div class="header-text">
-                        <h4 class="header-title">¡Venta Generada Exitosamente!</h4>
-                        <div class="header-subtitle">Recibo digital de la transacción completada</div>
-                    </div>
-                </div>
-
-                <!-- Botón cerrar - CORREGIDO: Ahora está alineado correctamente -->
-                <button type="button" class="btn-close-custom" (click)="cerrarModalRecibo()" title="Cerrar recibo">
-                    <i class="bi bi-x-lg"></i>
-                </button>
+    [style.display]="mostrarModalRecibo ? 'block' : 'none'" tabindex="-1" [attr.aria-hidden]="!mostrarModalRecibo">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content recibo-compacto">
+            <!-- Header del Recibo -->
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-receipt me-1"></i>
+                    Comprobante - {{ informacionVenta?.numeroVenta }}
+                </h6>
+                <button type="button" class="btn-close btn-close-white" (click)="cerrarModalRecibo()"></button>
             </div>
 
-            <div class="modal-body p-0">
-                <!-- Información de la venta - Mejorada -->
-                <div class="venta-info-card">
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <div class="info-label">
-                                <i class="bi bi-receipt me-1"></i>
-                                N° de Venta
-                            </div>
-                            <div class="info-value">{{ informacionVenta?.numeroVenta }}</div>
+            <!-- Body del Recibo -->
+            <div class="modal-body p-3">
+                <div class="recibo-container compacto" id="contenidoRecibo">
+                    <!-- Encabezado compacto -->
+                    <div class="recibo-header text-center mb-3">
+                        <h4 class="empresa-nombre mb-1">NEW VISION LENS</h4>
+                        <div class="empresa-info small text-muted">
+                            <p class="mb-0">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</p>
+                            <p class="mb-0">RIF: J-123456789 | newvisionlens2020gmail.com</p>
                         </div>
-                        <div class="info-item">
-                            <div class="info-label">
-                                <i class="bi bi-calendar me-1"></i>
-                                Fecha
+                        <h5 class="titulo-venta mt-2 mb-0 text-dark">COMPROBANTE DE VENTA</h5>
+                    </div>
+
+                    <!-- Información compacta en una línea -->
+                    <div class="info-rapida mb-3">
+                        <div class="row g-2 small">
+                            <div class="col-md-3">
+                                <strong>Recibo:</strong> {{ datosRecibo?.numeroVenta || 'N/A' }}
                             </div>
-                            <div class="info-value">{{ informacionVenta?.fecha }}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">
-                                <i class="bi bi-clock me-1"></i>
-                                Hora
+                            <div class="col-md-3">
+                                <strong>Fecha:</strong> {{ datosRecibo?.fecha || 'N/A' }}
                             </div>
-                            <div class="info-value">{{ informacionVenta?.hora }}</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">
-                                <i class="bi bi-check-circle me-1"></i>
-                                Estado
+                            <div class="col-md-3">
+                                <strong>Hora:</strong> {{ datosRecibo?.hora || 'N/A' }}
                             </div>
-                            <div class="info-value">
-                                <span class="status-badge status-completed">{{ informacionVenta?.estado }}</span>
+                            <div class="col-md-3">
+                                <strong>Vendedor:</strong> {{ datosRecibo?.vendedor || 'N/A' }}
                             </div>
                         </div>
                     </div>
 
-                    <!-- Contenedor del recibo -->
-                    <div class="p-3">
-                        <!-- Loading mientras carga el recibo -->
-                        <div *ngIf="generandoRecibo" class="text-center py-5">
-                            <div class="spinner-border text-success mb-3" role="status">
-                                <span class="visually-hidden">Generando recibo...</span>
+                    <!-- Cliente compacto -->
+                    <div class="cliente-compacto mb-3 p-2 bg-light rounded small">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <strong>Cliente:</strong> {{ datosRecibo?.cliente?.nombre || 'CLIENTE GENERAL' }}
                             </div>
-                            <h5 class="text-success">Generando comprobante de pago...</h5>
-                            <p class="text-muted">Estamos preparando tu recibo digital</p>
+                            <div class="col-md-4">
+                                <strong>Cédula:</strong> {{ datosRecibo?.cliente?.cedula || 'N/A' }}
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Teléfono:</strong> {{ datosRecibo?.cliente?.telefono || 'N/A' }}
+                            </div>
                         </div>
+                    </div>
 
-                        <!-- Iframe para mostrar el PDF -->
-                        <div *ngIf="urlRecibo && !generandoRecibo" class="recibo-container">
-                            <iframe [src]="urlRecibo | safeUrl" width="100%" [style.height]="getAlturaIframe()"
-                                frameborder="0" class="recibo-iframe w-100">
-                                Tu navegador no soporta la visualización de PDFs.
-                                <a [href]="urlRecibo" target="_blank">Descargar recibo</a>
-                            </iframe>
+                    <!-- Productos compactos -->
+                    <div class="productos-compactos mb-3">
+                        <h6 class="fw-bold mb-2 text-primary border-bottom pb-1">PRODUCTOS</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-1">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="5%" class="text-center">#</th>
+                                        <th width="55%">Descripción</th>
+                                        <th width="10%" class="text-center">Cant</th>
+                                        <th width="15%" class="text-end">P. Unitario</th>
+                                        <th width="15%" class="text-end">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let producto of getProductosSeguros(); let i = index">
+                                        <td class="text-center">{{ i + 1 }}</td>
+                                        <td class="small">{{ producto.nombre }}</td>
+                                        <td class="text-center">{{ producto.cantidad || 1 }}</td>
+                                        <td class="text-end">{{ formatearMoneda(producto.precioUnitario) }}</td>
+                                        <td class="text-end">{{ formatearMoneda(producto.subtotal) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
+                    </div>
 
-                        <!-- Mensaje de error -->
-                        <div *ngIf="errorGeneracion" class="alert alert-danger text-center">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            {{ errorGeneracion }}
+                    <!-- Métodos de pago compactos -->
+                    <div class="metodos-compactos mb-3" *ngIf="getMetodosPagoSeguros().length > 0">
+                        <h6 class="fw-bold mb-2 text-primary border-bottom pb-1">PAGOS</h6>
+                        <div class="row g-1">
+                            <div class="col-12" *ngFor="let metodo of getMetodosPagoSeguros()">
+                                <div class="d-flex justify-content-between align-items-center small py-1">
+                                    <span>
+                                        <span class="badge bg-primary me-1">{{ formatearTipoPago(metodo.tipo) }}</span>
+                                        {{ formatearMoneda(metodo.monto) }}
+                                        <span *ngIf="metodo.referencia" class="text-muted ms-1">(Ref: {{
+                                            metodo.referencia }})</span>
+                                        <span *ngIf="metodo.banco" class="text-muted ms-1">- {{ metodo.banco }}</span>
+                                    </span>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+
+                    <!-- Totales compactos -->
+                    <div class="totales-compactos mb-3">
+                        <div class="row justify-content-end">
+                            <div class="col-md-6">
+                                <table class="table table-sm table-bordered">
+                                    <tr>
+                                        <td class="fw-bold">Subtotal:</td>
+                                        <td class="text-end">{{ formatearMoneda(getSubtotalSeguro()) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">Descuento:</td>
+                                        <td class="text-end text-danger">- {{ formatearMoneda(getDescuentoSeguro()) }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">IVA:</td>
+                                        <td class="text-end">{{ formatearMoneda(getIvaSeguro()) }}</td>
+                                    </tr>
+                                    <tr class="table-success">
+                                        <td class="fw-bold">TOTAL PAGADO:</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Observaciones compactas -->
+                    <div class="observaciones-compactas mb-3" *ngIf="datosRecibo?.observaciones">
+                        <div class="alert alert-warning py-1 small mb-0">
+                            <strong>Observación:</strong> {{ datosRecibo?.observaciones }}
+                        </div>
+                    </div>
+
+                    <!-- Términos compactos -->
+                    <div class="terminos-compactos mt-3 pt-2 border-top">
+                        <div class="row small text-muted">
+                            <div class="col-md-8">
+                                <p class="mb-1">
+                                    <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                                    Pasados 30 días no nos hacemos responsables de trabajos no retirados
+                                </p>
+                                <p class="mb-0">
+                                    <i class="bi bi-info-circle text-primary me-1"></i>
+                                    Estado de orden: tracking.optolapp.com
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <small>{{ currentYear }} © New Vision Lens</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mensaje final -->
+                    <div class="mensaje-final text-center mt-2 pt-2 border-top">
+                        <p class="mb-0 small text-primary fw-bold">
+                            <i class="bi bi-check-circle me-1"></i>
+                            ¡Gracias por su compra! Conserve este comprobante
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <!-- Footer con acciones mejorado -->
-            <div class="modal-footer-recibo">
-                <div class="footer-actions">
-                    <!-- Botón Cerrar a la izquierda -->
-                    <button type="button" class="btn btn-outline-secondary btn-detalle" (click)="cerrarModalRecibo()">
-                        <i class="bi bi-x-circle me-2"></i>
-                        Cerrar
-                    </button>
-
-                    <!-- Grupo de acciones a la derecha -->
-                    <div class="action-buttons" *ngIf="urlRecibo && !generandoRecibo">
+            <!-- Footer del Modal Compacto -->
+            <div class="modal-footer py-2">
+                <div class="d-flex flex-wrap gap-1 w-100 justify-content-between align-items-center">
+                    <div class="d-flex flex-wrap gap-1">
                         <!-- Compartir -->
-                        <button type="button" class="btn btn-primary btn-detalle btn-action"
-                            (click)="compartirReciboSimple()">
-                            <i class="bi bi-share me-2"></i>
-                            Compartir/Descargar
+                        <div class="btn-group" dropdown>
+                            <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" dropdownToggle>
+                                <i class="bi bi-share me-1"></i>
+                                Compartir
+                            </button>
+                            <div class="dropdown-menu" *dropdownMenu>
+                                <button class="dropdown-item" (click)="compartirWhatsApp()">
+                                    <i class="bi bi-whatsapp text-success me-2"></i>
+                                    WhatsApp
+                                </button>
+                                <button class="dropdown-item" (click)="compartirEmail()">
+                                    <i class="bi bi-envelope text-primary me-2"></i>
+                                    Email
+                                </button>
+                                <button class="dropdown-item" (click)="copiarEnlace()">
+                                    <i class="bi bi-link text-info me-2"></i>
+                                    Copiar Enlace
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Descargar -->
+                        <button type="button" class="btn btn-outline-success btn-sm" (click)="descargarPDF()">
+                            <i class="bi bi-download me-1"></i>
+                            PDF
+                        </button>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-1">
+                        <!-- Imprimir -->
+                        <button type="button" class="btn btn-outline-secondary btn-sm" (click)="imprimirRecibo()">
+                            <i class="bi bi-printer me-1"></i>
+                            Imprimir
                         </button>
 
-                        <!-- Imprimir -->
-                        <button type="button" class="btn btn-primary btn-detalle btn-action" (click)="imprimirRecibo()">
-                            <i class="bi bi-printer me-2"></i>
-                            Imprimir
+                        <!-- Cerrar -->
+                        <button type="button" class="btn btn-primary btn-sm" (click)="cerrarModalRecibo()">
+                            <i class="bi bi-check me-1"></i>
+                            Listo
                         </button>
                     </div>
                 </div>
@@ -1250,6 +1351,7 @@
         </div>
     </div>
 </div>
+
 
 <!-- Backdrop del modal -->
 <div class="modal-backdrop fade show" *ngIf="mostrarModalRecibo"></div>
