@@ -458,17 +458,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 0);
     }
 
-    // === MÉTODOS DE PAGO ===
-    agregarMetodo(): void {
-        this.venta.metodosDePago.push({
-            tipo: '',
-            monto: 0,
-            valorTemporal: '',
-            referencia: '',
-            banco: ''
-        });
-    }
-
     eliminarMetodo(index: number): void {
         this.venta.metodosDePago.splice(index, 1);
     }
@@ -476,7 +465,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     onMetodoPagoChange(index: number): void {
         const metodo = this.venta.metodosDePago[index];
 
-        // Solo actualizar formato si ya tiene monto
         if (metodo.monto && metodo.monto > 0) {
             const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
             metodo.valorTemporal = `${metodo.monto.toFixed(2)} ${this.obtenerSimboloMoneda(monedaMetodo)}`;
@@ -514,7 +502,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return;
         }
 
-        // OBTENER EL MÁXIMO PERMITIDO para este método
         const maximoEnMonedaSistema = this.getMontoRestanteParaMetodo(index);
         const maximoEnMonedaMetodo = monedaMetodo === this.venta.moneda
             ? maximoEnMonedaSistema
@@ -1466,62 +1453,99 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    // Método para imprimir el recibo - CORREGIDO
+    /// Método para imprimir el recibo - CORREGIDO
     imprimirRecibo(): void {
         if (!this.urlRecibo) {
             this.swalService.showError('Error', 'No hay recibo disponible para imprimir');
             return;
         }
 
-        const iframe = document.querySelector('.recibo-iframe') as HTMLIFrameElement;
+        // Mostrar loading
+        this.swalService.showLoadingAlert('Preparando impresión...');
 
-        if (iframe && iframe.contentWindow) {
-            // Mostrar loading usando el método que sí existe
-            this.swalService.showLoadingAlert('Preparando impresión...');
-
-            const tryPrint = () => {
-                try {
-                    iframe.contentWindow!.focus();
-                    setTimeout(() => {
-                        iframe.contentWindow!.print();
-                        // Cerrar loading usando el método correcto
-                        this.swalService.closeLoading();
-                    }, 1000);
-                } catch (error) {
-                    console.error('Error al imprimir:', error);
-                    this.swalService.closeLoading();
-                    this.swalService.showError('Error', 'No se pudo abrir la ventana de impresión');
-                }
-            };
-
-            // Verificar si el iframe está cargado
-            if (iframe.contentDocument?.readyState === 'complete') {
-                tryPrint();
-            } else {
-                iframe.onload = tryPrint;
-                // Timeout de seguridad
-                setTimeout(() => {
-                    tryPrint();
-                }, 5000);
-            }
-        } else {
-            // Fallback: abrir en nueva ventana
-            this.imprimirReciboFallback();
-        }
+        // Siempre usar el método fallback que abre en nueva ventana
+        this.imprimirReciboFallback();
     }
 
-    // Método fallback para imprimir - CORREGIDO
+    // Método fallback mejorado para imprimir
     private imprimirReciboFallback(): void {
-        const printWindow = window.open(this.urlRecibo, '_blank');
-        if (printWindow) {
-            printWindow.onload = () => {
-                printWindow.focus();
-                setTimeout(() => {
-                    printWindow.print();
-                }, 1000);
-            };
-        } else {
-            this.swalService.showError('Error', 'No se pudo abrir la ventana de impresión. Por favor, permite ventanas emergentes.');
+        try {
+            // Abrir en nueva ventana/pestaña
+            const printWindow = window.open(this.urlRecibo, '_blank', 'width=800,height=600,scrollbars=yes');
+
+            if (!printWindow) {
+                this.swalService.closeLoading();
+                this.swalService.showError(
+                    'Bloqueado por el navegador',
+                    'Por favor, permite ventanas emergentes para imprimir el recibo.'
+                );
+                return;
+            }
+
+            // Intentar imprimir después de que la ventana se cargue
+            const checkLoad = setInterval(() => {
+                try {
+                    // Verificar si la ventana sigue abierta y está cargada
+                    if (printWindow.closed) {
+                        clearInterval(checkLoad);
+                        this.swalService.closeLoading();
+                        return;
+                    }
+
+                    // Intentar imprimir cuando el documento esté listo
+                    if (printWindow.document.readyState === 'complete') {
+                        clearInterval(checkLoad);
+
+                        // Pequeño delay para asegurar que todo esté renderizado
+                        setTimeout(() => {
+                            try {
+                                printWindow.focus();
+                                printWindow.print();
+                                this.swalService.closeLoading();
+
+                                // Opcional: Cerrar ventana después de imprimir (comentado por si el usuario quiere guardar)
+                                // printWindow.onafterprint = () => {
+                                //     setTimeout(() => {
+                                //         printWindow.close();
+                                //     }, 1000);
+                                // };
+
+                            } catch (printError) {
+                                console.error('Error al imprimir:', printError);
+                                this.swalService.closeLoading();
+                                this.swalService.showError(
+                                    'Error de impresión',
+                                    'No se pudo iniciar la impresión. Puedes imprimir manualmente desde la ventana abierta.'
+                                );
+                            }
+                        }, 1000);
+                    }
+                } catch (error) {
+                    console.error('Error verificando estado de ventana:', error);
+                    clearInterval(checkLoad);
+                    this.swalService.closeLoading();
+                }
+            }, 500);
+
+            // Timeout de seguridad
+            setTimeout(() => {
+                clearInterval(checkLoad);
+                this.swalService.closeLoading();
+            }, 10000);
+
+            // Manejar si el usuario cierra la ventana manualmente
+            printWindow.addEventListener('beforeunload', () => {
+                clearInterval(checkLoad);
+                this.swalService.closeLoading();
+            });
+
+        } catch (error) {
+            console.error('Error al abrir ventana de impresión:', error);
+            this.swalService.closeLoading();
+            this.swalService.showError(
+                'Error',
+                'No se pudo abrir la ventana de impresión. Intenta nuevamente.'
+            );
         }
     }
 
@@ -1889,6 +1913,20 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 this.resetearModalVenta();
             });
         }
+
+        // Watcher para cambios en bancoCodigo
+        this.venta.metodosDePago.forEach((metodo, index) => {
+            // Puedes usar un enfoque más robusto con Observables si es necesario
+            const originalBancoCodigo = metodo.bancoCodigo;
+            Object.defineProperty(metodo, 'bancoCodigo', {
+                get: () => originalBancoCodigo,
+                set: (value) => {
+                    metodo.bancoCodigo = value;
+                    this.actualizarBancoDesdeCodigo(index);
+                }
+            });
+        });
+
         this.cdr.detectChanges();
     }
 
@@ -1999,102 +2037,162 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    // En la interfaz VentaDto, asegúrate de que los métodos de pago tengan las propiedades correctas
-    metodosDePago: Array<{
-        tipo: string;
-        monto: number;
-        valorTemporal: string;
-        referencia: string;
-        bancoCodigo?: string;
-        bancoNombre?: string;
-        banco?: string;
-    }> = [];
-
-    // Método para manejar el cambio de banco
-    onBancoChange(codigoBanco: string, index: number): void {
+    private actualizarBancoDesdeCodigo(index: number): void {
         const metodo = this.venta.metodosDePago[index];
-        const bancoSeleccionado = this.bancosDisponibles.find(b => b.codigo === codigoBanco);
 
-        if (bancoSeleccionado) {
-            metodo.bancoCodigo = bancoSeleccionado.codigo;
-            metodo.bancoNombre = bancoSeleccionado.nombre;
-            metodo.banco = `${bancoSeleccionado.codigo} - ${bancoSeleccionado.nombre}`;
+        if (metodo.bancoCodigo && metodo.bancoCodigo.trim() !== '') {
+            const bancoSeleccionado = this.bancosDisponibles.find(b => b.codigo === metodo.bancoCodigo);
+            if (bancoSeleccionado) {
+                metodo.bancoNombre = bancoSeleccionado.nombre;
+                metodo.banco = `${bancoSeleccionado.codigo} - ${bancoSeleccionado.nombre}`;
+                console.log('🔄 Banco actualizado desde código:', metodo.banco);
+            } else {
+                console.log('❌ No se encontró banco con código:', metodo.bancoCodigo);
+                metodo.bancoNombre = '';
+                metodo.banco = '';
+            }
         } else {
-            metodo.bancoCodigo = '';
             metodo.bancoNombre = '';
             metodo.banco = '';
         }
     }
 
-    // Método para formatear la visualización del banco
-    getBancoDisplay(banco: any): string {
-        if (!banco) return '';
-        if (typeof banco === 'string') return banco;
-        return `${banco.codigo} - ${banco.nombre}`;
+    onBancoObjectChange(bancoObject: any, index: number): void {
+        console.log('🔄 onBancoObjectChange - Objeto:', bancoObject);
+
+        const metodo = this.venta.metodosDePago[index];
+
+        if (!bancoObject) {
+            console.log('❌ Objeto vacío - limpiando datos');
+            metodo.bancoCodigo = '';
+            metodo.bancoNombre = '';
+            metodo.banco = '';
+            metodo.bancoObject = null;
+            this.cdr.detectChanges();
+            return;
+        }
+
+        console.log('✅ Banco objeto seleccionado:', bancoObject);
+
+        // Actualizar todas las propiedades
+        metodo.bancoCodigo = bancoObject.codigo;
+        metodo.bancoNombre = bancoObject.nombre;
+        metodo.banco = `${bancoObject.codigo} - ${bancoObject.nombre}`;
+        metodo.bancoObject = bancoObject;
+
+        console.log('📝 Método actualizado:', {
+            bancoCodigo: metodo.bancoCodigo,
+            bancoNombre: metodo.bancoNombre,
+            banco: metodo.banco
+        });
+
+        this.cdr.detectChanges();
     }
 
-    // Método de búsqueda personalizado para bancos (igual que para productos)
-    filtrarBancos(term: string, item: any): boolean {
-        if (!term) return true;
 
-        const termLower = term.toLowerCase().trim();
-        const codigo = item.codigo?.toLowerCase() || '';
-        const nombre = item.nombre?.toLowerCase() || '';
-        const display = `${item.codigo} - ${item.nombre}`.toLowerCase();
 
-        return codigo.includes(termLower) ||
-            nombre.includes(termLower) ||
-            display.includes(termLower);
+
+
+
+
+
+
+    // Propiedad estable (NO getter)
+    bancosDisponibles: Array<{ codigo: string; nombre: string }> = [
+        { codigo: '0102', nombre: 'Banco de Venezuela' },
+        { codigo: '0134', nombre: 'Banesco' },
+        { codigo: '0104', nombre: 'Venezolano de Crédito' },
+        { codigo: '0105', nombre: 'Mercantil' },
+        { codigo: '0114', nombre: 'Bancaribe' },
+        { codigo: '0115', nombre: 'BOD' },
+        { codigo: '0116', nombre: 'Banco Plaza' },
+        { codigo: '0128', nombre: 'Banco Caribe' },
+        { codigo: '0108', nombre: 'Banco Provincial' },
+        { codigo: '0118', nombre: 'Banco del Sur' },
+        { codigo: '0121', nombre: 'Bancamiga' },
+        { codigo: '0151', nombre: '100% Banco' },
+        { codigo: '0156', nombre: 'Banco del Tesoro' },
+        { codigo: '0157', nombre: 'Banco Bicentenario' },
+        { codigo: '0163', nombre: 'Banco Fondo Común' },
+        { codigo: '0166', nombre: 'Banco Agrícola de Venezuela' },
+        { codigo: '0168', nombre: 'Bancrecer' },
+        { codigo: '0169', nombre: 'Mi Banco' },
+        { codigo: '0171', nombre: 'Banco Activo' },
+        { codigo: '0172', nombre: 'Bancamiga' },
+        { codigo: '0173', nombre: 'Banco Internacional de Desarrollo' },
+        { codigo: '0174', nombre: 'Banco Plaza' },
+        { codigo: '0175', nombre: 'Banco de la Fuerza Armada Nacional Bolivariana' },
+        { codigo: '0177', nombre: 'Banco del Tesoro' },
+        { codigo: '0191', nombre: 'Banco Nacional de Crédito' },
+        { codigo: '0000', nombre: 'Otro' }
+    ];
+
+    agregarMetodo(): void {
+        this.venta.metodosDePago.push({
+            tipo: '',
+            monto: 0,
+            valorTemporal: '',
+            referencia: '',
+            bancoCodigo: '',
+            bancoNombre: '',
+            banco: '',        // string formateado
+            bancoObject: null // objeto banco seleccionado
+        });
     }
 
-    // Lista de bancos disponibles (igual estructura que productos)
-    get bancosDisponibles(): any[] {
-        return [
-            { codigo: '0102', nombre: 'Banco de Venezuela' },
-            { codigo: '0134', nombre: 'Banesco' },
-            { codigo: '0104', nombre: 'Venezolano de Crédito' },
-            { codigo: '0105', nombre: 'Mercantil' },
-            { codigo: '0114', nombre: 'Bancaribe' },
-            { codigo: '0115', nombre: 'BOD' },
-            { codigo: '0116', nombre: 'Banco Plaza' },
-            { codigo: '0128', nombre: 'Banco Caribe' },
-            { codigo: '0108', nombre: 'Banco Provincial' },
-            { codigo: '0118', nombre: 'Banco del Sur' },
-            { codigo: '0121', nombre: 'Bancamiga' },
-            { codigo: '0151', nombre: '100% Banco' },
-            { codigo: '0156', nombre: 'Banco del Tesoro' },
-            { codigo: '0157', nombre: 'Banco Bicentenario' },
-            { codigo: '0163', nombre: 'Banco Fondo Común' },
-            { codigo: '0166', nombre: 'Banco Agrícola de Venezuela' },
-            { codigo: '0168', nombre: 'Bancrecer' },
-            { codigo: '0169', nombre: 'Mi Banco' },
-            { codigo: '0171', nombre: 'Banco Activo' },
-            { codigo: '0172', nombre: 'Bancamiga' },
-            { codigo: '0173', nombre: 'Banco Internacional de Desarrollo' },
-            { codigo: '0174', nombre: 'Banco Plaza' },
-            { codigo: '0175', nombre: 'Banco de la Fuerza Armada Nacional Bolivariana' },
-            { codigo: '0177', nombre: 'Banco del Tesoro' },
-            { codigo: '0191', nombre: 'Banco Nacional de Crédito' },
-            { codigo: '0000', nombre: 'Otro' }
-        ];
+
+    compararBanco = (a: any, b: any): boolean => {
+        if (!a || !b) return a === b;
+        return a.codigo === b.codigo;
+    };
+
+    onBancoChange(banco: { codigo: string; nombre: string } | null, index: number): void {
+        console.log('🔄 Banco seleccionado:', banco);
+
+        const metodo = this.venta.metodosDePago[index];
+
+        if (!banco) {
+            metodo.bancoCodigo = '';
+            metodo.bancoNombre = '';
+            metodo.banco = '';        // string formateado vacío
+            metodo.bancoObject = null;
+            return;
+        }
+
+        metodo.bancoCodigo = banco.codigo;
+        metodo.bancoNombre = banco.nombre;
+        metodo.banco = `${banco.codigo} - ${banco.nombre}`; // string formateado
+        metodo.bancoObject = banco; // objeto completo
+
+        console.log('📝 Método actualizado:', metodo);
     }
 
-    // Método para limpiar campos cuando cambia el tipo de método
+
     onTipoMetodoChange(index: number): void {
         const metodo = this.venta.metodosDePago[index];
 
-        // Limpiar campos específicos si ya no son necesarios
+        console.log('Cambio tipo método:', metodo.tipo, 'en índice:', index);
+
         if (!this.necesitaReferencia(metodo.tipo)) {
             metodo.referencia = '';
         }
+
         if (!this.necesitaBanco(metodo.tipo)) {
             metodo.bancoCodigo = '';
             metodo.bancoNombre = '';
             metodo.banco = '';
+            metodo.bancoObject = null;
+        } else {
+            if (metodo.bancoObject) {
+                metodo.bancoCodigo = metodo.bancoObject.codigo;
+                metodo.bancoNombre = metodo.bancoObject.nombre;
+                metodo.banco = `${metodo.bancoObject.codigo} - ${metodo.bancoObject.nombre}`;
+            }
         }
 
         this.onMetodoPagoChange(index);
     }
+
 
     // Métodos auxiliares para determinar qué campos mostrar
     necesitaReferencia(tipoMetodo: string): boolean {
@@ -2107,7 +2205,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return metodosConBanco.includes(tipoMetodo);
     }
 
-
     // Método para verificar si se puede generar la venta
     get puedeGenerarVenta(): boolean {
         // Verificar que hay productos
@@ -2115,11 +2212,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return false;
         }
 
-        // Verificar que el monto cubierto por métodos sea suficiente
         const montoCubierto = this.totalPagadoPorMetodos;
         const montoRequerido = this.montoCubiertoPorMetodos;
 
-        // Usar comparación con tolerancia para decimales
         const diferencia = Math.abs(montoCubierto - montoRequerido);
         const pagoCompleto = diferencia < 0.01;
 

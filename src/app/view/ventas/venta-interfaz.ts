@@ -29,11 +29,12 @@ export interface ProductoVentaDto {
 export interface MetodoPago {
     tipo: string;
     monto: number;
-    valorTemporal: string;
+    valorTemporal?: string;
     referencia?: string;
-    banco?: string;
     bancoCodigo?: string;
     bancoNombre?: string;
+    banco?: string; // string formateado
+    bancoObject?: { codigo: string; nombre: string }; // objeto real
 }
 
 export interface ProductoVenta {

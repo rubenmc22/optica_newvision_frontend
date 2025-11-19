@@ -758,24 +758,26 @@
                                     </div>
 
                                     <div class="metodo-body">
-                                        <!-- 2. Banco -->
+
                                         <div *ngIf="necesitaBanco(metodo.tipo)" class="campo-adicional">
                                             <label class="form-label compact-label">
                                                 <i class="bi bi-bank"></i>
                                                 Banco
                                             </label>
-                                            <ng-select [items]="bancosDisponibles" bindLabel="nombre" bindValue="codigo"
-                                                [(ngModel)]="metodo.bancoCodigo" (change)="onBancoChange($event, i)"
-                                                [searchable]="true" [clearable]="true" [selectOnTab]="true"
-                                                [searchFn]="filtrarBancos" placeholder="Buscar por código o nombre..."
-                                                class="modern-ng-select compact">
+
+                                            <ng-select [items]="bancosDisponibles" bindLabel="nombre"
+                                                [(ngModel)]="metodo.bancoObject"
+                                                (ngModelChange)="onBancoChange($event, i)" [compareWith]="compararBanco"
+                                                [searchable]="true" [clearable]="true"
+                                                placeholder="Buscar por código o nombre...">
 
                                                 <ng-template ng-label-tmp let-item="item">
-                                                    <span>{{ getBancoDisplay(item) }}</span>
+                                                    <span *ngIf="item">{{ item?.codigo }} - {{ item?.nombre }}</span>
+                                                    <span *ngIf="!item">Seleccionar banco...</span>
                                                 </ng-template>
 
-                                                <ng-template ng-option-tmp let-item="item" let-index="index">
-                                                    <div class="banco-option">
+                                                <ng-template ng-option-tmp let-item="item">
+                                                    <div class="banco-option" *ngIf="item">
                                                         <div class="banco-codigo">{{ item.codigo }}</div>
                                                         <div class="banco-nombre">{{ item.nombre }}</div>
                                                     </div>
@@ -798,11 +800,17 @@
                                                 maxlength="20" />
                                         </div>
 
-                                        <!-- 4. Monto -->
-                                        <input type="text" class="form-control modern-input compact"
-                                            [placeholder]="getPlaceholderMonto(metodo.tipo)"
-                                            [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
-                                            (keypress)="validarEntrada($event)" [disabled]="!metodo.tipo" />
+                                        <!-- 4. Monto - CON TÍTULO AGREGADO -->
+                                        <div class="campo-adicional">
+                                            <label class="form-label compact-label">
+                                                <i class="bi bi-cash-coin"></i>
+                                                Monto
+                                            </label>
+                                            <input type="text" class="form-control modern-input compact"
+                                                [placeholder]="getPlaceholderMonto(metodo.tipo)"
+                                                [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
+                                                (keypress)="validarEntrada($event)" [disabled]="!metodo.tipo" />
+                                        </div>
                                     </div>
 
                                     <div class="metodo-footer">
