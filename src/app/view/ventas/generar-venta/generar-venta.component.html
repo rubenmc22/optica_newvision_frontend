@@ -755,6 +755,15 @@
                                         <div class="metodo-number">
                                             <i class="bi bi-123"></i>
                                             <span>Método #{{ i + 1 }}</span>
+                                            <!-- Indicador de estado -->
+                                            <span class="estado-metodo" [ngClass]="{
+                    'estado-completo': metodoCompleto(metodo),
+                    'estado-incompleto': !metodoCompleto(metodo)
+                }">
+                                                <i class="bi" [class.bi-check-circle-fill]="metodoCompleto(metodo)"
+                                                    [class.bi-exclamation-circle-fill]="!metodoCompleto(metodo)"></i>
+                                                {{ metodoCompleto(metodo) ? 'Completo' : 'Incompleto' }}
+                                            </span>
                                         </div>
                                         <button class="btn btn-remove" (click)="eliminarMetodo(i)"
                                             title="Eliminar método">
@@ -770,7 +779,8 @@
                                                 Tipo de Pago
                                             </label>
                                             <select class="form-select modern-select" [(ngModel)]="metodo.tipo"
-                                                (change)="onTipoMetodoChange(i)">
+                                                (change)="onTipoMetodoChange(i)"
+                                                [ngClass]="{'campo-invalido': !metodo.tipo}">
                                                 <option value="" disabled selected>Elige un método de pago</option>
                                                 <option value="efectivo">💵 Efectivo</option>
                                                 <option value="debito">💳 Tarjeta Débito</option>
@@ -779,6 +789,9 @@
                                                 <option value="transferencia">🏦 Transferencia</option>
                                                 <option value="zelle">🌐 Zelle</option>
                                             </select>
+                                            <small *ngIf="!metodo.tipo" class="text-danger">
+                                                <i class="bi bi-exclamation-triangle"></i> Campo requerido
+                                            </small>
                                         </div>
 
                                         <!-- Campos condicionales -->
@@ -793,7 +806,8 @@
                                                     [(ngModel)]="metodo.bancoObject"
                                                     (ngModelChange)="onBancoChange($event, i)"
                                                     [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
-                                                    placeholder="Buscar banco por código o nombre...">
+                                                    placeholder="Buscar banco por código o nombre..."
+                                                    [ngClass]="{'campo-invalido': necesitaBanco(metodo.tipo) && !metodo.bancoObject}">
 
                                                     <ng-template ng-label-tmp let-item="item">
                                                         <span *ngIf="item">{{ item?.codigo }} - {{ item?.nombre
@@ -815,6 +829,10 @@
                                                         </div>
                                                     </ng-template>
                                                 </ng-select>
+                                                <small *ngIf="necesitaBanco(metodo.tipo) && !metodo.bancoObject"
+                                                    class="text-danger">
+                                                    <i class="bi bi-exclamation-triangle"></i> Selecciona un banco
+                                                </small>
                                             </div>
 
                                             <!-- Referencia -->
@@ -825,7 +843,14 @@
                                                 </label>
                                                 <input type="text" class="form-control modern-input"
                                                     [(ngModel)]="metodo.referencia" placeholder="Ej: 123456789"
-                                                    maxlength="20" />
+                                                    maxlength="20"
+                                                    [ngClass]="{'campo-invalido': necesitaReferencia(metodo.tipo) && (!metodo.referencia || metodo.referencia.trim() === '')}" />
+                                                <small
+                                                    *ngIf="necesitaReferencia(metodo.tipo) && (!metodo.referencia || metodo.referencia.trim() === '')"
+                                                    class="text-danger">
+                                                    <i class="bi bi-exclamation-triangle"></i> Ingresa el número de
+                                                    referencia
+                                                </small>
                                             </div>
 
                                             <!-- Monto -->
@@ -837,7 +862,11 @@
                                                 <input type="text" class="form-control modern-input"
                                                     [placeholder]="getPlaceholderMonto(metodo.tipo)"
                                                     [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
-                                                    (keypress)="validarEntrada($event)" [disabled]="!metodo.tipo" />
+                                                    (keypress)="validarEntrada($event)" [disabled]="!metodo.tipo"
+                                                    [ngClass]="{'campo-invalido': !metodo.monto || metodo.monto <= 0}" />
+                                                <small *ngIf="!metodo.monto || metodo.monto <= 0" class="text-danger">
+                                                    <i class="bi bi-exclamation-triangle"></i> Ingresa un monto válido
+                                                </small>
                                             </div>
                                         </div>
                                     </div>

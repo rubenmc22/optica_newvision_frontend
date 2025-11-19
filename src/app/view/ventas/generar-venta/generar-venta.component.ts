@@ -1305,11 +1305,22 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.loader.updateMessage('Generando comprobante de pago...');
 
         try {
-            // Simular generación de PDF
+            // Simular generación de PDF - EN PRODUCCIÓN ESTO VENDRÁ DEL API REAL
             await new Promise(resolve => setTimeout(resolve, 3000));
 
-            // URL de ejemplo del recibo (en producción vendrá del API)
-            this.urlRecibo = 'https://example.com/recibos/venta-001.pdf';
+            // ⚠️ CORREGIR: En lugar de URL de ejemplo, usar una URL real o base64
+            // this.urlRecibo = 'https://example.com/recibos/venta-001.pdf'; // ❌ Esto falla
+
+            // ✅ OPCIÓN 1: Usar un PDF de prueba local (para desarrollo)
+            this.urlRecibo = '/assets/Presupuesto-OPTICA VISION.pdf';
+
+            // ✅ OPCIÓN 2: Generar un PDF base64 (más confiable)
+            // this.urlRecibo = this.generarPDFBase64();
+
+            // ✅ OPCIÓN 3: Esperar a tener una URL real del backend
+            // const respuesta = await this.generarVentaService.generarRecibo(datosVenta);
+            // this.urlRecibo = respuesta.urlRecibo;
+
             this.informacionVenta = {
                 numeroVenta: 'V-' + Date.now(),
                 fecha: new Date().toLocaleDateString('es-VE'),
@@ -1453,100 +1464,106 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    /// Método para imprimir el recibo - CORREGIDO
+    // Método alternativo usando window.open - MÁS CONFIABLE
     imprimirRecibo(): void {
         if (!this.urlRecibo) {
             this.swalService.showError('Error', 'No hay recibo disponible para imprimir');
             return;
         }
 
-        // Mostrar loading
-        this.swalService.showLoadingAlert('Preparando impresión...');
+        this.swalService.showLoadingAlert('Abriendo recibo para impresión...');
 
-        // Siempre usar el método fallback que abre en nueva ventana
-        this.imprimirReciboFallback();
-    }
-
-    // Método fallback mejorado para imprimir
-    private imprimirReciboFallback(): void {
         try {
-            // Abrir en nueva ventana/pestaña
-            const printWindow = window.open(this.urlRecibo, '_blank', 'width=800,height=600,scrollbars=yes');
+            // Abrir en nueva ventana
+            const printWindow = window.open(this.urlRecibo, '_blank', 'width=800,height=600');
 
             if (!printWindow) {
                 this.swalService.closeLoading();
                 this.swalService.showError(
-                    'Bloqueado por el navegador',
-                    'Por favor, permite ventanas emergentes para imprimir el recibo.'
+                    'Ventana bloqueada',
+                    'Por favor, permite ventanas emergentes para imprimir.'
                 );
                 return;
             }
 
-            // Intentar imprimir después de que la ventana se cargue
+            // Esperar a que la ventana cargue
             const checkLoad = setInterval(() => {
                 try {
-                    // Verificar si la ventana sigue abierta y está cargada
                     if (printWindow.closed) {
                         clearInterval(checkLoad);
                         this.swalService.closeLoading();
                         return;
                     }
 
-                    // Intentar imprimir cuando el documento esté listo
                     if (printWindow.document.readyState === 'complete') {
                         clearInterval(checkLoad);
 
-                        // Pequeño delay para asegurar que todo esté renderizado
+                        // Pequeño delay antes de imprimir
                         setTimeout(() => {
                             try {
                                 printWindow.focus();
                                 printWindow.print();
                                 this.swalService.closeLoading();
 
-                                // Opcional: Cerrar ventana después de imprimir (comentado por si el usuario quiere guardar)
-                                // printWindow.onafterprint = () => {
-                                //     setTimeout(() => {
-                                //         printWindow.close();
-                                //     }, 1000);
-                                // };
+                                // 🔄 IMPORTANTE: No cerrar la ventana automáticamente
+                                // Dejar que el usuario decida cuándo cerrarla
 
                             } catch (printError) {
                                 console.error('Error al imprimir:', printError);
                                 this.swalService.closeLoading();
-                                this.swalService.showError(
-                                    'Error de impresión',
-                                    'No se pudo iniciar la impresión. Puedes imprimir manualmente desde la ventana abierta.'
+                                this.swalService.showInfo(
+                                    'PDF listo',
+                                    'El recibo está abierto. Usa Ctrl+P para imprimir manualmente.'
                                 );
                             }
                         }, 1000);
                     }
                 } catch (error) {
-                    console.error('Error verificando estado de ventana:', error);
                     clearInterval(checkLoad);
                     this.swalService.closeLoading();
                 }
             }, 500);
 
-            // Timeout de seguridad
+            // Timeout
             setTimeout(() => {
                 clearInterval(checkLoad);
                 this.swalService.closeLoading();
             }, 10000);
 
-            // Manejar si el usuario cierra la ventana manualmente
-            printWindow.addEventListener('beforeunload', () => {
-                clearInterval(checkLoad);
-                this.swalService.closeLoading();
-            });
-
         } catch (error) {
-            console.error('Error al abrir ventana de impresión:', error);
             this.swalService.closeLoading();
-            this.swalService.showError(
-                'Error',
-                'No se pudo abrir la ventana de impresión. Intenta nuevamente.'
-            );
+            this.manejarErrorImpresion(error);
         }
+    }
+
+    private manejarErrorImpresion(error: any): void {
+        console.error('Error en impresión:', error);
+        this.swalService.closeLoading();
+
+        this.swalService.showConfirm(
+            'Error al imprimir',
+            `
+        <div class="text-center">
+            <i class="bi bi-printer display-4 text-warning mb-3"></i>
+            <p class="mb-3">No se pudo iniciar la impresión automática.</p>
+            <div class="alert alert-info">
+                <strong>Alternativas:</strong>
+                <ul class="text-start mt-2">
+                    <li>Abre el PDF y usa <kbd>Ctrl + P</kbd></li>
+                    <li>Descarga el PDF e imprímelo manualmente</li>
+                    <li>Verifica que tu navegador permita ventanas emergentes</li>
+                </ul>
+            </div>
+        </div>
+        `,
+            'Abrir PDF',
+            'Cancelar'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                // Abrir PDF en nueva pestaña
+                window.open(this.urlRecibo, '_blank');
+            }
+        });
     }
 
     // Método para descargar el PDF - CORREGIDO
@@ -2167,28 +2184,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         console.log('📝 Método actualizado:', metodo);
     }
 
-
     onTipoMetodoChange(index: number): void {
         const metodo = this.venta.metodosDePago[index];
 
         console.log('Cambio tipo método:', metodo.tipo, 'en índice:', index);
 
-        if (!this.necesitaReferencia(metodo.tipo)) {
-            metodo.referencia = '';
-        }
+        // 🔄 LIMPIAR TODOS LOS CAMPOS DEL MÉTODO
+        metodo.monto = 0;
+        metodo.valorTemporal = '';
+        metodo.referencia = '';
+        metodo.bancoCodigo = '';
+        metodo.bancoNombre = '';
+        metodo.banco = '';
+        metodo.bancoObject = null;
 
-        if (!this.necesitaBanco(metodo.tipo)) {
-            metodo.bancoCodigo = '';
-            metodo.bancoNombre = '';
-            metodo.banco = '';
-            metodo.bancoObject = null;
-        } else {
-            if (metodo.bancoObject) {
-                metodo.bancoCodigo = metodo.bancoObject.codigo;
-                metodo.bancoNombre = metodo.bancoObject.nombre;
-                metodo.banco = `${metodo.bancoObject.codigo} - ${metodo.bancoObject.nombre}`;
-            }
-        }
+        console.log('🔄 Todos los campos del método han sido limpiados');
 
         this.onMetodoPagoChange(index);
     }
@@ -2205,10 +2215,35 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return metodosConBanco.includes(tipoMetodo);
     }
 
-    // Método para verificar si se puede generar la venta
+    // Método para verificar si se puede generar la venta - ACTUALIZADO
     get puedeGenerarVenta(): boolean {
         // Verificar que hay productos
         if (this.venta.productos.length === 0) {
+            return false;
+        }
+
+        // Verificar que todos los métodos de pago estén completamente configurados
+        const metodosCompletos = this.venta.metodosDePago.every(metodo => {
+            // Verificar tipo de pago seleccionado
+            if (!metodo.tipo) return false;
+
+            // Verificar monto válido
+            if (!metodo.monto || metodo.monto <= 0) return false;
+
+            // Para métodos que requieren banco (pago móvil, transferencia)
+            if (this.necesitaBanco(metodo.tipo)) {
+                if (!metodo.banco || !metodo.bancoObject) return false;
+            }
+
+            // Para métodos que requieren referencia (pago móvil, transferencia)
+            if (this.necesitaReferencia(metodo.tipo)) {
+                if (!metodo.referencia || metodo.referencia.trim() === '') return false;
+            }
+
+            return true;
+        });
+
+        if (!metodosCompletos) {
             return false;
         }
 
@@ -2239,10 +2274,55 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
+    // Método para verificar si un método de pago específico está completo
+    metodoCompleto(metodo: any): boolean {
+        if (!metodo.tipo) return false;
+        if (!metodo.monto || metodo.monto <= 0) return false;
+
+        // Validar campos condicionales
+        if (this.necesitaBanco(metodo.tipo) && (!metodo.banco || !metodo.bancoObject)) {
+            return false;
+        }
+
+        if (this.necesitaReferencia(metodo.tipo) && (!metodo.referencia || metodo.referencia.trim() === '')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    // Método para obtener el estado de validación de un método
+    getEstadoValidacionMetodo(metodo: any): { valido: boolean; mensaje: string } {
+        if (!metodo.tipo) {
+            return { valido: false, mensaje: 'Selecciona tipo de pago' };
+        }
+
+        if (!metodo.monto || metodo.monto <= 0) {
+            return { valido: false, mensaje: 'Ingresa un monto válido' };
+        }
+
+        if (this.necesitaBanco(metodo.tipo) && (!metodo.banco || !metodo.bancoObject)) {
+            return { valido: false, mensaje: 'Selecciona un banco' };
+        }
+
+        if (this.necesitaReferencia(metodo.tipo) && (!metodo.referencia || metodo.referencia.trim() === '')) {
+            return { valido: false, mensaje: 'Ingresa número de referencia' };
+        }
+
+        return { valido: true, mensaje: 'Método completo' };
+    }
+
     // Mensaje de estado para el botón
+    // Mensaje de estado para el botón - MEJORADO
     get mensajeEstadoBoton(): string {
         if (this.venta.productos.length === 0) {
             return 'Agrega productos para continuar';
+        }
+
+        // Verificar si hay métodos incompletos
+        const metodosIncompletos = this.venta.metodosDePago.some(metodo => !this.metodoCompleto(metodo));
+        if (metodosIncompletos) {
+            return 'Completa todos los métodos de pago';
         }
 
         const montoCubierto = this.totalPagadoPorMetodos;
@@ -2279,27 +2359,27 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
 
     // Métodos para los títulos e iconos
-getTituloMetodo(tipo: string): string {
-    const titulos: { [key: string]: string } = {
-        'efectivo': 'Pago en Efectivo',
-        'debito': 'Tarjeta de Débito', 
-        'credito': 'Tarjeta de Crédito',
-        'pagomovil': 'Pago Móvil',
-        'transferencia': 'Transferencia Bancaria',
-        'zelle': 'Transferencia Zelle'
-    };
-    return titulos[tipo] || 'Método de Pago';
-}
+    getTituloMetodo(tipo: string): string {
+        const titulos: { [key: string]: string } = {
+            'efectivo': 'Pago en Efectivo',
+            'debito': 'Tarjeta de Débito',
+            'credito': 'Tarjeta de Crédito',
+            'pagomovil': 'Pago Móvil',
+            'transferencia': 'Transferencia Bancaria',
+            'zelle': 'Transferencia Zelle'
+        };
+        return titulos[tipo] || 'Método de Pago';
+    }
 
-getIconoMetodo(tipo: string): string {
-    const iconos: { [key: string]: string } = {
-        'efectivo': 'bi bi-cash-coin',
-        'debito': 'bi bi-credit-card',
-        'credito': 'bi bi-credit-card-2-front', 
-        'pagomovil': 'bi bi-phone',
-        'transferencia': 'bi bi-bank',
-        'zelle': 'bi bi-globe-americas'
-    };
-    return iconos[tipo] || 'bi bi-wallet';
-}
+    getIconoMetodo(tipo: string): string {
+        const iconos: { [key: string]: string } = {
+            'efectivo': 'bi bi-cash-coin',
+            'debito': 'bi bi-credit-card',
+            'credito': 'bi bi-credit-card-2-front',
+            'pagomovil': 'bi bi-phone',
+            'transferencia': 'bi bi-bank',
+            'zelle': 'bi bi-globe-americas'
+        };
+        return iconos[tipo] || 'bi bi-wallet';
+    }
 }
