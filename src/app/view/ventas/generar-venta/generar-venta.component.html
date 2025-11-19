@@ -688,7 +688,6 @@
                             </div>
                         </div>
 
-                        <!-- Métodos de pago - Modernizado -->
                         <div class="metodos-pago-section">
                             <div class="section-header">
                                 <div class="section-label-container">
@@ -696,11 +695,15 @@
                                         <i class="bi bi-wallet2"></i>
                                         Métodos de pago
                                     </label>
+                                    <small class="section-description">Agrega y configura los métodos de pago para esta
+                                        venta</small>
                                 </div>
                                 <div class="section-actions">
-                                    <button class="btn btn-add-method" (click)="agregarMetodo()" title="Agregar método">
+                                    <!-- BOTÓN DINÁMICO -->
+                                    <button class="btn btn-add-method" (click)="agregarMetodo()" title="Agregar método"
+                                        *ngIf="venta.metodosDePago.length > 0">
                                         <i class="bi bi-plus-circle"></i>
-                                        Agregar
+                                        Agregar Método
                                     </button>
                                 </div>
                             </div>
@@ -738,99 +741,150 @@
                                 </div>
                             </div>
 
-                            <div class="metodos-grid">
+                            <!-- Contador de métodos -->
+                            <div class="metodos-counter" *ngIf="venta.metodosDePago.length > 0">
+                                <i class="bi bi-list-check"></i>
+                                <span>{{ venta.metodosDePago.length }} método{{ venta.metodosDePago.length > 1 ? 's' :
+                                    '' }} configurado{{ venta.metodosDePago.length > 1 ? 's' : '' }}</span>
+                            </div>
+
+                            <div class="metodos-grid" *ngIf="venta.metodosDePago.length > 0">
                                 <div *ngFor="let metodo of venta.metodosDePago; let i = index" class="metodo-card">
-                                    <div class="metodo-header">
-                                        <!-- 1. Select de métodos de pago -->
-                                        <select class="form-select modern-select compact" [(ngModel)]="metodo.tipo"
-                                            (change)="onTipoMetodoChange(i)">
-                                            <option value="" disabled selected>Método pago</option>
-                                            <option value="efectivo">Efectivo</option>
-                                            <option value="debito">Débito</option>
-                                            <option value="credito">Crédito</option>
-                                            <option value="pagomovil">Pago Móvil</option>
-                                            <option value="transferencia">Transferencia</option>
-                                            <option value="zelle">Zelle</option>
-                                        </select>
-                                        <button class="btn btn-remove" (click)="eliminarMetodo(i)">
-                                            <i class="bi bi-x-lg"></i>
+                                    <!-- Header con número y acciones -->
+                                    <div class="metodo-card-header">
+                                        <div class="metodo-number">
+                                            <i class="bi bi-123"></i>
+                                            <span>Método #{{ i + 1 }}</span>
+                                        </div>
+                                        <button class="btn btn-remove" (click)="eliminarMetodo(i)"
+                                            title="Eliminar método">
+                                            <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
 
-                                    <div class="metodo-body">
-
-                                        <div *ngIf="necesitaBanco(metodo.tipo)" class="campo-adicional">
+                                    <div class="metodo-content">
+                                        <!-- Selector de tipo de método -->
+                                        <div class="campo-principal">
                                             <label class="form-label compact-label">
-                                                <i class="bi bi-bank"></i>
-                                                Banco
+                                                <i class="bi bi-credit-card"></i>
+                                                Tipo de Pago
                                             </label>
-
-                                            <ng-select [items]="bancosDisponibles" bindLabel="nombre"
-                                                [(ngModel)]="metodo.bancoObject"
-                                                (ngModelChange)="onBancoChange($event, i)" [compareWith]="compararBanco"
-                                                [searchable]="true" [clearable]="true"
-                                                placeholder="Buscar por código o nombre...">
-
-                                                <ng-template ng-label-tmp let-item="item">
-                                                    <span *ngIf="item">{{ item?.codigo }} - {{ item?.nombre }}</span>
-                                                    <span *ngIf="!item">Seleccionar banco...</span>
-                                                </ng-template>
-
-                                                <ng-template ng-option-tmp let-item="item">
-                                                    <div class="banco-option" *ngIf="item">
-                                                        <div class="banco-codigo">{{ item.codigo }}</div>
-                                                        <div class="banco-nombre">{{ item.nombre }}</div>
-                                                    </div>
-                                                </ng-template>
-
-                                                <ng-template ng-notfound-tmp>
-                                                    <div class="not-found-message">
-                                                        <i class="bi bi-search"></i>
-                                                        No se encontraron bancos con ese criterio
-                                                    </div>
-                                                </ng-template>
-                                            </ng-select>
+                                            <select class="form-select modern-select" [(ngModel)]="metodo.tipo"
+                                                (change)="onTipoMetodoChange(i)">
+                                                <option value="" disabled selected>Elige un método de pago</option>
+                                                <option value="efectivo">💵 Efectivo</option>
+                                                <option value="debito">💳 Tarjeta Débito</option>
+                                                <option value="credito">🔄 Tarjeta Crédito</option>
+                                                <option value="pagomovil">📱 Pago Móvil</option>
+                                                <option value="transferencia">🏦 Transferencia</option>
+                                                <option value="zelle">🌐 Zelle</option>
+                                            </select>
                                         </div>
 
-                                        <!-- 3. Referencia -->
-                                        <div *ngIf="necesitaReferencia(metodo.tipo)" class="campo-adicional">
-                                            <label class="form-label compact-label">N° de Referencia</label>
-                                            <input type="text" class="form-control modern-input compact"
-                                                [(ngModel)]="metodo.referencia" placeholder="Ej: 123456789"
-                                                maxlength="20" />
-                                        </div>
+                                        <!-- Campos condicionales -->
+                                        <div class="campos-condicionales" *ngIf="metodo.tipo">
+                                            <!-- Banco -->
+                                            <div *ngIf="necesitaBanco(metodo.tipo)" class="campo-adicional">
+                                                <label class="form-label compact-label">
+                                                    <i class="bi bi-bank"></i>
+                                                    Banco
+                                                </label>
+                                                <ng-select [items]="bancosDisponibles" bindLabel="nombre"
+                                                    [(ngModel)]="metodo.bancoObject"
+                                                    (ngModelChange)="onBancoChange($event, i)"
+                                                    [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
+                                                    placeholder="Buscar banco por código o nombre...">
 
-                                        <!-- 4. Monto - CON TÍTULO AGREGADO -->
-                                        <div class="campo-adicional">
-                                            <label class="form-label compact-label">
-                                                <i class="bi bi-cash-coin"></i>
-                                                Monto
-                                            </label>
-                                            <input type="text" class="form-control modern-input compact"
-                                                [placeholder]="getPlaceholderMonto(metodo.tipo)"
-                                                [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
-                                                (keypress)="validarEntrada($event)" [disabled]="!metodo.tipo" />
+                                                    <ng-template ng-label-tmp let-item="item">
+                                                        <span *ngIf="item">{{ item?.codigo }} - {{ item?.nombre
+                                                            }}</span>
+                                                        <span *ngIf="!item">Seleccionar banco...</span>
+                                                    </ng-template>
+
+                                                    <ng-template ng-option-tmp let-item="item">
+                                                        <div class="banco-option" *ngIf="item">
+                                                            <div class="banco-codigo">{{ item.codigo }}</div>
+                                                            <div class="banco-nombre">{{ item.nombre }}</div>
+                                                        </div>
+                                                    </ng-template>
+
+                                                    <ng-template ng-notfound-tmp>
+                                                        <div class="not-found-message">
+                                                            <i class="bi bi-search"></i>
+                                                            No se encontraron bancos con ese criterio
+                                                        </div>
+                                                    </ng-template>
+                                                </ng-select>
+                                            </div>
+
+                                            <!-- Referencia -->
+                                            <div *ngIf="necesitaReferencia(metodo.tipo)" class="campo-adicional">
+                                                <label class="form-label compact-label">
+                                                    <i class="bi bi-hash"></i>
+                                                    N° de Referencia
+                                                </label>
+                                                <input type="text" class="form-control modern-input"
+                                                    [(ngModel)]="metodo.referencia" placeholder="Ej: 123456789"
+                                                    maxlength="20" />
+                                            </div>
+
+                                            <!-- Monto -->
+                                            <div class="campo-monto">
+                                                <label class="form-label compact-label">
+                                                    <i class="bi bi-cash-stack"></i>
+                                                    Monto a Pagar
+                                                </label>
+                                                <input type="text" class="form-control modern-input"
+                                                    [placeholder]="getPlaceholderMonto(metodo.tipo)"
+                                                    [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
+                                                    (keypress)="validarEntrada($event)" [disabled]="!metodo.tipo" />
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div class="metodo-footer">
-                                        <!-- 5. Lbl de máximo -->
-                                        <span class="maximo-text">
-                                            Máx: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{
-                                            getSimboloMonedaActual() }}
-                                            <span *ngIf="getMonedaParaMetodo(metodo.tipo) === 'bolivar'"
-                                                class="conversion-text">
-                                                ⇄ {{ getMontoRestanteParaMetodoEnBs(i) | number:'1.2-2' }} Bs
+                                    <!-- Footer con información -->
+                                    <div class="metodo-footer" *ngIf="metodo.tipo">
+                                        <div class="footer-info">
+                                            <span class="maximo-text">
+                                                <i class="bi bi-graph-up"></i>
+                                                Máx. disponible: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{
+                                                getSimboloMonedaActual() }}
+                                                <span *ngIf="getMonedaParaMetodo(metodo.tipo) === 'bolivar'"
+                                                    class="conversion-text">
+                                                    ({{ getMontoRestanteParaMetodoEnBs(i) | number:'1.2-2' }} Bs)
+                                                </span>
                                             </span>
-                                        </span>
 
-                                        <span
-                                            *ngIf="mostrarConversionBs(metodo.tipo) && metodo.monto && metodo.monto > 0"
-                                            class="conversion-text">
-                                            ⇄ {{ calcularConversionBs(metodo.monto, metodo.tipo) | number:'1.2-2' }} Bs
-                                        </span>
+                                            <span
+                                                *ngIf="mostrarConversionBs(metodo.tipo) && metodo.monto && metodo.monto > 0"
+                                                class="conversion-text">
+                                                <i class="bi bi-arrow-left-right"></i>
+                                                Equivale a {{ calcularConversionBs(metodo.monto, metodo.tipo) |
+                                                number:'1.2-2' }} Bs
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Estado vacío -->
+                                    <div class="metodo-empty" *ngIf="!metodo.tipo">
+                                        <i class="bi bi-credit-card-2-front"></i>
+                                        <span>Selecciona un tipo de pago para continuar</span>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Estado vacío general -->
+                            <div class="empty-state" *ngIf="venta.metodosDePago.length === 0">
+                                <div class="empty-icon">
+                                    <i class="bi bi-wallet"></i>
+                                </div>
+                                <h5>No hay métodos de pago</h5>
+                                <p>Agrega al menos un método de pago para continuar con la venta</p>
+                                <!-- BOTÓN PARA PRIMER MÉTODO -->
+                                <button class="btn btn-add-method" (click)="agregarMetodo()">
+                                    <i class="bi bi-plus-circle"></i>
+                                    Agregar Primer Método
+                                </button>
                             </div>
                         </div>
                     </div>

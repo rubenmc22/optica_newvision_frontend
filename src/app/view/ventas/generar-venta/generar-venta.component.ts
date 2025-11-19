@@ -2273,4 +2273,33 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     get totalPagadoCasheaBs(): number {
         return this.redondear(this.obtenerEquivalenteBs(this.totalPagadoCashea));
     }
+
+
+
+
+
+    // Métodos para los títulos e iconos
+getTituloMetodo(tipo: string): string {
+    const titulos: { [key: string]: string } = {
+        'efectivo': 'Pago en Efectivo',
+        'debito': 'Tarjeta de Débito', 
+        'credito': 'Tarjeta de Crédito',
+        'pagomovil': 'Pago Móvil',
+        'transferencia': 'Transferencia Bancaria',
+        'zelle': 'Transferencia Zelle'
+    };
+    return titulos[tipo] || 'Método de Pago';
+}
+
+getIconoMetodo(tipo: string): string {
+    const iconos: { [key: string]: string } = {
+        'efectivo': 'bi bi-cash-coin',
+        'debito': 'bi bi-credit-card',
+        'credito': 'bi bi-credit-card-2-front', 
+        'pagomovil': 'bi bi-phone',
+        'transferencia': 'bi bi-bank',
+        'zelle': 'bi bi-globe-americas'
+    };
+    return iconos[tipo] || 'bi bi-wallet';
+}
 }
