@@ -1361,6 +1361,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 50);
     }
 
+    forzarTamanioCarta(): void {
+        this.anchoPersonalizado = '800px';
+        this.altoPersonalizado = '1000px';
+        this.mostrarControlesPersonalizados = false;
+
+        setTimeout(() => {
+            this.ajustarDimensionesModal();
+        }, 50);
+    }
+
     // Método simplificado para ajustar dimensiones
     private ajustarDimensionesModal(): void {
         if (!this.mostrarModalRecibo) return;
@@ -1371,8 +1381,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             if (modalDialog) {
                 // Para XL fijo
-                modalDialog.style.maxWidth = '1100px';
-                modalDialog.style.width = '1100px';
+                modalDialog.style.maxWidth = '900px';
+                modalDialog.style.width = '900px';
                 modalDialog.style.maxHeight = '90vh';
             }
 
@@ -2173,289 +2183,707 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             datos = this.crearDatosReciboReal();
         }
 
+        const formaPago = datos.configuracion?.formaPago || 'contado';
+        const tituloRecibo = this.getTituloReciboParaHTML(formaPago);
+        const mensajeFinal = this.getMensajeFinalParaHTML(formaPago);
+
         return `
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Recibo - ${datos.numeroVenta}</title>
-            <style>
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
-                
-                body {
-                    font-family: 'Arial', sans-serif;
-                    font-size: 12px;
-                    line-height: 1.4;
-                    color: #333;
-                    background: white;
-                    padding: 10px;
-                }
-                
-                .recibo-container {
-                    max-width: 80mm;
-                    margin: 0 auto;
-                    border: 1px solid #ddd;
-                    padding: 12px;
-                    background: white;
-                }
-                
-                .header {
-                    text-align: center;
-                    border-bottom: 2px solid #2c5aa0;
-                    padding-bottom: 8px;
-                    margin-bottom: 12px;
-                }
-                
-                .logo {
-                    font-size: 18px;
-                    font-weight: bold;
-                    color: #2c5aa0;
-                    margin-bottom: 4px;
-                }
-                
-                .sede-info {
-                    font-size: 9px;
-                    color: #666;
-                    margin-bottom: 3px;
-                }
-                
-                .titulo {
-                    font-size: 13px;
-                    font-weight: bold;
-                    margin: 8px 0;
-                    text-transform: uppercase;
-                }
-                
-                .info-venta {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 6px;
-                    margin-bottom: 12px;
-                    font-size: 9px;
-                }
-                
-                .info-item {
-                    display: flex;
-                    justify-content: space-between;
-                }
-                
-                .info-label {
-                    font-weight: 500;
-                    color: #666;
-                }
-                
-                .info-value {
-                    font-weight: 600;
-                }
-                
-                .tabla-productos {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 12px;
-                    font-size: 8px;
-                }
-                
-                .tabla-productos th {
-                    background: #f8f9fa;
-                    border: 1px solid #ddd;
-                    padding: 3px;
-                    text-align: left;
-                    font-weight: 600;
-                }
-                
-                .tabla-productos td {
-                    border: 1px solid #ddd;
-                    padding: 3px;
-                }
-                
-                .metodos-pago {
-                    margin-bottom: 12px;
-                }
-                
-                .metodo-item {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 2px;
-                    font-size: 9px;
-                }
-                
-                .totales {
-                    border-top: 2px solid #2c5aa0;
-                    padding-top: 8px;
-                    margin-bottom: 12px;
-                }
-                
-                .total-item {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 4px;
-                    font-size: 10px;
-                }
-                
-                .total-final {
-                    font-size: 12px;
-                    font-weight: bold;
-                    color: #2c5aa0;
-                    border-top: 1px solid #ddd;
-                    padding-top: 4px;
-                }
-                
-                .footer {
-                    text-align: center;
-                    border-top: 1px solid #ddd;
-                    padding-top: 8px;
-                    font-size: 8px;
-                    color: #666;
-                }
-                
-                .gracias {
-                    font-weight: 600;
-                    margin-bottom: 4px;
-                    color: #2c5aa0;
-                }
-                
-                @media print {
-                    body {
-                        padding: 0;
-                        margin: 0;
-                    }
-                    
-                    .recibo-container {
-                        border: none;
-                        padding: 8px;
-                        max-width: 100%;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="recibo-container">
-                <div class="header">
-                    <div class="logo">NEW VISION LENS</div>
-                    <div class="sede-info">${datos.sede.nombre}</div>
-                    <div class="sede-info">${datos.sede.direccion}</div>
-                    <div class="sede-info">Tel: ${datos.sede.telefono}</div>
-                    <div class="sede-info">RIF: ${datos.sede.rif}</div>
-                    
-                    <div class="titulo">RECIBO DE VENTA</div>
-                </div>
-                
-                <div class="info-venta">
-                    <div class="info-item">
-                        <span class="info-label">Recibo #:</span>
-                        <span class="info-value">${datos.numeroVenta}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Fecha:</span>
-                        <span class="info-value">${datos.fecha}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Hora:</span>
-                        <span class="info-value">${datos.hora}</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Vendedor:</span>
-                        <span class="info-value">${datos.vendedor}</span>
-                    </div>
-                </div>
-                
-                <div style="margin-bottom: 12px;">
-                    <div style="font-weight: 600; margin-bottom: 4px; font-size: 10px;">CLIENTE:</div>
-                    <div style="font-size: 9px;">
-                        <div><strong>Nombre:</strong> ${datos.cliente.nombre}</div>
-                        <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
-                        <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
-                    </div>
-                </div>
-                
-                <table class="tabla-productos">
-                    <thead>
+    <!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recibo - ${datos.numeroVenta}</title>
+    <style>
+        @page {
+            margin: 0;
+            size: A4;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 10px;
+            line-height: 1.15;
+            color: #333;
+            background: white;
+            padding: 20mm 10mm 10mm 10mm;
+            width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+        }
+        
+        .recibo-container {
+            width: 100%;
+            max-width: 190mm;
+            margin: 0 auto;
+            background: white;
+            padding: 0;
+            height: auto;
+            max-height: 257mm;
+            overflow: hidden;
+        }
+        
+        .recibo-header {
+            text-align: center;
+            border-bottom: 2px solid #2c5aa0;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .empresa-nombre {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 2px;
+        }
+        
+        .empresa-info {
+            font-size: 8px;
+            color: #666;
+            margin-bottom: 1px;
+            line-height: 1.1;
+        }
+        
+        .titulo-venta {
+            font-size: 12px;
+            font-weight: 600;
+            color: #2c5aa0;
+            margin: 6px 0 2px 0;
+        }
+        
+        .info-rapida {
+            background: #f8f9fa;
+            padding: 4px;
+            border-radius: 2px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 8px;
+            font-size: 8px;
+        }
+        
+        .cliente-compacto {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 2px solid #2c5aa0;
+            padding: 6px;
+            font-size: 8px;
+            margin-bottom: 8px;
+            border-radius: 2px;
+        }
+        
+        .tabla-productos {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+            font-size: 8px;
+        }
+        
+        .tabla-productos th {
+            background: #2c5aa0;
+            color: white;
+            font-weight: 600;
+            padding: 3px 4px;
+            text-align: left;
+            border: 1px solid #dee2e6;
+            font-size: 8px;
+        }
+        
+        .tabla-productos td {
+            border: 1px solid #dee2e6;
+            padding: 2px 3px;
+            vertical-align: middle;
+            font-size: 8px;
+        }
+        
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+        
+        .metodos-compactos {
+            margin-bottom: 8px;
+        }
+        
+        .metodo-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            padding: 2px 0;
+            border-bottom: 1px dashed #dee2e6;
+            font-size: 8px;
+        }
+        
+        .resumen-cashea {
+            background: #f8f9fa;
+            padding: 6px;
+            border-radius: 3px;
+            margin: 6px 0;
+            border-left: 2px solid #0dcaf0;
+        }
+        
+        .pagos-section {
+            margin-bottom: 6px;
+        }
+        
+        .pago-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            padding: 3px 0;
+            border-bottom: 1px dashed #dee2e6;
+            font-size: 8px;
+        }
+        
+        .pago-total {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px solid #ccc;
+            font-size: 8px;
+        }
+        
+        .resumen-cuotas-compacto {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 6px;
+            text-align: center;
+        }
+        
+        .cuota-info {
+            text-align: center;
+        }
+        
+        .monto-cuota {
+            font-size: 7px;
+            color: #666;
+            margin-top: 1px;
+        }
+        
+        .resumen-abono {
+            background: #f8f9fa;
+            padding: 6px;
+            border-radius: 3px;
+            margin: 6px 0;
+            border-left: 2px solid #ffc107;
+        }
+        
+        .abonos-section {
+            margin-bottom: 6px;
+        }
+        
+        .abono-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            padding: 3px 0;
+            border-bottom: 1px dashed #dee2e6;
+            font-size: 8px;
+        }
+        
+        .total-abonado {
+            border-top: 1px solid #ccc;
+            padding-top: 3px;
+            margin-top: 3px;
+        }
+        
+        .resumen-financiero {
+            background: white;
+            padding: 6px;
+            border-radius: 3px;
+            border: 1px solid #e9ecef;
+            margin: 6px 0;
+        }
+        
+        .deuda-section, .progreso-section {
+            text-align: center;
+            margin-bottom: 6px;
+        }
+        
+        .deuda-label, .progreso-label {
+            font-size: 7px;
+            color: #666;
+            margin-bottom: 1px;
+        }
+        
+        .deuda-monto, .progreso-porcentaje {
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .resumen-contado {
+            background: #f8f9fa;
+            padding: 6px;
+            border-radius: 3px;
+            margin: 6px 0;
+            border-left: 2px solid #198754;
+            text-align: center;
+        }
+        
+        .totales-compactos {
+            margin-bottom: 8px;
+        }
+        
+        .totales-compactos table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+        }
+        
+        .totales-compactos td {
+            padding: 3px 4px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .table-success {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        }
+        
+        .observaciones-compactas {
+            margin-bottom: 8px;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 4px;
+            border-radius: 2px;
+            font-size: 8px;
+        }
+        
+        .terminos-compactos {
+            border-top: 1px solid #ddd;
+            padding-top: 6px;
+            margin-top: 8px;
+            font-size: 7px;
+            color: #666;
+        }
+        
+        .mensaje-final {
+            text-align: center;
+            border-top: 1px solid #ddd;
+            padding-top: 6px;
+            margin-top: 6px;
+            font-size: 9px;
+            color: #2c5aa0;
+            font-weight: bold;
+        }
+        
+        .text-danger { color: #dc3545; }
+        .text-success { color: #198754; }
+        .text-warning { color: #ffc107; }
+        .text-primary { color: #2c5aa0; }
+        .text-muted { color: #666; }
+        
+        .badge {
+            display: inline-block;
+            padding: 1px 3px;
+            font-size: 7px;
+            font-weight: 600;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 1px;
+        }
+        
+        .bg-primary { background-color: #2c5aa0; color: white; }
+        .bg-success { background-color: #198754; color: white; }
+        .bg-info { background-color: #0dcaf0; color: black; }
+        .bg-warning { background-color: #ffc107; color: black; }
+        
+        .progress {
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            height: 3px;
+            margin: 2px auto;
+            width: 50%;
+        }
+        
+        .progress-bar {
+            background-color: #198754;
+            height: 100%;
+            transition: width 0.6s ease;
+        }
+        
+        .fw-bold { font-weight: bold; }
+        .small { font-size: 7px; }
+        .fs-6 { font-size: 10px; }
+
+        .page-break-avoid {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        @media print {
+            body {
+                padding: 20mm 10mm 10mm 10mm;
+                margin: 0;
+                width: 210mm;
+                height: 297mm;
+                font-size: 9px;
+            }
+            
+            .recibo-container {
+                border: none;
+                padding: 0;
+                box-shadow: none;
+                max-height: 257mm;
+                overflow: hidden;
+            }
+
+            @page {
+                margin: 0;
+                size: A4;
+            }
+            
+            body {
+                margin: 0;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="recibo-container page-break-avoid">
+        <!-- Encabezado -->
+        <div class="recibo-header page-break-avoid">
+            <div class="empresa-nombre">NEW VISION LENS</div>
+            <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
+            <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
+            <div class="titulo-venta">${tituloRecibo}</div>
+        </div>
+
+        <!-- Información rápida -->
+        <div class="info-rapida page-break-avoid">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px;">
+                <div><strong>Recibo:</strong> ${datos.numeroVenta}</div>
+                <div><strong>Fecha:</strong> ${datos.fecha}</div>
+                <div><strong>Hora:</strong> ${datos.hora}</div>
+                <div><strong>Vendedor:</strong> ${datos.vendedor}</div>
+            </div>
+        </div>
+
+        <!-- Cliente -->
+        <div class="cliente-compacto page-break-avoid">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                <div><strong>Cliente:</strong> ${datos.cliente.nombre}</div>
+                <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
+                <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
+            </div>
+        </div>
+
+        <!-- Productos -->
+        <div class="productos-compactos page-break-avoid">
+            <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">PRODUCTOS</h6>
+            <table class="tabla-productos">
+                <thead>
+                    <tr>
+                        <th width="5%" class="text-center">#</th>
+                        <th width="55%">Descripción</th>
+                        <th width="10%" class="text-center">Cant</th>
+                        <th width="15%" class="text-end">P. Unitario</th>
+                        <th width="15%" class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${datos.productos.map((producto: any, index: number) => `
                         <tr>
-                            <th>Descripción</th>
-                            <th>Cant</th>
-                            <th>P.Unit</th>
-                            <th>Subtotal</th>
+                            <td class="text-center">${index + 1}</td>
+                            <td>${producto.nombre}</td>
+                            <td class="text-center">${producto.cantidad || 1}</td>
+                            <td class="text-end">${this.formatearMoneda(producto.precioUnitario)}</td>
+                            <td class="text-end">${this.formatearMoneda(producto.subtotal)}</td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        ${datos.productos.map((producto: any) => `
-                            <tr>
-                                <td>${producto.nombre}</td>
-                                <td style="text-align: center;">${producto.cantidad}</td>
-                                <td style="text-align: right;">${this.formatearMoneda(producto.precioUnitario)}</td>
-                                <td style="text-align: right;">${this.formatearMoneda(producto.subtotal)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                
-              // En el método generarReciboHTML, actualiza la sección de métodos de pago:
-                <div class="metodos-pago">
-                    <div style="font-weight: 600; margin-bottom: 4px; font-size: 10px;">MÉTODOS DE PAGO:</div>
-                    ${datos.metodosPago.map((metodo: any) => `
-                        <div class="metodo-item">
-                            <span>${this.formatearTipoPago(metodo.tipo)} 
-                            ${metodo.banco ? '- ' + metodo.banco : ''}
-                            ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}</span>
-                            <span>${this.formatearMoneda(metodo.monto)} ${this.obtenerSimboloMoneda(metodo.moneda)}</span>
-                        </div>
                     `).join('')}
-                    
-                    ${datos.cashea ? `
-                        <div class="metodo-item" style="border-top: 1px dashed #ccc; padding-top: 4px; margin-top: 4px;">
-                            <span><strong>CASHEA:</strong> ${this.obtenerNombreNivelCashea(datos.cashea.nivel)}</span>
-                            <span></span>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Métodos de pago -->
+        ${datos.metodosPago && datos.metodosPago.length > 0 ? `
+            <div class="metodos-compactos page-break-avoid">
+                <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">PAGOS</h6>
+                ${datos.metodosPago.map((metodo: any) => `
+                    <div class="metodo-item">
+                        <span>
+                            <span class="badge bg-primary">${this.formatearTipoPago(metodo.tipo)}</span>
+                            ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}
+                            ${metodo.banco ? '- ' + metodo.banco : ''}
+                        </span>
+                        <span>${this.formatearMoneda(metodo.monto)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        ` : ''}
+
+        <!-- SECCIÓN CASHEA COMPLETA - CORREGIDA -->
+        ${datos.cashea ? `
+            <div class="resumen-venta page-break-avoid">
+                <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
+                
+                <div class="resumen-cashea">
+                    <!-- Forma de pago -->
+                    <div style="text-align: center; margin-bottom: 8px;">
+                        <span class="badge bg-info fs-6">PLAN CASHEA</span>
+                    </div>
+
+                    <!-- Información del plan Cashea -->
+                    <div style="text-align: center; margin-bottom: 8px;">
+                        <div class="cashea-info">
+                            <div class="nivel-cashea" style="margin-bottom: 4px;">
+                                <small class="text-muted">NIVEL</small>
+                                <div class="fw-bold text-primary" style="font-size: 10px;">${this.obtenerNombreNivelCashea(datos.cashea.nivel)}</div>
+                            </div>
                         </div>
-                        <div class="metodo-item">
-                            <span>• Inicial pagada</span>
-                            <span>${this.formatearMoneda(datos.cashea.inicial)}</span>
+                    </div>
+
+                    <!-- Desglose de pagos - CORREGIDO -->
+                    <div class="pagos-section">
+                        <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 10px;">DESGLOSE DE PAGOS</h6>
+
+                        <!-- Pago inicial -->
+                        <div class="pago-item">
+                            <div style="text-align: center; width: 50%;">
+                                <strong style="font-size: 9px;">Pago Inicial</strong>
+                            </div>
+                            <div style="text-align: center; width: 50%;">
+                                <strong style="font-size: 9px;">${this.formatearMoneda(datos.cashea.inicial)}</strong>
+                            </div>
                         </div>
+
+                        <!-- Cuotas adelantadas -->
                         ${datos.cashea.cuotasAdelantadas > 0 ? `
-                            <div class="metodo-item">
-                                <span>• ${datos.cashea.cuotasAdelantadas} cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</span>
-                                <span>${this.formatearMoneda(datos.cashea.montoAdelantado)}</span>
+                            <div class="pago-item">
+                                <div style="text-align: center; width: 50%;">
+                                    <strong style="font-size: 9px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong>
+                                </div>
+                                <div style="text-align: center; width: 50%;">
+                                    <strong style="font-size: 9px;">${this.formatearMoneda(datos.cashea.montoAdelantado)}</strong>
+                                </div>
                             </div>
                         ` : ''}
-                    ` : ''}
-                </div>
-                
-                <div class="totales">
-                    <div class="total-item">
-                        <span>Subtotal:</span>
-                        <span>${this.formatearMoneda(datos.totales.subtotal)}</span>
+
+                        <!-- Total pagado ahora - CORREGIDO: MISMA FILA QUE LOS TÍTULOS -->
+                        <div class="pago-total">
+                            <div style="text-align: center; width: 50%;">
+                                <strong style="font-size: 9px;">TOTAL PAGADO AHORA:</strong>
+                            </div>
+                            <div style="text-align: center; width: 50%;">
+                                <strong class="text-success" style="font-size: 9px;">${this.formatearMoneda(datos.totales.totalPagado)}</strong>
+                            </div>
+                        </div>
                     </div>
-                    <div class="total-item">
-                        <span>Descuento:</span>
-                        <span>${this.formatearMoneda(datos.totales.descuento)}</span>
+
+                    <!-- Resumen de cuotas -->
+                    <div class="resumen-cuotas-compacto">
+                        <div class="cuota-info">
+                            <small class="text-muted" style="font-size: 8px;">CUOTAS PENDIENTES</small>
+                            <div class="fw-bold text-warning" style="font-size: 10px;">${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}</div>
+                            <div class="monto-cuota">${this.formatearMoneda(datos.cashea.montoCuota)} c/u</div>
+                        </div>
+                        <div class="cuota-info">
+                            <small class="text-muted" style="font-size: 8px;">DEUDA PENDIENTE</small>
+                            <div class="fw-bold text-danger" style="font-size: 10px;">${this.formatearMoneda(datos.cashea.deudaPendiente)}</div>
+                            <div class="monto-cuota">${this.formatearMoneda(datos.cashea.montoCuota * (datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas))} total</div>
+                        </div>
                     </div>
-                    <div class="total-item">
-                        <span>IVA:</span>
-                        <span>${this.formatearMoneda(datos.totales.iva)}</span>
-                    </div>
-                    <div class="total-item total-final">
-                        <span>TOTAL PAGADO:</span>
-                        <span>${this.formatearMoneda(datos.totales.totalPagado)}</span>
-                    </div>
-                </div>
-                
-                <div class="footer">
-                    <div class="gracias">¡Gracias por su compra!</div>
-                    <div>Conserve este recibo para cualquier reclamo</div>
-                    <div style="margin-top: 6px;">${new Date().getFullYear()} © New Vision Lens</div>
                 </div>
             </div>
-        </body>
-        </html>
+        ` : ''}
+
+        <!-- Resto del código se mantiene igual -->
+        ${datos.abono ? `
+            <div class="resumen-venta page-break-avoid">
+                <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
+                
+                <div class="resumen-abono">
+                    <!-- Forma de pago -->
+                    <div style="text-align: center; margin-bottom: 8px;">
+                        <span class="badge bg-warning text-dark fs-6">ABONO PARCIAL</span>
+                    </div>
+
+                    <!-- Abonos realizados -->
+                    <div class="abonos-section">
+                        <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 10px;">ABONOS REALIZADOS</h6>
+
+                        <div class="abonos-list">
+                            <div class="abono-item">
+                                <div style="text-align: center; width: 50%;">
+                                    <strong style="font-size: 9px;">${datos.fecha}</strong>
+                                </div>
+                                <div style="text-align: center; width: 50%;">
+                                    <strong style="font-size: 9px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong>
+                                </div>
+                            </div>
+                            
+                            <!-- Total abonado EN LA MISMA SECCIÓN -->
+                            <div class="abono-item total-abonado" style="border-top: 1px solid #ccc; padding-top: 4px; margin-top: 4px;">
+                                <div style="text-align: center; width: 50%;">
+                                    <strong style="font-size: 9px;">TOTAL ABONADO:</strong>
+                                </div>
+                                <div style="text-align: center; width: 50%;">
+                                    <strong class="text-success" style="font-size: 9px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resumen financiero -->
+                    <div class="resumen-financiero">
+                        <div class="deuda-section">
+                            <div class="deuda-label">DEUDA PENDIENTE</div>
+                            <div class="deuda-monto text-danger">${this.formatearMoneda(datos.abono.deudaPendiente)}</div>
+                        </div>
+
+                        <div class="progreso-section">
+                            <div class="progreso-label">PORCENTAJE PAGADO</div>
+                            <div class="progreso-porcentaje text-success">${Math.round(datos.abono.porcentajePagado)}%</div>
+                            <div class="progress">
+                                <div class="progress-bar" style="width: ${datos.abono.porcentajePagado}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        ` : ''}
+
+        ${!datos.cashea && !datos.abono ? `
+            <div class="resumen-venta page-break-avoid">
+                <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
+                
+                <div class="resumen-contado">
+                    <div style="margin-bottom: 6px;">
+                        <strong style="font-size: 10px;">Forma de pago:</strong><br>
+                        <span class="badge bg-success">CONTADO</span>
+                    </div>
+                    <div>
+                        <strong style="font-size: 10px;">Monto total:</strong><br>
+                        ${this.formatearMoneda(datos.totales.totalPagado)}
+                    </div>
+                    <div style="margin-top: 6px; font-size: 9px; color: #666;">
+                        El pago ha sido realizado en su totalidad
+                    </div>
+                </div>
+            </div>
+        ` : ''}
+
+        <!-- Totales -->
+        <div class="totales-compactos page-break-avoid">
+            <div style="display: flex; justify-content: flex-end;">
+                <div style="width: 50%;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td class="fw-bold" style="font-size: 10px;">Subtotal:</td>
+                            <td class="text-end" style="font-size: 10px;">${this.formatearMoneda(datos.totales.subtotal)}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold" style="font-size: 10px;">Descuento:</td>
+                            <td class="text-end text-danger" style="font-size: 10px;">- ${this.formatearMoneda(datos.totales.descuento)}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold" style="font-size: 10px;">IVA:</td>
+                            <td class="text-end" style="font-size: 10px;">${this.formatearMoneda(datos.totales.iva)}</td>
+                        </tr>
+                        <tr class="table-success">
+                            <td class="fw-bold" style="font-size: 11px;">${this.getTextoTotalPagadoParaHTML(formaPago)}:</td>
+                            <td class="text-end fw-bold" style="font-size: 11px;">${this.formatearMoneda(datos.totales.totalPagado)}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Observaciones -->
+        ${datos.configuracion?.observaciones ? `
+            <div class="observaciones-compactas page-break-avoid">
+                <div class="alert-warning">
+                    <strong>Observación:</strong> ${datos.configuracion.observaciones}
+                </div>
+            </div>
+        ` : ''}
+
+        <!-- Términos y condiciones -->
+        <div class="terminos-compactos page-break-avoid">
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 6px;">
+                <div>
+                    <p style="margin-bottom: 2px;">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Pasados 30 días no nos hacemos responsables de trabajos no retirados
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <i class="bi bi-info-circle"></i>
+                        Estado de orden: tracking.optolapp.com
+                    </p>
+                </div>
+                <div style="text-align: right;">
+                    <small>${new Date().getFullYear()} © New Vision Lens</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensaje final -->
+        <div class="mensaje-final page-break-avoid">
+            <i class="bi bi-check-circle"></i>
+            ${mensajeFinal}
+        </div>
+    </div>
+</body>
+</html>
         `;
     }
 
+
+    // Métodos auxiliares para el HTML
+    private getTituloReciboParaHTML(formaPago: string): string {
+        switch (formaPago) {
+            case 'abono':
+                return 'RECIBO DE ABONO';
+            case 'cashea':
+                return 'RECIBO DE PAGO - CASHEA';
+            case 'contado':
+            default:
+                return 'RECIBO DE VENTA';
+        }
+    }
+
+    private getMensajeFinalParaHTML(formaPago: string): string {
+        switch (formaPago) {
+            case 'abono':
+                return '¡Gracias por su abono!';
+            case 'cashea':
+                return '¡Gracias por su compra! Plan Cashea activado';
+            case 'contado':
+            default:
+                return '¡Gracias por su compra!';
+        }
+    }
+
+    private getTextoTotalPagadoParaHTML(formaPago: string): string {
+        switch (formaPago) {
+            case 'abono':
+                return 'TOTAL ABONADO';
+            case 'cashea':
+                return 'TOTAL PAGADO AHORA';
+            case 'contado':
+            default:
+                return 'TOTAL PAGADO';
+        }
+    }
+
     // === OPCIONES DE RECIBO ===
+    // En el método imprimirRecibo(), asegurar que cuotasCashea esté disponible
     imprimirRecibo(): void {
+        // Generar cuotas Cashea si no existen
+        if (this.venta.formaPago === 'cashea' && (!this.cuotasCashea || this.cuotasCashea.length === 0)) {
+            this.generarCuotasCashea();
+        }
+
         const datos = this.datosRecibo || this.crearDatosReciboReal();
         const htmlContent = this.generarReciboHTML(datos);
 
@@ -2618,9 +3046,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
 
     /**
- * Descarga el recibo como PDF
- */
+     * Descarga el recibo como PDF
+     */
     descargarPDF(): void {
+        // Generar cuotas Cashea si no existen
+        if (this.venta.formaPago === 'cashea' && (!this.cuotasCashea || this.cuotasCashea.length === 0)) {
+            this.generarCuotasCashea();
+        }
+
         const datos = this.datosRecibo || this.crearDatosReciboReal();
         const htmlContent = this.generarReciboHTML(datos);
 
@@ -2632,30 +3065,29 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         ventana.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Recibo_${datos.numeroVenta}_PDF</title>
-            <style>
-                body { margin: 0; padding: 10px; background: white; }
-                .download-header { text-align: center; padding: 20px; background: #28a745; color: white; }
-                @media print { .download-header { display: none; } }
-            </style>
-            <script>window.onload = () => window.print();</script>
-        </head>
-        <body>
-            <div class="download-header">
-                <h3>📥 Descargando Recibo...</h3>
-            </div>
-            ${htmlContent}
-        </body>
-        </html>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Recibo_${datos.numeroVenta}_PDF</title>
+        <style>
+            body { margin: 0; padding: 10px; background: white; }
+            .download-header { text-align: center; padding: 20px; background: #28a745; color: white; }
+            @media print { .download-header { display: none; } }
+        </style>
+        <script>window.onload = () => window.print();</script>
+    </head>
+    <body>
+        <div class="download-header">
+            <h3>📥 Descargando Recibo...</h3>
+        </div>
+        ${htmlContent}
+    </body>
+    </html>
     `);
         ventana.document.close();
 
         this.swalService.showInfo('Descargar PDF', 'Se ha abierto una ventana para descargar el recibo.');
     }
-
     /**
      * Comparte por Email
      */
