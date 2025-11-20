@@ -1,11 +1,11 @@
-import { Component, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, OnDestroy, ViewChild  } from '@angular/core';
 import { Producto } from '../../productos/producto.model';
 import { ProductoService } from '../../productos/producto.service';
 import { SystemConfigService } from '../../system-config/system-config.service';
 import { GenerarVentaService } from './generar-venta.service';
 import { Tasa } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
-import { forkJoin, map } from 'rxjs';
+import { forkJoin, map, Subject } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -22,6 +22,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
 import * as bootstrap from 'bootstrap';
 import { Subscription } from 'rxjs';
 import { ProductoConversionService } from '../../productos/productos-list/producto-conversion.service';
+import { NgSelectComponent } from '@ng-select/ng-select';
 
 @Component({
     selector: 'app-generar-venta',
@@ -43,6 +44,7 @@ import { ProductoConversionService } from '../../productos/productos-list/produc
 
 export class GenerarVentaComponent implements OnInit, OnDestroy {
 
+        @ViewChild('productoSelect', { static: false }) productoSelect!: NgSelectComponent;
     // === CONSTRUCTOR ===
     constructor(
         private productoService: ProductoService,
@@ -65,6 +67,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     simboloMonedaSistema: string = '$';
     private configSubscription!: Subscription;
     monedaEfectivo: string = 'USD';
+    filterInput = new Subject<string>();
 
     dataIsReady = false;
     tareasPendientes = 0;
@@ -221,7 +224,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.productosFiltradosPorSede = this.productos
                 .filter(p =>
                     p.sede?.trim().toLowerCase() === this.sedeActiva &&
-                    p.activo === true
+                    p.activo === true &&
+                    (p.stock ?? 0) > 0
                 )
                 .map(p => ({
                     ...p,
@@ -381,7 +385,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         this.actualizarProductosConDetalle();
-        this.productoSeleccionado = null;
+        this.productoSeleccionado = undefined;
+        this.limpiarSelectProductos();
     }
 
     eliminarProducto(id: string): void {
@@ -1182,162 +1187,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    // === MÉTODO DE GENERACIÓN DE VENTA MEJORADO ===
-    /* async generarVenta(): Promise<void> {
-         // Validaciones iniciales
-         if (!this.puedeGenerarVenta) {
-             this.swalService.showWarning(
-                 'No se puede generar la venta',
-                 'Verifica que todos los campos estén completos y los montos sean correctos.'
-             );
-             return;
-         }
- 
-         if (this.generandoVenta) {
-             return; // Evitar múltiples clics
-         }
- 
-         try {
-             // Resetear estados
-             this.generandoVenta = true;
-             this.generandoRecibo = false;
-             this.ventaGenerada = false;
-             this.errorGeneracion = '';
-             this.urlRecibo = '';
- 
-             // Mostrar loader inicial
-             this.loader.showWithMessage('Iniciando proceso de venta...');
- 
-             // 1. Preparar datos de la venta
-             const datosVenta = this.prepararDatosVenta();
- 
-             console.log('Datos de venta a enviar:', datosVenta);
- 
-             // 2. Generar venta (simulación mientras el API no está listo)
-             await this.simularGeneracionVenta(datosVenta);
- 
-             // 3. Obtener recibo
-             await this.obtenerReciboVenta();
- 
-             // 4. Mostrar éxito y recibo
-             this.mostrarRecibo();
- 
-         } catch (error) {
-             this.manejarErrorGeneracion(error);
-         } finally {
-             this.generandoVenta = false;
-             this.loader.hide();
-         }
-     }*/
-
-    // Método para preparar los datos de la venta - MANTENIDO
-    private prepararDatosVenta(): any {
-        return {
-            productos: this.venta.productos.map(p => ({
-                id: p.id,
-                nombre: p.nombre,
-                codigo: p.codigo,
-                precio: p.precio,
-                precioConIva: p.precioConIva,
-                cantidad: p.cantidad,
-                aplicaIva: p.aplicaIva,
-                moneda: p.moneda
-            })),
-            paciente: this.pacienteSeleccionado ? {
-                id: this.pacienteSeleccionado.key,
-                nombre: this.pacienteSeleccionado.informacionPersonal?.nombreCompleto,
-                cedula: this.pacienteSeleccionado.informacionPersonal?.cedula
-            } : null,
-            asesor: this.asesorSeleccionado ? {
-                id: this.asesorSeleccionado,
-                nombre: this.getResumenAsesor()
-            } : null,
-            configuracion: {
-                moneda: this.venta.moneda,
-                formaPago: this.venta.formaPago,
-                descuento: this.venta.descuento,
-                impuesto: this.venta.impuesto,
-                observaciones: this.venta.observaciones,
-                montoInicial: this.venta.montoInicial,
-                numeroCuotas: this.venta.numeroCuotas,
-                montoAbonado: this.venta.montoAbonado
-            },
-            metodosPago: this.venta.metodosDePago.map(m => ({
-                tipo: m.tipo,
-                monto: m.monto,
-                referencia: m.referencia,
-                banco: m.banco,
-                moneda: this.getMonedaParaMetodo(m.tipo)
-            })),
-            cashea: this.venta.formaPago === 'cashea' ? {
-                nivel: this.nivelCashea,
-                cantidadCuotas: this.cantidadCuotasCashea,
-                cuotasAdelantadas: this.resumenCashea.cantidad,
-                montoAdelantado: this.resumenCashea.total
-            } : null,
-            totales: {
-                subtotal: this.totalProductos,
-                descuento: this.venta.descuento ? (this.totalProductos * (this.venta.descuento / 100)) : 0,
-                iva: this.productosConDetalle.reduce((sum, p) => sum + (p.iva || 0), 0),
-                total: this.montoTotal
-            }
-        };
-    }
-
-    // Simulación de generación de venta - MANTENIDO
-    private async simularGeneracionVenta(datosVenta: any): Promise<void> {
-        this.loader.updateMessage('Procesando transacción...');
-
-        // Simular delay de red
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        this.loader.updateMessage('Validando métodos de pago...');
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        this.loader.updateMessage('Registrando venta en el sistema...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Simular respuesta exitosa del API
-        return Promise.resolve();
-    }
-
-    // Método para obtener el recibo - MEJORADO
-    private async obtenerReciboVenta(): Promise<void> {
-        this.generandoRecibo = true;
-        this.loader.updateMessage('Generando comprobante de pago...');
-
-        try {
-            // Simular generación de PDF - EN PRODUCCIÓN ESTO VENDRÁ DEL API REAL
-            await new Promise(resolve => setTimeout(resolve, 3000));
-
-            // ⚠️ CORREGIR: En lugar de URL de ejemplo, usar una URL real o base64
-            // this.urlRecibo = 'https://example.com/recibos/venta-001.pdf'; // ❌ Esto falla
-
-            // ✅ OPCIÓN 1: Usar un PDF de prueba local (para desarrollo)
-            this.urlRecibo = '/assets/Presupuesto-OPTICA VISION.pdf';
-
-            // ✅ OPCIÓN 2: Generar un PDF base64 (más confiable)
-            // this.urlRecibo = this.generarPDFBase64();
-
-            // ✅ OPCIÓN 3: Esperar a tener una URL real del backend
-            // const respuesta = await this.generarVentaService.generarRecibo(datosVenta);
-            // this.urlRecibo = respuesta.urlRecibo;
-
-            this.informacionVenta = {
-                numeroVenta: 'V-' + Date.now(),
-                fecha: new Date().toLocaleDateString('es-VE'),
-                hora: new Date().toLocaleTimeString('es-VE'),
-                estado: 'Completada'
-            };
-
-            this.generandoRecibo = false;
-            this.ventaGenerada = true;
-        } catch (error) {
-            this.generandoRecibo = false;
-            throw error;
-        }
-    }
-
     // Método simplificado - solo para personalizado
     aplicarTamanoPersonalizado(ancho: string, alto: string): void {
         // Validar formato del ancho
@@ -1416,71 +1265,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 this.ajustarDimensionesModal();
             }, 50);
         }
-    }
-    // Método para mostrar el recibo - ACTUALIZADO
-    private mostrarRecibo(): void {
-        this.loader.updateMessage('¡Venta generada exitosamente!');
-
-        // Resetear a tamaño por defecto
-        //this.tamanoModalRecibo = 'lg';
-
-        setTimeout(() => {
-            this.loader.hide();
-            this.mostrarModalRecibo = true;
-
-            // Ajustar dimensiones después de que el modal se muestre
-            setTimeout(() => {
-                this.ajustarDimensionesModal();
-            }, 100);
-
-            this.cdr.detectChanges();
-            this.cerrarModalResumen();
-        }, 1000);
-    }
-
-    // Método para obtener mensajes de error específicos - MANTENIDO
-    private obtenerMensajeError(error: any): string {
-        if (error?.status === 400) {
-            return 'Los datos de la venta son inválidos. Verifica la información.';
-        } else if (error?.status === 402) {
-            return 'Error en el procesamiento de pago. Verifica los métodos de pago.';
-        } else if (error?.status === 409) {
-            return 'Ya existe una venta con estos datos.';
-        } else if (error?.status === 503) {
-            return 'El servicio de ventas no está disponible temporalmente. Intenta nuevamente.';
-        } else {
-            return 'No se pudo completar la transacción. Intenta nuevamente.';
-        }
-    }
-
-    private manejarErrorImpresion(error: any): void {
-        console.error('Error en impresión:', error);
-        this.swalService.closeLoading();
-
-        this.swalService.showConfirm(
-            'Error al imprimir',
-            `
-        <div class="text-center">
-            <i class="bi bi-printer display-4 text-warning mb-3"></i>
-            <p class="mb-3">No se pudo iniciar la impresión automática.</p>
-            <div class="alert alert-info">
-                <strong>Alternativas:</strong>
-                <ul class="text-start mt-2">
-                    <li>Abre el PDF y usa <kbd>Ctrl + P</kbd></li>
-                    <li>Descarga el PDF e imprímelo manualmente</li>
-                    <li>Verifica que tu navegador permita ventanas emergentes</li>
-                </ul>
-            </div>
-        </div>
-        `,
-            'Abrir PDF',
-            'Cancelar'
-        ).then((result) => {
-            if (result.isConfirmed) {
-                // Abrir PDF en nueva pestaña
-                window.open(this.urlRecibo, '_blank');
-            }
-        });
     }
 
     compartirRecibo(): void {
@@ -1602,8 +1386,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-
-    // Método alternativo para descargas más robustas - CORREGIDO
     async descargarPDFAvanzado(): Promise<void> {
         if (!this.urlRecibo) {
             this.swalService.showError('Error', 'No hay recibo disponible para descargar');
@@ -1719,6 +1501,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (modalElement) {
             modalElement.addEventListener('hidden.bs.modal', () => {
                 this.resetearModalVenta();
+                this.limpiarSelectProductos();
             });
         }
 
@@ -1736,6 +1519,47 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
 
         this.cdr.detectChanges();
+    }
+
+    private limpiarSelectProductos(): void {
+        console.log('🔧 Limpiando select de productos...');
+
+        // 1. Limpiar el modelo
+        this.productoSeleccionado = undefined;
+
+        // 2. Forzar detección de cambios inmediata
+        this.cdr.detectChanges();
+
+        // 3. Usar el ViewChild para limpiar el ng-select
+        setTimeout(() => {
+            if (this.productoSelect) {
+                this.productoSelect.close();
+                this.productoSelect.clearModel();
+                console.log('✅ Select limpiado via ViewChild');
+            }
+
+            // 4. Limpieza visual adicional del DOM
+            this.limpiarVisualmenteSelect();
+
+            this.cdr.detectChanges();
+        }, 100);
+    }
+
+    private limpiarVisualmenteSelect(): void {
+        const selectContainer = document.querySelector('#selectorProducto .ng-select-container');
+        if (!selectContainer) return;
+
+        // Remover cualquier valor visual que pueda quedar
+        const valueElements = selectContainer.querySelectorAll('.ng-value');
+        valueElements.forEach(el => el.remove());
+
+        // Forzar que el placeholder sea visible
+        const placeholder = selectContainer.querySelector('.ng-placeholder');
+        if (placeholder) {
+            placeholder.classList.remove('ng-hide');
+        }
+
+        console.log('✅ Limpieza visual completada');
     }
 
     resetearModalVenta(): void {
@@ -1897,15 +1721,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
     }
 
-
-
-
-
-
-
-
-
-    // Propiedad estable (NO getter)
     bancosDisponibles: Array<{ codigo: string; nombre: string }> = [
         { codigo: '0102', nombre: 'Banco de Venezuela' },
         { codigo: '0134', nombre: 'Banesco' },
@@ -1943,8 +1758,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             referencia: '',
             bancoCodigo: '',
             bancoNombre: '',
-            banco: '',        // string formateado
-            bancoObject: null // objeto banco seleccionado
+            banco: '',
+            bancoObject: null
         });
     }
 
@@ -2167,6 +1982,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             // Mostrar recibo automáticamente
             this.mostrarReciboAutomatico();
+            this.limpiarSelectProductos(); // Limpiar select al cerrar modal
+            this.resetearModalVenta();
 
         } catch (error) {
             console.error('Error al generar venta:', error);
@@ -2838,7 +2655,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         `;
     }
 
-
     // Métodos auxiliares para el HTML
     private getTituloReciboParaHTML(formaPago: string): string {
         switch (formaPago) {
@@ -2876,8 +2692,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    // === OPCIONES DE RECIBO ===
-    // En el método imprimirRecibo(), asegurar que cuotasCashea esté disponible
     imprimirRecibo(): void {
         // Generar cuotas Cashea si no existen
         if (this.venta.formaPago === 'cashea' && (!this.cuotasCashea || this.cuotasCashea.length === 0)) {
@@ -2992,6 +2806,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
      * Cierra el modal de recibo y resetea la venta
      */
     cerrarModalRecibo(): void {
+        this.limpiarSelectProductos();
         this.mostrarModalRecibo = false;
         this.ventaGenerada = false;
         this.datosRecibo = null;
@@ -3017,10 +2832,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return tipos[tipo] || tipo.toUpperCase();
     }
 
-    /**
-   * Resetea toda la venta después de cerrar el recibo
-   */
     private resetearVenta(): void {
+        // Resetear el objeto venta
         this.venta = {
             productos: [],
             moneda: 'dolar',
@@ -3034,13 +2847,24 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             metodosDePago: []
         };
 
+        // Limpiar todas las selecciones
         this.pacienteSeleccionado = null;
-        this.productoSeleccionado = null;
+        this.productoSeleccionado = undefined;
+        this.asesorSeleccionado = this.currentUser?.id ?? null;
+
+        // Resetear Cashea
         this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
         this.cuotasCashea = [];
         this.valorInicialTemporal = '';
         this.valorTemporal = '';
+        this.nivelCashea = 'nivel3';
+        this.cantidadCuotasCashea = 3;
 
+        // Resetear paciente
+        this.requierePaciente = false;
+        this.historiaMedica = null;
+
+        // Actualizar la vista
         this.actualizarProductosConDetalle();
     }
 
@@ -3166,16 +2990,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-
-
-
-
-
-    // === MÉTODOS PARA EL RECIBO DINÁMICO (AGREGAR AL FINAL) ===
-
     /**
-  * Obtiene el título del recibo según la forma de pago REAL
-  */
+    * Obtiene el título del recibo según la forma de pago REAL
+    */
     getTituloRecibo(): string {
         // Usar la forma de pago de los datos del recibo si existe, sino usar la actual
         const formaPago = this.datosRecibo?.configuracion?.formaPago || this.venta.formaPago;

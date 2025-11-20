@@ -205,17 +205,20 @@
                                 <i class="bi bi-search"></i>
                                 Buscar producto
                             </label>
-                            <ng-select id="selectorProducto" [items]="productosFiltradosPorSede" bindLabel="nombre"
-                                [searchable]="true" [clearable]="true" [selectOnTab]="true"
+                            <ng-select #productoSelect id="selectorProducto" [items]="productosFiltradosPorSede" bindLabel="nombre"
+                                [searchable]="true" [clearable]="true" [selectOnTab]="true" [typeahead]="filterInput"
                                 [(ngModel)]="productoSeleccionado" (change)="agregarProductoAlCarrito($event)"
-                                [searchFn]="filtrarProductoPorNombreOCodigo" placeholder="Buscar por nombre o código..."
-                                class="modern-ng-select">
+                                [searchFn]="filtrarProductoPorNombreOCodigo"
+                                placeholder="Seleccione o busque un producto..." class="modern-ng-select">
+
                                 <ng-template ng-option-tmp let-item="item">
                                     <div class="producto-option">
                                         <strong>{{ item.nombre }}</strong>
                                         <small class="text-muted">— {{ item.codigo }}</small>
+                                        <small class="text-muted d-block">Stock: {{ item.stock }}</small>
                                     </div>
                                 </ng-template>
+
                                 <ng-template ng-notfound-tmp>
                                     <div class="not-found-message">
                                         <i class="bi bi-exclamation-circle"></i>
@@ -352,7 +355,8 @@
 </div>
 
 <!-- Modal resumen de  venta -->
-<div class="modal fade" id="resumenVentaModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="resumenVentaModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"
+    data-bs-keyboard="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <!-- Header modernizado -->
