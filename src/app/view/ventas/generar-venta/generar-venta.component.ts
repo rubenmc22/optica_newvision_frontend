@@ -2170,7 +2170,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     // === MÉTODOS DE RECIBO ===
     generarReciboHTML(datos: any): string {
         if (!datos) {
-            datos = this.crearDatosReciboDummy();
+            datos = this.crearDatosReciboReal();
         }
 
         return `
@@ -2394,14 +2394,34 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     </tbody>
                 </table>
                 
+              // En el método generarReciboHTML, actualiza la sección de métodos de pago:
                 <div class="metodos-pago">
                     <div style="font-weight: 600; margin-bottom: 4px; font-size: 10px;">MÉTODOS DE PAGO:</div>
                     ${datos.metodosPago.map((metodo: any) => `
                         <div class="metodo-item">
-                            <span>${this.formatearTipoPago(metodo.tipo)} ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}</span>
-                            <span>${this.formatearMoneda(metodo.monto)}</span>
+                            <span>${this.formatearTipoPago(metodo.tipo)} 
+                            ${metodo.banco ? '- ' + metodo.banco : ''}
+                            ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}</span>
+                            <span>${this.formatearMoneda(metodo.monto)} ${this.obtenerSimboloMoneda(metodo.moneda)}</span>
                         </div>
                     `).join('')}
+                    
+                    ${datos.cashea ? `
+                        <div class="metodo-item" style="border-top: 1px dashed #ccc; padding-top: 4px; margin-top: 4px;">
+                            <span><strong>CASHEA:</strong> ${this.obtenerNombreNivelCashea(datos.cashea.nivel)}</span>
+                            <span></span>
+                        </div>
+                        <div class="metodo-item">
+                            <span>• Inicial pagada</span>
+                            <span>${this.formatearMoneda(datos.cashea.inicial)}</span>
+                        </div>
+                        ${datos.cashea.cuotasAdelantadas > 0 ? `
+                            <div class="metodo-item">
+                                <span>• ${datos.cashea.cuotasAdelantadas} cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</span>
+                                <span>${this.formatearMoneda(datos.cashea.montoAdelantado)}</span>
+                            </div>
+                        ` : ''}
+                    ` : ''}
                 </div>
                 
                 <div class="totales">
@@ -2436,7 +2456,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // === OPCIONES DE RECIBO ===
     imprimirRecibo(): void {
-        const datos = this.datosRecibo || this.crearDatosReciboDummy();
+        const datos = this.datosRecibo || this.crearDatosReciboReal();
         const htmlContent = this.generarReciboHTML(datos);
 
         const ventanaImpresion = window.open('', '_blank', 'width=400,height=600');
@@ -2513,18 +2533,22 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     // === MÉTODOS DEL RECIBO ===
 
     /**
-     * Muestra el modal de recibo automáticamente después de generar la venta
-     */
+ * Muestra el modal de recibo automáticamente después de generar la venta
+ */
     private mostrarReciboAutomatico(): void {
         this.loader.updateMessage('¡Venta generada exitosamente!');
 
-        // Crear datos del recibo
-        this.datosRecibo = this.crearDatosReciboDummy();
+        // Crear datos del recibo con información REAL
+        this.datosRecibo = this.crearDatosReciboReal();
+        // Depurar datos para verificar
+        this.verificarDatosRecibo();
+
         this.informacionVenta = {
             numeroVenta: this.datosRecibo.numeroVenta,
             fecha: this.datosRecibo.fecha,
             hora: this.datosRecibo.hora,
-            estado: 'Completada'
+            estado: 'Completada',
+            formaPago: this.venta.formaPago
         };
 
         setTimeout(() => {
@@ -2566,59 +2590,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Crea datos de ejemplo para el recibo
-     */
-    private crearDatosReciboDummy(): any {
-        const fechaActual = new Date();
-
-        const productos = this.venta?.productos || [];
-        const paciente = this.pacienteSeleccionado || {
-            informacionPersonal: {
-                nombreCompleto: 'CLIENTE GENERAL',
-                cedula: 'N/A',
-                telefono: 'N/A'
-            }
-        };
-
-        const subtotal = this.totalProductos || 0;
-        const descuento = this.venta?.descuento ? (subtotal * (this.venta.descuento / 100)) : 0;
-        const iva = this.productosConDetalle?.reduce((sum, p) => sum + (p.iva || 0), 0) || 0;
-        const total = this.montoTotal || 0;
-        const totalPagado = this.totalPagadoPorMetodos || 0;
-
-        return {
-            numeroVenta: 'V-' + Date.now(),
-            fecha: fechaActual.toLocaleDateString('es-VE'),
-            hora: fechaActual.toLocaleTimeString('es-VE'),
-            vendedor: this.getResumenAsesor() || 'Ruben Dario Martinez Castro — Gerente',
-            cliente: {
-                nombre: paciente.informacionPersonal?.nombreCompleto || 'CLIENTE GENERAL',
-                cedula: paciente.informacionPersonal?.cedula || 'N/A',
-                telefono: paciente.informacionPersonal?.telefono || 'N/A'
-            },
-            productos: productos.map(p => ({
-                nombre: p.nombre || 'Lentes de prueba',
-                cantidad: p.cantidad || 1,
-                precioUnitario: p.precio || 25.09,
-                subtotal: (p.precio || 25.09) * (p.cantidad || 1)
-            })),
-            metodosPago: (this.venta?.metodosDePago || []).map(m => ({
-                tipo: m.tipo || 'efectivo',
-                monto: m.monto || 29.00
-            })),
-            totales: {
-                subtotal: subtotal,
-                descuento: descuento,
-                iva: iva,
-                total: total,
-                totalPagado: totalPagado
-            }
-        };
-    }
-
-    /**
-     * Resetea toda la venta después de cerrar el recibo
-     */
+   * Resetea toda la venta después de cerrar el recibo
+   */
     private resetearVenta(): void {
         this.venta = {
             productos: [],
@@ -2648,7 +2621,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
  * Descarga el recibo como PDF
  */
     descargarPDF(): void {
-        const datos = this.datosRecibo || this.crearDatosReciboDummy();
+        const datos = this.datosRecibo || this.crearDatosReciboReal();
         const htmlContent = this.generarReciboHTML(datos);
 
         const ventana = window.open('', '_blank', 'width=400,height=600');
@@ -2684,22 +2657,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Comparte por WhatsApp
-     */
-    compartirWhatsApp(): void {
-        const datos = this.datosRecibo || this.crearDatosReciboDummy();
-        const mensaje = `¡Hola! Te comparto el recibo de la venta ${datos.numeroVenta} por un total de ${this.formatearMoneda(datos.totales.totalPagado)}. ¡Gracias por tu compra!`;
-        const urlWhatsApp = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
-
-        window.open(urlWhatsApp, '_blank');
-        this.swalService.showSuccess('Éxito', 'Redirigiendo a WhatsApp...');
-    }
-
-    /**
      * Comparte por Email
      */
     compartirEmail(): void {
-        const datos = this.datosRecibo || this.crearDatosReciboDummy();
+        const datos = this.datosRecibo || this.crearDatosReciboReal();
         const asunto = `Recibo de Venta ${datos.numeroVenta}`;
         const cuerpo = `Hola,\n\nTe comparto los detalles de la venta ${datos.numeroVenta}:\n- Total: ${this.formatearMoneda(datos.totales.totalPagado)}\n- Fecha: ${datos.fecha}\n- Cliente: ${datos.cliente.nombre}\n\n¡Gracias por tu preferencia!`;
 
@@ -2711,7 +2672,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
      * Copia enlace del recibo
      */
     async copiarEnlace(): Promise<void> {
-        const datos = this.datosRecibo || this.crearDatosReciboDummy();
+        const datos = this.datosRecibo || this.crearDatosReciboReal();
         const texto = `Recibo de Venta ${datos.numeroVenta} - Total: ${this.formatearMoneda(datos.totales.totalPagado)} - Fecha: ${datos.fecha}`;
 
         try {
@@ -2723,29 +2684,381 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-
-
     getProductosSeguros(): any[] {
-        return this.datosRecibo?.productos || [];
+        return this.datosRecibo?.productos || this.venta.productos.map(p => ({
+            nombre: p.nombre,
+            cantidad: p.cantidad,
+            precioUnitario: p.precio,
+            subtotal: (p.precio || 0) * (p.cantidad || 1)
+        }));
     }
 
     getMetodosPagoSeguros(): any[] {
-        return this.datosRecibo?.metodosPago || [];
+        return this.datosRecibo?.metodosPago || this.venta.metodosDePago.map(m => ({
+            tipo: m.tipo,
+            monto: m.monto,
+            referencia: m.referencia,
+            banco: m.banco
+        }));
     }
 
     getSubtotalSeguro(): number {
-        return this.datosRecibo?.totales?.subtotal || 0;
+        return this.datosRecibo?.totales?.subtotal || this.totalProductos;
     }
 
     getDescuentoSeguro(): number {
-        return this.datosRecibo?.totales?.descuento || 0;
+        return this.datosRecibo?.totales?.descuento ||
+            (this.venta.descuento ? (this.totalProductos * (this.venta.descuento / 100)) : 0);
     }
 
     getIvaSeguro(): number {
-        return this.datosRecibo?.totales?.iva || 0;
+        return this.datosRecibo?.totales?.iva ||
+            this.productosConDetalle.reduce((sum, p) => sum + (p.iva || 0), 0);
     }
 
     getTotalPagadoSeguro(): number {
-        return this.datosRecibo?.totales?.totalPagado || 0;
+        if (this.datosRecibo?.totales?.totalPagado) {
+            return this.datosRecibo.totales.totalPagado;
+        }
+
+        // Calcular basado en la forma de pago actual
+        switch (this.venta.formaPago) {
+            case 'contado':
+                return this.totalPagadoPorMetodos;
+            case 'abono':
+                return this.venta.montoAbonado || 0;
+            case 'cashea':
+                return this.totalPagadoCashea;
+            default:
+                return this.totalPagadoPorMetodos;
+        }
+    }
+
+
+
+
+
+
+    // === MÉTODOS PARA EL RECIBO DINÁMICO (AGREGAR AL FINAL) ===
+
+    /**
+  * Obtiene el título del recibo según la forma de pago REAL
+  */
+    getTituloRecibo(): string {
+        // Usar la forma de pago de los datos del recibo si existe, sino usar la actual
+        const formaPago = this.datosRecibo?.configuracion?.formaPago || this.venta.formaPago;
+
+        //console.log('formaPago', formaPago);
+
+        switch (formaPago) {
+            case 'abono':
+                return 'RECIBO DE ABONO';
+            case 'cashea':
+                return 'RECIBO DE PAGO - CASHEA';
+            case 'contado':
+            default:
+                return 'RECIBO DE PAGO';
+        }
+    }
+    /**
+     * Obtiene el texto para el total pagado según la forma de pago
+     */
+    /**
+   * Obtiene el texto para el total pagado según la forma de pago REAL
+   */
+    getTextoTotalPagado(): string {
+        const formaPago = this.datosRecibo?.configuracion?.formaPago || this.venta.formaPago;
+
+        switch (formaPago) {
+            case 'abono':
+                return 'TOTAL ABONADO';
+            case 'cashea':
+                return 'TOTAL PAGADO AHORA';
+            case 'contado':
+            default:
+                return 'TOTAL PAGADO';
+        }
+    }
+
+    /**
+     * Obtiene el mensaje final según la forma de pago
+     */
+    getMensajeFinal(): string {
+        switch (this.venta.formaPago) {
+            case 'abono':
+                return '¡Gracias por su abono! Conserve este comprobante';
+            case 'cashea':
+                return '¡Gracias por su compra! Plan Cashea activado';
+            case 'contado':
+            default:
+                return '¡Gracias por su compra! Conserve este comprobante';
+        }
+    }
+
+    /**
+     * Calcula la deuda pendiente para Cashea
+     */
+    getDeudaPendienteCashea(): number {
+        if (this.venta.formaPago !== 'cashea') return 0;
+
+        const total = this.montoTotal;
+        const pagadoAhora = this.totalPagadoCashea;
+
+        return Math.max(total - pagadoAhora, 0);
+    }
+
+    /**
+     * Calcula la deuda pendiente para Abono
+     */
+    getDeudaPendienteAbono(): number {
+        if (this.venta.formaPago !== 'abono') return 0;
+
+        const total = this.montoTotal;
+        const abonado = this.venta.montoAbonado || 0;
+
+        return Math.max(total - abonado, 0);
+    }
+
+    /**
+  * Crea datos del recibo basados en la información real de la venta
+  */
+    private crearDatosReciboReal(): any {
+        const fechaActual = new Date();
+
+        // Obtener información de la sede del usuario actual
+        const sedeInfo = this.currentUser?.sede || 'Sede Principal';
+        const telefonoSede = '0212-365-39-42';
+        const rifSede = 'J-123456789';
+
+        // Calcular totales reales
+        const subtotal = this.totalProductos || 0;
+        const descuento = this.venta?.descuento ? (subtotal * (this.venta.descuento / 100)) : 0;
+        const iva = this.productosConDetalle?.reduce((sum, p) => sum + (p.iva || 0), 0) || 0;
+        const total = this.montoTotal || 0;
+
+        // Determinar el total pagado según la forma de pago REAL
+        let totalPagado = 0;
+        switch (this.venta.formaPago) {
+            case 'contado':
+                totalPagado = this.totalPagadoPorMetodos;
+                break;
+            case 'abono':
+                totalPagado = this.venta.montoAbonado || 0;
+                break;
+            case 'cashea':
+                totalPagado = this.totalPagadoCashea;
+                break;
+            default:
+                totalPagado = this.totalPagadoPorMetodos;
+        }
+
+        // Obtener productos con detalles calculados
+        const productosConDetalles = this.obtenerProductosConDetalles();
+
+        // Crear objeto base del recibo
+        const datosRecibo: any = {
+            // Información general
+            numeroVenta: 'V-' + Date.now().toString().slice(-6),
+            fecha: fechaActual.toLocaleDateString('es-VE'),
+            hora: fechaActual.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
+            vendedor: this.getResumenAsesor() || 'Vendedor',
+
+            // Información de la sede
+            sede: {
+                nombre: sedeInfo,
+                direccion: 'C.C. Candelaria, Local PB-04, Guarenas',
+                telefono: telefonoSede,
+                rif: rifSede,
+                email: 'newvisionlens2020@gmail.com'
+            },
+
+            // Información del cliente
+            cliente: {
+                nombre: this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'CLIENTE GENERAL',
+                cedula: this.pacienteSeleccionado?.informacionPersonal?.cedula || 'N/A',
+                telefono: this.pacienteSeleccionado?.informacionPersonal?.telefono || 'N/A'
+            },
+
+            // Productos reales del carrito con detalles calculados
+            productos: productosConDetalles,
+
+            // Métodos de pago reales
+            metodosPago: this.venta.metodosDePago.map(m => ({
+                tipo: m.tipo || 'efectivo',
+                monto: m.monto || 0,
+                referencia: m.referencia || '',
+                banco: m.banco || '',
+                moneda: this.getMonedaParaMetodo(m.tipo)
+            })),
+
+            // Totales reales
+            totales: {
+                subtotal: subtotal,
+                descuento: descuento,
+                iva: iva,
+                total: total,
+                totalPagado: totalPagado
+            },
+
+            // Configuración de la venta - INCLUIR FORMA DE PAGO REAL
+            configuracion: {
+                formaPago: this.venta.formaPago, // ← ESTA ES LA CLAVE
+                moneda: this.venta.moneda,
+                descuento: this.venta.descuento,
+                observaciones: this.venta.observaciones
+            }
+        };
+
+        // Agregar información específica para Cashea
+        if (this.venta.formaPago === 'cashea') {
+            datosRecibo.cashea = {
+                nivel: this.nivelCashea,
+                inicial: this.venta.montoInicial || 0,
+                cuotasAdelantadas: this.resumenCashea.cantidad,
+                montoAdelantado: this.resumenCashea.total,
+                cantidadCuotas: this.cantidadCuotasCashea,
+                montoPorCuota: this.montoPrimeraCuota,
+                deudaPendiente: this.getDeudaPendienteCashea()
+            };
+        }
+
+        // Agregar información específica para Abono
+        if (this.venta.formaPago === 'abono') {
+            datosRecibo.abono = {
+                montoAbonado: this.venta.montoAbonado || 0,
+                deudaPendiente: this.getDeudaPendienteAbono(),
+                porcentajePagado: this.porcentajeAbonadoDelTotal,
+                // Agregar array de abonos para estructura de tabla
+                abonos: [
+                    {
+                        fecha: fechaActual.toLocaleDateString('es-VE'),
+                        monto: this.venta.montoAbonado || 0,
+                        numero: 1
+                    }
+                ]
+            };
+        }
+
+        return datosRecibo;
+    }
+
+    /**
+     * Obtiene los productos con sus detalles calculados
+     */
+    private obtenerProductosConDetalles(): any[] {
+        return this.venta.productos.map((p, index) => {
+            // Buscar el producto en productosConDetalle
+            const productoCalculado = this.productosConDetalle.find(pc => pc.id === p.id);
+
+            // Si encontramos el producto calculado, usar esos datos
+            if (productoCalculado) {
+                return {
+                    nombre: p.nombre || 'Producto',
+                    codigo: p.codigo || 'N/A',
+                    cantidad: p.cantidad || 1,
+                    precioUnitario: p.precio || 0,
+                    precioConIva: p.precioConIva || 0,
+                    subtotal: productoCalculado.subtotal || 0,
+                    iva: productoCalculado.iva || 0,
+                    total: productoCalculado.total || 0,
+                    aplicaIva: p.aplicaIva || false,
+                    moneda: p.moneda
+                };
+            }
+
+            // Si no encontramos el producto calculado, calcular los valores manualmente
+            /*  const cantidad = p.cantidad || 1;
+              const precioUnitario = p.precio || 0;
+              const subtotal = precioUnitario * cantidad;
+              const iva = p.aplicaIva ? subtotal * (this.ivaPorcentaje / 100) : 0;
+              const total = subtotal + iva;*/
+
+            return {
+                nombre: p.nombre || 'Producto',
+                codigo: p.codigo || 'N/A',
+                cantidad: p.cantidad,
+                precioUnitario: p.precio,
+                precioConIva: p.precioConIva || 0,
+                subtotal: productoCalculado.subtotal,
+                iva: productoCalculado.iva,
+                total: productoCalculado.total,
+                aplicaIva: p.aplicaIva || false,
+                moneda: p.moneda
+            };
+        });
+    }
+
+    /**
+     * Compartir por WhatsApp mejorado con información específica
+     */
+    compartirWhatsApp(): void {
+        const datos = this.datosRecibo || this.crearDatosReciboReal();
+
+        let mensaje = `*NEW VISION LENS* 🛍️\n\n`;
+        mensaje += `*${this.getTituloRecibo()}:* ${datos.numeroVenta}\n`;
+        mensaje += `*Fecha:* ${datos.fecha}\n`;
+        mensaje += `*Hora:* ${datos.hora}\n`;
+        mensaje += `*Cliente:* ${datos.cliente.nombre}\n`;
+        mensaje += `*Cédula:* ${datos.cliente.cedula}\n`;
+
+        // Información específica por tipo de pago
+        switch (this.venta.formaPago) {
+            case 'abono':
+                mensaje += `*Forma de pago:* ABONO PARCIAL\n`;
+                mensaje += `*Monto abonado:* ${this.formatearMoneda(datos.totales.totalPagado)}\n`;
+                mensaje += `*Deuda pendiente:* ${this.formatearMoneda(this.getDeudaPendienteAbono())}\n`;
+                mensaje += `*Porcentaje pagado:* ${Math.round(this.porcentajeAbonadoDelTotal)}%\n\n`;
+                mensaje += `¡Gracias por su abono! 🎉\n`;
+                break;
+
+            case 'cashea':
+                mensaje += `*Forma de pago:* CASHEA\n`;
+                mensaje += `*Nivel:* ${this.obtenerNombreNivelCashea(this.nivelCashea)}\n`;
+                mensaje += `*Total pagado ahora:* ${this.formatearMoneda(datos.totales.totalPagado)}\n`;
+                mensaje += `*Inicial:* ${this.formatearMoneda(this.venta.montoInicial)}\n`;
+                if (this.resumenCashea.cantidad > 0) {
+                    mensaje += `*Cuotas adelantadas:* ${this.resumenCashea.cantidad}\n`;
+                }
+                mensaje += `*Deuda pendiente:* ${this.formatearMoneda(this.getDeudaPendienteCashea())}\n`;
+                mensaje += `*Cuotas restantes:* ${this.cantidadCuotas - this.resumenCashea.cantidad}\n\n`;
+                mensaje += `¡Plan Cashea activado! 📅\n`;
+                break;
+
+            case 'contado':
+            default:
+                mensaje += `*Forma de pago:* CONTADO\n`;
+                mensaje += `*Total pagado:* ${this.formatearMoneda(datos.totales.totalPagado)}\n\n`;
+                mensaje += `¡Pago completado! ✅\n`;
+        }
+
+        // Métodos de pago utilizados
+        if (datos.metodosPago && datos.metodosPago.length > 0) {
+            mensaje += `\n*Métodos de pago:*\n`;
+            datos.metodosPago.forEach((metodo: any) => {
+                mensaje += `• ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.monto)}\n`;
+            });
+        }
+
+        mensaje += `\nConserve este comprobante para cualquier reclamo.`;
+
+        const urlWhatsApp = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+        window.open(urlWhatsApp, '_blank');
+
+        this.swalService.showSuccess('Compartir', 'Redirigiendo a WhatsApp...');
+    }
+
+
+    /**
+ * Método para depurar y verificar los datos del recibo
+ */
+    private verificarDatosRecibo(): void {
+        console.log('=== DEPURACIÓN DATOS RECIBO ===');
+        console.log('Forma de pago en venta:', this.venta.formaPago);
+        console.log('Forma de pago en datosRecibo:', this.datosRecibo?.configuracion?.formaPago);
+        console.log('Datos Cashea:', this.datosRecibo?.cashea);
+        console.log('Nivel Cashea:', this.nivelCashea);
+        console.log('Monto inicial:', this.venta.montoInicial);
+        console.log('Total pagado Cashea:', this.totalPagadoCashea);
+        console.log('==============================');
     }
 }

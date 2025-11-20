@@ -2452,7 +2452,7 @@ input:checked+.slider:before {
 // =============================================
 
 .modal-dialog{
-    
+
 }
 .recibo-compacto {
     .modal-dialog {
@@ -2649,3 +2649,181 @@ input:checked+.slider:before {
         }
     }
 }
+
+
+
+
+// === ESTILOS PARA EL RECIBO DINÁMICO (AGREGAR AL FINAL) ===
+
+// Estilos para la sección de resumen de venta
+.resumen-venta {
+    .resumen-contado,
+    .resumen-cashea,
+    .resumen-abono {
+        background: #f8f9fa;
+        padding: 0.75rem;
+        border-radius: 4px;
+        border-left: 3px solid #2c5aa0;
+    }
+
+    .resumen-cashea {
+        border-left-color: #17a2b8; // Color info para Cashea
+    }
+
+    .resumen-abono {
+        border-left-color: #ffc107; // Color warning para Abono
+    }
+
+    .progress {
+        background-color: #e9ecef;
+        
+        .progress-bar {
+            transition: width 0.6s ease;
+            
+            &.progress-completo {
+                background: linear-gradient(135deg, #28a745, #20c997) !important;
+            }
+        }
+    }
+
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+// Estilos para los totales
+.totales-compactos {
+    .table-success {
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        
+        td {
+            font-weight: 700;
+            color: #155724;
+        }
+    }
+}
+
+// Responsive mejorado
+@media (max-width: 768px) {
+    .resumen-venta {
+        .row > div {
+            margin-bottom: 0.5rem;
+        }
+        
+        .col-6 {
+            width: 100% !important;
+            text-align: left !important;
+            
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
+    }
+}
+
+
+
+
+/* Estilos para la versión profesional */
+.resumen-abono, .resumen-cashea {
+    .abonos-section, .pagos-section, .cuotas-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid #e9ecef;
+    }
+
+    .abono-item, .pago-item, .cuota-item {
+        transition: background-color 0.2s;
+        
+        &:hover {
+            background-color: #ffffff;
+        }
+    }
+
+    .total-abonado, .pago-total, .resumen-cuotas {
+        background: #ffffff;
+        border-radius: 4px;
+        padding: 8px;
+    }
+
+    .deuda-section, .progreso-section {
+        padding: 12px;
+        background: #ffffff;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 8px;
+    }
+
+    .deuda-label, .progreso-label {
+        font-size: 0.7rem;
+        letter-spacing: 0.5px;
+    }
+
+    .deuda-monto, .progreso-porcentaje {
+        letter-spacing: 0.5px;
+    }
+
+    .progress {
+        border-radius: 10px;
+        overflow: hidden;
+        
+        .progress-bar {
+            border-radius: 10px;
+            transition: width 0.6s ease;
+        }
+    }
+
+    /* Estados de cuotas Cashea */
+    .badge-pagada {
+        background-color: #198754;
+        color: white;
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+
+    .badge-adelantada {
+        background-color: #0dcaf0;
+        color: white;
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+
+    .badge-pendiente {
+        background-color: #6c757d;
+        color: white;
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+
+    .cuota-info {
+        text-align: left !important;
+        
+        small {
+            display: block;
+            font-size: 0.65rem;
+        }
+    }
+}
+
+/* Asegurar que todo esté centrado */
+.text-center {
+    text-align: center !important;
+}
+
+.w-50 {
+    width: 50% !important;
+}
+
+.w-60 {
+    width: 60% !important;
+}
+
+.w-40 {
+    width: 40% !important;
+}
+
+
+
+
