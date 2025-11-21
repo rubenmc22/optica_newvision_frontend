@@ -1992,36 +1992,20 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
 
+        // Determinar el estado según la forma de pago y el monto pagado
         let estadoVenta = 'completada';
 
         if (this.venta.formaPago === 'abono') {
-            // Para abono, verificar si se pagó el monto total
             const montoAbonado = this.venta.montoAbonado || 0;
             const montoTotal = this.montoTotal;
             const diferencia = Math.abs(montoAbonado - montoTotal);
-
-            // Si hay diferencia mayor a 0.01, está pendiente
             estadoVenta = diferencia < 0.01 ? 'completada' : 'pendiente';
         } else if (this.venta.formaPago === 'cashea') {
-            // Para Cashea, verificar si se pagó el total requerido (inicial + cuotas adelantadas)
             const totalPagadoCashea = this.totalPagadoCashea;
             const montoTotal = this.montoTotal;
             const diferencia = Math.abs(totalPagadoCashea - montoTotal);
-
-            // Si hay diferencia mayor a 0.01, está pendiente
             estadoVenta = diferencia < 0.01 ? 'completada' : 'pendiente';
         }
-        // Para 'contado' siempre es completada porque requiere pago completo
-
-        console.log('🔍 Estado calculado:', {
-            formaPago: this.venta.formaPago,
-            estado: estadoVenta,
-            montoTotal: this.montoTotal,
-            montoAbonado: this.venta.montoAbonado,
-            totalPagadoCashea: this.totalPagadoCashea,
-            diferenciaAbono: this.venta.formaPago === 'abono' ? Math.abs((this.venta.montoAbonado || 0) - this.montoTotal) : null,
-            diferenciaCashea: this.venta.formaPago === 'cashea' ? Math.abs(this.totalPagadoCashea - this.montoTotal) : null
-        });
 
         // Preparar datos del cliente
         let clienteData: any = {};
@@ -2029,7 +2013,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             clienteData = {
                 tipo: 'paciente',
                 informacion: {
-                    tipoPersona: 'natural',
                     nombreCompleto: this.pacienteSeleccionado.informacionPersonal?.nombreCompleto,
                     cedula: this.pacienteSeleccionado.informacionPersonal?.cedula,
                     telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
@@ -2049,7 +2032,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             };
         }
 
-        // Preparar productos (solo IDs y datos esenciales)
         const productosData = this.venta.productos.map(producto => ({
             productoId: producto.id,
             cantidad: producto.cantidad,
@@ -2122,19 +2104,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 break;
         }
 
-        // Estructura completa para el API (simplificada)
+        // Estructura completa para el API
         const datosParaAPI = {
-            // Información general de venta
             venta: {
                 fecha: fechaActual.toISOString(),
-                estado: estadoVenta, // ← ESTADO CALCULADO AUTOMÁTICAMENTE
+                estado: estadoVenta,
                 formaPago: this.venta.formaPago,
                 moneda: this.venta.moneda,
                 observaciones: this.venta.observaciones || null,
                 impuesto: this.venta.impuesto
             },
-
-            // Totales
             totales: {
                 subtotal: this.totalProductos,
                 descuento: this.venta.descuento ? (this.totalProductos * (this.venta.descuento / 100)) : 0,
@@ -2142,25 +2121,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 total: this.montoTotal,
                 totalPagado: this.totalPagadoPorMetodos
             },
-
-            // Cliente
             cliente: clienteData,
-
-            // Asesor (solo ID)
             asesor: {
                 id: parseInt(this.asesorSeleccionado || '0')
             },
-
-            // Productos (solo IDs y datos esenciales)
             productos: productosData,
-
-            // Métodos de pago
             metodosPago: metodosPagoData,
-
-            // Datos específicos de la forma de pago
             formaPago: formaPagoData,
-
-            // Información adicional
             auditoria: {
                 usuarioCreacion: parseInt(this.currentUser?.id || '0'),
                 fechaCreacion: fechaActual.toISOString()
