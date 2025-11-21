@@ -1989,6 +1989,49 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.redondear(this.obtenerEquivalenteBs(this.totalPagadoCashea));
     }
 
+    private parsearFechaCuota(fechaString: string): Date {
+        try {
+            // Formato: "vie, 13 de febrero de 2026"
+            const partes = fechaString.split(', ');
+            if (partes.length > 1) {
+                const fechaParte = partes[1]; // "13 de febrero de 2026"
+
+                // Mapear nombres de meses en español
+                const meses: { [key: string]: number } = {
+                    'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3,
+                    'mayo': 4, 'junio': 5, 'julio': 6, 'agosto': 7,
+                    'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
+                };
+
+                const fechaPartes = fechaParte.split(' de ');
+                if (fechaPartes.length === 3) {
+                    const dia = parseInt(fechaPartes[0]);
+                    const mes = meses[fechaPartes[1].toLowerCase()];
+                    const año = parseInt(fechaPartes[2]);
+
+                    if (!isNaN(dia) && mes !== undefined && !isNaN(año)) {
+                        const fecha = new Date(año, mes, dia);
+                        return fecha;
+                    }
+                }
+            }
+
+            // Fallback: intentar parsear como fecha estándar
+            const fechaFallback = new Date(fechaString);
+            if (!isNaN(fechaFallback.getTime())) {
+                return fechaFallback;
+            }
+
+            // Fallback final: fecha muy futura para marcar como pendiente
+            console.warn('⚠️ Usando fecha fallback para:', fechaString);
+            return new Date(2030, 0, 1);
+        } catch (error) {
+            console.error('❌ Error al parsear fecha de cuota:', fechaString, error);
+            // Fallback: fecha muy futura para marcar como pendiente
+            return new Date(2030, 0, 1);
+        }
+    }
+
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
 
@@ -2001,10 +2044,22 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const diferencia = Math.abs(montoAbonado - montoTotal);
             estadoVenta = diferencia < 0.01 ? 'completada' : 'pendiente';
         } else if (this.venta.formaPago === 'cashea') {
-            const totalPagadoCashea = this.totalPagadoCashea;
-            const montoTotal = this.montoTotal;
-            const diferencia = Math.abs(totalPagadoCashea - montoTotal);
-            estadoVenta = diferencia < 0.01 ? 'completada' : 'pendiente';
+            //Determinar estado por fecha de última cuota
+            if (this.cuotasCashea && this.cuotasCashea.length > 0) {
+                // Obtener la fecha de la última cuota
+                const ultimaCuota = this.cuotasCashea[this.cuotasCashea.length - 1];
+                const fechaUltimaCuota = this.parsearFechaCuota(ultimaCuota.fecha);
+
+                // Si la fecha actual es posterior a la fecha de la última cuota, está completada
+                estadoVenta = fechaActual > fechaUltimaCuota ? 'completada' : 'pendiente';
+
+            } else {
+                // Si no hay cuotas, usar lógica de monto como fallback
+                const totalPagadoCashea = this.totalPagadoCashea;
+                const montoTotal = this.montoTotal;
+                const diferencia = Math.abs(totalPagadoCashea - montoTotal);
+                estadoVenta = diferencia < 0.01 ? 'completada' : 'pendiente';
+            }
         }
 
         // Preparar datos del cliente
