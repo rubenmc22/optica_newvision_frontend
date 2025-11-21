@@ -1989,6 +1989,187 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.redondear(this.obtenerEquivalenteBs(this.totalPagadoCashea));
     }
 
+    prepararDatosParaAPI(): any {
+        const fechaActual = new Date();
+
+        let estadoVenta = 'completada';
+
+        if (this.venta.formaPago === 'abono') {
+            // Para abono, verificar si se pagó el monto total
+            const montoAbonado = this.venta.montoAbonado || 0;
+            const montoTotal = this.montoTotal;
+            const diferencia = Math.abs(montoAbonado - montoTotal);
+
+            // Si hay diferencia mayor a 0.01, está pendiente
+            estadoVenta = diferencia < 0.01 ? 'completada' : 'pendiente';
+        } else if (this.venta.formaPago === 'cashea') {
+            // Para Cashea, verificar si se pagó el total requerido (inicial + cuotas adelantadas)
+            const totalPagadoCashea = this.totalPagadoCashea;
+            const montoTotal = this.montoTotal;
+            const diferencia = Math.abs(totalPagadoCashea - montoTotal);
+
+            // Si hay diferencia mayor a 0.01, está pendiente
+            estadoVenta = diferencia < 0.01 ? 'completada' : 'pendiente';
+        }
+        // Para 'contado' siempre es completada porque requiere pago completo
+
+        console.log('🔍 Estado calculado:', {
+            formaPago: this.venta.formaPago,
+            estado: estadoVenta,
+            montoTotal: this.montoTotal,
+            montoAbonado: this.venta.montoAbonado,
+            totalPagadoCashea: this.totalPagadoCashea,
+            diferenciaAbono: this.venta.formaPago === 'abono' ? Math.abs((this.venta.montoAbonado || 0) - this.montoTotal) : null,
+            diferenciaCashea: this.venta.formaPago === 'cashea' ? Math.abs(this.totalPagadoCashea - this.montoTotal) : null
+        });
+
+        // Preparar datos del cliente
+        let clienteData: any = {};
+        if (this.requierePaciente && this.pacienteSeleccionado) {
+            clienteData = {
+                tipo: 'paciente',
+                informacion: {
+                    tipoPersona: 'natural',
+                    nombreCompleto: this.pacienteSeleccionado.informacionPersonal?.nombreCompleto,
+                    cedula: this.pacienteSeleccionado.informacionPersonal?.cedula,
+                    telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
+                    email: this.pacienteSeleccionado.informacionPersonal?.email
+                }
+            };
+        } else if (!this.requierePaciente) {
+            clienteData = {
+                tipo: 'cliente_general',
+                informacion: {
+                    tipoPersona: this.clienteSinPaciente.tipoPersona,
+                    nombreCompleto: this.clienteSinPaciente.nombreCompleto,
+                    cedula: this.clienteSinPaciente.cedula,
+                    telefono: this.clienteSinPaciente.telefono,
+                    email: this.clienteSinPaciente.email
+                }
+            };
+        }
+
+        // Preparar productos (solo IDs y datos esenciales)
+        const productosData = this.venta.productos.map(producto => ({
+            productoId: producto.id,
+            cantidad: producto.cantidad,
+            moneda: producto.moneda
+        }));
+
+        // Preparar métodos de pago
+        const metodosPagoData = this.venta.metodosDePago.map(metodo => ({
+            tipo: metodo.tipo,
+            monto: metodo.monto,
+            moneda: this.getMonedaParaMetodo(metodo.tipo),
+            referencia: metodo.referencia || null,
+            bancoCodigo: metodo.bancoCodigo || null,
+            bancoNombre: metodo.bancoNombre || null
+        }));
+
+        // Preparar datos específicos por forma de pago
+        let formaPagoData: any = {};
+        switch (this.venta.formaPago) {
+            case 'contado':
+                formaPagoData = {
+                    tipo: 'contado',
+                    montoTotal: this.montoTotal,
+                    montoInicial: 0,
+                    cantidadCuotas: "0",
+                    montoPorCuota: 0,
+                    cuotasAdelantadas: 0,
+                    montoAdelantado: 0,
+                    totalPagadoAhora: this.totalPagadoPorMetodos,
+                    deudaPendiente: 0,
+                    cuotas: []
+                };
+                break;
+
+            case 'abono':
+                formaPagoData = {
+                    tipo: 'abono',
+                    montoTotal: this.montoTotal,
+                    montoInicial: this.venta.montoAbonado,
+                    cantidadCuotas: "0",
+                    montoPorCuota: 0,
+                    cuotasAdelantadas: 0,
+                    montoAdelantado: 0,
+                    totalPagadoAhora: this.venta.montoAbonado,
+                    deudaPendiente: this.getDeudaPendienteAbono(),
+                    cuotas: []
+                };
+                break;
+
+            case 'cashea':
+                formaPagoData = {
+                    tipo: 'cashea',
+                    nivel: this.nivelCashea,
+                    montoTotal: this.montoTotal,
+                    montoInicial: this.venta.montoInicial,
+                    cantidadCuotas: this.cantidadCuotasCashea.toString(),
+                    montoPorCuota: this.montoPrimeraCuota,
+                    cuotasAdelantadas: this.resumenCashea.cantidad,
+                    montoAdelantado: this.resumenCashea.total,
+                    totalPagadoAhora: this.totalPagadoCashea,
+                    deudaPendiente: this.getDeudaPendienteCashea(),
+                    cuotas: this.cuotasCashea.map(cuota => ({
+                        numero: cuota.id,
+                        fecha: cuota.fecha,
+                        monto: cuota.monto,
+                        pagada: cuota.pagada,
+                        seleccionada: cuota.seleccionada
+                    }))
+                };
+                break;
+        }
+
+        // Estructura completa para el API (simplificada)
+        const datosParaAPI = {
+            // Información general de venta
+            venta: {
+                fecha: fechaActual.toISOString(),
+                estado: estadoVenta, // ← ESTADO CALCULADO AUTOMÁTICAMENTE
+                formaPago: this.venta.formaPago,
+                moneda: this.venta.moneda,
+                observaciones: this.venta.observaciones || null,
+                impuesto: this.venta.impuesto
+            },
+
+            // Totales
+            totales: {
+                subtotal: this.totalProductos,
+                descuento: this.venta.descuento ? (this.totalProductos * (this.venta.descuento / 100)) : 0,
+                iva: this.productosConDetalle.reduce((sum, p) => sum + (p.iva || 0), 0),
+                total: this.montoTotal,
+                totalPagado: this.totalPagadoPorMetodos
+            },
+
+            // Cliente
+            cliente: clienteData,
+
+            // Asesor (solo ID)
+            asesor: {
+                id: parseInt(this.asesorSeleccionado || '0')
+            },
+
+            // Productos (solo IDs y datos esenciales)
+            productos: productosData,
+
+            // Métodos de pago
+            metodosPago: metodosPagoData,
+
+            // Datos específicos de la forma de pago
+            formaPago: formaPagoData,
+
+            // Información adicional
+            auditoria: {
+                usuarioCreacion: parseInt(this.currentUser?.id || '0'),
+                fechaCreacion: fechaActual.toISOString()
+            }
+        };
+
+        return datosParaAPI;
+    }
+
     // === MÉTODOS DE VENTA Y RECIBO ===
     async generarVenta(): Promise<void> {
         if (!this.puedeGenerarVenta) {
@@ -2007,7 +2188,25 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.generandoVenta = true;
             this.loader.showWithMessage('Procesando venta...');
 
-            // Simular proceso de venta
+            // 1. Preparar datos para el API
+            const datosParaAPI = this.prepararDatosParaAPI();
+            console.log('datosParaAPI', datosParaAPI);
+
+            // 2. Aquí iría la llamada real al servicio cuando el backend esté listo
+            console.log('🚀 ENVIANDO DATOS AL BACKEND...');
+            /*
+            // DESCOMENTAR CUANDO EL BACKEND ESTÉ LISTO:
+            const resultado = await this.generarVentaService.crearVenta(datosParaAPI).toPromise();
+            
+            if (resultado.exito) {
+                this.swalService.showSuccess('Venta Generada', `Venta ${resultado.numeroVenta} creada exitosamente`);
+                this.mostrarReciboAutomatico();
+            } else {
+                throw new Error(resultado.mensaje || 'Error al generar la venta');
+            }
+            */
+
+            // 3. Simular éxito (eliminar cuando el backend esté listo)
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Mostrar recibo automáticamente
