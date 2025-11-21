@@ -23,6 +23,8 @@ import * as bootstrap from 'bootstrap';
 import { Subscription } from 'rxjs';
 import { ProductoConversionService } from '../../productos/productos-list/producto-conversion.service';
 import { NgSelectComponent } from '@ng-select/ng-select';
+import * as jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 @Component({
     selector: 'app-generar-venta',
@@ -1191,10 +1193,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // Método para manejar el foco en el campo banco
     onBancoFocus(index: number): void {
-        // Si el campo está vacío, mostrar todos los bancos
         const metodo = this.venta.metodosDePago[index];
         if (!metodo.banco) {
-            // Forzar la actualización de la lista
             setTimeout(() => {
                 this.cdr.detectChanges();
             }, 0);
@@ -1223,241 +1223,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    // Método simplificado - solo para personalizado
-    aplicarTamanoPersonalizado(ancho: string, alto: string): void {
-        // Validar formato del ancho
-        if (!ancho.match(/^\d+(px|%|vw|vh)$/)) {
-            this.swalService.showWarning('Formato inválido', 'El ancho debe ser en px, %, vw o vh (ej: 1100px)');
-            return;
-        }
 
-        // Validar formato del alto
-        if (!alto.match(/^\d+(px|%|vw|vh)$/)) {
-            this.swalService.showWarning('Formato inválido', 'El alto debe ser en px, %, vw o vh (ej: 700px)');
-            return;
-        }
-
-        this.anchoPersonalizado = ancho;
-        this.altoPersonalizado = alto;
-        this.tamanoModalRecibo = 'xl'; // Siempre mantenemos XL como tipo
-
-        setTimeout(() => {
-            this.ajustarDimensionesModal();
-        }, 50);
-    }
-
-    forzarTamanioCarta(): void {
-        this.anchoPersonalizado = '800px';
-        this.altoPersonalizado = '1000px';
-        this.mostrarControlesPersonalizados = false;
-
-        setTimeout(() => {
-            this.ajustarDimensionesModal();
-        }, 50);
-    }
-
-    // Método simplificado para ajustar dimensiones
-    private ajustarDimensionesModal(): void {
-        if (!this.mostrarModalRecibo) return;
-
-        setTimeout(() => {
-            const modalDialog = document.querySelector('#reciboModal .modal-dialog') as HTMLElement;
-            const iframe = document.querySelector('.recibo-iframe') as HTMLIFrameElement;
-
-            if (modalDialog) {
-                // Para XL fijo
-                modalDialog.style.maxWidth = '900px';
-                modalDialog.style.width = '900px';
-                modalDialog.style.maxHeight = '90vh';
-            }
-
-            if (iframe) {
-                // Para XL fijo
-                iframe.style.height = '700px';
-
-                // Si hay tamaño personalizado, aplicar esas dimensiones al iframe
-                if (this.mostrarControlesPersonalizados) {
-                    iframe.style.height = this.altoPersonalizado;
-                }
-            }
-        }, 100);
-    }
-
-    // Método simplificado para obtener la altura del iframe
-    getAlturaIframe(): string {
-        return this.mostrarControlesPersonalizados ? this.altoPersonalizado : '700px';
-    }
-
-    // Método simplificado para obtener el ancho del modal
-    getAnchoModal(): string {
-        return this.mostrarControlesPersonalizados ? this.anchoPersonalizado : '1100px';
-    }
-
-    // Método para mostrar/ocultar controles personalizados
-    toggleControlesPersonalizados(): void {
-        this.mostrarControlesPersonalizados = !this.mostrarControlesPersonalizados;
-        if (this.mostrarControlesPersonalizados) {
-            setTimeout(() => {
-                this.ajustarDimensionesModal();
-            }, 50);
-        }
-    }
-
-    compartirRecibo(): void {
-        this.swalService.showConfirm(
-            'Compartir Recibo',
-            `
-        <div class="text-center">
-            <p class="mb-4">Elige cómo quieres compartir el recibo:</p>
-            <div class="row g-3">
-                <div class="col-6">
-                    <button class="btn btn-success w-100 p-3 compartir-btn" data-tipo="whatsapp">
-                        <i class="bi bi-whatsapp fs-4"></i>
-                        <div class="small mt-1">WhatsApp</div>
-                    </button>
-                </div>
-                <div class="col-6">
-                    <button class="btn btn-primary w-100 p-3 compartir-btn" data-tipo="email">
-                        <i class="bi bi-envelope fs-4"></i>
-                        <div class="small mt-1">Email</div>
-                    </button>
-                </div>
-                <div class="col-6">
-                    <button class="btn btn-info w-100 p-3 compartir-btn" data-tipo="enlace">
-                        <i class="bi bi-link fs-4"></i>
-                        <div class="small mt-1">Copiar Enlace</div>
-                    </button>
-                </div>
-                <div class="col-6">
-                    <button class="btn btn-secondary w-100 p-3 compartir-btn" data-tipo="descargar">
-                        <i class="bi bi-download fs-4"></i>
-                        <div class="small mt-1">Solo Descargar</div>
-                    </button>
-                </div>
-            </div>
-        </div>
-        `,
-            'Cerrar',
-            'Cancelar'
-        ).then((result) => {
-            if (result.isConfirmed) {
-                console.log('Modal de compartir cerrado');
-            }
-        });
-
-        // Agregar event listeners CORREGIDO
-        setTimeout(() => {
-            const buttons = document.querySelectorAll('.compartir-btn');
-            buttons.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    // CORRECCIÓN: Usar la sintaxis correcta para dataset
-                    const tipo = (e.currentTarget as HTMLElement).dataset['tipo'];
-                    if (tipo) {
-                        this.procesarCompartir(tipo);
-                        this.swalService.closeLoading();
-                    }
-                });
-            });
-        }, 100);
-    }
-
-    // Versión alternativa más simple para compartir
-    compartirReciboSimple(): void {
-        this.swalService.showInfo(
-            'Compartir Recibo',
-            `
-        <div class="text-center">
-            <p class="mb-3">Opciones para compartir:</p>
-            <div class="d-grid gap-2">
-                <button class="btn btn-success compartir-btn-simple" data-tipo="whatsapp">
-                    <i class="bi bi-whatsapp me-2"></i>Compartir por WhatsApp
-                </button>
-                <button class="btn btn-primary compartir-btn-simple" data-tipo="email">
-                    <i class="bi bi-envelope me-2"></i>Enviar por Email
-                </button>
-                <button class="btn btn-info compartir-btn-simple" data-tipo="enlace">
-                    <i class="bi bi-link me-2"></i>Copiar Enlace
-                </button>
-                <button class="btn btn-secondary compartir-btn-simple" data-tipo="descargar">
-                    <i class="bi bi-download me-2"></i>Descargar PDF
-                </button>
-            </div>
-        </div>
-        `
-        );
-
-        // Agregar event listeners CORREGIDO
-        setTimeout(() => {
-            const buttons = document.querySelectorAll('.compartir-btn-simple');
-            buttons.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    // CORRECCIÓN: Usar la sintaxis correcta para dataset
-                    const tipo = (e.currentTarget as HTMLElement).dataset['tipo'];
-                    if (tipo) {
-                        this.procesarCompartir(tipo);
-                        this.swalService.closeLoading();
-                    }
-                });
-            });
-        }, 100);
-    }
-
-    // Procesar la opción de compartir seleccionada - CORREGIDO
-    private procesarCompartir(tipo: string): void {
-        switch (tipo) {
-            case 'whatsapp':
-                this.compartirWhatsApp();
-                break;
-            case 'email':
-                this.compartirEmail();
-                break;
-            case 'enlace':
-                this.copiarEnlace();
-                break;
-            case 'descargar':
-                this.descargarPDF();
-                break;
-        }
-    }
-
-    async descargarPDFAvanzado(): Promise<void> {
-        if (!this.urlRecibo) {
-            this.swalService.showError('Error', 'No hay recibo disponible para descargar');
-            return;
-        }
-
-        try {
-            this.swalService.showLoadingAlert('Descargando recibo...');
-
-            // Usar fetch para obtener el PDF
-            const response = await fetch(this.urlRecibo);
-            if (!response.ok) throw new Error('Error al obtener el PDF');
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `recibo-${this.informacionVenta?.numeroVenta || 'venta'}.pdf`;
-
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            // Liberar recursos
-            window.URL.revokeObjectURL(url);
-
-            this.swalService.closeLoading();
-            this.swalService.showSuccess('Éxito', 'Recibo descargado correctamente');
-
-        } catch (error) {
-            this.swalService.closeLoading();
-            console.error('Error en descarga:', error);
-            this.swalService.showError('Error', 'No se pudo descargar el recibo');
-        }
-    }
 
     // === VALIDACIONES ===
     validarEntrada(event: KeyboardEvent): void {
@@ -3119,53 +2885,185 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.actualizarProductosConDetalle();
     }
 
+    async descargarPDF(): Promise<void> {
+        let datos: any;
 
-    /**
-     * Descarga el recibo como PDF
-     */
-    descargarPDF(): void {
-        // Generar cuotas Cashea si no existen
-        if (this.venta.formaPago === 'cashea' && (!this.cuotasCashea || this.cuotasCashea.length === 0)) {
-            this.generarCuotasCashea();
+        try {
+            // Generar cuotas Cashea si no existen
+            if (this.venta.formaPago === 'cashea' && (!this.cuotasCashea || this.cuotasCashea.length === 0)) {
+                this.generarCuotasCashea();
+            }
+
+            datos = this.datosRecibo || this.crearDatosReciboReal();
+            await this.generarPDFSeguro(datos);
+
+        } catch (error) {
+            console.error('Error al generar PDF:', error);
+            this.swalService.closeLoading();
+
+            if (datos) {
+                this.descargarPDFSimple(datos);
+            } else {
+                const datosFallback = this.datosRecibo || this.crearDatosReciboReal();
+                this.descargarPDFSimple(datosFallback);
+            }
         }
-
-        const datos = this.datosRecibo || this.crearDatosReciboReal();
-        const htmlContent = this.generarReciboHTML(datos);
-
-        const ventana = window.open('', '_blank', 'width=400,height=600');
-
-        if (!ventana) {
-            this.swalService.showError('Error', 'No se pudo abrir la ventana para descargar.');
-            return;
-        }
-
-        ventana.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Recibo_${datos.numeroVenta}_PDF</title>
-        <style>
-            body { margin: 0; padding: 10px; background: white; }
-            .download-header { text-align: center; padding: 20px; background: #28a745; color: white; }
-            @media print { .download-header { display: none; } }
-        </style>
-        <script>window.onload = () => window.print();</script>
-    </head>
-    <body>
-        <div class="download-header">
-            <h3>📥 Descargando Recibo...</h3>
-        </div>
-        ${htmlContent}
-    </body>
-    </html>
-    `);
-        ventana.document.close();
-
-        this.swalService.showInfo('Descargar PDF', 'Se ha abierto una ventana para descargar el recibo.');
     }
-    /**
-     * Comparte por Email
-     */
+
+
+    private async generarPDFSeguro(datos: any): Promise<void> {
+        return new Promise((resolve, reject) => {
+            try {
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'fixed';
+                iframe.style.right = '0';
+                iframe.style.bottom = '0';
+                iframe.style.width = '210mm';
+                iframe.style.height = '297mm';
+                iframe.style.border = 'none';
+                iframe.style.visibility = 'hidden';
+
+                document.body.appendChild(iframe);
+
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+
+                if (!iframeDoc) {
+                    document.body.removeChild(iframe);
+                    reject(new Error('No se pudo acceder al documento del iframe'));
+                    return;
+                }
+
+                // Escribir contenido en el iframe
+                iframeDoc.open();
+                iframeDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { 
+                            margin: 0; 
+                            padding: 15mm; 
+                            background: white;
+                            width: 210mm;
+                            min-height: 297mm;
+                            font-family: Arial, sans-serif;
+                        }
+                        * {
+                            box-sizing: border-box;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${this.generarReciboHTML(datos)}
+                </body>
+                </html>
+            `);
+                iframeDoc.close();
+
+                setTimeout(async () => {
+                    try {
+                        const canvas = await html2canvas(iframeDoc.body, {
+                            scale: 1.5,
+                            useCORS: true,
+                            logging: false,
+                            backgroundColor: '#ffffff',
+                            allowTaint: false,
+                            foreignObjectRendering: false
+                        });
+
+                        // Limpiar
+                        document.body.removeChild(iframe);
+
+                        // Crear PDF
+                        const pdf = new jsPDF.jsPDF({
+                            orientation: 'portrait',
+                            unit: 'mm',
+                            format: 'a4'
+                        });
+
+                        const imgWidth = 210;
+                        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                        const imgData = canvas.toDataURL('image/jpeg', 0.8);
+
+                        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+                        pdf.save(`Recibo_${datos.numeroVenta}.pdf`);
+
+                        this.swalService.closeLoading();
+                        this.swalService.showSuccess('PDF Descargado', 'El recibo se ha descargado correctamente.');
+                        resolve();
+
+                    } catch (canvasError) {
+                        document.body.removeChild(iframe);
+                        reject(canvasError);
+                    }
+                }, 1000);
+
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    private descargarPDFSimple(datos: any): void {
+        try {
+            const htmlContent = this.generarReciboHTML(datos);
+
+            // Crear blob y descargar como HTML que puede ser impreso como PDF
+            const blob = new Blob([`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Recibo_${datos.numeroVenta}</title>
+                <style>
+                    @media print {
+                        @page { margin: 0; size: A4; }
+                        body { margin: 15mm; }
+                    }
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        margin: 20px;
+                        -webkit-print-color-adjust: exact !important;
+                    }
+                </style>
+            </head>
+            <body>
+                ${htmlContent}
+                <script>
+                    // Auto-abrir diálogo de impresión al cargar
+                    window.onload = function() {
+                        setTimeout(() => {
+                            window.print();
+                        }, 500);
+                    };
+                </script>
+            </body>
+            </html>
+        `], { type: 'text/html' });
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Recibo_${datos.numeroVenta}.html`;
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+
+            this.swalService.showInfo(
+                'Descarga HTML',
+                'Se ha descargado el recibo como HTML. Ábrelo y usa "Imprimir → Guardar como PDF" para obtener el PDF.'
+            );
+
+        } catch (error) {
+            console.error('Error en método simple:', error);
+            this.swalService.showError('Error', 'No se pudo generar el archivo.');
+        }
+    }
+
     compartirEmail(): void {
         const datos = this.datosRecibo || this.crearDatosReciboReal();
         const asunto = `Recibo de Venta ${datos.numeroVenta}`;
@@ -3175,9 +3073,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         window.location.href = mailtoLink;
     }
 
-    /**
-     * Copia enlace del recibo
-     */
     async copiarEnlace(): Promise<void> {
         const datos = this.datosRecibo || this.crearDatosReciboReal();
         const texto = `Recibo de Venta ${datos.numeroVenta} - Total: ${this.formatearMoneda(datos.totales.totalPagado)} - Fecha: ${datos.fecha}`;

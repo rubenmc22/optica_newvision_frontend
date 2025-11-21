@@ -45,6 +45,7 @@ import { appRoutes } from '../app.routes';
 import { authInterceptor } from '../core/interceptors/auth.interceptor';
 import { ClickOutsideDirective } from '../directives/click-outside.directive';
 import { NgSelectModule } from '@ng-select/ng-select';
+import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
 
 @NgModule({
   declarations: [
@@ -88,6 +89,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
     NgbTooltipModule,
     NgxSkeletonLoaderModule,
     SafeUrlPipe,
+    NgbDropdownModule,
 
     RouterModule.forRoot(appRoutes, {
       onSameUrlNavigation: 'reload',

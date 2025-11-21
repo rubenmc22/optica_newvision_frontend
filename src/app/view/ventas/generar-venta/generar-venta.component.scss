@@ -2658,24 +2658,214 @@ input:checked+.slider:before {
     }
 }
 
-// Botones más grandes
-.modal-footer {
-    .btn {
-        padding: 0.75rem 1.5rem;
-        font-size: 1.1rem;
+.modal-footer-recibo {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    z-index: 1050;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 
-        &.btn-sm {
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
+    .footer-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+
+        .footer-section-left,
+        .footer-section-right {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+    }
+
+    .btn-recibo {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+
+        i {
+            font-size: 1.1rem;
+        }
+
+        // Botón primario (Listo)
+        &.btn-primary {
+            background: var(--degradado-color);
+            border: 1px solid var(--degradado-color);
+            color: #fff;
+
+            &:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+                background: var(--degradado-color);
+                border-color: var(--degradado-color);
+            }
+        }
+
+        // Botón Compartir - Mismo estilo que Listo
+        &.btn-compartir {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+
+            &:hover:not(:disabled),
+            &:focus:not(:disabled) {
+                background: var(--degradado-color);
+                border-color: var(--degradado-color);
+                color: #fff;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+            }
+
+            &:active:not(:disabled) {
+                background: var(--degradado-color);
+                border-color: var(--degradado-color);
+                color: #fff;
+                transform: translateY(0);
+                box-shadow: 0 2px 8px rgba(0, 120, 215, 0.4);
+            }
+
+            // Cuando el dropdown está abierto
+            &.show {
+                background: var(--degradado-color);
+                border-color: var(--degradado-color);
+                color: #fff;
+            }
+        }
+
+        // Botón outline secondary (Imprimir)
+        &.btn-outline-secondary {
+            border: 1px solid #6c757d;
+            color: #6c757d;
+
+            &:hover:not(:disabled) {
+                background-color: #6c757d;
+                border-color: #6c757d;
+                color: white;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+            }
+        }
+
+        // Botón outline primary (Compartir)
+        &.btn-outline-primary {
+            border: 1px solid #007bff;
+            color: #007bff;
+
+            &:hover:not(:disabled) {
+                background-color: #007bff;
+                border-color: #007bff;
+                color: white;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+            }
+        }
+
+        // Botón outline success (PDF)
+        &.btn-outline-success {
+            border: 1px solid #28a745;
+            color: #28a745;
+
+            &:hover:not(:disabled) {
+                background-color: #28a745;
+                border-color: #28a745;
+                color: white;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+            }
+        }
+    }
+
+    .btn-recibo:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        position: relative;
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: inherit;
         }
     }
 
     .dropdown-menu {
-        font-size: 1rem;
+        min-width: 200px;
+        border: 1px solid #dee2e6;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
         .dropdown-item {
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+
+            &:hover {
+                background-color: #f8f9fa;
+                transform: translateX(2px);
+            }
+
+            i {
+                width: 16px;
+                text-align: center;
+            }
+        }
+
+        .dropdown-divider {
+            margin: 0.25rem 0;
+        }
+    }
+
+    // Estilos específicos para el botón de compartir cuando está en estado activo/dropdown abierto
+    .btn-group.show .btn-compartir {
+        background: var(--degradado-color);
+        border-color: var(--degradado-color);
+        color: #fff;
+    }
+}
+
+// Asegurar que el modal body tenga scroll pero el footer se mantenga fijo
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+
+    .modal-body {
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .modal-footer-recibo {
+        flex-shrink: 0;
+    }
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .modal-footer-recibo {
+        .footer-actions {
+            flex-direction: column;
+            gap: 1rem;
+
+            .footer-section-left,
+            .footer-section-right {
+                justify-content: center;
+                width: 100%;
+            }
         }
     }
 }
