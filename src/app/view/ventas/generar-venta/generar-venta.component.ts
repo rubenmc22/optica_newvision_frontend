@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, OnDestroy, ViewChild  } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, OnDestroy, ViewChild } from '@angular/core';
 import { Producto } from '../../productos/producto.model';
 import { ProductoService } from '../../productos/producto.service';
 import { SystemConfigService } from '../../system-config/system-config.service';
@@ -44,7 +44,7 @@ import { NgSelectComponent } from '@ng-select/ng-select';
 
 export class GenerarVentaComponent implements OnInit, OnDestroy {
 
-        @ViewChild('productoSelect', { static: false }) productoSelect!: NgSelectComponent;
+    @ViewChild('productoSelect', { static: false }) productoSelect!: NgSelectComponent;
     // === CONSTRUCTOR ===
     constructor(
         private productoService: ProductoService,
@@ -95,6 +95,18 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     pacienteSeleccionado: Paciente | null = null;
     productoSeleccionado: string | null = null;
     asesorSeleccionado: string | null = null;
+
+    // === PROPIEDADES ADICIONALES PARA CLIENTE SIN PACIENTE ===
+    clienteSinPaciente: any = {
+        tipoPersona: 'natural',
+        nombreCompleto: '',
+        cedula: '',
+        telefono: '',
+        email: ''
+    };
+    mostrarSelectorAsesor: boolean = false;
+
+    // === PROPIEDADES PARA ASESOR ===
 
     historiaMedica: HistoriaMedica | null = null;
 
@@ -340,10 +352,31 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return material ?? '';
     }
 
-    // === MÉTODOS DE PRODUCTOS ===
-    agregarProductoAlCarrito(producto: ProductoVenta | any): void {
-        const yaExiste = this.venta.productos.find(p => p.id === producto.id);
+    onProductoSeleccionadoChange(productoId: string): void {
+        if (!productoId) return;
 
+        // Buscar el producto completo por ID
+        const producto = this.productosFiltradosPorSede.find(p => p.id === productoId);
+
+        if (producto) {
+            this.agregarProductoAlCarrito(producto);
+            // Limpiar la selección después de agregar
+            setTimeout(() => {
+                this.productoSeleccionado = null;
+            }, 100);
+        }
+    }
+
+    // Mantener tu método original pero asegurarte de que recibe el objeto completo
+    agregarProductoAlCarrito(producto: any): void {
+        // Validación CRÍTICA: Verificar que el producto existe y tiene ID
+        if (!producto || !producto.id) {
+            console.error('Producto inválido o sin ID:', producto);
+            this.swalService.showWarning('Error', 'No se puede agregar un producto inválido al carrito.');
+            return;
+        }
+
+        const yaExiste = this.venta.productos.find(p => p.id === producto.id);
         const stockDisponible = producto.stock ?? 0;
         const precioBase = +(producto.precio ?? 0);
         const precioFinal = +(producto.precioConIva ?? 0);
@@ -385,8 +418,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         this.actualizarProductosConDetalle();
-        this.productoSeleccionado = undefined;
         this.limpiarSelectProductos();
+
+        setTimeout(() => {
+            this.cdr.detectChanges();
+        });
     }
 
     eliminarProducto(id: string): void {
@@ -1524,42 +1560,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     private limpiarSelectProductos(): void {
         console.log('🔧 Limpiando select de productos...');
 
-        // 1. Limpiar el modelo
-        this.productoSeleccionado = undefined;
+        // SOLO esto es necesario - Angular se encarga del resto
+        this.productoSeleccionado = null;
 
-        // 2. Forzar detección de cambios inmediata
-        this.cdr.detectChanges();
-
-        // 3. Usar el ViewChild para limpiar el ng-select
+        // Cerrar dropdown de manera segura en el próximo ciclo
         setTimeout(() => {
-            if (this.productoSelect) {
+            if (this.productoSelect?.isOpen) {
                 this.productoSelect.close();
-                this.productoSelect.clearModel();
-                console.log('✅ Select limpiado via ViewChild');
             }
+        });
 
-            // 4. Limpieza visual adicional del DOM
-            this.limpiarVisualmenteSelect();
-
-            this.cdr.detectChanges();
-        }, 100);
-    }
-
-    private limpiarVisualmenteSelect(): void {
-        const selectContainer = document.querySelector('#selectorProducto .ng-select-container');
-        if (!selectContainer) return;
-
-        // Remover cualquier valor visual que pueda quedar
-        const valueElements = selectContainer.querySelectorAll('.ng-value');
-        valueElements.forEach(el => el.remove());
-
-        // Forzar que el placeholder sea visible
-        const placeholder = selectContainer.querySelector('.ng-placeholder');
-        if (placeholder) {
-            placeholder.classList.remove('ng-hide');
-        }
-
-        console.log('✅ Limpieza visual completada');
+        // No necesitas detectChanges() si usas ChangeDetectionStrategy.Default
     }
 
     resetearModalVenta(): void {
@@ -1823,12 +1834,30 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // Método para verificar si se puede generar la venta - ACTUALIZADO
     get puedeGenerarVenta(): boolean {
-        // Verificar que hay productos
+        // 1. Verificar que hay productos
         if (this.venta.productos.length === 0) {
             return false;
         }
 
-        // Verificar que todos los métodos de pago estén completamente configurados
+        // 2. Validar información del cliente según el tipo de venta
+        if (this.requierePaciente) {
+            // Venta con paciente - debe tener paciente seleccionado
+            if (!this.pacienteSeleccionado) {
+                return false;
+            }
+        } else {
+            // Venta sin paciente - debe tener información del cliente completa
+            if (!this.validarClienteSinPaciente()) {
+                return false;
+            }
+        }
+
+        // 3. Verificar asesor seleccionado
+        if (!this.asesorSeleccionado) {
+            return false;
+        }
+
+        // 4. Verificar que todos los métodos de pago estén completamente configurados
         const metodosCompletos = this.venta.metodosDePago.every(metodo => {
             // Verificar tipo de pago seleccionado
             if (!metodo.tipo) return false;
@@ -1853,6 +1882,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return false;
         }
 
+        // 5. Validaciones financieras
         const montoCubierto = this.totalPagadoPorMetodos;
         const montoRequerido = this.montoCubiertoPorMetodos;
 
@@ -2990,9 +3020,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    /**
-    * Obtiene el título del recibo según la forma de pago REAL
-    */
     getTituloRecibo(): string {
         // Usar la forma de pago de los datos del recibo si existe, sino usar la actual
         const formaPago = this.datosRecibo?.configuracion?.formaPago || this.venta.formaPago;
@@ -3009,12 +3036,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 return 'RECIBO DE PAGO';
         }
     }
-    /**
-     * Obtiene el texto para el total pagado según la forma de pago
-     */
-    /**
-   * Obtiene el texto para el total pagado según la forma de pago REAL
-   */
+
     getTextoTotalPagado(): string {
         const formaPago = this.datosRecibo?.configuracion?.formaPago || this.venta.formaPago;
 
@@ -3029,9 +3051,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    /**
-     * Obtiene el mensaje final según la forma de pago
-     */
     getMensajeFinal(): string {
         switch (this.venta.formaPago) {
             case 'abono':
@@ -3044,9 +3063,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    /**
-     * Calcula la deuda pendiente para Cashea
-     */
     getDeudaPendienteCashea(): number {
         if (this.venta.formaPago !== 'cashea') return 0;
 
@@ -3056,9 +3072,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return Math.max(total - pagadoAhora, 0);
     }
 
-    /**
-     * Calcula la deuda pendiente para Abono
-     */
     getDeudaPendienteAbono(): number {
         if (this.venta.formaPago !== 'abono') return 0;
 
@@ -3068,9 +3081,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return Math.max(total - abonado, 0);
     }
 
-    /**
-  * Crea datos del recibo basados en la información real de la venta
-  */
     private crearDatosReciboReal(): any {
         const fechaActual = new Date();
 
@@ -3191,9 +3201,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return datosRecibo;
     }
 
-    /**
-     * Obtiene los productos con sus detalles calculados
-     */
+
     private obtenerProductosConDetalles(): any[] {
         return this.venta.productos.map((p, index) => {
             // Buscar el producto en productosConDetalle
@@ -3237,9 +3245,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
     }
 
-    /**
-     * Compartir por WhatsApp mejorado con información específica
-     */
     compartirWhatsApp(): void {
         const datos = this.datosRecibo || this.crearDatosReciboReal();
 
@@ -3296,10 +3301,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.swalService.showSuccess('Compartir', 'Redirigiendo a WhatsApp...');
     }
 
-
-    /**
- * Método para depurar y verificar los datos del recibo
- */
     private verificarDatosRecibo(): void {
         console.log('=== DEPURACIÓN DATOS RECIBO ===');
         console.log('Forma de pago en venta:', this.venta.formaPago);
@@ -3309,5 +3310,81 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         console.log('Monto inicial:', this.venta.montoInicial);
         console.log('Total pagado Cashea:', this.totalPagadoCashea);
         console.log('==============================');
+    }
+
+
+    // === MÉTODOS PARA CLIENTE SIN PACIENTE ===
+    get mostrarFormulacionMedica(): boolean {
+        return this.requierePaciente && !!this.historiaMedica;
+    }
+
+    get mostrarClienteSinPaciente(): boolean {
+        return !this.requierePaciente;
+    }
+
+    // En tu componente TypeScript
+    onTipoPersonaChange(): void {
+        // Resetear campos según el tipo de persona
+        if (this.clienteSinPaciente.tipoPersona === 'juridica') {
+            // Para persona jurídica, limpiar nombre y apellido si existen
+            this.clienteSinPaciente.nombre = '';
+            this.clienteSinPaciente.apellido = '';
+            // Puedes agregar lógica adicional aquí si es necesario
+        } else {
+            // Para persona natural, limpiar razón social si existe
+            this.clienteSinPaciente.razonSocial = '';
+        }
+
+        // Forzar actualización de la vista
+        this.cdr.detectChanges();
+    }
+
+    // Método para validar cliente sin paciente
+    validarClienteSinPaciente(): boolean {
+        const cliente = this.clienteSinPaciente;
+
+        // Validar campos requeridos según tipo de persona
+        if (cliente.tipoPersona === 'natural') {
+            return !!cliente.nombreCompleto?.trim() &&
+                !!cliente.cedula?.trim();
+        } else {
+            return !!cliente.nombreCompleto?.trim() &&
+                !!cliente.cedula?.trim();
+        }
+        // Teléfono y email son opcionales
+    }
+
+    onAsesorChange() {
+        // Este método se ejecuta cuando se selecciona un asesor
+        console.log('Asesor seleccionado:', this.asesorSeleccionado);
+
+        // Opcional: Aquí puedes agregar lógica adicional
+        // como notificaciones, validaciones, etc.
+    }
+
+    getNombreAsesorSeleccionado(): string {
+        const asesor = this.empleadosDisponibles.find(e => e.id == this.asesorSeleccionado);
+        return asesor ? `${asesor.nombre}` : 'No asignado';
+    }
+
+    getCargoAsesorSeleccionado(): string {
+        const asesor = this.empleadosDisponibles.find(e => e.id == this.asesorSeleccionado);
+        return asesor ? asesor.cargoNombre : '';
+    }
+
+
+    get datosClienteParaVenta(): any {
+        if (this.requierePaciente && this.pacienteSeleccionado) {
+            return {
+                tipo: 'paciente',
+                datos: this.pacienteSeleccionado
+            };
+        } else if (!this.requierePaciente) {
+            return {
+                tipo: 'cliente_general',
+                datos: this.clienteSinPaciente
+            };
+        }
+        return null;
     }
 }

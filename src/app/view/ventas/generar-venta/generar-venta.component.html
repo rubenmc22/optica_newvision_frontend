@@ -205,20 +205,17 @@
                                 <i class="bi bi-search"></i>
                                 Buscar producto
                             </label>
-                            <ng-select #productoSelect id="selectorProducto" [items]="productosFiltradosPorSede" bindLabel="nombre"
-                                [searchable]="true" [clearable]="true" [selectOnTab]="true" [typeahead]="filterInput"
+                            <ng-select id="selectorProducto" [items]="productosFiltradosPorSede" bindLabel="nombre"
+                                [searchable]="true" [clearable]="true" [selectOnTab]="true"
                                 [(ngModel)]="productoSeleccionado" (change)="agregarProductoAlCarrito($event)"
-                                [searchFn]="filtrarProductoPorNombreOCodigo"
-                                placeholder="Seleccione o busque un producto..." class="modern-ng-select">
-
+                                [searchFn]="filtrarProductoPorNombreOCodigo" placeholder="Buscar por nombre o código..."
+                                class="modern-ng-select">
                                 <ng-template ng-option-tmp let-item="item">
                                     <div class="producto-option">
                                         <strong>{{ item.nombre }}</strong>
                                         <small class="text-muted">— {{ item.codigo }}</small>
-                                        <small class="text-muted d-block">Stock: {{ item.stock }}</small>
                                     </div>
                                 </ng-template>
-
                                 <ng-template ng-notfound-tmp>
                                     <div class="not-found-message">
                                         <i class="bi bi-exclamation-circle"></i>
@@ -357,7 +354,7 @@
 <!-- Modal resumen de  venta -->
 <div class="modal fade" id="resumenVentaModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"
     data-bs-keyboard="false">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <!-- Header modernizado -->
             <div class="modal-header-detalle">
@@ -378,7 +375,7 @@
 
             <div class="modal-body-detalle">
                 <!-- 👓 Formulación clínica resumida - Modernizada -->
-                <div class="info-card formulacion">
+                <div class="info-card formulacion" *ngIf="requierePaciente">
                     <div class="card-header-detalle">
                         <i class="bi bi-eyeglasses"></i>
                         <span>Formulación Clínica</span>
@@ -497,6 +494,103 @@
                                 <span>No hay formulación registrada para este paciente.</span>
                             </div>
                         </ng-template>
+                    </div>
+                </div>
+
+                <!-- 👤 Información del Cliente (solo cuando no hay paciente) -->
+                <div *ngIf="mostrarClienteSinPaciente" class="info-card cliente-sin-paciente">
+                    <div class="card-header-detalle">
+                        <i class="bi bi-person-badge"></i>
+                        <span>Información del Cliente</span>
+                    </div>
+                    <div class="card-body-detalle">
+                        <div class="cliente-form">
+                            <!-- Switch Tipo de Persona - Moderno -->
+                            <div class="tipo-persona-section">
+                                <label class="section-label">Tipo de Persona</label>
+                                <div class="switch-container modern">
+                                    <div class="switch-options">
+                                        <div class="switch-option"
+                                            [class.active]="clienteSinPaciente.tipoPersona === 'natural'"
+                                            (click)="clienteSinPaciente.tipoPersona = 'natural'">
+                                            <i class="bi bi-person"></i>
+                                            <span>Persona Natural</span>
+                                        </div>
+                                        <div class="switch-option"
+                                            [class.active]="clienteSinPaciente.tipoPersona === 'juridica'"
+                                            (click)="clienteSinPaciente.tipoPersona = 'juridica'">
+                                            <i class="bi bi-building"></i>
+                                            <span>Persona Jurídica</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Campos del formulario optimizados -->
+                            <div class="cliente-fields">
+                                <div class="form-grid">
+                                    <!-- Fila 1: Nombre/Razón Social y Cédula/RIF -->
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="bi bi-person"></i>
+                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón
+                                            Social' }}
+                                        </label>
+                                        <input type="text" class="form-control modern-input"
+                                            [(ngModel)]="clienteSinPaciente.nombreCompleto"
+                                            [placeholder]="clienteSinPaciente.tipoPersona === 'natural' ? 'Ingrese nombre completo' : 'Ingrese razón social'">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="bi bi-card-text"></i>
+                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Cédula' : 'RIF' }}
+                                        </label>
+                                        <input type="text" class="form-control modern-input"
+                                            [(ngModel)]="clienteSinPaciente.cedula"
+                                            [placeholder]="clienteSinPaciente.tipoPersona === 'natural' ? 'Ingrese la cédula' : 'Ingrese el RIF'">
+                                    </div>
+
+                                    <!-- Fila 2: Teléfono y Email -->
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="bi bi-telephone"></i>
+                                            Teléfono
+                                        </label>
+                                        <input type="tel" class="form-control modern-input"
+                                            [(ngModel)]="clienteSinPaciente.telefono" placeholder="Ingrese el teléfono">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="bi bi-envelope"></i>
+                                            Email
+                                        </label>
+                                        <input type="email" class="form-control modern-input"
+                                            [(ngModel)]="clienteSinPaciente.email" placeholder="Ingrese el email">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Estado de validación mejorado -->
+                            <div class="validation-status"
+                                [ngClass]="{'valid': validarClienteSinPaciente(), 'invalid': !validarClienteSinPaciente()}">
+                                <div class="status-content">
+                                    <i class="bi" [class.bi-check-circle-fill]="validarClienteSinPaciente()"
+                                        [class.bi-exclamation-circle-fill]="!validarClienteSinPaciente()"></i>
+                                    <div class="status-text">
+                                        <span class="status-title">
+                                            {{ validarClienteSinPaciente() ? 'Información completa' : 'Información
+                                            incompleta' }}
+                                        </span>
+                                        <span class="status-description">
+                                            {{ validarClienteSinPaciente() ? 'Todos los campos requeridos están
+                                            completos' : 'Complete los campos marcados como requeridos' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -667,10 +761,9 @@
                                             </div>
                                             <div class="progress modern-progress">
                                                 <div class="progress-bar" role="progressbar"
-                                                    [style.width.%]="porcentajeAbonadoDelTotal" [ngClass]="{
-                                                    'progress-complete': porcentajeAbonadoDelTotal === 100,
-                                                    'progress-partial': porcentajeAbonadoDelTotal < 100
-                                                }"></div>
+                                                    [style.width.%]="porcentajeAbonadoDelTotal"
+                                                    [ngClass]="{'progress-complete': porcentajeAbonadoDelTotal === 100, 'progress-partial': porcentajeAbonadoDelTotal < 100 }">
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -760,10 +853,8 @@
                                             <i class="bi bi-123"></i>
                                             <span>Método #{{ i + 1 }}</span>
                                             <!-- Indicador de estado -->
-                                            <span class="estado-metodo" [ngClass]="{
-                    'estado-completo': metodoCompleto(metodo),
-                    'estado-incompleto': !metodoCompleto(metodo)
-                }">
+                                            <span class="estado-metodo"
+                                                [ngClass]="{'estado-completo': metodoCompleto(metodo), 'estado-incompleto': !metodoCompleto(metodo) }">
                                                 <i class="bi" [class.bi-check-circle-fill]="metodoCompleto(metodo)"
                                                     [class.bi-exclamation-circle-fill]="!metodoCompleto(metodo)"></i>
                                                 {{ metodoCompleto(metodo) ? 'Completo' : 'Incompleto' }}
@@ -1103,6 +1194,56 @@
                                             number:'1.2-2' }} Bs
                                         </span>
                                     </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 👨‍💼 Selección de Asesor - Switch en header, selector a la derecha -->
+                <div class="info-card asesor asesor-container">
+                    <div class="card-header-detalle">
+                        <i class="bi bi-person-gear"></i>
+                        <span>Asesor de Venta</span>
+                        <div class="header-toggle">
+                            <label class="toggle-label">Cambiar asesor</label>
+                            <div class="toggle-switch modern compact">
+                                <label class="switch">
+                                    <input type="checkbox" [(ngModel)]="mostrarSelectorAsesor">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body-detalle">
+                        <div class="asesor-layout-horizontal">
+                            <!-- Sección izquierda: Información del asesor actual -->
+                            <div class="asesor-info-section">
+                                <div class="asesor-current-compact">
+                                    <div class="asesor-avatar">
+                                        <i class="bi bi-person-circle"></i>
+                                    </div>
+                                    <div class="asesor-details-compact">
+                                        <h4 class="asesor-name">{{ getNombreAsesorSeleccionado() }}</h4>
+                                        <p class="asesor-role">{{ getCargoAsesorSeleccionado() }}</p>
+                                        <span class="asesor-badge">Asesor actual</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección derecha: Selector compacto -->
+                            <div *ngIf="mostrarSelectorAsesor" class="asesor-selector-section">
+                                <div class="selector-container">
+                                    <select class="form-select asesor-select-normal" [(ngModel)]="asesorSeleccionado"
+                                        (change)="onAsesorChange()">
+                                        <option value="" disabled selected>Seleccionar asesor...</option>
+                                        <option *ngFor="let empleado of empleadosDisponibles" [value]="empleado.id">
+                                            {{ empleado.nombre }}
+                                        </option>
+                                    </select>
+                                    <div class="select-arrow">
+                                        <i class="bi bi-chevron-down"></i>
+                                    </div>
                                 </div>
                             </div>
                         </div>
