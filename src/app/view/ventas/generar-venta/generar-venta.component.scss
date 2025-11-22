@@ -2179,23 +2179,205 @@ ng-select {
     left: 22px;
 }
 
-// Headers existentes (para compatibilidad)
-.modal-header {
-    font-size: 1.2rem;
-    @include gradient-background;
-    color: var(--details-color) !important;
-    font-weight: bold;
-    border-bottom: 2px solid var(--secondary-color);
+// Header modernizado para recibo - Similar a generar venta
+.modal-header-recibo {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.5rem;
+    background: var(--degradado-color) !important;
+    color: white;
+    border-bottom: none;
+    border-radius: 0.5rem 0.5rem 0 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    height: 180px !important;
 
-    .bi-plus-lg,
-    .fa-plus {
-        color: var(--details-color) !important;
-        font-size: 1.25rem;
-        vertical-align: middle;
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 120px;
+        height: 120px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(40px, -40px);
+        animation: pulse-glow 2s ease-in-out infinite alternate;
+    }
+
+    &::after {
+        content: "";
+        position: absolute;
+        bottom: -20px;
+        left: -20px;
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        z-index: 2;
+        position: relative;
+    }
+
+    .header-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 50px;
+        height: 50px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        animation: icon-float 3s ease-in-out infinite;
+
+        i {
+            font-size: 1.5rem;
+            color: white;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+    }
+
+    .header-text {
+        .modal-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .header-subtitle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+            flex-wrap: wrap;
+        }
+    }
+
+    .badge-recibo {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+        font-weight: 600;
+        font-size: 0.75rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(10px);
+    }
+
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+
+        &.status-completed {
+            background: rgba(40, 167, 69, 0.9);
+            color: white;
+        }
+
+        &.status-pending {
+            background: rgba(255, 193, 7, 0.9);
+            color: #212529;
+        }
+
+        &.status-processing {
+            background: rgba(13, 110, 253, 0.9);
+            color: white;
+        }
     }
 
     .btn-close {
+        z-index: 3;
+        position: relative;
+        opacity: 0.8;
+        transition: all 0.3s ease;
         filter: invert(1) grayscale(100%) brightness(200%);
+        margin: 0;
+        padding: 0.5rem;
+
+        &:hover {
+            opacity: 1;
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+    }
+}
+
+// Animaciones
+@keyframes pulse-glow {
+    0% {
+        opacity: 0.6;
+        transform: translate(40px, -40px) scale(1);
+    }
+
+    100% {
+        opacity: 0.8;
+        transform: translate(40px, -40px) scale(1.05);
+    }
+}
+
+@keyframes icon-float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .modal-header-recibo {
+        padding: 1.25rem;
+
+        .header-content {
+            gap: 0.75rem;
+        }
+
+        .header-icon {
+            width: 45px;
+            height: 45px;
+
+            i {
+                font-size: 1.25rem;
+            }
+        }
+
+        .header-text .modal-title {
+            font-size: 1.2rem;
+        }
+
+        .header-subtitle {
+            gap: 0.25rem;
+        }
+    }
+}
+
+// Para modales XL
+.modal-xl .modal-header-recibo {
+    border-radius: 0.75rem 0.75rem 0 0;
+
+    &::before {
+        width: 150px;
+        height: 150px;
+        transform: translate(50px, -50px);
     }
 }
 

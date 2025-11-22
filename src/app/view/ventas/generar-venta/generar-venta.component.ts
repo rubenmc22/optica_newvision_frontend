@@ -1357,10 +1357,62 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.currentUser?.nombre ?? 'Sin nombre';
     }
 
+    // === MÉTODOS PARA ASESOR ===
+
+    /**
+     * Obtiene el resumen completo del asesor para mostrar en el recibo
+     */
     getResumenAsesor(): string {
-        const asesor = this.empleadosDisponibles.find(e => e.id === this.asesorSeleccionado);
-        if (!asesor) return 'Sin asesor asignado';
-        return `${asesor.nombre} — ${asesor.cargoNombre}`;
+        if (!this.asesorSeleccionado) {
+            return 'Sin asesor asignado';
+        }
+
+        const asesor = this.empleadosDisponibles.find(e => e.id == this.asesorSeleccionado);
+        if (!asesor) {
+            return 'Sin asesor asignado';
+        }
+
+        return `${asesor.nombre} — ${asesor.cargoNombre || 'Asesor'}`;
+    }
+
+    /**
+     * Obtiene el nombre del asesor seleccionado
+     */
+    getNombreAsesorSeleccionado(): string {
+        if (!this.asesorSeleccionado) {
+            return 'No asignado';
+        }
+
+        const asesor = this.empleadosDisponibles.find(e => e.id == this.asesorSeleccionado);
+        return asesor ? asesor.nombre : 'No asignado';
+    }
+
+    /**
+     * Obtiene el cargo del asesor seleccionado
+     */
+    getCargoAsesorSeleccionado(): string {
+        if (!this.asesorSeleccionado) {
+            return '';
+        }
+
+        const asesor = this.empleadosDisponibles.find(e => e.id == this.asesorSeleccionado);
+        return asesor ? (asesor.cargoNombre || 'Asesor') : '';
+    }
+
+    /**
+     * Maneja el cambio de asesor
+     */
+    onAsesorChange(): void {
+        console.log('🔄 Asesor seleccionado:', this.asesorSeleccionado);
+
+        // Forzar actualización de la vista
+        this.cdr.detectChanges();
+
+        // Verificar que el asesor existe
+        if (this.asesorSeleccionado) {
+            const asesor = this.empleadosDisponibles.find(e => e.id == this.asesorSeleccionado);
+            console.log('👤 Información del asesor encontrado:', asesor);
+        }
     }
 
     obtenerTasaActual(): number {
@@ -1809,6 +1861,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const montoTotal = this.montoTotal;
             const diferencia = Math.abs(montoAbonado - montoTotal);
             estadoVenta = diferencia < 0.01 ? 'completada' : 'pendiente';
+
         } else if (this.venta.formaPago === 'cashea') {
             //Determinar estado por fecha de última cuota
             if (this.cuotasCashea && this.cuotasCashea.length > 0) {
@@ -1998,7 +2051,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Mostrar recibo automáticamente
-            this.mostrarReciboAutomatico();
+            this.mostrarReciboAutomatico(datosParaAPI);
             this.limpiarSelectProductos(); // Limpiar select al cerrar modal
             this.resetearModalVenta();
 
@@ -2765,15 +2818,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.swalService.showError('Error en la transacción', mensaje);
     }
 
-    private cerrarModalResumen(): void {
-        const modalElement = document.getElementById('resumenVentaModal');
-        if (modalElement) {
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) {
-                modal.hide();
-            }
-        }
-    }
 
 
 
@@ -2794,20 +2838,22 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     /**
  * Muestra el modal de recibo automáticamente después de generar la venta
  */
-    private mostrarReciboAutomatico(): void {
+    private mostrarReciboAutomatico(data): void {
         this.loader.updateMessage('¡Venta generada exitosamente!');
 
         // Crear datos del recibo con información REAL
         this.datosRecibo = this.crearDatosReciboReal();
+        console.log('data', data);
+        console.log('datosRecibo', this.datosRecibo);
         // Depurar datos para verificar
         this.verificarDatosRecibo();
 
         this.informacionVenta = {
-            numeroVenta: this.datosRecibo.numeroVenta,
-            fecha: this.datosRecibo.fecha,
-            hora: this.datosRecibo.hora,
-            estado: 'Completada',
-            formaPago: this.venta.formaPago
+            numeroVenta: data.numeroVenta || 'API',
+            fecha: data.fecha || 'API',
+            hora: data.hora || 'API',
+            estado: data.venta.estado,
+            formaPago: data.venta.formaPago
         };
 
         setTimeout(() => {
@@ -2819,14 +2865,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 1000);
     }
 
-    /**
-     * Cierra el modal de recibo y resetea la venta
-     */
     cerrarModalRecibo(): void {
+        console.log('🔒 Cerrando modal de recibo...');
+
         this.limpiarSelectProductos();
         this.mostrarModalRecibo = false;
         this.ventaGenerada = false;
         this.datosRecibo = null;
+
+        // Cerrar también el modal de resumen si está abierto
+        this.cerrarModalResumen();
 
         setTimeout(() => {
             this.resetearVenta();
@@ -2834,6 +2882,38 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 300);
     }
 
+    /**
+     * Cierra el modal de recibo y resetea la venta
+     */
+    private cerrarModalResumen(): void {
+        const modalElement = document.getElementById('resumenVentaModal');
+        if (modalElement) {
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+            // También remover el backdrop si existe
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+            // Remover clases del body
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+    }
+
+    // Agregar este método para manejar la apertura del modal
+    onModalShown(): void {
+        // Resetear scroll cuando se abre el modal
+        setTimeout(() => {
+            const modalBody = document.querySelector('.modal-body-detalle');
+            if (modalBody) {
+                modalBody.scrollTop = 0;
+            }
+        }, 50);
+    }
     /**
      * Formatea el tipo de pago para mostrar en el recibo
      */
@@ -2850,6 +2930,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private resetearVenta(): void {
+        console.log('🔄 Reseteando venta completamente...');
+
         // Resetear el objeto venta
         this.venta = {
             productos: [],
@@ -2866,8 +2948,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         // Limpiar todas las selecciones
         this.pacienteSeleccionado = null;
-        this.productoSeleccionado = undefined;
+        this.productoSeleccionado = null;
         this.asesorSeleccionado = this.currentUser?.id ?? null;
+
+        // 🔥 CORRECCIÓN: Resetear COMPLETAMENTE cliente sin paciente
+        this.clienteSinPaciente = {
+            tipoPersona: 'natural',
+            nombreCompleto: '',
+            cedula: '',
+            telefono: '',
+            email: ''
+        };
 
         // Resetear Cashea
         this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
@@ -2880,9 +2971,24 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // Resetear paciente
         this.requierePaciente = false;
         this.historiaMedica = null;
+        this.mostrarSelectorAsesor = false;
+
+        // Resetear moneda efectivo
+        this.monedaEfectivo = 'USD';
 
         // Actualizar la vista
         this.actualizarProductosConDetalle();
+
+        // Forzar scroll al inicio
+        setTimeout(() => {
+            const modalBody = document.querySelector('.modal-body-detalle');
+            if (modalBody) {
+                modalBody.scrollTop = 0;
+            }
+        }, 100);
+
+        console.log('✅ Venta reseteada completamente');
+        console.log('📝 Estado de clienteSinPaciente después de reset:', this.clienteSinPaciente);
     }
 
     async descargarPDF(): Promise<void> {
@@ -3064,25 +3170,182 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    compartirEmail(): void {
-        const datos = this.datosRecibo || this.crearDatosReciboReal();
-        const asunto = `Recibo de Venta ${datos.numeroVenta}`;
-        const cuerpo = `Hola,\n\nTe comparto los detalles de la venta ${datos.numeroVenta}:\n- Total: ${this.formatearMoneda(datos.totales.totalPagado)}\n- Fecha: ${datos.fecha}\n- Cliente: ${datos.cliente.nombre}\n\n¡Gracias por tu preferencia!`;
+    async copiarEnlace(): Promise<void> {
+        try {
+            this.swalService.showLoadingAlert('Generando enlace de descarga...');
 
-        const mailtoLink = `mailto:?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
-        window.location.href = mailtoLink;
+            const datos = this.datosRecibo || this.crearDatosReciboReal();
+
+            // Generar el PDF y obtener el Blob
+            const pdfBlob = await this.generarPDFBlob(datos);
+
+            // Crear URL del Blob
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+
+            // Crear texto con el enlace de descarga REAL
+            const texto = `📋 NEW VISION LENS - Recibo de Venta\n\n` +
+                `Recibo: ${datos.numeroVenta}\n` +
+                `Fecha: ${datos.fecha}\n` +
+                `Hora: ${datos.hora}\n` +
+                `Cliente: ${datos.cliente.nombre}\n` +
+                `Total: ${this.formatearMoneda(datos.totales.totalPagado)}\n` +
+                `Forma de pago: ${this.venta.formaPago.toUpperCase()}\n\n` +
+                `📎 DESCARGAR RECIBO EN PDF:\n` +
+                `${pdfUrl}\n\n` +
+                `¡Gracias por su compra! 🛍️\n\n` +
+                `*Instrucciones:* Copie y pegue este enlace en su navegador para descargar el PDF.`;
+
+            // Copiar al portapapeles
+            const copiado = await this.copiarAlPortapapeles(texto);
+
+            this.swalService.closeLoading();
+
+            if (copiado) {
+                this.swalService.showSuccess('✅ Enlace Copiado',
+                    `Se ha generado un enlace de descarga para el recibo ${datos.numeroVenta}.\n\n` +
+                    `🔗 *El enlace ha sido copiado al portapapeles*\n\n` +
+                    `El cliente puede:\n` +
+                    `• Pegar el enlace en su navegador\n` +
+                    `• Descargar el PDF directamente\n` +
+                    `• Compartirlo por cualquier medio\n\n` +
+                    `⏰ *El enlace estará disponible por 24 horas*`
+                );
+
+                // Programar limpieza automática después de 24 horas
+                setTimeout(() => {
+                    URL.revokeObjectURL(pdfUrl);
+                    console.log('Enlace del PDF revocado después de 24 horas');
+                }, 24 * 60 * 60 * 1000); // 24 horas
+
+            } else {
+                this.swalService.showError('Error', 'No se pudo copiar el enlace automáticamente.');
+            }
+
+        } catch (error) {
+            this.swalService.closeLoading();
+            console.error('Error al generar enlace:', error);
+            this.swalService.showError('Error',
+                'No se pudo generar el enlace de descarga. Por favor, use el botón "Descargar PDF" para obtener el archivo.'
+            );
+        }
     }
 
-    async copiarEnlace(): Promise<void> {
-        const datos = this.datosRecibo || this.crearDatosReciboReal();
-        const texto = `Recibo de Venta ${datos.numeroVenta} - Total: ${this.formatearMoneda(datos.totales.totalPagado)} - Fecha: ${datos.fecha}`;
+    /**
+     * Genera el PDF y retorna el Blob
+     */
+    private async generarPDFBlob(datos: any): Promise<Blob> {
+        return new Promise((resolve, reject) => {
+            try {
+                // Crear un iframe temporal para renderizar el HTML
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'fixed';
+                iframe.style.right = '0';
+                iframe.style.bottom = '0';
+                iframe.style.width = '210mm';
+                iframe.style.height = '297mm';
+                iframe.style.border = 'none';
+                iframe.style.visibility = 'hidden';
+                iframe.style.zIndex = '-1';
 
+                document.body.appendChild(iframe);
+
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+
+                if (!iframeDoc) {
+                    document.body.removeChild(iframe);
+                    reject(new Error('No se pudo acceder al documento del iframe'));
+                    return;
+                }
+
+                // Escribir contenido en el iframe
+                iframeDoc.open();
+                iframeDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { 
+                            margin: 0; 
+                            padding: 15mm; 
+                            background: white;
+                            width: 210mm;
+                            min-height: 297mm;
+                            font-family: Arial, sans-serif;
+                        }
+                        * {
+                            box-sizing: border-box;
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${this.generarReciboHTML(datos)}
+                </body>
+                </html>
+            `);
+                iframeDoc.close();
+
+                // Esperar a que el contenido se cargue
+                setTimeout(async () => {
+                    try {
+                        const canvas = await html2canvas(iframeDoc.body, {
+                            scale: 1.5,
+                            useCORS: true,
+                            logging: false,
+                            backgroundColor: '#ffffff',
+                            allowTaint: false,
+                            foreignObjectRendering: false
+                        });
+
+                        // Limpiar el iframe
+                        document.body.removeChild(iframe);
+
+                        // Convertir canvas a Blob
+                        canvas.toBlob((blob) => {
+                            if (blob) {
+                                resolve(blob);
+                            } else {
+                                reject(new Error('No se pudo generar el Blob del PDF'));
+                            }
+                        }, 'application/pdf', 0.9); // 90% de calidad
+
+                    } catch (canvasError) {
+                        document.body.removeChild(iframe);
+                        reject(canvasError);
+                    }
+                }, 1500); // Dar más tiempo para cargar
+
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    /**
+     * Método simple y confiable para copiar al portapapeles
+     */
+    private async copiarAlPortapapeles(texto: string): Promise<boolean> {
         try {
-            await navigator.clipboard.writeText(texto);
-            this.swalService.showSuccess('Éxito', 'Información del recibo copiada al portapapeles');
+            // Método moderno
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(texto);
+                return true;
+            } else {
+                // Método fallback
+                const textArea = document.createElement('textarea');
+                textArea.value = texto;
+                textArea.style.position = 'absolute';
+                textArea.style.left = '-9999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                textArea.setSelectionRange(0, 99999); // Para móviles
+                const result = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return result;
+            }
         } catch (error) {
-            console.error('Error al copiar:', error);
-            this.swalService.showError('Error', 'No se pudo copiar la información');
+            console.error('Error copiando al portapapeles:', error);
+            return false;
         }
     }
 
@@ -3205,6 +3468,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const telefonoSede = '0212-365-39-42';
         const rifSede = 'J-123456789';
 
+        // 🔥 CORRECCIÓN: Obtener información del vendedor/asesor
+        const vendedorInfo = this.getResumenAsesor();
+        console.log('👤 Información del vendedor para recibo:', vendedorInfo);
+
         // Calcular totales reales
         const subtotal = this.totalProductos || 0;
         const descuento = this.venta?.descuento ? (subtotal * (this.venta.descuento / 100)) : 0;
@@ -3230,13 +3497,48 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // Obtener productos con detalles calculados
         const productosConDetalles = this.obtenerProductosConDetalles();
 
+        // 🔥 CORRECCIÓN: Obtener información del cliente CORRECTAMENTE
+        let clienteInfo = {
+            nombre: 'CLIENTE GENERAL',
+            cedula: 'N/A',
+            telefono: 'N/A'
+        };
+
+        console.log('🔍 Debug - Estado del cliente:');
+        console.log('requierePaciente:', this.requierePaciente);
+        console.log('pacienteSeleccionado:', this.pacienteSeleccionado);
+        console.log('clienteSinPaciente:', this.clienteSinPaciente);
+
+        if (this.requierePaciente && this.pacienteSeleccionado) {
+            // Cliente con paciente
+            console.log('📋 Usando datos de paciente');
+            clienteInfo = {
+                nombre: this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'CLIENTE GENERAL',
+                cedula: this.pacienteSeleccionado?.informacionPersonal?.cedula || 'N/A',
+                telefono: this.pacienteSeleccionado?.informacionPersonal?.telefono || 'N/A'
+            };
+        } else if (!this.requierePaciente) {
+            // 🔥 CORRECCIÓN CRÍTICA: Cliente general - usar datos del formulario
+            console.log('👤 Usando datos de cliente general');
+            clienteInfo = {
+                nombre: this.clienteSinPaciente.nombreCompleto?.trim() || 'CLIENTE GENERAL',
+                cedula: this.clienteSinPaciente.cedula?.trim() || 'N/A',
+                telefono: this.clienteSinPaciente.telefono?.trim() || 'N/A'
+            };
+
+            console.log('📝 Datos capturados del cliente general:', clienteInfo);
+        }
+
+        console.log('✅ Información final del cliente para recibo:', clienteInfo);
+
         // Crear objeto base del recibo
         const datosRecibo: any = {
             // Información general
             numeroVenta: 'V-' + Date.now().toString().slice(-6),
             fecha: fechaActual.toLocaleDateString('es-VE'),
             hora: fechaActual.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
-            vendedor: this.getResumenAsesor() || 'Vendedor',
+            // 🔥 USAR LA INFORMACIÓN CORREGIDA DEL VENDEDOR
+            vendedor: vendedorInfo,
 
             // Información de la sede
             sede: {
@@ -3247,12 +3549,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 email: 'newvisionlens2020@gmail.com'
             },
 
-            // Información del cliente
-            cliente: {
-                nombre: this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'CLIENTE GENERAL',
-                cedula: this.pacienteSeleccionado?.informacionPersonal?.cedula || 'N/A',
-                telefono: this.pacienteSeleccionado?.informacionPersonal?.telefono || 'N/A'
-            },
+            // 🔥 USAR LA INFORMACIÓN CORREGIDA DEL CLIENTE
+            cliente: clienteInfo,
 
             // Productos reales del carrito con detalles calculados
             productos: productosConDetalles,
@@ -3277,7 +3575,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             // Configuración de la venta - INCLUIR FORMA DE PAGO REAL
             configuracion: {
-                formaPago: this.venta.formaPago, // ← ESTA ES LA CLAVE
+                formaPago: this.venta.formaPago,
                 moneda: this.venta.moneda,
                 descuento: this.venta.descuento,
                 observaciones: this.venta.observaciones
@@ -3303,7 +3601,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 montoAbonado: this.venta.montoAbonado || 0,
                 deudaPendiente: this.getDeudaPendienteAbono(),
                 porcentajePagado: this.porcentajeAbonadoDelTotal,
-                // Agregar array de abonos para estructura de tabla
                 abonos: [
                     {
                         fecha: fechaActual.toLocaleDateString('es-VE'),
@@ -3314,9 +3611,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             };
         }
 
+        console.log('🎯 Datos finales del recibo creados:', datosRecibo);
         return datosRecibo;
     }
-
 
     private obtenerProductosConDetalles(): any[] {
         return this.venta.productos.map((p, index) => {
@@ -3361,20 +3658,92 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
     }
 
+    /**
+ * Compartir por WhatsApp usando la información del cliente del modal
+ */
     compartirWhatsApp(): void {
-        const datos = this.datosRecibo || this.crearDatosReciboReal();
+        try {
+            const datos = this.datosRecibo || this.crearDatosReciboReal();
 
+            // Obtener el teléfono del cliente directamente de los datos del modal
+            const telefonoCliente = this.obtenerTelefonoCliente();
+
+            if (!telefonoCliente) {
+                this.solicitarTelefonoParaWhatsApp(datos);
+                return;
+            }
+
+            this.enviarWhatsAppDirecto(telefonoCliente, datos);
+
+        } catch (error) {
+            console.error('Error al compartir por WhatsApp:', error);
+            this.swalService.showError('Error', 'No se pudo abrir WhatsApp. Verifica que tengas la aplicación instalada.');
+        }
+    }
+
+    private solicitarTelefonoParaWhatsApp(datos: any): void {
+        const htmlContent = `
+        <div class="text-start">
+            <p class="mb-3">Ingresa el número de teléfono del cliente:</p>
+            <input type="tel" 
+                   id="telefonoInput" 
+                   class="form-control" 
+                   placeholder="Ej: 584141234567"
+                   pattern="[0-9+]{10,15}"
+                   required>
+            <small class="form-text text-muted">Incluye código de país (ej: 58 para Venezuela)</small>
+        </div>
+    `;
+
+        this.swalService.showConfirm(
+            'Compartir por WhatsApp',
+            htmlContent,
+            'Enviar',
+            'Cancelar'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                const telefonoInput = document.getElementById('telefonoInput') as HTMLInputElement;
+                if (telefonoInput && telefonoInput.value) {
+                    let telefono = telefonoInput.value.replace(/\D/g, '');
+
+                    // Asegurar formato internacional para Venezuela
+                    if (!telefono.startsWith('58') && telefono.length === 10) {
+                        telefono = '58' + telefono;
+                    }
+
+                    if (telefono.length >= 10) {
+                        this.enviarWhatsAppDirecto(telefono, datos);
+                    } else {
+                        this.swalService.showError('Error', 'Por favor ingresa un número de teléfono válido.');
+                        this.solicitarTelefonoParaWhatsApp(datos);
+                    }
+                }
+            }
+        });
+
+        // Focus en el input después de que se abra el modal
+        setTimeout(() => {
+            const telefonoInput = document.getElementById('telefonoInput') as HTMLInputElement;
+            if (telefonoInput) {
+                telefonoInput.focus();
+            }
+        }, 300);
+    }
+
+    private enviarWhatsAppDirecto(telefono: string, datos: any): void {
+        // Crear mensaje mejorado
         let mensaje = `*NEW VISION LENS* 🛍️\n\n`;
-        mensaje += `*${this.getTituloRecibo()}:* ${datos.numeroVenta}\n`;
+        mensaje += `*${this.getTituloRecibo()}* 📄\n`;
+        mensaje += `*Número:* ${datos.numeroVenta}\n`;
         mensaje += `*Fecha:* ${datos.fecha}\n`;
         mensaje += `*Hora:* ${datos.hora}\n`;
         mensaje += `*Cliente:* ${datos.cliente.nombre}\n`;
-        mensaje += `*Cédula:* ${datos.cliente.cedula}\n`;
+        mensaje += `*Cédula:* ${datos.cliente.cedula}\n\n`;
 
         // Información específica por tipo de pago
         switch (this.venta.formaPago) {
             case 'abono':
-                mensaje += `*Forma de pago:* ABONO PARCIAL\n`;
+                mensaje += `*Forma de pago:* ABONO PARCIAL 💰\n`;
                 mensaje += `*Monto abonado:* ${this.formatearMoneda(datos.totales.totalPagado)}\n`;
                 mensaje += `*Deuda pendiente:* ${this.formatearMoneda(this.getDeudaPendienteAbono())}\n`;
                 mensaje += `*Porcentaje pagado:* ${Math.round(this.porcentajeAbonadoDelTotal)}%\n\n`;
@@ -3382,7 +3751,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 break;
 
             case 'cashea':
-                mensaje += `*Forma de pago:* CASHEA\n`;
+                mensaje += `*Forma de pago:* CASHEA 📅\n`;
                 mensaje += `*Nivel:* ${this.obtenerNombreNivelCashea(this.nivelCashea)}\n`;
                 mensaje += `*Total pagado ahora:* ${this.formatearMoneda(datos.totales.totalPagado)}\n`;
                 mensaje += `*Inicial:* ${this.formatearMoneda(this.venta.montoInicial)}\n`;
@@ -3391,30 +3760,218 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 }
                 mensaje += `*Deuda pendiente:* ${this.formatearMoneda(this.getDeudaPendienteCashea())}\n`;
                 mensaje += `*Cuotas restantes:* ${this.cantidadCuotas - this.resumenCashea.cantidad}\n\n`;
-                mensaje += `¡Plan Cashea activado! 📅\n`;
+                mensaje += `¡Plan Cashea activado! 🔄\n`;
                 break;
 
             case 'contado':
             default:
-                mensaje += `*Forma de pago:* CONTADO\n`;
+                mensaje += `*Forma de pago:* CONTADO 💵\n`;
                 mensaje += `*Total pagado:* ${this.formatearMoneda(datos.totales.totalPagado)}\n\n`;
                 mensaje += `¡Pago completado! ✅\n`;
         }
 
         // Métodos de pago utilizados
         if (datos.metodosPago && datos.metodosPago.length > 0) {
-            mensaje += `\n*Métodos de pago:*\n`;
+            mensaje += `\n*Métodos de pago utilizados:*\n`;
             datos.metodosPago.forEach((metodo: any) => {
-                mensaje += `• ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.monto)}\n`;
+                const emoji = this.obtenerEmojiMetodoPago(metodo.tipo);
+                mensaje += `• ${emoji} ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.monto)}\n`;
             });
         }
 
-        mensaje += `\nConserve este comprobante para cualquier reclamo.`;
+        mensaje += `\n📍 *NEW VISION LENS*\n`;
+        mensaje += `🏪 C.C. Candelaria, Local PB-04, Guarenas\n`;
+        mensaje += `📞 0212-365-39-42\n\n`;
+        mensaje += `_Conserve este comprobante para cualquier reclamo._`;
 
-        const urlWhatsApp = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+        // Crear URL de WhatsApp
+        const urlWhatsApp = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+
+        // Abrir WhatsApp
         window.open(urlWhatsApp, '_blank');
 
-        this.swalService.showSuccess('Compartir', 'Redirigiendo a WhatsApp...');
+        this.swalService.showSuccess('WhatsApp', 'Redirigiendo a WhatsApp para enviar mensaje');
+    }
+
+
+    private solicitarEmailParaEnvio(datos: any): void {
+        // Mostrar el email actual si existe
+        const emailActual = this.obtenerEmailCliente();
+        const placeholder = emailActual ? emailActual : 'ejemplo@correo.com';
+
+        const htmlContent = `
+        <div class="text-start">
+            <p class="mb-3">Ingresa la dirección de email del cliente:</p>
+            <input type="email" 
+                   id="emailInput" 
+                   class="form-control" 
+                   placeholder="${placeholder}"
+                   value="${emailActual || ''}"
+                   required>
+            <small class="form-text text-muted">Se enviará el recibo a esta dirección</small>
+        </div>
+    `;
+
+        this.swalService.showConfirm(
+            'Enviar por Email',
+            htmlContent,
+            'Enviar',
+            'Cancelar'
+        ).then((result) => {
+            if (result.isConfirmed) {
+                const emailInput = document.getElementById('emailInput') as HTMLInputElement;
+                if (emailInput && emailInput.value) {
+                    const email = emailInput.value.trim();
+
+                    if (this.validarEmail(email)) {
+                        this.enviarEmailDirecto(email, datos);
+                    } else {
+                        this.swalService.showError('Error', 'Por favor ingresa una dirección de email válida.');
+                        this.solicitarEmailParaEnvio(datos);
+                    }
+                }
+            }
+        });
+
+        // Focus y seleccionar texto en el input después de que se abra el modal
+        setTimeout(() => {
+            const emailInput = document.getElementById('emailInput') as HTMLInputElement;
+            if (emailInput) {
+                emailInput.focus();
+                emailInput.select();
+            }
+        }, 300);
+    }
+
+    private enviarEmailDirecto(email: string, datos: any): void {
+        const asunto = `Recibo de Venta ${datos.numeroVenta} - New Vision Lens`;
+
+        let cuerpo = `Estimado/a ${datos.cliente.nombre},\n\n`;
+        cuerpo += `Le enviamos los detalles de su compra en NEW VISION LENS:\n\n`;
+        cuerpo += `========================================\n`;
+        cuerpo += `           RECIBO DE VENTA\n`;
+        cuerpo += `========================================\n\n`;
+        cuerpo += `Número de recibo: ${datos.numeroVenta}\n`;
+        cuerpo += `Fecha: ${datos.fecha}\n`;
+        cuerpo += `Hora: ${datos.hora}\n`;
+        cuerpo += `Cliente: ${datos.cliente.nombre}\n`;
+        cuerpo += `Cédula: ${datos.cliente.cedula}\n\n`;
+
+        cuerpo += `PRODUCTOS:\n`;
+        cuerpo += `----------------------------------------\n`;
+        datos.productos.forEach((producto: any, index: number) => {
+            cuerpo += `${index + 1}. ${producto.nombre}\n`;
+            cuerpo += `   Cantidad: ${producto.cantidad}\n`;
+            cuerpo += `   Precio: ${this.formatearMoneda(producto.precioUnitario)}\n`;
+            cuerpo += `   Subtotal: ${this.formatearMoneda(producto.subtotal)}\n\n`;
+        });
+
+        cuerpo += `----------------------------------------\n`;
+        cuerpo += `Subtotal: ${this.formatearMoneda(datos.totales.subtotal)}\n`;
+        if (datos.totales.descuento > 0) {
+            cuerpo += `Descuento: -${this.formatearMoneda(datos.totales.descuento)}\n`;
+        }
+        cuerpo += `IVA: ${this.formatearMoneda(datos.totales.iva)}\n`;
+        cuerpo += `TOTAL: ${this.formatearMoneda(datos.totales.totalPagado)}\n\n`;
+
+        cuerpo += `Forma de pago: ${this.venta.formaPago.toUpperCase()}\n\n`;
+
+        if (datos.metodosPago && datos.metodosPago.length > 0) {
+            cuerpo += `Métodos de pago utilizados:\n`;
+            datos.metodosPago.forEach((metodo: any) => {
+                cuerpo += `• ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.monto)}\n`;
+                if (metodo.referencia) {
+                    cuerpo += `  Referencia: ${metodo.referencia}\n`;
+                }
+                if (metodo.banco) {
+                    cuerpo += `  Banco: ${metodo.banco}\n`;
+                }
+            });
+            cuerpo += `\n`;
+        }
+
+        cuerpo += `========================================\n`;
+        cuerpo += `NEW VISION LENS\n`;
+        cuerpo += `C.C. Candelaria, Local PB-04, Guarenas\n`;
+        cuerpo += `Teléfono: 0212-365-39-42\n`;
+        cuerpo += `Email: newvisionlens2020@gmail.com\n\n`;
+
+        cuerpo += `¡Gracias por su compra!\n`;
+        cuerpo += `Conserve este comprobante para cualquier reclamo.\n\n`;
+        cuerpo += `Atentamente,\n`;
+        cuerpo += `El equipo de New Vision Lens`;
+
+        // Crear enlace mailto
+        const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+
+        // Abrir cliente de email
+        window.location.href = mailtoLink;
+
+        this.swalService.showSuccess('Email', `Se ha abierto tu cliente de email para enviar a ${email}`);
+    }
+
+    private validarEmail(email: string): boolean {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(email);
+    }
+
+    private obtenerEmojiMetodoPago(tipo: string): string {
+        const emojis: { [key: string]: string } = {
+            'efectivo': '💵',
+            'debito': '💳',
+            'credito': '💳',
+            'pagomovil': '📱',
+            'transferencia': '🏦',
+            'zelle': '🌐'
+        };
+        return emojis[tipo] || '💰';
+    }
+
+    /**
+     * Obtiene el teléfono del cliente desde el modal de generar venta
+     */
+    private obtenerTelefonoCliente(): string {
+        if (this.requierePaciente && this.pacienteSeleccionado) {
+            return this.pacienteSeleccionado.informacionPersonal?.telefono || '';
+        } else if (!this.requierePaciente) {
+            return this.clienteSinPaciente.telefono || '';
+        }
+        return '';
+    }
+
+    /**
+     * Compartir por Email usando la información del cliente del modal
+     */
+    compartirEmail(): void {
+        try {
+            const datos = this.datosRecibo || this.crearDatosReciboReal();
+
+            // Obtener el email del cliente directamente de los datos del modal
+            const emailCliente = this.obtenerEmailCliente();
+
+            if (!emailCliente || !this.validarEmail(emailCliente)) {
+                this.solicitarEmailParaEnvio(datos);
+                return;
+            }
+
+            this.enviarEmailDirecto(emailCliente, datos);
+
+        } catch (error) {
+            console.error('Error al compartir por email:', error);
+            this.swalService.showError('Error', 'No se pudo abrir el cliente de email.');
+        }
+    }
+
+    /**
+     * Obtiene el email del cliente desde el modal de generar venta
+     */
+    private obtenerEmailCliente(): string {
+        if (this.requierePaciente && this.pacienteSeleccionado) {
+            return this.pacienteSeleccionado.informacionPersonal?.email || '';
+        } else if (!this.requierePaciente) {
+            return this.clienteSinPaciente.email || '';
+        }
+        return '';
     }
 
     private verificarDatosRecibo(): void {
@@ -3469,26 +4026,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
         // Teléfono y email son opcionales
     }
-
-    onAsesorChange() {
-        // Este método se ejecuta cuando se selecciona un asesor
-        console.log('Asesor seleccionado:', this.asesorSeleccionado);
-
-        // Opcional: Aquí puedes agregar lógica adicional
-        // como notificaciones, validaciones, etc.
-    }
-
-    getNombreAsesorSeleccionado(): string {
-        const asesor = this.empleadosDisponibles.find(e => e.id == this.asesorSeleccionado);
-        return asesor ? `${asesor.nombre}` : 'No asignado';
-    }
-
-    getCargoAsesorSeleccionado(): string {
-        const asesor = this.empleadosDisponibles.find(e => e.id == this.asesorSeleccionado);
-        return asesor ? asesor.cargoNombre : '';
-    }
-
-
     get datosClienteParaVenta(): any {
         if (this.requierePaciente && this.pacienteSeleccionado) {
             return {
@@ -3503,4 +4040,51 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
         return null;
     }
+
+    /**
+ * Obtiene la clase CSS para el badge de estado
+ */
+    getEstadoBadgeClass(): string {
+        const estado = this.informacionVenta?.estado?.toLowerCase() || 'completada';
+
+        switch (estado) {
+            case 'completada':
+            case 'completed':
+            case 'completado':
+                return 'status-completed';
+            case 'pendiente':
+            case 'pending':
+                return 'status-pending';
+            case 'procesando':
+            case 'processing':
+                return 'status-processing';
+            default:
+                return 'status-completed';
+        }
+    }
+
+    /**
+     * Obtiene el texto del estado formateado
+     */
+    getEstadoTexto(): string {
+        //  console.log('this.informacionVenta?',this.informacionVenta);
+        const estado = this.informacionVenta?.estado?.toLowerCase() || 'completada';
+
+        switch (estado) {
+            case 'completada':
+            case 'completed':
+            case 'completado':
+                return 'Completado';
+            case 'pendiente':
+            case 'pending':
+                return 'Pendiente';
+            case 'procesando':
+            case 'processing':
+                return 'Procesando';
+            default:
+                return 'Completado';
+        }
+    }
+
+
 }
