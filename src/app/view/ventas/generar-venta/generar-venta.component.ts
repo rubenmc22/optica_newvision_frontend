@@ -902,9 +902,15 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         cuotasOrdenadas: CuotaCashea[];
     } {
         const total = this.montoTotal;
-        const inicial = this.venta.montoInicial ?? this.calcularInicialCasheaPorNivel(total, this.nivelCashea);
-        const restante = total - inicial;
-        const montoPorCuota = this.redondear(restante / numeroCuotas);
+        let inicial = this.venta.montoInicial ?? this.calcularInicialCasheaPorNivel(total, this.nivelCashea);
+
+        // Validar que el inicial no exceda el total
+        if (inicial > total) {
+            inicial = total;
+        }
+
+        const restante = Math.max(total - inicial, 0); // Asegurar que no sea negativo
+        const montoPorCuota = numeroCuotas > 0 ? +(restante / numeroCuotas).toFixed(2) : 0;
 
         const hoy = new Date();
         const cuotasOrdenadas: CuotaCashea[] = [];
@@ -973,17 +979,37 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     generarCuotasCashea(): void {
-        // Asegurar que Cashea siempre use dólares
-        if (this.venta.formaPago === 'cashea') {
-            this.venta.moneda = 'dolar';
+        // Validar que estamos en modo Cashea
+        if (this.venta.formaPago !== 'cashea') {
+            return;
         }
 
+        // Asegurar que Cashea siempre use dólares
+        this.venta.moneda = 'dolar';
+
+        // Validar que el monto inicial no sea mayor al total
+        const total = this.montoTotal;
+        const inicial = this.venta.montoInicial ?? 0;
+
+        if (inicial > total) {
+            this.venta.montoInicial = total;
+            this.valorInicialTemporal = `${total.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+        }
+
+        // Recalcular el plan
         const plan = this.calcularCasheaPlan(this.cantidadCuotasCashea);
+
+        // Actualizar las cuotas
         this.cuotasCashea = plan.cuotasOrdenadas.map((cuota, index) => ({
             ...cuota,
             habilitada: index === 0
         }));
+
+        // Actualizar resumen
         this.actualizarResumenCashea();
+
+        // Forzar actualización de la vista
+        this.cdr.detectChanges();
     }
 
     toggleCuotaSeleccionada(index: number): void {
@@ -1273,6 +1299,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (!limpio) {
             this.venta.montoInicial = 0;
             this.valorInicialTemporal = '';
+            this.generarCuotasCashea();
             return;
         }
 
@@ -1282,17 +1309,33 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (isNaN(monto)) {
             this.venta.montoInicial = 0;
             this.valorInicialTemporal = '';
+            this.generarCuotasCashea();
             return;
         }
 
         if (monto < minimo) {
             this.venta.montoInicial = minimo;
             this.valorInicialTemporal = `${minimo.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+            this.generarCuotasCashea();
             return;
         }
 
         this.venta.montoInicial = monto;
         this.valorInicialTemporal = `${monto.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+        this.generarCuotasCashea();
+    }
+
+    onMontoInicialChange(): void {
+        if (this.venta.formaPago === 'cashea') {
+            // Forzar regeneración de cuotas cuando el monto inicial cambia
+            this.generarCuotasCashea();
+
+            // También actualizar el resumen
+            this.actualizarResumenCashea();
+
+            // Forzar detección de cambios
+            this.cdr.detectChanges();
+        }
     }
 
     ngAfterViewInit(): void {
@@ -3875,11 +3918,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.swalService.showSuccess('Email', `Se ha abierto tu cliente de email para enviar a ${email}`);
     }
 
-    private validarEmail(email: string): boolean {
-        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return regex.test(email);
-    }
-
     private obtenerEmojiMetodoPago(tipo: string): string {
         const emojis: { [key: string]: string } = {
             'efectivo': '💵',
@@ -3965,20 +4003,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
     }
 
-    // Método para validar cliente sin paciente
-    validarClienteSinPaciente(): boolean {
-        const cliente = this.clienteSinPaciente;
-
-        // Validar campos requeridos según tipo de persona
-        if (cliente.tipoPersona === 'natural') {
-            return !!cliente.nombreCompleto?.trim() &&
-                !!cliente.cedula?.trim();
-        } else {
-            return !!cliente.nombreCompleto?.trim() &&
-                !!cliente.cedula?.trim();
-        }
-        // Teléfono y email son opcionales
-    }
     get datosClienteParaVenta(): any {
         if (this.requierePaciente && this.pacienteSeleccionado) {
             return {
@@ -4034,5 +4058,281 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             default:
                 return 'Completado';
         }
+    }
+
+    // === MÉTODOS DE VALIDACIÓN PARA CLIENTE SIN PACIENTE ===
+
+    // Validar email (ahora obligatorio)
+    validarEmail(email: string): boolean {
+        if (!email || email.trim() === '') return false;
+
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return emailRegex.test(email.trim());
+    }
+
+    // Validar cédula/RIF (obligatorio)
+    validarCedula(cedula: string, tipoPersona: string): boolean {
+        if (!cedula || cedula.trim() === '') return false;
+
+        const cedulaLimpia = cedula.trim();
+
+        if (tipoPersona === 'juridica') {
+            // Para persona jurídica (RIF): J-123456789
+            const rifRegex = /^[JjVGgEe]-?\d{7,9}$/;
+            if (!rifRegex.test(cedulaLimpia)) return false;
+
+            // Si no tiene la J al inicio, agregarla automáticamente
+            if (!cedulaLimpia.toUpperCase().startsWith('J')) {
+                this.clienteSinPaciente.cedula = 'J-' + cedulaLimpia.replace(/[^0-9]/g, '');
+            }
+            return true;
+        } else {
+            // Para persona natural: solo números, máximo 8 dígitos
+            const cedulaRegex = /^\d{1,8}$/;
+            return cedulaRegex.test(cedulaLimpia);
+        }
+    }
+
+    // Validar nombre (solo alfabético y espacios, obligatorio)
+    validarNombre(nombre: string): boolean {
+        if (!nombre || nombre.trim() === '') return false;
+
+        const nombreRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+        return nombreRegex.test(nombre.trim());
+    }
+
+    // Validar teléfono (estructura internacional, obligatorio)
+    validarTelefono(telefono: string): boolean {
+        if (!telefono || telefono.trim() === '') return false;
+
+        const telefonoLimpio = telefono.trim();
+
+        // Remover todos los espacios para validar
+        const telefonoSinEspacios = telefonoLimpio.replace(/\s/g, '');
+
+        // Validar que solo contenga números y posiblemente el signo + al inicio
+        if (!/^\+?\d+$/.test(telefonoSinEspacios)) return false;
+
+        // Validar longitud mínima y máxima (8-15 dígitos sin código de país, o más con código)
+        const longitud = telefonoSinEspacios.replace('+', '').length;
+
+        // Longitud típica: 
+        // - Sin código: 8-11 dígitos
+        // - Con código: 10-15 dígitos (incluyendo código de país)
+        if (longitud < 8 || longitud > 15) return false;
+
+        return true;
+    }
+
+    // Formatear teléfono automáticamente (sin forzar código de país)
+    formatearTelefono(telefono: string): string {
+        if (!telefono) return '';
+
+        const telefonoLimpio = telefono.replace(/\D/g, ''); // Remover todo excepto números
+
+        // Si empieza con código de país (más de 8 dígitos), formatear con espacio después del código
+        if (telefonoLimpio.length > 8) {
+            // Asumir que los primeros 1-3 dígitos son código de país
+            const codigoPaisLength = telefonoLimpio.length - 8; // 8 dígitos para el número local
+            const codigoPais = telefonoLimpio.substring(0, codigoPaisLength);
+            const numeroLocal = telefonoLimpio.substring(codigoPaisLength);
+
+            return `+${codigoPais} ${numeroLocal}`;
+        }
+
+        return telefonoLimpio;
+    }
+
+    // Validar cliente completo (todos los campos obligatorios)
+    validarClienteSinPaciente(): boolean {
+        const cliente = this.clienteSinPaciente;
+
+        const nombreValido = this.validarNombre(cliente.nombreCompleto);
+        const cedulaValida = this.validarCedula(cliente.cedula, cliente.tipoPersona);
+        const telefonoValido = this.validarTelefono(cliente.telefono);
+        const emailValido = this.validarEmail(cliente.email);
+
+        return nombreValido && cedulaValida && telefonoValido && emailValido;
+    }
+
+    // Métodos para usar en los eventos de los inputs
+    onCedulaChange(): void {
+        const cedula = this.clienteSinPaciente.cedula;
+        const tipoPersona = this.clienteSinPaciente.tipoPersona;
+
+        if (!this.validarCedula(cedula, tipoPersona)) {
+            this.mostrarErrorCedula();
+        } else {
+            this.limpiarErrorCedula();
+        }
+        this.actualizarEstadoValidacion();
+    }
+
+    onTelefonoChange(): void {
+        const telefono = this.clienteSinPaciente.telefono;
+
+        if (!this.validarTelefono(telefono)) {
+            this.mostrarErrorTelefono();
+        } else {
+            this.limpiarErrorTelefono();
+
+            if (telefono) {
+                this.clienteSinPaciente.telefono = this.formatearTelefono(telefono);
+            }
+        }
+        this.actualizarEstadoValidacion();
+    }
+
+    onEmailChange(): void {
+        const email = this.clienteSinPaciente.email;
+
+        if (!this.validarEmail(email)) {
+            this.mostrarErrorEmail();
+        } else {
+            this.limpiarErrorEmail();
+        }
+        this.actualizarEstadoValidacion();
+    }
+
+    onNombreChange(): void {
+        const nombre = this.clienteSinPaciente.nombreCompleto;
+
+        if (!this.validarNombre(nombre)) {
+            this.mostrarErrorNombre();
+        } else {
+            this.limpiarErrorNombre();
+        }
+        this.actualizarEstadoValidacion();
+    }
+
+    // Actualizar estado de validación general
+    actualizarEstadoValidacion(): void {
+        const valido = this.validarClienteSinPaciente();
+        // Puedes usar esta función para habilitar/deshabilitar botones, etc.
+    }
+
+    // Métodos para mostrar/ocultar errores
+    mostrarErrorCedula(): void {
+        const elemento = document.querySelector('[data-cedula-input]');
+        if (elemento) {
+            elemento.classList.add('input-error');
+        }
+    }
+
+    limpiarErrorCedula(): void {
+        const elemento = document.querySelector('[data-cedula-input]');
+        if (elemento) {
+            elemento.classList.remove('input-error');
+        }
+    }
+
+    mostrarErrorTelefono(): void {
+        const elemento = document.querySelector('[data-telefono-input]');
+        if (elemento) {
+            elemento.classList.add('input-error');
+        }
+    }
+
+    limpiarErrorTelefono(): void {
+        const elemento = document.querySelector('[data-telefono-input]');
+        if (elemento) {
+            elemento.classList.remove('input-error');
+        }
+    }
+
+    mostrarErrorEmail(): void {
+        const elemento = document.querySelector('[data-email-input]');
+        if (elemento) {
+            elemento.classList.add('input-error');
+        }
+    }
+
+    limpiarErrorEmail(): void {
+        const elemento = document.querySelector('[data-email-input]');
+        if (elemento) {
+            elemento.classList.remove('input-error');
+        }
+    }
+
+    mostrarErrorNombre(): void {
+        const elemento = document.querySelector('[data-nombre-input]');
+        if (elemento) {
+            elemento.classList.add('input-error');
+        }
+    }
+
+    limpiarErrorNombre(): void {
+        const elemento = document.querySelector('[data-nombre-input]');
+        if (elemento) {
+            elemento.classList.remove('input-error');
+        }
+    }
+
+    // Obtener mensajes de error para mostrar al usuario
+    getMensajeErrorCedula(): string {
+        const tipoPersona = this.clienteSinPaciente.tipoPersona;
+        if (tipoPersona === 'juridica') {
+            return 'Formato de RIF inválido. Use J- seguido de 7-9 números. Ej: J-123456789';
+        } else {
+            return 'La cédula debe contener solo números (máximo 8 dígitos)';
+        }
+    }
+
+    getMensajeErrorTelefono(): string {
+        return 'Formato de teléfono inválido. Use: 58 4121234567 o 4121234567';
+    }
+
+    getMensajeErrorEmail(): string {
+        return 'Formato de email inválido. Use: ejemplo@correo.com';
+    }
+
+    getMensajeErrorNombre(): string {
+        return 'El nombre solo puede contener letras y espacios';
+    }
+
+    // Obtener estado individual de cada campo para mostrar en la UI
+    getEstadoCampoNombre(): { valido: boolean, mensaje: string } {
+        const nombre = this.clienteSinPaciente.nombreCompleto;
+        if (!nombre || nombre.trim() === '') {
+            return { valido: false, mensaje: 'El nombre es obligatorio' };
+        }
+        return {
+            valido: this.validarNombre(nombre),
+            mensaje: this.getMensajeErrorNombre()
+        };
+    }
+
+    getEstadoCampoCedula(): { valido: boolean, mensaje: string } {
+        const cedula = this.clienteSinPaciente.cedula;
+        const tipoPersona = this.clienteSinPaciente.tipoPersona;
+        if (!cedula || cedula.trim() === '') {
+            return { valido: false, mensaje: 'La cédula/RIF es obligatorio' };
+        }
+        return {
+            valido: this.validarCedula(cedula, tipoPersona),
+            mensaje: this.getMensajeErrorCedula()
+        };
+    }
+
+    getEstadoCampoTelefono(): { valido: boolean, mensaje: string } {
+        const telefono = this.clienteSinPaciente.telefono;
+        if (!telefono || telefono.trim() === '') {
+            return { valido: false, mensaje: 'El teléfono es obligatorio' };
+        }
+        return {
+            valido: this.validarTelefono(telefono),
+            mensaje: this.getMensajeErrorTelefono()
+        };
+    }
+
+    getEstadoCampoEmail(): { valido: boolean, mensaje: string } {
+        const email = this.clienteSinPaciente.email;
+        if (!email || email.trim() === '') {
+            return { valido: false, mensaje: 'El email es obligatorio' };
+        }
+        return {
+            valido: this.validarEmail(email),
+            mensaje: this.getMensajeErrorEmail()
+        };
     }
 }

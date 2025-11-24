@@ -354,7 +354,7 @@
 <!-- Modal resumen de  venta -->
 <div class="modal fade" id="resumenVentaModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"
     data-bs-keyboard="false" (shown.bs.modal)="onModalShown()">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <!-- Header modernizado -->
             <div class="modal-header-detalle">
@@ -529,61 +529,72 @@
                             <!-- Campos del formulario optimizados -->
                             <div class="cliente-fields">
                                 <div class="form-grid">
-                                    <!-- Fila 1: Nombre/Razón Social y Cédula/RIF -->
-                                    <div class="form-group">
-                                        <label class="form-label">
-                                            <i class="bi bi-person"></i>
-                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón Social' }}
-                                        </label>
-                                        <input type="text" class="form-control modern-input"
-                                            [(ngModel)]="clienteSinPaciente.nombreCompleto"
-                                            [placeholder]="clienteSinPaciente.tipoPersona === 'natural' ? 'Ingrese nombre completo' : 'Ingrese razón social'">
-                                    </div>
-
+                                    <!-- Fila 1: Cédula/RIF -->
                                     <div class="form-group">
                                         <label class="form-label">
                                             <i class="bi bi-card-text"></i>
                                             {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Cédula' : 'RIF' }}
                                         </label>
-                                        <input type="text" class="form-control modern-input"
+                                        <input type="text" class="form-control modern-input" style="margin-bottom: -10px !important;"
                                             [(ngModel)]="clienteSinPaciente.cedula"
-                                            [placeholder]="clienteSinPaciente.tipoPersona === 'natural' ? 'Ingrese la cédula' : 'Ingrese el RIF'">
+                                            [placeholder]="clienteSinPaciente.tipoPersona === 'natural' ? 'Ingrese la cédula' : 'Ingrese el RIF'"
+                                            (blur)="onCedulaChange()" (input)="onCedulaChange()" data-cedula-input>
+                                        <div class="error-message"
+                                            *ngIf="!getEstadoCampoCedula().valido && clienteSinPaciente.cedula">
+                                            <i class="bi bi-exclamation-circle"></i>
+                                            {{ getEstadoCampoCedula().mensaje }}
+                                        </div>
                                     </div>
 
-                                    <!-- Fila 2: Teléfono y Email -->
+                                    <!-- Fila 1: Nombre/Razón Social -->
+                                    <div class="form-group">
+                                        <label class="form-label">
+                                            <i class="bi bi-person"></i>
+                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón Social' }}
+                                        </label>
+                                        <input type="text" class="form-control modern-input" style="margin-bottom: -10px !important;"
+                                            [(ngModel)]="clienteSinPaciente.nombreCompleto"
+                                            [placeholder]="clienteSinPaciente.tipoPersona === 'natural' ? 'Ingrese nombre completo' : 'Ingrese razón social'"
+                                            (blur)="onNombreChange()" (input)="onNombreChange()" data-nombre-input>
+                                        <div class="error-message"
+                                            *ngIf="!getEstadoCampoNombre().valido && clienteSinPaciente.nombreCompleto">
+                                            <i class="bi bi-exclamation-circle"></i>
+                                            {{ getEstadoCampoNombre().mensaje }}
+                                        </div>
+                                    </div>
+
+
+                                    <!-- Fila 2: Teléfono -->
                                     <div class="form-group">
                                         <label class="form-label">
                                             <i class="bi bi-telephone"></i>
                                             Teléfono
                                         </label>
-                                        <input type="tel" class="form-control modern-input"
-                                            [(ngModel)]="clienteSinPaciente.telefono" placeholder="Ingrese el teléfono">
+                                        <input type="tel" class="form-control modern-input" style="margin-bottom: -10px !important;"
+                                            [(ngModel)]="clienteSinPaciente.telefono" placeholder="Ej: 58 4121234567"
+                                            (blur)="onTelefonoChange()" (input)="onTelefonoChange()"
+                                            data-telefono-input>
+                                        <div class="error-message"
+                                            *ngIf="!getEstadoCampoTelefono().valido && clienteSinPaciente.telefono">
+                                            <i class="bi bi-exclamation-circle"></i>
+                                            {{ getEstadoCampoTelefono().mensaje }}
+                                        </div>
                                     </div>
 
+                                    <!-- Fila 2: Email -->
                                     <div class="form-group">
                                         <label class="form-label">
                                             <i class="bi bi-envelope"></i>
                                             Email
                                         </label>
-                                        <input type="email" class="form-control modern-input"
-                                            [(ngModel)]="clienteSinPaciente.email" placeholder="Ingrese el email">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Estado de validación mejorado -->
-                            <div class="validation-status"
-                                [ngClass]="{'valid': validarClienteSinPaciente(), 'invalid': !validarClienteSinPaciente()}">
-                                <div class="status-content">
-                                    <i class="bi" [class.bi-check-circle-fill]="validarClienteSinPaciente()"
-                                        [class.bi-exclamation-circle-fill]="!validarClienteSinPaciente()"></i>
-                                    <div class="status-text">
-                                        <span class="status-title">
-                                            {{ validarClienteSinPaciente() ? 'Información completa' : 'Información incompleta' }}
-                                        </span>
-                                        <span class="status-description">
-                                            {{ validarClienteSinPaciente() ? 'Todos los campos requeridos están completos' : 'Complete los campos marcados como requeridos' }}
-                                        </span>
+                                        <input type="email" class="form-control modern-input" style="margin-bottom: -10px !important;"
+                                            [(ngModel)]="clienteSinPaciente.email" placeholder="ejemplo@correo.com"
+                                            (blur)="onEmailChange()" (input)="onEmailChange()" data-email-input>
+                                        <div class="error-message"
+                                            *ngIf="!getEstadoCampoEmail().valido && clienteSinPaciente.email">
+                                            <i class="bi bi-exclamation-circle"></i>
+                                            {{ getEstadoCampoEmail().mensaje }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -655,14 +666,13 @@
                                     <div class="input-with-validation">
                                         <input type="text" class="form-control modern-input"
                                             [placeholder]="'Monto en ' + obtenerSimboloMoneda(venta.moneda)"
-                                            [(ngModel)]="valorInicialTemporal" (blur)="formatearInicialCashea()"
+                                            [(ngModel)]="valorInicialTemporal" 
+                                            (blur)="formatearInicialCashea()" 
+                                            (input)="onMontoInicialChange()"
                                             (keypress)="validarEntrada($event)" />
                                         <small class="validation-text">
-                                            Mínimo: {{ calcularInicialCasheaPorNivel(montoTotal, nivelCashea) |
-                                            number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
-                                            <span *ngIf="venta.moneda !== 'bolivar'">⇄ {{
-                                                obtenerEquivalenteBs(calcularInicialCasheaPorNivel(montoTotal,
-                                                nivelCashea)) | number:'1.2-2' }} Bs</span>
+                                            Mínimo: {{ calcularInicialCasheaPorNivel(montoTotal, nivelCashea) | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
+                                            <span *ngIf="venta.moneda !== 'bolivar'">⇄ {{ obtenerEquivalenteBs(calcularInicialCasheaPorNivel(montoTotal, nivelCashea)) | number:'1.2-2' }} Bs</span>
                                         </small>
                                     </div>
                                 </div>
@@ -1295,7 +1305,8 @@
                         </div>
                     </div>
                 </div>
-                <button type="button" class="btn-close btn-close-white" (click)="cerrarModalRecibo()" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" (click)="cerrarModalRecibo()"
+                    aria-label="Close"></button>
             </div>
 
             <!-- Body del Recibo -->
@@ -1696,7 +1707,7 @@
                                     <i class="bi bi-whatsapp text-success me-2"></i>
                                     WhatsApp
                                 </button>
-                               <!-- <button ngbDropdownItem (click)="compartirEmail()">
+                                <!-- <button ngbDropdownItem (click)="compartirEmail()">
                                     <i class="bi bi-envelope text-primary me-2"></i>
                                     Email
                                 </button>-->
