@@ -553,10 +553,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return;
         }
 
-        const maximoEnMonedaSistema = this.getMontoRestanteParaMetodo(index);
-        const maximoEnMonedaMetodo = monedaMetodo === this.venta.moneda
-            ? maximoEnMonedaSistema
-            : this.convertirMontoExacto(maximoEnMonedaSistema, this.venta.moneda, monedaMetodo);
+        // Obtener el máximo disponible en la MONEDA DEL MÉTODO
+        const maximoEnMonedaMetodo = this.getMontoRestanteParaMetodo(index);
 
         let montoFinal = Math.min(monto, maximoEnMonedaMetodo);
 
@@ -1143,24 +1141,35 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     getMontoRestanteParaMetodo(index: number): number {
-        // Calcular lo que ya se ha pagado en otros métodos (en la moneda del sistema)
+        // 1. Calcular lo que ya se ha pagado en otros métodos (en la moneda del sistema - euros)
         const otrosMontos = this.venta.metodosDePago
             .filter((_, i) => i !== index)
             .reduce((sum, metodo) => {
                 const montoMetodo = metodo.monto ?? 0;
                 const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
 
+                // Convertir cada monto a la moneda del sistema (euros)
                 if (monedaMetodo !== this.venta.moneda) {
-                    return sum + this.convertirMontoExacto(montoMetodo, monedaMetodo, this.venta.moneda);
+                    const conversionExacta = this.convertirMontoExacto(montoMetodo, monedaMetodo, this.venta.moneda);
+                    return sum + conversionExacta;
                 }
                 return sum + montoMetodo;
             }, 0);
 
-        // El restante es la diferencia entre lo requerido y lo ya pagado
-        const restante = Math.max(this.montoCubiertoPorMetodos - otrosMontos, 0);
+        // 2. El restante es la diferencia entre lo requerido y lo ya pagado (en euros)
+        const restanteEnEuros = Math.max(this.montoCubiertoPorMetodos - otrosMontos, 0);
 
-        // Redondear para evitar problemas de precisión con decimales
-        return this.redondear(restante);
+        // 3. Si el método actual está en la misma moneda del sistema, devolver directamente
+        const metodoActual = this.venta.metodosDePago[index];
+        const monedaMetodoActual = this.getMonedaParaMetodo(metodoActual.tipo);
+
+        if (monedaMetodoActual === this.venta.moneda) {
+            return this.redondear(restanteEnEuros);
+        }
+
+        // 4. Si el método actual está en otra moneda, convertir el restante a esa moneda
+        const restanteEnMonedaMetodo = this.convertirMontoExacto(restanteEnEuros, this.venta.moneda, monedaMetodoActual);
+        return this.redondear(restanteEnMonedaMetodo);
     }
 
     onMontoInputChange(index: number, event: any): void {
@@ -1501,12 +1510,28 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (!monto || monto <= 0) return 0;
 
         const monedaMetodo = this.getMonedaParaMetodo(tipoMetodo);
-        if (monedaMetodo === 'bolivar') {
-            return this.redondear(monto);
+
+        // Convertir desde la moneda del método a bolívares
+        if (monedaMetodo === 'dolar') {
+            return this.redondear(monto * (this.tasasPorId['dolar'] ?? 1));
+        } else if (monedaMetodo === 'euro') {
+            return this.redondear(monto * (this.tasasPorId['euro'] ?? 1));
+        } else {
+            return this.redondear(monto); // Ya está en bolívares
+        }
+    }
+
+    getInfoConversionMetodo(metodo: any): string {
+        if (!metodo.monto || metodo.monto <= 0) return '';
+
+        const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
+        const montoEnSistema = this.convertirMontoExacto(metodo.monto, monedaMetodo, this.venta.moneda);
+
+        if (monedaMetodo === this.venta.moneda) {
+            return ''; // No mostrar conversión si es la misma moneda
         }
 
-        const tasa = this.tasasPorId[monedaMetodo] || 1;
-        return this.redondear(monto * tasa);
+        return `⇄ ${montoEnSistema.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
     }
 
     getMontoRestanteParaMetodoEnBs(index: number): number {

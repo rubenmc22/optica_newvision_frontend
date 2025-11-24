@@ -978,20 +978,17 @@
                                         <div class="footer-info">
                                             <span class="maximo-text">
                                                 <i class="bi bi-graph-up"></i>
-                                                Máx. disponible: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{
-                                                getSimboloMonedaActual() }}
-                                                <span *ngIf="getMonedaParaMetodo(metodo.tipo) === 'bolivar'"
-                                                    class="conversion-text">
-                                                    ({{ getMontoRestanteParaMetodoEnBs(i) | number:'1.2-2' }} Bs)
-                                                </span>
+                                                Máx. disponible: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{ obtenerSimboloMoneda(getMonedaParaMetodo(metodo.tipo)) }}
                                             </span>
 
-                                            <span
-                                                *ngIf="mostrarConversionBs(metodo.tipo) && metodo.monto && metodo.monto > 0"
-                                                class="conversion-text">
+                                            <!-- Mostrar conversión clara -->
+                                            <span *ngIf="metodo.monto && metodo.monto > 0" class="conversion-text">
                                                 <i class="bi bi-arrow-left-right"></i>
-                                                Equivale a {{ calcularConversionBs(metodo.monto, metodo.tipo) |
-                                                number:'1.2-2' }} Bs
+                                                {{ metodo.monto | number:'1.2-2' }} {{ obtenerSimboloMoneda(getMonedaParaMetodo(metodo.tipo)) }} 
+                                                = {{ getInfoConversionMetodo(metodo) }}
+                                                <span *ngIf="getMonedaParaMetodo(metodo.tipo) !== 'bolivar'" class="bs-conversion">
+                                                    ({{ calcularConversionBs(metodo.monto, metodo.tipo) | number:'1.2-2' }} Bs)
+                                                </span>
                                             </span>
                                         </div>
                                     </div>
