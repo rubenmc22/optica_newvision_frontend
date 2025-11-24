@@ -18,6 +18,7 @@ export class LoaderService {
 
   // Método para mostrar loader con mensaje
   showWithMessage(message: string = 'Cargando...') {
+    console.log('RDMC message ', message);
     this.messageSubject.next(message);
     this.loadingStartTime = Date.now();
     this.isCurrentlyLoading = true;

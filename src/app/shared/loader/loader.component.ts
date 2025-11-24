@@ -8,7 +8,8 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
   templateUrl: './loader.component.html',
   styleUrls: ['./loader.component.scss']
 })
+
 export class LoaderComponent {
-  constructor(public loader: LoaderService) {}
-  
+  constructor(public loader: LoaderService) { }
+
 }

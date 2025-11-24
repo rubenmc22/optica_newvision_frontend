@@ -11,9 +11,9 @@
       <div class="spinner-pulse"></div>
     </div>
     
-    <!-- Texto con animación -->
+    <!-- Texto con animación - ACTUALIZADO PARA MOSTRAR MENSAJE DINÁMICO -->
     <div class="loading-content">
-      <p class="loading-text">Cargando</p>
+      <p class="loading-text">{{ loader.message$ | async }}</p>
       <div class="loading-dots">
         <span class="dot"></span>
         <span class="dot"></span>

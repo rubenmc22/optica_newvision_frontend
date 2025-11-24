@@ -15,7 +15,7 @@ import { PacientesService } from '../../../core/services/pacientes/pacientes.ser
 import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
 import { Paciente } from '../../pacientes/paciente-interface';
 import { HistoriaMedica } from './../../historias-medicas/historias_medicas-interface';
-import { VentaDto, ProductoVenta, ProductoVentaCalculado, CuotaCashea, DatosRecibo } from '../venta-interfaz';
+import { VentaDto, ProductoVentaCalculado, CuotaCashea } from '../venta-interfaz';
 import { Empleado, User } from '../../../Interfaces/models-interface';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { trigger, transition, style, animate } from '@angular/animations';
@@ -131,7 +131,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     mostrarControlesPersonalizados: boolean = false;
 
-
     // Modal para mostrar el recibo
     mostrarModalRecibo: boolean = false;
     datosRecibo: any = null;
@@ -165,8 +164,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         $: 'dolar',
         '€': 'euro'
     };
-
-    private montoCubiertoAnterior: number = 0;
 
     // === CICLO DE VIDA ===
     ngOnInit(): void {
@@ -1324,19 +1321,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private limpiarSelectProductos(): void {
-        console.log('🔧 Limpiando select de productos...');
-
-        // SOLO esto es necesario - Angular se encarga del resto
         this.productoSeleccionado = null;
 
-        // Cerrar dropdown de manera segura en el próximo ciclo
         setTimeout(() => {
             if (this.productoSelect?.isOpen) {
                 this.productoSelect.close();
             }
         });
-
-        // No necesitas detectChanges() si usas ChangeDetectionStrategy.Default
     }
 
     resetearModalVenta(): void {
@@ -1358,10 +1349,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     // === MÉTODOS PARA ASESOR ===
-
-    /**
-     * Obtiene el resumen completo del asesor para mostrar en el recibo
-     */
     getResumenAsesor(): string {
         if (!this.asesorSeleccionado) {
             return 'Sin asesor asignado';
@@ -1375,9 +1362,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return `${asesor.nombre} — ${asesor.cargoNombre || 'Asesor'}`;
     }
 
-    /**
-     * Obtiene el nombre del asesor seleccionado
-     */
     getNombreAsesorSeleccionado(): string {
         if (!this.asesorSeleccionado) {
             return 'No asignado';
@@ -1387,9 +1371,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return asesor ? asesor.nombre : 'No asignado';
     }
 
-    /**
-     * Obtiene el cargo del asesor seleccionado
-     */
     getCargoAsesorSeleccionado(): string {
         if (!this.asesorSeleccionado) {
             return '';
@@ -1399,19 +1380,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return asesor ? (asesor.cargoNombre || 'Asesor') : '';
     }
 
-    /**
-     * Maneja el cambio de asesor
-     */
     onAsesorChange(): void {
-        console.log('🔄 Asesor seleccionado:', this.asesorSeleccionado);
-
         // Forzar actualización de la vista
         this.cdr.detectChanges();
 
         // Verificar que el asesor existe
         if (this.asesorSeleccionado) {
             const asesor = this.empleadosDisponibles.find(e => e.id == this.asesorSeleccionado);
-            console.log('👤 Información del asesor encontrado:', asesor);
         }
     }
 
@@ -1506,9 +1481,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             if (bancoSeleccionado) {
                 metodo.bancoNombre = bancoSeleccionado.nombre;
                 metodo.banco = `${bancoSeleccionado.codigo} - ${bancoSeleccionado.nombre}`;
-                console.log('🔄 Banco actualizado desde código:', metodo.banco);
             } else {
-                console.log('❌ No se encontró banco con código:', metodo.bancoCodigo);
                 metodo.bancoNombre = '';
                 metodo.banco = '';
             }
@@ -1519,12 +1492,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     onBancoObjectChange(bancoObject: any, index: number): void {
-        console.log('🔄 onBancoObjectChange - Objeto:', bancoObject);
-
         const metodo = this.venta.metodosDePago[index];
 
         if (!bancoObject) {
-            console.log('❌ Objeto vacío - limpiando datos');
             metodo.bancoCodigo = '';
             metodo.bancoNombre = '';
             metodo.banco = '';
@@ -1533,19 +1503,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return;
         }
 
-        console.log('✅ Banco objeto seleccionado:', bancoObject);
-
         // Actualizar todas las propiedades
         metodo.bancoCodigo = bancoObject.codigo;
         metodo.bancoNombre = bancoObject.nombre;
         metodo.banco = `${bancoObject.codigo} - ${bancoObject.nombre}`;
         metodo.bancoObject = bancoObject;
-
-        console.log('📝 Método actualizado:', {
-            bancoCodigo: metodo.bancoCodigo,
-            bancoNombre: metodo.bancoNombre,
-            banco: metodo.banco
-        });
 
         this.cdr.detectChanges();
     }
@@ -1599,32 +1561,25 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     };
 
     onBancoChange(banco: { codigo: string; nombre: string } | null, index: number): void {
-        console.log('🔄 Banco seleccionado:', banco);
-
         const metodo = this.venta.metodosDePago[index];
 
         if (!banco) {
             metodo.bancoCodigo = '';
             metodo.bancoNombre = '';
-            metodo.banco = '';        // string formateado vacío
+            metodo.banco = '';
             metodo.bancoObject = null;
             return;
         }
 
         metodo.bancoCodigo = banco.codigo;
         metodo.bancoNombre = banco.nombre;
-        metodo.banco = `${banco.codigo} - ${banco.nombre}`; // string formateado
-        metodo.bancoObject = banco; // objeto completo
-
-        console.log('📝 Método actualizado:', metodo);
+        metodo.banco = `${banco.codigo} - ${banco.nombre}`;
+        metodo.bancoObject = banco;
     }
 
     onTipoMetodoChange(index: number): void {
         const metodo = this.venta.metodosDePago[index];
 
-        console.log('Cambio tipo método:', metodo.tipo, 'en índice:', index);
-
-        // 🔄 LIMPIAR TODOS LOS CAMPOS DEL MÉTODO
         metodo.monto = 0;
         metodo.valorTemporal = '';
         metodo.referencia = '';
@@ -1632,8 +1587,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         metodo.bancoNombre = '';
         metodo.banco = '';
         metodo.bancoObject = null;
-
-        console.log('🔄 Todos los campos del método han sido limpiados');
 
         this.onMetodoPagoChange(index);
     }
@@ -1650,7 +1603,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return metodosConBanco.includes(tipoMetodo);
     }
 
-    // Método para verificar si se puede generar la venta - ACTUALIZADO
     get puedeGenerarVenta(): boolean {
         // 1. Verificar que hay productos
         if (this.venta.productos.length === 0) {
@@ -1814,7 +1766,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             if (partes.length > 1) {
                 const fechaParte = partes[1]; // "13 de febrero de 2026"
 
-                // Mapear nombres de meses en español
                 const meses: { [key: string]: number } = {
                     'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3,
                     'mayo': 4, 'junio': 5, 'julio': 6, 'agosto': 7,
@@ -1834,18 +1785,15 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 }
             }
 
-            // Fallback: intentar parsear como fecha estándar
             const fechaFallback = new Date(fechaString);
             if (!isNaN(fechaFallback.getTime())) {
                 return fechaFallback;
             }
 
-            // Fallback final: fecha muy futura para marcar como pendiente
-            console.warn('⚠️ Usando fecha fallback para:', fechaString);
+            console.warn('Usando fecha fallback para:', fechaString);
             return new Date(2030, 0, 1);
         } catch (error) {
-            console.error('❌ Error al parsear fecha de cuota:', fechaString, error);
-            // Fallback: fecha muy futura para marcar como pendiente
+            console.error('Error al parsear fecha de cuota:', fechaString, error);
             return new Date(2030, 0, 1);
         }
     }
@@ -1853,7 +1801,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
 
-        // Determinar el estado según la forma de pago y el monto pagado
         let estadoVenta = 'completada';
 
         if (this.venta.formaPago === 'abono') {
@@ -2027,40 +1974,79 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         try {
             this.generandoVenta = true;
-            this.loader.showWithMessage('Procesando venta...');
 
-            // 1. Preparar datos para el API
+            this.loader.showWithMessage('🔄 Generando venta...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
             const datosParaAPI = this.prepararDatosParaAPI();
-            console.log('datosParaAPI', datosParaAPI);
 
-            // 2. Aquí iría la llamada real al servicio cuando el backend esté listo
-            console.log('🚀 ENVIANDO DATOS AL BACKEND...');
-            /*
-            // DESCOMENTAR CUANDO EL BACKEND ESTÉ LISTO:
-            const resultado = await this.generarVentaService.crearVenta(datosParaAPI).toPromise();
-            
-            if (resultado.exito) {
-                this.swalService.showSuccess('Venta Generada', `Venta ${resultado.numeroVenta} creada exitosamente`);
-                this.mostrarReciboAutomatico();
-            } else {
-                throw new Error(resultado.mensaje || 'Error al generar la venta');
-            }
-            */
+            this.generarVentaService.crearVenta(datosParaAPI).subscribe({
+                next: async (resultado: any) => {
 
-            // 3. Simular éxito (eliminar cuando el backend esté listo)
-            await new Promise(resolve => setTimeout(resolve, 2000));
+                    if (resultado.message === 'ok' && resultado.venta) {
+                        const numeroVenta = resultado.venta.venta?.key ||
+                            resultado.venta.numeroVenta ||
+                            `V-${Date.now().toString().slice(-6)}`;
 
-            // Mostrar recibo automáticamente
-            this.mostrarReciboAutomatico(datosParaAPI);
-            this.limpiarSelectProductos(); // Limpiar select al cerrar modal
-            this.resetearModalVenta();
+                        this.loader.updateMessage('✅ Venta generada exitosamente');
+
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+
+                        this.loader.updateMessage('📄 Generando recibo de pago...');
+
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+
+                        this.loader.hide();
+
+                        // Mostrar recibo automáticamente 
+                        this.mostrarReciboAutomatico({
+                            ...datosParaAPI,
+                            numeroVenta: numeroVenta,
+                            ventaId: resultado.venta.venta?.key,
+                            datosRealesAPI: resultado.venta
+                        });
+
+                        this.limpiarSelectProductos();
+                        this.resetearModalVenta();
+
+                    } else {
+                        throw new Error(resultado.message || 'Error al generar la venta');
+                    }
+                },
+                error: (error) => {
+                    console.error('Error en la llamada al API:', error);
+
+                    this.loader.updateMessage('Error al procesar la venta');
+
+                    setTimeout(() => {
+                        this.loader.hide();
+
+                        let mensajeError = 'Error al conectar con el servidor';
+
+                        if (error.error?.message) {
+                            mensajeError = error.error.message;
+                        } else if (error.message) {
+                            mensajeError = error.message;
+                        } else if (error.error) {
+                            mensajeError = typeof error.error === 'string' ? error.error : JSON.stringify(error.error);
+                        }
+
+                        this.swalService.showError('Error en la transacción', mensajeError);
+                    }, 1500);
+                }
+            });
 
         } catch (error) {
             console.error('Error al generar venta:', error);
-            this.manejarErrorGeneracion(error);
+            this.loader.updateMessage('Error inesperado');
+
+            setTimeout(() => {
+                this.loader.hide();
+                this.manejarErrorGeneracion(error);
+            }, 1500);
+
         } finally {
             this.generandoVenta = false;
-            this.loader.hide();
         }
     }
 
@@ -2814,66 +2800,85 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     private manejarErrorGeneracion(error: any): void {
         console.error('Error al generar venta:', error);
-        const mensaje = error?.message || 'Ocurrió un error inesperado al generar la venta';
+
+        let mensaje = 'Ocurrió un error inesperado al generar la venta';
+
+        if (error?.error?.message) {
+            mensaje = error.error.message;
+        } else if (error?.message) {
+            mensaje = error.message;
+        } else if (typeof error === 'string') {
+            mensaje = error;
+        }
+
         this.swalService.showError('Error en la transacción', mensaje);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     // === MÉTODOS DEL RECIBO ===
+    private mostrarReciboAutomatico(data: any): void {
+        let datosRecibo = this.crearDatosReciboReal();
 
-    /**
- * Muestra el modal de recibo automáticamente después de generar la venta
- */
-    private mostrarReciboAutomatico(data): void {
-        this.loader.updateMessage('¡Venta generada exitosamente!');
+        if (data.datosRealesAPI) {
+            const apiData = data.datosRealesAPI;
 
-        // Crear datos del recibo con información REAL
-        this.datosRecibo = this.crearDatosReciboReal();
-        console.log('data', data);
-        console.log('datosRecibo', this.datosRecibo);
-        // Depurar datos para verificar
-        this.verificarDatosRecibo();
+            // Actualizar con datos reales del API
+            datosRecibo = {
+                ...datosRecibo,
+                numeroVenta: data.numeroVenta || apiData.venta?.key,
+                fecha: apiData.venta?.fecha ?
+                    new Date(apiData.venta.fecha).toLocaleDateString('es-VE') : datosRecibo.fecha,
+                hora: apiData.venta?.fecha ?
+                    new Date(apiData.venta.fecha).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : datosRecibo.hora,
+                vendedor: apiData.asesor?.nombre || datosRecibo.vendedor,
+                cliente: {
+                    nombre: apiData.cliente?.informacion?.nombreCompleto || datosRecibo.cliente.nombre,
+                    cedula: apiData.cliente?.informacion?.cedula || datosRecibo.cliente.cedula,
+                    telefono: apiData.cliente?.informacion?.telefono || datosRecibo.cliente.telefono
+                },
+                productos: apiData.productos?.map((producto: any) => ({
+                    nombre: producto.datos?.nombre || 'Producto',
+                    codigo: producto.datos?.codigo || 'N/A',
+                    cantidad: producto.cantidad || 1,
+                    precioUnitario: producto.precio_unitario || 0,
+                    subtotal: producto.total || 0
+                })) || datosRecibo.productos,
+                totales: {
+                    subtotal: apiData.totales?.subtotal || datosRecibo.totales.subtotal,
+                    descuento: apiData.totales?.descuento || datosRecibo.totales.descuento,
+                    iva: apiData.totales?.iva || datosRecibo.totales.iva,
+                    total: apiData.totales?.total || datosRecibo.totales.total,
+                    totalPagado: apiData.totales?.totalPagado || datosRecibo.totales.totalPagado
+                }
+            };
+        } else {
+            // Si no hay datos del API, usar los datos generados pero actualizar el número de venta
+            datosRecibo.numeroVenta = data.numeroVenta || datosRecibo.numeroVenta;
+        }
+
+        this.datosRecibo = datosRecibo;
 
         this.informacionVenta = {
-            numeroVenta: data.numeroVenta || 'API',
-            fecha: data.fecha || 'API',
-            hora: data.hora || 'API',
-            estado: data.venta.estado,
-            formaPago: data.venta.formaPago
+            numeroVenta: data.numeroVenta || this.datosRecibo.numeroVenta,
+            fecha: this.datosRecibo.fecha,
+            hora: this.datosRecibo.hora,
+            estado: data.datosRealesAPI?.venta?.estatus_venta || 'completada',
+            formaPago: data.datosRealesAPI?.venta?.formaPago || this.venta.formaPago
         };
 
-        setTimeout(() => {
-            this.loader.hide();
-            this.mostrarModalRecibo = true;
-            this.ventaGenerada = true;
-            this.cerrarModalResumen();
-            this.cdr.detectChanges();
-        }, 1000);
+        // MOSTRAR RECIBO INMEDIATAMENTE (sin delays adicionales)
+        this.mostrarModalRecibo = true;
+        this.ventaGenerada = true;
+        this.cerrarModalResumen();
+        this.cdr.detectChanges();
     }
 
     cerrarModalRecibo(): void {
-        console.log('🔒 Cerrando modal de recibo...');
 
         this.limpiarSelectProductos();
         this.mostrarModalRecibo = false;
         this.ventaGenerada = false;
         this.datosRecibo = null;
 
-        // Cerrar también el modal de resumen si está abierto
         this.cerrarModalResumen();
 
         setTimeout(() => {
@@ -2882,9 +2887,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 300);
     }
 
-    /**
-     * Cierra el modal de recibo y resetea la venta
-     */
     private cerrarModalResumen(): void {
         const modalElement = document.getElementById('resumenVentaModal');
         if (modalElement) {
@@ -2892,19 +2894,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             if (modal) {
                 modal.hide();
             }
-            // También remover el backdrop si existe
             const backdrop = document.querySelector('.modal-backdrop');
             if (backdrop) {
                 backdrop.remove();
             }
-            // Remover clases del body
             document.body.classList.remove('modal-open');
             document.body.style.overflow = '';
             document.body.style.paddingRight = '';
         }
     }
 
-    // Agregar este método para manejar la apertura del modal
     onModalShown(): void {
         // Resetear scroll cuando se abre el modal
         setTimeout(() => {
@@ -2914,9 +2913,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
         }, 50);
     }
-    /**
-     * Formatea el tipo de pago para mostrar en el recibo
-     */
+
     formatearTipoPago(tipo: string): string {
         const tipos: { [key: string]: string } = {
             'efectivo': 'EFECTIVO',
@@ -2930,9 +2927,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private resetearVenta(): void {
-        console.log('🔄 Reseteando venta completamente...');
-
-        // Resetear el objeto venta
         this.venta = {
             productos: [],
             moneda: 'dolar',
@@ -2946,12 +2940,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             metodosDePago: []
         };
 
-        // Limpiar todas las selecciones
         this.pacienteSeleccionado = null;
         this.productoSeleccionado = null;
         this.asesorSeleccionado = this.currentUser?.id ?? null;
 
-        // 🔥 CORRECCIÓN: Resetear COMPLETAMENTE cliente sin paciente
         this.clienteSinPaciente = {
             tipoPersona: 'natural',
             nombreCompleto: '',
@@ -2960,7 +2952,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             email: ''
         };
 
-        // Resetear Cashea
         this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
         this.cuotasCashea = [];
         this.valorInicialTemporal = '';
@@ -2968,15 +2959,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.nivelCashea = 'nivel3';
         this.cantidadCuotasCashea = 3;
 
-        // Resetear paciente
         this.requierePaciente = false;
         this.historiaMedica = null;
         this.mostrarSelectorAsesor = false;
 
-        // Resetear moneda efectivo
         this.monedaEfectivo = 'USD';
 
-        // Actualizar la vista
         this.actualizarProductosConDetalle();
 
         // Forzar scroll al inicio
@@ -2986,16 +2974,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 modalBody.scrollTop = 0;
             }
         }, 100);
-
-        console.log('✅ Venta reseteada completamente');
-        console.log('📝 Estado de clienteSinPaciente después de reset:', this.clienteSinPaciente);
     }
 
     async descargarPDF(): Promise<void> {
         let datos: any;
 
         try {
-            // Generar cuotas Cashea si no existen
             if (this.venta.formaPago === 'cashea' && (!this.cuotasCashea || this.cuotasCashea.length === 0)) {
                 this.generarCuotasCashea();
             }
@@ -3015,7 +2999,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
         }
     }
-
 
     private async generarPDFSeguro(datos: any): Promise<void> {
         return new Promise((resolve, reject) => {
@@ -3400,7 +3383,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     getTituloRecibo(): string {
-        // Usar la forma de pago de los datos del recibo si existe, sino usar la actual
         const formaPago = this.datosRecibo?.configuracion?.formaPago || this.venta.formaPago;
 
         //console.log('formaPago', formaPago);
@@ -3468,9 +3450,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const telefonoSede = '0212-365-39-42';
         const rifSede = 'J-123456789';
 
-        // 🔥 CORRECCIÓN: Obtener información del vendedor/asesor
         const vendedorInfo = this.getResumenAsesor();
-        console.log('👤 Información del vendedor para recibo:', vendedorInfo);
 
         // Calcular totales reales
         const subtotal = this.totalProductos || 0;
@@ -3494,50 +3474,36 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 totalPagado = this.totalPagadoPorMetodos;
         }
 
-        // Obtener productos con detalles calculados
+        //Obtener productos con detalles calculados
         const productosConDetalles = this.obtenerProductosConDetalles();
 
-        // 🔥 CORRECCIÓN: Obtener información del cliente CORRECTAMENTE
+        //Obtener información del cliente CORRECTAMENTE
         let clienteInfo = {
             nombre: 'CLIENTE GENERAL',
             cedula: 'N/A',
             telefono: 'N/A'
         };
 
-        console.log('🔍 Debug - Estado del cliente:');
-        console.log('requierePaciente:', this.requierePaciente);
-        console.log('pacienteSeleccionado:', this.pacienteSeleccionado);
-        console.log('clienteSinPaciente:', this.clienteSinPaciente);
-
         if (this.requierePaciente && this.pacienteSeleccionado) {
-            // Cliente con paciente
-            console.log('📋 Usando datos de paciente');
             clienteInfo = {
                 nombre: this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'CLIENTE GENERAL',
                 cedula: this.pacienteSeleccionado?.informacionPersonal?.cedula || 'N/A',
                 telefono: this.pacienteSeleccionado?.informacionPersonal?.telefono || 'N/A'
             };
         } else if (!this.requierePaciente) {
-            // 🔥 CORRECCIÓN CRÍTICA: Cliente general - usar datos del formulario
-            console.log('👤 Usando datos de cliente general');
             clienteInfo = {
                 nombre: this.clienteSinPaciente.nombreCompleto?.trim() || 'CLIENTE GENERAL',
                 cedula: this.clienteSinPaciente.cedula?.trim() || 'N/A',
                 telefono: this.clienteSinPaciente.telefono?.trim() || 'N/A'
             };
-
-            console.log('📝 Datos capturados del cliente general:', clienteInfo);
         }
 
-        console.log('✅ Información final del cliente para recibo:', clienteInfo);
-
-        // Crear objeto base del recibo
         const datosRecibo: any = {
             // Información general
             numeroVenta: 'V-' + Date.now().toString().slice(-6),
             fecha: fechaActual.toLocaleDateString('es-VE'),
             hora: fechaActual.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
-            // 🔥 USAR LA INFORMACIÓN CORREGIDA DEL VENDEDOR
+            //USAR LA INFORMACIÓN CORREGIDA DEL VENDEDOR
             vendedor: vendedorInfo,
 
             // Información de la sede
@@ -3549,7 +3515,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 email: 'newvisionlens2020@gmail.com'
             },
 
-            // 🔥 USAR LA INFORMACIÓN CORREGIDA DEL CLIENTE
+            //USAR LA INFORMACIÓN CORREGIDA DEL CLIENTE
             cliente: clienteInfo,
 
             // Productos reales del carrito con detalles calculados
@@ -3611,7 +3577,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             };
         }
 
-        console.log('🎯 Datos finales del recibo creados:', datosRecibo);
         return datosRecibo;
     }
 
@@ -3974,18 +3939,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return '';
     }
 
-    private verificarDatosRecibo(): void {
-        console.log('=== DEPURACIÓN DATOS RECIBO ===');
-        console.log('Forma de pago en venta:', this.venta.formaPago);
-        console.log('Forma de pago en datosRecibo:', this.datosRecibo?.configuracion?.formaPago);
-        console.log('Datos Cashea:', this.datosRecibo?.cashea);
-        console.log('Nivel Cashea:', this.nivelCashea);
-        console.log('Monto inicial:', this.venta.montoInicial);
-        console.log('Total pagado Cashea:', this.totalPagadoCashea);
-        console.log('==============================');
-    }
-
-
     // === MÉTODOS PARA CLIENTE SIN PACIENTE ===
     get mostrarFormulacionMedica(): boolean {
         return this.requierePaciente && !!this.historiaMedica;
@@ -4063,9 +4016,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    /**
-     * Obtiene el texto del estado formateado
-     */
     getEstadoTexto(): string {
         //  console.log('this.informacionVenta?',this.informacionVenta);
         const estado = this.informacionVenta?.estado?.toLowerCase() || 'completada';
@@ -4085,6 +4035,4 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 return 'Completado';
         }
     }
-
-
 }

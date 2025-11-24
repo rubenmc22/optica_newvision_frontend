@@ -117,3 +117,7 @@
     </div>
   </div>
 </div>
+
+<ng-container *ngIf="loader.loading$ | async">
+  <app-global-loader></app-global-loader>
+</ng-container>

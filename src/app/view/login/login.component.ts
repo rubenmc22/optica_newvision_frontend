@@ -7,7 +7,7 @@ import { AuthService } from '../../core/services/auth/auth.service';
 import { UserStateService } from '../../core/services/userState/user-state-service';
 import { finalize } from 'rxjs/operators';
 import { HttpErrorResponse } from '@angular/common/http';
-import { AuthData } from '../../Interfaces/models-interface';
+import { LoaderService } from './../../shared/loader/loader.service';
 
 @Component({
   selector: 'app-login',
@@ -18,7 +18,7 @@ import { AuthData } from '../../Interfaces/models-interface';
 export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   isLoading: boolean = false;
-  showPassword: boolean = false; // Nueva propiedad para controlar visibilidad
+  showPassword: boolean = false;
   sedes: any[] = [];
 
 
@@ -28,6 +28,7 @@ export class LoginComponent implements OnInit {
     private swalService: SwalService,
     private generalFunctions: GeneralFunctions,
     private authService: AuthService,
+    public loader: LoaderService,
     private userStateService: UserStateService,
   ) {
     this.loginForm = this.fb.group({
@@ -74,7 +75,7 @@ export class LoginComponent implements OnInit {
   obtenerSedes(): void {
     this.authService.getSedes().subscribe({
       next: (response) => {
-        this.sedes = response.sedes; // ✅ Extraemos el arreglo correctamente
+        this.sedes = response.sedes;
       },
       error: (err) => {
         console.error('Error cargando sedes:', err);
@@ -82,7 +83,7 @@ export class LoginComponent implements OnInit {
     });
   }
 
-  onSubmit() {
+  async onSubmit() {
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       return;
@@ -91,41 +92,72 @@ export class LoginComponent implements OnInit {
     this.isLoading = true;
     const { cedula, password, sede, rememberMe } = this.loginForm.value;
 
-    this.authService.login(cedula, password, sede).pipe(
-      finalize(() => this.isLoading = false)
-    ).subscribe({
-      next: (authData) => {
-        // Guardar credenciales si el usuario activó "Recuérdame"
-        if (rememberMe) {
-          localStorage.setItem('cedula', cedula);
-          localStorage.setItem('password', password);
-          localStorage.setItem('sedeRecordada', sede); // 👈 nueva línea
-        } else {
-          localStorage.removeItem('cedula');
-          localStorage.removeItem('password');
-          localStorage.removeItem('sedeRecordada'); // 👈 nueva línea
+    try {
+      // 🔥 FLUJO COMPLETO CON MÚLTIPLES ESTADOS
+      this.loader.showWithMessage('🔍 Validando datos...');
+
+      await this.delay(300);
+      this.loader.updateMessage('🔐 Conectando de forma segura...');
+
+      await this.delay(300);
+      this.loader.updateMessage('👤 Verificando credenciales...');
+
+      this.authService.login(cedula, password, sede).pipe(
+        finalize(() => {
+          this.isLoading = false;
+        })
+      ).subscribe({
+        next: async (authData) => {
+          this.loader.updateMessage('✅ ¡Acceso autorizado!');
+          await this.delay(500);
+
+          this.loader.updateMessage('🚀 Redirigiendo al dashboard...');
+
+          // Guardar credenciales
+          if (rememberMe) {
+            localStorage.setItem('cedula', cedula);
+            localStorage.setItem('password', password);
+            localStorage.setItem('sedeRecordada', sede);
+          } else {
+            localStorage.removeItem('cedula');
+            localStorage.removeItem('password');
+            localStorage.removeItem('sedeRecordada');
+          }
+
+          this.userStateService.setUserFromAuth(authData);
+          //Marcar que la navegación viene del login
+          sessionStorage.setItem('fromLogin', 'true');
+
+          await this.delay(800);
+          this.loader.hide();
+
+          this.router.navigate(['/dashboard'], { replaceUrl: true });
+          localStorage.removeItem('selectedMenuLabel');
+          localStorage.removeItem('selectedSubmenuLabel');
+        },
+        error: async (err: HttpErrorResponse) => {
+          // 🔥 ERROR - TRANSICIÓN CLARA
+          this.loader.updateMessage('❌ Credenciales incorrectas');
+          await this.delay(800);
+          this.loader.hide();
+
+          const message = err.error?.message === 'Credenciales inválidas.'
+            ? 'Estimado usuario, las credenciales ingresadas son inválidas.'
+            : err.error?.message || 'Error durante el login';
+
+          this.swalService.showError('Error', message);
         }
+      });
 
+    } catch (error) {
+      this.isLoading = false;
+      this.loader.hide();
+    }
+  }
 
-        // ✅ Guardar sede en el estado del usuario
-        this.userStateService.setUserFromAuth(authData);
-
-        // Redirección y notificación de éxito
-        this.router.navigate(['/dashboard'], { replaceUrl: true });
-        this.swalService.showSuccess('¡Éxito!', 'Bienvenido, ha iniciado sesión correctamente');
-        localStorage.removeItem('selectedMenuLabel');
-        localStorage.removeItem('selectedSubmenuLabel');
-
-      },
-      error: (err: HttpErrorResponse) => {
-        //console.log('err', err);
-        const message = err.error?.message === 'Credenciales inválidas.'
-          ? 'Estimado usuario, las credenciales ingresadas son inválidas.'
-          : err.error?.message || 'Error durante el login';
-
-        this.swalService.showError('Error', message);
-      }
-    });
+  // 🔧 MÉTODO AUXILIAR PARA DELAYS
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
 

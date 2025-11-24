@@ -4,9 +4,12 @@ import { PacientesService } from '../../core/services/pacientes/pacientes.servic
 import { HistoriaMedicaService } from '../../core/services/historias-medicas/historias-medicas.service';
 import { PacienteGrafico } from './../pacientes/paciente-interface';
 import { DatosPorSede } from './dashboard-interface';
-import { forkJoin } from 'rxjs';
+import { forkJoin, timer } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { LoaderService } from '../../shared/loader/loader.service';
+import { Router, NavigationStart } from '@angular/router';
+import { filter } from 'rxjs/operators';
+
 
 @Component({
   selector: 'app-dashboard',
@@ -17,7 +20,9 @@ import { LoaderService } from '../../shared/loader/loader.service';
 export class DashboardComponent implements OnInit, OnDestroy {
   rolUsuario: Rol | null = null;
   sedeActual: string = '';
-    isLoading: boolean = false;
+  isLoading: boolean = false;
+  private fromLogin: boolean = false;
+  private loaderTimeout: any;
 
   // Métricas generales
   totalHistorias: number = 0;
@@ -26,10 +31,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   pacientes: PacienteGrafico[] = [];
 
-  // 📊 Datos para comparativa por sede
+  //Datos para comparativa por sede
   datosComparativa: Record<string, DatosPorSede> | null = null;
 
-  // 📅 Distribución mensual por sede actual
+  //Distribución mensual por sede actual
   datosLocales: {
     total: number;
     porMes: Record<string, { pacientes: number; ventas: number; ordenes: number; historias: number }>;
@@ -50,16 +55,60 @@ export class DashboardComponent implements OnInit, OnDestroy {
   constructor(
     private pacientesService: PacientesService,
     private historiasService: HistoriaMedicaService,
-    private loader: LoaderService
+    private loader: LoaderService,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
+    this.detectarNavegacionDesdeLogin();
     this.initializePantalla();
     this.iniciarActualizacionAutomatica();
   }
 
   ngOnDestroy(): void {
     this.detenerActualizacionAutomatica();
+
+    if (this.loaderTimeout) {
+      clearTimeout(this.loaderTimeout);
+    }
+  }
+
+  private detectarNavegacionDesdeLogin(): void {
+    // Verificar si hay una marca en sessionStorage
+    this.fromLogin = sessionStorage.getItem('fromLogin') === 'true';
+
+    // Limpiar la marca inmediatamente después de usarla
+    if (this.fromLogin) {
+      sessionStorage.removeItem('fromLogin');
+    }
+
+    this.router.events
+      .pipe(
+        filter(event => event instanceof NavigationStart)
+      )
+      .subscribe((event: NavigationStart) => {
+        // Si la navegación es desde el login, no mostrar loader
+        if (event.navigationTrigger === 'imperative' &&
+          event.restoredState === null &&
+          this.esPrimeraCarga()) {
+          this.fromLogin = true;
+          console.log('🔍 fromLogin por navegación:', this.fromLogin);
+        }
+      });
+  }
+
+  /**
+   * Verifica si es la primera carga del dashboard
+   */
+  private esPrimeraCarga(): boolean {
+    return !sessionStorage.getItem('dashboardLoaded');
+  }
+
+  /**
+   * Marcar que el dashboard ya fue cargado
+   */
+  private marcarComoCargado(): void {
+    sessionStorage.setItem('dashboardLoaded', 'true');
   }
 
   private initializePantalla(): void {
@@ -75,46 +124,83 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   cargarPacientesYHistorias(): void {
     this.isLoading = true;
-    this.loader.show(); // Mostrar loader
 
-    forkJoin({
-      pacientes: this.pacientesService.getPacientes(),
-      historias: this.historiasService.getHistoriasMedicasAll()
-    }).pipe(
-      finalize(() => {
-        this.isLoading = false;
-        this.loader.hide(); // Ocultar loader al finalizar
-      })
-    ).subscribe({
-      next: ({ pacientes, historias }) => {
-        this.pacientes = Array.isArray(pacientes.pacientes)
-          ? pacientes.pacientes.map((p: any): PacienteGrafico => ({
-            key: p.key,
-            nombre: p.informacionPersonal?.nombreCompleto,
-            cedula: p.informacionPersonal?.cedula,
-            sede: p.sedeId ?? 'sin-sede',
-            created_at: p.created_at
-          }))
-          : [];
+    this.loader.hide();
+    if (!this.fromLogin) {
+      // Mostrar loader solo después de 100ms (para cargas lentas)
+      const loaderTimer = timer(100).subscribe(() => {
+        if (this.isLoading) {
+          this.loader.show();
+        }
+      });
 
-        const historiasFiltradas = Array.isArray(historias.historiales_medicos)
-          ? historias.historiales_medicos
-          : [];
+      forkJoin({
+        pacientes: this.pacientesService.getPacientes(),
+        historias: this.historiasService.getHistoriasMedicasAll()
+      }).pipe(
+        finalize(() => {
+          loaderTimer.unsubscribe();
+          this.isLoading = false;
+          this.loader.hide();
+        })
+      ).subscribe({
+        next: ({ pacientes, historias }) => {
+          this.procesarDatos(pacientes, historias);
+        },
+        error: (err) => {
+          console.error('Error al cargar datos:', err);
+          this.pacientes = [];
+          this.totalHistorias = 0;
+          this.loader.forceHide();
+        }
+      });
+    } else {
+      forkJoin({
+        pacientes: this.pacientesService.getPacientes(),
+        historias: this.historiasService.getHistoriasMedicasAll()
+      }).pipe(
+        finalize(() => {
+          this.isLoading = false;
+          this.marcarComoCargado();
+          this.fromLogin = false;
 
-        // CORRECCIÓN: Usar el mismo criterio que en cargarDatosGraficos
-        this.totalHistorias = historiasFiltradas.filter(h => h.sedeId === this.sedeActual).length;
-
-        this.cargarDatosGraficos(historiasFiltradas);
-        this.calcularMetricasAdicionales();
-      },
-      error: (err) => {
-        console.error('Error al cargar datos:', err);
-        this.pacientes = [];
-        this.totalHistorias = 0;
-        this.loader.forceHide(); // Forzar ocultar loader en error
-      }
-    });
+        })
+      ).subscribe({
+        next: ({ pacientes, historias }) => {
+          this.procesarDatos(pacientes, historias);
+        },
+        error: (err) => {
+          console.error('Error al cargar datos:', err);
+          this.pacientes = [];
+          this.totalHistorias = 0;
+          this.fromLogin = false; // Resetear incluso en error
+        }
+      });
+    }
   }
+
+  // 👇 MOVER la lógica de procesamiento a un método separado
+  private procesarDatos(pacientes: any, historias: any): void {
+    this.pacientes = Array.isArray(pacientes.pacientes)
+      ? pacientes.pacientes.map((p: any): PacienteGrafico => ({
+        key: p.key,
+        nombre: p.informacionPersonal?.nombreCompleto,
+        cedula: p.informacionPersonal?.cedula,
+        sede: p.sedeId ?? 'sin-sede',
+        created_at: p.created_at
+      }))
+      : [];
+
+    const historiasFiltradas = Array.isArray(historias.historiales_medicos)
+      ? historias.historiales_medicos
+      : [];
+
+    this.totalHistorias = historiasFiltradas.filter(h => h.sedeId === this.sedeActual).length;
+
+    this.cargarDatosGraficos(historiasFiltradas);
+    this.calcularMetricasAdicionales();
+  }
+
 
 
   cargarDatosGraficos(historias: any[]): void {

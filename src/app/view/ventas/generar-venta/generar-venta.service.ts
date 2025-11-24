@@ -5,16 +5,33 @@ import { tap } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { HistorialTasa, Tasa } from '../../../Interfaces/models-interface';
 
-@Injectable({
-    providedIn: 'root'
-})
+export interface VentaResponse {
+  exito: boolean;
+  mensaje: string;
+  numeroVenta?: string;
+  ventaId?: string;
+  datos?: any;
+}
 
+@Injectable({
+  providedIn: 'root'
+})
 export class GenerarVentaService {
-  constructor(private http: HttpClient) {}
+
+  private baseUrl = `${environment.apiUrl}`;
+
+  constructor(private http: HttpClient) { }
 
   getTasas(): Observable<{ message: string; tasas: Tasa[] }> {
     return this.http.get<{ message: string; tasas: Tasa[] }>(
-      `${environment.apiUrl}/tasas/`
+      `${this.baseUrl}/tasas/`
     );
+  }
+
+  /**
+   * Crear una nueva venta
+   */
+  crearVenta(datosVenta: any): Observable<VentaResponse> {
+    return this.http.post<VentaResponse>(`${this.baseUrl}/ventas-add`, datosVenta);
   }
 }
