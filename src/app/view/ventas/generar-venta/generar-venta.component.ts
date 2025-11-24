@@ -2165,655 +2165,655 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const formaPago = datos.configuracion?.formaPago || 'contado';
         const tituloRecibo = this.getTituloReciboParaHTML(formaPago);
         const mensajeFinal = this.getMensajeFinalParaHTML(formaPago);
+        console.log('datos', datos);
 
         return `
     <!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recibo - ${datos.numeroVenta}</title>
-    <style>
-        @page {
-            margin: 0;
-            size: A4;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            font-size: 10px;
-            line-height: 1.15;
-            color: #333;
-            background: white;
-            padding: 20mm 10mm 10mm 10mm;
-            width: 210mm;
-            height: 297mm;
-            margin: 0 auto;
-        }
-        
-        .recibo-container {
-            width: 100%;
-            max-width: 190mm;
-            margin: 0 auto;
-            background: white;
-            padding: 0;
-            height: auto;
-            max-height: 257mm;
-            overflow: hidden;
-        }
-        
-        .recibo-header {
-            text-align: center;
-            border-bottom: 2px solid #2c5aa0;
-            padding-bottom: 6px;
-            margin-bottom: 8px;
-        }
-        
-        .empresa-nombre {
-            font-size: 16px;
-            font-weight: bold;
-            color: #2c5aa0;
-            margin-bottom: 2px;
-        }
-        
-        .empresa-info {
-            font-size: 8px;
-            color: #666;
-            margin-bottom: 1px;
-            line-height: 1.1;
-        }
-        
-        .titulo-venta {
-            font-size: 12px;
-            font-weight: 600;
-            color: #2c5aa0;
-            margin: 6px 0 2px 0;
-        }
-        
-        .info-rapida {
-            background: #f8f9fa;
-            padding: 4px;
-            border-radius: 2px;
-            border: 1px solid #dee2e6;
-            margin-bottom: 8px;
-            font-size: 8px;
-        }
-        
-        .cliente-compacto {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-left: 2px solid #2c5aa0;
-            padding: 6px;
-            font-size: 8px;
-            margin-bottom: 8px;
-            border-radius: 2px;
-        }
-        
-        .tabla-productos {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 8px;
-            font-size: 8px;
-        }
-        
-        .tabla-productos th {
-            background: #2c5aa0;
-            color: white;
-            font-weight: 600;
-            padding: 3px 4px;
-            text-align: left;
-            border: 1px solid #dee2e6;
-            font-size: 8px;
-        }
-        
-        .tabla-productos td {
-            border: 1px solid #dee2e6;
-            padding: 2px 3px;
-            vertical-align: middle;
-            font-size: 8px;
-        }
-        
-        .text-center { text-align: center; }
-        .text-end { text-align: right; }
-        
-        .metodos-compactos {
-            margin-bottom: 8px;
-        }
-        
-        .metodo-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 3px;
-            padding: 2px 0;
-            border-bottom: 1px dashed #dee2e6;
-            font-size: 8px;
-        }
-        
-        .resumen-cashea {
-            background: #f8f9fa;
-            padding: 6px;
-            border-radius: 3px;
-            margin: 6px 0;
-            border-left: 2px solid #0dcaf0;
-        }
-        
-        .pagos-section {
-            margin-bottom: 6px;
-        }
-        
-        .pago-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 3px;
-            padding: 3px 0;
-            border-bottom: 1px dashed #dee2e6;
-            font-size: 8px;
-        }
-        
-        .pago-total {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 4px;
-            padding-top: 4px;
-            border-top: 1px solid #ccc;
-            font-size: 8px;
-        }
-        
-        .resumen-cuotas-compacto {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 6px;
-            text-align: center;
-        }
-        
-        .cuota-info {
-            text-align: center;
-        }
-        
-        .monto-cuota {
-            font-size: 7px;
-            color: #666;
-            margin-top: 1px;
-        }
-        
-        .resumen-abono {
-            background: #f8f9fa;
-            padding: 6px;
-            border-radius: 3px;
-            margin: 6px 0;
-            border-left: 2px solid #ffc107;
-        }
-        
-        .abonos-section {
-            margin-bottom: 6px;
-        }
-        
-        .abono-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 3px;
-            padding: 3px 0;
-            border-bottom: 1px dashed #dee2e6;
-            font-size: 8px;
-        }
-        
-        .total-abonado {
-            border-top: 1px solid #ccc;
-            padding-top: 3px;
-            margin-top: 3px;
-        }
-        
-        .resumen-financiero {
-            background: white;
-            padding: 6px;
-            border-radius: 3px;
-            border: 1px solid #e9ecef;
-            margin: 6px 0;
-        }
-        
-        .deuda-section, .progreso-section {
-            text-align: center;
-            margin-bottom: 6px;
-        }
-        
-        .deuda-label, .progreso-label {
-            font-size: 7px;
-            color: #666;
-            margin-bottom: 1px;
-        }
-        
-        .deuda-monto, .progreso-porcentaje {
-            font-size: 10px;
-            font-weight: bold;
-        }
-        
-        .resumen-contado {
-            background: #f8f9fa;
-            padding: 6px;
-            border-radius: 3px;
-            margin: 6px 0;
-            border-left: 2px solid #198754;
-            text-align: center;
-        }
-        
-        .totales-compactos {
-            margin-bottom: 8px;
-        }
-        
-        .totales-compactos table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 9px;
-        }
-        
-        .totales-compactos td {
-            padding: 3px 4px;
-            border: 1px solid #dee2e6;
-        }
-        
-        .table-success {
-            background: linear-gradient(135deg, #d4edda, #c3e6cb);
-        }
-        
-        .observaciones-compactas {
-            margin-bottom: 8px;
-        }
-        
-        .alert-warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 4px;
-            border-radius: 2px;
-            font-size: 8px;
-        }
-        
-        .terminos-compactos {
-            border-top: 1px solid #ddd;
-            padding-top: 6px;
-            margin-top: 8px;
-            font-size: 7px;
-            color: #666;
-        }
-        
-        .mensaje-final {
-            text-align: center;
-            border-top: 1px solid #ddd;
-            padding-top: 6px;
-            margin-top: 6px;
-            font-size: 9px;
-            color: #2c5aa0;
-            font-weight: bold;
-        }
-        
-        .text-danger { color: #dc3545; }
-        .text-success { color: #198754; }
-        .text-warning { color: #ffc107; }
-        .text-primary { color: #2c5aa0; }
-        .text-muted { color: #666; }
-        
-        .badge {
-            display: inline-block;
-            padding: 1px 3px;
-            font-size: 7px;
-            font-weight: 600;
-            line-height: 1;
-            text-align: center;
-            white-space: nowrap;
-            vertical-align: baseline;
-            border-radius: 1px;
-        }
-        
-        .bg-primary { background-color: #2c5aa0; color: white; }
-        .bg-success { background-color: #198754; color: white; }
-        .bg-info { background-color: #0dcaf0; color: black; }
-        .bg-warning { background-color: #ffc107; color: black; }
-        
-        .progress {
-            background-color: #e9ecef;
-            border-radius: 4px;
-            overflow: hidden;
-            height: 3px;
-            margin: 2px auto;
-            width: 50%;
-        }
-        
-        .progress-bar {
-            background-color: #198754;
-            height: 100%;
-            transition: width 0.6s ease;
-        }
-        
-        .fw-bold { font-weight: bold; }
-        .small { font-size: 7px; }
-        .fs-6 { font-size: 10px; }
-
-        .page-break-avoid {
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
-
-        @media print {
-            body {
-                padding: 20mm 10mm 10mm 10mm;
-                margin: 0;
-                width: 210mm;
-                height: 297mm;
-                font-size: 9px;
-            }
-            
-            .recibo-container {
-                border: none;
-                padding: 0;
-                box-shadow: none;
-                max-height: 257mm;
-                overflow: hidden;
-            }
-
-            @page {
-                margin: 0;
-                size: A4;
-            }
-            
-            body {
-                margin: 0;
-                -webkit-print-color-adjust: exact;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="recibo-container page-break-avoid">
-        <!-- Encabezado -->
-        <div class="recibo-header page-break-avoid">
-            <div class="empresa-nombre">NEW VISION LENS</div>
-            <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
-            <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
-            <div class="titulo-venta">${tituloRecibo}</div>
-        </div>
-
-        <!-- Información rápida -->
-        <div class="info-rapida page-break-avoid">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px;">
-                <div><strong>Recibo:</strong> ${datos.numeroVenta}</div>
-                <div><strong>Fecha:</strong> ${datos.fecha}</div>
-                <div><strong>Hora:</strong> ${datos.hora}</div>
-                <div><strong>Vendedor:</strong> ${datos.vendedor}</div>
-            </div>
-        </div>
-
-        <!-- Cliente -->
-        <div class="cliente-compacto page-break-avoid">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
-                <div><strong>Cliente:</strong> ${datos.cliente.nombre}</div>
-                <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
-                <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
-            </div>
-        </div>
-
-        <!-- Productos -->
-        <div class="productos-compactos page-break-avoid">
-            <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">PRODUCTOS</h6>
-            <table class="tabla-productos">
-                <thead>
-                    <tr>
-                        <th width="5%" class="text-center">#</th>
-                        <th width="55%">Descripción</th>
-                        <th width="10%" class="text-center">Cant</th>
-                        <th width="15%" class="text-end">P. Unitario</th>
-                        <th width="15%" class="text-end">Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${datos.productos.map((producto: any, index: number) => `
-                        <tr>
-                            <td class="text-center">${index + 1}</td>
-                            <td>${producto.nombre}</td>
-                            <td class="text-center">${producto.cantidad || 1}</td>
-                            <td class="text-end">${this.formatearMoneda(producto.precioUnitario)}</td>
-                            <td class="text-end">${this.formatearMoneda(producto.subtotal)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Métodos de pago -->
-        ${datos.metodosPago && datos.metodosPago.length > 0 ? `
-            <div class="metodos-compactos page-break-avoid">
-                <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">PAGOS</h6>
-                ${datos.metodosPago.map((metodo: any) => `
-                    <div class="metodo-item">
-                        <span>
-                            <span class="badge bg-primary">${this.formatearTipoPago(metodo.tipo)}</span>
-                            ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}
-                            ${metodo.banco ? '- ' + metodo.banco : ''}
-                        </span>
-                        <span>${this.formatearMoneda(metodo.monto)}</span>
-                    </div>
-                `).join('')}
-            </div>
-        ` : ''}
-
-        <!-- SECCIÓN CASHEA COMPLETA - CORREGIDA -->
-        ${datos.cashea ? `
-            <div class="resumen-venta page-break-avoid">
-                <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Recibo - ${datos.numeroVenta}</title>
+            <style>
+                @page {
+                    margin: 0;
+                    size: A4;
+                }
                 
-                <div class="resumen-cashea">
-                    <!-- Forma de pago -->
-                    <div style="text-align: center; margin-bottom: 8px;">
-                        <span class="badge bg-info fs-6">PLAN CASHEA</span>
-                    </div>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                
+                body {
+                    font-family: 'Arial', sans-serif;
+                    font-size: 10px;
+                    line-height: 1.15;
+                    color: #333;
+                    background: white;
+                    padding: 20mm 10mm 10mm 10mm;
+                    width: 210mm;
+                    height: 297mm;
+                    margin: 0 auto;
+                }
+                
+                .recibo-container {
+                    width: 100%;
+                    max-width: 190mm;
+                    margin: 0 auto;
+                    background: white;
+                    padding: 0;
+                    height: auto;
+                    max-height: 257mm;
+                    overflow: hidden;
+                }
+                
+                .recibo-header {
+                    text-align: center;
+                    border-bottom: 2px solid #2c5aa0;
+                    padding-bottom: 6px;
+                    margin-bottom: 8px;
+                }
+                
+                .empresa-nombre {
+                    font-size: 16px;
+                    font-weight: bold;
+                    color: #2c5aa0;
+                    margin-bottom: 2px;
+                }
+                
+                .empresa-info {
+                    font-size: 8px;
+                    color: #666;
+                    margin-bottom: 1px;
+                    line-height: 1.1;
+                }
+                
+                .titulo-venta {
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #2c5aa0;
+                    margin: 6px 0 2px 0;
+                }
+                
+                .info-rapida {
+                    background: #f8f9fa;
+                    padding: 4px;
+                    border-radius: 2px;
+                    border: 1px solid #dee2e6;
+                    margin-bottom: 8px;
+                    font-size: 8px;
+                }
+                
+                .cliente-compacto {
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    border-left: 2px solid #2c5aa0;
+                    padding: 6px;
+                    font-size: 8px;
+                    margin-bottom: 8px;
+                    border-radius: 2px;
+                }
+                
+                .tabla-productos {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 8px;
+                    font-size: 8px;
+                }
+                
+                .tabla-productos th {
+                    background: #2c5aa0;
+                    color: white;
+                    font-weight: 600;
+                    padding: 3px 4px;
+                    text-align: left;
+                    border: 1px solid #dee2e6;
+                    font-size: 8px;
+                }
+                
+                .tabla-productos td {
+                    border: 1px solid #dee2e6;
+                    padding: 2px 3px;
+                    vertical-align: middle;
+                    font-size: 8px;
+                }
+                
+                .text-center { text-align: center; }
+                .text-end { text-align: right; }
+                
+                .metodos-compactos {
+                    margin-bottom: 8px;
+                }
+                
+                .metodo-item {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 3px;
+                    padding: 2px 0;
+                    border-bottom: 1px dashed #dee2e6;
+                    font-size: 8px;
+                }
+                
+                .resumen-cashea {
+                    background: #f8f9fa;
+                    padding: 6px;
+                    border-radius: 3px;
+                    margin: 6px 0;
+                    border-left: 2px solid #0dcaf0;
+                }
+                
+                .pagos-section {
+                    margin-bottom: 6px;
+                }
+                
+                .pago-item {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 3px;
+                    padding: 3px 0;
+                    border-bottom: 1px dashed #dee2e6;
+                    font-size: 8px;
+                }
+                
+                .pago-total {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-top: 4px;
+                    padding-top: 4px;
+                    border-top: 1px solid #ccc;
+                    font-size: 8px;
+                }
+                
+                .resumen-cuotas-compacto {
+                    display: flex;
+                    justify-content: center;
+                    gap: 15px;
+                    margin-top: 6px;
+                    text-align: center;
+                }
+                
+                .cuota-info {
+                    text-align: center;
+                }
+                
+                .monto-cuota {
+                    font-size: 7px;
+                    color: #666;
+                    margin-top: 1px;
+                }
+                
+                .resumen-abono {
+                    background: #f8f9fa;
+                    padding: 6px;
+                    border-radius: 3px;
+                    margin: 6px 0;
+                    border-left: 2px solid #ffc107;
+                }
+                
+                .abonos-section {
+                    margin-bottom: 6px;
+                }
+                
+                .abono-item {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 3px;
+                    padding: 3px 0;
+                    border-bottom: 1px dashed #dee2e6;
+                    font-size: 8px;
+                }
+                
+                .total-abonado {
+                    border-top: 1px solid #ccc;
+                    padding-top: 3px;
+                    margin-top: 3px;
+                }
+                
+                .resumen-financiero {
+                    background: white;
+                    padding: 6px;
+                    border-radius: 3px;
+                    border: 1px solid #e9ecef;
+                    margin: 6px 0;
+                }
+                
+                .deuda-section, .progreso-section {
+                    text-align: center;
+                    margin-bottom: 6px;
+                }
+                
+                .deuda-label, .progreso-label {
+                    font-size: 7px;
+                    color: #666;
+                    margin-bottom: 1px;
+                }
+                
+                .deuda-monto, .progreso-porcentaje {
+                    font-size: 10px;
+                    font-weight: bold;
+                }
+                
+                .resumen-contado {
+                    background: #f8f9fa;
+                    padding: 6px;
+                    border-radius: 3px;
+                    margin: 6px 0;
+                    border-left: 2px solid #198754;
+                    text-align: center;
+                }
+                
+                .totales-compactos {
+                    margin-bottom: 8px;
+                }
+                
+                .totales-compactos table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 9px;
+                }
+                
+                .totales-compactos td {
+                    padding: 3px 4px;
+                    border: 1px solid #dee2e6;
+                }
+                
+                .table-success {
+                    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+                }
+                
+                .observaciones-compactas {
+                    margin-bottom: 8px;
+                }
+                
+                .alert-warning {
+                    background: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    color: #856404;
+                    padding: 4px;
+                    border-radius: 2px;
+                    font-size: 8px;
+                }
+                
+                .terminos-compactos {
+                    border-top: 1px solid #ddd;
+                    padding-top: 6px;
+                    margin-top: 8px;
+                    font-size: 7px;
+                    color: #666;
+                }
+                
+                .mensaje-final {
+                    text-align: center;
+                    border-top: 1px solid #ddd;
+                    padding-top: 6px;
+                    margin-top: 6px;
+                    font-size: 9px;
+                    color: #2c5aa0;
+                    font-weight: bold;
+                }
+                
+                .text-danger { color: #dc3545; }
+                .text-success { color: #198754; }
+                .text-warning { color: #ffc107; }
+                .text-primary { color: #2c5aa0; }
+                .text-muted { color: #666; }
+                
+                .badge {
+                    display: inline-block;
+                    padding: 1px 3px;
+                    font-size: 7px;
+                    font-weight: 600;
+                    line-height: 1;
+                    text-align: center;
+                    white-space: nowrap;
+                    vertical-align: baseline;
+                    border-radius: 1px;
+                }
+                
+                .bg-primary { background-color: #2c5aa0; color: white; }
+                .bg-success { background-color: #198754; color: white; }
+                .bg-info { background-color: #0dcaf0; color: black; }
+                .bg-warning { background-color: #ffc107; color: black; }
+                
+                .progress {
+                    background-color: #e9ecef;
+                    border-radius: 4px;
+                    overflow: hidden;
+                    height: 3px;
+                    margin: 2px auto;
+                    width: 50%;
+                }
+                
+                .progress-bar {
+                    background-color: #198754;
+                    height: 100%;
+                    transition: width 0.6s ease;
+                }
+                
+                .fw-bold { font-weight: bold; }
+                .small { font-size: 7px; }
+                .fs-6 { font-size: 10px; }
 
-                    <!-- Información del plan Cashea -->
-                    <div style="text-align: center; margin-bottom: 8px;">
-                        <div class="cashea-info">
-                            <div class="nivel-cashea" style="margin-bottom: 4px;">
-                                <small class="text-muted">NIVEL</small>
-                                <div class="fw-bold text-primary" style="font-size: 10px;">${this.obtenerNombreNivelCashea(datos.cashea.nivel)}</div>
-                            </div>
-                        </div>
-                    </div>
+                .page-break-avoid {
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }
 
-                    <!-- Desglose de pagos - CORREGIDO -->
-                    <div class="pagos-section">
-                        <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 10px;">DESGLOSE DE PAGOS</h6>
+                @media print {
+                    body {
+                        padding: 20mm 10mm 10mm 10mm;
+                        margin: 0;
+                        width: 210mm;
+                        height: 297mm;
+                        font-size: 9px;
+                    }
+                    
+                    .recibo-container {
+                        border: none;
+                        padding: 0;
+                        box-shadow: none;
+                        max-height: 257mm;
+                        overflow: hidden;
+                    }
 
-                        <!-- Pago inicial -->
-                        <div class="pago-item">
-                            <div style="text-align: center; width: 50%;">
-                                <strong style="font-size: 9px;">Pago Inicial</strong>
-                            </div>
-                            <div style="text-align: center; width: 50%;">
-                                <strong style="font-size: 9px;">${this.formatearMoneda(datos.cashea.inicial)}</strong>
-                            </div>
-                        </div>
+                    @page {
+                        margin: 0;
+                        size: A4;
+                    }
+                    
+                    body {
+                        margin: 0;
+                        -webkit-print-color-adjust: exact;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="recibo-container page-break-avoid">
+                <!-- Encabezado -->
+                <div class="recibo-header page-break-avoid">
+                    <div class="empresa-nombre">NEW VISION LENS</div>
+                    <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
+                    <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
+                    <div class="titulo-venta">${tituloRecibo}</div>
+                </div>
 
-                        <!-- Cuotas adelantadas -->
-                        ${datos.cashea.cuotasAdelantadas > 0 ? `
-                            <div class="pago-item">
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 9px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong>
-                                </div>
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 9px;">${this.formatearMoneda(datos.cashea.montoAdelantado)}</strong>
-                                </div>
-                            </div>
-                        ` : ''}
-
-                        <!-- Total pagado ahora - CORREGIDO: MISMA FILA QUE LOS TÍTULOS -->
-                        <div class="pago-total">
-                            <div style="text-align: center; width: 50%;">
-                                <strong style="font-size: 9px;">TOTAL PAGADO AHORA:</strong>
-                            </div>
-                            <div style="text-align: center; width: 50%;">
-                                <strong class="text-success" style="font-size: 9px;">${this.formatearMoneda(datos.totales.totalPagado)}</strong>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Resumen de cuotas -->
-                    <div class="resumen-cuotas-compacto">
-                        <div class="cuota-info">
-                            <small class="text-muted" style="font-size: 8px;">CUOTAS PENDIENTES</small>
-                            <div class="fw-bold text-warning" style="font-size: 10px;">${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}</div>
-                            <div class="monto-cuota">${this.formatearMoneda(datos.cashea.montoCuota)} c/u</div>
-                        </div>
-                        <div class="cuota-info">
-                            <small class="text-muted" style="font-size: 8px;">DEUDA PENDIENTE</small>
-                            <div class="fw-bold text-danger" style="font-size: 10px;">${this.formatearMoneda(datos.cashea.deudaPendiente)}</div>
-                            <div class="monto-cuota">${this.formatearMoneda(datos.cashea.montoCuota * (datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas))} total</div>
-                        </div>
+                <!-- Información rápida -->
+                <div class="info-rapida page-break-avoid">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px;">
+                        <div><strong>Recibo:</strong> ${datos.numeroVenta}</div>
+                        <div><strong>Fecha:</strong> ${datos.fecha}</div>
+                        <div><strong>Hora:</strong> ${datos.hora}</div>
+                        <div><strong>Vendedor:</strong> ${datos.vendedor}</div>
                     </div>
                 </div>
-            </div>
-        ` : ''}
 
-        <!-- Resto del código se mantiene igual -->
-        ${datos.abono ? `
-            <div class="resumen-venta page-break-avoid">
-                <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
-                
-                <div class="resumen-abono">
-                    <!-- Forma de pago -->
-                    <div style="text-align: center; margin-bottom: 8px;">
-                        <span class="badge bg-warning text-dark fs-6">ABONO PARCIAL</span>
-                    </div>
-
-                    <!-- Abonos realizados -->
-                    <div class="abonos-section">
-                        <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 10px;">ABONOS REALIZADOS</h6>
-
-                        <div class="abonos-list">
-                            <div class="abono-item">
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 9px;">${datos.fecha}</strong>
-                                </div>
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 9px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong>
-                                </div>
-                            </div>
-                            
-                            <!-- Total abonado EN LA MISMA SECCIÓN -->
-                            <div class="abono-item total-abonado" style="border-top: 1px solid #ccc; padding-top: 4px; margin-top: 4px;">
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 9px;">TOTAL ABONADO:</strong>
-                                </div>
-                                <div style="text-align: center; width: 50%;">
-                                    <strong class="text-success" style="font-size: 9px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Resumen financiero -->
-                    <div class="resumen-financiero">
-                        <div class="deuda-section">
-                            <div class="deuda-label">DEUDA PENDIENTE</div>
-                            <div class="deuda-monto text-danger">${this.formatearMoneda(datos.abono.deudaPendiente)}</div>
-                        </div>
-
-                        <div class="progreso-section">
-                            <div class="progreso-label">PORCENTAJE PAGADO</div>
-                            <div class="progreso-porcentaje text-success">${Math.round(datos.abono.porcentajePagado)}%</div>
-                            <div class="progress">
-                                <div class="progress-bar" style="width: ${datos.abono.porcentajePagado}%"></div>
-                            </div>
-                        </div>
+                <!-- Cliente -->
+                <div class="cliente-compacto page-break-avoid">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                        <div><strong>Cliente:</strong> ${datos.cliente.nombre}</div>
+                        <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
+                        <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
                     </div>
                 </div>
-            </div>
-        ` : ''}
 
-        ${!datos.cashea && !datos.abono ? `
-            <div class="resumen-venta page-break-avoid">
-                <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
-                
-                <div class="resumen-contado">
-                    <div style="margin-bottom: 6px;">
-                        <strong style="font-size: 10px;">Forma de pago:</strong><br>
-                        <span class="badge bg-success">CONTADO</span>
-                    </div>
-                    <div>
-                        <strong style="font-size: 10px;">Monto total:</strong><br>
-                        ${this.formatearMoneda(datos.totales.totalPagado)}
-                    </div>
-                    <div style="margin-top: 6px; font-size: 9px; color: #666;">
-                        El pago ha sido realizado en su totalidad
-                    </div>
-                </div>
-            </div>
-        ` : ''}
-
-        <!-- Totales -->
-        <div class="totales-compactos page-break-avoid">
-            <div style="display: flex; justify-content: flex-end;">
-                <div style="width: 50%;">
-                    <table style="width: 100%;">
-                        <tr>
-                            <td class="fw-bold" style="font-size: 10px;">Subtotal:</td>
-                            <td class="text-end" style="font-size: 10px;">${this.formatearMoneda(datos.totales.subtotal)}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold" style="font-size: 10px;">Descuento:</td>
-                            <td class="text-end text-danger" style="font-size: 10px;">- ${this.formatearMoneda(datos.totales.descuento)}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold" style="font-size: 10px;">IVA:</td>
-                            <td class="text-end" style="font-size: 10px;">${this.formatearMoneda(datos.totales.iva)}</td>
-                        </tr>
-                        <tr class="table-success">
-                            <td class="fw-bold" style="font-size: 11px;">${this.getTextoTotalPagadoParaHTML(formaPago)}:</td>
-                            <td class="text-end fw-bold" style="font-size: 11px;">${this.formatearMoneda(datos.totales.totalPagado)}</td>
-                        </tr>
+                <!-- Productos -->
+                <div class="productos-compactos page-break-avoid">
+                    <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">PRODUCTOS</h6>
+                    <table class="tabla-productos">
+                        <thead>
+                            <tr>
+                                <th width="5%" class="text-center">#</th>
+                                <th width="55%">Descripción</th>
+                                <th width="10%" class="text-center">Cant</th>
+                                <th width="15%" class="text-end">P. Unitario</th>
+                                <th width="15%" class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${datos.productos.map((producto: any, index: number) => `
+                                <tr>
+                                    <td class="text-center">${index + 1}</td>
+                                    <td>${producto.nombre}</td>
+                                    <td class="text-center">${producto.cantidad || 1}</td>
+                                    <td class="text-end">${this.formatearMoneda(producto.precioUnitario)}</td>
+                                    <td class="text-end">${this.formatearMoneda(producto.subtotal)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
                     </table>
                 </div>
-            </div>
-        </div>
 
-        <!-- Observaciones -->
-        ${datos.configuracion?.observaciones ? `
-            <div class="observaciones-compactas page-break-avoid">
-                <div class="alert-warning">
-                    <strong>Observación:</strong> ${datos.configuracion.observaciones}
+                <!-- Métodos de pago -->
+                ${datos.metodosPago && datos.metodosPago.length > 0 ? `
+                    <div class="metodos-compactos page-break-avoid">
+                        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">PAGOS</h6>
+                        ${datos.metodosPago.map((metodo: any) => `
+                            <div class="metodo-item">
+                                <span>
+                                    <span class="badge bg-primary">${this.formatearTipoPago(metodo.tipo)}</span>
+                                    ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}
+                                    ${metodo.banco ? '- ' + metodo.banco : ''}
+                                </span>
+                                <span>${this.formatearMoneda(metodo.monto)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+
+                <!-- SECCIÓN CASHEA COMPLETA - CORREGIDA -->
+                ${datos.cashea ? `
+                    <div class="resumen-venta page-break-avoid">
+                        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
+                        
+                        <div class="resumen-cashea">
+                            <!-- Forma de pago -->
+                            <div style="text-align: center; margin-bottom: 8px;">
+                                <span class="badge bg-info fs-6">PLAN CASHEA</span>
+                            </div>
+
+                            <!-- Información del plan Cashea -->
+                            <div style="text-align: center; margin-bottom: 8px;">
+                                <div class="cashea-info">
+                                    <div class="nivel-cashea" style="margin-bottom: 4px;">
+                                        <small class="text-muted">NIVEL</small>
+                                        <div class="fw-bold text-primary" style="font-size: 10px;">${this.obtenerNombreNivelCashea(datos.cashea.nivel)}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Desglose de pagos - CORREGIDO -->
+                            <div class="pagos-section">
+                                <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 10px;">DESGLOSE DE PAGOS</h6>
+
+                                <!-- Pago inicial -->
+                                <div class="pago-item">
+                                    <div style="text-align: center; width: 50%;">
+                                        <strong style="font-size: 9px;">Pago Inicial</strong>
+                                    </div>
+                                    <div style="text-align: center; width: 50%;">
+                                        <strong style="font-size: 9px;">${this.formatearMoneda(datos.cashea.inicial)}</strong>
+                                    </div>
+                                </div>
+
+                                <!-- Cuotas adelantadas -->
+                                ${datos.cashea.cuotasAdelantadas > 0 ? `
+                                    <div class="pago-item">
+                                        <div style="text-align: center; width: 50%;">
+                                            <strong style="font-size: 9px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong>
+                                        </div>
+                                        <div style="text-align: center; width: 50%;">
+                                            <strong style="font-size: 9px;">${this.formatearMoneda(datos.cashea.montoAdelantado)}</strong>
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                <!-- Total pagado ahora - CORREGIDO: MISMA FILA QUE LOS TÍTULOS -->
+                                <div class="pago-total">
+                                    <div style="text-align: center; width: 50%;">
+                                        <strong style="font-size: 9px;">TOTAL PAGADO AHORA:</strong>
+                                    </div>
+                                    <div style="text-align: center; width: 50%;">
+                                        <strong class="text-success" style="font-size: 9px;">${this.formatearMoneda(datos.totales.totalPagado)}</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Resumen de cuotas -->
+                            <div class="resumen-cuotas-compacto">
+                                <div class="cuota-info">
+                                    <small class="text-muted" style="font-size: 8px;">CUOTAS PENDIENTES</small>
+                                    <div class="fw-bold text-warning" style="font-size: 10px;">${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}</div>
+                                    <div class="monto-cuota">${this.formatearMoneda(datos.cashea.montoPorCuota)} c/u</div>
+                                </div>
+                                <div class="cuota-info">
+                                    <small class="text-muted" style="font-size: 8px;">DEUDA PENDIENTE</small>
+                                    <div class="fw-bold text-danger" style="font-size: 10px;">${this.formatearMoneda(datos.cashea.deudaPendiente)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Resto del código se mantiene igual -->
+                ${datos.abono ? `
+                    <div class="resumen-venta page-break-avoid">
+                        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
+                        
+                        <div class="resumen-abono">
+                            <!-- Forma de pago -->
+                            <div style="text-align: center; margin-bottom: 8px;">
+                                <span class="badge bg-warning text-dark fs-6">ABONO PARCIAL</span>
+                            </div>
+
+                            <!-- Abonos realizados -->
+                            <div class="abonos-section">
+                                <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 10px;">ABONOS REALIZADOS</h6>
+
+                                <div class="abonos-list">
+                                    <div class="abono-item">
+                                        <div style="text-align: center; width: 50%;">
+                                            <strong style="font-size: 9px;">${datos.fecha}</strong>
+                                        </div>
+                                        <div style="text-align: center; width: 50%;">
+                                            <strong style="font-size: 9px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Total abonado EN LA MISMA SECCIÓN -->
+                                    <div class="abono-item total-abonado" style="border-top: 1px solid #ccc; padding-top: 4px; margin-top: 4px;">
+                                        <div style="text-align: center; width: 50%;">
+                                            <strong style="font-size: 9px;">TOTAL ABONADO:</strong>
+                                        </div>
+                                        <div style="text-align: center; width: 50%;">
+                                            <strong class="text-success" style="font-size: 9px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Resumen financiero -->
+                            <div class="resumen-financiero">
+                                <div class="deuda-section">
+                                    <div class="deuda-label">DEUDA PENDIENTE</div>
+                                    <div class="deuda-monto text-danger">${this.formatearMoneda(datos.abono.deudaPendiente)}</div>
+                                </div>
+
+                                <div class="progreso-section">
+                                    <div class="progreso-label">PORCENTAJE PAGADO</div>
+                                    <div class="progreso-porcentaje text-success">${Math.round(datos.abono.porcentajePagado)}%</div>
+                                    <div class="progress">
+                                        <div class="progress-bar" style="width: ${datos.abono.porcentajePagado}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${!datos.cashea && !datos.abono ? `
+                    <div class="resumen-venta page-break-avoid">
+                        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
+                        
+                        <div class="resumen-contado">
+                            <div style="margin-bottom: 6px;">
+                                <strong style="font-size: 10px;">Forma de pago:</strong><br>
+                                <span class="badge bg-success">CONTADO</span>
+                            </div>
+                            <div>
+                                <strong style="font-size: 10px;">Monto total:</strong><br>
+                                ${this.formatearMoneda(datos.totales.totalPagado)}
+                            </div>
+                            <div style="margin-top: 6px; font-size: 9px; color: #666;">
+                                El pago ha sido realizado en su totalidad
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Totales -->
+                <div class="totales-compactos page-break-avoid">
+                    <div style="display: flex; justify-content: flex-end;">
+                        <div style="width: 50%;">
+                            <table style="width: 100%;">
+                                <tr>
+                                    <td class="fw-bold" style="font-size: 10px;">Subtotal:</td>
+                                    <td class="text-end" style="font-size: 10px;">${this.formatearMoneda(datos.totales.subtotal)}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold" style="font-size: 10px;">Descuento:</td>
+                                    <td class="text-end text-danger" style="font-size: 10px;">- ${this.formatearMoneda(datos.totales.descuento)}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold" style="font-size: 10px;">IVA:</td>
+                                    <td class="text-end" style="font-size: 10px;">${this.formatearMoneda(datos.totales.iva)}</td>
+                                </tr>
+                                <tr class="table-success">
+                                    <td class="fw-bold" style="font-size: 11px;">${this.getTextoTotalPagadoParaHTML(formaPago)}:</td>
+                                    <td class="text-end fw-bold" style="font-size: 11px;">${this.formatearMoneda(datos.totales.totalPagado)}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Observaciones -->
+                ${datos.configuracion?.observaciones ? `
+                    <div class="observaciones-compactas page-break-avoid">
+                        <div class="alert-warning">
+                            <strong>Observación:</strong> ${datos.configuracion.observaciones}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <!-- Términos y condiciones -->
+                <div class="terminos-compactos page-break-avoid">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 6px;">
+                        <div>
+                            <p style="margin-bottom: 2px;">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Pasados 30 días no nos hacemos responsables de trabajos no retirados
+                            </p>
+                            <p style="margin-bottom: 0;">
+                                <i class="bi bi-info-circle"></i>
+                                Estado de orden: tracking.optolapp.com
+                            </p>
+                        </div>
+                        <div style="text-align: right;">
+                            <small>${new Date().getFullYear()} © New Vision Lens</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mensaje final -->
+                <div class="mensaje-final page-break-avoid">
+                    <i class="bi bi-check-circle"></i>
+                    ${mensajeFinal}
                 </div>
             </div>
-        ` : ''}
-
-        <!-- Términos y condiciones -->
-        <div class="terminos-compactos page-break-avoid">
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 6px;">
-                <div>
-                    <p style="margin-bottom: 2px;">
-                        <i class="bi bi-exclamation-triangle"></i>
-                        Pasados 30 días no nos hacemos responsables de trabajos no retirados
-                    </p>
-                    <p style="margin-bottom: 0;">
-                        <i class="bi bi-info-circle"></i>
-                        Estado de orden: tracking.optolapp.com
-                    </p>
-                </div>
-                <div style="text-align: right;">
-                    <small>${new Date().getFullYear()} © New Vision Lens</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mensaje final -->
-        <div class="mensaje-final page-break-avoid">
-            <i class="bi bi-check-circle"></i>
-            ${mensajeFinal}
-        </div>
-    </div>
-</body>
-</html>
+        </body>
+        </html>
         `;
     }
 
