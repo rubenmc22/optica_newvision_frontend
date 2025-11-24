@@ -201,9 +201,18 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             'USD': 'dolar',
             'EUR': 'euro',
             'VES': 'bolivar',
-            'BS': 'bolivar'
+            'BS': 'bolivar',
+            '€': 'euro',
+            '$': 'dolar'
         };
-        return mapaMonedas[monedaSistema] || 'dolar';
+
+        // Si es un símbolo, convertirlo directamente
+        if (monedaSistema === '$' || monedaSistema === 'USD') return 'dolar';
+        if (monedaSistema === '€' || monedaSistema === 'EUR') return 'euro';
+        if (monedaSistema === 'Bs' || monedaSistema === 'VES' || monedaSistema === 'BS') return 'bolivar';
+
+        // Para nombres completos
+        return mapaMonedas[monedaSistema.toUpperCase()] || 'dolar';
     }
 
     private cargarDatosIniciales(): void {
@@ -826,6 +835,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.controlarCuotasPorNivel();
             this.actualizarMontoInicialCashea();
             this.generarCuotasCashea();
+        } else {
+            // Para contado y abono, usar la moneda del sistema
+            this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
         }
 
         this.venta.metodosDePago = [];
@@ -1342,7 +1354,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const modalElement = document.getElementById('resumenVentaModal');
         if (modalElement) {
             modalElement.addEventListener('hidden.bs.modal', () => {
-                this.resetearModalVenta();
+                this.resetearVentaCompleta();
                 this.limpiarSelectProductos();
             });
         }
@@ -1374,16 +1386,34 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     resetearModalVenta(): void {
+        // Limpiar propiedades básicas de venta
         this.venta.descuento = 0;
         this.venta.observaciones = '';
         this.venta.montoInicial = 0;
         this.venta.numeroCuotas = 0;
         this.venta.montoAbonado = 0;
         this.venta.metodosDePago = [];
+
+        // IMPORTANTE: Restablecer la forma de pago a contado Y la moneda a la del sistema
         this.venta.formaPago = 'contado';
+        this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema); // ← Esto es clave
+
         this.venta.impuesto = 16;
         this.valorInicialTemporal = '';
+        this.valorTemporal = '';
         this.montoExcedido = false;
+
+        // Limpiar propiedades específicas de Cashea
+        this.nivelCashea = 'nivel3';
+        this.cantidadCuotasCashea = 3;
+        this.cuotasCashea = [];
+        this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
+
+        // Restablecer moneda efectivo
+        this.monedaEfectivo = this.monedaSistema; // ← Usar moneda del sistema
+
+        // Forzar actualización de productos con la moneda correcta
+        this.actualizarProductosConDetalle();
     }
 
     // === MÉTODOS ADICIONALES NECESARIOS ===
@@ -2916,7 +2946,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     cerrarModalRecibo(): void {
-
         this.limpiarSelectProductos();
         this.mostrarModalRecibo = false;
         this.ventaGenerada = false;
@@ -2924,10 +2953,62 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         this.cerrarModalResumen();
 
+        // Limpiar completamente el estado de la venta
         setTimeout(() => {
-            this.resetearVenta();
+            this.resetearVentaCompleta();
             this.cdr.detectChanges();
         }, 300);
+    }
+
+    private resetearVentaCompleta(): void {
+        // Limpiar productos
+        this.venta.productos = [];
+
+        // Restablecer a valores por defecto del sistema
+        this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
+        this.venta.formaPago = 'contado';
+        this.venta.descuento = 0;
+        this.venta.impuesto = 16;
+        this.venta.observaciones = '';
+        this.venta.montoInicial = 0;
+        this.venta.numeroCuotas = 0;
+        this.venta.montoAbonado = 0;
+        this.venta.metodosDePago = [];
+
+        // Limpiar Cashea completamente
+        this.nivelCashea = 'nivel3';
+        this.cantidadCuotasCashea = 3;
+        this.cuotasCashea = [];
+        this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
+        this.valorInicialTemporal = '';
+
+        // Limpiar abono
+        this.valorTemporal = '';
+        this.montoExcedido = false;
+
+        // Restablecer moneda efectivo
+        this.monedaEfectivo = this.monedaSistema;
+
+        // Limpiar selecciones
+        this.pacienteSeleccionado = null;
+        this.productoSeleccionado = null;
+        this.asesorSeleccionado = this.currentUser?.id ?? null;
+
+        // Limpiar cliente sin paciente
+        this.clienteSinPaciente = {
+            tipoPersona: 'natural',
+            nombreCompleto: '',
+            cedula: '',
+            telefono: '',
+            email: ''
+        };
+
+        this.requierePaciente = false;
+        this.historiaMedica = null;
+        this.mostrarSelectorAsesor = false;
+
+        // Actualizar productos con la moneda correcta
+        this.actualizarProductosConDetalle();
     }
 
     private cerrarModalResumen(): void {
