@@ -572,7 +572,8 @@
 
 .iva-monto {
     font-family: 'Courier New', monospace;
-    color: #17a2b8;
+    color: var(--primary-color) !important;
+    ;
     font-weight: 500;
 }
 
@@ -920,10 +921,12 @@
     }
 
     &.metodos-pago-detalle {
-        border-left: 4px solid #17a2b8;
+        border-left: 4px solid var(--primary-color) !important;
+        ;
 
         .card-header-detalle i {
-            color: #17a2b8;
+            color: var(--primary-color) !important;
+            ;
         }
     }
 
@@ -1328,6 +1331,167 @@
     }
 }
 
+// Estilos para la validación de cliente
+.validacion-cliente {
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    margin-left: auto;
+
+    &.validando {
+        color: #ffc107;
+
+        .estado-texto {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+    }
+
+    &.encontrado {
+        color: #198754;
+
+        .estado-texto {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+    }
+
+    &.no-encontrado {
+        color: #dc3545;
+
+        .estado-texto {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+    }
+}
+
+.input-with-action {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+
+    .form-control {
+        flex: 1;
+    }
+
+    .btn-validar-compact {
+        background: #0d6efd;
+        color: white;
+        border: none;
+        border-radius: 0.375rem;
+        width: 38px; // Tamaño fijo compacto
+        height: 47px; // Misma altura que el input
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        flex-shrink: 0;
+        margin-top: 8px !important;
+
+        &:hover:not(:disabled) {
+            background: #0b5ed7;
+            transform: scale(1.05);
+            transition: all 0.2s ease;
+        }
+
+        &:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+
+        &:disabled {
+            background: #6c757d;
+            opacity: 0.65;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        i {
+            font-size: 1rem;
+            line-height: 1;
+        }
+    }
+}
+
+// Estados del botón
+.btn-validar-compact {
+    border: 1px solid #dee2e6;
+    background: #f8f9fa !important;
+    color: var(--primary-color) !important;
+
+    &.btn-validando {
+        background: #fff3cd !important;
+        color: #856404 !important;
+        border-color: #ffeaa7;
+    }
+
+    &.btn-encontrado {
+        background: #d1e7dd !important;
+        color: #0f5132 !important;
+        border-color: #badbcc;
+    }
+
+    &.btn-no-encontrado {
+        background: #f8d7da !important;
+        color: #721c24 !important;
+        border-color: #f1aeb5;
+    }
+}
+
+.campo-autocompletado {
+    background-color: #f8fff8 !important;
+    border-color: #198754 !important;
+    border-left: 3px solid #198754 !important;
+}
+
+.info-validacion {
+    margin-top: 1rem;
+
+    .alert {
+        border: none;
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+
+        &.alert-success {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        &.alert-warning {
+            background: #fff3cd;
+            color: #664d03;
+        }
+
+        &.alert-info {
+            background: #cff4fc;
+            color: #055160;
+        }
+    }
+}
+
+.required {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+// Loader para validación
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.bi-hourglass-split {
+    animation: spin 1s linear infinite;
+}
+
 // =============================================
 // MÉTODOS DE PAGO - NUEVO ORDEN
 // =============================================
@@ -1606,7 +1770,8 @@
         }
 
         .conversion-text {
-            color: #17a2b8;
+            color: var(--primary-color) !important;
+            ;
         }
     }
 }
@@ -1706,7 +1871,8 @@
     font-size: 0.75rem;
 
     .conversion-text {
-        color: #17a2b8;
+        color: var(--primary-color) !important;
+        ;
     }
 
     .maximo-text {
@@ -1932,7 +2098,8 @@
 
         .detail-text {
             font-size: 0.75rem;
-            color: #17a2b8;
+            color: var(--primary-color) !important;
+            ;
             display: block;
             margin-top: 0.125rem;
         }
@@ -2810,7 +2977,7 @@ input:checked+.slider:before {
     &::after {
         content: "*";
         color: #dc3545;
-        margin-left: 0.25rem;
+        margin-left: -0.3rem;
     }
 }
 
@@ -2966,7 +3133,8 @@ input:checked+.slider:before {
         }
 
         .resumen-cashea {
-            border-left-color: #17a2b8;
+            border-left-color: var(--primary-color) !important;
+            ;
         }
 
         .resumen-abono {
@@ -3537,7 +3705,8 @@ input:checked+.slider:before {
 // =============================================
 
 .cliente-sin-paciente {
-    border-left: 4px solid #17a2b8;
+    border-left: 4px solid var(--primary-color) !important;
+    ;
     margin: 1.5rem;
     border-radius: 12px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
@@ -3546,7 +3715,8 @@ input:checked+.slider:before {
     background: white;
 
     .card-header-detalle i {
-        color: #17a2b8;
+        color: var(--primary-color) !important;
+        ;
     }
 }
 
@@ -3614,16 +3784,16 @@ input:checked+.slider:before {
         }
 
         &.active {
-            border-color: #17a2b8;
-            background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+           border-color: #e9ecef !important;
+            background: var(--degradado-color) !important;
             box-shadow: 0 2px 12px rgba(23, 162, 184, 0.15);
 
             i {
-                color: #17a2b8;
+                color: white !important;
             }
 
             span {
-                color: #17a2b8;
+                color: white !important;
                 font-weight: 600;
             }
         }

@@ -5,7 +5,7 @@ import { SystemConfigService } from '../../system-config/system-config.service';
 import { GenerarVentaService } from './generar-venta.service';
 import { Tasa } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
-import { forkJoin, map, Subject } from 'rxjs';
+import { forkJoin, map, Subject, Observable, of } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -109,9 +109,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     mostrarSelectorAsesor: boolean = false;
 
     // === PROPIEDADES PARA ASESOR ===
-
     historiaMedica: HistoriaMedica | null = null;
-
     productosConDetalle: ProductoVentaCalculado[] = [];
     totalProductos: number = 0;
     cuotasCashea: CuotaCashea[] = [];
@@ -123,6 +121,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     ventaGenerada: boolean = false;
     urlRecibo: string = '';
     errorGeneracion: string = '';
+
+    // === PROPIEDADES PARA CLIENTE API ===
+    validandoCliente: boolean = false;
+    clienteEncontrado: boolean = false;
+    mensajeValidacionCliente: string = '';
+    cedulaAnterior: string = '';
+    validacionIntentada: boolean = false; // ← Nueva propiedad
 
     // === PROPIEDADES PARA CONTROL DE TAMAÑO DEL MODAL ===
     tamanoModalRecibo: 'xl' = 'xl';
@@ -1936,7 +1941,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     cedula: this.pacienteSeleccionado.informacionPersonal?.cedula,
                     telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
                     email: this.pacienteSeleccionado.informacionPersonal?.email
-                }
+                },
+                validado: true // Pacientes siempre están validados
             };
         } else if (!this.requierePaciente) {
             clienteData = {
@@ -1947,7 +1953,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     cedula: this.clienteSinPaciente.cedula,
                     telefono: this.clienteSinPaciente.telefono,
                     email: this.clienteSinPaciente.email
-                }
+                },
+                validado: this.clienteEncontrado, // Indica si fue validado por API
+                requiereRegistro: !this.clienteEncontrado // Indica si necesita ser guardado en BD
             };
         }
 
@@ -3031,6 +3039,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.requierePaciente = false;
         this.historiaMedica = null;
         this.mostrarSelectorAsesor = false;
+
+        // Limpiar validación de cliente
+        this.validandoCliente = false;
+        this.clienteEncontrado = false;
+        this.mensajeValidacionCliente = '';
 
         // Actualizar productos con la moneda correcta
         this.actualizarProductosConDetalle();
@@ -4261,19 +4274,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return nombreValido && cedulaValida && telefonoValido && emailValido;
     }
 
-    // Métodos para usar en los eventos de los inputs
-    onCedulaChange(): void {
-        const cedula = this.clienteSinPaciente.cedula;
-        const tipoPersona = this.clienteSinPaciente.tipoPersona;
-
-        if (!this.validarCedula(cedula, tipoPersona)) {
-            this.mostrarErrorCedula();
-        } else {
-            this.limpiarErrorCedula();
-        }
-        this.actualizarEstadoValidacion();
-    }
-
     onTelefonoChange(): void {
         const telefono = this.clienteSinPaciente.telefono;
 
@@ -4441,4 +4441,343 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             mensaje: this.getMensajeErrorEmail()
         };
     }
+
+
+
+
+    // === MÉTODOS PARA VALIDACIÓN DE CLIENTE VÍA API ===
+
+    /**
+     * Simula la búsqueda de cliente en la base de datos
+     * TODO: Reemplazar con llamada real al API cuando esté disponible
+     */
+    private simularBusquedaCliente(cedula: string): Promise<any> {
+        return new Promise((resolve, reject) => {
+            // Simular delay de red
+            setTimeout(() => {
+                // Datos de prueba - simular que algunos clientes existen y otros no
+                const clientesExistentes: any = {
+                    '12345678': {
+                        existe: true,
+                        datos: {
+                            nombreCompleto: 'MARÍA GABRIELA PÉREZ RODRÍGUEZ',
+                            telefono: '+58 4121234567',
+                            email: 'maria.perez@email.com',
+                            tipoPersona: 'natural'
+                        }
+                    },
+                    '87654321': {
+                        existe: true,
+                        datos: {
+                            nombreCompleto: 'CARLOS JOSÉ MARTÍNEZ LÓPEZ',
+                            telefono: '+58 4149876543',
+                            email: 'carlos.martinez@empresa.com',
+                            tipoPersona: 'natural'
+                        }
+                    },
+                    'J-123456789': {
+                        existe: true,
+                        datos: {
+                            nombreCompleto: 'TECNOLOGÍA AVANZADA C.A.',
+                            telefono: '+58 2125558899',
+                            email: 'ventas@tecnologia-avanzada.com',
+                            tipoPersona: 'juridica'
+                        }
+                    }
+                };
+
+                const cliente = clientesExistentes[cedula];
+
+                if (cliente) {
+                    resolve(cliente);
+                } else {
+                    resolve({
+                        existe: false,
+                        mensaje: 'Cliente no encontrado en la base de datos'
+                    });
+                }
+            }, 1500); // Simular 1.5 segundos de delay
+        });
+    }
+
+    /**
+     * Autocompleta los datos del cliente cuando es encontrado
+     */
+    private autocompletarDatosCliente(datosCliente: any): void {
+        // Actualizar tipo de persona si es diferente
+        if (datosCliente.tipoPersona && datosCliente.tipoPersona !== this.clienteSinPaciente.tipoPersona) {
+            this.clienteSinPaciente.tipoPersona = datosCliente.tipoPersona;
+        }
+
+        // Autocompletar campos
+        this.clienteSinPaciente.nombreCompleto = datosCliente.nombreCompleto || '';
+        this.clienteSinPaciente.telefono = datosCliente.telefono || '';
+        this.clienteSinPaciente.email = datosCliente.email || '';
+
+        // Limpiar errores de validación
+        this.limpiarErroresValidacion();
+
+        // Forzar validación de los campos autocompletados
+        this.actualizarEstadoValidacion();
+    }
+
+    /**
+     * Limpia todos los errores de validación
+     */
+    private limpiarErroresValidacion(): void {
+        this.limpiarErrorCedula();
+        this.limpiarErrorNombre();
+        this.limpiarErrorTelefono();
+        this.limpiarErrorEmail();
+    }
+
+    onCampoEditadoManualmente(): void {
+        // Solo resetear si previamente se había encontrado el cliente
+        // o si se había intentado validar
+        if (this.clienteEncontrado || this.validacionIntentada) {
+            this.clienteEncontrado = false;
+            this.validacionIntentada = false;
+            this.mensajeValidacionCliente = '✏️ Editando datos manualmente';
+
+            this.snackBar.open('Modo edición manual activado', 'Cerrar', {
+                duration: 2000,
+                panelClass: ['snackbar-info']
+            });
+        }
+    }
+
+    /**
+ * Método mejorado para cambio de cédula - validación solo en blur
+ */
+    onCedulaChange(): void {
+        const cedula = this.clienteSinPaciente.cedula;
+        const tipoPersona = this.clienteSinPaciente.tipoPersona;
+
+        // Resetear estado de validación anterior solo si cambia la cédula
+        if (cedula !== this.cedulaAnterior) {
+            this.clienteEncontrado = false;
+            this.mensajeValidacionCliente = '';
+            this.cedulaAnterior = cedula;
+        }
+
+        if (!this.validarCedula(cedula, tipoPersona)) {
+            this.mostrarErrorCedula();
+            this.mensajeValidacionCliente = this.getMensajeErrorCedula();
+        } else {
+            this.limpiarErrorCedula();
+            // NO validamos automáticamente aquí, solo en blur
+        }
+
+        this.actualizarEstadoValidacion();
+    }
+
+    /**
+     * Método para validar cuando el usuario sale del campo (blur)
+     */
+    onCedulaBlur(): void {
+        console.log('🔍 onCedulaBlur() ejecutado'); // Para debug
+
+        const cedula = this.clienteSinPaciente.cedula?.trim();
+        const tipoPersona = this.clienteSinPaciente.tipoPersona;
+
+        if (!cedula) {
+            console.log('Cédula vacía, no validar');
+            return;
+        }
+
+        // Validar formato básico
+        if (!this.validarCedula(cedula, tipoPersona)) {
+            console.log('Cédula inválida:', cedula);
+            this.mostrarErrorCedula();
+            this.mensajeValidacionCliente = this.getMensajeErrorCedula();
+            return;
+        }
+
+        console.log('Cédula válida, procediendo a validar:', cedula);
+
+        // Solo validar si la cédula es válida y tiene al menos 4 caracteres
+        if (cedula.length >= 4) {
+            this.validarClientePorCedula();
+        } else {
+            console.log('Cédula muy corta, no validar:', cedula.length);
+        }
+    }
+
+    /**
+     * Método para forzar validación manual
+     */
+    forzarValidacionCliente(): void {
+        const cedula = this.clienteSinPaciente.cedula?.trim();
+
+        if (!cedula) {
+            this.mensajeValidacionCliente = 'Ingrese una cédula o RIF para validar';
+            return;
+        }
+
+        if (!this.validarCedula(cedula, this.clienteSinPaciente.tipoPersona)) {
+            this.mensajeValidacionCliente = this.getMensajeErrorCedula();
+            return;
+        }
+
+        this.validarClientePorCedula();
+    }
+
+    /**
+     * TODO: Implementar cuando el API esté listo
+     */
+    buscarClientePorCedula(cedula: string): Observable<any> {
+        // Por ahora retornamos un observable vacío
+        return of({
+            existe: false,
+            mensaje: 'API no implementada'
+        });
+    }
+
+    /**
+     * TODO: Implementar cuando el API esté listo
+     */
+    guardarCliente(datosCliente: any): Observable<any> {
+        // Por ahora retornamos un observable vacío
+        return of({
+            success: true,
+            mensaje: 'Cliente guardado exitosamente',
+            clienteId: 'CLI-' + Date.now()
+        });
+    }
+
+    /**
+ * Obtener clase CSS para el botón de validación
+ */
+    getClaseBotonValidar(): string {
+        let clase = 'btn-validar-compact';
+
+        if (this.validandoCliente) {
+            clase += ' btn-validando';
+        } else if (this.clienteEncontrado) {
+            clase += ' btn-encontrado';
+        } else if (this.validacionIntentada && !this.clienteEncontrado && this.clienteSinPaciente.cedula) {
+            // Solo mostrar "no encontrado" si ya se intentó validar y no se encontró
+            clase += ' btn-no-encontrado';
+        }
+        // En otros casos, se mantiene el estado por defecto
+
+        return clase;
+    }
+
+    async validarClientePorCedula(): Promise<void> {
+        const cedula = this.clienteSinPaciente.cedula?.trim();
+
+        // Validaciones básicas
+        if (!cedula) {
+            this.mensajeValidacionCliente = 'Ingrese una cédula o RIF para validar';
+            this.validacionIntentada = false;
+            return;
+        }
+
+        if (!this.validarCedula(cedula, this.clienteSinPaciente.tipoPersona)) {
+            this.mensajeValidacionCliente = this.getMensajeErrorCedula();
+            this.validacionIntentada = false;
+            return;
+        }
+
+        // Guardar la cédula actual por si necesitamos restaurarla
+        const cedulaActual = this.clienteSinPaciente.cedula;
+
+        // Iniciar validación
+        this.validandoCliente = true;
+        this.clienteEncontrado = false;
+        this.validacionIntentada = false;
+        this.mensajeValidacionCliente = '🔍 Buscando cliente en la base de datos...';
+
+        try {
+            const respuesta = await this.simularBusquedaCliente(cedula);
+
+            // MARCAR QUE LA VALIDACIÓN SE INTENTÓ
+            this.validacionIntentada = true;
+
+            if (respuesta.existe) {
+                // CLIENTE ENCONTRADO - Autocompletar datos
+                this.clienteEncontrado = true;
+                this.mensajeValidacionCliente = '✅ Cliente encontrado - Datos autocompletados';
+                this.autocompletarDatosCliente(respuesta.datos);
+
+                /*  this.snackBar.open('Cliente encontrado - Datos autocompletados', 'Cerrar', {
+                      duration: 3000,
+                      panelClass: ['snackbar-success']
+                  });*/
+            } else {
+                // CLIENTE NO ENCONTRADO - Limpiar campos excepto cédula
+                this.clienteEncontrado = false;
+                this.mensajeValidacionCliente = 'Cliente no encontrado - Complete los datos manualmente';
+
+                // Limpiar todos los campos excepto la cédula
+                this.limpiarCamposCliente();
+
+                // Restaurar la cédula (por si se modificó durante la limpieza)
+                this.clienteSinPaciente.cedula = cedulaActual;
+
+                /* this.snackBar.open('Cliente no encontrado. Complete los datos manualmente.', 'Cerrar', {
+                     duration: 4000,
+                     panelClass: ['snackbar-info']
+                 });*/
+            }
+
+        } catch (error) {
+            this.validacionIntentada = true;
+            this.clienteEncontrado = false;
+            this.mensajeValidacionCliente = '⚠️ Error al conectar con el servidor';
+
+            // En caso de error, también limpiar campos
+            this.limpiarCamposCliente();
+            this.clienteSinPaciente.cedula = cedulaActual;
+
+            this.snackBar.open('Error al validar cliente. Verifique su conexión.', 'Cerrar', {
+                duration: 3000,
+                panelClass: ['snackbar-warning']
+            });
+            console.log('error', error);
+        } finally {
+            this.validandoCliente = false;
+            this.cdr.detectChanges();
+        }
+    }
+
+    private limpiarCamposCliente(): void {
+        // Guardar la cédula actual y tipo de persona
+        const cedulaActual = this.clienteSinPaciente.cedula;
+        const tipoPersonaActual = this.clienteSinPaciente.tipoPersona;
+
+        // Limpiar todos los campos
+        this.clienteSinPaciente = {
+            tipoPersona: tipoPersonaActual, // Mantener el tipo de persona
+            nombreCompleto: '',
+            cedula: cedulaActual, // Restaurar la cédula después de limpiar
+            telefono: '',
+            email: ''
+        };
+
+        // Limpiar errores de validación
+        this.limpiarErroresValidacion();
+
+        // Actualizar estado de validación
+        this.actualizarEstadoValidacion();
+    }
+
+    getTooltipBotonValidar(): string {
+    if (this.validandoCliente) {
+        return 'Buscando cliente...';
+    } else if (this.clienteEncontrado) {
+        return 'Cliente encontrado - Click para re-validar';
+    } else if (this.validacionIntentada && !this.clienteEncontrado) {
+        return 'Cliente no encontrado - Complete los datos manualmente';
+    } else if (!this.clienteSinPaciente.cedula) {
+        return 'Ingrese una cédula para buscar';
+    } else if (!this.validarCedula(this.clienteSinPaciente.cedula, this.clienteSinPaciente.tipoPersona)) {
+        return 'Cédula inválida - Corrija el formato';
+    } else if (this.clienteSinPaciente.cedula.length < 4) {
+        return 'Ingrese al menos 4 caracteres para buscar';
+    } else {
+        return 'Buscar cliente en base de datos';
+    }
+}
 }

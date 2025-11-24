@@ -503,6 +503,7 @@
                         <i class="bi bi-person-badge"></i>
                         <span>Información del Cliente</span>
                     </div>
+
                     <div class="card-body-detalle">
                         <div class="cliente-form">
                             <!-- Switch Tipo de Persona - Moderno -->
@@ -512,13 +513,13 @@
                                     <div class="switch-options">
                                         <div class="switch-option"
                                             [class.active]="clienteSinPaciente.tipoPersona === 'natural'"
-                                            (click)="clienteSinPaciente.tipoPersona = 'natural'">
+                                            (click)="clienteSinPaciente.tipoPersona = 'natural'; onTipoPersonaChange()">
                                             <i class="bi bi-person"></i>
                                             <span>Persona Natural</span>
                                         </div>
                                         <div class="switch-option"
                                             [class.active]="clienteSinPaciente.tipoPersona === 'juridica'"
-                                            (click)="clienteSinPaciente.tipoPersona = 'juridica'">
+                                            (click)="clienteSinPaciente.tipoPersona = 'juridica'; onTipoPersonaChange()">
                                             <i class="bi bi-building"></i>
                                             <span>Persona Jurídica</span>
                                         </div>
@@ -529,33 +530,53 @@
                             <!-- Campos del formulario optimizados -->
                             <div class="cliente-fields">
                                 <div class="form-grid">
-                                    <!-- Fila 1: Cédula/RIF -->
+                                    <!-- Fila 1: Cédula/RIF con validación -->
                                     <div class="form-group">
                                         <label class="form-label">
                                             <i class="bi bi-card-text"></i>
                                             {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Cédula' : 'RIF' }}
                                         </label>
-                                        <input type="text" class="form-control modern-input" style="margin-bottom: -10px !important;"
-                                            [(ngModel)]="clienteSinPaciente.cedula"
-                                            [placeholder]="clienteSinPaciente.tipoPersona === 'natural' ? 'Ingrese la cédula' : 'Ingrese el RIF'"
-                                            (blur)="onCedulaChange()" (input)="onCedulaChange()" data-cedula-input>
+                                        <div class="input-with-action">
+                                            <input type="text" class="form-control modern-input"
+                                                style="margin-bottom: -10px !important;"
+                                                [(ngModel)]="clienteSinPaciente.cedula"
+                                                [placeholder]="clienteSinPaciente.tipoPersona === 'natural' ? 'Ingrese la cédula' : 'Ingrese el RIF'"
+                                                (blur)="onCedulaBlur()" (input)="onCedulaChange()"
+                                                (focus)="onCampoEditadoManualmente()" [disabled]="validandoCliente"
+                                                data-cedula-input>
+
+                                            <!-- Botón de validación compacto y con estados -->
+                                            <button class="{{ getClaseBotonValidar() }}"
+                                                (click)="forzarValidacionCliente()"
+                                                [disabled]="validandoCliente || !clienteSinPaciente.cedula || !validarCedula(clienteSinPaciente.cedula, clienteSinPaciente.tipoPersona)"
+                                                [title]="getTooltipBotonValidar()" type="button">
+                                                <i class="bi"
+                                                    [class.bi-search]="!validandoCliente && !clienteEncontrado && !validacionIntentada"
+                                                    [class.bi-check-lg]="clienteEncontrado && !validandoCliente"
+                                                    [class.bi-hourglass]="validandoCliente"
+                                                    [class.bi-exclamation-circle]="validacionIntentada && !clienteEncontrado && !validandoCliente"></i>
+                                            </button>
+                                        </div>
+
                                         <div class="error-message"
                                             *ngIf="!getEstadoCampoCedula().valido && clienteSinPaciente.cedula">
                                             <i class="bi bi-exclamation-circle"></i>
                                             {{ getEstadoCampoCedula().mensaje }}
                                         </div>
                                     </div>
-
                                     <!-- Fila 1: Nombre/Razón Social -->
                                     <div class="form-group">
                                         <label class="form-label">
                                             <i class="bi bi-person"></i>
                                             {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón Social' }}
                                         </label>
-                                        <input type="text" class="form-control modern-input" style="margin-bottom: -10px !important;"
+                                        <input type="text" class="form-control modern-input"
+                                            style="margin-bottom: -10px !important;"
                                             [(ngModel)]="clienteSinPaciente.nombreCompleto"
                                             [placeholder]="clienteSinPaciente.tipoPersona === 'natural' ? 'Ingrese nombre completo' : 'Ingrese razón social'"
-                                            (blur)="onNombreChange()" (input)="onNombreChange()" data-nombre-input>
+                                            (blur)="onNombreChange()"
+                                            (input)="onNombreChange(); onCampoEditadoManualmente()"
+                                            [class.campo-autocompletado]="clienteEncontrado" data-nombre-input>
                                         <div class="error-message"
                                             *ngIf="!getEstadoCampoNombre().valido && clienteSinPaciente.nombreCompleto">
                                             <i class="bi bi-exclamation-circle"></i>
@@ -563,17 +584,18 @@
                                         </div>
                                     </div>
 
-
                                     <!-- Fila 2: Teléfono -->
                                     <div class="form-group">
                                         <label class="form-label">
                                             <i class="bi bi-telephone"></i>
                                             Teléfono
                                         </label>
-                                        <input type="tel" class="form-control modern-input" style="margin-bottom: -10px !important;"
+                                        <input type="tel" class="form-control modern-input"
+                                            style="margin-bottom: -10px !important;"
                                             [(ngModel)]="clienteSinPaciente.telefono" placeholder="Ej: 58 4121234567"
-                                            (blur)="onTelefonoChange()" (input)="onTelefonoChange()"
-                                            data-telefono-input>
+                                            (blur)="onTelefonoChange()"
+                                            (input)="onTelefonoChange(); onCampoEditadoManualmente()"
+                                            [class.campo-autocompletado]="clienteEncontrado" data-telefono-input>
                                         <div class="error-message"
                                             *ngIf="!getEstadoCampoTelefono().valido && clienteSinPaciente.telefono">
                                             <i class="bi bi-exclamation-circle"></i>
@@ -587,13 +609,44 @@
                                             <i class="bi bi-envelope"></i>
                                             Email
                                         </label>
-                                        <input type="email" class="form-control modern-input" style="margin-bottom: -10px !important;"
+                                        <input type="email" class="form-control modern-input"
+                                            style="margin-bottom: -10px !important;"
                                             [(ngModel)]="clienteSinPaciente.email" placeholder="ejemplo@correo.com"
-                                            (blur)="onEmailChange()" (input)="onEmailChange()" data-email-input>
+                                            (blur)="onEmailChange()"
+                                            (input)="onEmailChange(); onCampoEditadoManualmente()"
+                                            [class.campo-autocompletado]="clienteEncontrado" data-email-input>
                                         <div class="error-message"
                                             *ngIf="!getEstadoCampoEmail().valido && clienteSinPaciente.email">
                                             <i class="bi bi-exclamation-circle"></i>
                                             {{ getEstadoCampoEmail().mensaje }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Información adicional sobre validación -->
+                            <div class="info-validacion" *ngIf="clienteSinPaciente.cedula && validacionIntentada">
+                                <div class="alert alert-info" [ngClass]="{
+                                    'alert-success': clienteEncontrado,
+                                    'alert-warning': !clienteEncontrado && !validandoCliente,
+                                    'alert-info': validandoCliente
+                                }">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi" [class.bi-check-circle-fill]="clienteEncontrado"
+                                            [class.bi-exclamation-circle-fill]="!clienteEncontrado && !validandoCliente"
+                                            [class.bi-hourglass-split]="validandoCliente" class="me-2"></i>
+                                        <div>
+                                            <strong>
+                                                {{ clienteEncontrado ? 'Cliente Verificado' :
+                                                validandoCliente ? 'Validando...' : 'Cliente No Encontrado' }}
+                                            </strong>
+                                            <div class="small">
+                                                {{ clienteEncontrado ?
+                                                'Los datos fueron autocompletados desde nuestra base de datos' :
+                                                validandoCliente ?
+                                                'Buscando información del cliente...' :
+                                                'Complete los datos manualmente. El cliente será registrado al generar la venta.' }}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -666,13 +719,14 @@
                                     <div class="input-with-validation">
                                         <input type="text" class="form-control modern-input"
                                             [placeholder]="'Monto en ' + obtenerSimboloMoneda(venta.moneda)"
-                                            [(ngModel)]="valorInicialTemporal" 
-                                            (blur)="formatearInicialCashea()" 
-                                            (input)="onMontoInicialChange()"
-                                            (keypress)="validarEntrada($event)" />
+                                            [(ngModel)]="valorInicialTemporal" (blur)="formatearInicialCashea()"
+                                            (input)="onMontoInicialChange()" (keypress)="validarEntrada($event)" />
                                         <small class="validation-text">
-                                            Mínimo: {{ calcularInicialCasheaPorNivel(montoTotal, nivelCashea) | number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
-                                            <span *ngIf="venta.moneda !== 'bolivar'">⇄ {{ obtenerEquivalenteBs(calcularInicialCasheaPorNivel(montoTotal, nivelCashea)) | number:'1.2-2' }} Bs</span>
+                                            Mínimo: {{ calcularInicialCasheaPorNivel(montoTotal, nivelCashea) |
+                                            number:'1.2-2' }} {{ obtenerSimboloMoneda(venta.moneda) }}
+                                            <span *ngIf="venta.moneda !== 'bolivar'">⇄ {{
+                                                obtenerEquivalenteBs(calcularInicialCasheaPorNivel(montoTotal,
+                                                nivelCashea)) | number:'1.2-2' }} Bs</span>
                                         </small>
                                     </div>
                                 </div>
@@ -978,16 +1032,20 @@
                                         <div class="footer-info">
                                             <span class="maximo-text">
                                                 <i class="bi bi-graph-up"></i>
-                                                Máx. disponible: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{ obtenerSimboloMoneda(getMonedaParaMetodo(metodo.tipo)) }}
+                                                Máx. disponible: {{ getMontoRestanteParaMetodo(i) | number:'1.2-2' }} {{
+                                                obtenerSimboloMoneda(getMonedaParaMetodo(metodo.tipo)) }}
                                             </span>
 
                                             <!-- Mostrar conversión clara -->
                                             <span *ngIf="metodo.monto && metodo.monto > 0" class="conversion-text">
                                                 <i class="bi bi-arrow-left-right"></i>
-                                                {{ metodo.monto | number:'1.2-2' }} {{ obtenerSimboloMoneda(getMonedaParaMetodo(metodo.tipo)) }} 
+                                                {{ metodo.monto | number:'1.2-2' }} {{
+                                                obtenerSimboloMoneda(getMonedaParaMetodo(metodo.tipo)) }}
                                                 = {{ getInfoConversionMetodo(metodo) }}
-                                                <span *ngIf="getMonedaParaMetodo(metodo.tipo) !== 'bolivar'" class="bs-conversion">
-                                                    ({{ calcularConversionBs(metodo.monto, metodo.tipo) | number:'1.2-2' }} Bs)
+                                                <span *ngIf="getMonedaParaMetodo(metodo.tipo) !== 'bolivar'"
+                                                    class="bs-conversion">
+                                                    ({{ calcularConversionBs(metodo.monto, metodo.tipo) | number:'1.2-2'
+                                                    }} Bs)
                                                 </span>
                                             </span>
                                         </div>
