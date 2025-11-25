@@ -18,7 +18,6 @@
     </div>
   </div>
 
-
   <div class="card-body">
     <!-- Filtros y búsquedas -->
     <div class="card mb-4">
@@ -31,20 +30,34 @@
               [(ngModel)]="filtros.busquedaGeneral" (input)="onFiltroChange()">
           </div>
 
+          <!-- Select de Asesores -->
           <div class="col-12 col-md-4">
             <label class="form-label fw-semibold">👨‍💼 Asesor</label>
             <select class="form-select" [(ngModel)]="filtros.asesor" (change)="onFiltroChange()">
-              <option value="">Todos</option>
-              <option *ngFor="let asesor of asesores" [value]="asesor.id">{{asesor.nombre}}</option>
+              <option value="">Todos los asesores ({{ asesores.length }})</option>
+              <option *ngFor="let asesor of asesores" [value]="asesor.id">
+                {{ asesor.nombre }}
+                <span *ngIf="asesor.cargo && asesor.cargo !== 'Sin cargo'">- {{ asesor.cargo }}</span>
+              </option>
             </select>
+            <div class="form-text" *ngIf="asesores.length === 0">
+              ⚠️ No hay asesores disponibles
+            </div>
           </div>
 
+          <!-- Select de Especialistas -->
           <div class="col-12 col-md-4">
             <label class="form-label fw-semibold">👨‍⚕️ Especialista</label>
             <select class="form-select" [(ngModel)]="filtros.especialista" (change)="onFiltroChange()">
-              <option value="">Todos</option>
-              <option *ngFor="let esp of especialistas" [value]="esp.id">{{esp.nombre}}</option>
+              <option value="">Todos los especialistas ({{ especialistas.length }})</option>
+              <option *ngFor="let esp of especialistas" [value]="esp.id">
+                {{ esp.nombre }}
+                <span *ngIf="esp.tipo">- {{ esp.tipo }}</span>
+              </option>
             </select>
+            <div class="form-text" *ngIf="especialistas.length === 0">
+              ⚠️ No hay especialistas disponibles
+            </div>
           </div>
 
           <!-- Fila 2: Status, Rango de Fechas, Limpiar -->
@@ -276,7 +289,8 @@
                 <!-- Monto -->
                 <div class="monto-display">
                   <div class="monto-amount text-primary fw-bold">
-                    {{venta.montoTotal | currency:'USD':'symbol':'1.2-2'}}
+                    <!-- ACTUALIZADO: Usar formateo según moneda del sistema -->
+                    {{ getMontoParaMostrar(venta, venta.montoTotal) }}
                   </div>
                   <div class="monto-label text-muted small">Total</div>
                 </div>
@@ -304,8 +318,8 @@
                     <i class="bi bi-currency-dollar text-success"></i>
                     <div>
                       <small class="text-muted">Subtotal</small>
-                      <div class="fw-semibold">{{getSimboloMonedaParaVenta(venta)}}{{venta.subtotal | number:'1.2-2'}}
-                      </div>
+                      <!-- ACTUALIZADO: Usar formateo según moneda del sistema -->
+                      <div class="fw-semibold">{{ getMontoParaMostrar(venta, venta.subtotal) }}</div>
                     </div>
                   </div>
                   <div class="resumen-item">
@@ -319,18 +333,22 @@
                     <i class="bi bi-cash-coin text-info"></i>
                     <div>
                       <small class="text-muted">Pagado</small>
-                      <div class="fw-semibold">{{getSimboloMonedaParaVenta(venta)}}{{getTotalPagadoVenta(venta) |
-                        number:'1.2-2'}}</div>
+                      <!-- ACTUALIZADO: Usar formateo según moneda del sistema -->
+                      <div class="fw-semibold">{{ getMontoParaMostrar(venta, getTotalPagadoVenta(venta)) }}</div>
                     </div>
                   </div>
 
-                  <!-- Deuda en resumen rápido -->
+                  <!-- En la sección de deuda pendiente -->
                   <div class="resumen-item" *ngIf="getDeudaPendiente(venta) > 0">
                     <i class="bi bi-clock-history text-danger"></i>
                     <div>
                       <small class="text-muted">Deuda Pendiente</small>
                       <div class="fw-semibold text-danger">
-                        {{getSimboloMonedaParaVenta(venta)}}{{getDeudaPendiente(venta) | number:'1.2-2'}}</div>
+                        {{ getMontoParaMostrar(venta, getDeudaPendiente(venta)) }}
+                        <small *ngIf="venta.formaPago === 'cashea'" class="text-muted d-block">
+                          {{ venta.cantidadCuotas - venta.cuotasAdelantadas.length }} cuota pendiente
+                        </small>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -354,39 +372,148 @@
                         </div>
                         <div class="metodo-info">
                           <span class="metodo-tipo text-capitalize">{{metodo.tipo}}</span>
-                          <span class="metodo-monto">{{metodo.monto | number:'1.2-2'}}</span>
+                          <!-- ACTUALIZADO: Mostrar monto con símbolo correcto -->
+                          <span class="metodo-monto">
+                            {{ getSimboloMonedaMetodo(metodo.tipo) }}{{ metodo.monto | number:'1.2-2' }}
+                          </span>
                         </div>
                         <div class="metodo-conversion" *ngIf="metodo.conversionBs">
-                          <small class="text-muted">{{metodo.conversionBs | number:'1.2-2'}}
-                            Bs</small>
+                          <!-- ACTUALIZADO: Mostrar conversión en Bs -->
+                          <small class="text-muted">{{ metodo.conversionBs | number:'1.2-2' }} Bs</small>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <!-- Información Adicional -->
+                  <!-- Información Adicional - 2 Columnas Optimizada -->
                   <div class="detalle-seccion">
                     <h6 class="seccion-titulo">
                       <i class="bi bi-info-circle me-2"></i>
                       Información Adicional
                     </h6>
-                    <div class="info-adicional">
-                      <div class="info-item">
-                        <span class="info-label">Especialista:</span>
-                        <span class="info-value">{{venta.especialista?.nombre || 'No asignado'}}</span>
+                    <div class="info-adicional-grid">
+
+                      <!-- Fila 1 -->
+                      <div class="info-fila">
+                        <!-- Especialista -->
+                        <div class="info-item destacado">
+                          <div class="info-icono">
+                            <i class="bi bi-person-badge"></i>
+                          </div>
+                          <div class="info-contenido">
+                            <span class="info-label">Especialista</span>
+                            <span class="info-value" [ngClass]="{'text-muted': !venta.especialista?.nombre}">
+                              {{venta.especialista?.nombre || 'No asignado'}}
+                              <span *ngIf="venta.especialista?.tipo" class="info-subtext">
+                                - {{venta.especialista.tipo}}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        <!-- Tipo de Cliente -->
+                        <div class="info-item">
+                          <div class="info-icono">
+                            <i class="bi bi-person-gear"></i>
+                          </div>
+                          <div class="info-contenido">
+                            <span class="info-label">Tipo Cliente</span>
+                            <span class="info-value">
+                              {{venta.paciente?.tipoPersona || 'Natural' | titlecase}}
+                              <small class="text-muted d-block">General</small>
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div class="info-item">
-                        <span class="info-label">Sede:</span>
-                        <span class="info-value text-capitalize">{{venta.sede}}</span>
+
+                      <!-- Fila 2 -->
+                      <div class="info-fila">
+                        <!-- Cantidad de Productos -->
+                        <div class="info-item">
+                          <div class="info-icono">
+                            <i class="bi bi-box-seam"></i>
+                          </div>
+                          <div class="info-contenido">
+                            <span class="info-label">Productos</span>
+                            <span class="info-value">
+                              {{venta.productos?.length || 0}} items
+                              <small class="text-muted d-block" *ngIf="venta.productos?.length === 1">
+                                {{venta.productos[0]?.nombre}}
+                              </small>
+                              <small class="text-muted d-block" *ngIf="venta.productos?.length > 1">
+                                {{venta.productos[0]?.nombre}} +{{venta.productos.length - 1}} más
+                              </small>
+                            </span>
+                          </div>
+                        </div>
+
+                        <!-- Moneda -->
+                        <div class="info-item">
+                          <div class="info-icono">
+                            <i class="bi bi-currency-exchange"></i>
+                          </div>
+                          <div class="info-contenido">
+                            <span class="info-label">Moneda</span>
+                            <span class="info-value">
+                              <span class="badge bg-primary">{{venta.moneda | uppercase}}</span>
+                              <small class="text-muted d-block">
+                                Sistema: {{monedaSistema}}
+                              </small>
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div class="info-item">
-                        <span class="info-label">Moneda:</span>
-                        <span class="info-value text-uppercase">{{venta.moneda}}</span>
+
+                      <!-- Fila 3 - Solo si hay Cashea -->
+                      <div class="info-fila" *ngIf="venta.formaPago === 'cashea'">
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                          <div class="info-icono">
+                            <i class="bi bi-calendar-check"></i>
+                          </div>
+                          <div class="info-contenido">
+                            <span class="info-label">Plan Cashea</span>
+                            <span class="info-value">
+                              {{venta.cuotasAdelantadas?.length || 0}}/{{venta.cantidadCuotas}} cuotas
+                              <small class="text-muted d-block">
+                                Nivel: {{venta.nivelCashea || 'No especificado'}} •
+                                Cuota: {{getMontoParaMostrar(venta, venta.montoPorCuota)}}
+                              </small>
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div class="info-item" *ngIf="venta.observaciones">
-                        <span class="info-label">Observaciones:</span>
-                        <span class="info-value">{{venta.observaciones}}</span>
+
+                      <!-- Fila 4 - Solo si hay Abono -->
+                      <div class="info-fila" *ngIf="venta.formaPago === 'abono'">
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                          <div class="info-icono">
+                            <i class="bi bi-piggy-bank"></i>
+                          </div>
+                          <div class="info-contenido">
+                            <span class="info-label">Plan Abonos</span>
+                            <span class="info-value">
+                              Abonado: {{getMontoParaMostrar(venta, venta.montoAbonado)}}
+                              <small class="text-muted d-block">
+                                Pendiente: {{getMontoParaMostrar(venta, getDeudaPendiente(venta))}}
+                              </small>
+                            </span>
+                          </div>
+                        </div>
                       </div>
+
+                      <!-- Fila 5 - Solo si hay observaciones -->
+                      <div class="info-fila" *ngIf="venta.observaciones">
+                        <div class="info-item observaciones" style="grid-column: 1 / -1;">
+                          <div class="info-icono">
+                            <i class="bi bi-chat-left-text"></i>
+                          </div>
+                          <div class="info-contenido">
+                            <span class="info-label">Observaciones</span>
+                            <span class="info-value observacion-texto">{{venta.observaciones}}</span>
+                          </div>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 </div>

@@ -6,6 +6,11 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { Tasa } from '../../../Interfaces/models-interface';
 import { GenerarVentaService } from './../generar-venta/generar-venta.service';
 import { take } from 'rxjs/operators';
+import { SystemConfigService } from '../../system-config/system-config.service';
+import { Subscription } from 'rxjs';
+import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
+import { LoaderService } from './../../../shared/loader/loader.service';
+
 
 
 
@@ -73,6 +78,11 @@ export class HistorialVentasComponent implements OnInit {
   tasasDisponibles: any[] = [];
   monedasDisponibles: any[] = [];
 
+  // === NUEVAS PROPIEDADES PARA MONEDA DEL SISTEMA ===
+  monedaSistema: string = 'USD';
+  simboloMonedaSistema: string = '$';
+  private configSubscription!: Subscription;
+
   // Mapeos de monedas
   private readonly idMap: Record<string, string> = {
     usd: 'dolar',
@@ -89,11 +99,22 @@ export class HistorialVentasComponent implements OnInit {
     private historialVentaService: HistorialVentaService,
     private fb: FormBuilder,
     private generarVentaService: GenerarVentaService,
+    private systemConfigService: SystemConfigService,
+    private empleadosService: EmpleadosService,
+    private loader: LoaderService,
   ) { }
 
   ngOnInit() {
+    this.obtenerConfiguracionSistema();
+    this.suscribirCambiosConfiguracion();
     this.cargarDatosIniciales();
     this.setMaxDate();
+  }
+
+  ngOnDestroy(): void {
+    if (this.configSubscription) {
+      this.configSubscription.unsubscribe();
+    }
   }
 
   private setMaxDate(): void {
@@ -111,19 +132,11 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private cargarDatosIniciales(): void {
-    // Cargar lista de asesores 
-    this.asesores = [
-      { id: 1, nombre: 'Ana García' },
-      { id: 2, nombre: 'Carlos López' },
-      { id: 3, nombre: 'María Rodríguez' }
-    ];
+    // Mostrar loader
+    this.loader.showWithMessage('🔄 Cargando historial de ventas...');
 
-    // Cargar lista de especialistas 
-    this.especialistas = [
-      { id: 1, nombre: 'Dr. Pérez' },
-      { id: 2, nombre: 'Dra. Martínez' },
-      { id: 3, nombre: 'Dr. González' }
-    ];
+    // Cargar empleados (asesores y especialistas)
+    this.cargarEmpleados();
 
     // Cargar tasas de cambio desde el servicio
     this.generarVentaService.getTasas().pipe(take(1)).subscribe({
@@ -139,7 +152,9 @@ export class HistorialVentasComponent implements OnInit {
           'bolivar': 1
         };
 
-        // console.log('Tasas de cambio cargadas:', this.tasasPorId);
+        console.log('Tasas de cambio cargadas:', this.tasasPorId);
+        console.log('Moneda del sistema:', this.monedaSistema, this.simboloMonedaSistema);
+
         this.cargarVentas();
       },
       error: (error) => {
@@ -150,10 +165,138 @@ export class HistorialVentasComponent implements OnInit {
           'euro': 39.2,
           'bolivar': 1
         };
+
+        // Actualizar mensaje del loader
+        this.loader.updateMessage('📊 Cargando datos de ventas...');
         this.cargarVentas();
       }
     });
   }
+
+  /**
+  * Carga los empleados desde el API y los separa en asesores y especialistas
+  */
+  private cargarEmpleados(): void {
+    this.empleadosService.getAllEmpleados().subscribe({
+      next: (response: any) => {
+        console.log('Respuesta completa del servicio de empleados:', response);
+
+        let usuarios: any[] = [];
+
+        // Manejar diferentes formatos de respuesta
+        if (Array.isArray(response)) {
+          // Caso 1: El servicio retorna un array directamente
+          usuarios = response;
+          console.log('Se recibió array directamente de empleados:', usuarios.length);
+        } else if (response && response.message === 'ok' && Array.isArray(response.usuarios)) {
+          // Caso 2: El servicio retorna {message: "ok", usuarios: [...]}
+          usuarios = response.usuarios;
+          console.log('Se recibió respuesta estructurada de empleados:', usuarios.length);
+        } else if (response && Array.isArray(response)) {
+          // Caso 3: El servicio retorna un array en otra propiedad
+          usuarios = response;
+          console.log('Se recibió array en propiedad de empleados:', usuarios.length);
+        } else {
+          console.error('Formato de respuesta inesperado del servicio de empleados:', response);
+          this.establecerEmpleadosPorDefecto();
+          return;
+        }
+
+        this.procesarEmpleados(usuarios);
+      },
+      error: (error) => {
+        console.error('Error al cargar empleados:', error);
+        this.establecerEmpleadosPorDefecto();
+        this.swalService.showWarning('Advertencia', 'No se pudieron cargar los empleados. Se usarán datos de prueba.');
+      }
+    });
+  }
+
+  /**
+   * Procesa la lista de empleados y los separa en asesores y especialistas
+   */
+  private procesarEmpleados(usuarios: any[]): void {
+    // Filtrar solo empleados activos (usando estatus en lugar de activo)
+    const empleadosActivos = usuarios.filter(usuario =>
+      usuario.estatus === true || usuario.activo === true
+    );
+
+    console.log('Empleados activos encontrados:', empleadosActivos.length);
+
+    // ASESORES: Todos los empleados activos sin importar el cargo
+    this.asesores = empleadosActivos.map(usuario => ({
+      id: usuario.id,
+      nombre: usuario.nombre,
+      cedula: usuario.cedula,
+      cargo: usuario.cargoNombre || usuario.cargo?.nombre || 'Sin cargo',
+      rol: usuario.rolNombre || usuario.rol?.nombre || 'Sin rol',
+      estatus: usuario.estatus
+    }));
+
+    // ESPECIALISTAS: Solo optometristas y oftalmólogos activos
+    const cargosEspecialistas = ['optometrista', 'oftalmologo', 'oftalmólogo'];
+
+    this.especialistas = empleadosActivos
+      .filter(usuario => {
+        const cargoId = usuario.cargoId?.toLowerCase();
+        const cargoNombre = usuario.cargoNombre?.toLowerCase();
+
+        return cargosEspecialistas.includes(cargoId) ||
+          cargosEspecialistas.includes(cargoNombre);
+      })
+      .map(usuario => ({
+        id: usuario.id,
+        nombre: usuario.nombre,
+        cedula: usuario.cedula,
+        cargo: usuario.cargoNombre || usuario.cargo?.nombre || 'Sin cargo',
+        tipo: this.obtenerTipoEspecialista(usuario),
+        estatus: usuario.estatus
+      }));
+
+    console.log('Asesores cargados:', this.asesores);
+    console.log('Especialistas cargados:', this.especialistas);
+
+    // Si no hay especialistas, mostrar advertencia
+    if (this.especialistas.length === 0) {
+      console.warn('No se encontraron especialistas (optometristas/oftalmólogos) activos');
+    }
+  }
+
+  /**
+   * Determina el tipo de especialista basado en el cargo
+   */
+  private obtenerTipoEspecialista(usuario: any): string {
+    const cargoId = usuario.cargoId?.toLowerCase();
+    const cargoNombre = usuario.cargoNombre?.toLowerCase();
+
+    if (cargoId === 'optometrista' || cargoNombre === 'optometrista') {
+      return 'Optometrista';
+    } else if (cargoId === 'oftalmologo' || cargoNombre === 'oftalmólogo' || cargoNombre === 'oftalmologo') {
+      return 'Oftalmólogo';
+    } else {
+      return 'Especialista';
+    }
+  }
+
+  /**
+   * Establece valores por defecto si falla la carga de empleados
+   */
+  private establecerEmpleadosPorDefecto(): void {
+    console.log('Estableciendo empleados por defecto');
+
+    this.asesores = [
+      { id: 1, nombre: 'Ana García', cedula: '', cargo: 'Asesor', rol: 'Asesor', estatus: true },
+      { id: 2, nombre: 'Carlos López', cedula: '', cargo: 'Asesor', rol: 'Asesor', estatus: true },
+      { id: 3, nombre: 'María Rodríguez', cedula: '', cargo: 'Asesor', rol: 'Asesor', estatus: true }
+    ];
+
+    this.especialistas = [
+      { id: 1, nombre: 'Dr. Pérez', cedula: '', cargo: 'Optometrista', tipo: 'Optometrista', estatus: true },
+      { id: 2, nombre: 'Dra. Martínez', cedula: '', cargo: 'Oftalmólogo', tipo: 'Oftalmólogo', estatus: true },
+      { id: 3, nombre: 'Dr. González', cedula: '', cargo: 'Optometrista', tipo: 'Optometrista', estatus: true }
+    ];
+  }
+
   // Métodos para el datepicker moderno
   toggleDatepicker(): void {
     this.showDatepicker = !this.showDatepicker;
@@ -322,648 +465,199 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  cargarVentas() {
-    this.ventasOriginales = [
-      {
-        id: 1,
-        numeroControl: '001',
-        paciente: {
-          nombre: 'María González',
-          cedula: '12345678'
-        },
-        fecha: new Date('2024-01-15T10:30:00'),
-        estado: 'completada',
-        estadoPago: 'completado', // ✅ NUEVO: Estado del pago
-        montoTotal: 90,
-        asesor: { id: 1, nombre: 'Ana García' },
-        especialista: { id: 1, nombre: 'Dr. Pérez' },
-        servicios: [{ nombre: 'Consulta oftalmológica' }],
-        metodosPago: [
-          {
-            tipo: 'efectivo',
-            monto: 90,
-            conversionBs: 19635.3
-          }
-        ],
-        mostrarDetalle: false,
-        sede: 'guatire',
-        moneda: 'dolar',
-        formaPago: 'contado',
-        descuento: 10,
-        observaciones: 'Cliente satisfecho con la atención',
-        asesorNombre: 'Ana García',
-        productos: [
-          {
-            id: "17",
-            nombre: "Lentes de contacto mensuales",
-            codigo: "PR-000017",
-            precio: 50,
-            precioConIva: 50,
-            cantidad: 2,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 100,
-            total: 100
-          }
-        ],
-        subtotal: 100,
-        totalIva: 0,
-        totalDescuento: 10,
-        total: 90,
-        pagoCompleto: true,
-        financiado: false,
-        historiaMedica: {
-          formulacion: {
-            od: {
-              esf: "+1.25",
-              cil: "-0.50",
-              eje: 180,
-              add: "+1.75",
-              alt: "24.5",
-              dp: "62"
-            },
-            oi: {
-              esf: "+1.00",
-              cil: "-0.75",
-              eje: 170,
-              add: "+1.75",
-              alt: "24.5",
-              dp: "62"
-            }
-          },
-          recomendaciones: {
-            montura: "Metalica delgada",
-            material: "AR_AZUL",
-            cristal: "Progresivo digital"
-          }
-        }
-      },
-      {
-        id: 2,
-        numeroControl: '002',
-        paciente: {
-          nombre: 'Carlos Rodríguez',
-          cedula: '87654321'
-        },
-        fecha: new Date('2024-01-16T14:20:00'),
-        estado: 'completada',
-        estadoPago: 'parcial', // ✅ NUEVO: Estado del pago
-        montoTotal: 190,
-        asesor: { id: 2, nombre: 'Carlos López' },
-        especialista: { id: 2, nombre: 'Dra. Martínez' },
-        servicios: [{ nombre: 'Examen visual completo' }],
-        metodosPago: [
-          {
-            tipo: 'debito',
-            monto: 76,
-            conversionBs: 16580.92
-          }
-        ],
-        mostrarDetalle: false,
-        sede: 'guatire',
-        moneda: 'dolar',
-        formaPago: 'cashea',
-        descuento: 5,
-        observaciones: '',
-        asesorNombre: 'Carlos López',
-        productos: [
-          {
-            id: "18",
-            nombre: "Armazón de diseño italiano",
-            codigo: "PR-000018",
-            precio: 120,
-            precioConIva: 120,
-            cantidad: 1,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 120,
-            total: 120
-          },
-          {
-            id: "19",
-            nombre: "Lentes fotocromáticos",
-            codigo: "PR-000019",
-            precio: 80,
-            precioConIva: 80,
-            cantidad: 1,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 80,
-            total: 80
-          }
-        ],
-        subtotal: 200,
-        totalIva: 0,
-        totalDescuento: 10,
-        total: 190,
-        pagoCompleto: false,
-        financiado: true,
-        nivelCashea: "nivel3",
-        montoInicial: 76,
-        cantidadCuotas: 6,
-        montoPorCuota: 19,
-        cuotasAdelantadas: [
-          {
-            numero: 1,
-            monto: 19,
-            fechaVencimiento: "2024-02-16T00:00:00.000Z"
-          },
-          {
-            numero: 2,
-            monto: 19,
-            fechaVencimiento: "2024-03-16T00:00:00.000Z"
-          }
-        ],
-        totalAdelantado: 38,
-        historiaMedica: {
-          formulacion: {
-            od: {
-              esf: "-2.25",
-              cil: "-1.25",
-              eje: 10,
-              add: "0.00",
-              alt: "25.0",
-              dp: "64"
-            },
-            oi: {
-              esf: "-2.00",
-              cil: "-1.00",
-              eje: 170,
-              add: "0.00",
-              alt: "25.0",
-              dp: "64"
-            }
-          },
-          recomendaciones: {
-            montura: "Plástico resistente",
-            material: "FOTOCROMATICO",
-            cristal: "Visión sencilla digital"
-          }
-        }
-      },
-      {
-        id: 3,
-        numeroControl: '003',
-        paciente: {
-          nombre: 'Laura Martínez',
-          cedula: '11223344'
-        },
-        fecha: new Date('2024-01-17T11:15:00'),
-        estado: 'completada',
-        estadoPago: 'parcial', // ✅ NUEVO: Estado del pago
-        montoTotal: 52500.32,
-        asesor: { id: 3, nombre: 'María Rodríguez' },
-        especialista: { id: 3, nombre: 'Dr. González' },
-        servicios: [{ nombre: 'Venta de accesorios' }],
-        metodosPago: [
-          {
-            tipo: 'efectivo',
-            monto: 30000,
-            conversionBs: 30000
-          }
-        ],
-        mostrarDetalle: false,
-        sede: 'guatire',
-        moneda: 'bolivar',
-        formaPago: 'abono',
-        descuento: 0,
-        observaciones: 'Cliente pagará el resto la próxima semana',
-        asesorNombre: 'María Rodríguez',
-        productos: [
-          {
-            id: "20",
-            nombre: "Estuche para lentes",
-            codigo: "PR-000020",
-            precio: 26000,
-            precioConIva: 30000,
-            cantidad: 1,
-            aplicaIva: true,
-            iva: 4000,
-            subtotal: 26000,
-            total: 30000
-          },
-          {
-            id: "21",
-            nombre: "Líquido limpiador",
-            codigo: "PR-000021",
-            precio: 10000,
-            precioConIva: 11200,
-            cantidad: 2,
-            aplicaIva: true,
-            iva: 1200,
-            subtotal: 20000,
-            total: 22500.32
-          }
-        ],
-        subtotal: 46000,
-        totalIva: 5200,
-        totalDescuento: 0,
-        total: 52500.32,
-        montoAbonado: 30000,
-        pagoCompleto: false,
-        financiado: false
-      },
-      {
-        id: 4,
-        numeroControl: '004',
-        paciente: {
-          nombre: 'Pedro López',
-          cedula: '55667788'
-        },
-        fecha: new Date('2024-01-18T16:45:00'),
-        estado: 'cancelada',
-        estadoPago: 'cancelado', // ✅ NUEVO: Estado del pago
-        montoTotal: 65,
-        asesor: { id: 1, nombre: 'Ana García' },
-        especialista: { id: 1, nombre: 'Dr. Pérez' },
-        servicios: [{ nombre: 'Lentes de sol' }],
-        metodosPago: [],
-        mostrarDetalle: false,
-        sede: 'guatire',
-        moneda: 'dolar',
-        formaPago: 'contado',
-        descuento: 0,
-        observaciones: '',
-        asesorNombre: 'Ana García',
-        productos: [
-          {
-            id: "22",
-            nombre: "Lentes de sol polarizados",
-            codigo: "PR-000022",
-            precio: 65,
-            precioConIva: 65,
-            cantidad: 1,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 65,
-            total: 65
-          }
-        ],
-        subtotal: 65,
-        totalIva: 0,
-        totalDescuento: 0,
-        total: 65,
-        pagoCompleto: false,
-        financiado: false,
-        motivo_cancelacion: 'Cliente cambió de opinión',
-        fecha_cancelacion: new Date('2024-01-18T17:00:00')
-      },
-      {
-        id: 5,
-        numeroControl: '005',
-        paciente: {
-          nombre: 'Ana Silva',
-          cedula: '99887766'
-        },
-        fecha: new Date('2024-01-19T09:30:00'),
-        estado: 'completada',
-        estadoPago: 'parcial', // ✅ NUEVO: Estado del pago
-        montoTotal: 127.5,
-        asesor: { id: 2, nombre: 'Carlos López' },
-        especialista: { id: 2, nombre: 'Dra. Martínez' },
-        servicios: [{ nombre: 'Lentes de contacto anuales' }],
-        metodosPago: [
-          {
-            tipo: 'credito',
-            monto: 76.5,
-            conversionBs: 16689.255
-          }
-        ],
-        mostrarDetalle: false,
-        sede: 'guatire',
-        moneda: 'dolar',
-        formaPago: 'cashea',
-        descuento: 15,
-        observaciones: 'Cliente preferió pagar más cuotas',
-        asesorNombre: 'Carlos López',
-        productos: [
-          {
-            id: "23",
-            nombre: "Lentes de contacto anuales",
-            codigo: "PR-000023",
-            precio: 150,
-            precioConIva: 150,
-            cantidad: 1,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 150,
-            total: 150
-          }
-        ],
-        subtotal: 150,
-        totalIva: 0,
-        totalDescuento: 22.5,
-        total: 127.5,
-        pagoCompleto: false,
-        financiado: true,
-        nivelCashea: "nivel1",
-        montoInicial: 76.5,
-        cantidadCuotas: 3,
-        montoPorCuota: 17,
-        cuotasAdelantadas: [
-          {
-            numero: 1,
-            monto: 17,
-            fechaVencimiento: "2024-02-19T00:00:00.000Z"
-          }
-        ],
-        totalAdelantado: 17,
-        historiaMedica: {
-          formulacion: {
-            od: {
-              esf: "+0.75",
-              cil: "-0.25",
-              eje: 90,
-              add: "+2.00",
-              alt: "23.5",
-              dp: "60"
-            },
-            oi: {
-              esf: "+0.50",
-              cil: "-0.50",
-              eje: 85,
-              add: "+2.00",
-              alt: "23.5",
-              dp: "60"
-            }
-          },
-          recomendaciones: {
-            montura: "Titanio ultraligero",
-            material: "BLUE_CUT",
-            cristal: "Progresivo premium"
-          }
-        }
-      },
-      {
-        id: 6,
-        numeroControl: '006',
-        paciente: {
-          nombre: 'Roberto Hernández',
-          cedula: '33445566'
-        },
-        fecha: new Date('2024-01-20T13:00:00'),
-        estado: 'completada',
-        estadoPago: 'completado', // ✅ NUEVO: Estado del pago
-        montoTotal: 102.12,
-        asesor: { id: 3, nombre: 'María Rodríguez' },
-        especialista: { id: 3, nombre: 'Dr. González' },
-        servicios: [{ nombre: 'Lentes para computadora' }],
-        metodosPago: [
-          {
-            tipo: 'efectivo',
-            monto: 50,
-            conversionBs: 10908.5
-          },
-          {
-            tipo: 'debito',
-            monto: 52.12,
-            conversionBs: 11368.98
-          }
-        ],
-        mostrarDetalle: false,
-        sede: 'guatire',
-        moneda: 'dolar',
-        formaPago: 'contado',
-        descuento: 8,
-        observaciones: 'Cliente usó dos métodos de pago',
-        asesorNombre: 'María Rodríguez',
-        productos: [
-          {
-            id: "24",
-            nombre: "Lentes para computadora",
-            codigo: "PR-000024",
-            precio: 75,
-            precioConIva: 75,
-            cantidad: 1,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 75,
-            total: 75
-          },
-          {
-            id: "25",
-            nombre: "Toallitas limpiadoras",
-            codigo: "PR-000025",
-            precio: 12,
-            precioConIva: 12,
-            cantidad: 3,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 36,
-            total: 36
-          }
-        ],
-        subtotal: 111,
-        totalIva: 0,
-        totalDescuento: 8.88,
-        total: 102.12,
-        pagoCompleto: true,
-        financiado: false,
-        historiaMedica: {
-          formulacion: {
-            od: {
-              esf: "-1.50",
-              cil: "-0.75",
-              eje: 20,
-              add: "0.00",
-              alt: "26.0",
-              dp: "66"
-            },
-            oi: {
-              esf: "-1.25",
-              cil: "-0.50",
-              eje: 160,
-              add: "0.00",
-              alt: "26.0",
-              dp: "66"
-            }
-          },
-          recomendaciones: {
-            montura: "Acetato moderno",
-            material: "AR_VERDE",
-            cristal: "Blue light filter"
-          }
-        }
-      },
-      // ✅ NUEVAS VENTAS ADICIONALES CON DIFERENTES MONEDAS
-      {
-        id: 7,
-        numeroControl: '007',
-        paciente: {
-          nombre: 'Elena Castillo',
-          cedula: '44556677'
-        },
-        fecha: new Date('2024-01-21T10:00:00'),
-        estado: 'completada',
-        estadoPago: 'parcial', // Abono en Euros
-        montoTotal: 85,
-        asesor: { id: 1, nombre: 'Ana García' },
-        especialista: { id: 1, nombre: 'Dr. Pérez' },
-        servicios: [{ nombre: 'Lentes progresivos' }],
-        metodosPago: [
-          {
-            tipo: 'efectivo',
-            monto: 40,
-            conversionBs: 1568 // 40 EUR * 39.2
-          }
-        ],
-        mostrarDetalle: false,
-        sede: 'guatire',
-        moneda: 'euro',
-        formaPago: 'abono',
-        descuento: 0,
-        observaciones: 'Cliente pagará el resto en 15 días',
-        asesorNombre: 'Ana García',
-        productos: [
-          {
-            id: "26",
-            nombre: "Lentes progresivos premium",
-            codigo: "PR-000026",
-            precio: 85,
-            precioConIva: 85,
-            cantidad: 1,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 85,
-            total: 85
-          }
-        ],
-        subtotal: 85,
-        totalIva: 0,
-        totalDescuento: 0,
-        total: 85,
-        montoAbonado: 40,
-        pagoCompleto: false,
-        financiado: false
-      },
-      {
-        id: 8,
-        numeroControl: '008',
-        paciente: {
-          nombre: 'Miguel Ángel Rojas',
-          cedula: '88990011'
-        },
-        fecha: new Date('2024-01-22T14:30:00'),
-        estado: 'completada',
-        estadoPago: 'parcial', // Abono en Dólares
-        montoTotal: 200,
-        asesor: { id: 2, nombre: 'Carlos López' },
-        especialista: { id: 2, nombre: 'Dra. Martínez' },
-        servicios: [{ nombre: 'Armazón + Cristales' }],
-        metodosPago: [
-          {
-            tipo: 'transferencia',
-            monto: 100,
-            conversionBs: 3650 // 100 USD * 36.5
-          }
-        ],
-        mostrarDetalle: false,
-        sede: 'guatire',
-        moneda: 'dolar',
-        formaPago: 'abono',
-        descuento: 0,
-        observaciones: 'Saldo pendiente por transferir',
-        asesorNombre: 'Carlos López',
-        productos: [
-          {
-            id: "27",
-            nombre: "Armazón de titanio",
-            codigo: "PR-000027",
-            precio: 120,
-            precioConIva: 120,
-            cantidad: 1,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 120,
-            total: 120
-          },
-          {
-            id: "28",
-            nombre: "Cristales anti-reflejo",
-            codigo: "PR-000028",
-            precio: 80,
-            precioConIva: 80,
-            cantidad: 1,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 80,
-            total: 80
-          }
-        ],
-        subtotal: 200,
-        totalIva: 0,
-        totalDescuento: 0,
-        total: 200,
-        montoAbonado: 100,
-        pagoCompleto: false,
-        financiado: false
-      },
-      {
-        id: 9,
-        numeroControl: '009',
-        paciente: {
-          nombre: 'Sofía Mendoza',
-          cedula: '22334455'
-        },
-        fecha: new Date('2024-01-23T11:45:00'),
-        estado: 'completada',
-        estadoPago: 'completado', // Pago completo en Bolívares
-        montoTotal: 75000,
-        asesor: { id: 3, nombre: 'María Rodríguez' },
-        especialista: { id: 3, nombre: 'Dr. González' },
-        servicios: [{ nombre: 'Consulta + Lentes de contacto' }],
-        metodosPago: [
-          {
-            tipo: 'pagomovil',
-            monto: 75000,
-            conversionBs: 75000
-          }
-        ],
-        mostrarDetalle: false,
-        sede: 'guatire',
-        moneda: 'bolivar',
-        formaPago: 'contado',
-        descuento: 5,
-        observaciones: 'Pago completo vía Pago Móvil',
-        asesorNombre: 'María Rodríguez',
-        productos: [
-          {
-            id: "29",
-            nombre: "Consulta especializada",
-            codigo: "PR-000029",
-            precio: 25000,
-            precioConIva: 25000,
-            cantidad: 1,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 25000,
-            total: 25000
-          },
-          {
-            id: "30",
-            nombre: "Lentes de contacto trimestrales",
-            codigo: "PR-000030",
-            precio: 50000,
-            precioConIva: 50000,
-            cantidad: 1,
-            aplicaIva: false,
-            iva: 0,
-            subtotal: 50000,
-            total: 50000
-          }
-        ],
-        subtotal: 75000,
-        totalIva: 0,
-        totalDescuento: 3750,
-        total: 71250,
-        pagoCompleto: true,
-        financiado: false
-      }
-    ];
+  cargarVentas(): void {
+    // Actualizar mensaje del loader si aún está visible
+    this.loader.updateMessage('📋 Obteniendo historial de ventas...');
 
+    this.historialVentaService.obtenerHistorialVentas(
+      this.paginaActual,
+      this.itemsPorPagina,
+      this.filtros
+    ).subscribe({
+      next: (response: any) => {
+        console.log('Respuesta del API de ventas:', response);
+
+        if (response.message === 'ok' && response.ventas) {
+          this.obtenerVentas(response.ventas, response.pagination);
+
+          // Ocultar loader cuando se completan todas las cargas
+          setTimeout(() => {
+            this.loader.hide();
+          }, 500);
+
+        } else {
+          console.error('Respuesta inesperada del API de ventas:', response);
+
+          this.loader.hide();
+          console.error('Advertencia', 'Formato de respuesta inesperado. Se usarán datos de prueba.');
+        }
+      },
+      error: (error) => {
+        console.error('Error al cargar ventas:', error);
+        this.loader.hide();
+
+        let mensajeError = 'No se pudieron cargar las ventas. ';
+        if (error.status === 404) {
+          mensajeError += 'El servicio no está disponible (404).';
+        } else if (error.status === 500) {
+          mensajeError += 'Error interno del servidor.';
+        } else {
+          mensajeError += 'Verifique su conexión.';
+        }
+      }
+    });
+  }
+
+  /**
+   * Procesa las ventas reales del API y las adapta al formato del componente
+   */
+  private obtenerVentas(ventasApi: any[], pagination: any): void {
+    this.ventasOriginales = ventasApi.map(ventaApi => this.adaptarVentaDelApi(ventaApi));
     this.ventasFiltradas = [...this.ventasOriginales];
-    this.totalVentas = this.ventasFiltradas.length;
-    this.totalPaginas = Math.ceil(this.totalVentas / this.itemsPorPagina);
+
+    // Actualizar paginación
+    this.totalVentas = pagination?.total || this.ventasOriginales.length;
+    this.totalPaginas = pagination?.pages || Math.ceil(this.totalVentas / this.itemsPorPagina);
+
+    console.log(`Ventas cargadas: ${this.ventasOriginales.length} de ${this.totalVentas} totales`);
+  }
+
+  private adaptarVentaDelApi(ventaApi: any): any {
+    const venta = ventaApi.venta;
+    const totales = ventaApi.totales;
+    const cliente = ventaApi.cliente;
+    const asesor = ventaApi.asesor;
+    const productos = ventaApi.productos;
+    const metodosPago = ventaApi.metodosPago;
+    const formaPago = ventaApi.formaPago;
+
+    return {
+      // Información básica
+      id: venta.key, // Usar el key como ID
+      key: venta.key,
+      numeroControl: this.generarNumeroControl(venta.key),
+      fecha: new Date(venta.fecha),
+      estado: venta.estatus_venta,
+      estadoPago: this.mapearEstadoPago(venta.estatus_pago),
+      montoTotal: totales.total,
+
+      // Información del cliente
+      paciente: {
+        nombre: cliente.informacion.nombreCompleto,
+        cedula: cliente.informacion.cedula,
+        telefono: cliente.informacion.telefono,
+        email: cliente.informacion.email
+      },
+
+      // Personal
+      asesor: {
+        id: asesor.id,
+        nombre: asesor.nombre
+      },
+      especialista: {
+        id: 0, // Por defecto, ya que no viene en el API
+        nombre: 'No asignado'
+      },
+
+      // Productos y servicios
+      productos: productos.map((prod: any) => ({
+        id: prod.datos.id.toString(),
+        nombre: prod.datos.nombre,
+        codigo: prod.datos.codigo,
+        precio: prod.precio_unitario,
+        precioConIva: prod.precio_unitario, // Asumir mismo precio
+        cantidad: prod.cantidad,
+        aplicaIva: prod.total !== prod.precio_unitario * prod.cantidad,
+        iva: 0, // Calcular si es necesario
+        subtotal: prod.precio_unitario * prod.cantidad,
+        total: prod.total
+      })),
+
+      servicios: [], // No viene en el API actual
+
+      // Métodos de pago
+      metodosPago: metodosPago.map((metodo: any) => ({
+        tipo: metodo.tipo,
+        monto: metodo.monto_en_moneda_de_venta || metodo.monto,
+        conversionBs: this.calcularConversionBs(metodo.monto, metodo.moneda_id),
+        referencia: metodo.referencia,
+        banco: metodo.bancoNombre ? `${metodo.bancoCodigo} - ${metodo.bancoNombre}` : null
+      })),
+
+      // Información adicional
+      mostrarDetalle: false,
+      sede: 'guatire', // Por defecto, ya que no viene en el API
+      moneda: venta.moneda,
+      formaPago: venta.formaPago,
+      descuento: totales.descuento || 0,
+      observaciones: venta.observaciones,
+      asesorNombre: asesor.nombre,
+
+      // Totales
+      subtotal: totales.subtotal,
+      totalIva: totales.iva || 0,
+      totalDescuento: totales.descuento || 0,
+      total: totales.total,
+
+      // Estados de pago
+      pagoCompleto: totales.totalPagado >= totales.total,
+      financiado: formaPago.tipo === 'cashea',
+
+      // Información específica por forma de pago
+      montoAbonado: formaPago.tipo === 'abono' ? formaPago.montoInicial : totales.totalPagado,
+      nivelCashea: formaPago.nivel,
+      montoInicial: formaPago.montoInicial,
+      cantidadCuotas: formaPago.cantidadCuotas,
+      montoPorCuota: formaPago.montoPorCuota,
+      cuotasAdelantadas: formaPago.cuotas?.filter((c: any) => c.seleccionada).map((c: any) => ({
+        numero: c.numero,
+        monto: c.monto,
+        fechaVencimiento: c.fecha_vencimiento
+      })) || [],
+      totalAdelantado: formaPago.montoAdelantado,
+
+      // NUEVO: Incluir deuda pendiente específica para Cashea
+      deudaPendiente: formaPago.deudaPendiente || 0,
+
+      // Información de cancelación (si aplica)
+      motivo_cancelacion: venta.motivo_cancelacion,
+      fecha_cancelacion: venta.fecha_cancelacion ? new Date(venta.fecha_cancelacion) : null,
+
+      // Historia médica (si existe)
+      historiaMedica: ventaApi.ultima_historia_medica || null
+    };
+  }
+
+  /**
+   * Genera un número de control basado en el key de la venta
+   */
+  private generarNumeroControl(ventaKey: string): string {
+    // Usar los últimos 6 caracteres del key como número de control
+    return ventaKey.slice(-6).toUpperCase();
+  }
+
+  /**
+   * Mapea el estado de pago del API al formato del componente
+   */
+  private mapearEstadoPago(estatusPago: string): string {
+    const mapeo: { [key: string]: string } = {
+      'completada': 'completado',
+      'pagado_por_cashea': 'parcial',
+      'pendiente': 'parcial',
+      'cancelado': 'cancelado'
+    };
+
+    return mapeo[estatusPago] || estatusPago;
+  }
+
+  /**
+   * Calcula la conversión a bolívares
+   */
+  private calcularConversionBs(monto: number, moneda: string): number {
+    if (moneda === 'bolivar') return monto;
+
+    const tasa = this.tasasPorId[moneda] || 1;
+    return this.redondear(monto * tasa);
   }
 
   // Filtrado automático cuando cambian los inputs
@@ -982,35 +676,11 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private filtrarVentas(): void {
-    this.ventasFiltradas = this.ventasOriginales.filter(venta => {
-      const coincideBusqueda = !this.filtros.busquedaGeneral ||
-        this.normalizarTexto(venta.paciente?.nombre).includes(this.normalizarTexto(this.filtros.busquedaGeneral)) ||
-        venta.paciente?.cedula?.includes(this.filtros.busquedaGeneral) ||
-        venta.numeroControl?.toString().includes(this.filtros.busquedaGeneral);
+    // Mostrar loader cuando se aplican filtros
+    this.loader.showWithMessage('🔍 Aplicando filtros...');
 
-      const coincideAsesor = !this.filtros.asesor || venta.asesor?.id == this.filtros.asesor;
-
-      const coincideEspecialista = !this.filtros.especialista || venta.especialista?.id == this.filtros.especialista;
-
-      const coincideEstado = !this.filtros.estado || venta.estado === this.filtros.estado;
-
-      let coincideFechas = true;
-      if (this.filtros.fechaDesde || this.filtros.fechaHasta) {
-        const fechaVenta = new Date(venta.fecha);
-        const desde = this.filtros.fechaDesde ? new Date(this.filtros.fechaDesde) : null;
-        const hasta = this.filtros.fechaHasta ? new Date(this.filtros.fechaHasta) : null;
-
-        if (desde && fechaVenta < desde) coincideFechas = false;
-        if (hasta && fechaVenta > hasta) coincideFechas = false;
-      }
-
-      return coincideBusqueda && coincideAsesor && coincideEspecialista &&
-        coincideEstado && coincideFechas;
-    });
-
-    this.totalVentas = this.ventasFiltradas.length;
-    this.totalPaginas = Math.ceil(this.totalVentas / this.itemsPorPagina);
-    this.paginaActual = 1;
+    // En lugar de filtrar localmente, recargar desde el API con los filtros
+    this.cargarVentas();
   }
 
   // Método para cambiar items por página
@@ -1152,7 +822,6 @@ export class HistorialVentasComponent implements OnInit {
 
   cancelarVenta(venta: any) {
     //console.log('Cancelar venta:', venta);
-
     this.selectedVenta = venta;
     this.motivoCancelacion = '';
 
@@ -1185,48 +854,131 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  private procesarCancelacion() {
-    // console.log('Procesando cancelación de venta:', this.selectedVenta.id);
+  /**
+ * Cancela una venta usando el API real
+ */
+  private procesarCancelacion(): void {
+    if (!this.selectedVenta?.key) {
+      this.swalService.showError('Error', 'No se puede cancelar la venta: falta información.');
+      return;
+    }
 
-    this.historialVentaService.cancelarVenta(this.selectedVenta.id, this.motivoCancelacion).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.swalService.showSuccess('Éxito', response.message);
+    this.historialVentaService.anularVenta(
+      this.selectedVenta.key,
+      this.motivoCancelacion
+    ).subscribe({
+      next: (response: any) => {
+        if (response.success || response.message === 'ok') {
+          this.swalService.showSuccess('Éxito', 'Venta cancelada exitosamente.');
 
+          // Actualizar la venta localmente
           this.selectedVenta.estado = 'cancelada';
+          this.selectedVenta.estadoPago = 'cancelado';
           this.selectedVenta.motivo_cancelacion = this.motivoCancelacion;
-          this.selectedVenta.fecha_cancelacion = response.data.fecha_cancelacion;
+          this.selectedVenta.fecha_cancelacion = new Date();
 
-          //  console.log('Venta cancelada exitosamente:', this.selectedVenta);
+          // Actualizar en ambas listas
+          this.actualizarVentaEnListas(this.selectedVenta);
+
         } else {
-          this.swalService.showError('Error', response.message);
+          this.swalService.showError('Error', response.message || 'No se pudo cancelar la venta.');
         }
 
-        this.selectedVenta = null;
-        this.motivoCancelacion = '';
+        this.limpiarSeleccionCancelacion();
       },
       error: (error) => {
         console.error('Error en la solicitud de cancelación:', error);
-        this.swalService.showError('Error', 'No se pudo completar la solicitud. Verifique su conexión.');
 
-        this.selectedVenta = null;
-        this.motivoCancelacion = '';
+        let mensajeError = 'No se pudo completar la solicitud. Verifique su conexión.';
+        if (error.error?.message) {
+          mensajeError = error.error.message;
+        }
+
+        this.swalService.showError('Error', mensajeError);
+        this.limpiarSeleccionCancelacion();
       }
     });
   }
 
-  // Método alternativo si no tienes servicio
-  private procesarCancelacionLocal() {
-    setTimeout(() => {
-      this.swalService.showSuccess('Éxito', 'Venta cancelada correctamente.');
+  /**
+   * Procesa la edición/abono de una venta usando el API real
+   */
+  private procesarEdicionVenta(modal: any, formData: any): void {
+    if (!this.selectedVenta?.key) {
+      this.swalService.showError('Error', 'No se puede actualizar la venta: falta información.');
+      return;
+    }
 
-      this.selectedVenta.estado = 'cancelada';
-      this.selectedVenta.motivo_cancelacion = this.motivoCancelacion;
-      this.selectedVenta.fecha_cancelacion = new Date().toISOString();
+    const datosActualizados = {
+      montoAbonado: formData.montoAbonado,
+      observaciones: formData.observaciones,
+      metodosPago: formData.metodosPago,
+      fechaActualizacion: new Date().toISOString()
+    };
 
-      this.selectedVenta = null;
-      this.motivoCancelacion = '';
-    }, 1000);
+    this.historialVentaService.realizarAbono(this.selectedVenta.key, datosActualizados)
+      .subscribe({
+        next: (response: any) => {
+          if (response.success || response.message === 'ok') {
+            this.swalService.showSuccess('Éxito', 'Venta actualizada correctamente.');
+
+            // Actualizar la venta localmente
+            const ventaActualizada = {
+              ...this.selectedVenta,
+              montoAbonado: formData.montoAbonado,
+              observaciones: formData.observaciones,
+              metodosPago: formData.metodosPago
+            };
+
+            this.actualizarVentaEnListas(ventaActualizada);
+            modal.close();
+
+          } else {
+            this.swalService.showError('Error', response.message || 'No se pudo actualizar la venta.');
+          }
+        },
+        error: (error) => {
+          console.error('Error al actualizar venta:', error);
+
+          let mensajeError = 'No se pudo actualizar la venta. Verifique su conexión.';
+          if (error.error?.message) {
+            mensajeError = error.error.message;
+          }
+
+          this.swalService.showError('Error', mensajeError);
+        }
+      });
+  }
+
+  /**
+   * Actualiza una venta en ambas listas (original y filtrada)
+   */
+  private actualizarVentaEnListas(ventaActualizada: any): void {
+    // Actualizar en ventas originales
+    const indexOriginal = this.ventasOriginales.findIndex(v => v.key === ventaActualizada.key);
+    if (indexOriginal !== -1) {
+      this.ventasOriginales[indexOriginal] = {
+        ...this.ventasOriginales[indexOriginal],
+        ...ventaActualizada
+      };
+    }
+
+    // Actualizar en ventas filtradas
+    const indexFiltrado = this.ventasFiltradas.findIndex(v => v.key === ventaActualizada.key);
+    if (indexFiltrado !== -1) {
+      this.ventasFiltradas[indexFiltrado] = {
+        ...this.ventasFiltradas[indexFiltrado],
+        ...ventaActualizada
+      };
+    }
+  }
+
+  /**
+   * Limpia la selección de cancelación
+   */
+  private limpiarSeleccionCancelacion(): void {
+    this.selectedVenta = null;
+    this.motivoCancelacion = '';
   }
 
   verDetalleCompleto(venta: any) {
@@ -1346,47 +1098,6 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  private procesarEdicionVenta(modal: any, formData: any): void {
-    const datosActualizados = {
-      id: this.selectedVenta.id,
-      montoAbonado: formData.montoAbonado,
-      observaciones: formData.observaciones,
-      metodosPago: formData.metodosPago,
-      fechaActualizacion: new Date().toISOString()
-    };
-
-    /*  this.historialVentaService.actualizarVentaAbono(datosActualizados).subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.swalService.showSuccess('Éxito', 'Venta actualizada correctamente.');
-  
-            this.actualizarVentaLocal(response.data);
-  
-            modal.close();
-  
-            this.generarNuevoRecibo(response.data);
-          } else {
-            this.swalService.showError('Error', response.message);
-          }
-        },
-        error: (error) => {
-          console.error('Error al actualizar venta:', error);
-          this.swalService.showError('Error', 'No se pudo actualizar la venta. Verifique su conexión.');
-        }
-      });*/
-  }
-
-  private actualizarVentaLocal(ventaActualizada: any): void {
-    const index = this.ventasOriginales.findIndex(v => v.id === ventaActualizada.id);
-    if (index !== -1) {
-      this.ventasOriginales[index] = { ...this.ventasOriginales[index], ...ventaActualizada };
-    }
-
-    const indexFiltrado = this.ventasFiltradas.findIndex(v => v.id === ventaActualizada.id);
-    if (indexFiltrado !== -1) {
-      this.ventasFiltradas[indexFiltrado] = { ...this.ventasFiltradas[indexFiltrado], ...ventaActualizada };
-    }
-  }
 
   private generarNuevoRecibo(venta: any): void {
     //   console.log('Generando nuevo recibo para venta:', venta);
@@ -1494,22 +1205,18 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   getSimboloMonedaVenta(): string {
-    const moneda = this.getMonedaVenta();
-    switch (moneda) {
-      case 'dolar': return '$';
-      case 'euro': return '€';
-      case 'bolivar': return 'Bs. ';
-      default: return '$';
-    }
+    // Usar el símbolo del sistema en lugar de hardcodeado
+    return this.simboloMonedaSistema;
   }
 
   getSimboloMonedaParaVenta(venta: any): string {
+    // Para ventas específicas, usar su moneda original
     const moneda = venta?.moneda || 'dolar';
     switch (moneda) {
       case 'dolar': return '$';
       case 'euro': return '€';
       case 'bolivar': return 'Bs.';
-      default: return '$';
+      default: return this.simboloMonedaSistema;
     }
   }
 
@@ -1610,15 +1317,6 @@ export class HistorialVentasComponent implements OnInit {
     return `${simbolo}${totalAbonado.toFixed(2)} / ${simbolo}${this.selectedVenta.total.toFixed(2)}`;
   }
 
-
-
-
-
-
-
-
-
-
   getSimboloMonedaMetodo(tipoPago: string): string {
     switch (tipoPago) {
       case 'efectivo':
@@ -1632,21 +1330,25 @@ export class HistorialVentasComponent implements OnInit {
       case 'zelle':
         return '$'; // Siempre dólares para Zelle
       default:
-        return this.getSimboloMonedaVenta();
+        return this.simboloMonedaSistema; // ← Usar símbolo del sistema por defecto
     }
   }
 
-  // CORRECCIÓN: Obtener símbolo para efectivo basado en selector
   getSimboloMonedaEfectivo(): string {
+    // Si el sistema está configurado en bolívares, usar Bs. para efectivo
+    if (this.monedaSistema === 'BS' || this.monedaSistema === 'VES' || this.monedaSistema === 'Bs') {
+      return 'Bs. ';
+    }
+
+    // Para otros casos, usar el selector local
     switch (this.monedaEfectivo) {
       case 'USD': return '$';
       case 'EUR': return '€';
       case 'Bs': return 'Bs. ';
-      default: return '$';
+      default: return this.simboloMonedaSistema; // ← Usar símbolo del sistema por defecto
     }
   }
 
-  // CORRECCIÓN: Obtener moneda para método específico
   getMonedaParaMetodo(index: number): string {
     const metodoControl = this.metodosPagoArray.at(index);
     const tipoPago = metodoControl?.get('tipo')?.value;
@@ -1667,7 +1369,37 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  // CORRECCIÓN: Función de conversión corregida
+  // NUEVO MÉTODO: Formatear monto según la moneda del sistema
+  formatearMontoSistema(monto: number): string {
+    if (monto === null || monto === undefined || isNaN(monto)) {
+      return `${this.simboloMonedaSistema}0.00`;
+    }
+
+    const montoNumerico = Number(monto);
+
+    if (isNaN(montoNumerico)) {
+      return `${this.simboloMonedaSistema}0.00`;
+    }
+
+    return `${this.simboloMonedaSistema}${montoNumerico.toFixed(2)}`;
+  }
+
+  // MÉTODO MEJORADO: Para mostrar montos en tablas/resúmenes
+  getMontoParaMostrar(venta: any, monto: number): string {
+    // Si la venta está en la misma moneda del sistema, mostrar directamente
+    const monedaVenta = venta?.moneda || 'dolar';
+    const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
+
+    if (monedaVenta === monedaSistemaNormalizada) {
+      return this.formatearMontoSistema(monto);
+    }
+
+    // Si es diferente, convertir y mostrar
+    const montoConvertido = this.convertirMonto(monto, monedaVenta, monedaSistemaNormalizada);
+    return this.formatearMontoSistema(montoConvertido);
+  }
+
+  // CORRECCIÓN: Función de conversión mejorada
   convertirMonto(monto: number, origen: string, destino: string): number {
     if (origen === destino) return this.redondear(monto);
 
@@ -1914,20 +1646,28 @@ export class HistorialVentasComponent implements OnInit {
   getDeudaPendiente(venta: any): number {
     if (!venta) return 0;
 
-    if (venta.formaPago === 'contado' && venta.pagoCompleto) {
-      return 0; // Pago completado
+    // Si la venta está cancelada, no hay deuda
+    if (venta.estado === 'cancelada') {
+      return 0;
     }
 
+    // Para ventas con Cashea, usar la deuda pendiente del API
+    if (venta.formaPago === 'cashea' && venta.financiado) {
+      return venta.deudaPendiente || 0;
+    }
+
+    // Para abonos, calcular la diferencia
     if (venta.formaPago === 'abono') {
       const total = venta.total || 0;
       const abonado = venta.montoAbonado || 0;
       return Math.max(0, total - abonado);
     }
 
-    if (venta.formaPago === 'cashea' && venta.financiado) {
+    // Para contado, verificar si el pago está completo
+    if (venta.formaPago === 'contado') {
       const total = venta.total || 0;
-      const adelantado = venta.totalAdelantado || 0;
-      return Math.max(0, total - adelantado);
+      const pagado = this.getTotalPagadoVenta(venta) || 0;
+      return Math.max(0, total - pagado);
     }
 
     return 0;
@@ -1965,6 +1705,40 @@ export class HistorialVentasComponent implements OnInit {
         return 'estatus-cancelado';
       default: return 'estatus-pendiente';
     }
+  }
+
+  // === MÉTODOS PARA MONEDA DEL SISTEMA ===
+  private obtenerConfiguracionSistema(): void {
+    this.monedaSistema = this.systemConfigService.getMonedaPrincipal();
+    this.simboloMonedaSistema = this.systemConfigService.getSimboloMonedaPrincipal();
+  }
+
+  private suscribirCambiosConfiguracion(): void {
+    this.configSubscription = this.systemConfigService.config$.subscribe(config => {
+      this.monedaSistema = config.monedaPrincipal;
+      this.simboloMonedaSistema = config.simboloMoneda;
+      // Si necesitas recargar datos cuando cambia la moneda, puedes hacerlo aquí
+      // this.recargarDatosConNuevaMoneda();
+    });
+  }
+
+  private normalizarMonedaParaVenta(monedaSistema: string): string {
+    const mapaMonedas: { [key: string]: string } = {
+      'USD': 'dolar',
+      'EUR': 'euro',
+      'VES': 'bolivar',
+      'BS': 'bolivar',
+      '€': 'euro',
+      '$': 'dolar'
+    };
+
+    // Si es un símbolo, convertirlo directamente
+    if (monedaSistema === '$' || monedaSistema === 'USD') return 'dolar';
+    if (monedaSistema === '€' || monedaSistema === 'EUR') return 'euro';
+    if (monedaSistema === 'Bs' || monedaSistema === 'VES' || monedaSistema === 'BS') return 'bolivar';
+
+    // Para nombres completos
+    return mapaMonedas[monedaSistema.toUpperCase()] || 'dolar';
   }
 
 }

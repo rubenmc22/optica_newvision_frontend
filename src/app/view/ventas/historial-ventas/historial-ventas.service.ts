@@ -1,71 +1,86 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class HistorialVentaService {
 
-  constructor() { }
+  private apiUrl = environment.apiUrl;
+
+  constructor(private http: HttpClient) { }
 
   /**
-   * Simula la cancelación de una venta
-   * @param ventaId ID de la venta a cancelar
-   * @param motivo Motivo de la cancelación
-   * @returns Observable con la respuesta simulada
+   * Obtiene el historial de ventas
+   * @param pagina Página actual
+   * @param porPagina Items por página
+   * @param filtros Filtros opcionales
    */
-  cancelarVenta(ventaId: number, motivo: string): Observable<any> {
-    //console.log('Cancelando venta:', { ventaId, motivo });
+  obtenerHistorialVentas(
+    pagina: number = 1,
+    porPagina: number = 10,
+    filtros?: any
+  ): Observable<any> {
+    let params = new HttpParams()
+      .set('page', pagina.toString())
+      .set('per_page', porPagina.toString());
 
-    // Simular una respuesta exitosa del API
-    const respuestaSimulada = {
-      success: true,
-      message: 'Venta cancelada exitosamente',
-      data: {
-        id: ventaId,
-        estado: 'cancelada',
-        motivo_cancelacion: motivo,
-        fecha_cancelacion: new Date().toISOString()
+    // Agregar filtros si existen
+    if (filtros) {
+      if (filtros.busquedaGeneral) {
+        params = params.set('busqueda', filtros.busquedaGeneral);
       }
-    };
-
-    // Simular delay de red (1-2 segundos)
-    const delayTime = Math.random() * 1000 + 1000;
-
-    return of(respuestaSimulada).pipe(
-      delay(delayTime)
-    );
-  }
-
-  /**
-   * Versión alternativa que simula un error (para testing)
-   */
-  cancelarVentaConError(ventaId: number, motivo: string): Observable<any> {
-    //console.log('Cancelando venta (simulando error):', { ventaId, motivo });
-
-    // Simular un error del API
-    const errorSimulado = {
-      success: false,
-      message: 'Error: No se pudo cancelar la venta. La venta ya ha sido procesada.',
-      error: 'VENTA_YA_PROCESADA'
-    };
-
-    // Simular delay de red
-    const delayTime = Math.random() * 1000 + 1000;
-
-    return of(errorSimulado).pipe(
-      delay(delayTime)
-    );
-  }
-
-  /**
-   * Método para probar diferentes escenarios
-   */
-  cancelarVentaConEscenario(ventaId: number, motivo: string, escenario: 'exito' | 'error' = 'exito'): Observable<any> {
-    if (escenario === 'error') {
-      return this.cancelarVentaConError(ventaId, motivo);
+      if (filtros.asesor) {
+        params = params.set('asesor_id', filtros.asesor);
+      }
+      if (filtros.especialista) {
+        params = params.set('especialista_id', filtros.especialista);
+      }
+      if (filtros.estado) {
+        params = params.set('estado', filtros.estado);
+      }
+      if (filtros.fechaDesde) {
+        params = params.set('fecha_desde', filtros.fechaDesde);
+      }
+      if (filtros.fechaHasta) {
+        params = params.set('fecha_hasta', filtros.fechaHasta);
+      }
     }
-    return this.cancelarVenta(ventaId, motivo);
+
+    // CORRECCIÓN: Usar la ruta correcta sin duplicar /api
+    return this.http.get(`${this.apiUrl}/ventas-get`, { params });
+  }
+
+  /**
+   * Anula una venta
+   * @param ventaKey Key de la venta a anular
+   * @param motivo Motivo de la anulación
+   */
+  anularVenta(ventaKey: string, motivo: string): Observable<any> {
+    // CORRECCIÓN: Usar la ruta correcta sin duplicar /api
+    return this.http.post(`${this.apiUrl}/ventas-anular/${ventaKey}`, {
+      motivo_cancelacion: motivo
+    });
+  }
+
+  /**
+   * Realiza un abono a una venta
+   * @param ventaKey Key de la venta
+   * @param datosAbono Datos del abono
+   */
+  realizarAbono(ventaKey: string, datosAbono: any): Observable<any> {
+    // CORRECCIÓN: Usar la ruta correcta sin duplicar /api
+    return this.http.post(`${this.apiUrl}/ventas-abonar/${ventaKey}`, datosAbono);
+  }
+
+  /**
+   * Obtiene el detalle completo de una venta
+   * @param ventaKey Key de la venta
+   */
+  obtenerDetalleVenta(ventaKey: string): Observable<any> {
+    // CORRECCIÓN: Usar la ruta correcta sin duplicar /api
+    return this.http.get(`${this.apiUrl}/ventas-get/${ventaKey}`);
   }
 }
