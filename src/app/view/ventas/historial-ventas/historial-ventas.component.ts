@@ -83,6 +83,8 @@ export class HistorialVentasComponent implements OnInit {
   simboloMonedaSistema: string = '$';
   private configSubscription!: Subscription;
 
+  tasaCableada: number = 243.00; // Tasa temporal mientras el API se ajusta
+
   // Mapeos de monedas
   private readonly idMap: Record<string, string> = {
     usd: 'dolar',
@@ -577,10 +579,20 @@ export class HistorialVentasComponent implements OnInit {
 
       // Métodos de pago
       metodosPago: metodosPago.map((metodo: any) => ({
+        // Datos originales del API
         tipo: metodo.tipo,
-        monto: metodo.monto_en_moneda_de_venta || metodo.monto,
-        conversionBs: this.calcularConversionBs(metodo.monto, metodo.moneda_id),
+        monto: metodo.monto,
+        moneda_id: metodo.moneda_id,
+        monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta,
         referencia: metodo.referencia,
+        bancoCodigo: metodo.bancoCodigo,
+        bancoNombre: metodo.bancoNombre,
+
+        // Para compatibilidad con el formato anterior
+        conversionBs: this.calcularConversionBs(
+          metodo.monto_en_moneda_de_venta || metodo.monto,
+          metodo.moneda_id
+        ),
         banco: metodo.bancoNombre ? `${metodo.bancoCodigo} - ${metodo.bancoNombre}` : null
       })),
 
@@ -982,7 +994,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   verDetalleCompleto(venta: any) {
-    //   console.log('Ver detalle completo:', venta);
+    console.log('Ver detalle completo:', venta);
 
     this.selectedVenta = venta;
 
@@ -1202,11 +1214,6 @@ export class HistorialVentasComponent implements OnInit {
         this.validarMontoMetodoPago(index);
       }
     });
-  }
-
-  getSimboloMonedaVenta(): string {
-    // Usar el símbolo del sistema en lugar de hardcodeado
-    return this.simboloMonedaSistema;
   }
 
   getSimboloMonedaParaVenta(venta: any): string {
@@ -1739,6 +1746,297 @@ export class HistorialVentasComponent implements OnInit {
 
     // Para nombres completos
     return mapaMonedas[monedaSistema.toUpperCase()] || 'dolar';
+  }
+
+
+
+  // Método mejorado para mostrar montos en métodos de pago
+  getMontoParaMostrarMetodoPago(metodo: any, venta: any): string {
+    const monedaPago = metodo.moneda_id || this.getMonedaParaMetodoPorTipo(metodo.tipo);
+    const monedaVenta = venta.moneda;
+
+    // Si el pago es en la misma moneda de la venta, mostrar directamente
+    if (monedaPago === monedaVenta) {
+      return this.formatearMontoConMoneda(metodo.monto, monedaPago);
+    }
+
+    // Si el pago es en diferente moneda, mostrar el monto en la moneda del pago
+    // y calcular el equivalente
+    return this.formatearMontoConMoneda(metodo.monto, monedaPago);
+  }
+
+  // Método para obtener la moneda según el tipo de pago
+  getMonedaParaMetodoPorTipo(tipoPago: string): string {
+    switch (tipoPago) {
+      case 'pagomovil':
+      case 'transferencia':
+      case 'debito':
+      case 'credito':
+        return 'bolivar';
+      case 'zelle':
+        return 'dolar';
+      case 'efectivo':
+        // Para efectivo, depende de lo seleccionado
+        return this.monedaEfectivo.toLowerCase() === 'bs' ? 'bolivar' :
+          this.monedaEfectivo.toLowerCase() === 'eur' ? 'euro' : 'dolar';
+      default:
+        return 'dolar';
+    }
+  }
+
+  // Método para formatear monto con símbolo de moneda
+  formatearMontoConMoneda(monto: number, moneda: string): string {
+    const simbolo = this.getSimboloMoneda(moneda);
+    return `${simbolo}${monto.toFixed(2)}`;
+  }
+
+  // Método para obtener símbolo de moneda
+  getSimboloMoneda(moneda: string): string {
+    switch (moneda) {
+      case 'dolar': return '$';
+      case 'euro': return '€';
+      case 'bolivar': return 'Bs. ';
+      default: return '$';
+    }
+  }
+
+  // Método para obtener la moneda del método de pago
+  getMonedaDelMetodo(metodo: any): string {
+    // Si viene del API, usar moneda_id, sino determinar por tipo
+    if (metodo.moneda_id) {
+      return metodo.moneda_id;
+    }
+
+    // Determinar por tipo de pago
+    switch (metodo.tipo) {
+      case 'pagomovil':
+      case 'transferencia':
+      case 'debito':
+      case 'credito':
+        return 'bolivar';
+      case 'zelle':
+        return 'dolar';
+      case 'efectivo':
+        // Para histórico, asumir dólares si no hay información
+        return 'dolar';
+      default:
+        return 'dolar';
+    }
+  }
+
+
+  // Método para mostrar tasa
+  getTasaDisplay(): string {
+    return `Tasa: 1 USD = ${this.tasaCableada} Bs`;
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // Método corregido para obtener el monto display
+  getMontoDisplayMetodoPago(metodo: any, venta: any): string {
+    const monedaPago = this.getMonedaDelMetodo(metodo);
+    const monto = this.getMontoOriginalDelMetodo(metodo, monedaPago);
+
+    return this.formatearMontoConMoneda(monto, monedaPago);
+  }
+
+  // Método para obtener el monto original correcto
+  getMontoOriginalDelMetodo(metodo: any, monedaPago: string): number {
+    // Si el método tiene monto_en_moneda_de_venta, significa que el monto principal está en bolívares
+    if (metodo.monto_en_moneda_de_venta !== undefined && metodo.monto_en_moneda_de_venta !== null) {
+      // Para débito/transferencia: monto está en bolívares, monto_en_moneda_de_venta en dólares
+      return metodo.monto;
+    }
+
+    // Si tiene conversionBs, significa que el monto principal está en dólares
+    if (metodo.conversionBs !== undefined && metodo.conversionBs !== null) {
+      // Para pagomóvil/efectivo: monto está en dólares, conversionBs en bolívares
+      if (monedaPago === 'bolivar') {
+        return metodo.conversionBs;
+      } else {
+        return metodo.monto;
+      }
+    }
+
+    // Por defecto, usar el monto principal
+    return metodo.monto;
+  }
+
+  // Método corregido para el equivalente
+  getEquivalenteDisplay(metodo: any, venta: any): string {
+    const monedaPago = this.getMonedaDelMetodo(metodo);
+    const monedaSistema = this.normalizarMonedaParaVenta(this.monedaSistema);
+
+    // Si el pago ya está en la moneda del sistema, no mostrar equivalente
+    if (monedaPago === monedaSistema) {
+      return '';
+    }
+
+    // ASIGNAR DIRECTAMENTE el valor que ya viene convertido del API
+    if (metodo.monto_en_moneda_de_venta !== undefined && metodo.monto_en_moneda_de_venta !== null) {
+      return `Equivale a: ${this.formatearMontoConDecimales(metodo.monto_en_moneda_de_venta, monedaSistema)}`;
+    }
+
+    // Solo para métodos que no tienen monto_en_moneda_de_venta (API antiguo)
+    if (metodo.conversionBs !== undefined && metodo.conversionBs !== null) {
+      if (monedaPago === 'bolivar' && monedaSistema === 'dolar') {
+        return `Equivale a: ${this.formatearMontoConDecimales(metodo.monto, 'dolar')}`;
+      } else if (monedaPago === 'dolar' && monedaSistema === 'bolivar') {
+        return `Equivale a: ${this.formatearMontoConDecimales(metodo.conversionBs, 'bolivar')}`;
+      }
+    }
+
+    return '';
+  }
+
+  // Método para formatear (sin cambios)
+  formatearMontoConDecimales(monto: number, moneda: string): string {
+    const simbolo = this.getSimboloMoneda(moneda);
+    const montoFormateado = Number(monto).toFixed(2);
+    return `${simbolo}${montoFormateado}`;
+  }
+
+  // Método mejorado para obtener banco
+  getBancoDisplay(metodo: any): string {
+    if (!metodo) return '';
+
+    // Prioridad 1: bancoNombre y bancoCodigo del API
+    if (metodo.bancoNombre) {
+      return metodo.bancoCodigo ?
+        `${metodo.bancoNombre} (${metodo.bancoCodigo})` :
+        metodo.bancoNombre;
+    }
+
+    // Prioridad 2: propiedad banco (formato antiguo)
+    if (metodo.banco) {
+      return metodo.banco;
+    }
+
+    return '';
+  }
+
+
+
+
+
+  // En el componente, agrega este método para obtener la tasa correcta
+  getTasaBolivar(): number {
+    if (!this.selectedVenta) return this.tasaCableada;
+
+    const monedaVenta = this.selectedVenta.moneda;
+
+    // Si la venta es en dólares, usar tasa dólar
+    if (monedaVenta === 'dolar') {
+      return this.tasasPorId['dolar'] || this.tasaCableada;
+    }
+
+    // Si la venta es en euros, usar tasa euro
+    if (monedaVenta === 'euro') {
+      return this.tasasPorId['euro'] || (this.tasaCableada * 0.85); // Aproximación EUR/USD
+    }
+
+    return this.tasaCableada;
+  }
+
+  // Método mejorado para obtener el display del tipo de pago
+  getTipoPagoDisplay(tipo: string): string {
+    if (!tipo) return '';
+
+    const mapeoTipos: { [key: string]: string } = {
+      'efectivo': 'Efectivo',
+      'pagomovil': 'Pago Móvil',
+      'debito': 'Débito',
+      'credito': 'Crédito',
+      'transferencia': 'Transferencia',
+      'zelle': 'Zelle'
+    };
+
+    return mapeoTipos[tipo] || tipo.charAt(0).toUpperCase() + tipo.slice(1).toLowerCase();
+  }
+
+  // Método para obtener la moneda de venta display
+  getMonedaVentaDisplay(): string {
+    if (!this.selectedVenta) return 'USD';
+
+    const moneda = this.selectedVenta.moneda;
+    switch (moneda) {
+      case 'dolar': return 'USD';
+      case 'euro': return 'EUR';
+      case 'bolivar': return 'Bs';
+      default: return 'USD';
+    }
+  }
+
+  // Método para calcular el total de cuotas adelantadas
+  getTotalCuotasAdelantadas(): number {
+    if (!this.selectedVenta?.cuotasAdelantadas?.length) return 0;
+
+    return this.selectedVenta.cuotasAdelantadas.reduce((total: number, cuota: any) => {
+      return total + (cuota.monto || 0);
+    }, 0);
+  }
+
+  // Método para obtener símbolo de moneda de venta
+  getSimboloMonedaVenta(): string {
+    if (!this.selectedVenta) return '$';
+
+    const moneda = this.selectedVenta.moneda;
+    switch (moneda) {
+      case 'dolar': return '$';
+      case 'euro': return '€';
+      case 'bolivar': return 'Bs. ';
+      default: return '$';
+    }
+  }
+
+  // Método para mostrar forma de pago formateada
+  getFormaPagoDisplay(formaPago: string): string {
+    if (!formaPago) return 'No especificada';
+
+    const formas: { [key: string]: string } = {
+      'contado': 'Contado',
+      'abono': 'Abono',
+      'cashea': 'Cashea',
+      'credito': 'Crédito'
+    };
+
+    return formas[formaPago] || formaPago.charAt(0).toUpperCase() + formaPago.slice(1);
+  }
+
+  // Método para mostrar moneda formateada
+  getMonedaDisplay(moneda: string): string {
+    if (!moneda) return 'USD';
+
+    const monedas: { [key: string]: string } = {
+      'dolar': 'USD',
+      'euro': 'EUR',
+      'bolivar': 'BS'
+    };
+
+    return monedas[moneda] || moneda.toUpperCase();
+  }
+
+  // Método para calcular porcentaje abonado
+  getPorcentajeAbonado(): number {
+    if (!this.selectedVenta || this.selectedVenta.formaPago !== 'abono') return 0;
+
+    const total = this.selectedVenta.total || 0;
+    const abonado = this.selectedVenta.montoAbonado || 0;
+
+    if (total === 0) return 0;
+
+    return Math.round((abonado / total) * 100);
   }
 
 }

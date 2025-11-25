@@ -503,7 +503,6 @@
     }
 }
 
-// Estilos para el modal de detalle completo
 // Estilos para el modal de detalle moderno
 .modal-header-detalle {
     display: flex;
@@ -616,31 +615,56 @@
     overflow: hidden;
 
     &.principal {
-        border-left: 4px solid #667eea;
+        border-left: 4px solid var(--primary-color) !important;
+    }
+
+    &.personal {
+        border-left: 4px solid var(--primary-color) !important;
     }
 
     &.formulacion {
-        border-left: 4px solid #20c997;
+        border-left: 4px solid var(--primary-color) !important;
     }
 
     &.productos {
-        border-left: 4px solid #fd7e14;
+        border-left: 4px solid var(--primary-color) !important;
     }
 
     &.pago {
-        border-left: 4px solid #6f42c1;
+        border-left: 4px solid var(--primary-color) !important;
     }
 
     &.metodos-pago-detalle {
-        border-left: 4px solid #17a2b8;
+        border-left: 4px solid var(--primary-color) !important;
     }
 
     &.resumen {
-        border-left: 4px solid #28a745;
+        border-left: 4px solid var(--primary-color) !important;
     }
 
     &.observaciones {
-        border-left: 4px solid #ffc107;
+        border-left: 4px solid var(--primary-color) !important;
+    }
+}
+
+.metodo-detalles-adicionales {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+}
+
+.detalle-adicional {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: #6c757d;
+
+    i {
+        font-size: 0.7rem;
+        width: 12px;
+        text-align: center;
     }
 }
 
@@ -664,26 +688,126 @@
     padding: 1.5rem;
 }
 
-// Grid de información
-.info-grid {
+.info-grid-2cols {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.personal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.info-item-detalle {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .value {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #212529;
+        word-break: break-word;
+    }
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+
+    .info-row,
+    .personal-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+.info-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.info-item-detalle {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .value {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #212529;
+        word-break: break-word;
+    }
+}
+
+.info-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.section-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cashea-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
 }
 
-.info-item-detalle {
-    label {
-        display: block;
-        font-size: 0.875rem;
-        color: #6c757d;
-        margin-bottom: 0.25rem;
-        font-weight: 500;
+.observaciones-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    border-left: 4px solid #007bff;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
 
-    .value {
-        font-weight: 600;
-        color: #495057;
-        font-size: 1rem;
+    .cashea-grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -860,48 +984,70 @@
 }
 
 // Configuración de Pago
-.pago-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+.pago-grid-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.pago-item {
+.pago-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.pago-item-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 80px;
+
     label {
-        display: block;
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         color: #6c757d;
-        margin-bottom: 0.25rem;
         font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        i {
+            font-size: 0.7rem;
+        }
     }
 
     .value {
+        font-size: 0.9rem;
         font-weight: 600;
-        color: #495057;
-    }
 
-    .value-badge {
-        display: inline-block;
-        padding: 0.375rem 0.75rem;
-        border-radius: 6px;
-        font-weight: 500;
-        font-size: 0.875rem;
-
-        &.forma-contado {
-            background: #e3f2fd;
-            color: #1976d2;
+        &.small {
+            font-size: 0.8rem;
         }
 
-        &.forma-cashea {
-            background: #fff3e0;
-            color: #f57c00;
+        &.highlight {
+            color: var(--primary-color) !important;
         }
 
-        &.forma-abono {
-            background: #e8f5e8;
-            color: #388e3c;
+        &.success {
+            color: #28a745;
+        }
+
+        &.warning {
+            color: #ffc107;
+        }
+
+        &.discount {
+            color: #dc3545;
         }
     }
+}
+
+.pago-especifico {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-top: 4px;
+    border-left: 3px solid #007bff;
 }
 
 // Métodos de Pago
@@ -909,6 +1055,51 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+}
+
+.montos-linea {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.montos-duales {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.monto-bs {
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+.monto-usd {
+    font-size: 0.9em;
+}
+
+.monto-simple {
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+.metodo-detalles-adicionales {
+    margin-top: 8px;
+}
+
+.detalle-linea-combinada {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.detalle-adicional {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85em;
+    color: #6c757d;
 }
 
 .metodo-item-detalle {
@@ -964,9 +1155,45 @@
         }
 
         .metodo-monto {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #28a745;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #212529;
+
+            &.text-success {
+                color: #198754 !important;
+                font-weight: 700;
+            }
+        }
+
+        .metodo-equivalente {
+            margin-top: 0.25rem;
+        }
+
+        .equivalente-text {
+            font-size: 0.85rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .metodo-detalles-adicionales {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .detalle-adicional {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #6c757d;
+
+            i {
+                font-size: 0.7rem;
+                width: 12px;
+                text-align: center;
+            }
         }
     }
 
@@ -1340,10 +1567,202 @@
     align-items: center;
 }
 
+// Estilos para métodos de pago mejorados
 .metodos-pago {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+}
+
+.metodo-item-detallado {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    border-left: 4px solid #007bff;
+}
+
+.metodo-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.metodo-icono {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+
+    &.metodo-efectivo {
+        background: #28a745;
+        color: white;
+    }
+
+    &.metodo-debito,
+    &.metodo-credito {
+        background: #17a2b8;
+        color: white;
+    }
+
+    &.metodo-pagomovil {
+        background: #6f42c1;
+        color: white;
+    }
+
+    &.metodo-transferencia {
+        background: #fd7e14;
+        color: white;
+    }
+
+    &.metodo-zelle {
+        background: #6610f2;
+        color: white;
+    }
+}
+
+.metodo-info {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.metodo-tipo {
+    font-size: 1rem;
+    color: #212529;
+}
+
+.montos-duales {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.metodo-monto {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #212529;
+
+    &.text-success {
+        color: #198754 !important;
+        font-weight: 700;
+    }
+}
+
+.metodo-equivalente {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.metodo-detalles-adicionales {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+}
+
+.detalle-adicional {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: #6c757d;
+
+    i {
+        font-size: 0.7rem;
+        width: 12px;
+        text-align: center;
+    }
+}
+
+.metodo-detalles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.detalle-linea-combinada {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.detalle-item-combinado {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #6c757d;
+
+    i {
+        font-size: 0.8rem;
+        width: 16px;
+        text-align: center;
+    }
+}
+
+.detalle-texto {
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+.detalle-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.detalle-texto {
+    color: #6c757d;
+
+    strong {
+        color: #495057;
+        font-weight: 500;
+    }
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .metodo-item-detallado {
+        padding: 0.75rem;
+    }
+
+    .metodo-header {
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .metodo-icono {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+
+    .metodo-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .metodo-tipo {
+        font-size: 0.9rem;
+    }
+
+    .metodo-monto {
+        font-size: 1rem;
+    }
+
+    .detalle-item {
+        font-size: 0.8rem;
+    }
 }
 
 .metodo-item {
@@ -1353,41 +1772,6 @@
     padding: 0.75rem;
     background: #f8f9fa;
     border-radius: 6px;
-}
-
-.metodo-icono {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    flex-shrink: 0;
-
-    &.metodo-efectivo {
-        background: #28a745;
-    }
-
-    &.metodo-debito {
-        background: #17a2b8;
-    }
-
-    &.metodo-credito {
-        background: #6f42c1;
-    }
-
-    &.metodo-pagomovil {
-        background: #fd7e14;
-    }
-
-    &.metodo-transferencia {
-        background: #20c997;
-    }
-
-    &.metodo-zelle {
-        background: #6610f2;
-    }
 }
 
 .metodo-info {
@@ -2602,15 +2986,6 @@
     div {
         font-size: 0.7rem;
     }
-}
-
-
-// Estilos para métodos de pago mejorados
-.metodos-grid-compact {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    padding: 1.5rem;
 }
 
 .metodo-item-compact {

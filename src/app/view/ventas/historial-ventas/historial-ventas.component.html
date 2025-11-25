@@ -361,30 +361,59 @@
                       <i class="bi bi-credit-card me-2"></i>
                       Métodos de Pago
                     </h6>
+                    <!-- Métodos de Pago - Versión Corregida -->
                     <div class="metodos-pago">
-                      <div *ngFor="let metodo of venta.metodosPago" class="metodo-item">
-                        <div class="metodo-icono" [ngClass]="'metodo-' + metodo.tipo">
-                          <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
-                            [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
-                            [class.bi-phone]="metodo.tipo === 'pagomovil'"
-                            [class.bi-bank]="metodo.tipo === 'transferencia'"
-                            [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
+                      <div *ngFor="let metodo of venta.metodosPago" class="metodo-item-detallado">
+                        <div class="metodo-header">
+                          <div class="metodo-icono" [ngClass]="'metodo-' + metodo.tipo">
+                            <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
+                              [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
+                              [class.bi-phone]="metodo.tipo === 'pagomovil'"
+                              [class.bi-bank]="metodo.tipo === 'transferencia'"
+                              [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
+                          </div>
+                          <div class="metodo-info">
+                            <span class="metodo-tipo text-capitalize fw-semibold">{{metodo.tipo}}</span>
+                            <span class="metodo-monto">
+                              {{ getMontoDisplayMetodoPago(metodo, venta) }}
+                            </span>
+                          </div>
                         </div>
-                        <div class="metodo-info">
-                          <span class="metodo-tipo text-capitalize">{{metodo.tipo}}</span>
-                          <!-- ACTUALIZADO: Mostrar monto con símbolo correcto -->
-                          <span class="metodo-monto">
-                            {{ getSimboloMonedaMetodo(metodo.tipo) }}{{ metodo.monto | number:'1.2-2' }}
-                          </span>
-                        </div>
-                        <div class="metodo-conversion" *ngIf="metodo.conversionBs">
-                          <!-- ACTUALIZADO: Mostrar conversión en Bs -->
-                          <small class="text-muted">{{ metodo.conversionBs | number:'1.2-2' }} Bs</small>
+
+                        <div class="metodo-detalles">
+                          <!-- Primera línea: Equivalente y Tasa juntos -->
+                          <div class="detalle-linea-combinada" *ngIf="getEquivalenteDisplay(metodo, venta)">
+                            <div class="detalle-item-combinado">
+                              <i class="bi bi-arrow-left-right text-muted"></i>
+                              <span class="detalle-texto">{{ getEquivalenteDisplay(metodo, venta) }}</span>
+                            </div>
+                            <div class="detalle-item-combinado">
+                              <i class="bi bi-graph-up text-muted"></i>
+                              <span class="detalle-texto">{{ getTasaDisplay() }}</span>
+                            </div>
+                          </div>
+
+                          <!-- Segunda línea: Referencia y Banco juntos cuando aplican -->
+                          <div class="detalle-linea-combinada" *ngIf="metodo.referencia || getBancoDisplay(metodo)">
+                            <div class="detalle-item-combinado" *ngIf="metodo.referencia">
+                              <i class="bi bi-receipt text-muted"></i>
+                              <span class="detalle-texto">
+                                Ref: <strong>{{metodo.referencia}}</strong>
+                              </span>
+                            </div>
+
+                            <div class="detalle-item-combinado" *ngIf="getBancoDisplay(metodo) && 
+                              (metodo.tipo === 'pagomovil' || metodo.tipo === 'transferencia')">
+                              <i class="bi bi-building text-muted"></i>
+                              <span class="detalle-texto">
+                                Banco: <strong>{{ getBancoDisplay(metodo) }}</strong>
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-
                   <!-- Información Adicional - 2 Columnas Optimizada -->
                   <div class="detalle-seccion">
                     <h6 class="seccion-titulo">
@@ -721,22 +750,49 @@
         <span>Información del Paciente</span>
       </div>
       <div class="card-body-detalle">
-        <div class="info-grid">
-          <div class="info-item-detalle">
-            <label>Paciente</label>
-            <div class="value">{{selectedVenta?.paciente?.nombre}}</div>
+        <div class="info-grid-2cols">
+          <!-- Fila 1 -->
+          <div class="info-row">
+            <div class="info-item-detalle">
+              <label>👤 Paciente</label>
+              <div class="value">{{selectedVenta?.paciente?.nombre}}</div>
+            </div>
+            <div class="info-item-detalle">
+              <label>🆔 Cédula</label>
+              <div class="value">{{selectedVenta?.paciente?.cedula || 'No especificada'}}</div>
+            </div>
           </div>
-          <div class="info-item-detalle">
-            <label>Cédula</label>
-            <div class="value">{{selectedVenta?.paciente?.cedula}}</div>
+
+          <!-- Fila 2 -->
+          <div class="info-row">
+            <div class="info-item-detalle">
+              <label>📧 Email</label>
+              <div class="value">{{selectedVenta?.paciente?.email || 'No especificado'}}</div>
+            </div>
+            <div class="info-item-detalle">
+              <label>📞 Teléfono</label>
+              <div class="value">{{selectedVenta?.paciente?.telefono || 'No especificado'}}</div>
+            </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarjeta de Personal Asignado -->
+    <div class="info-card personal">
+      <div class="card-header-detalle">
+        <i class="bi bi-people"></i>
+        <span>Personal Asignado</span>
+      </div>
+      <div class="card-body-detalle">
+        <div class="personal-grid">
           <div class="info-item-detalle">
-            <label>Asesor</label>
+            <label>👨‍💼 Asesor</label>
             <div class="value">{{selectedVenta?.asesorNombre}}</div>
           </div>
           <div class="info-item-detalle">
-            <label>Sede</label>
-            <div class="value">{{selectedVenta?.sede}}</div>
+            <label>👨‍⚕️ Especialista</label>
+            <div class="value">{{selectedVenta?.especialista?.nombre}}</div>
           </div>
         </div>
       </div>
@@ -879,50 +935,78 @@
         <span>Configuración de Pago</span>
       </div>
       <div class="card-body-detalle">
-        <div class="pago-grid">
-          <div class="pago-item">
-            <label>Forma de Pago</label>
-            <div class="value">{{selectedVenta?.formaPago}}</div>
-          </div>
-          <div class="pago-item">
-            <label>Moneda</label>
-            <div class="value">{{selectedVenta?.moneda}}</div>
-          </div>
-          <div class="pago-item">
-            <label>Descuento</label>
-            <div class="value">{{selectedVenta?.descuento || 0}}%</div>
+        <div class="pago-grid-compact">
+
+          <!-- Fila 1: Información Básica -->
+          <div class="pago-row">
+            <div class="pago-item-compact">
+              <label>Forma de Pago</label>
+              <div class="value highlight">{{getFormaPagoDisplay(selectedVenta?.formaPago)}}</div>
+            </div>
+            <div class="pago-item-compact">
+              <label>Moneda</label>
+              <div class="value">{{getMonedaDisplay(selectedVenta?.moneda)}}</div>
+            </div>
+            <div class="pago-item-compact" *ngIf="selectedVenta?.descuento > 0">
+              <label>Descuento</label>
+              <div class="value discount">{{selectedVenta?.descuento || 0}}%</div>
+            </div>
           </div>
 
           <!-- Información específica por tipo de pago -->
-          <div *ngIf="selectedVenta?.formaPago === 'cashea'" class="cashea-info">
-            <div class="pago-item">
-              <label>Nivel Cashea</label>
-              <div class="value">{{selectedVenta?.nivelCashea}}</div>
-            </div>
-            <div class="pago-item">
-              <label>Monto Inicial</label>
-              <div class="value">{{selectedVenta?.montoInicial | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ?
-                'USD' : 'BS'}}</div>
-            </div>
-            <div class="pago-item">
-              <label>Cuotas</label>
-              <div class="value">{{selectedVenta?.cantidadCuotas}} de {{selectedVenta?.montoPorCuota | number:'1.2-2'}}
-                c/u</div>
+
+          <!-- Cashea: Diseño compacto -->
+          <div *ngIf="selectedVenta?.formaPago === 'cashea'" class="pago-especifico">
+            <div class="pago-row">
+              <div class="pago-item-compact">
+                <label><i class="bi bi-graph-up"></i> Nivel</label>
+                <div class="value small">{{selectedVenta?.nivelCashea}}</div>
+              </div>
+              <div class="pago-item-compact">
+                <label><i class="bi bi-cash-coin"></i> Inicial</label>
+                <div class="value small">
+                  {{selectedVenta?.montoInicial | number:'1.2-2'}} {{getMonedaDisplay(selectedVenta?.moneda)}}
+                </div>
+              </div>
+              <div class="pago-item-compact">
+                <label><i class="bi bi-calendar-week"></i> Cuotas</label>
+                <div class="value small">
+                  {{selectedVenta?.cantidadCuotas}}x {{selectedVenta?.montoPorCuota | number:'1.2-2'}}
+                  {{getMonedaDisplay(selectedVenta?.moneda)}}
+                </div>
+              </div>
+              <div class="pago-item-compact" *ngIf="selectedVenta?.cuotasAdelantadas?.length > 0">
+                <label><i class="bi bi-lightning"></i> Adelantadas</label>
+                <div class="value small info">
+                  {{selectedVenta?.cuotasAdelantadas?.length}} ({{getTotalCuotasAdelantadas() | number:'1.2-2'}} {{getMonedaDisplay(selectedVenta?.moneda)}}) 
+                </div>
+              </div>
             </div>
           </div>
 
-          <div *ngIf="selectedVenta?.formaPago === 'abono'" class="abono-info">
-            <div class="pago-item">
-              <label>Monto Abonado</label>
-              <div class="value">{{selectedVenta?.montoAbonado | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ?
-                'USD' : 'BS'}}</div>
-            </div>
-            <div class="pago-item">
-              <label>Saldo Pendiente</label>
-              <div class="value">{{(selectedVenta?.total - selectedVenta?.montoAbonado) | number:'1.2-2'}}
-                {{selectedVenta?.moneda === 'dolar' ? 'USD' : 'BS'}}</div>
+          <!-- Abono: Diseño compacto en línea -->
+          <div *ngIf="selectedVenta?.formaPago === 'abono'" class="pago-especifico">
+            <div class="pago-row">
+              <div class="pago-item-compact">
+                <label><i class="bi bi-check-circle"></i> Abonado</label>
+                <div class="value small success">
+                  {{selectedVenta?.montoAbonado | number:'1.2-2'}} {{getMonedaDisplay(selectedVenta?.moneda)}}
+                </div>
+              </div>
+              <div class="pago-item-compact">
+                <label><i class="bi bi-clock"></i> Pendiente</label>
+                <div class="value small warning">
+                  {{(selectedVenta?.total - selectedVenta?.montoAbonado) | number:'1.2-2'}}
+                  {{getMonedaDisplay(selectedVenta?.moneda)}}
+                </div>
+              </div>
+              <div class="pago-item-compact">
+                <label><i class="bi bi-percent"></i> Progreso</label>
+                <div class="value small">{{getPorcentajeAbonado()}}%</div>
+              </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -943,12 +1027,51 @@
                 [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
             </div>
             <div class="metodo-info-detalle">
-              <div class="metodo-tipo">{{metodo.tipo}}</div>
-              <div class="metodo-monto">{{metodo.monto | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' :
-                'BS'}}</div>
-            </div>
-            <div class="metodo-conversion" *ngIf="metodo.conversionBs">
-              <div class="conversion-text">{{metodo.conversionBs | number:'1.2-2'}} Bs</div>
+              <div class="metodo-tipo">{{ getTipoPagoDisplay(metodo.tipo) }}</div>
+
+              <!-- DISPLAY CORREGIDO DE MONTOS -->
+              <div class="montos-linea">
+                <!-- Pago en BOLIVARES - SOLO MONTO EN BS ALINEADO -->
+                <div *ngIf="metodo.moneda_id === 'bolivar'" class="monto-simple text-success">
+                  {{ metodo.monto | number:'1.2-2' }} Bs.
+                </div>
+
+                <!-- Pago en DÓLARES -->
+                <div *ngIf="metodo.moneda_id === 'dolar'" class="monto-simple text-success">
+                  {{ metodo.monto | number:'1.2-2' }} USD
+                </div>
+
+                <!-- Pago en EUROS -->
+                <div *ngIf="metodo.moneda_id === 'euro'" class="monto-simple text-success">
+                  {{ metodo.monto | number:'1.2-2' }} EUR
+                </div>
+              </div>
+
+              <!-- INFORMACIÓN ADICIONAL CORREGIDA -->
+              <div class="metodo-detalles-adicionales">
+                <!-- Referencia - mostrar siempre que exista -->
+                <div class="detalle-adicional" *ngIf="metodo.referencia">
+                  <i class="bi bi-receipt"></i>
+                  <span>Ref: {{metodo.referencia}}</span>
+                </div>
+
+                <!-- Banco - mostrar siempre que exista -->
+                <div class="detalle-adicional" *ngIf="metodo.bancoNombre">
+                  <i class="bi bi-building"></i>
+                  <span>Banco: {{metodo.bancoNombre}} {{metodo.bancoCodigo ? '(' + metodo.bancoCodigo + ')' :
+                    ''}}</span>
+                </div>
+
+                <!-- Tasa de cambio y equivalente - solo para pagos en bolívares, al final -->
+                <div *ngIf="metodo.moneda_id === 'bolivar' && metodo.monto_en_moneda_de_venta"
+                  class="detalle-adicional">
+                  <i class="bi bi-arrow-left-right"></i>
+                  <span>
+                    {{ getSimboloMonedaVenta() }}{{ metodo.monto_en_moneda_de_venta | number:'1.2-2' }}
+                    (Tasa: 1 {{ getMonedaVentaDisplay() }} = {{ getTasaBolivar() | number:'1.2-2' }} Bs)
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
