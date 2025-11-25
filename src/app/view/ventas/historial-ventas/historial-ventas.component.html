@@ -414,7 +414,8 @@
                       </div>
                     </div>
                   </div>
-                  <!-- Información Adicional - 2 Columnas Optimizada -->
+
+                  <!-- Información Adicional -->
                   <div class="detalle-seccion">
                     <h6 class="seccion-titulo">
                       <i class="bi bi-info-circle me-2"></i>
@@ -422,7 +423,7 @@
                     </h6>
                     <div class="info-adicional-grid">
 
-                      <!-- Fila 1 -->
+                      <!-- Fila 1 - 4 campos en 2 columnas -->
                       <div class="info-fila">
                         <!-- Especialista -->
                         <div class="info-item destacado">
@@ -449,15 +450,14 @@
                             <span class="info-label">Tipo Cliente</span>
                             <span class="info-value">
                               {{venta.paciente?.tipoPersona || 'Natural' | titlecase}}
-                              <small class="text-muted d-block">General</small>
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      <!-- Fila 2 -->
+                      <!-- Fila 2 - Productos y Plan de Pagos -->
                       <div class="info-fila">
-                        <!-- Cantidad de Productos -->
+                        <!-- Productos -->
                         <div class="info-item">
                           <div class="info-icono">
                             <i class="bi bi-box-seam"></i>
@@ -465,7 +465,7 @@
                           <div class="info-contenido">
                             <span class="info-label">Productos</span>
                             <span class="info-value">
-                              {{venta.productos?.length || 0}} items
+                              {{venta.productos?.length || 0}}
                               <small class="text-muted d-block" *ngIf="venta.productos?.length === 1">
                                 {{venta.productos[0]?.nombre}}
                               </small>
@@ -476,61 +476,35 @@
                           </div>
                         </div>
 
-                        <!-- Moneda -->
-                        <div class="info-item">
+                        <!-- Plan de Pagos (Abono o Cashea) -->
+                        <div class="info-item" *ngIf="venta.formaPago === 'abono' || venta.formaPago === 'cashea'">
                           <div class="info-icono">
-                            <i class="bi bi-currency-exchange"></i>
+                            <i class="bi" [class.bi-piggy-bank]="venta.formaPago === 'abono'"
+                              [class.bi-calendar-check]="venta.formaPago === 'cashea'"></i>
                           </div>
                           <div class="info-contenido">
-                            <span class="info-label">Moneda</span>
+                            <span class="info-label" *ngIf="venta.formaPago === 'abono'">Plan Abonos</span>
+                            <span class="info-label" *ngIf="venta.formaPago === 'cashea'">Plan Cashea</span>
                             <span class="info-value">
-                              <span class="badge bg-primary">{{venta.moneda | uppercase}}</span>
-                              <small class="text-muted d-block">
-                                Sistema: {{monedaSistema}}
-                              </small>
+                              <span *ngIf="venta.formaPago === 'abono'">
+                                Abonado: {{getMontoParaMostrar(venta, venta.montoAbonado)}}
+                                <small class="text-muted d-block">
+                                  Pendiente: {{getMontoParaMostrar(venta, getDeudaPendiente(venta))}}
+                                </small>
+                              </span>
+                              <span *ngIf="venta.formaPago === 'cashea'">
+                                {{venta.cuotasAdelantadas?.length || 0}}/{{venta.cantidadCuotas}} cuotas
+                                <small class="text-muted d-block">
+                                  Nivel: {{venta.nivelCashea}} • Cuota: {{getMontoParaMostrar(venta,
+                                  venta.montoPorCuota)}}
+                                </small>
+                              </span>
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      <!-- Fila 3 - Solo si hay Cashea -->
-                      <div class="info-fila" *ngIf="venta.formaPago === 'cashea'">
-                        <div class="info-item" style="grid-column: 1 / -1;">
-                          <div class="info-icono">
-                            <i class="bi bi-calendar-check"></i>
-                          </div>
-                          <div class="info-contenido">
-                            <span class="info-label">Plan Cashea</span>
-                            <span class="info-value">
-                              {{venta.cuotasAdelantadas?.length || 0}}/{{venta.cantidadCuotas}} cuotas
-                              <small class="text-muted d-block">
-                                Nivel: {{venta.nivelCashea || 'No especificado'}} •
-                                Cuota: {{getMontoParaMostrar(venta, venta.montoPorCuota)}}
-                              </small>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Fila 4 - Solo si hay Abono -->
-                      <div class="info-fila" *ngIf="venta.formaPago === 'abono'">
-                        <div class="info-item" style="grid-column: 1 / -1;">
-                          <div class="info-icono">
-                            <i class="bi bi-piggy-bank"></i>
-                          </div>
-                          <div class="info-contenido">
-                            <span class="info-label">Plan Abonos</span>
-                            <span class="info-value">
-                              Abonado: {{getMontoParaMostrar(venta, venta.montoAbonado)}}
-                              <small class="text-muted d-block">
-                                Pendiente: {{getMontoParaMostrar(venta, getDeudaPendiente(venta))}}
-                              </small>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Fila 5 - Solo si hay observaciones -->
+                      <!-- Fila 3 - Solo si hay observaciones -->
                       <div class="info-fila" *ngIf="venta.observaciones">
                         <div class="info-item observaciones" style="grid-column: 1 / -1;">
                           <div class="info-icono">
@@ -978,7 +952,8 @@
               <div class="pago-item-compact" *ngIf="selectedVenta?.cuotasAdelantadas?.length > 0">
                 <label><i class="bi bi-lightning"></i> Adelantadas</label>
                 <div class="value small info">
-                  {{selectedVenta?.cuotasAdelantadas?.length}} ({{getTotalCuotasAdelantadas() | number:'1.2-2'}} {{getMonedaDisplay(selectedVenta?.moneda)}}) 
+                  {{selectedVenta?.cuotasAdelantadas?.length}} ({{getTotalCuotasAdelantadas() | number:'1.2-2'}}
+                  {{getMonedaDisplay(selectedVenta?.moneda)}})
                 </div>
               </div>
             </div>
@@ -1128,10 +1103,6 @@
       <button type="button" class="btn btn-secondary btn-detalle" (click)="modal.dismiss()">
         <i class="bi bi-x-circle me-2"></i>
         Cerrar
-      </button>
-      <button type="button" class="btn btn-primary btn-detalle" *ngIf="selectedVenta?.estado !== 'cancelada'">
-        <i class="bi bi-printer me-2"></i>
-        Imprimir
       </button>
     </div>
   </div>

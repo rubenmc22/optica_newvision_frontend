@@ -1987,6 +1987,18 @@ export class HistorialVentasComponent implements OnInit {
     }, 0);
   }
 
+  // Método para calcular porcentaje de abono para una venta específica
+  getPorcentajeAbonadoVenta(venta: any): number {
+    if (!venta || venta.formaPago !== 'abono') return 0;
+
+    const total = venta.total || 0;
+    const abonado = venta.montoAbonado || 0;
+
+    if (total === 0) return 0;
+
+    return Math.round((abonado / total) * 100);
+  }
+
   // Método para obtener símbolo de moneda de venta
   getSimboloMonedaVenta(): string {
     if (!this.selectedVenta) return '$';
