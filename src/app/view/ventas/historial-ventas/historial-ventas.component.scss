@@ -1042,6 +1042,23 @@
     }
 }
 
+.empty-state {
+  padding: 0rem 1rem;
+  
+  i {
+    opacity: 0.5;
+  }
+  
+  h4 {
+    font-weight: 500;
+  }
+  
+  p {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+}
+
 .pago-especifico {
     background: #f8f9fa;
     border-radius: 6px;

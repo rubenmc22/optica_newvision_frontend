@@ -62,10 +62,11 @@
 
           <!-- Fila 2: Status, Rango de Fechas, Limpiar -->
           <div class="col-12 col-md-4">
-            <label class="form-label fw-semibold">📊 Status</label>
+            <label class="form-label fw-semibold">📊 Estatus</label>
             <select class="form-select" [(ngModel)]="filtros.estado" (change)="onFiltroChange()">
               <option value="">Todos</option>
               <option value="completada">✅ Completada</option>
+              <option value="pendiente">⏳ Pendiente por pago</option>
               <option value="cancelada">❌ Cancelada</option>
             </select>
           </div>
@@ -208,7 +209,27 @@
     <!-- Lista de ventas - Diseño Innovador -->
     <div class="card border-0 shadow-sm">
       <div class="card-body p-0">
-        <div class="ventas-grid">
+        <!-- Mensaje cuando no hay resultados -->
+        <div *ngIf="ventasFiltradas.length === 0" class="text-center py-5">
+          <div class="empty-state">
+            <i class="bi bi-inbox display-1 text-muted"></i>
+            <h4 class="mt-3 text-muted">No se encontraron ventas</h4>
+            <p class="text-muted mb-4">
+              <span *ngIf="hayFiltrosActivos()">
+                No hay ventas que coincidan con los filtros aplicados.
+              </span>
+              <span *ngIf="!hayFiltrosActivos()">
+                No hay ventas registradas en el historial.
+              </span>
+            </p>
+            <button *ngIf="hayFiltrosActivos()" class="btn btn-primary" (click)="limpiarFiltros()">
+              <i class="bi bi-arrow-counterclockwise me-1"></i>
+              Limpiar filtros
+            </button>
+          </div>
+        </div>
+
+        <div class="ventas-grid" *ngIf="ventasFiltradas.length > 0">
           <div *ngFor="let venta of ventasFiltradas" class="venta-card">
             <!-- Tarjeta Principal -->
             <div class="venta-header" (click)="toggleDetalleVenta(venta.id)">
