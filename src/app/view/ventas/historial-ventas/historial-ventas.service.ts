@@ -25,7 +25,7 @@ export class HistorialVentaService {
    */
   anularVenta(ventaKey: string, motivo: string): Observable<any> {
     // CORRECCIÓN: Usar la ruta correcta sin duplicar /api
-    return this.http.post(`${this.apiUrl}/ventas-anular/${ventaKey}`, {
+    return this.http.put(`${this.apiUrl}/ventas-anular/${ventaKey}`, {
       motivo_cancelacion: motivo
     });
   }
