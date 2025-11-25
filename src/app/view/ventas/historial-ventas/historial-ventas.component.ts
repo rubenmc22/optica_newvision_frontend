@@ -12,9 +12,6 @@ import { EmpleadosService } from './../../../core/services/empleados/empleados.s
 import { LoaderService } from './../../../shared/loader/loader.service';
 
 
-
-
-
 @Component({
   selector: 'app-historial-ventas',
   standalone: false,
@@ -35,16 +32,6 @@ export class HistorialVentasComponent implements OnInit {
   ventasOriginales: any[] = [];
   totalVentas: number = 0;
   presetActivo: string = '';
-
-  // Filtros optimizados
-  filtros = {
-    busquedaGeneral: '',
-    asesor: '',
-    especialista: '',
-    fechaDesde: '',
-    fechaHasta: '',
-    estado: ''
-  };
 
   // Nuevas propiedades para el datepicker
   showDatepicker: boolean = false;
@@ -84,6 +71,28 @@ export class HistorialVentasComponent implements OnInit {
   private configSubscription!: Subscription;
 
   tasaCableada: number = 243.00; // Tasa temporal mientras el API se ajusta
+
+  // Propiedades para paginación avanzada - CORREGIDAS
+  paginacion = {
+    paginaActual: 1,
+    itemsPorPagina: 25,
+    totalItems: 0,
+    totalPaginas: 0,
+    itemsPorPaginaOpciones: [10, 25, 50, 100, 250],
+    rangoPaginas: [] as number[]
+  };
+
+  filtros = {
+    busquedaGeneral: '',
+    asesor: '',
+    especialista: '',
+    estado: '',
+    formaPago: '', // Nuevo filtro
+    fechaDesde: '',
+    fechaHasta: ''
+  };
+
+  private modoBusquedaGlobal: boolean = false;
 
   // Mapeos de monedas
   private readonly idMap: Record<string, string> = {
@@ -144,40 +153,35 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private cargarDatosIniciales(): void {
-    // Mostrar loader
     this.loader.showWithMessage('🔄 Cargando historial de ventas...');
-
-    // Cargar empleados (asesores y especialistas)
     this.cargarEmpleados();
+    this.cargarTasasCambio();
+  }
 
-    // Cargar tasas de cambio desde el servicio
+  private cargarTasasCambio(): void {
     this.generarVentaService.getTasas().pipe(take(1)).subscribe({
       next: (tasasResponse) => {
         const tasas = tasasResponse.tasas ?? [];
         this.tasasDisponibles = tasas;
         this.monedasDisponibles = tasas;
 
-        // CORRECCIÓN: Mapear correctamente las tasas
         this.tasasPorId = {
           'dolar': tasas.find(t => t.id === 'dolar')?.valor || 36.5,
           'euro': tasas.find(t => t.id === 'euro')?.valor || 39.2,
           'bolivar': 1
         };
 
-        this.cargarVentas();
+        // Cargar primera página de ventas
+        this.cargarVentasPagina(1);
       },
       error: (error) => {
         console.error('Error al cargar tasas de cambio:', error);
-        // Valores por defecto
         this.tasasPorId = {
           'dolar': 36.5,
           'euro': 39.2,
           'bolivar': 1
         };
-
-        // Actualizar mensaje del loader
-        this.loader.updateMessage('📊 Cargando datos de ventas...');
-        this.cargarVentas();
+        this.cargarVentasPagina(1);
       }
     });
   }
@@ -304,6 +308,175 @@ export class HistorialVentasComponent implements OnInit {
       { id: 2, nombre: 'Dra. Martínez', cedula: '', cargo: 'Oftalmólogo', tipo: 'Oftalmólogo', estatus: true },
       { id: 3, nombre: 'Dr. González', cedula: '', cargo: 'Optometrista', tipo: 'Optometrista', estatus: true }
     ];
+  }
+
+  /**
+   * Carga una página específica de ventas desde el servidor
+   */
+  private cargarVentasPagina(pagina: number, aplicarFiltros: boolean = true): void {
+    this.loader.showWithMessage('📋 Cargando ventas...');
+
+    const filtrosParaServicio = aplicarFiltros ? this.filtros : {};
+
+    this.historialVentaService.obtenerHistorialVentas(
+      pagina,
+      this.paginacion.itemsPorPagina,
+      filtrosParaServicio
+    ).subscribe({
+      next: (response: any) => {
+        console.log('📦 RESPUESTA PAGINADA DEL API:');
+        console.log('- Página:', pagina);
+        console.log('- Ventas recibidas:', response.ventas?.length);
+        console.log('- Total items:', response.totalItems);
+        console.log('- Total páginas:', response.totalPaginas);
+
+        if (response.message === 'ok' && response.ventas) {
+          // Procesar las ventas de la página actual
+          const ventasPagina = response.ventas.map((ventaApi: any) =>
+            this.adaptarVentaDelApi(ventaApi)
+          );
+
+          // Actualizar propiedades de paginación
+          this.paginacion.paginaActual = pagina;
+          this.paginacion.totalItems = response.totalItems || 0;
+          this.paginacion.totalPaginas = response.totalPaginas || 1;
+
+          // Asignar ventas filtradas (que ahora son solo las de la página actual)
+          this.ventasFiltradas = ventasPagina;
+
+          // Si estamos en modo búsqueda global, guardar todas las ventas para estadísticas
+          if (this.modoBusquedaGlobal) {
+            this.ventasOriginales = ventasPagina;
+          }
+
+          // Generar rango de páginas
+          this.generarRangoPaginas();
+
+          // Cargar estadísticas si es necesario
+          if (this.hayFiltrosActivos()) {
+            this.cargarEstadisticasConFiltros();
+          }
+
+        } else {
+          console.error('Respuesta inesperada del API de ventas:', response);
+          this.ventasFiltradas = [];
+          this.paginacion.totalItems = 0;
+          this.paginacion.totalPaginas = 1;
+        }
+
+        setTimeout(() => {
+          this.loader.hide();
+        }, 500);
+      },
+      error: (error) => {
+        console.error('❌ ERROR al cargar ventas paginadas:', error);
+        this.loader.hide();
+        this.swalService.showError('Error', 'No se pudieron cargar las ventas. Verifique su conexión.');
+      }
+    });
+  }
+
+  /**
+   * Carga estadísticas con los filtros aplicados
+   */
+  private cargarEstadisticasConFiltros(): void {
+    this.historialVentaService.obtenerEstadisticasVentas(this.filtros).subscribe({
+      next: (estadisticas: any) => {
+        // Actualizar las estadísticas con los datos del servidor
+        // Esto depende de cómo esté estructurada la respuesta del API
+        console.log('Estadísticas con filtros:', estadisticas);
+      },
+      error: (error) => {
+        console.error('Error al cargar estadísticas:', error);
+        // En caso de error, calcular estadísticas localmente con las ventas cargadas
+        this.calcularEstadisticasLocales();
+      }
+    });
+  }
+
+  /**
+   * Calcula estadísticas localmente (fallback)
+   */
+  private calcularEstadisticasLocales(): void {
+    // Esta función se usaría si el endpoint de estadísticas falla
+    // Calcula basándose en las ventasOriginales
+  }
+
+  /**
+   * Maneja cambios en los filtros
+   */
+  onFiltroChange(): void {
+    this.modoBusquedaGlobal = !!this.filtros.busquedaGeneral;
+    this.paginacion.paginaActual = 1;
+
+    // Si hay búsqueda general, cargar desde servidor con filtros
+    if (this.hayFiltrosActivos()) {
+      this.cargarVentasPagina(1, true);
+    } else {
+      // Si no hay filtros, volver a cargar primera página sin filtros
+      this.cargarVentasPagina(1, false);
+    }
+  }
+
+  /**
+   * Aplica filtros y paginación (modificado para usar servidor)
+   */
+  aplicarFiltrosYPaginacion(): void {
+    this.paginacion.paginaActual = 1;
+    this.cargarVentasPagina(1, true);
+  }
+
+  /**
+   * Navegación entre páginas
+   */
+  irAPagina(pagina: number | string): void {
+    const paginaNum = typeof pagina === 'string' ? parseInt(pagina, 10) : pagina;
+
+    if (paginaNum >= 1 && paginaNum <= this.paginacion.totalPaginas) {
+      this.cargarVentasPagina(paginaNum, this.hayFiltrosActivos());
+    }
+  }
+
+  cambiarItemsPorPagina(): void {
+    this.paginacion.paginaActual = 1;
+    this.cargarVentasPagina(1, this.hayFiltrosActivos());
+  }
+
+  primeraPagina(): void {
+    this.irAPagina(1);
+  }
+
+  ultimaPagina(): void {
+    this.irAPagina(this.paginacion.totalPaginas);
+  }
+
+  paginaAnterior(): void {
+    this.irAPagina(this.paginacion.paginaActual - 1);
+  }
+
+  paginaSiguiente(): void {
+    this.irAPagina(this.paginacion.paginaActual + 1);
+  }
+
+  /**
+   * Limpia filtros y vuelve a cargar primera página
+   */
+  limpiarFiltros() {
+    this.filtros = {
+      busquedaGeneral: '',
+      asesor: '',
+      especialista: '',
+      fechaDesde: '',
+      fechaHasta: '',
+      estado: '',
+      formaPago: '',
+    };
+    this.modoBusquedaGlobal = false;
+    this.paginacion.paginaActual = 1;
+    this.fechaUnica = '';
+
+    // Volver a cargar primera página sin filtros
+    this.cargarVentasPagina(1, false);
   }
 
   // Métodos para el datepicker moderno
@@ -511,83 +684,6 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   /**
- * Aplica todos los filtros y luego la paginación
- */
-  private aplicarFiltrosYPaginacion(): void {
-    if (!this.ventasOriginales || this.ventasOriginales.length === 0) {
-      this.ventasFiltradas = [];
-      this.totalVentas = 0;
-      this.totalPaginas = 1;
-      return;
-    }
-
-    // 1. Aplicar filtros
-    let ventasFiltradas = this.ventasOriginales;
-
-    // Filtro de búsqueda general
-    if (this.filtros.busquedaGeneral) {
-      const busqueda = this.filtros.busquedaGeneral.toLowerCase();
-      ventasFiltradas = ventasFiltradas.filter(venta =>
-        venta.paciente.nombre.toLowerCase().includes(busqueda) ||
-        venta.paciente.cedula.toLowerCase().includes(busqueda) ||
-        venta.numeroControl.toLowerCase().includes(busqueda)
-      );
-    }
-
-    // Filtro de asesor
-    if (this.filtros.asesor) {
-      ventasFiltradas = ventasFiltradas.filter(venta =>
-        venta.asesor.id.toString() === this.filtros.asesor
-      );
-    }
-
-    // Filtro de especialista
-    if (this.filtros.especialista) {
-      ventasFiltradas = ventasFiltradas.filter(venta =>
-        venta.especialista.id.toString() === this.filtros.especialista
-      );
-    }
-
-    // Filtro de estado
-    if (this.filtros.estado === 'pendiente') {
-      ventasFiltradas = ventasFiltradas.filter(venta =>
-        this.ventaTienePendiente(venta)
-      );
-    } else if (this.filtros.estado === 'completada') {
-      ventasFiltradas = ventasFiltradas.filter(venta =>
-        this.esVentaCompletada(venta)
-      );
-    } else if (this.filtros.estado === 'cancelada') {
-      ventasFiltradas = ventasFiltradas.filter(venta =>
-        venta.estado === 'cancelada'
-      );
-    }
-
-    // Filtro de fechas 
-    if (this.filtros.fechaDesde) {
-      const fechaDesde = new Date(this.filtros.fechaDesde);
-      fechaDesde.setHours(0, 0, 0, 0); // Inicio del día
-      ventasFiltradas = ventasFiltradas.filter(venta => {
-        const fechaVenta = new Date(venta.fecha);
-        fechaVenta.setHours(0, 0, 0, 0);
-        return fechaVenta >= fechaDesde;
-      });
-    }
-
-    if (this.filtros.fechaHasta) {
-      const fechaHasta = new Date(this.filtros.fechaHasta);
-      fechaHasta.setHours(23, 59, 59, 999); // Fin del día
-      ventasFiltradas = ventasFiltradas.filter(venta => {
-        const fechaVenta = new Date(venta.fecha);
-        return fechaVenta <= fechaHasta;
-      });
-    }
-
-    // 2. Aplicar paginación a las ventas filtradas
-    this.aplicarPaginacion(ventasFiltradas);
-  }
-
-  /**
    * Aplica paginación a un conjunto de ventas
    */
   private aplicarPaginacion(ventas: any[] = this.ventasOriginales): void {
@@ -790,11 +886,6 @@ export class HistorialVentasComponent implements OnInit {
     return this.redondear(monto * tasa);
   }
 
-  onFiltroChange(): void {
-    this.paginaActual = 1;
-    this.aplicarFiltrosYPaginacion();
-  }
-
   private mapearEstadoParaFiltros(estatusPago: string): string {
     const mapeo: { [key: string]: string } = {
       'completada': 'completada',
@@ -805,11 +896,6 @@ export class HistorialVentasComponent implements OnInit {
     };
 
     return mapeo[estatusPago] || estatusPago;
-  }
-
-  cambiarItemsPorPagina(): void {
-    this.paginaActual = 1;
-    this.aplicarFiltrosYPaginacion();
   }
 
   getRangoPaginas(): number[] {
@@ -852,20 +938,6 @@ export class HistorialVentasComponent implements OnInit {
   // Método para verificar si es puntos suspensivos
   esPuntosSuspensivos(pagina: number): boolean {
     return pagina === -1;
-  }
-
-  limpiarFiltros() {
-    this.filtros = {
-      busquedaGeneral: '',
-      asesor: '',
-      especialista: '',
-      fechaDesde: '',
-      fechaHasta: '',
-      estado: ''
-    };
-    this.paginaActual = 1;
-    this.fechaUnica = '';
-    this.aplicarFiltrosYPaginacion();
   }
 
   cambiarOrden() {
@@ -2145,20 +2217,6 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  // Método para mostrar forma de pago formateada
-  getFormaPagoDisplay(formaPago: string): string {
-    if (!formaPago) return 'No especificada';
-
-    const formas: { [key: string]: string } = {
-      'contado': 'Contado',
-      'abono': 'Abono',
-      'cashea': 'Cashea',
-      'credito': 'Crédito'
-    };
-
-    return formas[formaPago] || formaPago.charAt(0).toUpperCase() + formaPago.slice(1);
-  }
-
   // Método para mostrar moneda formateada
   getMonedaDisplay(moneda: string): string {
     if (!moneda) return 'USD';
@@ -2184,22 +2242,277 @@ export class HistorialVentasComponent implements OnInit {
     return Math.round((abonado / total) * 100);
   }
 
-  // Método para determinar si una venta está realmente completada
-  private esVentaCompletada(venta: any): boolean {
-    // Debe estar en estado completada Y no tener deuda pendiente
-    return venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0;
+  /* Formatea una fecha para mostrar
+   */
+  formatFecha(fecha: string | Date): string {
+    if (!fecha) return '';
+
+    const date = new Date(fecha);
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   }
 
-  // Método para determinar si una venta tiene pendiente
+  /**
+   * Aplica filtros estándar a las ventas
+   */
+  private aplicarFiltrosEstándar(ventas: any[]): any[] {
+    let resultado = [...ventas];
+
+    // Filtro de asesor
+    if (this.filtros.asesor) {
+      resultado = resultado.filter(venta =>
+        venta.asesor.id.toString() === this.filtros.asesor
+      );
+    }
+
+    // Filtro de especialista
+    if (this.filtros.especialista) {
+      resultado = resultado.filter(venta =>
+        venta.especialista.id.toString() === this.filtros.especialista
+      );
+    }
+
+    // Filtro de estado
+    if (this.filtros.estado === 'pendiente') {
+      resultado = resultado.filter(venta =>
+        this.ventaTienePendiente(venta)
+      );
+    } else if (this.filtros.estado === 'completada') {
+      resultado = resultado.filter(venta =>
+        this.esVentaCompletada(venta)
+      );
+    } else if (this.filtros.estado === 'cancelada') {
+      resultado = resultado.filter(venta =>
+        venta.estado === 'cancelada'
+      );
+    }
+
+    // Filtro de fechas
+    if (this.filtros.fechaDesde) {
+      const fechaDesde = new Date(this.filtros.fechaDesde);
+      fechaDesde.setHours(0, 0, 0, 0);
+      resultado = resultado.filter(venta => {
+        const fechaVenta = new Date(venta.fecha);
+        fechaVenta.setHours(0, 0, 0, 0);
+        return fechaVenta >= fechaDesde;
+      });
+    }
+
+    if (this.filtros.fechaHasta) {
+      const fechaHasta = new Date(this.filtros.fechaHasta);
+      fechaHasta.setHours(23, 59, 59, 999);
+      resultado = resultado.filter(venta => {
+        const fechaVenta = new Date(venta.fecha);
+        return fechaVenta <= fechaHasta;
+      });
+    }
+
+    return resultado;
+  }
+
+  /**
+   * Aplica ordenamiento a las ventas
+   */
+  private aplicarOrdenamiento(ventas: any[]): any[] {
+    const ventasOrdenadas = [...ventas];
+
+    return ventasOrdenadas.sort((a, b) => {
+      const factor = this.ordenamiento.ascendente ? 1 : -1;
+
+      switch (this.ordenamiento.campo) {
+        case 'fecha':
+          return (new Date(a.fecha).getTime() - new Date(b.fecha).getTime()) * factor;
+        case 'numeroControl':
+          return (a.numeroControl.localeCompare(b.numeroControl)) * factor;
+        case 'montoTotal':
+          return (a.montoTotal - b.montoTotal) * factor;
+        case 'paciente':
+          return a.paciente.nombre.localeCompare(b.paciente.nombre) * factor;
+        default:
+          return 0;
+      }
+    });
+  }
+
+  /**
+   * Aplica búsqueda general
+   */
+  private aplicarBusquedaGeneral(ventas: any[]): any[] {
+    if (!this.filtros.busquedaGeneral) return ventas;
+
+    const busqueda = this.filtros.busquedaGeneral.toLowerCase();
+    return ventas.filter(venta =>
+      venta.paciente.nombre.toLowerCase().includes(busqueda) ||
+      venta.paciente.cedula.toLowerCase().includes(busqueda) ||
+      venta.numeroControl.toLowerCase().includes(busqueda)
+    );
+  }
+
+  /**
+   * Métodos de paginación avanzada
+   */
+  private aplicarPaginacionAvanzada(ventas: any[] = this.ventasOriginales): void {
+    if (!ventas || ventas.length === 0) {
+      this.ventasFiltradas = [];
+      this.paginacion.totalItems = 0;
+      this.paginacion.totalPaginas = 1;
+      this.paginacion.paginaActual = 1;
+      return;
+    }
+
+    // Calcular índices
+    const inicio = (this.paginacion.paginaActual - 1) * this.paginacion.itemsPorPagina;
+    const fin = inicio + this.paginacion.itemsPorPagina;
+
+    // Aplicar paginación
+    this.ventasFiltradas = ventas.slice(inicio, fin);
+    this.paginacion.totalItems = ventas.length;
+    this.paginacion.totalPaginas = Math.ceil(this.paginacion.totalItems / this.paginacion.itemsPorPagina);
+
+    // Generar rango de páginas para navegación
+    this.generarRangoPaginas();
+
+    // Ajustar página actual si es necesario
+    if (this.paginacion.paginaActual > this.paginacion.totalPaginas && this.paginacion.totalPaginas > 0) {
+      this.paginacion.paginaActual = this.paginacion.totalPaginas;
+      this.aplicarPaginacionAvanzada(ventas);
+    }
+  }
+
+  private generarRangoPaginas(): void {
+    const totalPaginas = this.paginacion.totalPaginas;
+    const paginaActual = this.paginacion.paginaActual;
+    const rango: number[] = [];
+
+    if (totalPaginas <= 7) {
+      // Mostrar todas las páginas
+      for (let i = 1; i <= totalPaginas; i++) {
+        rango.push(i);
+      }
+    } else {
+      // Lógica avanzada de rango
+      if (paginaActual <= 4) {
+        // Primeras páginas
+        for (let i = 1; i <= 5; i++) rango.push(i);
+        rango.push(-1); // Separador
+        rango.push(totalPaginas);
+      } else if (paginaActual >= totalPaginas - 3) {
+        // Últimas páginas
+        rango.push(1);
+        rango.push(-1);
+        for (let i = totalPaginas - 4; i <= totalPaginas; i++) rango.push(i);
+      } else {
+        // Páginas intermedias
+        rango.push(1);
+        rango.push(-1);
+        for (let i = paginaActual - 1; i <= paginaActual + 1; i++) rango.push(i);
+        rango.push(-1);
+        rango.push(totalPaginas);
+      }
+    }
+
+    this.paginacion.rangoPaginas = rango;
+  }
+
+  /**
+   * Determina si una venta tiene pendiente
+   */
   private ventaTienePendiente(venta: any): boolean {
-    // Si la venta está cancelada, no mostrar en pendiente
     if (venta.estado === 'cancelada') {
       return false;
     }
-
-    // Verificar si tiene deuda pendiente
     const deuda = this.getDeudaPendiente(venta);
     return deuda > 0;
+  }
+
+  /**
+   * Determina si una venta está completada
+   */
+  private esVentaCompletada(venta: any): boolean {
+    return venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0;
+  }
+
+  // Métodos para las tarjetas de resumen
+  getTotalVentas(): number {
+    return this.ventasOriginales?.length || 0;
+  }
+
+  getVentasCompletadas(): number {
+    return this.ventasOriginales?.filter(venta =>
+      venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0
+    ).length || 0;
+  }
+
+  getVentasPendientes(): number {
+    return this.ventasOriginales?.filter(venta =>
+      this.ventaTienePendiente(venta)
+    ).length || 0;
+  }
+
+  getVentasCanceladas(): number {
+    return this.ventasOriginales?.filter(venta =>
+      venta.estado === 'cancelada'
+    ).length || 0;
+  }
+
+  getMontoCompletadas(): string {
+    const ventasCompletadas = this.ventasOriginales?.filter(venta =>
+      venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0
+    ) || [];
+
+    const total = ventasCompletadas.reduce((sum, venta) => sum + venta.montoTotal, 0);
+    return this.formatearMontoSistema(total);
+  }
+
+  getMontoPendientes(): string {
+    const ventasPendientes = this.ventasOriginales?.filter(venta =>
+      this.ventaTienePendiente(venta)
+    ) || [];
+
+    const total = ventasPendientes.reduce((sum, venta) => sum + this.getDeudaPendiente(venta), 0);
+    return this.formatearMontoSistema(total);
+  }
+
+  getMontoCanceladas(): string {
+    const ventasCanceladas = this.ventasOriginales?.filter(venta =>
+      venta.estado === 'cancelada'
+    ) || [];
+
+    const total = ventasCanceladas.reduce((sum, venta) => sum + venta.montoTotal, 0);
+    return this.formatearMontoSistema(total);
+  }
+
+  // Métodos auxiliares para los filtros activos
+  getAsesorNombre(asesorId: string): string {
+    const asesor = this.asesores.find(a => a.id.toString() === asesorId);
+    return asesor?.nombre || 'Asesor';
+  }
+
+  getEspecialistaNombre(especialistaId: string): string {
+    const especialista = this.especialistas.find(e => e.id.toString() === especialistaId);
+    return especialista?.nombre || 'Especialista';
+  }
+
+  getEstadoDisplay(estado: string): string {
+    const estados: { [key: string]: string } = {
+      'completada': 'Completada',
+      'pendiente': 'Pendiente',
+      'cancelada': 'Cancelada'
+    };
+    return estados[estado] || estado;
+  }
+
+  getFormaPagoDisplay(formaPago: string): string {
+    const formas: { [key: string]: string } = {
+      'contado': 'Contado',
+      'abono': 'Abono',
+      'cashea': 'Cashea',
+      'credito': 'Crédito'
+    };
+    return formas[formaPago] || formaPago;
   }
 
   // Método para verificar si hay filtros activos
@@ -2209,6 +2522,7 @@ export class HistorialVentasComponent implements OnInit {
       this.filtros.asesor ||
       this.filtros.especialista ||
       this.filtros.estado ||
+      this.filtros.formaPago ||
       this.filtros.fechaDesde ||
       this.filtros.fechaHasta
     );
