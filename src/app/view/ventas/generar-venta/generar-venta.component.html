@@ -54,7 +54,7 @@
                             <i class="bi bi-search"></i>
                             Buscar paciente
                         </label>
-                        <ng-select id="selectorPaciente" [items]="pacientesFiltradosPorSede"
+                        <ng-select #selectorPaciente id="selectorPaciente" [items]="pacientesFiltradosPorSede"
                             bindLabel="informacionPersonal.nombreCompleto" [selectOnTab]="true" [clearable]="true"
                             [searchable]="true" [(ngModel)]="pacienteSeleccionado"
                             (search)="actualizarFiltroTexto($event)" (change)="onPacienteSeleccionado($event)"
@@ -205,17 +205,23 @@
                                 <i class="bi bi-search"></i>
                                 Buscar producto
                             </label>
-                            <ng-select id="selectorProducto" [items]="productosFiltradosPorSede" bindLabel="nombre"
-                                [searchable]="true" [clearable]="true" [selectOnTab]="true"
-                                [(ngModel)]="productoSeleccionado" (change)="agregarProductoAlCarrito($event)"
+                            <ng-select #productoSelect id="selectorProducto" [items]="productosFiltradosPorSede"
+                                bindLabel="nombre" bindValue="id" [searchable]="true" [clearable]="true"
+                                [selectOnTab]="true" [(ngModel)]="productoSeleccionado"
+                                (change)="onProductoSeleccionadoChange($event)"
                                 [searchFn]="filtrarProductoPorNombreOCodigo" placeholder="Buscar por nombre o código..."
                                 class="modern-ng-select">
+
                                 <ng-template ng-option-tmp let-item="item">
                                     <div class="producto-option">
                                         <strong>{{ item.nombre }}</strong>
                                         <small class="text-muted">— {{ item.codigo }}</small>
+                                        <small class="stock-badge" [class.low-stock]="item.stock < 5">
+                                            Stock: {{ item.stock }}
+                                        </small>
                                     </div>
                                 </ng-template>
+
                                 <ng-template ng-notfound-tmp>
                                     <div class="not-found-message">
                                         <i class="bi bi-exclamation-circle"></i>
@@ -339,7 +345,8 @@
                                     {{ totalProductos | number:'1.2-2' }} {{ getSimboloMonedaActual() }}
                                 </span>
                             </div>
-                            <button class="btn-generar-venta" (click)="abrirModalResumen()">
+                            <button class="btn-generar-venta" (click)="abrirModalResumen()"
+                                [disabled]="!puedeGenerarVentaDesdeCarrito()" [title]="getMensajeTooltipBotonGenerar()">
                                 <i class="bi bi-check-lg"></i>
                                 Generar Venta
                             </button>
@@ -568,7 +575,8 @@
                                     <div class="form-group">
                                         <label class="form-label">
                                             <i class="bi bi-person"></i>
-                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón Social' }}
+                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón
+                                            Social' }}
                                         </label>
                                         <input type="text" class="form-control modern-input"
                                             style="margin-bottom: -10px !important;"
@@ -645,7 +653,8 @@
                                                 'Los datos fueron autocompletados desde nuestra base de datos' :
                                                 validandoCliente ?
                                                 'Buscando información del cliente...' :
-                                                'Complete los datos manualmente. El cliente será registrado al generar la venta.' }}
+                                                'Complete los datos manualmente. El cliente será registrado al generar
+                                                la venta.' }}
                                             </div>
                                         </div>
                                     </div>

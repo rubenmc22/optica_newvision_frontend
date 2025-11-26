@@ -47,6 +47,8 @@ import html2canvas from 'html2canvas';
 export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     @ViewChild('productoSelect', { static: false }) productoSelect!: NgSelectComponent;
+    @ViewChild('selectorPaciente', { static: false }) selectorPaciente!: NgSelectComponent;
+
     // === CONSTRUCTOR ===
     constructor(
         private productoService: ProductoService,
@@ -365,8 +367,25 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return material ?? '';
     }
 
-    onProductoSeleccionadoChange(productoId: string): void {
-        if (!productoId) return;
+    onProductoSeleccionadoChange(event: any): void {
+        //SOLUCIÓN: Ignorar eventos con valores null/undefined
+        if (event === null || event === undefined) {
+            return;
+        }
+
+        // Si es un objeto, extraer el ID
+        let productoId: string;
+
+        if (typeof event === 'object' && event !== null) {
+            productoId = event.id;
+        } else {
+            productoId = event?.toString();
+        }
+
+        if (!productoId) {
+            console.error('No se pudo extraer ID del producto');
+            return;
+        }
 
         // Buscar el producto completo por ID
         const producto = this.productosFiltradosPorSede.find(p => p.id === productoId);
@@ -376,11 +395,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Limpiar la selección después de agregar
             setTimeout(() => {
                 this.productoSeleccionado = null;
+                this.cdr.detectChanges();
             }, 100);
+        } else {
+            console.error('Producto no encontrado para ID:', productoId);
+            this.swalService.showWarning('Error', 'No se pudo encontrar el producto seleccionado.');
         }
     }
 
-    // Mantener tu método original pero asegurarte de que recibe el objeto completo
     agregarProductoAlCarrito(producto: any): void {
         // Validación CRÍTICA: Verificar que el producto existe y tiene ID
         if (!producto || !producto.id) {
@@ -415,7 +437,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
 
             yaExiste.cantidad = nuevaCantidad;
-            this.swalService.showInfo('Producto actualizado', 'Se incrementó la cantidad en el carrito.');
+            //this.swalService.showInfo('Producto actualizado', 'Se incrementó la cantidad en el carrito.');
         } else {
             this.venta.productos.push({
                 id: producto.id,
@@ -428,15 +450,18 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 aplicaIva,
                 stock: producto.stock ?? 0
             });
+
+            //   this.swalService.showSuccess('Producto agregado', `${producto.nombre} se agregó al carrito.`);
         }
 
         this.actualizarProductosConDetalle();
-        this.limpiarSelectProductos();
+        // this.limpiarSelectProductos();
 
         setTimeout(() => {
             this.cdr.detectChanges();
         });
     }
+
 
     eliminarProducto(id: string): void {
         const eliminado = this.venta.productos.find(p => p.id === id)?.nombre;
@@ -1263,6 +1288,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return;
         }
 
+
         this.actualizarProductosConDetalle();
 
         const modalElement = document.getElementById('resumenVentaModal');
@@ -1272,8 +1298,74 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
+    /**
+ * Limpia todos los selects y selecciones de manera efectiva
+ */
+    limpiarTodosLosSelects(): void {
+        // Limpiar modelos
+        this.productoSeleccionado = null;
+        this.pacienteSeleccionado = null;
 
+        // Limpiar los componentes ng-select directamente usando ViewChild
+        setTimeout(() => {
+            if (this.productoSelect) {
+                this.productoSelect.clearModel();
+                this.productoSelect.close();
+                // Forzar limpieza del input de búsqueda - CORREGIDO
+                if (this.productoSelect.searchInput) {
+                    this.productoSelect.searchInput.nativeElement.value = '';
+                    this.productoSelect.searchInput.nativeElement.dispatchEvent(new Event('input'));
+                }
+            }
 
+            if (this.selectorPaciente) {
+                this.selectorPaciente.clearModel();
+                this.selectorPaciente.close();
+                // Forzar limpieza del input de búsqueda - CORREGIDO
+                if (this.selectorPaciente.searchInput) {
+                    this.selectorPaciente.searchInput.nativeElement.value = '';
+                    this.selectorPaciente.searchInput.nativeElement.dispatchEvent(new Event('input'));
+                }
+            }
+
+            // Forzar detección de cambios
+            this.cdr.detectChanges();
+        });
+    }
+
+    /**
+  * Limpia específicamente el select de productos SIN disparar eventos
+  */
+    /**
+  * Limpia específicamente el select de productos y cierra el dropdown
+  */
+    limpiarSelectProductos(): void {
+        this.productoSeleccionado = null;
+
+        setTimeout(() => {
+            if (this.productoSelect) {
+                // 1. Cerrar el dropdown primero
+                this.productoSelect.close();
+
+                // 2. Limpiar el modelo
+                this.productoSelect.clearModel();
+
+                // 3. Limpiar el input de búsqueda
+                if (this.productoSelect.searchInput) {
+                    this.productoSelect.searchInput.nativeElement.value = '';
+                    this.productoSelect.searchInput.nativeElement.dispatchEvent(new Event('input'));
+                }
+
+                // 4. Forzar el cierre del dropdown nuevamente (por si acaso)
+                setTimeout(() => {
+                    if (this.productoSelect) {
+                        this.productoSelect.close();
+                    }
+                }, 50);
+            }
+            this.cdr.detectChanges();
+        }, 100);
+    }
     // === VALIDACIONES ===
     validarEntrada(event: KeyboardEvent): void {
         const tecla = event.key;
@@ -1368,6 +1460,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const modalElement = document.getElementById('resumenVentaModal');
         if (modalElement) {
             modalElement.addEventListener('hidden.bs.modal', () => {
+                this.limpiarTodosLosSelects();
                 this.resetearVentaCompleta();
                 this.limpiarSelectProductos();
             });
@@ -1387,16 +1480,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
 
         this.cdr.detectChanges();
-    }
-
-    private limpiarSelectProductos(): void {
-        this.productoSeleccionado = null;
-
-        setTimeout(() => {
-            if (this.productoSelect?.isOpen) {
-                this.productoSelect.close();
-            }
-        });
     }
 
     resetearModalVenta(): void {
@@ -1904,32 +1987,23 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
 
-        let estadoVenta = 'completada';
+        let estadoVenta = 'completada'; // ← LA VENTA SIEMPRE SE CREA COMO COMPLETADA
+        let estadoPago = 'completado';  // ← ESTADO DEL PAGO
 
+        // Determinar estado del pago basado en la forma de pago y deuda
         if (this.venta.formaPago === 'abono') {
             const montoAbonado = this.venta.montoAbonado || 0;
             const montoTotal = this.montoTotal;
             const diferencia = Math.abs(montoAbonado - montoTotal);
-            estadoVenta = diferencia < 0.01 ? 'completada' : 'pendiente';
+            estadoPago = diferencia < 0.01 ? 'completado' : 'pendiente';
 
         } else if (this.venta.formaPago === 'cashea') {
-            //Determinar estado por fecha de última cuota
-            if (this.cuotasCashea && this.cuotasCashea.length > 0) {
-                // Obtener la fecha de la última cuota
-                const ultimaCuota = this.cuotasCashea[this.cuotasCashea.length - 1];
-                const fechaUltimaCuota = this.parsearFechaCuota(ultimaCuota.fecha);
-
-                // Si la fecha actual es posterior a la fecha de la última cuota, está completada
-                estadoVenta = fechaActual > fechaUltimaCuota ? 'completada' : 'pendiente';
-
-            } else {
-                // Si no hay cuotas, usar lógica de monto como fallback
-                const totalPagadoCashea = this.totalPagadoCashea;
-                const montoTotal = this.montoTotal;
-                const diferencia = Math.abs(totalPagadoCashea - montoTotal);
-                estadoVenta = diferencia < 0.01 ? 'completada' : 'pendiente';
-            }
+            const totalPagadoCashea = this.totalPagadoCashea;
+            const montoTotal = this.montoTotal;
+            const diferencia = Math.abs(totalPagadoCashea - montoTotal);
+            estadoPago = diferencia < 0.01 ? 'completado' : 'pendiente';
         }
+        // Para 'contado', estadoPago siempre será 'completado'
 
         // Preparar datos del cliente
         let clienteData: any = {};
@@ -1937,12 +2011,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             clienteData = {
                 tipo: 'paciente',
                 informacion: {
+                    tipoPersona: 'natural', // Los pacientes siempre son naturales
                     nombreCompleto: this.pacienteSeleccionado.informacionPersonal?.nombreCompleto,
                     cedula: this.pacienteSeleccionado.informacionPersonal?.cedula,
                     telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
                     email: this.pacienteSeleccionado.informacionPersonal?.email
-                },
-                validado: true // Pacientes siempre están validados
+                }
             };
         } else if (!this.requierePaciente) {
             clienteData = {
@@ -1953,19 +2027,18 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     cedula: this.clienteSinPaciente.cedula,
                     telefono: this.clienteSinPaciente.telefono,
                     email: this.clienteSinPaciente.email
-                },
-                validado: this.clienteEncontrado, // Indica si fue validado por API
-                requiereRegistro: !this.clienteEncontrado // Indica si necesita ser guardado en BD
+                }
             };
         }
 
+        // Productos
         const productosData = this.venta.productos.map(producto => ({
             productoId: producto.id,
             cantidad: producto.cantidad,
             moneda: producto.moneda
         }));
 
-        // Preparar métodos de pago
+        // Métodos de pago
         const metodosPagoData = this.venta.metodosDePago.map(metodo => ({
             tipo: metodo.tipo,
             monto: metodo.monto,
@@ -1975,78 +2048,45 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             bancoNombre: metodo.bancoNombre || null
         }));
 
-        // Preparar datos específicos por forma de pago
-        let formaPagoData: any = {};
+        // CALCULAR TOTALES
+        const subtotal = this.totalProductos || 0;
+        const descuentoMonto = this.venta?.descuento ? (subtotal * (this.venta.descuento / 100)) : 0;
+        const ivaMonto = this.productosConDetalle?.reduce((sum, p) => sum + (p.iva || 0), 0) || 0;
+        const total = this.montoTotal || 0;
+
+        // Determinar total pagado según forma de pago
+        let totalPagado = 0;
         switch (this.venta.formaPago) {
             case 'contado':
-                formaPagoData = {
-                    tipo: 'contado',
-                    montoTotal: this.montoTotal,
-                    montoInicial: 0,
-                    cantidadCuotas: "0",
-                    montoPorCuota: 0,
-                    cuotasAdelantadas: 0,
-                    montoAdelantado: 0,
-                    totalPagadoAhora: this.totalPagadoPorMetodos,
-                    deudaPendiente: 0,
-                    cuotas: []
-                };
+                totalPagado = this.totalPagadoPorMetodos;
                 break;
-
             case 'abono':
-                formaPagoData = {
-                    tipo: 'abono',
-                    montoTotal: this.montoTotal,
-                    montoInicial: this.venta.montoAbonado,
-                    cantidadCuotas: "0",
-                    montoPorCuota: 0,
-                    cuotasAdelantadas: 0,
-                    montoAdelantado: 0,
-                    totalPagadoAhora: this.venta.montoAbonado,
-                    deudaPendiente: this.getDeudaPendienteAbono(),
-                    cuotas: []
-                };
+                totalPagado = this.venta.montoAbonado || 0;
                 break;
-
             case 'cashea':
-                formaPagoData = {
-                    tipo: 'cashea',
-                    nivel: this.nivelCashea,
-                    montoTotal: this.montoTotal,
-                    montoInicial: this.venta.montoInicial,
-                    cantidadCuotas: this.cantidadCuotasCashea.toString(),
-                    montoPorCuota: this.montoPrimeraCuota,
-                    cuotasAdelantadas: this.resumenCashea.cantidad,
-                    montoAdelantado: this.resumenCashea.total,
-                    totalPagadoAhora: this.totalPagadoCashea,
-                    deudaPendiente: this.getDeudaPendienteCashea(),
-                    cuotas: this.cuotasCashea.map(cuota => ({
-                        numero: cuota.id,
-                        fecha: cuota.fecha,
-                        monto: cuota.monto,
-                        pagada: cuota.pagada,
-                        seleccionada: cuota.seleccionada
-                    }))
-                };
+                totalPagado = this.totalPagadoCashea;
                 break;
+            default:
+                totalPagado = this.totalPagadoPorMetodos;
         }
 
-        // Estructura completa para el API
+        // ESTRUCTURA ORIGINAL - SOLO CAMBIOS EN ESTADOS
         const datosParaAPI = {
             venta: {
                 fecha: fechaActual.toISOString(),
-                estado: estadoVenta,
+                estado: estadoVenta, // ← SIEMPRE "completada"
+                estatus_pago: estadoPago, // ← "completado" o "pendiente"
                 formaPago: this.venta.formaPago,
                 moneda: this.venta.moneda,
                 observaciones: this.venta.observaciones || null,
                 impuesto: this.venta.impuesto
             },
             totales: {
-                subtotal: this.totalProductos,
-                descuento: this.venta.descuento ? (this.totalProductos * (this.venta.descuento / 100)) : 0,
-                iva: this.productosConDetalle.reduce((sum, p) => sum + (p.iva || 0), 0),
-                total: this.montoTotal,
-                totalPagado: this.totalPagadoPorMetodos
+                subtotal: subtotal,
+                descuento: descuentoMonto,
+                iva: ivaMonto,
+                total: total,
+                totalPagado: totalPagado
             },
             cliente: clienteData,
             asesor: {
@@ -2054,7 +2094,25 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             },
             productos: productosData,
             metodosPago: metodosPagoData,
-            formaPago: formaPagoData,
+            formaPago: {
+                tipo: this.venta.formaPago,
+                nivel: this.nivelCashea,
+                montoTotal: this.montoTotal,
+                montoInicial: this.venta.montoInicial,
+                cantidadCuotas: this.cantidadCuotasCashea.toString(),
+                montoPorCuota: this.montoPrimeraCuota,
+                cuotasAdelantadas: this.resumenCashea.cantidad,
+                montoAdelantado: this.resumenCashea.total,
+                totalPagadoAhora: this.totalPagadoCashea,
+                deudaPendiente: this.getDeudaPendienteCashea(),
+                cuotas: this.cuotasCashea.map(cuota => ({
+                    numero: cuota.id,
+                    fecha: cuota.fecha,
+                    monto: cuota.monto,
+                    pagada: cuota.pagada,
+                    seleccionada: cuota.seleccionada
+                }))
+            },
             auditoria: {
                 usuarioCreacion: parseInt(this.currentUser?.id || '0'),
                 fechaCreacion: fechaActual.toISOString()
@@ -2062,6 +2120,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         };
 
         return datosParaAPI;
+    }
+
+    // Método auxiliar para limpiar el objeto
+    private limpiarObjeto(obj: any): any {
+        Object.keys(obj).forEach(key => {
+            if (obj[key] === null || obj[key] === undefined || obj[key] === '') {
+                delete obj[key];
+            } else if (typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+                this.limpiarObjeto(obj[key]);
+                if (Object.keys(obj[key]).length === 0) {
+                    delete obj[key];
+                }
+            }
+        });
+        return obj;
     }
 
     // === MÉTODOS DE VENTA Y RECIBO ===
@@ -2165,7 +2238,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const formaPago = datos.configuracion?.formaPago || 'contado';
         const tituloRecibo = this.getTituloReciboParaHTML(formaPago);
         const mensajeFinal = this.getMensajeFinalParaHTML(formaPago);
-        console.log('datos', datos);
 
         return `
     <!DOCTYPE html>
@@ -2979,7 +3051,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     cerrarModalRecibo(): void {
-        this.limpiarSelectProductos();
+        this.limpiarTodosLosSelects(); // Esto ahora limpiará efectivamente
         this.mostrarModalRecibo = false;
         this.ventaGenerada = false;
         this.datosRecibo = null;
@@ -3026,6 +3098,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.pacienteSeleccionado = null;
         this.productoSeleccionado = null;
         this.asesorSeleccionado = this.currentUser?.id ?? null;
+
+        this.limpiarTodosLosSelects();
 
         // Limpiar cliente sin paciente
         this.clienteSinPaciente = {
@@ -3359,7 +3433,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 // Programar limpieza automática después de 24 horas
                 setTimeout(() => {
                     URL.revokeObjectURL(pdfUrl);
-                    console.log('Enlace del PDF revocado después de 24 horas');
+                    //  console.log('Enlace del PDF revocado después de 24 horas');
                 }, 24 * 60 * 60 * 1000); // 24 horas
 
             } else {
@@ -4575,31 +4649,23 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
      * Método para validar cuando el usuario sale del campo (blur)
      */
     onCedulaBlur(): void {
-        console.log('🔍 onCedulaBlur() ejecutado'); // Para debug
-
         const cedula = this.clienteSinPaciente.cedula?.trim();
         const tipoPersona = this.clienteSinPaciente.tipoPersona;
 
         if (!cedula) {
-            console.log('Cédula vacía, no validar');
             return;
         }
 
         // Validar formato básico
         if (!this.validarCedula(cedula, tipoPersona)) {
-            console.log('Cédula inválida:', cedula);
             this.mostrarErrorCedula();
             this.mensajeValidacionCliente = this.getMensajeErrorCedula();
             return;
         }
 
-        console.log('Cédula válida, procediendo a validar:', cedula);
-
         // Solo validar si la cédula es válida y tiene al menos 4 caracteres
         if (cedula.length >= 4) {
             this.validarClientePorCedula();
-        } else {
-            console.log('Cédula muy corta, no validar:', cedula.length);
         }
     }
 
@@ -4735,7 +4801,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 duration: 3000,
                 panelClass: ['snackbar-warning']
             });
-            console.log('error', error);
+
         } finally {
             this.validandoCliente = false;
             this.cdr.detectChanges();
@@ -4749,9 +4815,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         // Limpiar todos los campos
         this.clienteSinPaciente = {
-            tipoPersona: tipoPersonaActual, // Mantener el tipo de persona
+            tipoPersona: tipoPersonaActual,
             nombreCompleto: '',
-            cedula: cedulaActual, // Restaurar la cédula después de limpiar
+            cedula: cedulaActual,
             telefono: '',
             email: ''
         };
@@ -4764,20 +4830,66 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     getTooltipBotonValidar(): string {
-    if (this.validandoCliente) {
-        return 'Buscando cliente...';
-    } else if (this.clienteEncontrado) {
-        return 'Cliente encontrado - Click para re-validar';
-    } else if (this.validacionIntentada && !this.clienteEncontrado) {
-        return 'Cliente no encontrado - Complete los datos manualmente';
-    } else if (!this.clienteSinPaciente.cedula) {
-        return 'Ingrese una cédula para buscar';
-    } else if (!this.validarCedula(this.clienteSinPaciente.cedula, this.clienteSinPaciente.tipoPersona)) {
-        return 'Cédula inválida - Corrija el formato';
-    } else if (this.clienteSinPaciente.cedula.length < 4) {
-        return 'Ingrese al menos 4 caracteres para buscar';
-    } else {
-        return 'Buscar cliente en base de datos';
+        if (this.validandoCliente) {
+            return 'Buscando cliente...';
+        } else if (this.clienteEncontrado) {
+            return 'Cliente encontrado - Click para re-validar';
+        } else if (this.validacionIntentada && !this.clienteEncontrado) {
+            return 'Cliente no encontrado - Complete los datos manualmente';
+        } else if (!this.clienteSinPaciente.cedula) {
+            return 'Ingrese una cédula para buscar';
+        } else if (!this.validarCedula(this.clienteSinPaciente.cedula, this.clienteSinPaciente.tipoPersona)) {
+            return 'Cédula inválida - Corrija el formato';
+        } else if (this.clienteSinPaciente.cedula.length < 4) {
+            return 'Ingrese al menos 4 caracteres para buscar';
+        } else {
+            return 'Buscar cliente en base de datos';
+        }
     }
-}
+
+    puedeGenerarVentaDesdeCarrito(): boolean {
+        // 1. Verificar que hay productos en el carrito
+        if (this.venta.productos.length === 0) {
+            return false;
+        }
+
+        // 2. Validar según el estado de requierePaciente
+        if (this.requierePaciente) {
+            // Si requiere paciente: debe tener producto Y paciente seleccionado
+            return !!this.pacienteSeleccionado;
+        } else {
+            // Si no requiere paciente: solo necesita productos
+            return true;
+        }
+    }
+
+    getMensajeTooltipBotonGenerar(): string {
+        if (this.venta.productos.length === 0) {
+            return 'Agrega al menos un producto para continuar';
+        }
+
+        if (this.requierePaciente && !this.pacienteSeleccionado) {
+            return 'Selecciona un paciente para continuar';
+        }
+
+        return 'Haz clic para generar la venta';
+    }
+
+    abrirModalResumenConValidacion(): void {
+        // Validar productos
+        if (this.venta.productos.length === 0) {
+            this.swalService.showWarning('Sin productos', 'Debes agregar al menos un producto para continuar.');
+            return;
+        }
+
+        // Validar paciente si es requerido
+        if (this.requierePaciente && !this.pacienteSeleccionado) {
+            this.swalService.showWarning('Paciente requerido', 'Debes seleccionar un paciente para continuar.');
+            return;
+        }
+
+        // Si pasa todas las validaciones, abrir el modal
+        this.abrirModalResumen();
+    }
+
 }
