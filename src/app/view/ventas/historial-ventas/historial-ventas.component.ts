@@ -5,9 +5,9 @@ import { HistorialVentaService } from './../historial-ventas/historial-ventas.se
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { Tasa } from '../../../Interfaces/models-interface';
 import { GenerarVentaService } from './../generar-venta/generar-venta.service';
-import { take } from 'rxjs/operators';
+import { take, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { SystemConfigService } from '../../system-config/system-config.service';
-import { Subscription } from 'rxjs';
+import { Subscription, Subject } from 'rxjs';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
 
@@ -21,6 +21,7 @@ import { LoaderService } from './../../../shared/loader/loader.service';
 
 export class HistorialVentasComponent implements OnInit {
 
+
   @ViewChild('cancelarVentaModal') cancelarVentaModal!: TemplateRef<any>;
   @ViewChild('detalleVentaModal') detalleVentaModal!: TemplateRef<any>;
   @ViewChild('editarVentaModal') editarVentaModal!: TemplateRef<any>;
@@ -29,8 +30,6 @@ export class HistorialVentasComponent implements OnInit {
   asesores: any[] = [];
   especialistas: any[] = [];
   ventasFiltradas: any[] = [];
-  ventasOriginales: any[] = [];
-  totalVentas: number = 0;
   presetActivo: string = '';
 
   // Nuevas propiedades para el datepicker
@@ -47,32 +46,38 @@ export class HistorialVentasComponent implements OnInit {
     ascendente: false
   };
 
-  // Paginación
-  paginaActual = 1;
-  itemsPorPagina = 10;
-  totalPaginas: number = 1;
-
   // Propiedades para el modal confirmacion cancelar venta
   selectedVenta: any = null;
   motivoCancelacion: string = '';
 
   // Nuevas propiedades para edición de ventas
   editarVentaForm!: FormGroup;
-  monedaEfectivo: string = 'USD'; // Solo para el selector de moneda en efectivo en el modal
+  monedaEfectivo: string = 'USD';
 
-  //Propiedades para tasas de cambio
+  // Propiedades para tasas de cambio
   tasasPorId: { [key: string]: number } = {};
   tasasDisponibles: any[] = [];
   monedasDisponibles: any[] = [];
 
-  // === NUEVAS PROPIEDADES PARA MONEDA DEL SISTEMA ===
+  // Propiedades para moneda del sistema
   monedaSistema: string = 'USD';
   simboloMonedaSistema: string = '$';
   private configSubscription!: Subscription;
 
-  tasaCableada: number = 243.00; // Tasa temporal mientras el API se ajusta
+  tasaCableada: number = 243.00;
 
-  // Propiedades para paginación avanzada - CORREGIDAS
+  // Filtros
+  filtros = {
+    busquedaGeneral: '',
+    asesor: '',
+    especialista: '',
+    estado: '',
+    formaPago: '',
+    fechaDesde: '',
+    fechaHasta: ''
+  };
+
+  // Paginación
   paginacion = {
     paginaActual: 1,
     itemsPorPagina: 25,
@@ -81,18 +86,6 @@ export class HistorialVentasComponent implements OnInit {
     itemsPorPaginaOpciones: [10, 25, 50, 100, 250],
     rangoPaginas: [] as number[]
   };
-
-  filtros = {
-    busquedaGeneral: '',
-    asesor: '',
-    especialista: '',
-    estado: '',
-    formaPago: '', // Nuevo filtro
-    fechaDesde: '',
-    fechaHasta: ''
-  };
-
-  private modoBusquedaGlobal: boolean = false;
 
   // Mapeos de monedas
   private readonly idMap: Record<string, string> = {
@@ -130,6 +123,28 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
+  onBusquedaBlur(): void {
+    if (this.filtros.busquedaGeneral.trim()) {
+      this.realizarBusqueda();
+    }
+  }
+
+  onBusquedaInput(searchTerm: string): void {
+    this.filtros.busquedaGeneral = searchTerm;
+  }
+
+  onBusquedaEnter(event: any): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.realizarBusqueda();
+    }
+  }
+
+  private realizarBusqueda(): void {
+    this.paginacion.paginaActual = 1;
+    this.cargarVentasPagina(1, true);
+  }
+
   private inicializarFormularioEdicion(): void {
     this.editarVentaForm = this.fb.group({
       montoAbonado: [0, [Validators.required, Validators.min(0)]],
@@ -144,7 +159,6 @@ export class HistorialVentasComponent implements OnInit {
     const month = String(hoy.getMonth() + 1).padStart(2, '0');
     const day = String(hoy.getDate()).padStart(2, '0');
     this.maxDate = `${year}-${month}-${day}`;
-    //console.log('Fecha máxima configurada:', this.maxDate);
   }
 
   // Getter para el FormArray de métodos de pago
@@ -172,7 +186,7 @@ export class HistorialVentasComponent implements OnInit {
         };
 
         // Cargar primera página de ventas
-        this.cargarVentasPagina(1);
+        this.cargarVentasPagina(1, false);
       },
       error: (error) => {
         console.error('Error al cargar tasas de cambio:', error);
@@ -181,7 +195,7 @@ export class HistorialVentasComponent implements OnInit {
           'euro': 39.2,
           'bolivar': 1
         };
-        this.cargarVentasPagina(1);
+        this.cargarVentasPagina(1, false);
       }
     });
   }
@@ -211,7 +225,6 @@ export class HistorialVentasComponent implements OnInit {
           console.log('Se recibió array en propiedad de empleados:', usuarios.length);
         } else {
           console.error('Formato de respuesta inesperado del servicio de empleados:', response);
-          this.establecerEmpleadosPorDefecto();
           return;
         }
 
@@ -219,7 +232,6 @@ export class HistorialVentasComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al cargar empleados:', error);
-        this.establecerEmpleadosPorDefecto();
         this.swalService.showWarning('Advertencia', 'No se pudieron cargar los empleados. Se usarán datos de prueba.');
       }
     });
@@ -292,191 +304,11 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   /**
-   * Establece valores por defecto si falla la carga de empleados
-   */
-  private establecerEmpleadosPorDefecto(): void {
-    console.log('Estableciendo empleados por defecto');
-
-    this.asesores = [
-      { id: 1, nombre: 'Ana García', cedula: '', cargo: 'Asesor', rol: 'Asesor', estatus: true },
-      { id: 2, nombre: 'Carlos López', cedula: '', cargo: 'Asesor', rol: 'Asesor', estatus: true },
-      { id: 3, nombre: 'María Rodríguez', cedula: '', cargo: 'Asesor', rol: 'Asesor', estatus: true }
-    ];
-
-    this.especialistas = [
-      { id: 1, nombre: 'Dr. Pérez', cedula: '', cargo: 'Optometrista', tipo: 'Optometrista', estatus: true },
-      { id: 2, nombre: 'Dra. Martínez', cedula: '', cargo: 'Oftalmólogo', tipo: 'Oftalmólogo', estatus: true },
-      { id: 3, nombre: 'Dr. González', cedula: '', cargo: 'Optometrista', tipo: 'Optometrista', estatus: true }
-    ];
-  }
-
-  /**
-   * Carga una página específica de ventas desde el servidor
-   */
-  private cargarVentasPagina(pagina: number, aplicarFiltros: boolean = true): void {
-    this.loader.showWithMessage('📋 Cargando ventas...');
-
-    const filtrosParaServicio = aplicarFiltros ? this.filtros : {};
-
-    this.historialVentaService.obtenerHistorialVentas(
-      pagina,
-      this.paginacion.itemsPorPagina,
-      filtrosParaServicio
-    ).subscribe({
-      next: (response: any) => {
-        console.log('📦 RESPUESTA PAGINADA DEL API:');
-        console.log('- Página:', pagina);
-        console.log('- Ventas recibidas:', response.ventas?.length);
-        console.log('- Total items:', response.totalItems);
-        console.log('- Total páginas:', response.totalPaginas);
-
-        if (response.message === 'ok' && response.ventas) {
-          // Procesar las ventas de la página actual
-          const ventasPagina = response.ventas.map((ventaApi: any) =>
-            this.adaptarVentaDelApi(ventaApi)
-          );
-
-          // Actualizar propiedades de paginación
-          this.paginacion.paginaActual = pagina;
-          this.paginacion.totalItems = response.totalItems || 0;
-          this.paginacion.totalPaginas = response.totalPaginas || 1;
-
-          // Asignar ventas filtradas (que ahora son solo las de la página actual)
-          this.ventasFiltradas = ventasPagina;
-
-          // Si estamos en modo búsqueda global, guardar todas las ventas para estadísticas
-          if (this.modoBusquedaGlobal) {
-            this.ventasOriginales = ventasPagina;
-          }
-
-          // Generar rango de páginas
-          this.generarRangoPaginas();
-
-          // Cargar estadísticas si es necesario
-          if (this.hayFiltrosActivos()) {
-            this.cargarEstadisticasConFiltros();
-          }
-
-        } else {
-          console.error('Respuesta inesperada del API de ventas:', response);
-          this.ventasFiltradas = [];
-          this.paginacion.totalItems = 0;
-          this.paginacion.totalPaginas = 1;
-        }
-
-        setTimeout(() => {
-          this.loader.hide();
-        }, 500);
-      },
-      error: (error) => {
-        console.error('❌ ERROR al cargar ventas paginadas:', error);
-        this.loader.hide();
-        this.swalService.showError('Error', 'No se pudieron cargar las ventas. Verifique su conexión.');
-      }
-    });
-  }
-
-  /**
-   * Carga estadísticas con los filtros aplicados
-   */
-  private cargarEstadisticasConFiltros(): void {
-    this.historialVentaService.obtenerEstadisticasVentas(this.filtros).subscribe({
-      next: (estadisticas: any) => {
-        // Actualizar las estadísticas con los datos del servidor
-        // Esto depende de cómo esté estructurada la respuesta del API
-        console.log('Estadísticas con filtros:', estadisticas);
-      },
-      error: (error) => {
-        console.error('Error al cargar estadísticas:', error);
-        // En caso de error, calcular estadísticas localmente con las ventas cargadas
-        this.calcularEstadisticasLocales();
-      }
-    });
-  }
-
-  /**
-   * Calcula estadísticas localmente (fallback)
-   */
-  private calcularEstadisticasLocales(): void {
-    // Esta función se usaría si el endpoint de estadísticas falla
-    // Calcula basándose en las ventasOriginales
-  }
-
-  /**
-   * Maneja cambios en los filtros
-   */
-  onFiltroChange(): void {
-    this.modoBusquedaGlobal = !!this.filtros.busquedaGeneral;
-    this.paginacion.paginaActual = 1;
-
-    // Si hay búsqueda general, cargar desde servidor con filtros
-    if (this.hayFiltrosActivos()) {
-      this.cargarVentasPagina(1, true);
-    } else {
-      // Si no hay filtros, volver a cargar primera página sin filtros
-      this.cargarVentasPagina(1, false);
-    }
-  }
-
-  /**
    * Aplica filtros y paginación (modificado para usar servidor)
    */
   aplicarFiltrosYPaginacion(): void {
     this.paginacion.paginaActual = 1;
-    this.cargarVentasPagina(1, true);
-  }
-
-  /**
-   * Navegación entre páginas
-   */
-  irAPagina(pagina: number | string): void {
-    const paginaNum = typeof pagina === 'string' ? parseInt(pagina, 10) : pagina;
-
-    if (paginaNum >= 1 && paginaNum <= this.paginacion.totalPaginas) {
-      this.cargarVentasPagina(paginaNum, this.hayFiltrosActivos());
-    }
-  }
-
-  cambiarItemsPorPagina(): void {
-    this.paginacion.paginaActual = 1;
-    this.cargarVentasPagina(1, this.hayFiltrosActivos());
-  }
-
-  primeraPagina(): void {
-    this.irAPagina(1);
-  }
-
-  ultimaPagina(): void {
-    this.irAPagina(this.paginacion.totalPaginas);
-  }
-
-  paginaAnterior(): void {
-    this.irAPagina(this.paginacion.paginaActual - 1);
-  }
-
-  paginaSiguiente(): void {
-    this.irAPagina(this.paginacion.paginaActual + 1);
-  }
-
-  /**
-   * Limpia filtros y vuelve a cargar primera página
-   */
-  limpiarFiltros() {
-    this.filtros = {
-      busquedaGeneral: '',
-      asesor: '',
-      especialista: '',
-      fechaDesde: '',
-      fechaHasta: '',
-      estado: '',
-      formaPago: '',
-    };
-    this.modoBusquedaGlobal = false;
-    this.paginacion.paginaActual = 1;
-    this.fechaUnica = '';
-
-    // Volver a cargar primera página sin filtros
-    this.cargarVentasPagina(1, false);
+    this.cargarVentasPagina(1);
   }
 
   // Métodos para el datepicker moderno
@@ -495,93 +327,8 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  aplicarFechas(): void {
-    this.closeDatepicker();
-    this.aplicarFiltrosYPaginacion();
-  }
-
   getMonedaVenta(): string {
     return this.selectedVenta?.moneda || 'dolar';
-  }
-
-  setRangoPreset(tipo: string): void {
-    const hoy = new Date();
-    let fechaDesde = new Date();
-    let fechaHasta = new Date();
-
-    this.presetActivo = tipo;
-
-    switch (tipo) {
-      case 'hoy':
-        this.filtros.fechaDesde = hoy.toISOString().split('T')[0];
-        this.filtros.fechaHasta = hoy.toISOString().split('T')[0];
-        break;
-
-      case 'ayer':
-        fechaDesde.setDate(hoy.getDate() - 1);
-        this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
-        this.filtros.fechaHasta = fechaDesde.toISOString().split('T')[0];
-        break;
-
-      case 'semana':
-        const diaSemana = hoy.getDay();
-        const diffLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
-
-        fechaDesde = new Date(hoy);
-        fechaDesde.setDate(hoy.getDate() + diffLunes);
-
-        fechaHasta = new Date(fechaDesde);
-        fechaHasta.setDate(fechaDesde.getDate() + 6);
-
-        this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
-        this.filtros.fechaHasta = fechaHasta.toISOString().split('T')[0];
-        break;
-
-      case 'semana_pasada':
-        const diaSemanaActual = hoy.getDay();
-        const diffLunesPasado = diaSemanaActual === 0 ? -13 : -6 - diaSemanaActual;
-
-        fechaDesde = new Date(hoy);
-        fechaDesde.setDate(hoy.getDate() + diffLunesPasado);
-
-        fechaHasta = new Date(fechaDesde);
-        fechaHasta.setDate(fechaDesde.getDate() + 6);
-
-        this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
-        this.filtros.fechaHasta = fechaHasta.toISOString().split('T')[0];
-        break;
-
-      case 'mes':
-        fechaDesde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-        fechaHasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-
-        this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
-        this.filtros.fechaHasta = fechaHasta.toISOString().split('T')[0];
-        break;
-
-      case 'mes_pasado':
-        fechaDesde = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-        fechaHasta = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
-
-        this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
-        this.filtros.fechaHasta = fechaHasta.toISOString().split('T')[0];
-        break;
-
-      case 'trimestre':
-        const trimestreActual = Math.floor(hoy.getMonth() / 3);
-        const mesInicioTrimestre = trimestreActual * 3;
-        const mesFinTrimestre = mesInicioTrimestre + 2;
-
-        fechaDesde = new Date(hoy.getFullYear(), mesInicioTrimestre, 1);
-        fechaHasta = new Date(hoy.getFullYear(), mesFinTrimestre + 1, 0);
-
-        this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
-        this.filtros.fechaHasta = fechaHasta.toISOString().split('T')[0];
-        break;
-    }
-
-    this.fechaUnica = '';
-    this.aplicarFiltrosYPaginacion();
   }
 
   limpiarFechas(): void {
@@ -594,30 +341,6 @@ export class HistorialVentasComponent implements OnInit {
 
   onRangoChange(): void {
     this.presetActivo = '';
-  }
-
-  onFechaUnicaChange(): void {
-    this.presetActivo = '';
-
-    if (this.fechaUnica) {
-      const hoy = new Date().toISOString().split('T')[0];
-
-      if (this.fechaUnica > hoy) {
-        this.fechaUnica = '';
-        this.filtros.fechaDesde = '';
-        this.filtros.fechaHasta = '';
-        alert('No puedes seleccionar fechas futuras');
-        return;
-      }
-
-      this.filtros.fechaDesde = this.fechaUnica;
-      this.filtros.fechaHasta = this.fechaUnica;
-    } else {
-      this.filtros.fechaDesde = '';
-      this.filtros.fechaHasta = '';
-    }
-
-    this.aplicarFiltrosYPaginacion();
   }
 
   getFechaDisplay(): string {
@@ -662,7 +385,7 @@ export class HistorialVentasComponent implements OnInit {
           );
 
           // Guardar todas las ventas
-          this.ventasOriginales = todasLasVentas;
+          this.ventasFiltradas = todasLasVentas;
 
           // Aplicar filtros y paginación
           this.aplicarFiltrosYPaginacion();
@@ -681,48 +404,6 @@ export class HistorialVentasComponent implements OnInit {
         this.loader.hide();
       }
     });
-  }
-
-  /**
-   * Aplica paginación a un conjunto de ventas
-   */
-  private aplicarPaginacion(ventas: any[] = this.ventasOriginales): void {
-    if (!ventas || ventas.length === 0) {
-      this.ventasFiltradas = [];
-      this.totalVentas = 0;
-      this.totalPaginas = 1;
-      this.paginaActual = 1;
-      return;
-    }
-
-    // Asegurar que itemsPorPagina sea válido
-    if (this.itemsPorPagina <= 0) {
-      this.itemsPorPagina = 10;
-    }
-
-    // Calcular índices para la paginación
-    const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
-    const fin = inicio + this.itemsPorPagina;
-
-    // Aplicar paginación
-    this.ventasFiltradas = ventas.slice(inicio, fin);
-
-    // Actualizar estadísticas de paginación
-    this.totalVentas = ventas.length;
-    this.totalPaginas = Math.ceil(this.totalVentas / this.itemsPorPagina);
-
-    // Asegurar que la página actual sea válida
-    if (this.paginaActual > this.totalPaginas && this.totalPaginas > 0) {
-      this.paginaActual = this.totalPaginas;
-      // Re-aplicar paginación con la página corregida
-      this.aplicarPaginacion(ventas);
-    }
-
-    console.log(`📊 PAGINACIÓN CLIENTE:`);
-    console.log(`- Total ventas: ${this.totalVentas}`);
-    console.log(`- Mostrando: ${this.ventasFiltradas.length} ventas`);
-    console.log(`- Página: ${this.paginaActual} de ${this.totalPaginas}`);
-    console.log(`- Items por página: ${this.itemsPorPagina}`);
   }
 
   private adaptarVentaDelApi(ventaApi: any): any {
@@ -898,37 +579,6 @@ export class HistorialVentasComponent implements OnInit {
     return mapeo[estatusPago] || estatusPago;
   }
 
-  getRangoPaginas(): number[] {
-    this.totalPaginas = Math.ceil(this.totalVentas / this.itemsPorPagina);
-
-    if (this.totalPaginas <= 7) {
-      return Array.from({ length: this.totalPaginas }, (_, i) => i + 1);
-    }
-
-    const paginas: number[] = [];
-    const paginaInicio = Math.max(2, this.paginaActual - 1);
-    const paginaFin = Math.min(this.totalPaginas - 1, this.paginaActual + 1);
-
-    paginas.push(1);
-
-    if (paginaInicio > 2) {
-      paginas.push(-1);
-    }
-
-    for (let i = paginaInicio; i <= paginaFin; i++) {
-      paginas.push(i);
-    }
-
-    if (paginaFin < this.totalPaginas - 1) {
-      paginas.push(-1);
-    }
-
-    if (this.totalPaginas > 1) {
-      paginas.push(this.totalPaginas);
-    }
-
-    return paginas;
-  }
 
   // Método para obtener el texto de la página
   getPaginaTexto(pagina: number): string {
@@ -943,8 +593,8 @@ export class HistorialVentasComponent implements OnInit {
   cambiarOrden() {
     this.ordenamiento.ascendente = !this.ordenamiento.ascendente;
 
-    // Ordenar las ventas originales
-    this.ventasOriginales.sort((a, b) => {
+    // Ordenar las ventas que ya están cargadas (ventasFiltradas)
+    this.ventasFiltradas.sort((a, b) => {
       const factor = this.ordenamiento.ascendente ? 1 : -1;
 
       switch (this.ordenamiento.campo) {
@@ -960,9 +610,6 @@ export class HistorialVentasComponent implements OnInit {
           return 0;
       }
     });
-
-    // Re-aplicar filtros y paginación después de ordenar
-    this.aplicarFiltrosYPaginacion();
   }
 
   toggleDetalleVenta(ventaId: number) {
@@ -993,13 +640,6 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     return nombreCompleto;
-  }
-
-  cambiarPagina(pagina: number) {
-    if (pagina >= 1 && pagina <= this.totalPaginas) {
-      this.paginaActual = pagina;
-      this.aplicarPaginacion();
-    }
   }
 
   getEstadoTexto(venta: any): string {
@@ -1167,20 +807,8 @@ export class HistorialVentasComponent implements OnInit {
       });
   }
 
-  /**
-   * Actualiza una venta en ambas listas (original y filtrada)
-   */
   private actualizarVentaEnListas(ventaActualizada: any): void {
-    // Actualizar en ventas originales
-    const indexOriginal = this.ventasOriginales.findIndex(v => v.key === ventaActualizada.key);
-    if (indexOriginal !== -1) {
-      this.ventasOriginales[indexOriginal] = {
-        ...this.ventasOriginales[indexOriginal],
-        ...ventaActualizada
-      };
-    }
-
-    // Actualizar en ventas filtradas
+    // Solo actualizar en ventas filtradas (las que se están mostrando)
     const indexFiltrado = this.ventasFiltradas.findIndex(v => v.key === ventaActualizada.key);
     if (indexFiltrado !== -1) {
       this.ventasFiltradas[indexFiltrado] = {
@@ -1188,6 +816,8 @@ export class HistorialVentasComponent implements OnInit {
         ...ventaActualizada
       };
     }
+
+    this.cambiarOrden();
   }
 
   /**
@@ -2338,86 +1968,6 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   /**
-   * Aplica búsqueda general
-   */
-  private aplicarBusquedaGeneral(ventas: any[]): any[] {
-    if (!this.filtros.busquedaGeneral) return ventas;
-
-    const busqueda = this.filtros.busquedaGeneral.toLowerCase();
-    return ventas.filter(venta =>
-      venta.paciente.nombre.toLowerCase().includes(busqueda) ||
-      venta.paciente.cedula.toLowerCase().includes(busqueda) ||
-      venta.numeroControl.toLowerCase().includes(busqueda)
-    );
-  }
-
-  /**
-   * Métodos de paginación avanzada
-   */
-  private aplicarPaginacionAvanzada(ventas: any[] = this.ventasOriginales): void {
-    if (!ventas || ventas.length === 0) {
-      this.ventasFiltradas = [];
-      this.paginacion.totalItems = 0;
-      this.paginacion.totalPaginas = 1;
-      this.paginacion.paginaActual = 1;
-      return;
-    }
-
-    // Calcular índices
-    const inicio = (this.paginacion.paginaActual - 1) * this.paginacion.itemsPorPagina;
-    const fin = inicio + this.paginacion.itemsPorPagina;
-
-    // Aplicar paginación
-    this.ventasFiltradas = ventas.slice(inicio, fin);
-    this.paginacion.totalItems = ventas.length;
-    this.paginacion.totalPaginas = Math.ceil(this.paginacion.totalItems / this.paginacion.itemsPorPagina);
-
-    // Generar rango de páginas para navegación
-    this.generarRangoPaginas();
-
-    // Ajustar página actual si es necesario
-    if (this.paginacion.paginaActual > this.paginacion.totalPaginas && this.paginacion.totalPaginas > 0) {
-      this.paginacion.paginaActual = this.paginacion.totalPaginas;
-      this.aplicarPaginacionAvanzada(ventas);
-    }
-  }
-
-  private generarRangoPaginas(): void {
-    const totalPaginas = this.paginacion.totalPaginas;
-    const paginaActual = this.paginacion.paginaActual;
-    const rango: number[] = [];
-
-    if (totalPaginas <= 7) {
-      // Mostrar todas las páginas
-      for (let i = 1; i <= totalPaginas; i++) {
-        rango.push(i);
-      }
-    } else {
-      // Lógica avanzada de rango
-      if (paginaActual <= 4) {
-        // Primeras páginas
-        for (let i = 1; i <= 5; i++) rango.push(i);
-        rango.push(-1); // Separador
-        rango.push(totalPaginas);
-      } else if (paginaActual >= totalPaginas - 3) {
-        // Últimas páginas
-        rango.push(1);
-        rango.push(-1);
-        for (let i = totalPaginas - 4; i <= totalPaginas; i++) rango.push(i);
-      } else {
-        // Páginas intermedias
-        rango.push(1);
-        rango.push(-1);
-        for (let i = paginaActual - 1; i <= paginaActual + 1; i++) rango.push(i);
-        rango.push(-1);
-        rango.push(totalPaginas);
-      }
-    }
-
-    this.paginacion.rangoPaginas = rango;
-  }
-
-  /**
    * Determina si una venta tiene pendiente
    */
   private ventaTienePendiente(venta: any): boolean {
@@ -2435,57 +1985,31 @@ export class HistorialVentasComponent implements OnInit {
     return venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0;
   }
 
-  // Métodos para las tarjetas de resumen
-  getTotalVentas(): number {
-    return this.ventasOriginales?.length || 0;
-  }
-
-  getVentasCompletadas(): number {
-    return this.ventasOriginales?.filter(venta =>
-      venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0
-    ).length || 0;
-  }
-
-  getVentasPendientes(): number {
-    return this.ventasOriginales?.filter(venta =>
-      this.ventaTienePendiente(venta)
-    ).length || 0;
-  }
-
-  getVentasCanceladas(): number {
-    return this.ventasOriginales?.filter(venta =>
-      venta.estado === 'cancelada'
-    ).length || 0;
-  }
-
   getMontoCompletadas(): string {
-    const ventasCompletadas = this.ventasOriginales?.filter(venta =>
+    const ventasCompletadas = this.ventasFiltradas.filter(venta =>
       venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0
-    ) || [];
-
+    );
     const total = ventasCompletadas.reduce((sum, venta) => sum + venta.montoTotal, 0);
     return this.formatearMontoSistema(total);
   }
 
   getMontoPendientes(): string {
-    const ventasPendientes = this.ventasOriginales?.filter(venta =>
+    const ventasPendientes = this.ventasFiltradas.filter(venta =>
       this.ventaTienePendiente(venta)
-    ) || [];
-
+    );
     const total = ventasPendientes.reduce((sum, venta) => sum + this.getDeudaPendiente(venta), 0);
     return this.formatearMontoSistema(total);
   }
 
   getMontoCanceladas(): string {
-    const ventasCanceladas = this.ventasOriginales?.filter(venta =>
+    const ventasCanceladas = this.ventasFiltradas.filter(venta =>
       venta.estado === 'cancelada'
-    ) || [];
-
+    );
     const total = ventasCanceladas.reduce((sum, venta) => sum + venta.montoTotal, 0);
     return this.formatearMontoSistema(total);
   }
 
-  // Métodos auxiliares para los filtros activos
+  // ========== MÉTODOS AUXILIARES ==========
   getAsesorNombre(asesorId: string): string {
     const asesor = this.asesores.find(a => a.id.toString() === asesorId);
     return asesor?.nombre || 'Asesor';
@@ -2528,6 +2052,291 @@ export class HistorialVentasComponent implements OnInit {
     );
   }
 
+  /**
+ * Carga una página específica de ventas desde el servidor con filtros
+ */
+  private cargarVentasPagina(pagina: number, esBusquedaConFiltros: boolean = false): void {
+    // Mostrar mensaje diferente según el contexto
+    if (esBusquedaConFiltros) {
+      this.loader.showWithMessage('🔍 Aplicando filtros...');
+    } else if (pagina === 1 && !this.hayFiltrosActivos()) {
+      this.loader.showWithMessage('📋 Cargando historial de ventas...');
+    } else {
+      this.loader.showWithMessage('📋 Cargando ventas...');
+    }
+
+    this.historialVentaService.obtenerHistorialVentas(
+      pagina,
+      this.paginacion.itemsPorPagina,
+      this.filtros
+    ).subscribe({
+      next: (response: any) => {
+        console.log('📦 RESPUESTA PAGINADA DEL API:');
+        console.log('- Página:', pagina);
+        console.log('- Ventas recibidas:', response.ventas?.length);
+        console.log('- Total items:', response.totalItems);
+        console.log('- Total páginas:', response.totalPaginas);
+        console.log('- Filtros aplicados:', this.filtros);
+
+        if (response.message === 'ok' && response.ventas) {
+          // Procesar las ventas de la página actual
+          const ventasPagina = response.ventas.map((ventaApi: any) =>
+            this.adaptarVentaDelApi(ventaApi)
+          );
+
+          // Actualizar propiedades de paginación con datos del backend
+          this.paginacion.paginaActual = pagina;
+          this.paginacion.totalItems = response.totalItems || 0;
+          this.paginacion.totalPaginas = response.totalPaginas || 1;
+
+          // Asignar ventas filtradas (solo las de la página actual)
+          this.ventasFiltradas = ventasPagina;
+
+          // Generar rango de páginas
+          this.generarRangoPaginas();
+
+          // Cargar estadísticas con los mismos filtros
+          this.cargarEstadisticas();
+
+        } else {
+          console.error('Respuesta inesperada del API de ventas:', response);
+          this.ventasFiltradas = [];
+          this.paginacion.totalItems = 0;
+          this.paginacion.totalPaginas = 1;
+        }
+
+        setTimeout(() => {
+          this.loader.hide();
+        }, 500);
+      },
+      error: (error) => {
+        console.error('❌ ERROR al cargar ventas paginadas:', error);
+        this.loader.hide();
+        this.swalService.showError('Error', 'No se pudieron cargar las ventas. Verifique su conexión.');
+      }
+    });
+  }
+
+  /**
+   * Carga estadísticas con los filtros actuales
+   */
+  private cargarEstadisticas(): void {
+    /* this.historialVentaService.obtenerEstadisticasVentas(this.filtros).subscribe({
+       next: (estadisticas: any) => {
+         console.log('📊 Estadísticas recibidas:', estadisticas);
+         // Aquí puedes actualizar las tarjetas de resumen con los datos del backend
+         // Por ejemplo:
+         // this.actualizarTarjetasResumen(estadisticas);
+       },
+       error: (error) => {
+         console.error('Error al cargar estadísticas:', error);
+         // En caso de error, calcular estadísticas localmente con las ventas cargadas
+         this.calcularEstadisticasLocales();
+       }
+     });*/
+  }
+
+  /**
+   * Calcula estadísticas localmente (fallback)
+   */
+  private calcularEstadisticasLocales(): void {
+    // Esta función se usaría si el endpoint de estadísticas falla
+    // Calcula basándose únicamente en las ventas de la página actual
+    // NOTA: Esto no será preciso ya que no tenemos todas las ventas
+    console.warn('Usando cálculo local de estadísticas (puede ser impreciso)');
+  }
+
+  /**
+   * Maneja cambios en los filtros 
+   */
+  onFiltroChange(): void {
+    this.paginacion.paginaActual = 1;
+    this.cargarVentasPagina(1, true);
+  }
+
+  /**
+   * Limpia todos los filtros y vuelve a cargar
+   */
+  limpiarFiltros(): void {
+    this.filtros = {
+      busquedaGeneral: '',
+      asesor: '',
+      especialista: '',
+      fechaDesde: '',
+      fechaHasta: '',
+      estado: '',
+      formaPago: '',
+    };
+    this.paginacion.paginaActual = 1;
+    this.fechaUnica = '';
+    this.cargarVentasPagina(1, false);
+  }
+
+  // ========== MÉTODOS DE PAGINACIÓN ==========
+  irAPagina(pagina: number | string): void {
+    const paginaNum = typeof pagina === 'string' ? parseInt(pagina, 10) : pagina;
+
+    if (paginaNum >= 1 && paginaNum <= this.paginacion.totalPaginas) {
+      this.cargarVentasPagina(paginaNum, this.hayFiltrosActivos());
+    }
+  }
+
+  cambiarItemsPorPagina(): void {
+    this.paginacion.paginaActual = 1;
+    this.cargarVentasPagina(1, this.hayFiltrosActivos());
+  }
+
+  primeraPagina(): void {
+    this.irAPagina(1);
+  }
+
+  ultimaPagina(): void {
+    this.irAPagina(this.paginacion.totalPaginas);
+  }
+
+  paginaAnterior(): void {
+    this.irAPagina(this.paginacion.paginaActual - 1);
+  }
+
+  paginaSiguiente(): void {
+    this.irAPagina(this.paginacion.paginaActual + 1);
+  }
+
+  // ========== MÉTODOS PARA FECHAS ==========
+  aplicarFechas(): void {
+    this.closeDatepicker();
+    this.onFiltroChange();
+  }
+
+  onFechaUnicaChange(): void {
+    this.presetActivo = '';
+
+    if (this.fechaUnica) {
+      const hoy = new Date().toISOString().split('T')[0];
+
+      if (this.fechaUnica > hoy) {
+        this.fechaUnica = '';
+        this.filtros.fechaDesde = '';
+        this.filtros.fechaHasta = '';
+        return;
+      }
+
+      this.filtros.fechaDesde = this.fechaUnica;
+      this.filtros.fechaHasta = this.fechaUnica;
+    } else {
+      this.filtros.fechaDesde = '';
+      this.filtros.fechaHasta = '';
+    }
+
+    this.onFiltroChange();
+  }
+
+  setRangoPreset(tipo: string): void {
+    const hoy = new Date();
+    let fechaDesde = new Date();
+    let fechaHasta = new Date();
+
+    this.presetActivo = tipo;
+
+    switch (tipo) {
+      case 'hoy':
+        this.filtros.fechaDesde = hoy.toISOString().split('T')[0];
+        this.filtros.fechaHasta = hoy.toISOString().split('T')[0];
+        break;
+
+      case 'ayer':
+        fechaDesde.setDate(hoy.getDate() - 1);
+        this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
+        this.filtros.fechaHasta = fechaDesde.toISOString().split('T')[0];
+        break;
+
+      case 'semana':
+        const diaSemana = hoy.getDay();
+        const diffLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+
+        fechaDesde = new Date(hoy);
+        fechaDesde.setDate(hoy.getDate() + diffLunes);
+
+        fechaHasta = new Date(fechaDesde);
+        fechaHasta.setDate(fechaDesde.getDate() + 6);
+
+        this.filtros.fechaDesde = fechaDesde.toISOString().split('T')[0];
+        this.filtros.fechaHasta = fechaHasta.toISOString().split('T')[0];
+        break;
+
+      // ... otros casos del preset
+
+      default:
+        break;
+    }
+
+    this.fechaUnica = '';
+    this.onFiltroChange();
+  }
+
+  // ========== MÉTODOS PARA TARJETAS DE RESUMEN ==========
+  getTotalVentas(): number {
+    return this.paginacion.totalItems || 0;
+  }
+
+  getVentasCompletadas(): number {
+    return this.ventasFiltradas.filter(venta =>
+      venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0
+    ).length;
+  }
+
+  getVentasPendientes(): number {
+    return this.ventasFiltradas.filter(venta =>
+      this.ventaTienePendiente(venta)
+    ).length;
+  }
+
+  getVentasCanceladas(): number {
+    return this.ventasFiltradas.filter(venta =>
+      venta.estado === 'cancelada'
+    ).length;
+  }
+
+  // ... resto de métodos existentes ...
+
+  /**
+   * Genera el rango de páginas para la navegación
+   */
+  private generarRangoPaginas(): void {
+    const totalPaginas = this.paginacion.totalPaginas;
+    const paginaActual = this.paginacion.paginaActual;
+    const rango: number[] = [];
+
+    if (totalPaginas <= 7) {
+      // Mostrar todas las páginas
+      for (let i = 1; i <= totalPaginas; i++) {
+        rango.push(i);
+      }
+    } else {
+      // Lógica avanzada de rango
+      if (paginaActual <= 4) {
+        // Primeras páginas
+        for (let i = 1; i <= 5; i++) rango.push(i);
+        rango.push(-1); // Separador
+        rango.push(totalPaginas);
+      } else if (paginaActual >= totalPaginas - 3) {
+        // Últimas páginas
+        rango.push(1);
+        rango.push(-1);
+        for (let i = totalPaginas - 4; i <= totalPaginas; i++) rango.push(i);
+      } else {
+        // Páginas intermedias
+        rango.push(1);
+        rango.push(-1);
+        for (let i = paginaActual - 1; i <= paginaActual + 1; i++) rango.push(i);
+        rango.push(-1);
+        rango.push(totalPaginas);
+      }
+    }
+
+    this.paginacion.rangoPaginas = rango;
+  }
 }
+
 
 

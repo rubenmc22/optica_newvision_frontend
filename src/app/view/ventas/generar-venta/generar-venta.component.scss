@@ -932,11 +932,11 @@
             color: var(--primary-color);
             ;
         }
+
     }
 
     &.metodos-pago-detalle {
         border-left: 4px solid var(--primary-color) !important;
-        ;
 
         .card-header-detalle i {
             color: var(--primary-color) !important;
@@ -1105,6 +1105,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+
 }
 
 .input-with-hint,
@@ -2984,14 +2985,14 @@ input:checked+.slider:before {
     }
 }
 
-// Indicador de campo obligatorio
+
 .form-label {
     position: relative;
 
     &::after {
         content: "*";
         color: #dc3545;
-        margin-left: -0.3rem;
+       // margin-left: -0.3rem;
     }
 }
 

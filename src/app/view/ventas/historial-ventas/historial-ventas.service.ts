@@ -14,54 +14,42 @@ export class HistorialVentaService {
   constructor(private http: HttpClient) { }
 
   /**
-   * Obtiene el historial de ventas con paginación y filtros
+   * Obtiene el historial de ventas con paginación y filtros desde el backend
    */
-  obtenerHistorialVentas(pagina: number = 1, itemsPorPagina: number = 25, filtros: any = {}): Observable<any> {
+  obtenerHistorialVentas(
+    pagina: number = 1,
+    itemsPorPagina: number = 25,
+    filtros: any = {}
+  ): Observable<any> {
     let params = new HttpParams()
       .set('pagina', pagina.toString())
       .set('itemsPorPagina', itemsPorPagina.toString());
 
-    // Agregar filtros si existen
-    if (filtros.busquedaGeneral) {
-      params = params.set('busqueda', filtros.busquedaGeneral);
-    }
-    if (filtros.estado) {
-      params = params.set('estado', filtros.estado);
-    }
-    if (filtros.formaPago) {
-      params = params.set('formaPago', filtros.formaPago);
-    }
-    if (filtros.asesor) {
-      params = params.set('asesor', filtros.asesor);
-    }
-    if (filtros.especialista) {
-      params = params.set('especialista', filtros.especialista);
-    }
-    if (filtros.fechaDesde) {
-      params = params.set('fechaDesde', filtros.fechaDesde);
-    }
-    if (filtros.fechaHasta) {
-      params = params.set('fechaHasta', filtros.fechaHasta);
-    }
+    // Agregar TODOS los filtros al backend
+    Object.keys(filtros).forEach(key => {
+      if (filtros[key] !== null && filtros[key] !== undefined && filtros[key] !== '') {
+        params = params.set(key, filtros[key].toString());
+      }
+    });
 
-    console.log('Params', params);
+    console.log('🔍 Enviando filtros al backend:', filtros);
+    console.log('📦 Parámetros HTTP:', params.toString());
+
     return this.http.get(`${this.apiUrl}/ventas-get`, { params });
   }
 
   /**
-   * Obtiene estadísticas generales del sistema (para las tarjetas de resumen)
+   * Obtiene estadísticas con los mismos filtros aplicados
    */
   obtenerEstadisticasVentas(filtros: any = {}): Observable<any> {
     let params = new HttpParams();
 
-    // Agregar filtros si existen
-    if (filtros.busquedaGeneral) {
-      params = params.set('busqueda', filtros.busquedaGeneral);
-    }
-    if (filtros.estado) {
-      params = params.set('estado', filtros.estado);
-    }
-    // ... otros filtros
+    // Agregar los mismos filtros para estadísticas
+    Object.keys(filtros).forEach(key => {
+      if (filtros[key] !== null && filtros[key] !== undefined && filtros[key] !== '') {
+        params = params.set(key, filtros[key].toString());
+      }
+    });
 
     return this.http.get(`${this.apiUrl}/ventas-estadisticas`, { params });
   }

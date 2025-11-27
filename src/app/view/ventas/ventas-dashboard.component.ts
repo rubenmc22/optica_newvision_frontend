@@ -1,13 +1,13 @@
-import { Component, OnInit, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
+import { Component, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
 import { Producto, ProductoDto, MonedaVisual } from '../productos/producto.model';
 import { ProductoService } from '../productos/producto.service';
 import { Sede } from '../../view/login/login-interface';
-
+import { ActivatedRoute, Router } from '@angular/router';
 import { TasaCambiariaService } from '../../core/services/tasaCambiaria/tasaCambiaria.service';
 import { Tasa } from '../../Interfaces/models-interface';
 import { SwalService } from '../../core/services/swal/swal.service';
-import { Observable, of, forkJoin, map } from 'rxjs';
-import { switchMap, take, catchError } from 'rxjs/operators';
+import { of, forkJoin, map } from 'rxjs';
+import { take, catchError } from 'rxjs/operators';
 import { LoaderService } from './../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../core/services/auth/auth.service';
@@ -15,8 +15,7 @@ import { UserStateService } from '../../core/services/userState/user-state-servi
 import { HttpErrorResponse } from '@angular/common/http';
 import { PacientesService } from '../../core/services/pacientes/pacientes.service';
 import { HistoriaMedicaService } from '../../core/services/historias-medicas/historias-medicas.service';
-import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico, DatosConsulta } from './../historias-medicas/historias_medicas-interface';
-
+import { HistoriaMedica } from './../historias-medicas/historias_medicas-interface';
 
 @Component({
     selector: 'app-ventas-dashboard',
@@ -25,14 +24,13 @@ import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcul
     styleUrl: './ventas-dashboard.component.scss'
 })
 export class VentasDashboardComponent {
-    vista: 'venta' | 'presupuesto' | 'historial' | 'caja' = 'venta';
+    vista: 'generacion-de-ventas' | 'presupuestos' | 'historial-de-ventas' | 'cierre-de-caja' = 'generacion-de-ventas';
 
     totalVentas = 0;
     totalPresupuestos = 0;
     totalHistorialVentas = 0;
     totalCierres = 0;
     @Output() onCerrar = new EventEmitter<void>();
-
 
     // ESTADO DEL COMPONENTE
     productos: Producto[] = [];
@@ -51,8 +49,8 @@ export class VentasDashboardComponent {
     } = {
             productos: []
         };
-    pacientes: any[] = []; // Puedes tipar con PacienteDto si lo tienes
-    historiaMedica: any = null; // Puedes tipar con HistoriaMedicaDto
+    pacientes: any[] = [];
+    historiaMedica: any = null;
 
     // FILTROS
     sedeActiva: string = '';
@@ -66,7 +64,6 @@ export class VentasDashboardComponent {
     constructor(
         private productoService: ProductoService,
         private tasaCambiariaService: TasaCambiariaService,
-        //    private fb: FormBuilder,
         private swalService: SwalService,
         private userStateService: UserStateService,
         private snackBar: MatSnackBar,
@@ -74,26 +71,77 @@ export class VentasDashboardComponent {
         private cdr: ChangeDetectorRef,
         private loader: LoaderService,
         private pacientesService: PacientesService,
-        private historiaService: HistoriaMedicaService
+        private historiaService: HistoriaMedicaService,
+        private route: ActivatedRoute,
+        private router: Router
     ) { }
 
     // =========== LIFECYCLE HOOKS ===========
     ngOnInit(): void {
+        this.inicializarVista();
         this.cargarDatosIniciales();
     }
 
     cambiarVista(v: typeof this.vista): void {
         this.vista = v;
+        this.actualizarEstadoVista(v);
+        // Forzar detección de cambios para actualizar la vista inmediatamente
+        this.cdr.detectChanges();
+    }
+
+    esVistaActiva(vista: string): boolean {
+        return this.vista === vista;
     }
 
     private cargarDatosIniciales(): void {
         this.iniciarCarga();
         this.tareaIniciada();
         this.obtenerTasasCambio();
-        this.cargarProductosYSedes(); // delega la lógica
+        this.cargarProductosYSedes();
     }
 
-    // =========== GESTIÓN DE DATOS ===========
+    // =========== GESTIÓN DE VISTA Y URL ===========
+    /**
+     * Inicializa la vista combinando URL y sessionStorage
+     */
+
+    private inicializarVista(): void {
+        this.route.queryParams.subscribe(params => {
+            const vistaDesdeUrl = params['vista'];
+
+            // Solo respetar la URL si existe y es válida, de lo contrario usar "generacion-de-ventas"
+            if (vistaDesdeUrl && this.esVistaValida(vistaDesdeUrl)) {
+                this.vista = vistaDesdeUrl as typeof this.vista;
+            } else {
+                this.vista = 'generacion-de-ventas';
+                this.actualizarUrlSinNavegacion('generacion-de-ventas');
+            }
+
+            // Forzar actualización visual
+            this.cdr.detectChanges();
+        });
+    }
+
+    private actualizarEstadoVista(vista: 'generacion-de-ventas' | 'presupuestos' | 'historial-de-ventas' | 'cierre-de-caja'): void {
+        this.vista = vista;
+
+        this.actualizarUrlSinNavegacion(vista);
+    }
+
+    private actualizarUrlSinNavegacion(vista: string): void {
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { vista: vista },
+            queryParamsHandling: 'merge',
+            replaceUrl: true
+        });
+    }
+
+    private esVistaValida(vista: string): boolean {
+        return ['generacion-de-ventas', 'presupuestos', 'historial-de-ventas', 'cierre-de-caja'].includes(vista);
+    }
+
+    // =========== RESTORED METHODS ===========
     private cargarProductosYSedes(): void {
         this.iniciarCarga();
         this.tareaIniciada();
@@ -125,8 +173,6 @@ export class VentasDashboardComponent {
                 })
             )
         }).subscribe(({ productos, sedes, user }) => {
-          //  this.productos = productos;
-
             this.sedesDisponibles = (sedes.sedes ?? [])
                 .map(s => ({
                     ...s,
@@ -153,7 +199,7 @@ export class VentasDashboardComponent {
 
     cargarPacientes(): void {
         this.dataIsReady = false;
-        this.loader.show(); // activa el loader
+        this.loader.show();
         this.pacientesService.getPacientes().subscribe({
             next: (data) => {
                 this.pacientes = Array.isArray(data.pacientes)
@@ -206,7 +252,7 @@ export class VentasDashboardComponent {
                 setTimeout(() => {
                     this.dataIsReady = true;
                     this.loader.hide();
-                }, 100); // Delay visual para evitar parpadeo
+                }, 100);
             },
             error: (err: HttpErrorResponse) => {
                 this.pacientes = [];
@@ -274,29 +320,22 @@ export class VentasDashboardComponent {
 
     formatearFecha(fechaIso: string): string {
         if (!fechaIso || typeof fechaIso !== 'string') return 'Fecha inválida';
-
-        // Evita formatear si ya está en formato DD/MM/YYYY
         if (fechaIso.includes('/') && !fechaIso.includes('T')) return fechaIso;
-
-        const fechaLimpiada = fechaIso.split('T')[0]; // elimina hora si está presente
+        const fechaLimpiada = fechaIso.split('T')[0];
         const [anio, mes, dia] = fechaLimpiada.split('-');
         return `${dia}/${mes}/${anio}`;
     }
 
     calcularEdad(fechaNac: string): number | '--' {
         if (!fechaNac) return '--';
-
         const nacimiento = new Date(fechaNac);
         if (isNaN(nacimiento.getTime())) return '--';
-
         const hoy = new Date();
         let edad = hoy.getFullYear() - nacimiento.getFullYear();
         const mes = hoy.getMonth() - nacimiento.getMonth();
-
         if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
             edad--;
         }
-
         return edad >= 0 ? edad : '--';
     }
 
@@ -311,11 +350,8 @@ export class VentasDashboardComponent {
                     valor: t.valor ?? 0
                 }));
 
-                // Guardar tasas específicas si las necesitas
                 this.tasaDolar = monedasVisuales.find(m => m.id === 'dolar')?.valor ?? 0;
                 this.tasaEuro = monedasVisuales.find(m => m.id === 'euro')?.valor ?? 0;
-
-                // Guardar lista completa para el ng-select
                 this.moneda = monedasVisuales;
             },
             error: () => {
@@ -341,20 +377,17 @@ export class VentasDashboardComponent {
     }
 
     private tareaFinalizada(): void {
-
         this.tareasPendientes--;
         if (this.tareasPendientes <= 0) {
-            setTimeout(() => this.loader.hide(), 300); // Delay visual
+            setTimeout(() => this.loader.hide(), 300);
             this.dataIsReady = true;
         }
     }
 
-    // =========== GESTIÓN DE MODAL ===========
     abrirModal(modo: 'agregar' | 'editar' | 'ver', producto?: Producto): void {
         setTimeout(() => {
             this.cdr.detectChanges?.();
         });
-
         document.body.classList.add('modal-open');
     }
 
@@ -388,7 +421,6 @@ export class VentasDashboardComponent {
     }
 
     actualizarPacientesPorSede(): void {
-        //  this.limpiarDatos();
         const sedeId = this.sedeFiltro?.trim().toLowerCase();
         this.productosFiltradosPorSede = !sedeId
             ? [...this.productos]
@@ -398,5 +430,4 @@ export class VentasDashboardComponent {
     obtenerSedeDesdePaciente(productos: Producto): string {
         return productos?.sede?.toLowerCase() || '';
     }
-
 }

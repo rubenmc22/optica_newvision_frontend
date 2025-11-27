@@ -394,7 +394,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.agregarProductoAlCarrito(producto);
             // Limpiar la selección después de agregar
             setTimeout(() => {
-                this.productoSeleccionado = null;
+             //   this.productoSeleccionado = null;
                 this.cdr.detectChanges();
             }, 100);
         } else {

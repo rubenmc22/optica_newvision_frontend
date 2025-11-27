@@ -1,9 +1,10 @@
 <div class="container-fluid px-4 mt-4">
-
   <div class="row">
     <!-- Generar Venta -->
     <div class="col-xl-3 col-md-6 mb-4">
-      <div class="modern-card card-venta" (click)="vista = 'venta'">
+      <div class="modern-card card-venta" 
+           [class.active]="esVistaActiva('generacion-de-ventas')"
+           (click)="cambiarVista('generacion-de-ventas')">
         <div class="card-content">
           <div class="card-icon">
             <i class="fas fa-cash-register"></i>
@@ -17,13 +18,19 @@
             </div>
           </div>
           <div class="card-glow"></div>
+          <!-- Indicador de selección -->
+          <div class="selection-indicator" *ngIf="esVistaActiva('generacion-de-ventas')">
+            <i class="fas fa-check"></i>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Presupuesto -->
     <div class="col-xl-3 col-md-6 mb-4">
-      <div class="modern-card card-presupuesto" (click)="vista = 'presupuesto'">
+      <div class="modern-card card-presupuesto" 
+           [class.active]="esVistaActiva('presupuestos')"
+           (click)="cambiarVista('presupuestos')">
         <div class="card-content">
           <div class="card-icon">
             <i class="fas fa-file-invoice-dollar"></i>
@@ -37,13 +44,19 @@
             </div>
           </div>
           <div class="card-glow"></div>
+          <!-- Indicador de selección -->
+          <div class="selection-indicator" *ngIf="esVistaActiva('presupuestos')">
+            <i class="fas fa-check"></i>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Historial -->
     <div class="col-xl-3 col-md-6 mb-4">
-      <div class="modern-card card-historial" (click)="vista = 'historial'">
+      <div class="modern-card card-historial" 
+           [class.active]="esVistaActiva('historial-de-ventas')"
+           (click)="cambiarVista('historial-de-ventas')">
         <div class="card-content">
           <div class="card-icon">
             <i class="fas fa-history"></i>
@@ -57,13 +70,19 @@
             </div>
           </div>
           <div class="card-glow"></div>
+          <!-- Indicador de selección -->
+          <div class="selection-indicator" *ngIf="esVistaActiva('historial-de-ventas')">
+            <i class="fas fa-check"></i>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Cierre de Caja -->
     <div class="col-xl-3 col-md-6 mb-4">
-      <div class="modern-card card-caja" (click)="vista = 'caja'">
+      <div class="modern-card card-caja" 
+           [class.active]="esVistaActiva('cierre-de-caja')"
+           (click)="cambiarVista('cierre-de-caja')">
         <div class="card-content">
           <div class="card-icon">
             <i class="fas fa-lock"></i>
@@ -77,6 +96,10 @@
             </div>
           </div>
           <div class="card-glow"></div>
+          <!-- Indicador de selección -->
+          <div class="selection-indicator" *ngIf="esVistaActiva('cierre-de-caja')">
+            <i class="fas fa-check"></i>
+          </div>
         </div>
       </div>
     </div>
@@ -84,9 +107,9 @@
 
   <!-- Panel dinámico -->
   <div class="card shadow-sm mt-1 mb-5">
-    <app-generar-venta *ngIf="vista === 'venta'"></app-generar-venta>
-    <app-presupuesto *ngIf="vista === 'presupuesto'"></app-presupuesto>
-    <app-historial-ventas *ngIf="vista === 'historial'"></app-historial-ventas>
-    <app-cierre-caja *ngIf="vista === 'caja'"></app-cierre-caja>
+    <app-generar-venta *ngIf="vista === 'generacion-de-ventas'"></app-generar-venta>
+    <app-presupuesto *ngIf="vista === 'presupuestos'"></app-presupuesto>
+    <app-historial-ventas *ngIf="vista === 'historial-de-ventas'"></app-historial-ventas>
+    <app-cierre-caja *ngIf="vista === 'cierre-de-caja'"></app-cierre-caja>
   </div>
 </div>

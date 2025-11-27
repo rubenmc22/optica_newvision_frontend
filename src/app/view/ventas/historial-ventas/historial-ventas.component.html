@@ -114,11 +114,15 @@
               </label>
               <div class="input-group-moderno">
                 <input type="text" class="form-control-moderno" placeholder="Cédula, nombre, N° control..."
-                  [(ngModel)]="filtros.busquedaGeneral" (input)="onFiltroChange()">
+                  [(ngModel)]="filtros.busquedaGeneral" (ngModelChange)="onBusquedaInput($event)"
+                  (blur)="onBusquedaBlur()" (keydown.enter)="onBusquedaEnter($event)">
                 <span class="input-icon">
                   <i class="bi bi-search"></i>
                 </span>
               </div>
+              <small class="form-text text-muted mt-1">
+                💡 Presiona Enter o haz clic fuera del campo para buscar
+              </small>
             </div>
           </div>
 
