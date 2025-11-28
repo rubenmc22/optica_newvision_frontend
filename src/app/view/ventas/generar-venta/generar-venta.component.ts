@@ -172,6 +172,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         '€': 'euro'
     };
 
+
     // === CICLO DE VIDA ===
     ngOnInit(): void {
         this.resetearCarga();
@@ -394,7 +395,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.agregarProductoAlCarrito(producto);
             // Limpiar la selección después de agregar
             setTimeout(() => {
-             //   this.productoSeleccionado = null;
+                //   this.productoSeleccionado = null;
                 this.cdr.detectChanges();
             }, 100);
         } else {
@@ -546,8 +547,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     onMetodoPagoChange(index: number): void {
         const metodo = this.venta.metodosDePago[index];
 
+        // Asegurar que la moneda esté sincronizada con el tipo
+        if (metodo.tipo && !metodo.moneda) {
+            metodo.moneda = this.getMonedaParaMetodo(metodo.tipo);
+        }
+
         if (metodo.monto && metodo.monto > 0) {
-            const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
+            const monedaMetodo = metodo.moneda || this.getMonedaParaMetodo(metodo.tipo);
             metodo.valorTemporal = `${metodo.monto.toFixed(2)} ${this.obtenerSimboloMoneda(monedaMetodo)}`;
         } else {
             metodo.valorTemporal = '';
@@ -558,7 +564,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     formatearMontoMetodo(index: number): void {
         const metodo = this.venta.metodosDePago[index];
-        const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
+
+        // Usar la moneda del método si existe, sino calcularla
+        const monedaMetodo = metodo.moneda || this.getMonedaParaMetodo(metodo.tipo);
 
         if (!metodo.tipo) {
             this.snackBar.open('⚠️ Primero selecciona un método de pago', 'Cerrar', { duration: 3000 });
@@ -567,7 +575,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return;
         }
 
-        const limpio = metodo.valorTemporal?.replace(/[^\d.]/g, '').trim();
+        const limpio = metodo.valorTemporal?.replace(/[^\d.,]/g, '').trim(); // Permitir coma
 
         if (!limpio) {
             metodo.monto = 0;
@@ -575,7 +583,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return;
         }
 
-        const monto = parseFloat(limpio);
+        // Convertir coma decimal a punto para cálculo
+        const montoString = limpio.replace(',', '.');
+        const monto = parseFloat(montoString);
 
         if (isNaN(monto)) {
             metodo.monto = 0;
@@ -588,26 +598,90 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         let montoFinal = Math.min(monto, maximoEnMonedaMetodo);
 
-        // Para métodos en bolívares, forzar 2 decimales exactos
-        if (this.esMetodoEnBolivares(metodo.tipo)) {
-            montoFinal = Number(montoFinal.toFixed(2));
-            metodo.valorTemporal = `${montoFinal.toFixed(2)} Bs`;
-        } else {
-            // Para otras monedas, redondear a 2 decimales
-            montoFinal = Number(montoFinal.toFixed(2));
-            metodo.valorTemporal = `${montoFinal.toFixed(2)} ${this.obtenerSimboloMoneda(monedaMetodo)}`;
-        }
-
+        // Usar el nuevo formato venezolano para TODOS los métodos
         metodo.monto = montoFinal;
+        metodo.valorTemporal = this.formatearMoneda(montoFinal, monedaMetodo);
 
         // Mostrar advertencia si el usuario intentó exceder el máximo
         if (monto > maximoEnMonedaMetodo) {
-            this.snackBar.open(`⚠️ El monto se ajustó al máximo disponible: ${montoFinal.toFixed(2)} ${this.obtenerSimboloMoneda(monedaMetodo)}`, 'Cerrar', {
+            this.snackBar.open(`⚠️ El monto se ajustó al máximo disponible: ${this.formatearMoneda(montoFinal, monedaMetodo)}`, 'Cerrar', {
                 duration: 3000,
                 panelClass: ['snackbar-warning']
             });
         }
 
+        this.cdr.detectChanges();
+    }
+
+    formatearInicialCashea(): void {
+        const limpio = this.valorInicialTemporal.replace(/[^\d.,]/g, '').trim(); // Permitir coma
+
+        if (!limpio) {
+            this.venta.montoInicial = 0;
+            this.valorInicialTemporal = '';
+            this.generarCuotasCashea();
+            return;
+        }
+
+        // Convertir coma decimal a punto para cálculo
+        const montoString = limpio.replace(',', '.');
+        const monto = parseFloat(montoString);
+        const minimo = this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
+
+        if (isNaN(monto)) {
+            this.venta.montoInicial = 0;
+            this.valorInicialTemporal = '';
+            this.generarCuotasCashea();
+            return;
+        }
+
+        if (monto < minimo) {
+            this.venta.montoInicial = minimo;
+            this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
+            this.generarCuotasCashea();
+            return;
+        }
+
+        this.venta.montoInicial = monto;
+        this.valorInicialTemporal = this.formatearMoneda(monto, this.venta.moneda);
+        this.generarCuotasCashea();
+    }
+
+    formatearMonto(): void {
+        const limpio = this.valorTemporal.replace(/[^\d.,]/g, '').trim(); // Permitir coma
+
+        if (!limpio) {
+            this.venta.montoAbonado = 0;
+            this.valorTemporal = '';
+            this.montoExcedido = false;
+            this.cdr.detectChanges();
+            return;
+        }
+
+        // Convertir coma decimal a punto para cálculo
+        const montoString = limpio.replace(',', '.');
+        const monto = parseFloat(montoString);
+        const adeudado = this.montoTotal;
+
+        if (isNaN(monto)) {
+            this.venta.montoAbonado = 0;
+            this.valorTemporal = '';
+            this.montoExcedido = false;
+            this.cdr.detectChanges();
+            return;
+        }
+
+        this.montoExcedido = monto > adeudado;
+
+        if (this.montoExcedido) {
+            this.valorTemporal = this.formatearMoneda(adeudado, this.venta.moneda);
+            this.venta.montoAbonado = adeudado;
+            this.cdr.detectChanges();
+            return;
+        }
+
+        this.venta.montoAbonado = monto;
+        this.valorTemporal = this.formatearMoneda(monto, this.venta.moneda);
         this.cdr.detectChanges();
     }
 
@@ -872,15 +946,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
     }
 
-    asignarInicialPorNivel(): void {
-        const totalConDescuento = this.montoTotal;
-        const minimo = this.calcularInicialCasheaPorNivel(totalConDescuento, this.nivelCashea);
-        this.venta.montoInicial = minimo;
-        this.valorInicialTemporal = `${minimo.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
-
-        this.controlarCuotasPorNivel();
-    }
-
     validarInicialCashea(): void {
         const totalConDescuento = this.montoTotal;
         const minimo = this.calcularInicialCasheaPorNivel(totalConDescuento, this.nivelCashea);
@@ -1058,13 +1123,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         cuota.seleccionada = !cuota.seleccionada;
 
-        if (cuota.seleccionada && index + 1 < this.cuotasCashea.length) {
-            this.cuotasCashea[index + 1].habilitada = true;
-        }
-
-        if (!cuota.seleccionada) {
+        // CORRECCIÓN: Si está seleccionada, debe marcarse como pagada
+        if (cuota.seleccionada) {
+            cuota.pagada = true; // ← Si está seleccionada, está pagada
+            if (index + 1 < this.cuotasCashea.length) {
+                this.cuotasCashea[index + 1].habilitada = true;
+            }
+        } else {
+            cuota.pagada = false; // ← Si no está seleccionada, no está pagada
             for (let i = index + 1; i < this.cuotasCashea.length; i++) {
                 this.cuotasCashea[i].seleccionada = false;
+                this.cuotasCashea[i].pagada = false; // ← También limpiar pagada
                 this.cuotasCashea[i].habilitada = false;
             }
         }
@@ -1129,11 +1198,25 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     get mensajeResumenCashea(): string {
-        if (this.esPagoCompletoCashea) {
-            return 'Pago completo - Sin cuotas pendientes';
-        }
-        return `Adelantando ${this.resumenCashea.cantidad} cuota${this.resumenCashea.cantidad > 1 ? 's' : ''}`;
+    if (this.esPagoCompletoCashea) {
+        return 'Pago completo - Sin cuotas pendientes';
     }
+    
+    const cuotasAdelantadas = this.resumenCashea.cantidad;
+    const montoAdelantado = this.resumenCashea.total;
+    
+    return `Adelantando ${cuotasAdelantadas} cuota${cuotasAdelantadas > 1 ? 's' : ''} (${this.formatearMoneda(montoAdelantado, this.venta.moneda)})`;
+}
+
+// En el método que asigna el inicial por nivel
+asignarInicialPorNivel(): void {
+    const totalConDescuento = this.montoTotal;
+    const minimo = this.calcularInicialCasheaPorNivel(totalConDescuento, this.nivelCashea);
+    this.venta.montoInicial = minimo;
+    this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
+
+    this.controlarCuotasPorNivel();
+}
 
     redondearDosDecimales(valor: number): number {
         return Math.round(valor * 100) / 100;
@@ -1149,20 +1232,29 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     obtenerSimboloMoneda(id: string): string {
         const normalizado = this.idMap[id?.toLowerCase()] ?? id?.toLowerCase();
+
+        // Mapeo directo para símbolos
+        if (normalizado === 'ves' || normalizado === 'bolivar' || normalizado === 'bs') {
+            return 'Bs. ';
+        }
+
         const moneda = this.tasasDisponibles.find(m => m.id === normalizado);
         return moneda?.simbolo ?? '';
     }
 
     getMonedaParaMetodo(tipoMetodo: string): string {
         const monedasPorMetodo: { [key: string]: string } = {
-            'efectivo': this.monedaEfectivo.toLowerCase() === 'eur' ? 'euro' : 'dolar',
+            'efectivo': this.monedaEfectivo.toLowerCase() === 'eur' ? 'euro' :
+                this.monedaEfectivo.toLowerCase() === 'ves' ? 'bolivar' :
+                    this.monedaEfectivo.toLowerCase() === 'bs' ? 'bolivar' : 'dolar',
             'zelle': 'dolar',
             'debito': 'bolivar',
             'credito': 'bolivar',
             'pagomovil': 'bolivar',
             'transferencia': 'bolivar'
         };
-        return monedasPorMetodo[tipoMetodo] || this.venta.moneda;
+
+        return monedasPorMetodo[tipoMetodo];
     }
 
     esMetodoEnBolivares(tipoMetodo: string): boolean {
@@ -1171,7 +1263,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     getMontoRestanteParaMetodo(index: number): number {
-        // 1. Calcular lo que ya se ha pagado en otros métodos (en la moneda del sistema - euros)
         const otrosMontos = this.venta.metodosDePago
             .filter((_, i) => i !== index)
             .reduce((sum, metodo) => {
@@ -1298,9 +1389,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    /**
- * Limpia todos los selects y selecciones de manera efectiva
- */
     limpiarTodosLosSelects(): void {
         // Limpiar modelos
         this.productoSeleccionado = null;
@@ -1333,12 +1421,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
     }
 
-    /**
-  * Limpia específicamente el select de productos SIN disparar eventos
-  */
-    /**
-  * Limpia específicamente el select de productos y cierra el dropdown
-  */
     limpiarSelectProductos(): void {
         this.productoSeleccionado = null;
 
@@ -1368,80 +1450,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
     // === VALIDACIONES ===
     validarEntrada(event: KeyboardEvent): void {
-        const tecla = event.key;
-        const permitido = /^[0-9.,]$/;
-        if (!permitido.test(tecla)) {
-            event.preventDefault();
-        }
+    const tecla = event.key;
+    const permitido = /^[0-9.,]$/; // Permitir coma y punto
+    if (!permitido.test(tecla)) {
+        event.preventDefault();
     }
-
-    formatearMonto(): void {
-        const limpio = this.valorTemporal.replace(/[^\d.]/g, '').trim();
-
-        if (!limpio) {
-            this.venta.montoAbonado = 0;
-            this.valorTemporal = '';
-            this.montoExcedido = false;
-            this.cdr.detectChanges();
-            return;
-        }
-
-        const monto = parseFloat(limpio);
-        const adeudado = this.montoTotal;
-
-        if (isNaN(monto)) {
-            this.venta.montoAbonado = 0;
-            this.valorTemporal = '';
-            this.montoExcedido = false;
-            this.cdr.detectChanges();
-            return;
-        }
-
-        this.montoExcedido = monto > adeudado;
-
-        if (this.montoExcedido) {
-            this.valorTemporal = `${adeudado.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
-            this.venta.montoAbonado = adeudado;
-            this.cdr.detectChanges();
-            return;
-        }
-
-        this.venta.montoAbonado = monto;
-        this.valorTemporal = `${monto.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
-        this.cdr.detectChanges();
-    }
-
-    formatearInicialCashea(): void {
-        const limpio = this.valorInicialTemporal.replace(/[^\d.]/g, '').trim();
-
-        if (!limpio) {
-            this.venta.montoInicial = 0;
-            this.valorInicialTemporal = '';
-            this.generarCuotasCashea();
-            return;
-        }
-
-        const monto = parseFloat(limpio);
-        const minimo = this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
-
-        if (isNaN(monto)) {
-            this.venta.montoInicial = 0;
-            this.valorInicialTemporal = '';
-            this.generarCuotasCashea();
-            return;
-        }
-
-        if (monto < minimo) {
-            this.venta.montoInicial = minimo;
-            this.valorInicialTemporal = `${minimo.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
-            this.generarCuotasCashea();
-            return;
-        }
-
-        this.venta.montoInicial = monto;
-        this.valorInicialTemporal = `${monto.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
-        this.generarCuotasCashea();
-    }
+}
 
     onMontoInicialChange(): void {
         if (this.venta.formaPago === 'cashea') {
@@ -1581,8 +1595,52 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // === MÉTODOS DE MONEDA EFECTIVO ===
     cambiarMonedaEfectivo(nuevaMoneda: string): void {
-        this.monedaEfectivo = nuevaMoneda;
-        this.cdr.detectChanges();
+    this.monedaEfectivo = nuevaMoneda;
+
+    // ACTUALIZAR LA MONEDA EN TODOS LOS MÉTODOS DE EFECTIVO EXISTENTES
+    this.venta.metodosDePago.forEach(metodo => {
+        if (metodo.tipo === 'efectivo') {
+            metodo.moneda = this.getMonedaParaMetodo('efectivo');
+
+            // También actualizar el valor temporal con el nuevo formato
+            if (metodo.monto && metodo.monto > 0) {
+                metodo.valorTemporal = this.formatearMoneda(metodo.monto, metodo.moneda);
+            }
+        }
+    });
+
+    this.cdr.detectChanges();
+}
+
+    onTipoMetodoChange(index: number): void {
+        const metodo = this.venta.metodosDePago[index];
+
+        // FORZAR LA ASIGNACIÓN DE MONEDA
+        metodo.moneda = this.getMonedaParaMetodo(metodo.tipo);
+
+        metodo.monto = 0;
+        metodo.valorTemporal = '';
+        metodo.referencia = '';
+        metodo.bancoCodigo = '';
+        metodo.bancoNombre = '';
+        metodo.banco = '';
+        metodo.bancoObject = null;
+
+        this.onMetodoPagoChange(index);
+    }
+
+    agregarMetodo(): void {
+        this.venta.metodosDePago.push({
+            tipo: '',
+            monto: 0,
+            valorTemporal: '',
+            referencia: '',
+            bancoCodigo: '',
+            bancoNombre: '',
+            banco: '',
+            bancoObject: null,
+            moneda: '' // ← AGREGAR MONEDA VACÍA
+        });
     }
 
     hayMetodoEfectivoSeleccionado(): boolean {
@@ -1594,20 +1652,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return monedaMetodo !== 'bolivar' && this.venta.moneda !== 'bolivar';
     }
 
-    calcularConversionBs(monto: number, tipoMetodo: string): number {
-        if (!monto || monto <= 0) return 0;
-
-        const monedaMetodo = this.getMonedaParaMetodo(tipoMetodo);
-
-        // Convertir desde la moneda del método a bolívares
-        if (monedaMetodo === 'dolar') {
-            return this.redondear(monto * (this.tasasPorId['dolar'] ?? 1));
-        } else if (monedaMetodo === 'euro') {
-            return this.redondear(monto * (this.tasasPorId['euro'] ?? 1));
-        } else {
-            return this.redondear(monto); // Ya está en bolívares
-        }
-    }
 
     getInfoConversionMetodo(metodo: any): string {
         if (!metodo.monto || metodo.monto <= 0) return '';
@@ -1619,7 +1663,41 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return ''; // No mostrar conversión si es la misma moneda
         }
 
-        return `⇄ ${montoEnSistema.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+        return `⇄ ${this.formatearMoneda(montoEnSistema, this.venta.moneda)}`;
+    }
+
+    calcularConversionBs(monto: number, tipoMetodo: string): number {
+        if (!monto || monto <= 0) return 0;
+
+        const monedaMetodo = this.getMonedaParaMetodo(tipoMetodo);
+
+        // Si ya está en bolívares, retornar directamente
+        if (monedaMetodo === 'bolivar') {
+            return this.redondear(monto);
+        }
+
+        // Convertir desde la moneda del método a bolívares
+        if (monedaMetodo === 'dolar') {
+            return this.redondear(monto * (this.tasasPorId['dolar'] ?? 1));
+        } else if (monedaMetodo === 'euro') {
+            return this.redondear(monto * (this.tasasPorId['euro'] ?? 1));
+        } else {
+            return this.redondear(monto); // Ya está en bolívares
+        }
+    }
+
+    // Agregar método para formatear la conversión en Bs
+    getInfoConversionBs(metodo: any): string {
+        if (!metodo.monto || metodo.monto <= 0) return '';
+
+        const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
+        const montoEnBs = this.calcularConversionBs(metodo.monto, metodo.tipo);
+
+        if (monedaMetodo === 'bolivar') {
+            return ''; // No mostrar conversión si ya está en bolívares
+        }
+
+        return `⇄ ${this.formatearMoneda(montoEnBs, 'bolivar')}`;
     }
 
     getMontoRestanteParaMetodoEnBs(index: number): number {
@@ -1727,20 +1805,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         { codigo: '0000', nombre: 'Otro' }
     ];
 
-    agregarMetodo(): void {
-        this.venta.metodosDePago.push({
-            tipo: '',
-            monto: 0,
-            valorTemporal: '',
-            referencia: '',
-            bancoCodigo: '',
-            bancoNombre: '',
-            banco: '',
-            bancoObject: null
-        });
-    }
-
-
     compararBanco = (a: any, b: any): boolean => {
         if (!a || !b) return a === b;
         return a.codigo === b.codigo;
@@ -1761,20 +1825,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         metodo.bancoNombre = banco.nombre;
         metodo.banco = `${banco.codigo} - ${banco.nombre}`;
         metodo.bancoObject = banco;
-    }
-
-    onTipoMetodoChange(index: number): void {
-        const metodo = this.venta.metodosDePago[index];
-
-        metodo.monto = 0;
-        metodo.valorTemporal = '';
-        metodo.referencia = '';
-        metodo.bancoCodigo = '';
-        metodo.bancoNombre = '';
-        metodo.banco = '';
-        metodo.bancoObject = null;
-
-        this.onMetodoPagoChange(index);
     }
 
 
@@ -1904,32 +1954,31 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return { valido: true, mensaje: 'Método completo' };
     }
 
-    // Mensaje de estado para el botón - MEJORADO
-    get mensajeEstadoBoton(): string {
-        if (this.venta.productos.length === 0) {
-            return 'Agrega productos para continuar';
-        }
-
-        // Verificar si hay métodos incompletos
-        const metodosIncompletos = this.venta.metodosDePago.some(metodo => !this.metodoCompleto(metodo));
-        if (metodosIncompletos) {
-            return 'Completa todos los métodos de pago';
-        }
-
-        const montoCubierto = this.totalPagadoPorMetodos;
-        const montoRequerido = this.montoCubiertoPorMetodos;
-        const diferencia = montoRequerido - montoCubierto;
-
-        if (diferencia > 0.01) {
-            return `Faltan ${this.redondear(diferencia)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
-        }
-
-        if (Math.abs(montoCubierto - montoRequerido) < 0.01) {
-            return 'Listo para generar venta';
-        }
-
-        return 'Monto excedido, ajusta los métodos de pago';
+   get mensajeEstadoBoton(): string {
+    if (this.venta.productos.length === 0) {
+        return 'Agrega productos para continuar';
     }
+
+    // Verificar si hay métodos incompletos
+    const metodosIncompletos = this.venta.metodosDePago.some(metodo => !this.metodoCompleto(metodo));
+    if (metodosIncompletos) {
+        return 'Completa todos los métodos de pago';
+    }
+
+    const montoCubierto = this.totalPagadoPorMetodos;
+    const montoRequerido = this.montoCubiertoPorMetodos;
+    const diferencia = montoRequerido - montoCubierto;
+
+    if (diferencia > 0.01) {
+        return `Faltan ${this.formatearMoneda(diferencia, this.venta.moneda)}`;
+    }
+
+    if (Math.abs(montoCubierto - montoRequerido) < 0.01) {
+        return 'Listo para generar venta';
+    }
+
+    return 'Monto excedido, ajusta los métodos de pago';
+}
 
     // En tu componente TypeScript
     get totalPagadoCashea(): number {
@@ -1987,8 +2036,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
 
-        let estadoVenta = 'completada'; // ← LA VENTA SIEMPRE SE CREA COMO COMPLETADA
-        let estadoPago = 'completado';  // ← ESTADO DEL PAGO
+        let estadoVenta = 'completada';
+        let estadoPago = 'completado';
 
         // Determinar estado del pago basado en la forma de pago y deuda
         if (this.venta.formaPago === 'abono') {
@@ -1996,14 +2045,15 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const montoTotal = this.montoTotal;
             const diferencia = Math.abs(montoAbonado - montoTotal);
             estadoPago = diferencia < 0.01 ? 'completado' : 'pendiente';
-
         } else if (this.venta.formaPago === 'cashea') {
             const totalPagadoCashea = this.totalPagadoCashea;
             const montoTotal = this.montoTotal;
             const diferencia = Math.abs(totalPagadoCashea - montoTotal);
             estadoPago = diferencia < 0.01 ? 'completado' : 'pendiente';
         }
-        // Para 'contado', estadoPago siempre será 'completado'
+
+        // OBTENER LA TASA ACTUAL UTILIZADA
+        const tasaUtilizada = this.obtenerTasaUtilizada();
 
         // Preparar datos del cliente
         let clienteData: any = {};
@@ -2011,7 +2061,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             clienteData = {
                 tipo: 'paciente',
                 informacion: {
-                    tipoPersona: 'natural', // Los pacientes siempre son naturales
+                    tipoPersona: 'natural',
                     nombreCompleto: this.pacienteSeleccionado.informacionPersonal?.nombreCompleto,
                     cedula: this.pacienteSeleccionado.informacionPersonal?.cedula,
                     telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
@@ -2070,16 +2120,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 totalPagado = this.totalPagadoPorMetodos;
         }
 
-        // ESTRUCTURA ORIGINAL - SOLO CAMBIOS EN ESTADOS
-        const datosParaAPI = {
+        // ESTRUCTURA BASE DE LA VENTA - INCLUYENDO TASA
+        const datosParaAPI: any = {
             venta: {
                 fecha: fechaActual.toISOString(),
-                estado: estadoVenta, // ← SIEMPRE "completada"
-                estatus_pago: estadoPago, // ← "completado" o "pendiente"
+                estado: estadoVenta,
+                estatus_pago: estadoPago,
                 formaPago: this.venta.formaPago,
                 moneda: this.venta.moneda,
                 observaciones: this.venta.observaciones || null,
-                impuesto: this.venta.impuesto
+                impuesto: this.venta.impuesto,
+                tasa_cambio: tasaUtilizada,
             },
             totales: {
                 subtotal: subtotal,
@@ -2094,8 +2145,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             },
             productos: productosData,
             metodosPago: metodosPagoData,
-            formaPago: {
-                tipo: this.venta.formaPago,
+            auditoria: {
+                usuarioCreacion: parseInt(this.currentUser?.id || '0'),
+                fechaCreacion: fechaActual.toISOString()
+            }
+        };
+
+        // AGREGAR INFORMACIÓN ESPECÍFICA SEGÚN LA FORMA DE PAGO
+        if (this.venta.formaPago === 'cashea') {
+            datosParaAPI.formaPago = {
+                tipo: 'cashea',
                 nivel: this.nivelCashea,
                 montoTotal: this.montoTotal,
                 montoInicial: this.venta.montoInicial,
@@ -2112,12 +2171,25 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     pagada: cuota.pagada,
                     seleccionada: cuota.seleccionada
                 }))
-            },
-            auditoria: {
-                usuarioCreacion: parseInt(this.currentUser?.id || '0'),
-                fechaCreacion: fechaActual.toISOString()
-            }
-        };
+            };
+
+            // Para Cashea, el estado de la venta debe ser 'pendiente'
+            datosParaAPI.venta.estado = 'pendiente';
+
+        } else if (this.venta.formaPago === 'abono') {
+            datosParaAPI.formaPagoDetalle = {
+                tipo: 'abono',
+                montoAbonado: this.venta.montoAbonado,
+                deudaPendiente: this.getDeudaPendienteAbono(),
+                porcentajePagado: this.porcentajeAbonadoDelTotal
+            };
+        } else if (this.venta.formaPago === 'contado') {
+            datosParaAPI.formaPagoDetalle = {
+                tipo: 'contado',
+                montoTotal: this.montoTotal,
+                totalPagado: this.totalPagadoPorMetodos
+            };
+        }
 
         return datosParaAPI;
     }
@@ -2238,6 +2310,27 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const formaPago = datos.configuracion?.formaPago || 'contado';
         const tituloRecibo = this.getTituloReciboParaHTML(formaPago);
         const mensajeFinal = this.getMensajeFinalParaHTML(formaPago);
+
+        // CREAR UNA FUNCIÓN LOCAL PARA FORMATEAR MONEDA
+        const formatearMonedaLocal = (monto: number | null | undefined, moneda?: string) => {
+
+            // Validar que el monto sea un número válido
+            if (monto === null || monto === undefined || isNaN(monto)) {
+                return this.obtenerSimboloMoneda(moneda || datos.configuracion?.moneda || 'dolar') + '0.00';
+            }
+
+            // Asegurarse de que es un número
+            const montoNumerico = Number(monto);
+
+            if (isNaN(montoNumerico)) {
+                return this.obtenerSimboloMoneda(moneda || datos.configuracion?.moneda || 'dolar') + '0.00';
+            }
+
+            const monedaFinal = moneda || datos.configuracion?.moneda || 'dolar';
+            const simbolo = this.obtenerSimboloMoneda(monedaFinal);
+
+            return `${simbolo}${montoNumerico.toFixed(2)}`;
+        };
 
         return `
     <!DOCTYPE html>
@@ -2649,8 +2742,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                                     <td class="text-center">${index + 1}</td>
                                     <td>${producto.nombre}</td>
                                     <td class="text-center">${producto.cantidad || 1}</td>
-                                    <td class="text-end">${this.formatearMoneda(producto.precioUnitario)}</td>
-                                    <td class="text-end">${this.formatearMoneda(producto.subtotal)}</td>
+                                    <td class="text-end">${formatearMonedaLocal(producto.precioUnitario)}</td>
+                                    <td class="text-end">${formatearMonedaLocal(producto.subtotal)}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -2658,21 +2751,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 </div>
 
                 <!-- Métodos de pago -->
-                ${datos.metodosPago && datos.metodosPago.length > 0 ? `
-                    <div class="metodos-compactos page-break-avoid">
-                        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">PAGOS</h6>
-                        ${datos.metodosPago.map((metodo: any) => `
-                            <div class="metodo-item">
-                                <span>
-                                    <span class="badge bg-primary">${this.formatearTipoPago(metodo.tipo)}</span>
-                                    ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}
-                                    ${metodo.banco ? '- ' + metodo.banco : ''}
-                                </span>
-                                <span>${this.formatearMoneda(metodo.monto)}</span>
-                            </div>
-                        `).join('')}
+                ${datos.metodosPago.map((metodo: any) => `
+                    <div class="metodo-item">
+                        <span>
+                            <span class="badge bg-primary"> ${this.formatearTipoPago(metodo.tipo)} </span>
+                            ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}
+                            ${metodo.banco ? '- ' + metodo.banco : ''}
+                        </span>
+                        <span> ${formatearMonedaLocal(metodo.monto, metodo.moneda)}</span>
                     </div>
-                ` : ''}
+                `).join('')}
 
                 <!-- SECCIÓN CASHEA COMPLETA - CORREGIDA -->
                 ${datos.cashea ? `
@@ -2932,6 +3020,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.generarCuotasCashea();
         }
 
+
         const datos = this.datosRecibo || this.crearDatosReciboReal();
         const htmlContent = this.generarReciboHTML(datos);
 
@@ -2959,21 +3048,52 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 500);
     }
 
-    // === MÉTODOS AUXILIARES ===
-    formatearMoneda(monto: number | null | undefined): string {
+    formatearMoneda(monto: number | null | undefined, moneda?: string): string {
         // Validar que el monto sea un número válido
         if (monto === null || monto === undefined || isNaN(monto)) {
-            return '$0.00';
+            const monedaDefault = moneda || this.datosRecibo?.configuracion?.moneda || this.venta.moneda;
+            return this.obtenerSimboloMoneda(monedaDefault) + '0,00';
         }
 
         // Asegurarse de que es un número
         const montoNumerico = Number(monto);
 
         if (isNaN(montoNumerico)) {
-            return '$0.00';
+            const monedaDefault = moneda || this.datosRecibo?.configuracion?.moneda || this.venta.moneda;
+            return this.obtenerSimboloMoneda(monedaDefault) + '0,00';
         }
 
-        return `$${montoNumerico.toFixed(2)}`;
+        // Usar la moneda específica si se proporciona, sino la del recibo, sino la de la venta
+        const monedaFinal = moneda || this.datosRecibo?.configuracion?.moneda || this.venta.moneda;
+        const simbolo = this.obtenerSimboloMoneda(monedaFinal);
+
+        // Formatear según el estilo venezolano
+        return this.formatearNumeroVenezolano(montoNumerico, simbolo);
+    }
+
+    // Nueva función para formatear números al estilo venezolano
+    private formatearNumeroVenezolano(valor: number, simbolo: string): string {
+        // Redondear a 2 decimales
+        const valorRedondeado = Math.round(valor * 100) / 100;
+
+        // Separar parte entera y decimal
+        const partes = valorRedondeado.toString().split('.');
+        let parteEntera = partes[0];
+        let parteDecimal = partes[1] || '00';
+
+        // Asegurar 2 decimales
+        parteDecimal = parteDecimal.padEnd(2, '0');
+
+        // Formatear parte entera con separadores de miles (puntos)
+        parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+        // Para bolívares, usar el formato específico
+        if (simbolo === 'Bs.') {
+            return `${simbolo} ${parteEntera},${parteDecimal}`;
+        } else {
+            // Para otras monedas
+            return `${simbolo}${parteEntera},${parteDecimal}`;
+        }
     }
 
     private manejarErrorGeneracion(error: any): void {
@@ -2994,59 +3114,84 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // === MÉTODOS DEL RECIBO ===
     private mostrarReciboAutomatico(data: any): void {
+        // Siempre crear datos reales del recibo basados en el estado actual
         let datosRecibo = this.crearDatosReciboReal();
 
+        // Si hay datos del API, actualizar solo la información que no afecte las monedas
         if (data.datosRealesAPI) {
             const apiData = data.datosRealesAPI;
 
-            // Actualizar con datos reales del API
+            // Actualizar SOLO campos informativos, NO métodos de pago ni monedas
             datosRecibo = {
                 ...datosRecibo,
-                numeroVenta: data.numeroVenta || apiData.venta?.key,
+                // Información básica que puede venir del API
+                numeroVenta: data.numeroVenta || apiData.venta?.key || datosRecibo.numeroVenta,
                 fecha: apiData.venta?.fecha ?
                     new Date(apiData.venta.fecha).toLocaleDateString('es-VE') : datosRecibo.fecha,
                 hora: apiData.venta?.fecha ?
                     new Date(apiData.venta.fecha).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : datosRecibo.hora,
                 vendedor: apiData.asesor?.nombre || datosRecibo.vendedor,
+
+                // Cliente - mantener datos originales pero actualizar si hay información mejor
                 cliente: {
                     nombre: apiData.cliente?.informacion?.nombreCompleto || datosRecibo.cliente.nombre,
                     cedula: apiData.cliente?.informacion?.cedula || datosRecibo.cliente.cedula,
                     telefono: apiData.cliente?.informacion?.telefono || datosRecibo.cliente.telefono
                 },
-                productos: apiData.productos?.map((producto: any) => ({
-                    nombre: producto.datos?.nombre || 'Producto',
-                    codigo: producto.datos?.codigo || 'N/A',
-                    cantidad: producto.cantidad || 1,
-                    precioUnitario: producto.precio_unitario || 0,
-                    subtotal: producto.total || 0
-                })) || datosRecibo.productos,
+
+                // Productos - mantener estructura original pero con datos mejorados si existen
+                productos: datosRecibo.productos.map((producto: any, index: number) => {
+                    const productoAPI = apiData.productos?.[index];
+                    return {
+                        ...producto,
+                        nombre: productoAPI?.datos?.nombre || producto.nombre,
+                        codigo: productoAPI?.datos?.codigo || producto.codigo
+                    };
+                }),
+
+                // TOTALES - usar los del API si son consistentes
                 totales: {
                     subtotal: apiData.totales?.subtotal || datosRecibo.totales.subtotal,
                     descuento: apiData.totales?.descuento || datosRecibo.totales.descuento,
                     iva: apiData.totales?.iva || datosRecibo.totales.iva,
                     total: apiData.totales?.total || datosRecibo.totales.total,
                     totalPagado: apiData.totales?.totalPagado || datosRecibo.totales.totalPagado
+                },
+
+                // CONFIGURACIÓN - mantener la configuración original (monedas, forma de pago)
+                configuracion: {
+                    ...datosRecibo.configuracion,
+                    // Solo actualizar observaciones si vienen del API
+                    observaciones: apiData.venta?.observaciones || datosRecibo.configuracion.observaciones
                 }
             };
+
         } else {
-            // Si no hay datos del API, usar los datos generados pero actualizar el número de venta
+            // Si no hay datos del API, solo actualizar el número de venta si viene en data
             datosRecibo.numeroVenta = data.numeroVenta || datosRecibo.numeroVenta;
         }
 
+        // ASIGNAR LOS DATOS FINALES AL RECIBO
         this.datosRecibo = datosRecibo;
 
+        // INFORMACIÓN DE VENTA PARA MOSTRAR EN EL MODAL
         this.informacionVenta = {
-            numeroVenta: data.numeroVenta || this.datosRecibo.numeroVenta,
+            numeroVenta: this.datosRecibo.numeroVenta,
             fecha: this.datosRecibo.fecha,
             hora: this.datosRecibo.hora,
             estado: data.datosRealesAPI?.venta?.estatus_venta || 'completada',
-            formaPago: data.datosRealesAPI?.venta?.formaPago || this.venta.formaPago
+            formaPago: this.datosRecibo.configuracion.formaPago,
+            moneda: this.datosRecibo.configuracion.moneda
         };
 
-        // MOSTRAR RECIBO INMEDIATAMENTE (sin delays adicionales)
+        // MOSTRAR RECIBO INMEDIATAMENTE
         this.mostrarModalRecibo = true;
         this.ventaGenerada = true;
+
+        // Cerrar modal de resumen si está abierto
         this.cerrarModalResumen();
+
+        // Forzar actualización de la vista
         this.cdr.detectChanges();
     }
 
@@ -3621,8 +3766,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     getTituloRecibo(): string {
         const formaPago = this.datosRecibo?.configuracion?.formaPago || this.venta.formaPago;
 
-        //console.log('formaPago', formaPago);
-
         switch (formaPago) {
             case 'abono':
                 return 'RECIBO DE ABONO';
@@ -3710,10 +3853,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 totalPagado = this.totalPagadoPorMetodos;
         }
 
-        //Obtener productos con detalles calculados
+        // Obtener productos con detalles calculados
         const productosConDetalles = this.obtenerProductosConDetalles();
 
-        //Obtener información del cliente CORRECTAMENTE
+        // Obtener información del cliente CORRECTAMENTE
         let clienteInfo = {
             nombre: 'CLIENTE GENERAL',
             cedula: 'N/A',
@@ -3734,12 +3877,26 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             };
         }
 
+        // USAR LOS MÉTODOS DE PAGO REALES - CORREGIDO
+        const metodosPagoParaRecibo = this.venta.metodosDePago.map(m => {
+            // Determinar la moneda: usar la que ya está en el método, o calcularla si no existe
+            const monedaMetodo = m.moneda || this.getMonedaParaMetodo(m.tipo);
+
+            return {
+                tipo: m.tipo || 'efectivo',
+                monto: m.monto || 0,
+                referencia: m.referencia || '',
+                banco: m.banco || '',
+                moneda: monedaMetodo 
+            };
+        });
+
         const datosRecibo: any = {
             // Información general
             numeroVenta: 'V-' + Date.now().toString().slice(-6),
             fecha: fechaActual.toLocaleDateString('es-VE'),
             hora: fechaActual.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
-            //USAR LA INFORMACIÓN CORREGIDA DEL VENDEDOR
+            // USAR LA INFORMACIÓN CORREGIDA DEL VENDEDOR
             vendedor: vendedorInfo,
 
             // Información de la sede
@@ -3751,20 +3908,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 email: 'newvisionlens2020@gmail.com'
             },
 
-            //USAR LA INFORMACIÓN CORREGIDA DEL CLIENTE
+            // USAR LA INFORMACIÓN CORREGIDA DEL CLIENTE
             cliente: clienteInfo,
 
             // Productos reales del carrito con detalles calculados
             productos: productosConDetalles,
 
-            // Métodos de pago reales
-            metodosPago: this.venta.metodosDePago.map(m => ({
-                tipo: m.tipo || 'efectivo',
-                monto: m.monto || 0,
-                referencia: m.referencia || '',
-                banco: m.banco || '',
-                moneda: this.getMonedaParaMetodo(m.tipo)
-            })),
+            // Métodos de pago - USAR LOS DATOS PROCESADOS
+            metodosPago: metodosPagoParaRecibo,
 
             // Totales reales
             totales: {
@@ -3815,6 +3966,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         return datosRecibo;
     }
+
+
 
     private obtenerProductosConDetalles(): any[] {
         return this.venta.productos.map((p, index) => {
@@ -3976,7 +4129,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             mensaje += `\n*Métodos de pago utilizados:*\n`;
             datos.metodosPago.forEach((metodo: any) => {
                 const emoji = this.obtenerEmojiMetodoPago(metodo.tipo);
-                mensaje += `• ${emoji} ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.monto)}\n`;
+                mensaje += `• ${emoji} ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.monto, metodo.moneda)}\n`;
             });
         }
 
@@ -4080,7 +4233,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (datos.metodosPago && datos.metodosPago.length > 0) {
             cuerpo += `Métodos de pago utilizados:\n`;
             datos.metodosPago.forEach((metodo: any) => {
-                cuerpo += `• ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.monto)}\n`;
+                cuerpo += `• ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.monto, metodo.moneda)}\n`;
                 if (metodo.referencia) {
                     cuerpo += `  Referencia: ${metodo.referencia}\n`;
                 }
@@ -4286,35 +4439,172 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    // Validar nombre (solo alfabético y espacios, obligatorio)
+    // Validar nombre según el tipo de persona
     validarNombre(nombre: string): boolean {
         if (!nombre || nombre.trim() === '') return false;
 
-        const nombreRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
-        return nombreRegex.test(nombre.trim());
+        const nombreLimpio = nombre.trim();
+        const tipoPersona = this.clienteSinPaciente.tipoPersona;
+
+        if (tipoPersona === 'juridica') {
+            // Para persona jurídica (razón social): permitir letras, números, puntos, comas, guiones, etc.
+            const razonSocialRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\.\,\-\&]+$/;
+            return razonSocialRegex.test(nombreLimpio);
+        } else {
+            // Para persona natural: solo letras y espacios
+            const nombreNaturalRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/;
+            return nombreNaturalRegex.test(nombreLimpio);
+        }
     }
 
-    // Validar teléfono (estructura internacional, obligatorio)
+    // Actualizar el mensaje de error según el tipo de persona
+    getMensajeErrorNombre(): string {
+        const tipoPersona = this.clienteSinPaciente.tipoPersona;
+
+        if (tipoPersona === 'juridica') {
+            return 'La razón social puede contener letras, números, espacios, puntos (.), comas (,), guiones (-) y símbolos como &';
+        } else {
+            return 'El nombre solo puede contener letras y espacios';
+        }
+    }
+
+    onTelefonoBlur(): void {
+        const telefono = this.clienteSinPaciente.telefono;
+
+        if (telefono && telefono.trim() !== '') {
+            const telefonoFormateado = this.formatearTelefonoVenezuela(telefono);
+
+            // Solo actualizar si el formato cambió
+            if (telefonoFormateado !== telefono) {
+                this.clienteSinPaciente.telefono = telefonoFormateado;
+            }
+
+            // Validar después del formateo
+            this.validarTelefonoFormateado(telefonoFormateado);
+        }
+    }
+
+    private validarTelefonoFormateado(telefono: string): void {
+        if (!this.validarTelefono(telefono)) {
+            this.mostrarErrorTelefono();
+            this.mensajeValidacionCliente = this.getMensajeErrorTelefono();
+        } else {
+            this.limpiarErrorTelefono();
+        }
+    }
+
+    // Validar teléfono
     validarTelefono(telefono: string): boolean {
         if (!telefono || telefono.trim() === '') return false;
 
         const telefonoLimpio = telefono.trim();
 
-        // Remover todos los espacios para validar
-        const telefonoSinEspacios = telefonoLimpio.replace(/\s/g, '');
+        // Aceptar formatos internacionales y locales
+        const formatosAceptados = [
+            /^\+\d{1,3} \d{7,15}$/,     // +58 4121234567, +57 3123456789
+            /^\d{1,3} \d{7,15}$/,       // 58 4121234567, 57 3123456789
+            /^\d{10,11}$/,              // 4121234567 o 04121234567 (Venezuela)
+            /^\+?\d{10,15}$/,           // +584121234567 o 584121234567
+            /^\d{1,3}\s+\d{7,15}$/      // 57  3123456789 (con espacios múltiples)
+        ];
 
-        // Validar que solo contenga números y posiblemente el signo + al inicio
-        if (!/^\+?\d+$/.test(telefonoSinEspacios)) return false;
+        return formatosAceptados.some(pattern => pattern.test(telefonoLimpio));
+    }
 
-        // Validar longitud mínima y máxima (8-15 dígitos sin código de país, o más con código)
-        const longitud = telefonoSinEspacios.replace('+', '').length;
+    getMensajeErrorTelefono(): string {
+        return 'Formato inválido. Para Venezuela: 4121234567. Otros países: +código número';
+    }
 
-        // Longitud típica: 
-        // - Sin código: 8-11 dígitos
-        // - Con código: 10-15 dígitos (incluyendo código de país)
-        if (longitud < 8 || longitud > 15) return false;
 
-        return true;
+    private formatearTelefonoVenezuela(telefono: string): string {
+        if (!telefono) return '';
+
+        // Limpiar el teléfono (pero mantener espacios para detectar formato)
+        const telefonoLimpio = telefono.replace(/[\-\(\)]/g, '').trim();
+
+        // Caso 1: Ya tiene formato correcto con +, dejarlo como está
+        if (telefonoLimpio.startsWith('+')) {
+            return this.formatearConEspacio(telefonoLimpio);
+        }
+
+        // Caso 2: Si ya tiene 58 sin +, agregar el + (Venezuela)
+        if (telefonoLimpio.startsWith('58') && telefonoLimpio.length > 2) {
+            // Si tiene espacio después del 58: "58 412..."
+            if (telefonoLimpio.includes(' ')) {
+                const partes = telefonoLimpio.split(' ');
+                if (partes[0] === '58') {
+                    return `+58 ${partes.slice(1).join('')}`;
+                }
+            } else {
+                // Sin espacio: "58412..."
+                const numero = telefonoLimpio.substring(2);
+                return `+58 ${numero}`;
+            }
+        }
+
+        // Caso 3: Detectar formato internacional con código y espacio (ej: "57 3123456789")
+        const formatoInternacional = this.detectarFormatoInternacional(telefonoLimpio);
+        if (formatoInternacional) {
+            return `+${formatoInternacional}`;
+        }
+
+        // Caso 4: Detectar números venezolanos por sus códigos de área
+        const esNumeroVenezolano = this.esNumeroVenezolano(telefonoLimpio.replace(/\s/g, ''));
+
+        if (esNumeroVenezolano) {
+            return `+58 ${telefonoLimpio.replace(/\s/g, '')}`;
+        }
+
+        // Caso 5: Si no coincide con nada, dejar como está
+        return telefono;
+    }
+
+    // Formatear con espacio después del código (mejorado)
+    private formatearConEspacio(telefono: string): string {
+        // Si ya tiene + pero no espacio después del código, agregarlo
+        if (telefono.startsWith('+') && !telefono.includes(' ')) {
+            // Buscar donde termina el código (1-3 dígitos después del +)
+            const match = telefono.match(/^\+(\d{1,3})(\d+)$/);
+            if (match) {
+                const codigo = match[1];
+                const numero = match[2];
+                return `+${codigo} ${numero}`;
+            }
+        }
+
+        // Si ya tiene formato con espacio, dejarlo como está
+        return telefono;
+    }
+
+    // Detectar formato internacional: "código número" (ej: "57 3123456789")
+    private detectarFormatoInternacional(telefono: string): string | null {
+        // Patrón: 1-3 dígitos + espacio + 7-15 dígitos
+        const patronInternacional = /^(\d{1,3})\s+(\d{7,15})$/;
+        const match = telefono.match(patronInternacional);
+
+        if (match) {
+            const codigo = match[1];
+            const numero = match[2];
+            return `${codigo} ${numero}`;
+        }
+
+        return null;
+    }
+
+    // Verificar si es un número venezolano (mantenemos igual)
+    private esNumeroVenezolano(telefono: string): boolean {
+        // Remover espacios para la validación
+        const telefonoSinEspacios = telefono.replace(/\s/g, '');
+
+        // Patrones de números venezolanos
+        const patronesVenezuela = [
+            /^(0412|0414|0416|0424|0426|0412|0424|0416|0426|0414)/, // Móviles con 0
+            /^(412|414|416|424|426)/, // Móviles sin 0
+            /^(0212|0234|0235|0241|0243|0244|0245|0246|0247|0248|0249|0251|0252|0253|0254|0255|0256|0257|0258|0259|0261|0262|0263|0264|0265|0266|0267|0268|0269|0271|0272|0273|0274|0275)/, // Fijos con 0
+            /^(212|234|235|241|243|244|245|246|247|248|249|251|252|253|254|255|256|257|258|259|261|262|263|264|265|266|267|268|269|271|272|273|274|275)/ // Fijos sin 0
+        ];
+
+        return patronesVenezuela.some(patron => patron.test(telefonoSinEspacios));
     }
 
     // Formatear teléfono automáticamente (sin forzar código de país)
@@ -4355,10 +4645,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.mostrarErrorTelefono();
         } else {
             this.limpiarErrorTelefono();
-
-            if (telefono) {
-                this.clienteSinPaciente.telefono = this.formatearTelefono(telefono);
-            }
         }
         this.actualizarEstadoValidacion();
     }
@@ -4458,16 +4744,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    getMensajeErrorTelefono(): string {
-        return 'Formato de teléfono inválido. Use: 58 4121234567 o 4121234567';
-    }
-
     getMensajeErrorEmail(): string {
         return 'Formato de email inválido. Use: ejemplo@correo.com';
-    }
-
-    getMensajeErrorNombre(): string {
-        return 'El nombre solo puede contener letras y espacios';
     }
 
     // Obtener estado individual de cada campo para mostrar en la UI
@@ -4516,15 +4794,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         };
     }
 
-
-
-
     // === MÉTODOS PARA VALIDACIÓN DE CLIENTE VÍA API ===
-
-    /**
-     * Simula la búsqueda de cliente en la base de datos
-     * TODO: Reemplazar con llamada real al API cuando esté disponible
-     */
     private simularBusquedaCliente(cedula: string): Promise<any> {
         return new Promise((resolve, reject) => {
             // Simular delay de red
@@ -4891,5 +5161,51 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // Si pasa todas las validaciones, abrir el modal
         this.abrirModalResumen();
     }
+
+    /**
+ * Obtiene la tasa de cambio utilizada para la venta
+ */
+    private obtenerTasaUtilizada(): number {
+        const monedaVenta = this.venta.moneda.toLowerCase();
+        const monedaNormalizada = this.normalizarIdMoneda(monedaVenta);
+
+        // Si la moneda es bolívar, retornar 1
+        if (monedaNormalizada === 'bolivar') {
+            return 1;
+        }
+
+        // Buscar la tasa en las tasas disponibles
+        const tasa = this.tasasDisponibles.find(t => t.id === monedaNormalizada);
+
+        if (tasa) {
+            return tasa.valor;
+        }
+
+        // Si no se encuentra la tasa, buscar por nombre como fallback
+        const tasaPorNombre = this.tasasDisponibles.find(t =>
+            t.nombre.toLowerCase() === monedaNormalizada
+        );
+
+        return tasaPorNombre?.valor || 1;
+    }
+    /**
+ * Normaliza el ID de moneda para búsqueda en las tasas
+ */
+    private normalizarIdMoneda(moneda: string): string {
+        const mapaMonedas: { [key: string]: string } = {
+            'dolar': 'dolar',
+            'usd': 'dolar',
+            '$': 'dolar',
+            'euro': 'euro',
+            'eur': 'euro',
+            '€': 'euro',
+            'bolivar': 'bolivar',
+            'ves': 'bolivar',
+            'bs': 'bolivar'
+        };
+        return mapaMonedas[moneda.toLowerCase()] || moneda.toLowerCase();
+    }
+
+
 
 }

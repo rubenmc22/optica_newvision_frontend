@@ -1022,6 +1022,16 @@
     }
 }
 
+// Estilo específico para el botón de VES si es necesario
+.moneda-btn .moneda-symbol {
+    font-weight: bold;
+    
+    // Para el símbolo de Bolívares
+    &:contains("Bs") {
+        font-size: 0.9em;
+    }
+}
+
 // Componentes modernos
 .modern-select {
     border: 1px solid #e0e0e0;

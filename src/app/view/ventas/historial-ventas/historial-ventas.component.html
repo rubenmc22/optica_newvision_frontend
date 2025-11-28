@@ -518,7 +518,7 @@
                     <div>
                       <small class="text-muted">Deuda Pendiente</small>
                       <div class="fw-semibold text-danger">
-                        {{ getMontoParaMostrar(venta, getDeudaPendiente(venta)) }}
+                        {{ getMontoParaMostrar(venta, getDeudaPendiente(venta)) }}N
                         <small *ngIf="venta.formaPago === 'cashea'" class="text-muted d-block">
                           {{ venta.cantidadCuotas - venta.cuotasAdelantadas.length }} cuota pendiente
                         </small>
@@ -528,8 +528,7 @@
                 </div>
 
                 <!-- Sección Media: Detalles Específicos -->
-                <div class="detalles-grid">
-                  <!-- Métodos de Pago -->
+               <!-- <div class="detalles-grid">
                   <div class="detalle-seccion">
                     <h6 class="seccion-titulo">
                       <i class="bi bi-credit-card me-2"></i>
@@ -586,7 +585,6 @@
                     </div>
                   </div>
 
-                  <!-- Información Adicional -->
                   <div class="detalle-seccion">
                     <h6 class="seccion-titulo">
                       <i class="bi bi-info-circle me-2"></i>
@@ -683,7 +681,7 @@
 
                     </div>
                   </div>
-                </div>
+                </div>-->
 
                 <!-- Sección Inferior: Acciones -->
                 <div class="acciones-venta">

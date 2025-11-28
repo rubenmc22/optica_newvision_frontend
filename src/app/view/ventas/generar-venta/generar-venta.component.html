@@ -271,12 +271,11 @@
                                         <!-- Columna Precio -->
                                         <td class="text-center precio">
                                             <span class="precio-unitario">
-                                                {{ getPrecioParaMostrar(p) | number:'1.2-2' }} {{
-                                                getSimboloMonedaActual() }}
+                                                {{ formatearMoneda(getPrecioParaMostrar(p)) }}
                                             </span>
                                             <!-- Referencia en Bs si no es bolívar -->
                                             <small *ngIf="!esMonedaBolivar(monedaSistema)" class="text-muted d-block">
-                                                Bs {{ getPrecioEnBs(p) | number:'1.2-2' }}
+                                                {{ formatearMoneda(getPrecioEnBs(p), 'bolivar') }}
                                             </small>
                                         </td>
 
@@ -299,15 +298,14 @@
 
                                         <!-- Columna Subtotal -->
                                         <td class="text-center subtotal">
-                                            {{ p.subtotal | number:'1.2-2' }} {{ getSimboloMonedaActual() }}
+                                            {{ formatearMoneda(p.subtotal) }}
                                         </td>
-
 
                                         <!-- Columna IVA -->
                                         <td class="text-center iva">
                                             <ng-container *ngIf="p.iva && p.iva > 0; else sinIva">
                                                 <span class="iva-monto">
-                                                    {{ p.iva | number:'1.2-2' }} {{ getSimboloMonedaActual() }}
+                                                    {{ formatearMoneda(p.iva) }}
                                                 </span>
                                             </ng-container>
                                             <ng-template #sinIva>
@@ -318,7 +316,7 @@
                                         <!-- Columna Total -->
                                         <td class="text-center total">
                                             <strong class="total-monto">
-                                                {{ p.total | number:'1.2-2' }} {{ getSimboloMonedaActual() }}
+                                                {{ formatearMoneda(p.total) }}
                                             </strong>
                                         </td>
 
@@ -342,7 +340,7 @@
                                 <i class="bi bi-receipt"></i>
                                 <span class="resumen-label">Monto total:</span>
                                 <span class="monto-valor">
-                                    {{ totalProductos | number:'1.2-2' }} {{ getSimboloMonedaActual() }}
+                                    {{ formatearMoneda(totalProductos) }}
                                 </span>
                             </div>
                             <button class="btn-generar-venta" (click)="abrirModalResumen()"
@@ -599,10 +597,15 @@
                                         </label>
                                         <input type="tel" class="form-control modern-input"
                                             style="margin-bottom: -10px !important;"
-                                            [(ngModel)]="clienteSinPaciente.telefono" placeholder="Ej: 58 4121234567"
-                                            (blur)="onTelefonoChange()"
+                                            [(ngModel)]="clienteSinPaciente.telefono" 
+                                            placeholder="Ej: 4121234567 (Ven) o +57 3123456789"
+                                            (blur)="onTelefonoBlur()"
                                             (input)="onTelefonoChange(); onCampoEditadoManualmente()"
-                                            [class.campo-autocompletado]="clienteEncontrado" data-telefono-input>
+                                            [class.campo-autocompletado]="clienteEncontrado" 
+                                            data-telefono-input>
+                                        <small class="form-text text-muted">
+                                            Para Venezuela: ingrese el número (4121234567). Otros países: incluya el código (+57 3123456789)
+                                        </small>
                                         <div class="error-message"
                                             *ngIf="!getEstadoCampoTelefono().valido && clienteSinPaciente.telefono">
                                             <i class="bi bi-exclamation-circle"></i>
@@ -718,7 +721,7 @@
                                         <option [value]="3">3 cuotas</option>
                                         <option [value]="6" [disabled]="!nivelPermiteCuotasExtendidas(nivelCashea)">6
                                             cuotas</option>
-                                    </select>
+                                    </select>   
                                 </div>
 
                                 <div class="config-item">
@@ -735,14 +738,6 @@
                                                 obtenerEquivalenteBs(calcularInicialCasheaPorNivel(montoTotal,
                                                 nivelCashea)) | number:'1.2-2' }} Bs</span>
                                         </small>
-                                    </div>
-                                </div>
-
-                                <div class="config-item">
-                                    <label class="form-label">Monto por cuota</label>
-                                    <div class="readonly-field">
-                                        {{ redondearDosDecimales(montoPrimeraCuota) }} {{
-                                        obtenerSimboloMoneda(venta.moneda) }}
                                     </div>
                                 </div>
                             </div>
@@ -873,7 +868,7 @@
                                 </div>
                             </div>
 
-                            <!-- Selector de moneda para efectivo -->
+                           <!-- Selector de moneda para efectivo -->
                             <div *ngIf="hayMetodoEfectivoSeleccionado()" class="moneda-selector-container">
                                 <div class="moneda-selector-header">
                                     <i class="bi bi-currency-exchange"></i>
@@ -897,6 +892,16 @@
                                         <span class="moneda-info">
                                             <strong>EUR</strong>
                                             <small>Euro</small>
+                                        </span>
+                                    </button>
+
+                                    <button type="button" class="moneda-btn"
+                                        [class.moneda-active]="monedaEfectivo === 'VES'"
+                                        (click)="cambiarMonedaEfectivo('VES')">
+                                        <span class="moneda-symbol">Bs</span>
+                                        <span class="moneda-info">
+                                            <strong>VES</strong>
+                                            <small>Bolívar</small>
                                         </span>
                                     </button>
                                 </div>
@@ -1445,16 +1450,16 @@
                     </div>
 
                     <!-- Métodos de pago compactos -->
-                    <div class="metodos-compactos mb-3" *ngIf="getMetodosPagoSeguros().length > 0">
+                        <div class="metodos-compactos mb-3" *ngIf="getMetodosPagoSeguros().length > 0">
                         <h6 class="fw-bold mb-2 text-primary border-bottom pb-1">PAGOS</h6>
                         <div class="row g-1">
                             <div class="col-12" *ngFor="let metodo of getMetodosPagoSeguros()">
                                 <div class="d-flex justify-content-between align-items-center small py-1">
                                     <span>
                                         <span class="badge bg-primary me-1">{{ formatearTipoPago(metodo.tipo) }}</span>
-                                        {{ formatearMoneda(metodo.monto) }}
-                                        <span *ngIf="metodo.referencia" class="text-muted ms-1">(Ref: {{
-                                            metodo.referencia }})</span>
+                                        <!-- CORRECCIÓN: Pasar la moneda específica del método -->
+                                        {{ formatearMoneda(metodo.monto, metodo.moneda) }}
+                                        <span *ngIf="metodo.referencia" class="text-muted ms-1">(Ref: {{ metodo.referencia }})</span>
                                         <span *ngIf="metodo.banco" class="text-muted ms-1">- {{ metodo.banco }}</span>
                                     </span>
                                 </div>

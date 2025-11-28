@@ -12,6 +12,26 @@ export interface VentaDto {
     numeroCuotas?: number;
     montoAbonado?: number;
     metodosDePago: MetodoPago[];
+    formaPagoDetalle?: FormaPagoDetalle; // Agregar esta propiedad opcional
+
+}
+
+// En tu archivo de interfaces (venta-interfaz.ts o similar)
+export interface FormaPagoDetalle {
+    tipo: string;
+    montoTotal?: number;
+    totalPagado?: number;
+    nivel?: string;
+    montoInicial?: number;
+    cantidadCuotas?: string;
+    montoPorCuota?: number;
+    cuotasAdelantadas?: number;
+    montoAdelantado?: number;
+    totalPagadoAhora?: number;
+    deudaPendiente?: number;
+    montoAbonado?: number;
+    porcentajePagado?: number;
+    cuotas?: any[];
 }
 
 export interface ProductoVentaDto {
@@ -33,8 +53,9 @@ export interface MetodoPago {
     referencia?: string;
     bancoCodigo?: string;
     bancoNombre?: string;
-    banco?: string; // string formateado
-    bancoObject?: { codigo: string; nombre: string }; // objeto real
+    banco?: string;
+    bancoObject?: { codigo: string; nombre: string }; 
+     moneda?: string;
 }
 
 export interface DatosRecibo {
