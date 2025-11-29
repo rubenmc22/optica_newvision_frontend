@@ -575,7 +575,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return;
         }
 
-        const limpio = metodo.valorTemporal?.replace(/[^\d.,]/g, '').trim(); // Permitir coma
+        const limpio = metodo.valorTemporal?.replace(/[^\d.,]/g, '').trim();
 
         if (!limpio) {
             metodo.monto = 0;
@@ -614,34 +614,47 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     formatearInicialCashea(): void {
-        const limpio = this.valorInicialTemporal.replace(/[^\d.,]/g, '').trim(); // Permitir coma
-
-        if (!limpio) {
-            this.venta.montoInicial = 0;
-            this.valorInicialTemporal = '';
-            this.generarCuotasCashea();
-            return;
-        }
-
-        // Convertir coma decimal a punto para cálculo
-        const montoString = limpio.replace(',', '.');
-        const monto = parseFloat(montoString);
+        const limpio = this.valorInicialTemporal.replace(/[^\d.,]/g, '').trim();
         const minimo = this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
 
-        if (isNaN(monto)) {
-            this.venta.montoInicial = 0;
-            this.valorInicialTemporal = '';
+        // Si está vacío, asignar mínimo automáticamente
+        if (!limpio) {
+            this.venta.montoInicial = minimo;
+            this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
             this.generarCuotasCashea();
+
+            this.snackBar.open(`Se asignó el monto mínimo: ${this.formatearMoneda(minimo, this.venta.moneda)}`, 'Cerrar', {
+                duration: 2000,
+                panelClass: ['snackbar-info']
+            });
             return;
         }
 
-        if (monto < minimo) {
+        const montoString = limpio.replace(',', '.');
+        const monto = parseFloat(montoString);
+
+        // Si no es un número válido, asignar mínimo
+        if (isNaN(monto)) {
             this.venta.montoInicial = minimo;
             this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
             this.generarCuotasCashea();
             return;
         }
 
+        // Si el monto es menor al mínimo, asignar mínimo y mostrar mensaje
+        if (monto < minimo) {
+            this.venta.montoInicial = minimo;
+            this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
+            this.generarCuotasCashea();
+
+            this.snackBar.open(`El monto mínimo es ${this.formatearMoneda(minimo, this.venta.moneda)}. Se ajustó automáticamente.`, 'Cerrar', {
+                duration: 3000,
+                panelClass: ['snackbar-warning']
+            });
+            return;
+        }
+
+        // Monto válido - formatear correctamente
         this.venta.montoInicial = monto;
         this.valorInicialTemporal = this.formatearMoneda(monto, this.venta.moneda);
         this.generarCuotasCashea();
@@ -928,7 +941,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return redondearResultado ? this.redondear(resultado) : resultado;
     }
 
-    // === MÉTODOS CASHEA (RESTAURADOS) ===
+    // === MÉTODOS CASHEA ===
     onFormaPagoChange(valor: string): void {
         this.venta.formaPago = valor;
 
@@ -937,8 +950,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.controlarCuotasPorNivel();
             this.actualizarMontoInicialCashea();
             this.generarCuotasCashea();
+
+            // CORRECCIÓN: Asegurar que se muestre formateado desde el inicio
+            const minimo = this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
+            this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
         } else {
-            // Para contado y abono, usar la moneda del sistema
             this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
         }
 
@@ -974,7 +990,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const nuevoMontoInicial = this.calcularInicialCasheaPorNivel(totalConDescuento, this.nivelCashea);
 
         this.venta.montoInicial = nuevoMontoInicial;
-        this.valorInicialTemporal = `${nuevoMontoInicial.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+        this.valorInicialTemporal = this.formatearMoneda(nuevoMontoInicial, this.venta.moneda);
     }
 
     private controlarCuotasPorNivel(): void {
@@ -1084,36 +1100,48 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     generarCuotasCashea(): void {
-        // Validar que estamos en modo Cashea
         if (this.venta.formaPago !== 'cashea') {
             return;
         }
 
-        // Asegurar que Cashea siempre use dólares
         this.venta.moneda = 'dolar';
-
-        // Validar que el monto inicial no sea mayor al total
         const total = this.montoTotal;
-        const inicial = this.venta.montoInicial ?? 0;
+        const minimo = this.calcularInicialCasheaPorNivel(total, this.nivelCashea);
 
-        if (inicial > total) {
-            this.venta.montoInicial = total;
-            this.valorInicialTemporal = `${total.toFixed(2)} ${this.obtenerSimboloMoneda(this.venta.moneda)}`;
+        // Validación robusta del monto inicial
+        if (!this.venta.montoInicial || this.venta.montoInicial < minimo || isNaN(this.venta.montoInicial)) {
+            this.venta.montoInicial = minimo;
+            if (document.activeElement?.tagName !== 'INPUT') {
+                this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
+            }
         }
 
-        // Recalcular el plan
+        if (this.venta.montoInicial > total) {
+            this.venta.montoInicial = total;
+            if (document.activeElement?.tagName !== 'INPUT') {
+                this.valorInicialTemporal = this.formatearMoneda(total, this.venta.moneda);
+            }
+        }
+
         const plan = this.calcularCasheaPlan(this.cantidadCuotasCashea);
 
-        // Actualizar las cuotas
+        //Verificar si el pago inicial cubre el total
+        const deudaPendiente = total - this.venta.montoInicial;
+        const noHayDeuda = deudaPendiente <= 0.01; // Tolerancia para decimales
+
         this.cuotasCashea = plan.cuotasOrdenadas.map((cuota, index) => ({
             ...cuota,
-            habilitada: index === 0
+            habilitada: index === 0 && !noHayDeuda, // Solo habilitar si hay deuda pendiente
+            monto: noHayDeuda ? 0 : cuota.monto, // Si no hay deuda, monto de cuota es 0
+            pagada: noHayDeuda // Si no hay deuda, marcar como pagadas automáticamente
         }));
 
-        // Actualizar resumen
-        this.actualizarResumenCashea();
+        // Si no hay deuda, limpiar cualquier selección previa
+        if (noHayDeuda) {
+            this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
+        }
 
-        // Forzar actualización de la vista
+        this.actualizarResumenCashea();
         this.cdr.detectChanges();
     }
 
@@ -1123,17 +1151,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         cuota.seleccionada = !cuota.seleccionada;
 
-        // CORRECCIÓN: Si está seleccionada, debe marcarse como pagada
         if (cuota.seleccionada) {
-            cuota.pagada = true; // ← Si está seleccionada, está pagada
+            cuota.pagada = true;
             if (index + 1 < this.cuotasCashea.length) {
                 this.cuotasCashea[index + 1].habilitada = true;
             }
         } else {
-            cuota.pagada = false; // ← Si no está seleccionada, no está pagada
+            cuota.pagada = false;
             for (let i = index + 1; i < this.cuotasCashea.length; i++) {
                 this.cuotasCashea[i].seleccionada = false;
-                this.cuotasCashea[i].pagada = false; // ← También limpiar pagada
+                this.cuotasCashea[i].pagada = false;
                 this.cuotasCashea[i].habilitada = false;
             }
         }
@@ -1171,11 +1198,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     // En el método que maneja cambios en el nivel Cashea
     onNivelCasheaChange(): void {
         if (this.venta.formaPago === 'cashea') {
-            // Asegurar que Cashea use dólares
             this.venta.moneda = 'dolar';
             this.controlarCuotasPorNivel();
             this.actualizarMontoInicialCashea();
             this.generarCuotasCashea();
+
+            if (this.venta.montoInicial && this.venta.montoInicial > 0) {
+                this.valorInicialTemporal = this.formatearMoneda(this.venta.montoInicial, this.venta.moneda);
+            }
         }
     }
 
@@ -1198,25 +1228,26 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     get mensajeResumenCashea(): string {
-    if (this.esPagoCompletoCashea) {
-        return 'Pago completo - Sin cuotas pendientes';
+        if (this.esPagoCompletoCashea) {
+            return 'Pago completo - Sin cuotas pendientes';
+        }
+
+        const cuotasAdelantadas = this.resumenCashea.cantidad;
+        const montoAdelantado = this.resumenCashea.total;
+
+        return `Adelantando ${cuotasAdelantadas} cuota${cuotasAdelantadas > 1 ? 's' : ''} (${this.formatearMoneda(montoAdelantado, this.venta.moneda)})`;
     }
-    
-    const cuotasAdelantadas = this.resumenCashea.cantidad;
-    const montoAdelantado = this.resumenCashea.total;
-    
-    return `Adelantando ${cuotasAdelantadas} cuota${cuotasAdelantadas > 1 ? 's' : ''} (${this.formatearMoneda(montoAdelantado, this.venta.moneda)})`;
-}
 
-// En el método que asigna el inicial por nivel
-asignarInicialPorNivel(): void {
-    const totalConDescuento = this.montoTotal;
-    const minimo = this.calcularInicialCasheaPorNivel(totalConDescuento, this.nivelCashea);
-    this.venta.montoInicial = minimo;
-    this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
+    // En el método que asigna el inicial por nivel
+    asignarInicialPorNivel(): void {
+        const totalConDescuento = this.montoTotal;
+        const minimo = this.calcularInicialCasheaPorNivel(totalConDescuento, this.nivelCashea);
+        this.venta.montoInicial = minimo;
+        this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
 
-    this.controlarCuotasPorNivel();
-}
+        this.controlarCuotasPorNivel();
+        this.generarCuotasCashea(); // Asegurar que se generen las cuotas
+    }
 
     redondearDosDecimales(valor: number): number {
         return Math.round(valor * 100) / 100;
@@ -1448,25 +1479,58 @@ asignarInicialPorNivel(): void {
             this.cdr.detectChanges();
         }, 100);
     }
+
     // === VALIDACIONES ===
     validarEntrada(event: KeyboardEvent): void {
-    const tecla = event.key;
-    const permitido = /^[0-9.,]$/; // Permitir coma y punto
-    if (!permitido.test(tecla)) {
-        event.preventDefault();
+        const tecla = event.key;
+        const valorActual = this.valorInicialTemporal;
+
+        // Permitir: números, coma, punto, teclas de control
+        const permitido = /^[0-9.,]$|Backspace|Delete|Tab|Enter|Escape|ArrowLeft|ArrowRight|Home|End/;
+
+        // Si ya hay una coma, no permitir otra coma
+        if (tecla === ',' && valorActual.includes(',')) {
+            event.preventDefault();
+            return;
+        }
+
+        // Si ya hay un punto, no permitir otro punto
+        if (tecla === '.' && valorActual.includes('.')) {
+            event.preventDefault();
+            return;
+        }
+
+        if (!permitido.test(tecla)) {
+            event.preventDefault();
+        }
     }
-}
+
+    limpiarCampoInicial(): void {
+        const minimo = this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
+        this.venta.montoInicial = minimo;
+        this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
+        this.generarCuotasCashea();
+    }
 
     onMontoInicialChange(): void {
         if (this.venta.formaPago === 'cashea') {
-            // Forzar regeneración de cuotas cuando el monto inicial cambia
+            // Solo actualizar el modelo numérico sin formatear visualmente
+            const limpio = this.valorInicialTemporal.replace(/[^\d.,]/g, '').trim();
+
+            if (limpio) {
+                const montoString = limpio.replace(',', '.');
+                const monto = parseFloat(montoString);
+
+                if (!isNaN(monto)) {
+                    this.venta.montoInicial = monto;
+                }
+            } else {
+                // Si está vacío, establecer como 0 temporalmente
+                this.venta.montoInicial = 0;
+            }
+
             this.generarCuotasCashea();
-
-            // También actualizar el resumen
             this.actualizarResumenCashea();
-
-            // Forzar detección de cambios
-            this.cdr.detectChanges();
         }
     }
 
@@ -1595,22 +1659,22 @@ asignarInicialPorNivel(): void {
 
     // === MÉTODOS DE MONEDA EFECTIVO ===
     cambiarMonedaEfectivo(nuevaMoneda: string): void {
-    this.monedaEfectivo = nuevaMoneda;
+        this.monedaEfectivo = nuevaMoneda;
 
-    // ACTUALIZAR LA MONEDA EN TODOS LOS MÉTODOS DE EFECTIVO EXISTENTES
-    this.venta.metodosDePago.forEach(metodo => {
-        if (metodo.tipo === 'efectivo') {
-            metodo.moneda = this.getMonedaParaMetodo('efectivo');
+        // ACTUALIZAR LA MONEDA EN TODOS LOS MÉTODOS DE EFECTIVO EXISTENTES
+        this.venta.metodosDePago.forEach(metodo => {
+            if (metodo.tipo === 'efectivo') {
+                metodo.moneda = this.getMonedaParaMetodo('efectivo');
 
-            // También actualizar el valor temporal con el nuevo formato
-            if (metodo.monto && metodo.monto > 0) {
-                metodo.valorTemporal = this.formatearMoneda(metodo.monto, metodo.moneda);
+                // También actualizar el valor temporal con el nuevo formato
+                if (metodo.monto && metodo.monto > 0) {
+                    metodo.valorTemporal = this.formatearMoneda(metodo.monto, metodo.moneda);
+                }
             }
-        }
-    });
+        });
 
-    this.cdr.detectChanges();
-}
+        this.cdr.detectChanges();
+    }
 
     onTipoMetodoChange(index: number): void {
         const metodo = this.venta.metodosDePago[index];
@@ -1954,31 +2018,31 @@ asignarInicialPorNivel(): void {
         return { valido: true, mensaje: 'Método completo' };
     }
 
-   get mensajeEstadoBoton(): string {
-    if (this.venta.productos.length === 0) {
-        return 'Agrega productos para continuar';
+    get mensajeEstadoBoton(): string {
+        if (this.venta.productos.length === 0) {
+            return 'Agrega productos para continuar';
+        }
+
+        // Verificar si hay métodos incompletos
+        const metodosIncompletos = this.venta.metodosDePago.some(metodo => !this.metodoCompleto(metodo));
+        if (metodosIncompletos) {
+            return 'Completa todos los métodos de pago';
+        }
+
+        const montoCubierto = this.totalPagadoPorMetodos;
+        const montoRequerido = this.montoCubiertoPorMetodos;
+        const diferencia = montoRequerido - montoCubierto;
+
+        if (diferencia > 0.01) {
+            return `Faltan ${this.formatearMoneda(diferencia, this.venta.moneda)}`;
+        }
+
+        if (Math.abs(montoCubierto - montoRequerido) < 0.01) {
+            return 'Listo para generar venta';
+        }
+
+        return 'Monto excedido, ajusta los métodos de pago';
     }
-
-    // Verificar si hay métodos incompletos
-    const metodosIncompletos = this.venta.metodosDePago.some(metodo => !this.metodoCompleto(metodo));
-    if (metodosIncompletos) {
-        return 'Completa todos los métodos de pago';
-    }
-
-    const montoCubierto = this.totalPagadoPorMetodos;
-    const montoRequerido = this.montoCubiertoPorMetodos;
-    const diferencia = montoRequerido - montoCubierto;
-
-    if (diferencia > 0.01) {
-        return `Faltan ${this.formatearMoneda(diferencia, this.venta.moneda)}`;
-    }
-
-    if (Math.abs(montoCubierto - montoRequerido) < 0.01) {
-        return 'Listo para generar venta';
-    }
-
-    return 'Monto excedido, ajusta los métodos de pago';
-}
 
     // En tu componente TypeScript
     get totalPagadoCashea(): number {
@@ -3887,7 +3951,7 @@ asignarInicialPorNivel(): void {
                 monto: m.monto || 0,
                 referencia: m.referencia || '',
                 banco: m.banco || '',
-                moneda: monedaMetodo 
+                moneda: monedaMetodo
             };
         });
 
