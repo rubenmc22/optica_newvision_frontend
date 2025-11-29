@@ -724,22 +724,23 @@
                                     </select>
                                 </div>
 
-                          <div class="config-item">
-                                <label class="form-label">Inicial</label>
-                                <div class="input-with-validation">
-                                    <input type="text" class="form-control modern-input"
-                                        [placeholder]="formatearMoneda(calcularInicialCasheaPorNivel(montoTotal, nivelCashea), venta.moneda)"
-                                        [(ngModel)]="valorInicialTemporal" 
-                                        (blur)="formatearInicialCashea()"
-                                        (input)="onMontoInicialChange()" 
-                                        (keypress)="validarEntrada($event)"
-                                        (keydown.escape)="limpiarCampoInicial()" />
-                                    <small class="validation-text">
-                                        Mínimo: {{ formatearMoneda(calcularInicialCasheaPorNivel(montoTotal, nivelCashea), venta.moneda) }}
-                                        <span *ngIf="venta.moneda !== 'bolivar'">⇄ {{ obtenerEquivalenteBs(calcularInicialCasheaPorNivel(montoTotal, nivelCashea)) | number:'1.2-2' }} Bs</span>
-                                    </small>
+                                <div class="config-item">
+                                    <label class="form-label">Inicial</label>
+                                    <div class="input-with-validation">
+                                        <input type="text" class="form-control modern-input"
+                                            [placeholder]="formatearMoneda(calcularInicialCasheaPorNivel(montoTotal, nivelCashea), venta.moneda)"
+                                            [(ngModel)]="valorInicialTemporal" (blur)="formatearInicialCashea()"
+                                            (input)="onMontoInicialChange()" (keypress)="validarEntrada($event)"
+                                            (keydown.escape)="limpiarCampoInicial()" />
+                                        <small class="validation-text">
+                                            Mínimo: {{ formatearMoneda(calcularInicialCasheaPorNivel(montoTotal,
+                                            nivelCashea), venta.moneda) }}
+                                            <span *ngIf="venta.moneda !== 'bolivar'">⇄ {{
+                                                obtenerEquivalenteBs(calcularInicialCasheaPorNivel(montoTotal,
+                                                nivelCashea)) | number:'1.2-2' }} Bs</span>
+                                        </small>
+                                    </div>
                                 </div>
-                            </div>
                             </div>
 
                             <!-- Cuotas Cashea - Modernizado -->
@@ -1687,7 +1688,7 @@
                         </div>
                     </div>
 
-                    <!-- Totales compactos -->
+                   <!-- Totales compactos -->
                     <div class="totales-compactos mb-3">
                         <div class="row justify-content-end">
                             <div class="col-md-6">
@@ -1696,19 +1697,53 @@
                                         <td class="fw-bold">Subtotal:</td>
                                         <td class="text-end">{{ formatearMoneda(getSubtotalSeguro()) }}</td>
                                     </tr>
-                                    <tr>
+                                    <tr *ngIf="getDescuentoSeguro() > 0">
                                         <td class="fw-bold">Descuento:</td>
-                                        <td class="text-end text-danger">- {{ formatearMoneda(getDescuentoSeguro()) }}
-                                        </td>
+                                        <td class="text-end text-danger">- {{ formatearMoneda(getDescuentoSeguro()) }}</td>
                                     </tr>
                                     <tr>
                                         <td class="fw-bold">IVA:</td>
                                         <td class="text-end">{{ formatearMoneda(getIvaSeguro()) }}</td>
                                     </tr>
-                                    <tr class="table-success">
-                                        <td class="fw-bold">
-                                            {{ getTextoTotalPagado() }}:
-                                        </td>
+                                    
+                                    <!-- ========== CONTADO ========== -->
+                                    <!-- CONTADO: Solo línea de éxito -->
+                                    <tr *ngIf="venta.formaPago === 'contado'" class="table-success">
+                                        <td class="fw-bold">Total pagado:</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
+                                    </tr>
+                                    
+                                    <!-- ========== CASHEA ========== -->
+                                    <!-- CASHEA SIN DEUDA: Solo total pagado -->
+                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() <= 0" class="table-success">
+                                        <td class="fw-bold">Total pagado:</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
+                                    </tr>
+                                    
+                                    <!-- CASHEA CON DEUDA: Total a pagar + total pagado ahora -->
+                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() > 0" class="table-info">
+                                        <td class="fw-bold">Total a pagar:</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(getMontoTotalSeguro()) }}</td>
+                                    </tr>
+                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() > 0" class="table-warning">
+                                        <td class="fw-bold">Total pagado ahora:</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
+                                    </tr>
+                                    
+                                    <!-- ========== ABONO ========== -->
+                                    <!-- ABONO SIN DEUDA: Solo total abonado -->
+                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() <= 0" class="table-success">
+                                        <td class="fw-bold">Total abonado:</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
+                                    </tr>
+                                    
+                                    <!-- ABONO CON DEUDA: Total a pagar + total abonado -->
+                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() > 0" class="table-info">
+                                        <td class="fw-bold">Total a pagar:</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(getMontoTotalSeguro()) }}</td>
+                                    </tr>
+                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() > 0" class="table-warning">
+                                        <td class="fw-bold">Total abonado:</td>
                                         <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
                                     </tr>
                                 </table>

@@ -3636,6 +3636,37 @@ input:checked+.slider:before {
         padding: 8px;
     }
 
+    .total-abonado {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border-left: 4px solid #ffc107;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+.total-abonado .total-amount {
+    color: #856404;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.porcentaje-abonado {
+    font-size: 0.8em;
+    color: #666;
+    margin-left: 8px;
+}
+
+.deuda-pendiente {
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+    border-left: 4px solid #dc3545;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+.deuda-pendiente .resumen-value {
+    color: #721c24;
+    font-weight: bold;
+}
+
     .deuda-section,
     .progreso-section {
         padding: 12px;
