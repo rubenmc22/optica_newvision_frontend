@@ -518,7 +518,7 @@
                     <div>
                       <small class="text-muted">Deuda Pendiente</small>
                       <div class="fw-semibold text-danger">
-                        {{ getMontoParaMostrar(venta, getDeudaPendiente(venta)) }}N
+                        {{ getMontoParaMostrar(venta, getDeudaPendiente(venta)) }}
                         <small *ngIf="venta.formaPago === 'cashea'" class="text-muted d-block">
                           {{ venta.cantidadCuotas - venta.cuotasAdelantadas.length }} cuota pendiente
                         </small>
@@ -528,7 +528,7 @@
                 </div>
 
                 <!-- Sección Media: Detalles Específicos -->
-               <!-- <div class="detalles-grid">
+                <!-- <div class="detalles-grid">
                   <div class="detalle-seccion">
                     <h6 class="seccion-titulo">
                       <i class="bi bi-credit-card me-2"></i>
@@ -536,21 +536,21 @@
                     </h6>
                     <div class="metodos-pago">
                       <div *ngFor="let metodo of venta.metodosPago" class="metodo-item-detallado">
-                        <div class="metodo-header">
+                       <div class="metodo-header">
                           <div class="metodo-icono" [ngClass]="'metodo-' + metodo.tipo">
-                            <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
-                              [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
-                              [class.bi-phone]="metodo.tipo === 'pagomovil'"
-                              [class.bi-bank]="metodo.tipo === 'transferencia'"
-                              [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
+                              <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
+                                  [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
+                                  [class.bi-phone]="metodo.tipo === 'pagomovil'"
+                                  [class.bi-bank]="metodo.tipo === 'transferencia'"
+                                  [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
                           </div>
                           <div class="metodo-info">
-                            <span class="metodo-tipo text-capitalize fw-semibold">{{metodo.tipo}}</span>
-                            <span class="metodo-monto">
-                              {{ getMontoDisplayMetodoPago(metodo, venta) }}
-                            </span>
+                              <span class="metodo-tipo text-capitalize fw-semibold">{{getTipoPagoDisplay(metodo.tipo)}}</span>
+                              <span class="metodo-monto">
+                                  {{ getMontoDisplayMetodoPago(metodo, venta) }}
+                              </span>
                           </div>
-                        </div>
+                      </div>
 
                         <div class="metodo-detalles">
                           <div class="detalle-linea-combinada" *ngIf="getEquivalenteDisplay(metodo, venta)">
@@ -560,7 +560,7 @@
                             </div>
                             <div class="detalle-item-combinado">
                               <i class="bi bi-graph-up text-muted"></i>
-                              <span class="detalle-texto">{{ getTasaDisplay() }}</span>
+                              <span class="detalle-texto">{{ getEquivalenteDisplay(metodo, venta) }}</span>
                             </div>
                           </div>
 
