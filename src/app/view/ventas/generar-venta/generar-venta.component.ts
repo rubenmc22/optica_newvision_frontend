@@ -2226,7 +2226,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             };
 
             // Para Cashea, el estado de la venta debe ser 'pendiente'
-            datosParaAPI.venta.estado = 'pendiente';
+         //   datosParaAPI.venta.estado = 'pendiente';
 
         } else if (this.venta.formaPago === 'abono') {
             datosParaAPI.formaPagoDetalle = {
@@ -3475,7 +3475,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     cerrarModalRecibo(): void {
-        this.limpiarTodosLosSelects(); // Esto ahora limpiará efectivamente
+        this.limpiarTodosLosSelects();
         this.mostrarModalRecibo = false;
         this.ventaGenerada = false;
         this.datosRecibo = null;
