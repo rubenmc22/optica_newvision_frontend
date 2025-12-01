@@ -420,9 +420,9 @@ export class HistorialVentasComponent implements OnInit {
 
     return {
       // Información básica
-      id: venta.key, // Usar el key como ID
-      key: venta.key,
-      numeroControl: this.generarNumeroControl(venta.key),
+      id: venta.key,
+      numeroControl: venta.numero_venta,
+      numeroRecibo: venta.numero_recibo,
       fecha: new Date(venta.fecha),
       estado: estadoVenta,
       estadoPago: this.mapearEstadoPago(venta.estatus_pago),
@@ -443,7 +443,7 @@ export class HistorialVentasComponent implements OnInit {
         nombre: asesor.nombre
       },
       especialista: {
-        id: 0, // Por defecto, ya que no viene en el API
+        id: asesor, // Por defecto, ya que no viene en el API
         nombre: 'No asignado'
       },
 
@@ -533,14 +533,6 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     return 'completada';
-  }
-
-  /**
-   * Genera un número de control basado en el key de la venta
-   */
-  private generarNumeroControl(ventaKey: string): string {
-    // Usar los últimos 6 caracteres del key como número de control
-    return ventaKey.slice(-6).toUpperCase();
   }
 
   /**

@@ -77,11 +77,62 @@
                         </ng-select>
                     </div>
 
-                    <!-- Formulación clínica -->
-                    <div *ngIf="historiaMedica" class="formulacion-section">
+                    <!-- Selector de historia médica -->
+                    <div *ngIf="pacienteSeleccionado && historiasMedicas.length > 0" class="selector-historia-moderno">
+                        <label class="form-label-moderno">
+                            <i class="bi bi-clipboard-pulse"></i>
+                            Seleccionar historia médica
+                        </label>
+                        <ng-select [items]="historiasMedicas" bindLabel="fechaFormateada" bindValue="key"
+                            [searchable]="false" [clearable]="false" [(ngModel)]="historiaSeleccionadaId"
+                            (change)="onHistoriaSeleccionada($event)" placeholder="Selecciona una historia médica..."
+                            class="modern-ng-select">
+
+                            <ng-template ng-label-tmp let-item="item">
+                                <div class="historia-label">
+                                    <span class="historia-fecha">{{item.fechaFormateada}}</span>
+                                    <span *ngIf="item.esReciente" class="badge bg-info ms-2">MÁS RECIENTE</span>
+                                </div>
+                            </ng-template>
+
+                            <ng-template ng-option-tmp let-item="item">
+                                <div class="historia-option">
+                                    <div class="historia-header">
+                                        <strong>{{item.nHistoria}}</strong>
+                                        <small class="text-muted"> {{item.fechaFormateada}}</small>
+                                        <span *ngIf="item.esReciente" class="badge bg-info ms-2">MÁS RECIENTE</span>
+                                    </div>
+                                    <div class="historia-detalle">
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-person-badge"></i>
+                                                    {{item.profesionalNombre || 'Sin profesional'}}
+                                                </small>
+                                            </div>
+                                            <div class="col-6 text-end">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-emoji-sunglasses"></i> {{item.motivo}}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ng-template>
+                        </ng-select>
+                        <small class="form-text text-muted">
+                            Por defecto se selecciona la historia más reciente. Puedes cambiar si es necesario.
+                        </small>
+                    </div>
+
+                    <!-- En la sección de formulación clínica -->
+                    <div *ngIf="historiaMedica && tieneFormulaCompletaTemplate(historiaMedica)" class="formulacion-section">
                         <div class="section-header">
                             <h5>Formulación Clínica</h5>
                             <i class="bi bi-eyeglasses"></i>
+                            <span *ngIf="!tieneFormulaCompletaTemplate(historiaMedica)" class="badge bg-warning ms-2">
+                                <i class="bi bi-exclamation-triangle"></i> Sin fórmula
+                            </span>
                         </div>
 
                         <div class="formulacion-grid">
@@ -94,33 +145,33 @@
                                 <div class="ojo-params">
                                     <div class="param">
                                         <span class="param-label">Esfera (ESF)</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.esf_od
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.esf_od || '--' }}</span>
                                     </div>
                                     <div class="param">
                                         <span class="param-label">Cilindro (CIL)</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.cil_od
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.cil_od || '--' }}</span>
                                     </div>
                                     <div class="param">
                                         <span class="param-label">Eje</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.eje_od
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.eje_od || '--' }}</span>
                                     </div>
                                     <div class="param">
                                         <span class="param-label">ADD</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.add_od
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.add_od || '--' }}</span>
                                     </div>
                                     <div class="param">
                                         <span class="param-label">ALT</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.alt_od
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.alt_od || '--' }}</span>
                                     </div>
                                     <div class="param">
                                         <span class="param-label">DP</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.dp_od
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.dp_od || '--' }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -134,40 +185,40 @@
                                 <div class="ojo-params">
                                     <div class="param">
                                         <span class="param-label">Esfera (ESF)</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.esf_oi
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.esf_oi || '--' }}</span>
                                     </div>
                                     <div class="param">
                                         <span class="param-label">Cilindro (CIL)</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.cil_oi
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.cil_oi || '--' }}</span>
                                     </div>
                                     <div class="param">
                                         <span class="param-label">Eje</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.eje_oi
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.eje_oi || '--' }}</span>
                                     </div>
                                     <div class="param">
                                         <span class="param-label">ADD</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.add_oi
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.add_oi || '--' }}</span>
                                     </div>
                                     <div class="param">
                                         <span class="param-label">ALT</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.alt_oi
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.alt_oi || '--' }}</span>
                                     </div>
                                     <div class="param">
                                         <span class="param-label">DP</span>
-                                        <span class="param-value">{{ historiaMedica.examenOcular.refraccionFinal.dp_oi
-                                            }}</span>
+                                        <span class="param-value">{{
+                                            historiaMedica?.examenOcular?.refraccionFinal?.dp_oi || '--' }}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Recomendaciones -->
-                        <div class="recomendaciones-section">
+                        <div *ngIf="historiaMedica?.recomendaciones?.length > 0" class="recomendaciones-section">
                             <div class="section-header">
                                 <h5>Recomendaciones</h5>
                                 <i class="bi bi-clipboard-check"></i>
@@ -175,15 +226,17 @@
                             <div class="recomendaciones-grid">
                                 <div class="recomendacion-item">
                                     <span class="rec-label">Montura</span>
-                                    <span class="rec-value">{{ historiaMedica.recomendaciones[0].montura }}</span>
+                                    <span class="rec-value">{{ historiaMedica.recomendaciones[0]?.montura || '--'
+                                        }}</span>
                                 </div>
                                 <div class="recomendacion-item">
                                     <span class="rec-label">Material</span>
-                                    <span class="rec-value">{{ materialesRecomendados }}</span>
+                                    <span class="rec-value">{{ getMaterialesRecomendados() }}</span>
                                 </div>
                                 <div class="recomendacion-item">
                                     <span class="rec-label">Cristal</span>
-                                    <span class="rec-value">{{ historiaMedica.recomendaciones[0].cristal.label }}</span>
+                                    <span class="rec-value">{{ historiaMedica.recomendaciones[0]?.cristal?.label || '--'
+                                        }}</span>
                                 </div>
                             </div>
                         </div>
@@ -573,7 +626,8 @@
                                     <div class="form-group">
                                         <label class="form-label">
                                             <i class="bi bi-person"></i>
-                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón Social' }}
+                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón
+                                            Social' }}
                                         </label>
                                         <input type="text" class="form-control modern-input"
                                             style="margin-bottom: -10px !important;"
@@ -655,7 +709,8 @@
                                                 'Los datos fueron autocompletados desde nuestra base de datos' :
                                                 validandoCliente ?
                                                 'Buscando información del cliente...' :
-                                                'Complete los datos manualmente. El cliente será registrado al generar la venta.' }}
+                                                'Complete los datos manualmente. El cliente será registrado al generar
+                                                la venta.' }}
                                             </div>
                                         </div>
                                     </div>
@@ -1688,7 +1743,7 @@
                         </div>
                     </div>
 
-                   <!-- Totales compactos -->
+                    <!-- Totales compactos -->
                     <div class="totales-compactos mb-3">
                         <div class="row justify-content-end">
                             <div class="col-md-6">
@@ -1699,50 +1754,57 @@
                                     </tr>
                                     <tr *ngIf="getDescuentoSeguro() > 0">
                                         <td class="fw-bold">Descuento:</td>
-                                        <td class="text-end text-danger">- {{ formatearMoneda(getDescuentoSeguro()) }}</td>
+                                        <td class="text-end text-danger">- {{ formatearMoneda(getDescuentoSeguro()) }}
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td class="fw-bold">IVA:</td>
                                         <td class="text-end">{{ formatearMoneda(getIvaSeguro()) }}</td>
                                     </tr>
-                                    
+
                                     <!-- ========== CONTADO ========== -->
                                     <!-- CONTADO: Solo línea de éxito -->
                                     <tr *ngIf="venta.formaPago === 'contado'" class="table-success">
                                         <td class="fw-bold">Total pagado:</td>
                                         <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
                                     </tr>
-                                    
+
                                     <!-- ========== CASHEA ========== -->
                                     <!-- CASHEA SIN DEUDA: Solo total pagado -->
-                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() <= 0" class="table-success">
+                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() <= 0"
+                                        class="table-success">
                                         <td class="fw-bold">Total pagado:</td>
                                         <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
                                     </tr>
-                                    
+
                                     <!-- CASHEA CON DEUDA: Total a pagar + total pagado ahora -->
-                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() > 0" class="table-info">
+                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() > 0"
+                                        class="table-info">
                                         <td class="fw-bold">Total a pagar:</td>
                                         <td class="text-end fw-bold">{{ formatearMoneda(getMontoTotalSeguro()) }}</td>
                                     </tr>
-                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() > 0" class="table-warning">
+                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() > 0"
+                                        class="table-warning">
                                         <td class="fw-bold">Total pagado ahora:</td>
                                         <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
                                     </tr>
-                                    
+
                                     <!-- ========== ABONO ========== -->
                                     <!-- ABONO SIN DEUDA: Solo total abonado -->
-                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() <= 0" class="table-success">
+                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() <= 0"
+                                        class="table-success">
                                         <td class="fw-bold">Total abonado:</td>
                                         <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
                                     </tr>
-                                    
+
                                     <!-- ABONO CON DEUDA: Total a pagar + total abonado -->
-                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() > 0" class="table-info">
+                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() > 0"
+                                        class="table-info">
                                         <td class="fw-bold">Total a pagar:</td>
                                         <td class="text-end fw-bold">{{ formatearMoneda(getMontoTotalSeguro()) }}</td>
                                     </tr>
-                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() > 0" class="table-warning">
+                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() > 0"
+                                        class="table-warning">
                                         <td class="fw-bold">Total abonado:</td>
                                         <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
                                     </tr>

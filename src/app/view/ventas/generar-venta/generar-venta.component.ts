@@ -117,6 +117,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     cuotasCashea: CuotaCashea[] = [];
     valorInicialTemporal = '';
 
+    // NUEVAS PROPIEDADES PARA HISTORIAS MÉDICAS
+    historiasMedicas: any[] = []; // Lista de todas las historias del paciente
+    historiaSeleccionadaId: string | null = null; // ID de la historia seleccionada
+    historiaMedicaSeleccionada: HistoriaMedica | null = null; // Historia completa seleccionada
+
     // === PROPIEDADES ADICIONALES PARA GENERACIÓN DE VENTA ===
     generandoVenta: boolean = false;
     generandoRecibo: boolean = false;
@@ -295,10 +300,88 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
+    onHistoriaSeleccionada(event: any): void {
+
+        // El evento puede ser el valor directamente o un objeto
+        let historiaId: string | null = null;
+
+        if (event === null || event === undefined) {
+            this.historiaMedica = null;
+            this.historiaMedicaSeleccionada = null;
+            this.cdr.detectChanges();
+            return;
+        }
+
+        if (typeof event === 'object' && event !== null) {
+            // Si es un objeto, extraer el valor
+            historiaId = event.value || event.key || event.id?.toString() || null;
+        } else {
+            // Si es un string/number directamente
+            historiaId = event?.toString() || null;
+        }
+
+        if (!historiaId || historiaId.trim() === '') {
+            console.warn('ID de historia vacío o inválido:', historiaId);
+            this.historiaMedica = null;
+            this.historiaMedicaSeleccionada = null;
+            this.cdr.detectChanges();
+            return;
+        }
+
+        // Buscar la historia seleccionada - comparar como string
+        const historiaSeleccionada = this.historiasMedicas.find(h =>
+            h.key === historiaId ||
+            h.id.toString() === historiaId
+        );
+
+        if (historiaSeleccionada) {
+            this.historiaMedica = historiaSeleccionada.data;
+            this.historiaMedicaSeleccionada = historiaSeleccionada.data;
+
+            // Forzar la detección de cambios
+            this.cdr.detectChanges();
+
+            // Mostrar mensaje informativo si no es la más reciente
+            if (!historiaSeleccionada.esReciente) {
+                this.snackBar.open(
+                    `✅ Historia ${historiaSeleccionada.nHistoria} seleccionada`,
+                    'Cerrar',
+                    {
+                        duration: 2000,
+                        panelClass: ['snackbar-success']
+                    }
+                );
+            }
+
+            // Verificar si la nueva historia tiene fórmula
+            if (!historiaSeleccionada.tieneFormula) {
+                this.snackBar.open(
+                    '⚠️ Esta historia no tiene fórmula óptica registrada',
+                    'Cerrar',
+                    {
+                        duration: 3000,
+                        panelClass: ['snackbar-warning']
+                    }
+                );
+            }
+        } else {
+            console.warn('❌ Historia no encontrada. ID buscado:', historiaId);
+            console.warn('Keys disponibles:', this.historiasMedicas?.map(h => h.key));
+            this.historiaMedica = null;
+            this.historiaMedicaSeleccionada = null;
+            this.cdr.detectChanges();
+        }
+    }
+
     // === MÉTODOS DE PACIENTES ===
     onPacienteSeleccionado(pacienteSeleccionado: Paciente | null): void {
         this.registrarTarea();
+
+        // Limpiar historias previas
+        this.historiasMedicas = [];
+        this.historiaSeleccionadaId = null;
         this.historiaMedica = null;
+        this.historiaMedicaSeleccionada = null;
 
         if (!pacienteSeleccionado?.key) {
             console.error('No se encontró la clave del paciente seleccionado.', pacienteSeleccionado?.key);
@@ -309,39 +392,120 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const pacienteKey = pacienteSeleccionado.key;
 
         this.historiaService.getHistoriasPorPaciente(pacienteKey).pipe(take(1)).subscribe({
-            next: historial => {
-                if (!historial || historial.length === 0) {
+            next: (historiales: any[]) => {
+                if (!historiales || historiales.length === 0) {
                     this.swalService.showWarning(
                         'Sin historia médica',
                         'Este paciente no tiene historia registrada. Puedes continuar si es una venta libre.'
                     );
-                    this.historiaMedica = null;
                     this.completarTarea();
                     return;
                 }
 
-                this.historiaMedica = historial.sort((a, b) =>
-                    new Date(b.auditoria.fechaCreacion).getTime() - new Date(a.auditoria.fechaCreacion).getTime()
-                )[0];
+                const historiasOrdenadas = historiales.sort((a: any, b: any) =>
+                    new Date(b.auditoria.fechaCreacion).getTime() -
+                    new Date(a.auditoria.fechaCreacion).getTime()
+                );
 
-                if (!this.historiaMedica?.examenOcular?.refraccionFinal) {
-                    this.swalService.showInfo(
-                        'Sin fórmula óptica',
-                        'Este paciente no tiene fórmula registrada. Puedes continuar con venta libre.'
-                    );
+                // En onPacienteSeleccionado, cuando creas las historias:
+                this.historiasMedicas = historiasOrdenadas.map((historia: any, index: number) => {
+                    const fecha = new Date(historia.auditoria.fechaCreacion);
+                    const tieneFormula = this.tieneFormulaCompleta(historia);
+
+                    return {
+                        key: historia.id.toString(),
+                        id: historia.id,
+                        nHistoria: historia.nHistoria || `H-${historia.id}`,
+                        fechaFormateada: fecha.toLocaleDateString('es-VE', {
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }),
+                        fechaCreacion: historia.auditoria.fechaCreacion,
+                        profesionalNombre: historia.auditoria?.creadoPor?.nombre ||
+                            historia.datosConsulta?.medico?.nombre ||
+                            'Desconocido',
+                        esReciente: index === 0,
+                        tieneFormula: tieneFormula,
+                        formula: {
+                            od: tieneFormula ?
+                                `${historia.examenOcular?.refraccionFinal?.esf_od || '--'}/${historia.examenOcular?.refraccionFinal?.cil_od || '--'}` :
+                                'Sin fórmula',
+                            oi: tieneFormula ?
+                                `${historia.examenOcular?.refraccionFinal?.esf_oi || '--'}/${historia.examenOcular?.refraccionFinal?.cil_oi || '--'}` :
+                                'Sin fórmula'
+                        },
+                        motivo: historia.datosConsulta?.motivo?.[0] || 'Consulta',
+                        data: historia
+                    };
+                });
+
+                // Asegurarse de que la historia seleccionada por defecto también tenga key como string
+                if (this.historiasMedicas.length > 0) {
+                    this.historiaSeleccionadaId = this.historiasMedicas[0].key; // Esto ya es string
+                    this.historiaMedica = this.historiasMedicas[0].data;
+                    this.historiaMedicaSeleccionada = this.historiasMedicas[0].data;
+                }
+                // Seleccionar automáticamente la historia más reciente (por defecto)
+                if (this.historiasMedicas.length > 0) {
+                    this.historiaSeleccionadaId = this.historiasMedicas[0].key;
+                    this.historiaMedica = this.historiasMedicas[0].data;
+                    this.historiaMedicaSeleccionada = this.historiasMedicas[0].data;
+
+                    // Mostrar mensaje informativo si la historia más reciente no tiene fórmula
+                    if (!this.historiasMedicas[0].tieneFormula) {
+                        this.swalService.showInfo(
+                            'Sin fórmula óptica',
+                            'La historia más reciente no tiene fórmula registrada. Puedes seleccionar otra historia o continuar con venta libre.'
+                        );
+                    }
                 }
 
                 this.completarTarea();
             },
-            error: () => {
+            error: (error) => {
+                console.error('Error al cargar historias:', error);
                 this.swalService.showError(
                     'Error al cargar historia',
-                    'No se pudo obtener la historia médica del paciente.'
+                    'No se pudo obtener las historias médicas del paciente.'
                 );
-                this.historiaMedica = null;
                 this.completarTarea();
             }
         });
+    }
+
+    getMaterialesRecomendados(): string {
+        if (!this.historiaMedica?.recomendaciones?.[0]?.material) {
+            return '--';
+        }
+
+        const material = this.historiaMedica.recomendaciones[0].material;
+        if (Array.isArray(material)) {
+            return material.join(', ');
+        }
+        return material || '--';
+    }
+
+    // Método mejorado para verificar fórmula
+    private tieneFormulaCompleta(historia: any): boolean {
+        if (!historia?.examenOcular?.refraccionFinal) {
+            return false;
+        }
+
+        const ref = historia.examenOcular.refraccionFinal;
+
+        // Verificar si tiene datos significativos (no strings vacíos)
+        const odTieneDatos = !!ref.esf_od || ref.esf_od === 0 || !!ref.cil_od || ref.cil_od === 0;
+        const oiTieneDatos = !!ref.esf_oi || ref.esf_oi === 0 || !!ref.cil_oi || ref.cil_oi === 0;
+
+        return odTieneDatos || oiTieneDatos;
+    }
+
+    // Método público para el template
+    tieneFormulaCompletaTemplate(historia: any): boolean {
+        return this.tieneFormulaCompleta(historia);
     }
 
     filtrarPorNombreOCedula(term: string, item: Paciente): boolean {
@@ -2118,7 +2282,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     cedula: this.pacienteSeleccionado.informacionPersonal?.cedula,
                     telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
                     email: this.pacienteSeleccionado.informacionPersonal?.email
-                }
+                },
+                // AGREGAR HISTORIA MÉDICA AL CLIENTE
+                historiaMedica: this.historiaMedicaSeleccionada ? {
+                    id: this.historiaMedicaSeleccionada.id,
+                    nHistoria: this.historiaMedicaSeleccionada.nHistoria,
+                } : null
+
             };
         } else if (!this.requierePaciente) {
             clienteData = {
@@ -2129,7 +2299,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     cedula: this.clienteSinPaciente.cedula,
                     telefono: this.clienteSinPaciente.telefono,
                     email: this.clienteSinPaciente.email
-                }
+                },
+                // Para cliente general, no hay historia médica
+                historiaMedica: null
             };
         }
 
@@ -2226,7 +2398,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             };
 
             // Para Cashea, el estado de la venta debe ser 'pendiente'
-         //   datosParaAPI.venta.estado = 'pendiente';
+            //   datosParaAPI.venta.estado = 'pendiente';
 
         } else if (this.venta.formaPago === 'abono') {
             datosParaAPI.formaPagoDetalle = {
@@ -2510,9 +2682,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    /**
-     * Producto fallback (rara vez se usa)
-     */
     private crearProductoFallback(p: any): any {
         const cantidad = p.cantidad || 1;
         const precio = p.precio || 0;
@@ -2533,24 +2702,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         };
     }
 
-    /**
-     * Actualiza solo el número de venta en el recibo pre-generado
-     */
     private actualizarNumeroVentaRecibo(numeroVenta: string): void {
         if (this.datosRecibo) {
             this.datosRecibo.numeroVenta = numeroVenta;
         }
     }
 
-    /**
-     * Muestra el recibo (versión simplificada)
-     */
     private mostrarReciboAutomatico(): void {
         if (!this.datosRecibo) {
             this.datosRecibo = this.crearDatosReciboOptimizado();
         }
-
-        console.log('this.datosRecibo 2 ', this.datosRecibo)
 
         this.informacionVenta = {
             numeroVenta: this.datosRecibo.numeroVenta,
@@ -2567,7 +2728,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
     }
 
-    // Manejo de errores optimizado
     private manejarErrorVenta(error: any): void {
         console.error('Error en la llamada al API:', error);
         this.loader.updateMessage('Error al procesar la venta');
@@ -2602,7 +2762,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         // CREAR UNA FUNCIÓN LOCAL PARA FORMATEAR MONEDA
         const formatearMonedaLocal = (monto: number | null | undefined, moneda?: string) => {
-            // Validar que el monto sea un número válido
             if (monto === null || monto === undefined || isNaN(monto)) {
                 return this.obtenerSimboloMoneda(moneda || datos.configuracion?.moneda || 'dolar') + '0.00';
             }
@@ -3800,8 +3959,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 // Programar limpieza automática después de 24 horas
                 setTimeout(() => {
                     URL.revokeObjectURL(pdfUrl);
-                    //  console.log('Enlace del PDF revocado después de 24 horas');
-                }, 24 * 60 * 60 * 1000); // 24 horas
+                }, 24 * 60 * 60 * 1000);
 
             } else {
                 this.swalService.showError('Error', 'No se pudo copiar el enlace automáticamente.');
