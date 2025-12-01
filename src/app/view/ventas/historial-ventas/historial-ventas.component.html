@@ -1075,15 +1075,14 @@
               <div class="producto-codigo">Código: {{producto.codigo}}</div>
               <div class="producto-detalles">
                 <span class="cantidad">{{producto.cantidad}} und</span>
-                <span class="precio">{{producto.precio | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' :
-                  'BS'}}</span>
+                <span class="precio">{{producto.precio | number:'1.2-2'}}
+                  {{getMonedaDisplay(selectedVenta?.moneda)}}</span>
                 <span *ngIf="producto.aplicaIva" class="iva-badge">+IVA</span>
               </div>
             </div>
             <div class="producto-totales">
               <div class="subtotal">{{producto.subtotal | number:'1.2-2'}}</div>
-              <div class="total">{{producto.total | number:'1.2-2'}} {{selectedVenta?.moneda === 'dolar' ? 'USD' :
-                'BS'}}</div>
+              <div class="total">{{producto.total | number:'1.2-2'}} {{getMonedaDisplay(selectedVenta?.moneda)}}</div>
             </div>
           </div>
         </div>
