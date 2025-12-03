@@ -3818,3 +3818,891 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 }
+
+
+
+// =============================================
+// MODAL RECIBO DE PAGO - ESTILOS MEJORADOS
+// =============================================
+.recibo-compacto {
+    .modal-dialog {
+        max-width: 800px !important; // Ancho carta en px para pantalla
+        width: 800px !important;
+        margin: 1rem auto;
+    }
+
+    .modal-content {
+        width: 800px !important;
+        min-height: 1000px; // Alto carta en px para pantalla
+    }
+
+
+    .modal-body {
+        padding: 2rem;
+        background: #f8f9fa;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .recibo-container.compacto {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        font-size: 14px;
+        width: 100%;
+        min-height: 900px;
+    }
+
+    // ENCABEZADO MÁS GRANDE
+    .recibo-header {
+        .empresa-nombre {
+            color: #2c5aa0;
+            font-weight: 700;
+            font-size: 2rem !important;
+            margin-bottom: 0.5rem;
+        }
+
+        .empresa-info {
+            font-size: 1rem !important;
+
+            p {
+                margin-bottom: 0.5rem;
+                line-height: 1.4;
+            }
+        }
+
+        .titulo-venta {
+            font-size: 1.5rem !important;
+            font-weight: 600;
+            color: #2c5aa0;
+            margin: 1rem 0;
+        }
+    }
+
+    // INFORMACIÓN MÁS LEGIBLE
+    .info-rapida {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 4px;
+        border: 1px solid #dee2e6;
+        font-size: 1rem;
+
+        .row {
+            margin-bottom: 0.5rem;
+        }
+    }
+
+    .cliente-compacto {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-left: 4px solid #2c5aa0;
+        padding: 1rem !important;
+        font-size: 1rem;
+    }
+
+    // TABLAS MÁS GRANDES
+    .productos-compactos {
+        .table {
+            margin-bottom: 1rem;
+            font-size: 1rem;
+
+            th {
+                background: #2c5aa0;
+                color: white;
+                font-weight: 600;
+                padding: 0.75rem 1rem;
+                font-size: 1rem;
+                text-align: center;
+            }
+
+            td {
+                padding: 0.75rem 1rem;
+                vertical-align: middle;
+                font-size: 1rem;
+            }
+
+            .small {
+                font-size: 1rem;
+            }
+        }
+    }
+
+    // MÉTODOS DE PAGO MÁS VISIBLES
+    .metodos-compactos {
+        .badge {
+            font-size: 1rem !important;
+            padding: 0.5rem 1rem;
+        }
+    }
+
+    // TOTALES MÁS DESTACADOS
+    .totales-compactos {
+        .table {
+            font-size: 1.1rem;
+
+            td {
+                padding: 0.75rem 1rem;
+            }
+
+            .table-success {
+                background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+                font-size: 1.2rem;
+
+                td {
+                    font-weight: 700;
+                    font-size: 1.2rem;
+                }
+            }
+        }
+    }
+
+    // SECCIONES ESPECIALES MÁS GRANDES
+    .resumen-venta {
+
+        .resumen-contado,
+        .resumen-cashea,
+        .resumen-abono {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 5px solid #2c5aa0;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .resumen-cashea {
+            border-left-color: var(--primary-color) !important;
+            ;
+        }
+
+        .resumen-abono {
+            border-left-color: #ffc107;
+        }
+
+        .progress {
+            background-color: #e9ecef;
+
+            .progress-bar {
+                transition: width 0.6s ease;
+
+                &.progress-completo {
+                    background: linear-gradient(135deg, #28a745, #20c997) !important;
+                }
+            }
+        }
+
+        .badge {
+            font-size: 1.1rem !important;
+            padding: 0.75rem 1.5rem;
+        }
+
+        h6 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+    }
+
+    .observaciones-compactas {
+        .alert {
+            margin-bottom: 0;
+            padding: 1rem;
+            font-size: 1rem;
+        }
+    }
+
+    .terminos-compactos {
+        font-size: 1rem !important;
+
+        p {
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
+        }
+    }
+
+    .mensaje-final {
+        font-size: 1.2rem;
+        padding: 1rem 0;
+    }
+}
+
+// Header modernizado para recibo - Similar a generar venta
+.modal-header-recibo {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.5rem;
+    background: var(--degradado-color) !important;
+    color: white;
+    border-bottom: none;
+    border-radius: 0.5rem 0.5rem 0 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    height: 180px !important;
+
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 120px;
+        height: 120px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(40px, -40px);
+        animation: pulse-glow 2s ease-in-out infinite alternate;
+    }
+
+    &::after {
+        content: "";
+        position: absolute;
+        bottom: -20px;
+        left: -20px;
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 50%;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        z-index: 2;
+        position: relative;
+    }
+
+    .header-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 50px;
+        height: 50px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        animation: icon-float 3s ease-in-out infinite;
+
+        i {
+            font-size: 1.5rem;
+            color: white;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+    }
+
+    .header-text {
+        .modal-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .header-subtitle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+            flex-wrap: wrap;
+        }
+    }
+
+    .badge-recibo {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+        font-weight: 600;
+        font-size: 0.75rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(10px);
+    }
+
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+
+        &.status-completed {
+            background: rgba(40, 167, 69, 0.9);
+            color: white;
+        }
+
+        &.status-pending {
+            background: rgba(255, 193, 7, 0.9);
+            color: #212529;
+        }
+
+        &.status-processing {
+            background: rgba(13, 110, 253, 0.9);
+            color: white;
+        }
+    }
+
+    .btn-close {
+        z-index: 3;
+        position: relative;
+        opacity: 0.8;
+        transition: all 0.3s ease;
+        filter: invert(1) grayscale(100%) brightness(200%);
+        margin: 0;
+        padding: 0.5rem;
+
+        &:hover {
+            opacity: 1;
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+    }
+}
+
+
+.modal-footer-recibo {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    z-index: 1050;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+
+    .footer-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+
+        .footer-section-left,
+        .footer-section-right {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+    }
+
+    .btn-recibo {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+
+        i {
+            font-size: 1.1rem;
+        }
+
+        // Botón primario (Listo)
+        &.btn-primary {
+            background: var(--degradado-color);
+            border: 1px solid var(--degradado-color);
+            color: #fff;
+
+            &:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+                background: var(--degradado-color);
+                border-color: var(--degradado-color);
+            }
+        }
+
+        // Botón Compartir - Mismo estilo que Listo
+        &.btn-compartir {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+
+            &:hover:not(:disabled),
+            &:focus:not(:disabled) {
+                background: var(--degradado-color);
+                border-color: var(--degradado-color);
+                color: #fff;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(0, 120, 215, 0.3);
+            }
+
+            &:active:not(:disabled) {
+                background: var(--degradado-color);
+                border-color: var(--degradado-color);
+                color: #fff;
+                transform: translateY(0);
+                box-shadow: 0 2px 8px rgba(0, 120, 215, 0.4);
+            }
+
+            // Cuando el dropdown está abierto
+            &.show {
+                background: var(--degradado-color);
+                border-color: var(--degradado-color);
+                color: #fff;
+            }
+        }
+
+        // Botón outline secondary (Imprimir)
+        &.btn-outline-secondary {
+            border: 1px solid #6c757d;
+            color: #6c757d;
+
+            &:hover:not(:disabled) {
+                background-color: #6c757d;
+                border-color: #6c757d;
+                color: white;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+            }
+        }
+
+        // Botón outline primary (Compartir)
+        &.btn-outline-primary {
+            border: 1px solid #007bff;
+            color: #007bff;
+
+            &:hover:not(:disabled) {
+                background-color: #007bff;
+                border-color: #007bff;
+                color: white;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+            }
+        }
+
+        // Botón outline success (PDF)
+        &.btn-outline-success {
+            border: 1px solid #28a745;
+            color: #28a745;
+
+            &:hover:not(:disabled) {
+                background-color: #28a745;
+                border-color: #28a745;
+                color: white;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+            }
+        }
+    }
+
+    .btn-recibo:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        position: relative;
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: inherit;
+        }
+    }
+
+    .dropdown-menu {
+        min-width: 200px;
+        border: 1px solid #dee2e6;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+        .dropdown-item {
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+
+            &:hover {
+                background-color: #f8f9fa;
+                transform: translateX(2px);
+            }
+
+            i {
+                width: 16px;
+                text-align: center;
+            }
+        }
+
+        .dropdown-divider {
+            margin: 0.25rem 0;
+        }
+    }
+
+    // Estilos específicos para el botón de compartir cuando está en estado activo/dropdown abierto
+    .btn-group.show .btn-compartir {
+        background: var(--degradado-color);
+        border-color: var(--degradado-color);
+        color: #fff;
+    }
+}
+
+// Asegurar que el modal body tenga scroll pero el footer se mantenga fijo
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+
+    .modal-body {
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .modal-footer-recibo {
+        flex-shrink: 0;
+    }
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .modal-footer-recibo {
+        .footer-actions {
+            flex-direction: column;
+            gap: 1rem;
+
+            .footer-section-left,
+            .footer-section-right {
+                justify-content: center;
+                width: 100%;
+            }
+        }
+    }
+}
+
+// Responsive mejorado
+@media (max-width: 1200px) {
+    .recibo-compacto {
+        .modal-dialog {
+            max-width: 95% !important;
+            width: 95% !important;
+        }
+
+        .modal-content {
+            width: 100% !important;
+        }
+    }
+}
+
+@media (max-width: 900px) {
+    .recibo-compacto {
+        .modal-dialog {
+            max-width: 700px !important;
+            width: 700px !important;
+        }
+
+        .modal-content {
+            width: 700px !important;
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .recibo-compacto {
+        .modal-dialog {
+            margin: 0.5rem;
+            max-width: calc(100% - 1rem) !important;
+            width: calc(100% - 1rem) !important;
+        }
+
+        .modal-content {
+            width: 100% !important;
+            min-height: auto;
+        }
+
+        .modal-body {
+            padding: 1rem;
+            max-height: 75vh;
+        }
+
+        .recibo-container.compacto {
+            padding: 1.5rem;
+            font-size: 12px;
+            min-height: auto;
+        }
+
+        .empresa-nombre {
+            font-size: 1.25rem !important;
+        }
+
+        .info-rapida,
+        .cliente-compacto {
+            .row>div {
+                margin-bottom: 0.25rem;
+            }
+        }
+
+        .table-responsive {
+            font-size: 0.75rem;
+        }
+    }
+
+    .resumen-venta {
+        .row>div {
+            margin-bottom: 0.5rem;
+        }
+
+        .col-6 {
+            width: 100% !important;
+            text-align: left !important;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
+    }
+}
+
+// Estilos de impresión - Aquí sí usamos mm para impresión real
+@media print {
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+
+    .recibo-compacto {
+        .modal-footer {
+            display: none !important;
+        }
+
+        .modal-dialog {
+            max-width: 150mm !important;
+            width: 150mm !important;
+            margin: 0 !important;
+        }
+
+        .modal-content {
+            width: 210mm !important;
+            min-height: 297mm !important;
+            border: none !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+        }
+
+        .modal-body {
+            max-height: none !important;
+            overflow: visible !important;
+            padding: 15mm !important;
+            background: white !important;
+        }
+
+        .recibo-container.compacto {
+            box-shadow: none !important;
+            padding: 0 !important;
+            min-height: 267mm !important;
+            font-size: 12pt !important;
+        }
+
+        // AJUSTAR FUENTES PARA IMPRESIÓN
+        .empresa-nombre {
+            font-size: 24pt !important;
+        }
+
+        .empresa-info {
+            font-size: 10pt !important;
+        }
+
+        .titulo-venta {
+            font-size: 16pt !important;
+        }
+
+        .table {
+            font-size: 10pt !important;
+        }
+
+        .resumen-venta {
+            font-size: 11pt !important;
+        }
+    }
+}
+
+// === ESTILOS PARA EL RECIBO DINÁMICO (AGREGAR AL FINAL) ===
+
+// Estilos para la sección de resumen de venta
+.resumen-venta {
+    .progress {
+        background-color: #e9ecef;
+
+        .progress-bar {
+            transition: width 0.6s ease;
+
+            &.progress-completo {
+                background: linear-gradient(135deg, #28a745, #20c997) !important;
+            }
+        }
+    }
+
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+// Estilos para los totales
+.totales-compactos {
+    .table-success {
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+
+        td {
+            font-weight: 700;
+            color: #155724;
+        }
+    }
+}
+
+/* Estilos para la versión profesional */
+.resumen-abono,
+.resumen-cashea {
+
+    .abonos-section,
+    .pagos-section,
+    .cuotas-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid #e9ecef;
+    }
+
+    .abono-item,
+    .pago-item,
+    .cuota-item {
+        transition: background-color 0.2s;
+
+        &:hover {
+            background-color: #ffffff;
+        }
+    }
+
+    .total-abonado,
+    .pago-total,
+    .resumen-cuotas {
+        background: #ffffff;
+        border-radius: 4px;
+        padding: 8px;
+    }
+
+    .total-abonado {
+        background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+        border-left: 4px solid #ffc107;
+        padding: 8px 12px;
+        border-radius: 4px;
+    }
+
+    .total-abonado .total-amount {
+        color: #856404;
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+
+    .porcentaje-abonado {
+        font-size: 0.8em;
+        color: #666;
+        margin-left: 8px;
+    }
+
+    .deuda-pendiente {
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        border-left: 4px solid #dc3545;
+        padding: 8px 12px;
+        border-radius: 4px;
+    }
+
+    .deuda-pendiente .resumen-value {
+        color: #721c24;
+        font-weight: bold;
+    }
+
+    .deuda-section,
+    .progreso-section {
+        padding: 12px;
+        background: #ffffff;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin-bottom: 8px;
+    }
+
+    .deuda-label,
+    .progreso-label {
+        font-size: 0.7rem;
+        letter-spacing: 0.5px;
+    }
+
+    .deuda-monto,
+    .progreso-porcentaje {
+        letter-spacing: 0.5px;
+    }
+
+    .progress {
+        border-radius: 10px;
+        overflow: hidden;
+
+        .progress-bar {
+            border-radius: 10px;
+            transition: width 0.6s ease;
+        }
+    }
+
+    /* Estados de cuotas Cashea */
+    .badge-pagada {
+        background-color: #198754;
+        color: white;
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+
+    .badge-adelantada {
+        background-color: #0dcaf0;
+        color: white;
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+
+    .badge-pendiente {
+        background-color: #6c757d;
+        color: white;
+        font-size: 0.6rem;
+        padding: 2px 6px;
+    }
+
+    .cuota-info {
+        text-align: left !important;
+
+        small {
+            display: block;
+            font-size: 0.65rem;
+        }
+    }
+}
+
+/* Asegurar que todo esté centrado */
+.text-center {
+    text-align: center !important;
+}
+
+.w-50 {
+    width: 50% !important;
+}
+
+.w-60 {
+    width: 60% !important;
+}
+
+.w-40 {
+    width: 40% !important;
+}
+
+.pago-total {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #ccc;
+    font-size: 8px;
+}

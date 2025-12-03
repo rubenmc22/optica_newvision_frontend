@@ -66,6 +66,21 @@ export class HistorialVentasComponent implements OnInit {
 
   tasaCableada: number = 243.00;
 
+  // Propiedades para el modal de recibo
+  mostrarModalRecibo: boolean = false;
+  datosRecibo: any = null;
+  ventaParaRecibo: any = null;
+
+  // Propiedades para Cashea y Abono
+  nivelCashea: string = '';
+  cantidadCuotasCashea: number = 0;
+  resumenCashea: any = { cantidad: 0, total: 0 };
+  cuotasCashea: any[] = [];
+
+  // Propiedades para cálculos
+  porcentajeAbonadoDelTotal: number = 0;
+  currentYear: number = new Date().getFullYear();
+
   // Filtros
   filtros = {
     busquedaGeneral: '',
@@ -407,6 +422,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private adaptarVentaDelApi(ventaApi: any): any {
+    console.log('ventaAPI', ventaApi);
     const venta = ventaApi.venta;
     const totales = ventaApi.totales;
     const cliente = ventaApi.cliente;
@@ -418,113 +434,161 @@ export class HistorialVentasComponent implements OnInit {
     // Determinar el estado para filtros
     const estadoVenta = this.determinarEstadoVenta(venta.estatus_venta);
 
-    return {
-      // Información básica
-      id: venta.key,
+    // Calcular el total pagado en la moneda de la venta
+    const totalPagadoEnMonedaVenta = metodosPago.reduce((total: number, metodo: any) => {
+      return total + (metodo.monto_en_moneda_de_venta || 0);
+    }, 0);
+
+    // Determinar si es Cashea
+    const esCashea = formaPago?.tipo === 'cashea';
+
+    // Preparar métodos de pago limpios
+    const metodosPagoLimpios = metodosPago.map((metodo: any) => {
+      const metodoLimpio: any = {
+        tipo: metodo.tipo,
+        monto: metodo.monto,
+        montoPagado: metodo.monto_en_moneda_de_venta || metodo.monto,
+        moneda_id: metodo.moneda_id,
+        monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta,
+        referencia: metodo.referencia
+      };
+
+      // Solo agregar información bancaria si existe
+      if (metodo.bancoNombre) {
+        metodoLimpio.bancoCodigo = metodo.bancoCodigo;
+        metodoLimpio.bancoNombre = metodo.bancoNombre;
+
+        // Solo crear propiedad 'banco' si ambos existen
+        if (metodo.bancoCodigo && metodo.bancoNombre) {
+          metodoLimpio.banco = `${metodo.bancoCodigo} - ${metodo.bancoNombre}`;
+        } else if (metodo.bancoNombre) {
+          metodoLimpio.banco = metodo.bancoNombre;
+        }
+      }
+
+      // Solo agregar conversión si es diferente de bolívar
+      if (metodo.moneda_id !== 'bolivar') {
+        metodoLimpio.conversionBs = this.calcularConversionBs(
+          metodo.monto_en_moneda_de_venta || metodo.monto,
+          metodo.moneda_id
+        );
+      }
+
+      return metodoLimpio;
+    });
+
+    // Preparar productos limpios
+    const productosLimpios = productos.map((prod: any) => {
+      const subtotal = prod.precio_unitario * prod.cantidad;
+      const tieneIva = prod.total !== subtotal;
+      const iva = tieneIva ? prod.total - subtotal : 0;
+
+      return {
+        id: prod.datos.id.toString(),
+        nombre: prod.datos.nombre,
+        codigo: prod.datos.codigo,
+        precio: prod.precio_unitario,
+        cantidad: prod.cantidad,
+        aplicaIva: tieneIva,
+        iva: iva,
+        subtotal: subtotal,
+        total: prod.total
+      };
+    });
+
+    // Construir objeto final
+    const ventaAdaptada: any = {
+      // Identificadores únicos
+      key: venta.key,
       numeroControl: venta.numero_venta,
       numeroRecibo: venta.numero_recibo,
+
+      // Información temporal
       fecha: new Date(venta.fecha),
+
+      // Estados
       estado: estadoVenta,
       estadoPago: this.mapearEstadoPago(venta.estatus_pago),
       estadoParaFiltros: this.mapearEstadoParaFiltros(venta.estatus_venta),
-      montoTotal: totales.total,
 
-      // Información del cliente
+      // Totales financieros
+      montoTotal: totales.total,
+      subtotal: totales.subtotal,
+      totalIva: totales.iva || 0,
+      totalDescuento: totales.descuento || 0,
+      total: totales.total,
+
+      // Información de pago
+      montoAbonado: totalPagadoEnMonedaVenta,
+      pagoCompleto: totalPagadoEnMonedaVenta >= totales.total,
+      deudaPendiente: Math.max(0, totales.total - totalPagadoEnMonedaVenta),
+
+      // Configuración de la venta
+      moneda: venta.moneda,
+      formaPago: venta.formaPago,
+      formaPagoCompleto: formaPago,
+      descuento: totales.descuento || 0,
+      observaciones: venta.observaciones,
+
+      // Personas involucradas
       paciente: {
         nombre: cliente.informacion.nombreCompleto,
         cedula: cliente.informacion.cedula,
         telefono: cliente.informacion.telefono,
         email: cliente.informacion.email
       },
-
-      // Personal
       asesor: {
         id: asesor.id,
         nombre: asesor.nombre
       },
       especialista: {
-        id: 0, // Por defecto, ya que no viene en el API
+        id: 0,
         nombre: 'No asignado'
       },
+      //asesorNombre: asesor.nombre,
 
-      // Productos y servicios
-      productos: productos.map((prod: any) => ({
-        id: prod.datos.id.toString(),
-        nombre: prod.datos.nombre,
-        codigo: prod.datos.codigo,
-        precio: prod.precio_unitario,
-        precioConIva: prod.precio_unitario, // Asumir mismo precio
-        cantidad: prod.cantidad,
-        aplicaIva: prod.total !== prod.precio_unitario * prod.cantidad,
-        iva: 0, // Calcular si es necesario
-        subtotal: prod.precio_unitario * prod.cantidad,
-        total: prod.total
-      })),
+      // Contenido de la venta
+      productos: productosLimpios,
+      servicios: [],
+      metodosPago: metodosPagoLimpios,
 
-      servicios: [], // No viene en el API actual
-
-      // Métodos de pago
-      metodosPago: metodosPago.map((metodo: any) => ({
-        // Datos originales del API
-        tipo: metodo.tipo,
-        monto: metodo.monto,
-        montoPagado: metodo.monto_en_moneda_de_venta || metodo.monto,
-        moneda_id: metodo.moneda_id,
-        monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta,
-        referencia: metodo.referencia,
-        bancoCodigo: metodo.bancoCodigo,
-        bancoNombre: metodo.bancoNombre,
-
-        // Para compatibilidad
-        conversionBs: this.calcularConversionBs(
-          metodo.monto_en_moneda_de_venta || metodo.monto,
-          metodo.moneda_id
-        ),
-        banco: metodo.bancoNombre ? `${metodo.bancoCodigo} - ${metodo.bancoNombre}` : null
-      })),
-
-      // Información adicional
+      // Configuración local
       mostrarDetalle: false,
       sede: 'guatire',
-      moneda: venta.moneda,
-      formaPago: venta.formaPago,
-      descuento: totales.descuento || 0,
-      observaciones: venta.observaciones,
-      asesorNombre: asesor.nombre,
 
-      // Totales
-      subtotal: totales.subtotal,
-      totalIva: totales.iva || 0,
-      totalDescuento: totales.descuento || 0,
-      total: totales.total,
-
-      // Estados de pago
-      pagoCompleto: totales.totalPagado >= totales.total,
-      financiado: formaPago.tipo === 'cashea',
-
-      // Información específica por forma de pago
-      montoAbonado: formaPago.tipo === 'abono' ? formaPago.montoInicial : totales.totalPagado,
-      nivelCashea: formaPago.nivel,
-      montoInicial: formaPago.montoInicial,
-      cantidadCuotas: formaPago.cantidadCuotas,
-      montoPorCuota: formaPago.montoPorCuota,
-      cuotasAdelantadas: formaPago.cuotas?.filter((c: any) => c.seleccionada).map((c: any) => ({
-        numero: c.numero,
-        monto: c.monto,
-        fechaVencimiento: c.fecha_vencimiento
-      })) || [],
-      totalAdelantado: formaPago.montoAdelantado,
-
-      // NUEVO: Incluir deuda pendiente específica para Cashea
-      deudaPendiente: formaPago.deudaPendiente || 0,
-
-      // Información de cancelación (si aplica)
+      // Información de cancelación
       motivo_cancelacion: venta.motivo_cancelacion,
       fecha_cancelacion: venta.fecha_cancelacion ? new Date(venta.fecha_cancelacion) : null,
 
-      // Historia médica (si existe)
+      // Historia médica
       historiaMedica: ventaApi.ultima_historia_medica || null
     };
+
+    // Solo agregar información específica de Cashea si aplica
+    if (esCashea && formaPago) {
+      ventaAdaptada.financiado = true;
+      ventaAdaptada.nivelCashea = formaPago.nivel;
+      ventaAdaptada.montoInicial = formaPago.montoInicial;
+      ventaAdaptada.cantidadCuotas = formaPago.cantidadCuotas;
+      ventaAdaptada.montoPorCuota = formaPago.montoPorCuota;
+
+      // Solo agregar cuotas adelantadas si existen
+      if (formaPago.cuotas?.length > 0) {
+        const cuotasSeleccionadas = formaPago.cuotas.filter((c: any) => c.seleccionada);
+        if (cuotasSeleccionadas.length > 0) {
+          ventaAdaptada.cuotasAdelantadas = cuotasSeleccionadas.map((c: any) => ({
+            numero: c.numero,
+            monto: c.monto,
+            fechaVencimiento: c.fecha_vencimiento
+          }));
+          ventaAdaptada.totalAdelantado = formaPago.montoAdelantado || 0;
+        }
+      }
+    } else {
+      ventaAdaptada.financiado = false;
+    }
+
+    return ventaAdaptada;
   }
 
   private determinarEstadoVenta(estatusVenta: string): string {
@@ -612,10 +676,6 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  verRecibo(venta: any) {
-    // console.log('Ver recibo:', venta);
-  }
-
   generarInforme() {
     //console.log('Generar informe con filtros:', this.filtros);
   }
@@ -635,43 +695,8 @@ export class HistorialVentasComponent implements OnInit {
     return nombreCompleto;
   }
 
-  getEstadoTexto(venta: any): string {
-    // Primero verificar si está cancelada
-    if (venta.estado === 'cancelada') {
-      return '❌ Cancelada';
-    }
-
-    // Luego verificar si tiene deuda pendiente
-    const deuda = this.getDeudaPendiente(venta);
-    if (deuda > 0) {
-      return '⏳ Pendiente por pago';
-    }
-
-    // Finalmente, si está completada y sin deuda
-    if (venta.estado === 'completada') {
-      return '✅ Completada';
-    }
-
-    // Para cualquier otro caso
-    return venta.estado || 'Desconocido';
-  }
-
-  getEstadoClase(venta: any): string {
-    const estadoTexto = this.getEstadoTexto(venta);
-
-    if (estadoTexto.includes('✅ Completada')) {
-      return 'bg-success';
-    } else if (estadoTexto.includes('⏳ Pendiente')) {
-      return 'bg-warning';
-    } else if (estadoTexto.includes('❌ Cancelada')) {
-      return 'bg-danger';
-    } else {
-      return 'bg-secondary';
-    }
-  }
-
   cancelarVenta(venta: any) {
-    //console.log('Cancelar venta:', venta);
+    console.log('Cancelar venta:', venta);
     this.selectedVenta = venta;
     this.motivoCancelacion = '';
 
@@ -692,7 +717,7 @@ export class HistorialVentasComponent implements OnInit {
 
     this.swalService.showConfirm(
       'Confirmar Acción',
-      `¿Está completamente seguro de cancelar la venta #${this.selectedVenta.id}? Esta acción no se puede deshacer.`,
+      `¿Está completamente seguro de cancelar la venta #${this.selectedVenta.numeroControl}? Esta acción no se puede deshacer.`,
       'Sí, Cancelar Venta',
       'Revisar'
     ).then((result) => {
@@ -704,18 +729,19 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  /**
- * Cancela una venta usando el API real
- */
   private procesarCancelacion(): void {
+    console.log('this.selectedVenta', this.selectedVenta);
     if (!this.selectedVenta?.key) {
       this.swalService.showError('Error', 'No se puede cancelar la venta: falta información.');
       return;
     }
 
+    console.log('this.motivoCancelacion', this.motivoCancelacion);
+    let motivo_cancelacion = this.motivoCancelacion;
+
     this.historialVentaService.anularVenta(
       this.selectedVenta.key,
-      this.motivoCancelacion
+      motivo_cancelacion
     ).subscribe({
       next: (response: any) => {
         if (response.success || response.message === 'ok') {
@@ -731,6 +757,7 @@ export class HistorialVentasComponent implements OnInit {
           this.actualizarVentaEnListas(this.selectedVenta);
 
         } else {
+          console.log('error', response.message);
           this.swalService.showError('Error', response.message || 'No se pudo cancelar la venta.');
         }
 
@@ -840,8 +867,18 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   getTotalPagadoVenta(venta: any): number {
-    if (!venta.metodosPago || !venta.metodosPago.length) return 0;
+    if (!venta || !venta.metodosPago || !venta.metodosPago.length) {
+      // Intentar obtener de otras propiedades
+      if (venta?.formaPago?.totalPagadoAhora) {
+        return venta.formaPago.totalPagadoAhora;
+      }
+      if (venta?.totales?.totalPagado) {
+        return venta.totales.totalPagado;
+      }
+      return 0;
+    }
 
+    // Sumar todos los montos en la moneda de la venta
     return venta.metodosPago.reduce((total: number, pago: any) => {
       const montoPagado = pago.monto_en_moneda_de_venta || 0;
       return total + montoPagado;
@@ -966,10 +1003,28 @@ export class HistorialVentasComponent implements OnInit {
 
   onMontoAbonadoChange() {
     setTimeout(() => {
-      this.calcularPorcentajeAbonado();
       this.ajustarMontosMetodosPago();
     });
   }
+
+  /**
+ * Calcular porcentaje abonado para el modal de edición
+ * Usa el monto del formulario, no requiere parámetro
+ */
+  calcularPorcentajeAbonadoEnModal(): number {
+    if (!this.selectedVenta || !this.selectedVenta.total) return 0;
+
+    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
+    const nuevoMontoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+
+    const totalAbonado = montoAbonadoAnterior + nuevoMontoAbonado;
+
+    let porcentaje = (totalAbonado / this.selectedVenta.total) * 100;
+    porcentaje = Math.min(porcentaje, 100);
+
+    return Math.round(porcentaje);
+  }
+
 
   ajustarMontosMetodosPago(): void {
     this.metodosPagoArray.controls.forEach((control, index) => {
@@ -1073,19 +1128,19 @@ export class HistorialVentasComponent implements OnInit {
     return Math.max(0, deuda);
   }
 
-  calcularPorcentajeAbonado(): number {
-    if (!this.selectedVenta || !this.selectedVenta.total) return 0;
-
-    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
-    const nuevoMontoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
-
-    const totalAbonado = montoAbonadoAnterior + nuevoMontoAbonado;
-
-    let porcentaje = (totalAbonado / this.selectedVenta.total) * 100;
-    porcentaje = Math.min(porcentaje, 100);
-
-    return Math.round(porcentaje);
-  }
+  /* calcularPorcentajeAbonado(): number {
+     if (!this.selectedVenta || !this.selectedVenta.total) return 0;
+ 
+     const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
+     const nuevoMontoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+ 
+     const totalAbonado = montoAbonadoAnterior + nuevoMontoAbonado;
+ 
+     let porcentaje = (totalAbonado / this.selectedVenta.total) * 100;
+     porcentaje = Math.min(porcentaje, 100);
+ 
+     return Math.round(porcentaje);
+   }*/
 
   // CORRECCIÓN: Obtener monto máximo permitido en moneda de venta
   getMontoMaximoPermitido(): number {
@@ -1623,33 +1678,33 @@ export class HistorialVentasComponent implements OnInit {
     return `Tasa: 1 USD = ${this.tasaCableada} Bs`;
   }
 
-getMontoDisplayMetodoPago(metodo: any, venta: any): string {
+  getMontoDisplayMetodoPago(metodo: any, venta: any): string {
     const monedaPago = metodo.moneda_id;
     const montoOriginal = metodo.monto || 0;
     const montoEnMonedaVenta = metodo.monto_en_moneda_de_venta || montoOriginal;
-    
+
     // Formatear ambos montos
     const montoOriginalFormateado = this.formatearMoneda(montoOriginal, monedaPago);
     const montoConvertidoFormateado = this.formatearMoneda(montoEnMonedaVenta, venta.moneda);
-    
+
     // Si es la misma moneda, mostrar solo uno
     if (monedaPago === venta.moneda) {
-        return montoOriginalFormateado;
+      return montoOriginalFormateado;
     }
-    
-    return `${montoOriginalFormateado} → ${montoConvertidoFormateado}`;
-}
 
-getEquivalenteDisplay(metodo: any, venta: any): string {
+    return `${montoOriginalFormateado} → ${montoConvertidoFormateado}`;
+  }
+
+  getEquivalenteDisplay(metodo: any, venta: any): string {
     if (!metodo.monto_en_moneda_de_venta || metodo.moneda_id === venta.moneda) {
-        return '';
+      return '';
     }
-    
+
     const montoOriginal = metodo.monto || 0;
     const montoConvertido = metodo.monto_en_moneda_de_venta;
-    
+
     return `Equivale a: ${this.formatearMoneda(montoConvertido, venta.moneda)}`;
-}
+  }
 
   // Método para obtener el monto original correcto
   getMontoOriginalDelMetodo(metodo: any, monedaPago: string): number {
@@ -2140,14 +2195,13 @@ getEquivalenteDisplay(metodo: any, venta: any): string {
     this.paginacion.rangoPaginas = rango;
   }
 
+  // Método mejorado para formatear con soporte de euro
   formatearMoneda(monto: number | null | undefined, moneda?: string): string {
-    // Validar que el monto sea un número válido
     if (monto === null || monto === undefined || isNaN(monto)) {
       const monedaDefault = moneda || this.selectedVenta?.moneda || this.monedaSistema;
       return this.obtenerSimboloMoneda(monedaDefault) + '0,00';
     }
 
-    // Asegurarse de que es un número
     const montoNumerico = Number(monto);
 
     if (isNaN(montoNumerico)) {
@@ -2155,11 +2209,16 @@ getEquivalenteDisplay(metodo: any, venta: any): string {
       return this.obtenerSimboloMoneda(monedaDefault) + '0,00';
     }
 
-    // Usar la moneda específica si se proporciona, sino la del recibo, sino la del sistema
-    const monedaFinal = moneda || this.selectedVenta?.moneda || this.monedaSistema;
-    const simbolo = this.obtenerSimboloMoneda(monedaFinal);
+    // Determinar moneda
+    let monedaFinal = moneda;
+    if (!monedaFinal && this.ventaParaRecibo) {
+      monedaFinal = this.ventaParaRecibo.moneda || 'dolar';
+    }
+    if (!monedaFinal) {
+      monedaFinal = this.monedaSistema;
+    }
 
-    // Formatear según el estilo venezolano
+    const simbolo = this.obtenerSimboloMoneda(monedaFinal);
     return this.formatearNumeroVenezolano(montoNumerico, simbolo);
   }
 
@@ -2210,8 +2269,6 @@ getEquivalenteDisplay(metodo: any, venta: any): string {
     }
 
     // Obtener la moneda de la venta
-    console.log('venta.moneda', venta.moneda);
-    console.log('this.monedaSistema', this.monedaSistema);
     const monedaVenta = venta.moneda || 'dolar';
 
     const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
@@ -2308,6 +2365,557 @@ getEquivalenteDisplay(metodo: any, venta: any): string {
 
     return this.formatearMoneda(total, this.monedaSistema);
   }
+
+
+
+
+  // ========== MÉTODOS PARA EL RECIBO ==========
+
+  /**
+  * Método para ver el recibo de una venta - VERSIÓN MEJORADA
+  */
+  verRecibo(venta: any): void {
+    console.log('📄 Preparando recibo para venta:', venta);
+    console.log('Datos de formaPago:', venta.formaPago);
+    console.log('Deuda pendiente del API:', venta.formaPago?.deudaPendiente);
+    console.log('Total venta:', venta.total);
+    console.log('Total pagado:', this.getTotalPagadoVenta(venta));
+
+    // VALIDACIÓN 1: Verificar que la venta no sea null/undefined
+    if (!venta) {
+      console.error('❌ Error crítico: venta es null o undefined');
+      this.swalService.showError('Error', 'No se puede mostrar el recibo: información de venta no disponible');
+      return;
+    }
+
+    // VALIDACIÓN 2: Verificar propiedades mínimas requeridas
+    if (!venta.key || !venta.numeroControl) {
+      console.warn('⚠️ Advertencia: venta no tiene propiedades clave:', venta);
+      this.swalService.showWarning('Advertencia', 'La venta no tiene información completa');
+    }
+
+    // Cerrar modal anterior si está abierto
+    this.cerrarModalRecibo();
+
+    // Pequeño delay para asegurar limpieza
+    setTimeout(() => this.iniciarReciboNuevo(venta), 50);
+  }
+
+  /**
+   * Método auxiliar para iniciar un nuevo recibo
+   */
+  private iniciarReciboNuevo(venta: any): void {
+    try {
+      // Crear una copia para evitar mutaciones
+      this.ventaParaRecibo = {
+        ...venta,
+        // Asegurar propiedades críticas con valores por defecto
+        formaPago: venta.formaPago || 'contado',
+        montoAbonado: venta.montoAbonado || 0,
+        montoInicial: venta.montoInicial || 0,
+        moneda: venta.moneda || 'dolar',
+        total: venta.total || 0,
+        subtotal: venta.subtotal || 0,
+        totalIva: venta.totalIva || 0,
+        descuento: venta.descuento || 0
+      };
+
+      console.log('✅ Venta preparada para recibo:', {
+        key: this.ventaParaRecibo.key,
+        numeroControl: this.ventaParaRecibo.numeroControl,
+        formaPago: this.ventaParaRecibo.formaPago,
+        montoAbonado: this.ventaParaRecibo.montoAbonado,
+        total: this.ventaParaRecibo.total
+      });
+
+      // Preparar datos para el recibo
+      this.prepararDatosRecibo(this.ventaParaRecibo);
+
+      // Mostrar el modal después de preparar los datos
+      setTimeout(() => {
+        this.mostrarModalRecibo = true;
+
+        // Forzar detección de cambios
+        setTimeout(() => {
+          this.scrollToTop();
+
+          // Log para depuración
+          console.log('🎯 Modal de recibo mostrado:', {
+            mostrarModalRecibo: this.mostrarModalRecibo,
+            ventaParaRecibo: !!this.ventaParaRecibo,
+            datosRecibo: !!this.datosRecibo
+          });
+        }, 50);
+      }, 50);
+
+    } catch (error) {
+      console.error('💥 Error crítico al preparar recibo:', error);
+      this.swalService.showError('Error',
+        'Ocurrió un error inesperado al preparar el recibo. Por favor, intente nuevamente.');
+
+      // Limpiar estado en caso de error
+      this.cerrarModalRecibo();
+    }
+  }
+
+  /**
+   * Preparar los datos del recibo
+   */
+  private prepararDatosRecibo(venta: any): void {
+    const fecha = new Date(venta.fecha);
+
+    this.datosRecibo = {
+      // Información básica
+      numeroVenta: venta.numeroControl || `V-${venta.key.substring(0, 8)}`,
+      fecha: this.formatFecha(fecha),
+      hora: fecha.toLocaleTimeString('es-VE', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      vendedor: venta.asesorNombre || venta.asesor?.nombre || 'No asignado',
+
+      // Cliente
+      cliente: {
+        nombre: venta.paciente?.nombre || 'CLIENTE GENERAL',
+        cedula: venta.paciente?.cedula || 'N/A',
+        telefono: venta.paciente?.telefono || 'N/A'
+      },
+
+      // Configuración
+      configuracion: {
+        formaPago: venta.formaPago || 'contado'
+      },
+
+      // Totales
+      totalVenta: venta.total || 0,
+      totalPagado: this.getTotalPagadoVenta(venta),
+
+      // Información específica
+      abono: {
+        montoAbonado: venta.formaPago?.montoInicial || venta.montoAbonado || 0,
+        deudaPendiente: venta.formaPago?.deudaPendiente || this.getDeudaPendiente(venta),
+        porcentajePagado: this.calcularPorcentajePagado(venta)
+      },
+
+      // Cashea (si aplica)
+      cashea: {
+        nivel: venta.nivelCashea,
+        inicial: venta.montoInicial || 0,
+        cantidadCuotas: venta.cantidadCuotas || 0,
+        cuotasAdelantadas: venta.cuotasAdelantadas?.length || 0,
+        montoAdelantado: venta.totalAdelantado || 0,
+        deudaPendiente: venta.deudaPendiente || 0
+      },
+
+      // Observaciones
+      observaciones: venta.observaciones
+    };
+
+    // Preparar datos específicos según forma de pago
+    if (venta.formaPago === 'cashea') {
+      this.prepararDatosCashea(venta);
+    } else if (venta.formaPago === 'abono') {
+      this.calcularPorcentajeAbonado(venta);
+    }
+  }
+
+  /**
+   * Preparar datos específicos para Cashea
+   */
+  private prepararDatosCashea(venta: any): void {
+    this.nivelCashea = venta.nivelCashea || 'inicial';
+    this.cantidadCuotasCashea = venta.cantidadCuotas || 0;
+
+    // Calcular cuotas adelantadas
+    const cuotasAdelantadas = venta.cuotasAdelantadas || [];
+    this.resumenCashea = {
+      cantidad: cuotasAdelantadas.length,
+      total: cuotasAdelantadas.reduce((sum: number, c: any) => sum + (c.monto || 0), 0)
+    };
+
+    // Generar calendario de cuotas
+    this.generarCalendarioCuotas(venta);
+  }
+
+  /**
+   * Generar calendario de cuotas para Cashea
+   */
+  private generarCalendarioCuotas(venta: any): void {
+    const cuotas = [];
+    const totalCuotas = venta.cantidadCuotas || 0;
+    const montoPorCuota = venta.montoPorCuota || 0;
+    const cuotasAdelantadas = venta.cuotasAdelantadas || [];
+    const cuotasAdelantadasIds = cuotasAdelantadas.map((c: any) => c.numero);
+
+    // Fecha base (fecha de la venta)
+    const fechaBase = new Date(venta.fecha);
+
+    for (let i = 1; i <= totalCuotas; i++) {
+      const fechaCuota = new Date(fechaBase);
+      fechaCuota.setMonth(fechaCuota.getMonth() + i);
+
+      const esAdelantada = cuotasAdelantadasIds.includes(i);
+      const esPagada = false; // Por defecto, se marcarían como pagadas en el historial
+
+      cuotas.push({
+        id: i,
+        fecha: this.formatFecha(fechaCuota),
+        monto: montoPorCuota,
+        seleccionada: esAdelantada,
+        pagada: esPagada
+      });
+    }
+
+    this.cuotasCashea = cuotas;
+  }
+
+  /**
+   * Calcular porcentaje abonado
+   */
+  private calcularPorcentajeAbonado(venta: any): void {
+    const total = venta.total || 0;
+    const abonado = venta.montoAbonado || 0;
+
+    if (total > 0) {
+      this.porcentajeAbonadoDelTotal = Math.round((abonado / total) * 100);
+    } else {
+      this.porcentajeAbonadoDelTotal = 0;
+    }
+  }
+
+  /**
+   * Calcular porcentaje pagado para el recibo
+   */
+  private calcularPorcentajePagado(venta: any): number {
+    const total = venta.total || 0;
+    const pagado = this.getTotalPagadoVenta(venta);
+
+    if (total > 0) {
+      return Math.round((pagado / total) * 100);
+    }
+    return 0;
+  }
+
+  /**
+   * Obtener el título del recibo según tipo de venta
+   */
+  getTituloRecibo(): string {
+    if (!this.ventaParaRecibo) return 'Recibo de Venta';
+
+    const formaPago = this.ventaParaRecibo.formaPago;
+
+    switch (formaPago) {
+      case 'contado':
+        return 'RECIBO DE VENTA AL CONTADO';
+      case 'abono':
+        return 'RECIBO DE ABONO PARCIAL';
+      case 'cashea':
+        return 'RECIBO DE PLAN CASHEA';
+      default:
+        return 'RECIBO DE VENTA';
+    }
+  }
+
+  /**
+   * Obtener estado del recibo
+   */
+  getEstadoTexto(): string {
+    if (!this.ventaParaRecibo) return 'Completada';
+
+    if (this.ventaParaRecibo.estado === 'cancelada') {
+      return 'Cancelada';
+    }
+
+    const deuda = this.getDeudaPendiente(this.ventaParaRecibo);
+    if (deuda > 0) {
+      return 'Pendiente por pago';
+    }
+
+    return 'Completada';
+  }
+
+  /**
+   * Obtener clase CSS para el badge de estado
+   */
+  getEstadoBadgeClass(): string {
+    const estado = this.getEstadoTexto();
+
+    if (estado.includes('Cancelada')) return 'bg-danger';
+    if (estado.includes('Pendiente')) return 'bg-warning';
+    if (estado.includes('Completada')) return 'bg-success';
+
+    return 'bg-secondary';
+  }
+
+  /**
+   * Obtener productos seguros
+   */
+  getProductosSeguros(): any[] {
+    if (!this.ventaParaRecibo || !this.ventaParaRecibo.productos) {
+      return [];
+    }
+
+    return this.ventaParaRecibo.productos.map((prod: any) => ({
+      nombre: prod.nombre || 'Producto sin nombre',
+      cantidad: prod.cantidad || 1,
+      precioUnitario: prod.precio || 0,
+      subtotal: prod.total || 0
+    }));
+  }
+
+  /**
+   * Obtener métodos de pago seguros
+   */
+  getMetodosPagoSeguros(): any[] {
+    if (!this.ventaParaRecibo || !this.ventaParaRecibo.metodosPago) {
+      return [];
+    }
+
+    return this.ventaParaRecibo.metodosPago.map((metodo: any) => ({
+      tipo: metodo.tipo || 'efectivo',
+      monto: metodo.monto || 0,
+      moneda: metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+      referencia: metodo.referencia,
+      banco: metodo.banco || metodo.bancoNombre
+    }));
+  }
+
+  /**
+   * Formatear tipo de pago
+   */
+  formatearTipoPago(tipo: string): string {
+    const tipos: { [key: string]: string } = {
+      'efectivo': 'Efectivo',
+      'pagomovil': 'Pago Móvil',
+      'transferencia': 'Transferencia',
+      'debito': 'Débito',
+      'credito': 'Crédito',
+      'zelle': 'Zelle'
+    };
+
+    return tipos[tipo] || tipo.charAt(0).toUpperCase() + tipo.slice(1);
+  }
+
+  getDescuentoSeguro(): number {
+    return this.ventaParaRecibo?.descuento || 0;
+  }
+
+
+  getMontoTotalSeguro(): number {
+    if (!this.ventaParaRecibo) return 0;
+
+    // Intentar obtener el total de múltiples fuentes
+    const totalDelApi = this.ventaParaRecibo?.total ||
+      this.ventaParaRecibo?.montoTotal ||
+      this.datosRecibo?.totalVenta ||
+      0;
+
+    // Si el total parece incorrecto (menor que subtotal + IVA), calcularlo
+    const subtotal = this.getSubtotalSeguro();
+    const iva = this.getIvaSeguro();
+    const totalCalculado = subtotal + iva;
+
+    // Usar el mayor de los dos valores para evitar errores
+    return Math.max(totalDelApi, totalCalculado);
+  }
+
+  getSubtotalSeguro(): number {
+    return this.ventaParaRecibo?.subtotal ||
+      this.datosRecibo?.subtotal ||
+      0;
+  }
+
+  getIvaSeguro(): number {
+    return this.ventaParaRecibo?.totalIva ||
+      this.ventaParaRecibo?.iva ||
+      this.datosRecibo?.iva ||
+      0;
+  }
+
+  // Método para obtener la deuda pendiente específica para abono
+  getDeudaPendienteAbono(): number {
+    if (!this.ventaParaRecibo) return 0;
+
+    // Usar la deuda del API si está disponible (del objeto formaPago)
+    if (this.ventaParaRecibo.formaPago?.deudaPendiente !== undefined) {
+      return this.ventaParaRecibo.formaPago.deudaPendiente;
+    }
+
+    // Si no, calcularlo basado en los datos
+    const total = this.getMontoTotalSeguro();
+    const pagado = this.getTotalPagadoSeguro();
+    const deuda = Math.max(0, total - pagado);
+
+    console.log('Cálculo de deuda:', { total, pagado, deuda });
+    return deuda;
+  }
+
+  // Método para calcular porcentaje
+  calcularPorcentajeParaRecibo(): number {
+    if (!this.ventaParaRecibo || !this.ventaParaRecibo.total) return 0;
+
+    const total = this.getMontoTotalSeguro();
+    const pagado = this.getTotalPagadoSeguro();
+
+    if (total === 0) return 0;
+
+    const porcentaje = (pagado / total) * 100;
+    const porcentajeRedondeado = Math.round(porcentaje);
+
+    console.log('Cálculo de porcentaje:', { total, pagado, porcentaje, porcentajeRedondeado });
+    return porcentajeRedondeado;
+  }
+
+  // Método para obtener total pagado
+  getTotalPagadoSeguro(): number {
+    return this.getTotalPagadoVenta(this.ventaParaRecibo);
+  }
+
+  getDeudaPendienteCashea(): number {
+    return this.ventaParaRecibo?.deudaPendiente || 0;
+  }
+
+  /**
+   * Obtener nombre del nivel Cashea
+   */
+  obtenerNombreNivelCashea(nivel: string): string {
+    const niveles: { [key: string]: string } = {
+      'inicial': 'Inicial',
+      'intermedio': 'Intermedio',
+      'avanzado': 'Avanzado'
+    };
+
+    return niveles[nivel] || nivel.charAt(0).toUpperCase() + nivel.slice(1);
+  }
+
+  /**
+   * Obtener mensaje final según estado
+   */
+  getMensajeFinal(): string {
+    if (!this.ventaParaRecibo) return 'Gracias por su compra';
+
+    if (this.ventaParaRecibo.estado === 'cancelada') {
+      return 'Venta cancelada';
+    }
+
+    const deuda = this.getDeudaPendiente(this.ventaParaRecibo);
+
+    if (deuda > 0) {
+      return 'Pago pendiente por completar';
+    }
+
+    return '¡Gracias por su compra!';
+  }
+
+  /**
+   * Cerrar modal de recibo
+   */
+  cerrarModalRecibo(): void {
+    this.mostrarModalRecibo = false;
+
+    // Limpiar primero la referencia
+    this.ventaParaRecibo = null;
+
+    // Luego limpiar otros datos
+    this.datosRecibo = null;
+    this.cuotasCashea = [];
+    this.resumenCashea = { cantidad: 0, total: 0 };
+    this.porcentajeAbonadoDelTotal = 0;
+  }
+
+  /**
+   * Imprimir recibo
+   */
+  imprimirRecibo(): void {
+    const contenido = document.getElementById('contenidoRecibo');
+
+    if (contenido) {
+      const ventana = window.open('', '_blank');
+
+      if (ventana) {
+        ventana.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Recibo ${this.datosRecibo?.numeroVenta || ''}</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+            <style>
+              @media print {
+                body { margin: 0; padding: 0; }
+                .recibo-container { width: 100%; max-width: 800px; margin: 0 auto; }
+                .no-print { display: none !important; }
+              }
+              body { font-family: Arial, sans-serif; }
+              .recibo-container { padding: 20px; }
+              .empresa-nombre { font-size: 24px; font-weight: bold; }
+              .titulo-venta { font-size: 18px; }
+            </style>
+          </head>
+          <body>
+            ${contenido.innerHTML}
+            <script>
+              window.onload = function() {
+                window.print();
+                setTimeout(() => window.close(), 1000);
+              }
+            </script>
+          </body>
+          </html>
+        `);
+        ventana.document.close();
+      }
+    }
+  }
+
+  /**
+   * Descargar PDF (placeholder - necesitarías una librería como jsPDF)
+   */
+  descargarPDF(): void {
+    this.swalService.showInfo('Información', 'La descarga de PDF estará disponible próximamente');
+  }
+
+  /**
+   * Compartir por WhatsApp
+   */
+  compartirWhatsApp(): void {
+    const numero = this.datosRecibo?.cliente?.telefono?.replace(/\D/g, '');
+    const mensaje = `*NEW VISION LENS*%0A%0A` +
+      `*Recibo:* ${this.datosRecibo?.numeroVenta}%0A` +
+      `*Cliente:* ${this.datosRecibo?.cliente?.nombre}%0A` +
+      `*Fecha:* ${this.datosRecibo?.fecha}%0A` +
+      `*Total:* ${this.formatearMoneda(this.datosRecibo?.totalVenta)}%0A%0A` +
+      `¡Gracias por su compra!`;
+
+    if (numero) {
+      const url = `https://wa.me/58${numero}?text=${mensaje}`;
+      window.open(url, '_blank');
+    } else {
+      this.swalService.showWarning('Atención', 'No se encontró número de teléfono para compartir');
+    }
+  }
+
+  /**
+   * Copiar enlace
+   */
+  copiarEnlace(): void {
+    const enlace = `${window.location.origin}/ventas/recibo/${this.ventaParaRecibo?.key}`;
+
+    navigator.clipboard.writeText(enlace).then(() => {
+      this.swalService.showSuccess('Éxito', 'Enlace copiado al portapapeles');
+    }).catch(err => {
+      console.error('Error al copiar:', err);
+      this.swalService.showError('Error', 'No se pudo copiar el enlace');
+    });
+  }
+
+  /**
+   * Scroll al top
+   */
+  private scrollToTop(): void {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 }
+
 
 

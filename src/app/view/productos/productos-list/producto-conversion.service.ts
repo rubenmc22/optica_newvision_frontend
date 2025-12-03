@@ -137,15 +137,13 @@ export class ProductoConversionService {
      * Obtiene el precio en bolívares como referencia
      */
     getPrecioEnBs(producto: any): number {
-        const precioParaConversion = producto.aplicaIva ?
-            (producto.precioConIva || producto.precio) :
-            producto.precio;
-
+        // SIEMPRE usar precio SIN IVA para la conversión a bolívares
+        // Independientemente de si el producto aplica IVA o no
+        const precioSinIva = producto.precio || 0;
         const monedaOriginal = producto.monedaOriginal || producto.moneda;
 
-        const precioEnBs = this.convertirDirectoABs(precioParaConversion, monedaOriginal);
-
-        return precioEnBs;
+        // Convertir usando el método seguro de conversión
+        return this.convertirDirectoABs(precioSinIva, monedaOriginal);
     }
 
     /**

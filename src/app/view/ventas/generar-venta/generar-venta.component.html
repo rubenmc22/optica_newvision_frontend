@@ -626,8 +626,7 @@
                                     <div class="form-group">
                                         <label class="form-label">
                                             <i class="bi bi-person"></i>
-                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón
-                                            Social' }}
+                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón Social' }}
                                         </label>
                                         <input type="text" class="form-control modern-input"
                                             style="margin-bottom: -10px !important;"
@@ -709,8 +708,7 @@
                                                 'Los datos fueron autocompletados desde nuestra base de datos' :
                                                 validandoCliente ?
                                                 'Buscando información del cliente...' :
-                                                'Complete los datos manualmente. El cliente será registrado al generar
-                                                la venta.' }}
+                                                'Complete los datos manualmente. El cliente será registrado al generar la venta.' }}
                                             </div>
                                         </div>
                                     </div>
@@ -1476,23 +1474,33 @@
                     <div class="productos-compactos mb-3">
                         <h6 class="fw-bold mb-2 text-primary border-bottom pb-1">PRODUCTOS</h6>
                         <div class="table-responsive">
-                            <table class="table table-sm table-bordered mb-1">
-                                <thead class="table-light">
+                            <table class="table table-sm table-bordered">
+                                <thead>
                                     <tr>
-                                        <th width="5%" class="text-center">#</th>
-                                        <th width="55%">Descripción</th>
-                                        <th width="10%" class="text-center">Cant</th>
-                                        <th width="15%" class="text-end">P. Unitario</th>
-                                        <th width="15%" class="text-end">Subtotal</th>
+                                        <th width="5%">#</th>
+                                        <th width="45%">Producto</th>
+                                        <th width="15%" class="text-end">Precio Unit.</th>
+                                        <th width="10%" class="text-center">Cant.</th>
+                                        <th width="15%" class="text-end">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr *ngFor="let producto of getProductosSeguros(); let i = index">
+                                    <!-- USAR datosRecibo.productos en lugar de productosConDetalle -->
+                                    <tr *ngFor="let producto of datosRecibo?.productos || []; let i = index">
                                         <td class="text-center">{{ i + 1 }}</td>
-                                        <td class="small">{{ producto.nombre }}</td>
-                                        <td class="text-center">{{ producto.cantidad || 1 }}</td>
-                                        <td class="text-end">{{ formatearMoneda(producto.precioUnitario) }}</td>
-                                        <td class="text-end">{{ formatearMoneda(producto.subtotal) }}</td>
+                                        <td>
+                                            <div class="fw-bold small">{{ producto.nombre }}</div>
+                                            <div class="text-muted extra-small">{{ producto.codigo || 'N/A' }}</div>
+                                        </td>
+                                        <td class="text-end">
+                                            {{ formatearMoneda(producto.precioUnitario, producto.moneda) }}
+                                        </td>
+                                        <td class="text-center">
+                                            {{ producto.cantidad || 1 }}
+                                        </td>
+                                        <td class="text-end">
+                                            {{ formatearMoneda(producto.subtotal, producto.moneda) }}
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>

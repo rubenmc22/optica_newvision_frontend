@@ -675,20 +675,24 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const aplicaIva = p.aplicaIva ?? false;
             const tasaOrigen = this.tasasDisponibles.find(t => t.nombre.toLowerCase() === p.moneda)?.valor ?? 1;
 
-            const subtotal = +(p.precio * cantidad).toFixed(2);
+            // **SUBTOTAL**: precio sin IVA × cantidad
+            const precioUnitarioSinIvaConvertido = +(p.precio * (tasaOrigen / tasaDestino)).toFixed(2);
+            const subtotal = +(precioUnitarioSinIvaConvertido * cantidad).toFixed(2);
+
+            // **IVA**: solo si aplica IVA
             const iva = aplicaIva ? +(subtotal * (this.ivaPorcentaje / 100)).toFixed(2) : 0;
-            const totalEnOrigen = subtotal + iva;
-            const factor = tasaOrigen / tasaDestino;
-            const totalConvertido = +(totalEnOrigen * factor).toFixed(2);
+
+            // **TOTAL**: subtotal + iva
+            const total = +(subtotal + iva).toFixed(2);
 
             return {
                 ...p,
                 codigo: p.codigo,
                 cantidad,
-                subtotal,
-                iva,
-                total: totalConvertido,
-                precioConvertido: +(p.precio * factor).toFixed(2),
+                precioConvertido: precioUnitarioSinIvaConvertido,
+                subtotal: subtotal,    // PRECIO × CANTIDAD (sin IVA)
+                iva,                  // IVA sobre subtotal
+                total: total,         // SUBTOTAL + IVA
                 stock: p.stock
             };
         });
@@ -699,7 +703,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     calcularTotalProductos(): number {
         if (!Array.isArray(this.productosConDetalle)) return 0;
         return this.productosConDetalle.reduce((acc, p) => {
-            const total = +p.total || 0;
+            const total = +p.total || 0;  // SUBTOTAL + IVA
             return acc + total;
         }, 0);
     }
@@ -1529,7 +1533,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     getPrecioParaMostrar(producto: any): number {
-        return producto.aplicaIva ? (producto.precioConIva || producto.precio) : producto.precio;
+        return producto.precioConvertido || producto.precio || 0;
     }
 
     getPrecioEnBs(producto: any): number {
@@ -2249,6 +2253,28 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.redondear(this.obtenerEquivalenteBs(this.totalPagadoCashea));
     }
 
+    private obtenerProductosParaCalculoTotales(): any[] {
+        // Si tenemos productosConDetalle, usarlos
+        if (this.productosConDetalle && this.productosConDetalle.length > 0) {
+            return this.productosConDetalle;
+        }
+
+        // Si no, usar venta.productos y calcular básico
+        return this.venta.productos.map(producto => {
+            const productoOriginal = this.productosFiltradosPorSede.find(p => p.id === producto.id);
+            const precioUnitario = productoOriginal?.precio || producto.precio || 0;
+            const aplicaIva = productoOriginal?.aplicaIva || producto.aplicaIva || false;
+
+            return {
+                ...producto,
+                precioConvertido: precioUnitario,
+                precio: precioUnitario,
+                aplicaIva: aplicaIva,
+                cantidad: producto.cantidad || 1
+            };
+        });
+    }
+
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
 
@@ -2323,10 +2349,27 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }));
 
         // CALCULAR TOTALES
-        const subtotal = this.totalProductos || 0;
-        const descuentoMonto = this.venta?.descuento ? (subtotal * (this.venta.descuento / 100)) : 0;
-        const ivaMonto = this.productosConDetalle?.reduce((sum, p) => sum + (p.iva || 0), 0) || 0;
-        const total = this.montoTotal || 0;
+        const productosParaCalculo = this.obtenerProductosParaCalculoTotales();
+
+        // 1. Calcular subtotal CORRECTO: precio sin IVA × cantidad
+        const subtotalCorrecto = productosParaCalculo.reduce((total, producto) => {
+            const precioUnitarioSinIva = producto.precioConvertido || producto.precio || 0;
+            return total + (precioUnitarioSinIva * (producto.cantidad || 1));
+        }, 0);
+
+        // 2. Calcular IVA CORRECTO: solo productos que aplican IVA
+        const ivaCorrecto = productosParaCalculo.reduce((total, producto) => {
+            if (producto.aplicaIva) {
+                const precioUnitarioSinIva = producto.precioConvertido || producto.precio || 0;
+                const subtotalProducto = precioUnitarioSinIva * (producto.cantidad || 1);
+                return total + (subtotalProducto * (this.ivaPorcentaje / 100));
+            }
+            return total;
+        }, 0);
+
+        // 3. Calcular total CORRECTO: subtotal + IVA - descuento
+        const descuentoMonto = this.venta.descuento ? (subtotalCorrecto * (this.venta.descuento / 100)) : 0;
+        const totalCorrecto = subtotalCorrecto + ivaCorrecto - descuentoMonto;
 
         // Determinar total pagado según forma de pago
         let totalPagado = 0;
@@ -2344,7 +2387,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 totalPagado = this.totalPagadoPorMetodos;
         }
 
-        // ESTRUCTURA BASE DE LA VENTA - INCLUYENDO TASA
+        //Usar las variables correctas en totales**
         const datosParaAPI: any = {
             venta: {
                 fecha: fechaActual.toISOString(),
@@ -2357,11 +2400,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 tasa_cambio: tasaUtilizada,
             },
             totales: {
-                subtotal: subtotal,
-                descuento: descuentoMonto,
-                iva: ivaMonto,
-                total: total,
-                totalPagado: totalPagado
+                subtotal: this.redondear(subtotalCorrecto),       
+                descuento: this.redondear(descuentoMonto),         
+                iva: this.redondear(ivaCorrecto),               
+                total: this.redondear(totalCorrecto),          
+                totalPagado: this.redondear(totalPagado)
             },
             cliente: clienteData,
             asesor: {
@@ -2380,7 +2423,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             datosParaAPI.formaPago = {
                 tipo: 'cashea',
                 nivel: this.nivelCashea,
-                montoTotal: this.montoTotal,
+                montoTotal: this.redondear(totalCorrecto),   
                 montoInicial: this.venta.montoInicial,
                 cantidadCuotas: this.cantidadCuotasCashea.toString(),
                 montoPorCuota: this.montoPrimeraCuota,
@@ -2397,21 +2440,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 }))
             };
 
-            // Para Cashea, el estado de la venta debe ser 'pendiente'
-            //   datosParaAPI.venta.estado = 'pendiente';
-
         } else if (this.venta.formaPago === 'abono') {
+            const deudaPendienteAbono = Math.max(totalCorrecto - totalPagado, 0);
+            const porcentajeAbonado = totalCorrecto > 0 ? (totalPagado / totalCorrecto) * 100 : 0;
+
             datosParaAPI.formaPagoDetalle = {
                 tipo: 'abono',
-                montoAbonado: this.venta.montoAbonado,
-                deudaPendiente: this.getDeudaPendienteAbono(),
-                porcentajePagado: this.porcentajeAbonadoDelTotal
+                montoAbonado: this.redondear(totalPagado),
+                deudaPendiente: this.redondear(deudaPendienteAbono),
+                porcentajePagado: this.redondear(porcentajeAbonado)
             };
         } else if (this.venta.formaPago === 'contado') {
             datosParaAPI.formaPagoDetalle = {
                 tipo: 'contado',
-                montoTotal: this.montoTotal,
-                totalPagado: this.totalPagadoPorMetodos
+                montoTotal: this.redondear(totalCorrecto),
+                totalPagado: this.redondear(totalPagado)
             };
         }
 
@@ -4094,12 +4137,20 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     getProductosSeguros(): any[] {
-        return this.datosRecibo?.productos || this.venta.productos.map(p => ({
-            nombre: p.nombre,
-            cantidad: p.cantidad,
-            precioUnitario: p.precio,
-            subtotal: (p.precio || 0) * (p.cantidad || 1)
-        }));
+        if (this.datosRecibo?.productos && this.datosRecibo.productos.length > 0) {
+            return this.datosRecibo.productos;
+        }
+
+        if (this.venta.productos && this.venta.productos.length > 0) {
+            return this.venta.productos.map(p => ({
+                nombre: p.nombre || 'Producto',
+                cantidad: p.cantidad || 1,
+                precioUnitario: p.precio || 0,
+                subtotal: (p.precio || 0) * (p.cantidad || 1)
+            }));
+        }
+
+        return [];
     }
 
     getMetodosPagoSeguros(): any[] {
@@ -4371,16 +4422,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Buscar el producto en productosConDetalle
             const productoCalculado = this.productosConDetalle.find(pc => pc.id === p.id);
 
-            // Si encontramos el producto calculado, usar esos datos
             if (productoCalculado) {
+                const precioUnitarioSinIva = p.aplicaIva ? p.precio : productoCalculado.precioConvertido;
+                const subtotal = precioUnitarioSinIva * (p.cantidad || 1);
+
                 return {
                     nombre: p.nombre || 'Producto',
                     codigo: p.codigo || 'N/A',
                     cantidad: p.cantidad || 1,
-                    // === CORRECCIÓN: Mostrar precio unitario sin IVA ===
-                    precioUnitario: p.precio || 0,
+                    precioUnitario: precioUnitarioSinIva,
                     precioConIva: p.precioConIva || 0,
-                    subtotal: productoCalculado.subtotal || 0,
+                    subtotal: subtotal,
                     iva: productoCalculado.iva || 0,
                     total: productoCalculado.total || 0,
                     aplicaIva: p.aplicaIva || false,
@@ -4388,16 +4440,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 };
             }
 
-            // Fallback si no se encuentra el producto calculado
+            const cantidad = p.cantidad || 1;
+            const precioSinIva = p.precio || 0;
+            const subtotalCalculado = precioSinIva * cantidad;
+            const ivaCalculado = p.aplicaIva ? subtotalCalculado * (this.ivaPorcentaje / 100) : 0;
+            const totalCalculado = subtotalCalculado + ivaCalculado;
+
             return {
                 nombre: p.nombre || 'Producto',
                 codigo: p.codigo || 'N/A',
-                cantidad: p.cantidad || 1,
-                precioUnitario: p.precio || 0,
+                cantidad: cantidad,
+                precioUnitario: precioSinIva,
                 precioConIva: p.precioConIva || 0,
-                subtotal: (p.precio || 0) * (p.cantidad || 1),
-                iva: p.aplicaIva ? ((p.precio || 0) * (p.cantidad || 1)) * (this.ivaPorcentaje / 100) : 0,
-                total: ((p.precio || 0) * (p.cantidad || 1)) + (p.aplicaIva ? ((p.precio || 0) * (p.cantidad || 1)) * (this.ivaPorcentaje / 100) : 0),
+                subtotal: subtotalCalculado,
+                iva: ivaCalculado,
+                total: totalCalculado,
                 aplicaIva: p.aplicaIva || false,
                 moneda: p.moneda
             };
