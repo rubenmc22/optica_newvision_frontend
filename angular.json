@@ -48,6 +48,11 @@
               "src/assets/adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js",
               "src/assets/adminlte/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js",
               "src/assets/adminlte/dist/js/adminlte.min.js"
+            ],
+            "allowedCommonJsDependencies": [
+              "html2canvas",
+              "jspdf",
+              "jspdf-autotable"
             ]
           },
           "configurations": {
@@ -69,14 +74,19 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "8MB",
-                  "maximumError": "8MB"
+                  "maximumWarning": "10MB",
+                  "maximumError": "10MB"
                 },
                 {
                   "type": "anyComponentStyle",
                   "maximumWarning": "2MB",
                   "maximumError": "2MB"
                 }
+              ],
+              "allowedCommonJsDependencies": [
+                "html2canvas",
+                "jspdf",
+                "jspdf-autotable"
               ]
             },
             "development": {
@@ -90,7 +100,12 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
-              "vendorChunk": true
+              "vendorChunk": true,
+              "allowedCommonJsDependencies": [
+                "html2canvas",
+                "jspdf",
+                "jspdf-autotable"
+              ]
             },
             "staging": {
               "fileReplacements": [
@@ -105,7 +120,12 @@
               "sourceMap": false,
               "namedChunks": false,
               "extractLicenses": true,
-              "vendorChunk": false
+              "vendorChunk": false,
+              "allowedCommonJsDependencies": [
+                "html2canvas",
+                "jspdf",
+                "jspdf-autotable"
+              ]
             },
             "local": {
               "fileReplacements": [
@@ -120,7 +140,12 @@
               "extractLicenses": false,
               "sourceMap": true,
               "vendorChunk": true,
-              "namedChunks": true
+              "namedChunks": true,
+              "allowedCommonJsDependencies": [
+                "html2canvas",
+                "jspdf",
+                "jspdf-autotable"
+              ]
             }
           },
           "defaultConfiguration": "local"

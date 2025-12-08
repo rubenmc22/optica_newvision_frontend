@@ -592,8 +592,8 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private determinarEstadoVenta(estatusVenta: string): string {
-    // Si está cancelada en el API, mantener cancelada
-    if (estatusVenta === 'cancelada' || estatusVenta === 'cancelado') {
+    // Si está cancelada o anulada en el API, mantener cancelada
+    if (estatusVenta === 'cancelada' || estatusVenta === 'cancelado' || estatusVenta === 'anulada') {
       return 'cancelada';
     }
 
@@ -630,7 +630,8 @@ export class HistorialVentasComponent implements OnInit {
       'pagado_por_cashea': 'pendiente',
       'pendiente': 'pendiente',
       'cancelado': 'cancelada',
-      'cancelada': 'cancelada'
+      'cancelada': 'cancelada',
+      'anulada': 'cancelada'
     };
 
     return mapeo[estatusPago] || estatusPago;
@@ -669,8 +670,8 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  toggleDetalleVenta(ventaId: number) {
-    const venta = this.ventasFiltradas.find(v => v.id === ventaId);
+  toggleDetalleVenta(ventaKey: string) {
+    const venta = this.ventasFiltradas.find(v => v.key === ventaKey);
     if (venta) {
       venta.mostrarDetalle = !venta.mostrarDetalle;
     }
@@ -728,6 +729,38 @@ export class HistorialVentasComponent implements OnInit {
       }
     });
   }
+ 
+  private recargarListaVentas(): void {
+  this.loader.showWithMessage('🔄 Venta cancelada exitosamente, actualizando historial...');
+
+  // Recargar la página actual con los mismos filtros
+  this.historialVentaService.obtenerHistorialVentas(
+    this.paginacion.paginaActual,
+    this.paginacion.itemsPorPagina,
+    this.filtros
+  ).subscribe({
+    next: (response: any) => {
+      if (response.message === 'ok' && response.ventas) {
+        const ventasPagina = response.ventas.map((ventaApi: any) =>
+          this.adaptarVentaDelApi(ventaApi)
+        );
+        
+        this.ventasFiltradas = ventasPagina;
+        this.paginacion.totalItems = response.totalItems || 0;
+        this.paginacion.totalPaginas = response.totalPaginas || 1;
+        this.generarRangoPaginas();
+      }
+      
+      setTimeout(() => {
+        this.loader.hide();
+      }, 1500);
+    },
+    error: (error) => {
+      console.error('Error al recargar ventas:', error);
+      this.loader.hide();
+    }
+  });
+}
 
   private procesarCancelacion(): void {
     console.log('this.selectedVenta', this.selectedVenta);
@@ -744,17 +777,11 @@ export class HistorialVentasComponent implements OnInit {
       motivo_cancelacion
     ).subscribe({
       next: (response: any) => {
-        if (response.success || response.message === 'ok') {
-          this.swalService.showSuccess('Éxito', 'Venta cancelada exitosamente.');
-
-          // Actualizar la venta localmente
-          this.selectedVenta.estado = 'cancelada';
-          this.selectedVenta.estadoPago = 'cancelado';
-          this.selectedVenta.motivo_cancelacion = this.motivoCancelacion;
-          this.selectedVenta.fecha_cancelacion = new Date();
-
-          // Actualizar en ambas listas
-          this.actualizarVentaEnListas(this.selectedVenta);
+        if (response.success || response.message === 'ok') {     
+        // Recargar la lista completa
+        this.recargarListaVentas();
+        
+        this.limpiarSeleccionCancelacion();
 
         } else {
           console.log('error', response.message);
@@ -1889,7 +1916,8 @@ export class HistorialVentasComponent implements OnInit {
     const estados: { [key: string]: string } = {
       'completada': 'Completada',
       'pendiente': 'Pendiente',
-      'cancelada': 'Cancelada'
+      'cancelada': 'Cancelada',
+      'anulada': 'Cancelada'
     };
     return estados[estado] || estado;
   }

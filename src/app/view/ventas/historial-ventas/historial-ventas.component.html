@@ -389,7 +389,7 @@
         <div class="ventas-grid" *ngIf="ventasFiltradas.length > 0">
           <div *ngFor="let venta of ventasFiltradas" class="venta-card">
             <!-- Tarjeta Principal -->
-            <div class="venta-header" (click)="toggleDetalleVenta(venta.id)">
+            <div class="venta-header" (click)="toggleDetalleVenta(venta.key)">
               <!-- Avatar y Info Principal -->
               <div class="venta-avatar">
                 <div class="avatar-circle" [ngClass]="{
@@ -710,7 +710,7 @@
                     <button *ngIf="venta.estado !== 'cancelada'" class="btn btn-outline-danger btn-sm accion-btn"
                       (click)="cancelarVenta(venta)">
                       <i class="bi bi-x-circle"></i>
-                      <span>Cancelar</span>
+                      <span>Anular venta</span>
                     </button>
 
                   </div>

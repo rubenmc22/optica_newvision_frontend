@@ -137,15 +137,14 @@ export class LoginComponent implements OnInit {
         },
         error: async (err: HttpErrorResponse) => {
           // 🔥 ERROR - TRANSICIÓN CLARA
-          this.loader.updateMessage('❌ Credenciales incorrectas');
-          await this.delay(800);
-          this.loader.hide();
-
           const message = err.error?.message === 'Credenciales inválidas.'
-            ? 'Estimado usuario, las credenciales ingresadas son inválidas.'
-            : err.error?.message || 'Error durante el login';
+            ? '❌ Estimado usuario, las credenciales ingresadas son inválidas.'
+            : '❌ ' + (err.error?.message || 'Error durante el login');
 
-          this.swalService.showError('Error', message);
+          this.loader.updateMessage(message);
+          await this.delay(1500);
+          this.loader.hide();
+          // this.swalService.showError('Error', message);
         }
       });
 

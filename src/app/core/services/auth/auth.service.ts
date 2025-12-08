@@ -106,7 +106,7 @@ export class AuthService {
       catchError((error: HttpErrorResponse) => {
         const errorMsg = error.error?.message || 'Error en el inicio de sesión';
         console.error('Error en login:', errorMsg);
-        this.swalService.showError('Error', errorMsg);
+        //this.swalService.showError('Error', errorMsg);
         return throwError(() => error);
       })
     );

@@ -54,7 +54,6 @@ export class HistorialVentaService {
     return this.http.get(`${this.apiUrl}/ventas-estadisticas`, { params });
   }
 
-  // Los demás métodos permanecen igual...
 // Modifica temporalmente el método anularVenta para más detalle
 anularVenta(ventaKey: string, motivo: string): Observable<any> {
     const url = `${this.apiUrl}/ventas-anular/${ventaKey}`;
