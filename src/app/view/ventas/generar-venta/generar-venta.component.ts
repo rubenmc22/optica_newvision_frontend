@@ -5,7 +5,7 @@ import { SystemConfigService } from '../../system-config/system-config.service';
 import { GenerarVentaService } from './generar-venta.service';
 import { Tasa } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
-import { forkJoin, map, Subject, Observable, of } from 'rxjs';
+import { forkJoin, map, Subject, Observable, of, lastValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -22,6 +22,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
 import * as bootstrap from 'bootstrap';
 import { Subscription } from 'rxjs';
 import { ProductoConversionService } from '../../productos/productos-list/producto-conversion.service';
+import { ClienteService } from '../../clientes/clientes.services';
 import { NgSelectComponent } from '@ng-select/ng-select';
 import * as jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -63,7 +64,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         private historiaService: HistoriaMedicaService,
         private empleadosService: EmpleadosService,
         private systemConfigService: SystemConfigService,
-        private productoConversionService: ProductoConversionService
+        private productoConversionService: ProductoConversionService,
+        private clienteService: ClienteService
     ) { }
 
     // === PROPIEDADES ===
@@ -2400,10 +2402,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 tasa_cambio: tasaUtilizada,
             },
             totales: {
-                subtotal: this.redondear(subtotalCorrecto),       
-                descuento: this.redondear(descuentoMonto),         
-                iva: this.redondear(ivaCorrecto),               
-                total: this.redondear(totalCorrecto),          
+                subtotal: this.redondear(subtotalCorrecto),
+                descuento: this.redondear(descuentoMonto),
+                iva: this.redondear(ivaCorrecto),
+                total: this.redondear(totalCorrecto),
                 totalPagado: this.redondear(totalPagado)
             },
             cliente: clienteData,
@@ -2423,7 +2425,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             datosParaAPI.formaPago = {
                 tipo: 'cashea',
                 nivel: this.nivelCashea,
-                montoTotal: this.redondear(totalCorrecto),   
+                montoTotal: this.redondear(totalCorrecto),
                 montoInicial: this.venta.montoInicial,
                 cantidadCuotas: this.cantidadCuotasCashea.toString(),
                 montoPorCuota: this.montoPrimeraCuota,
@@ -5242,69 +5244,22 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         };
     }
 
-    // === MÉTODOS PARA VALIDACIÓN DE CLIENTE VÍA API ===
-    private simularBusquedaCliente(cedula: string): Promise<any> {
-        return new Promise((resolve, reject) => {
-            // Simular delay de red
-            setTimeout(() => {
-                // Datos de prueba - simular que algunos clientes existen y otros no
-                const clientesExistentes: any = {
-                    '12345678': {
-                        existe: true,
-                        datos: {
-                            nombreCompleto: 'MARÍA GABRIELA PÉREZ RODRÍGUEZ',
-                            telefono: '+58 4121234567',
-                            email: 'maria.perez@email.com',
-                            tipoPersona: 'natural'
-                        }
-                    },
-                    '87654321': {
-                        existe: true,
-                        datos: {
-                            nombreCompleto: 'CARLOS JOSÉ MARTÍNEZ LÓPEZ',
-                            telefono: '+58 4149876543',
-                            email: 'carlos.martinez@empresa.com',
-                            tipoPersona: 'natural'
-                        }
-                    },
-                    'J-123456789': {
-                        existe: true,
-                        datos: {
-                            nombreCompleto: 'TECNOLOGÍA AVANZADA C.A.',
-                            telefono: '+58 2125558899',
-                            email: 'ventas@tecnologia-avanzada.com',
-                            tipoPersona: 'juridica'
-                        }
-                    }
-                };
-
-                const cliente = clientesExistentes[cedula];
-
-                if (cliente) {
-                    resolve(cliente);
-                } else {
-                    resolve({
-                        existe: false,
-                        mensaje: 'Cliente no encontrado en la base de datos'
-                    });
-                }
-            }, 1500); // Simular 1.5 segundos de delay
-        });
-    }
-
     /**
      * Autocompleta los datos del cliente cuando es encontrado
-     */
+    */
     private autocompletarDatosCliente(datosCliente: any): void {
-        // Actualizar tipo de persona si es diferente
-        if (datosCliente.tipoPersona && datosCliente.tipoPersona !== this.clienteSinPaciente.tipoPersona) {
-            this.clienteSinPaciente.tipoPersona = datosCliente.tipoPersona;
+        // Actualizar tipo de persona si es diferente (puedes inferirlo del RIF)
+        if (datosCliente.cedula && datosCliente.cedula.toUpperCase().startsWith('J')) {
+            this.clienteSinPaciente.tipoPersona = 'juridica';
         }
 
-        // Autocompletar campos
-        this.clienteSinPaciente.nombreCompleto = datosCliente.nombreCompleto || '';
+        // Autocompletar campos - mapear los nombres de campos según tu API
+        this.clienteSinPaciente.nombreCompleto = datosCliente.nombre || datosCliente.nombreCompleto || '';
         this.clienteSinPaciente.telefono = datosCliente.telefono || '';
         this.clienteSinPaciente.email = datosCliente.email || '';
+
+        // La cédula ya debería estar en el campo, pero por si acaso
+        this.clienteSinPaciente.cedula = datosCliente.cedula || this.clienteSinPaciente.cedula;
 
         // Limpiar errores de validación
         this.limpiarErroresValidacion();
@@ -5313,9 +5268,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.actualizarEstadoValidacion();
     }
 
-    /**
-     * Limpia todos los errores de validación
-     */
     private limpiarErroresValidacion(): void {
         this.limpiarErrorCedula();
         this.limpiarErrorNombre();
@@ -5324,8 +5276,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     onCampoEditadoManualmente(): void {
-        // Solo resetear si previamente se había encontrado el cliente
-        // o si se había intentado validar
         if (this.clienteEncontrado || this.validacionIntentada) {
             this.clienteEncontrado = false;
             this.validacionIntentada = false;
@@ -5339,8 +5289,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     /**
- * Método mejorado para cambio de cédula - validación solo en blur
- */
+     * Método mejorado para cambio de cédula - validación solo en blur
+     */
     onCedulaChange(): void {
         const cedula = this.clienteSinPaciente.cedula;
         const tipoPersona = this.clienteSinPaciente.tipoPersona;
@@ -5357,7 +5307,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.mensajeValidacionCliente = this.getMensajeErrorCedula();
         } else {
             this.limpiarErrorCedula();
-            // NO validamos automáticamente aquí, solo en blur
         }
 
         this.actualizarEstadoValidacion();
@@ -5474,48 +5423,49 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.mensajeValidacionCliente = '🔍 Buscando cliente en la base de datos...';
 
         try {
-            const respuesta = await this.simularBusquedaCliente(cedula);
+            const respuesta = await lastValueFrom(this.clienteService.buscarPorCedula(cedula));
 
             // MARCAR QUE LA VALIDACIÓN SE INTENTÓ
             this.validacionIntentada = true;
 
-            if (respuesta.existe) {
-                // CLIENTE ENCONTRADO - Autocompletar datos
+            if (respuesta.cliente) {
                 this.clienteEncontrado = true;
                 this.mensajeValidacionCliente = '✅ Cliente encontrado - Datos autocompletados';
-                this.autocompletarDatosCliente(respuesta.datos);
+                this.autocompletarDatosCliente(respuesta.cliente);
 
-                /*  this.snackBar.open('Cliente encontrado - Datos autocompletados', 'Cerrar', {
-                      duration: 3000,
-                      panelClass: ['snackbar-success']
-                  });*/
+                this.snackBar.open('Cliente encontrado - Datos autocompletados', 'Cerrar', {
+                    duration: 3000,
+                    panelClass: ['snackbar-success']
+                });
             } else {
-                // CLIENTE NO ENCONTRADO - Limpiar campos excepto cédula
                 this.clienteEncontrado = false;
                 this.mensajeValidacionCliente = 'Cliente no encontrado - Complete los datos manualmente';
 
-                // Limpiar todos los campos excepto la cédula
                 this.limpiarCamposCliente();
-
-                // Restaurar la cédula (por si se modificó durante la limpieza)
                 this.clienteSinPaciente.cedula = cedulaActual;
 
-                /* this.snackBar.open('Cliente no encontrado. Complete los datos manualmente.', 'Cerrar', {
-                     duration: 4000,
-                     panelClass: ['snackbar-info']
-                 });*/
+                this.snackBar.open('Cliente no encontrado. Complete los datos manualmente.', 'Cerrar', {
+                    duration: 4000,
+                    panelClass: ['snackbar-info']
+                });
             }
 
-        } catch (error) {
+        } catch (error: any) {
             this.validacionIntentada = true;
             this.clienteEncontrado = false;
             this.mensajeValidacionCliente = '⚠️ Error al conectar con el servidor';
 
-            // En caso de error, también limpiar campos
             this.limpiarCamposCliente();
             this.clienteSinPaciente.cedula = cedulaActual;
 
-            this.snackBar.open('Error al validar cliente. Verifique su conexión.', 'Cerrar', {
+            let mensajeError = 'Error al validar cliente. Verifique su conexión.';
+            if (error.error?.message) {
+                mensajeError = error.error.message;
+            } else if (error.message) {
+                mensajeError = error.message;
+            }
+
+            this.snackBar.open(mensajeError, 'Cerrar', {
                 duration: 3000,
                 panelClass: ['snackbar-warning']
             });
@@ -5527,7 +5477,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private limpiarCamposCliente(): void {
-        // Guardar la cédula actual y tipo de persona
         const cedulaActual = this.clienteSinPaciente.cedula;
         const tipoPersonaActual = this.clienteSinPaciente.tipoPersona;
 
@@ -5611,8 +5560,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     /**
- * Obtiene la tasa de cambio utilizada para la venta
- */
+     * Obtiene la tasa de cambio utilizada para la venta
+     */
     private obtenerTasaUtilizada(): number {
         const monedaVenta = this.venta.moneda.toLowerCase();
         const monedaNormalizada = this.normalizarIdMoneda(monedaVenta);

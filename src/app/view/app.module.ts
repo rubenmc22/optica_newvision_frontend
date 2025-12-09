@@ -36,6 +36,7 @@ import { CierreCajaComponent } from './ventas/cierre-caja/cierre-caja.component'
 import { SafeUrlPipe } from './ventas/generar-venta/safe-url.pipe';
 import { LoaderComponent } from './../shared/loader/loader.component';
 import { SystemConfigComponent } from './system-config/system-config.component';
+import { clientesComponent } from './clientes/clientes.component';
 
 
 
@@ -74,7 +75,7 @@ import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
     VentasDashboardComponent,
     PresupuestoComponent,
     CierreCajaComponent,
-
+    clientesComponent,
     SystemConfigComponent
   ],
   imports: [
