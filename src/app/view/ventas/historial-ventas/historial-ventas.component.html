@@ -251,284 +251,284 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Modal de Datepicker Flotante -->
-    <div class="modal fade show" [class.d-block]="showDatepicker" tabindex="-1" *ngIf="showDatepicker">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Seleccionar rango de fechas</h5>
-            <button type="button" class="btn-close btn-close-white" (click)="closeDatepicker()"
-              style="color: white !important;"></button>
-          </div>
-          <div class="modal-body">
-            <div class="row g-3">
-              <!-- Selector de fecha única -->
-              <div class="col-12">
-                <label class="form-label fw-semibold">📌 Fecha única</label>
-                <input type="date" class="form-control" [(ngModel)]="fechaUnica" [max]="maxDate" [min]="minDate"
-                  (change)="onFechaUnicaChange()">
-                <div class="form-text">Selecciona una fecha específica</div>
-              </div>
+  <!-- Modal de Datepicker Flotante -->
+  <div class="modal fade show" [class.d-block]="showDatepicker" tabindex="-1" *ngIf="showDatepicker">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Seleccionar rango de fechas</h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeDatepicker()"
+            style="color: white !important;"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <!-- Selector de fecha única -->
+            <div class="col-12">
+              <label class="form-label fw-semibold">📌 Fecha única</label>
+              <input type="date" class="form-control" [(ngModel)]="fechaUnica" [max]="maxDate" [min]="minDate"
+                (change)="onFechaUnicaChange()">
+              <div class="form-text">Selecciona una fecha específica</div>
+            </div>
 
-              <div class="col-12 text-center d-flex align-items-center justify-content-center">
-                <hr class="my-3">
-                <span class="text-muted">O selecciona un rango</span>
-              </div>
+            <div class="col-12 text-center d-flex align-items-center justify-content-center">
+              <hr class="my-3">
+              <span class="text-muted">O selecciona un rango</span>
+            </div>
 
-              <!-- Rango de fechas -->
-              <div class="col-md-6">
-                <label class="form-label fw-semibold">Desde</label>
-                <input type="date" class="form-control" [max]="filtros.fechaHasta || maxDate" [min]="minDate"
-                  [(ngModel)]="filtros.fechaDesde" (change)="onRangoChange()">
-              </div>
+            <!-- Rango de fechas -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Desde</label>
+              <input type="date" class="form-control" [max]="filtros.fechaHasta || maxDate" [min]="minDate"
+                [(ngModel)]="filtros.fechaDesde" (change)="onRangoChange()">
+            </div>
 
-              <div class="col-md-6">
-                <label class="form-label fw-semibold">Hasta</label>
-                <input type="date" class="form-control" [min]="filtros.fechaDesde || minDate" [max]="maxDate"
-                  [(ngModel)]="filtros.fechaHasta" (change)="onRangoChange()">
-              </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Hasta</label>
+              <input type="date" class="form-control" [min]="filtros.fechaDesde || minDate" [max]="maxDate"
+                [(ngModel)]="filtros.fechaHasta" (change)="onRangoChange()">
+            </div>
 
-              <!-- Presets rápidos -->
-              <div class="col-12">
-                <label class="form-label fw-semibold">Rangos predefinidos</label>
-                <div class="d-flex flex-wrap gap-2">
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'hoy'"
-                    [class.btn-outline-secondary]="presetActivo !== 'hoy'" (click)="setRangoPreset('hoy')">
-                    Hoy
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'ayer'"
-                    [class.btn-outline-secondary]="presetActivo !== 'ayer'" (click)="setRangoPreset('ayer')">
-                    Ayer
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana'"
-                    [class.btn-outline-secondary]="presetActivo !== 'semana'" (click)="setRangoPreset('semana')">
-                    Esta semana
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana_pasada'"
-                    [class.btn-outline-secondary]="presetActivo !== 'semana_pasada'"
-                    (click)="setRangoPreset('semana_pasada')">
-                    Semana pasada
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes'"
-                    [class.btn-outline-secondary]="presetActivo !== 'mes'" (click)="setRangoPreset('mes')">
-                    Este mes
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes_pasado'"
-                    [class.btn-outline-secondary]="presetActivo !== 'mes_pasado'"
-                    (click)="setRangoPreset('mes_pasado')">
-                    Mes pasado
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'trimestre'"
-                    [class.btn-outline-secondary]="presetActivo !== 'trimestre'" (click)="setRangoPreset('trimestre')">
-                    Este trimestre
-                  </button>
-                </div>
+            <!-- Presets rápidos -->
+            <div class="col-12">
+              <label class="form-label fw-semibold">Rangos predefinidos</label>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'hoy'"
+                  [class.btn-outline-secondary]="presetActivo !== 'hoy'" (click)="setRangoPreset('hoy')">
+                  Hoy
+                </button>
+                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'ayer'"
+                  [class.btn-outline-secondary]="presetActivo !== 'ayer'" (click)="setRangoPreset('ayer')">
+                  Ayer
+                </button>
+                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana'"
+                  [class.btn-outline-secondary]="presetActivo !== 'semana'" (click)="setRangoPreset('semana')">
+                  Esta semana
+                </button>
+                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana_pasada'"
+                  [class.btn-outline-secondary]="presetActivo !== 'semana_pasada'"
+                  (click)="setRangoPreset('semana_pasada')">
+                  Semana pasada
+                </button>
+                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes'"
+                  [class.btn-outline-secondary]="presetActivo !== 'mes'" (click)="setRangoPreset('mes')">
+                  Este mes
+                </button>
+                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes_pasado'"
+                  [class.btn-outline-secondary]="presetActivo !== 'mes_pasado'" (click)="setRangoPreset('mes_pasado')">
+                  Mes pasado
+                </button>
+                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'trimestre'"
+                  [class.btn-outline-secondary]="presetActivo !== 'trimestre'" (click)="setRangoPreset('trimestre')">
+                  Este trimestre
+                </button>
               </div>
             </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" (click)="limpiarFechas()">
-              <i class="bi bi-x-circle me-1"></i> Limpiar
-            </button>
-            <button type="button" class="btn btn-primary" (click)="aplicarFechas()">
-              <i class="bi bi-check-circle me-1"></i> Aplicar
-            </button>
-          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="limpiarFechas()">
+            <i class="bi bi-x-circle me-1"></i> Limpiar
+          </button>
+          <button type="button" class="btn btn-primary" (click)="aplicarFechas()">
+            <i class="bi bi-check-circle me-1"></i> Aplicar
+          </button>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Overlay para cerrar al hacer click fuera -->
-    <div class="modal-backdrop fade show" *ngIf="showDatepicker" (click)="closeDatepicker()"></div>
+  <!-- Overlay para cerrar al hacer click fuera -->
+  <div class="modal-backdrop fade show" *ngIf="showDatepicker" (click)="closeDatepicker()"></div>
 
-    <!-- Controles de ordenamiento -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <div class="d-flex align-items-center gap-2">
-        <span class="text-muted">Ordenar por:</span>
-        <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="ordenamiento.campo">
-          <option value="fecha">Fecha</option>
-          <option value="numeroControl">N° Control</option>
-          <option value="montoTotal">Monto Total</option>
-          <option value="paciente">Paciente</option>
-        </select>
-        <button class="btn btn-outline-secondary btn-sm" (click)="cambiarOrden()">
-          <i class="bi" [class.bi-arrow-up]="ordenamiento.ascendente"
-            [class.bi-arrow-down]="!ordenamiento.ascendente"></i>
-        </button>
-      </div>
-
-      <div class="text-muted">
-        Mostrando {{ventasFiltradas.length}} de {{paginacion.totalItems}} ventas
-      </div>
+  <!-- Controles de ordenamiento -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-2">
+      <span class="text-muted">Ordenar por:</span>
+      <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="ordenamiento.campo">
+        <option value="fecha">Fecha</option>
+        <option value="numeroControl">N° Control</option>
+        <option value="montoTotal">Monto Total</option>
+        <option value="paciente">Paciente</option>
+      </select>
+      <button class="btn btn-outline-secondary btn-sm" (click)="cambiarOrden()">
+        <i class="bi" [class.bi-arrow-up]="ordenamiento.ascendente"
+          [class.bi-arrow-down]="!ordenamiento.ascendente"></i>
+      </button>
     </div>
 
-    <!-- Lista de ventas - Diseño Innovador -->
-    <div class="card border-0 shadow-sm">
-      <div class="card-body p-0">
-        <!-- Mensaje cuando no hay resultados -->
-        <div *ngIf="ventasFiltradas.length === 0" class="text-center py-5">
-          <div class="empty-state">
-            <i class="bi bi-inbox display-1 text-muted"></i>
-            <h4 class="mt-3 text-muted">No se encontraron ventas</h4>
-            <p class="text-muted mb-4">
-              <span *ngIf="hayFiltrosActivos()">
-                No hay ventas que coincidan con los filtros aplicados.
-              </span>
-              <span *ngIf="!hayFiltrosActivos()">
-                No hay ventas registradas en el historial.
-              </span>
-            </p>
-            <button *ngIf="hayFiltrosActivos()" class="btn btn-primary" (click)="limpiarFiltros()">
-              <i class="bi bi-arrow-counterclockwise me-1"></i>
-              Limpiar filtros
-            </button>
-          </div>
-        </div>
+    <div class="text-muted">
+      Mostrando {{ventasFiltradas.length}} de {{paginacion.totalItems}} ventas
+    </div>
+  </div>
 
-        <div class="ventas-grid" *ngIf="ventasFiltradas.length > 0">
-          <div *ngFor="let venta of ventasFiltradas" class="venta-card">
-            <!-- Tarjeta Principal -->
-            <div class="venta-header" (click)="toggleDetalleVenta(venta.key)">
-              <!-- Avatar y Info Principal -->
-              <div class="venta-avatar">
-                <div class="avatar-circle" [ngClass]="{
+  <!-- Lista de ventas - Diseño Innovador -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <!-- Mensaje cuando no hay resultados -->
+      <div *ngIf="ventasFiltradas.length === 0" class="text-center py-5">
+        <div class="empty-state">
+          <i class="bi bi-inbox display-1 text-muted"></i>
+          <h4 class="mt-3 text-muted">No se encontraron ventas</h4>
+          <p class="text-muted mb-4">
+            <span *ngIf="hayFiltrosActivos()">
+              No hay ventas que coincidan con los filtros aplicados.
+            </span>
+            <span *ngIf="!hayFiltrosActivos()">
+              No hay ventas registradas en el historial.
+            </span>
+          </p>
+          <button *ngIf="hayFiltrosActivos()" class="btn btn-primary" (click)="limpiarFiltros()">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+
+      <div class="ventas-grid" *ngIf="ventasFiltradas.length > 0">
+        <div *ngFor="let venta of ventasFiltradas" class="venta-card">
+          <!-- Tarjeta Principal -->
+          <div class="venta-header" (click)="toggleDetalleVenta(venta.key)">
+            <!-- Avatar y Info Principal -->
+            <div class="venta-avatar">
+              <div class="avatar-circle" [ngClass]="{
                             'avatar-success': venta.estado === 'completada',
                             'avatar-warning': venta.estado === 'pendiente',
                             'avatar-danger': venta.estado === 'cancelada'
                         }">
-                  <i class="bi" [class.bi-check-lg]="venta.estado === 'completada'"
-                    [class.bi-clock]="venta.estado === 'pendiente'" [class.bi-x-lg]="venta.estado === 'cancelada'"></i>
+                <i class="bi" [class.bi-check-lg]="venta.estado === 'completada'"
+                  [class.bi-clock]="venta.estado === 'pendiente'" [class.bi-x-lg]="venta.estado === 'cancelada'"></i>
+              </div>
+            </div>
+
+            <!-- Información Central -->
+            <div class="venta-info">
+              <div class="venta-title">
+                <h6 class="mb-1 fw-bold text-dark">
+                  {{venta.paciente.nombre}}
+                  <span class="estatus-pago-text" [ngClass]="getEstatusPagoClase(venta)">
+                    ({{getEstatusPago(venta)}})
+                  </span>
+                </h6>
+                <div class="venta-meta">
+                  <span class="meta-item">
+                    <i class="bi bi-person-badge text-muted"></i>
+                    CI. {{venta.paciente.cedula}}
+                  </span>
+                  <span class="meta-divider">•</span>
+                  <span class="meta-item">
+                    <i class="bi bi-calendar3 text-muted"></i>
+                    {{venta.fecha | date:'dd/MM/yyyy'}}
+                  </span>
+                  <span class="meta-divider">•</span>
+                  <span class="meta-item">
+                    <i class="bi bi-clock text-muted"></i>
+                    {{venta.fecha | date:'HH:mm'}}
+                  </span>
                 </div>
               </div>
 
-              <!-- Información Central -->
-              <div class="venta-info">
-                <div class="venta-title">
-                  <h6 class="mb-1 fw-bold text-dark">
-                    {{venta.paciente.nombre}}
-                    <span class="estatus-pago-text" [ngClass]="getEstatusPagoClase(venta)">
-                      ({{getEstatusPago(venta)}})
-                    </span>
-                  </h6>
-                  <div class="venta-meta">
-                    <span class="meta-item">
-                      <i class="bi bi-person-badge text-muted"></i>
-                      CI. {{venta.paciente.cedula}}
-                    </span>
-                    <span class="meta-divider">•</span>
-                    <span class="meta-item">
-                      <i class="bi bi-calendar3 text-muted"></i>
-                      {{venta.fecha | date:'dd/MM/yyyy'}}
-                    </span>
-                    <span class="meta-divider">•</span>
-                    <span class="meta-item">
-                      <i class="bi bi-clock text-muted"></i>
-                      {{venta.fecha | date:'HH:mm'}}
-                    </span>
-                  </div>
+              <!-- Información Adicional -->
+              <div class="venta-details">
+                <div class="detail-item">
+                  <small class="text-muted">Control</small>
+                  <strong class="text-primary">#{{venta.numeroControl}}</strong>
                 </div>
-
-                <!-- Información Adicional -->
-                <div class="venta-details">
-                  <div class="detail-item">
-                    <small class="text-muted">Control</small>
-                    <strong class="text-primary">#{{venta.numeroControl}}</strong>
-                  </div>
-                  <div class="detail-item">
-                    <small class="text-muted">Asesor</small>
-                    <span class="text-dark">{{venta.asesor.nombre}}</span>
-                  </div>
-                  <div class="detail-item">
-                    <small class="text-muted">Forma Pago</small>
-                    <span class="text-capitalize badge forma-pago-badge" [ngClass]="{
+                <div class="detail-item">
+                  <small class="text-muted">Asesor</small>
+                  <span class="text-dark">{{venta.asesor.nombre}}</span>
+                </div>
+                <div class="detail-item">
+                  <small class="text-muted">Forma Pago</small>
+                  <span class="text-capitalize badge forma-pago-badge" [ngClass]="{
                                     'forma-contado': venta.formaPago === 'contado',
                                     'forma-cashea': venta.formaPago === 'cashea',
                                     'forma-abono': venta.formaPago === 'abono'
                                 }">
-                      {{venta.formaPago}}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Lado Derecho - Estado y Monto -->
-              <div class="venta-sidebar">
-                <!-- Estado -->
-                <div class="estado-badge" [ngClass]="{
-                            'estado-completada': venta.estado === 'completada',
-                            'estado-pendiente': venta.estado === 'pendiente',
-                            'estado-cancelada': venta.estado === 'cancelada'
-                        }">
-                  <div class="estado-dot"></div>
-                  <span class="estado-text">{{venta.estado | titlecase}}</span>
-                </div>
-
-                <!-- Monto -->
-                <div class="monto-display">
-                  <div class="monto-amount text-primary fw-bold">
-                    {{ getMontoParaMostrar(venta, venta.montoTotal) }}
-                  </div>
-                  <div class="monto-label text-muted small">Total</div>
-                </div>
-
-                <!-- Ícono Expandir -->
-                <div class="expand-icon">
-                  <i class="bi" [class.bi-chevron-down]="!venta.mostrarDetalle"
-                    [class.bi-chevron-up]="venta.mostrarDetalle"></i>
+                    {{venta.formaPago}}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <!-- Panel Expandible - Diseño Moderno -->
-            <div *ngIf="venta.mostrarDetalle" class="venta-expandible">
-              <div class="expandible-content">
-                <div class="resumen-rapido">
-                  <div class="resumen-item">
-                    <i class="bi bi-cart-check text-primary"></i>
-                    <div>
-                      <small class="text-muted">Productos</small>
-                      <div class="fw-semibold">{{venta.productos?.length || 0}} items</div>
-                    </div>
-                  </div>
-                  <div class="resumen-item">
-                    <i class="bi bi-currency-dollar text-success"></i>
-                    <div>
-                      <small class="text-muted">Subtotal</small>
-                      <div class="fw-semibold">{{ getMontoParaMostrar(venta, venta.subtotal) }}</div>
-                    </div>
-                  </div>
-                  <div class="resumen-item">
-                    <i class="bi bi-percent text-warning"></i>
-                    <div>
-                      <small class="text-muted">Descuento</small>
-                      <div class="fw-semibold">{{venta.descuento || 0}}%</div>
-                    </div>
-                  </div>
-                  <div class="resumen-item">
-                    <i class="bi bi-cash-coin text-info"></i>
-                    <div>
-                      <small class="text-muted">Pagado</small>
-                      <div class="fw-semibold">{{ getMontoParaMostrar(venta, getTotalPagadoVenta(venta)) }}</div>
-                    </div>
-                  </div>
+            <!-- Lado Derecho - Estado y Monto -->
+            <div class="venta-sidebar">
+              <!-- Estado -->
+              <div class="estado-badge" [ngClass]="{
+                            'estado-completada': venta.estado === 'completada',
+                            'estado-pendiente': venta.estado === 'pendiente',
+                            'estado-cancelada': venta.estado === 'cancelada'
+                        }">
+                <div class="estado-dot"></div>
+                <span class="estado-text">{{venta.estado | titlecase}}</span>
+              </div>
 
-                  <div class="resumen-item" *ngIf="getDeudaPendiente(venta) > 0">
-                    <i class="bi bi-clock-history text-danger"></i>
-                    <div>
-                      <small class="text-muted">Deuda Pendiente</small>
-                      <div class="fw-semibold text-danger">
-                        {{ getMontoParaMostrar(venta, getDeudaPendiente(venta)) }}
-                        <small *ngIf="venta.formaPago === 'cashea'" class="text-muted d-block">
-                          {{ venta.cantidadCuotas - venta.cuotasAdelantadas.length }} cuota pendiente
-                        </small>
-                      </div>
-                    </div>
+              <!-- Monto -->
+              <div class="monto-display">
+                <div class="monto-amount text-primary fw-bold">
+                  {{ getMontoParaMostrar(venta, venta.montoTotal) }}
+                </div>
+                <div class="monto-label text-muted small">Total</div>
+              </div>
+
+              <!-- Ícono Expandir -->
+              <div class="expand-icon">
+                <i class="bi" [class.bi-chevron-down]="!venta.mostrarDetalle"
+                  [class.bi-chevron-up]="venta.mostrarDetalle"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel Expandible - Diseño Moderno -->
+          <div *ngIf="venta.mostrarDetalle" class="venta-expandible">
+            <div class="expandible-content">
+              <div class="resumen-rapido">
+                <div class="resumen-item">
+                  <i class="bi bi-cart-check text-primary"></i>
+                  <div>
+                    <small class="text-muted">Productos</small>
+                    <div class="fw-semibold">{{venta.productos?.length || 0}} items</div>
+                  </div>
+                </div>
+                <div class="resumen-item">
+                  <i class="bi bi-currency-dollar text-success"></i>
+                  <div>
+                    <small class="text-muted">Subtotal</small>
+                    <div class="fw-semibold">{{ getMontoParaMostrar(venta, venta.subtotal) }}</div>
+                  </div>
+                </div>
+                <div class="resumen-item">
+                  <i class="bi bi-percent text-warning"></i>
+                  <div>
+                    <small class="text-muted">Descuento</small>
+                    <div class="fw-semibold">{{venta.descuento || 0}}%</div>
+                  </div>
+                </div>
+                <div class="resumen-item">
+                  <i class="bi bi-cash-coin text-info"></i>
+                  <div>
+                    <small class="text-muted">Pagado</small>
+                    <div class="fw-semibold">{{ getMontoParaMostrar(venta, getTotalPagadoVenta(venta)) }}</div>
                   </div>
                 </div>
 
-                <!-- Sección Media: Detalles Específicos -->
-                <!-- <div class="detalles-grid">
+                <div class="resumen-item" *ngIf="getDeudaPendiente(venta) > 0">
+                  <i class="bi bi-clock-history text-danger"></i>
+                  <div>
+                    <small class="text-muted">Deuda Pendiente</small>
+                    <div class="fw-semibold text-danger">
+                      {{ getMontoParaMostrar(venta, getDeudaPendiente(venta)) }}
+                      <small *ngIf="venta.formaPago === 'cashea'" class="text-muted d-block">
+                        {{ venta.cantidadCuotas - venta.cuotasAdelantadas.length }} cuota pendiente
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sección Media: Detalles Específicos -->
+              <!-- <div class="detalles-grid">
                   <div class="detalle-seccion">
                     <h6 class="seccion-titulo">
                       <i class="bi bi-credit-card me-2"></i>
@@ -683,37 +683,36 @@
                   </div>
                 </div>-->
 
-                <!-- Sección Inferior: Acciones -->
-                <div class="acciones-venta">
-                  <div class="acciones-left">
-                    <span class="text-muted small">
-                      <i class="bi bi-clock-history me-1"></i>
-                      Creado el {{venta.fecha | date:'dd/MM/yyyy'}}
-                    </span>
-                  </div>
-                  <div class="acciones-right">
-                    <button *ngIf="mostrarBotonEditar(venta)" class="btn btn-outline-primary btn-sm accion-btn"
-                      (click)="editarVenta(venta)">
-                      <i class="bi-cash-coin"></i>
-                      <span>Abonar</span>
-                    </button>
+              <!-- Sección Inferior: Acciones -->
+              <div class="acciones-venta">
+                <div class="acciones-left">
+                  <span class="text-muted small">
+                    <i class="bi bi-clock-history me-1"></i>
+                    Creado el {{venta.fecha | date:'dd/MM/yyyy'}}
+                  </span>
+                </div>
+                <div class="acciones-right">
+                  <button *ngIf="mostrarBotonEditar(venta)" class="btn btn-outline-primary btn-sm accion-btn"
+                    (click)="editarVenta(venta)">
+                    <i class="bi-cash-coin"></i>
+                    <span>Abonar</span>
+                  </button>
 
-                    <button class="btn btn-outline-primary btn-sm accion-btn" (click)="verDetalleCompleto(venta)">
-                      <i class="bi bi-eye"></i>
-                      <span>Detalles</span>
-                    </button>
+                  <button class="btn btn-outline-primary btn-sm accion-btn" (click)="verDetalleCompleto(venta)">
+                    <i class="bi bi-eye"></i>
+                    <span>Detalles</span>
+                  </button>
 
-                    <button class="btn btn-outline-primary btn-sm accion-btn" (click)="verRecibo(venta)">
-                      <i class="bi bi-receipt"></i>
-                      <span>Ver recibo</span>
-                    </button>
-                    <button *ngIf="venta.estado !== 'cancelada'" class="btn btn-outline-danger btn-sm accion-btn"
-                      (click)="cancelarVenta(venta)">
-                      <i class="bi bi-x-circle"></i>
-                      <span>Anular venta</span>
-                    </button>
+                  <button class="btn btn-outline-primary btn-sm accion-btn" (click)="verRecibo(venta)">
+                    <i class="bi bi-receipt"></i>
+                    <span>Ver recibo</span>
+                  </button>
+                  <button *ngIf="venta.estado !== 'cancelada'" class="btn btn-outline-danger btn-sm accion-btn"
+                    (click)="cancelarVenta(venta)">
+                    <i class="bi bi-x-circle"></i>
+                    <span>Anular venta</span>
+                  </button>
 
-                  </div>
                 </div>
               </div>
             </div>
@@ -721,118 +720,116 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Paginación Estilo Bancario -->
-    <div class="card mt-4">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <!-- Información de resultados -->
-          <div class="col-md-4">
-            <div class="d-flex align-items-center gap-3">
-              <span class="text-muted small">
-                Mostrando <strong>{{ ventasFiltradas.length }}</strong> de
-                <strong>{{ paginacion.totalItems }}</strong> registros
-              </span>
+  <!-- Paginación Estilo Bancario -->
+  <div class="card mt-4">
+    <div class="card-body">
+      <div class="row align-items-center">
+        <!-- Información de resultados -->
+        <div class="col-md-4">
+          <div class="d-flex align-items-center gap-3">
+            <span class="text-muted small">
+              Mostrando <strong>{{ ventasFiltradas.length }}</strong> de
+              <strong>{{ paginacion.totalItems }}</strong> registros
+            </span>
 
-              <div class="vr"></div>
+            <div class="vr"></div>
 
-              <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="paginacion.itemsPorPagina"
-                (change)="cambiarItemsPorPagina()">
-                <option *ngFor="let opcion of paginacion.itemsPorPaginaOpciones" [value]="opcion">
-                  {{ opcion }} por página
-                </option>
-              </select>
-            </div>
+            <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="paginacion.itemsPorPagina"
+              (change)="cambiarItemsPorPagina()">
+              <option *ngFor="let opcion of paginacion.itemsPorPaginaOpciones" [value]="opcion">
+                {{ opcion }} por página
+              </option>
+            </select>
           </div>
+        </div>
 
-          <!-- Controles de paginación centrados -->
-          <div class="col-md-4">
-            <div class="d-flex justify-content-center align-items-center gap-1">
-              <!-- Navegación rápida -->
-              <button class="btn btn-sm btn-outline-secondary" (click)="primeraPagina()"
-                [disabled]="paginacion.paginaActual === 1" title="Primera página">
-                <i class="bi bi-chevron-double-left"></i>
-              </button>
+        <!-- Controles de paginación centrados -->
+        <div class="col-md-4">
+          <div class="d-flex justify-content-center align-items-center gap-1">
+            <!-- Navegación rápida -->
+            <button class="btn btn-sm btn-outline-secondary" (click)="primeraPagina()"
+              [disabled]="paginacion.paginaActual === 1" title="Primera página">
+              <i class="bi bi-chevron-double-left"></i>
+            </button>
 
-              <button class="btn btn-sm btn-outline-secondary" (click)="paginaAnterior()"
-                [disabled]="paginacion.paginaActual === 1" title="Página anterior">
-                <i class="bi bi-chevron-left"></i>
-              </button>
+            <button class="btn btn-sm btn-outline-secondary" (click)="paginaAnterior()"
+              [disabled]="paginacion.paginaActual === 1" title="Página anterior">
+              <i class="bi bi-chevron-left"></i>
+            </button>
 
-              <!-- Números de página -->
-              <div class="btn-group mx-2" role="group">
-                <button *ngFor="let pagina of paginacion.rangoPaginas" class="btn btn-sm"
-                  [class.btn-primary]="pagina === paginacion.paginaActual"
-                  [class.btn-outline-secondary]="pagina !== paginacion.paginaActual && pagina !== -1"
-                  [class.btn-light]="pagina === -1" (click)="pagina !== -1 && irAPagina(pagina)"
-                  [disabled]="pagina === -1">
-                  {{ pagina === -1 ? '...' : pagina }}
-                </button>
-              </div>
-
-              <button class="btn btn-sm btn-outline-secondary" (click)="paginaSiguiente()"
-                [disabled]="paginacion.paginaActual === paginacion.totalPaginas" title="Página siguiente">
-                <i class="bi bi-chevron-right"></i>
-              </button>
-
-              <button class="btn btn-sm btn-outline-secondary" (click)="ultimaPagina()"
-                [disabled]="paginacion.paginaActual === paginacion.totalPaginas" title="Última página">
-                <i class="bi bi-chevron-double-right"></i>
+            <!-- Números de página -->
+            <div class="btn-group mx-2" role="group">
+              <button *ngFor="let pagina of paginacion.rangoPaginas" class="btn btn-sm"
+                [class.btn-primary]="pagina === paginacion.paginaActual"
+                [class.btn-outline-secondary]="pagina !== paginacion.paginaActual && pagina !== -1"
+                [class.btn-light]="pagina === -1" (click)="pagina !== -1 && irAPagina(pagina)"
+                [disabled]="pagina === -1">
+                {{ pagina === -1 ? '...' : pagina }}
               </button>
             </div>
+
+            <button class="btn btn-sm btn-outline-secondary" (click)="paginaSiguiente()"
+              [disabled]="paginacion.paginaActual === paginacion.totalPaginas" title="Página siguiente">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+
+            <button class="btn btn-sm btn-outline-secondary" (click)="ultimaPagina()"
+              [disabled]="paginacion.paginaActual === paginacion.totalPaginas" title="Última página">
+              <i class="bi bi-chevron-double-right"></i>
+            </button>
           </div>
+        </div>
 
-          <!-- Información de página -->
-          <div class="col-md-4 text-end">
-            <div class="d-flex align-items-center justify-content-end gap-3">
-              <span class="text-muted small">
-                Página <strong>{{ paginacion.paginaActual }}</strong> de
-                <strong>{{ paginacion.totalPaginas }}</strong>
-              </span>
+        <!-- Información de página -->
+        <div class="col-md-4 text-end">
+          <div class="d-flex align-items-center justify-content-end gap-3">
+            <span class="text-muted small">
+              Página <strong>{{ paginacion.paginaActual }}</strong> de
+              <strong>{{ paginacion.totalPaginas }}</strong>
+            </span>
 
-              <div class="vr"></div>
+            <div class="vr"></div>
 
-              <!-- Salto rápido a página -->
-              <div class="input-group input-group-sm" style="width: 120px;">
-                <input type="number" class="form-control" #paginaInput [min]="1" [max]="paginacion.totalPaginas"
-                  placeholder="Ir a...">
-                <button class="btn btn-outline-secondary" type="button" (click)="irAPagina(paginaInput.valueAsNumber)"
-                  [disabled]="!paginaInput.value || paginaInput.valueAsNumber < 1 || paginaInput.valueAsNumber > paginacion.totalPaginas">
-                  <i class="bi bi-arrow-right"></i>
-                </button>
-              </div>
+            <!-- Salto rápido a página -->
+            <div class="input-group input-group-sm" style="width: 120px;">
+              <input type="number" class="form-control" #paginaInput [min]="1" [max]="paginacion.totalPaginas"
+                placeholder="Ir a...">
+              <button class="btn btn-outline-secondary" type="button" (click)="irAPagina(paginaInput.valueAsNumber)"
+                [disabled]="!paginaInput.value || paginaInput.valueAsNumber < 1 || paginaInput.valueAsNumber > paginacion.totalPaginas">
+                <i class="bi bi-arrow-right"></i>
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Paginación Móvil (solo se muestra en pantallas pequeñas) -->
-    <div class="d-lg-none mt-3">
-      <div class="card">
-        <div class="card-body py-2">
-          <div class="row align-items-center">
-            <div class="col-4">
-              <button
-                class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
-                (click)="paginaAnterior()" [disabled]="paginacion.paginaActual === 1">
-                <i class="bi bi-chevron-left"></i>
-                <span>Ant</span>
-              </button>
-            </div>
-            <div class="col-4 text-center">
-              <span class="text-muted small">
-                {{ paginacion.paginaActual }}/{{ paginacion.totalPaginas }}
-              </span>
-            </div>
-            <div class="col-4">
-              <button
-                class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
-                (click)="paginaSiguiente()" [disabled]="paginacion.paginaActual === paginacion.totalPaginas">
-                <span>Sig</span>
-                <i class="bi bi-chevron-right"></i>
-              </button>
-            </div>
+  <!-- Paginación Móvil (solo se muestra en pantallas pequeñas) -->
+  <div class="d-lg-none mt-3">
+    <div class="card">
+      <div class="card-body py-2">
+        <div class="row align-items-center">
+          <div class="col-4">
+            <button class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
+              (click)="paginaAnterior()" [disabled]="paginacion.paginaActual === 1">
+              <i class="bi bi-chevron-left"></i>
+              <span>Ant</span>
+            </button>
+          </div>
+          <div class="col-4 text-center">
+            <span class="text-muted small">
+              {{ paginacion.paginaActual }}/{{ paginacion.totalPaginas }}
+            </span>
+          </div>
+          <div class="col-4">
+            <button class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
+              (click)="paginaSiguiente()" [disabled]="paginacion.paginaActual === paginacion.totalPaginas">
+              <span>Sig</span>
+              <i class="bi bi-chevron-right"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -1680,12 +1677,15 @@
                   </tr>
                 </thead>
                 <tbody>
+                  <!-- VERSIÓN FINAL: Usar los datos de productosOriginales -->
                   <tr *ngFor="let producto of getProductosSeguros(); let i = index">
                     <td class="text-center">{{ i + 1 }}</td>
                     <td class="small">{{ producto.nombre }}</td>
-                    <td class="text-center">{{ producto.cantidad || 1 }}</td>
-                    <td class="text-end">{{ formatearMoneda(producto.precioUnitario) }}</td>
-                    <td class="text-end">{{ formatearMoneda(producto.subtotal) }}</td>
+                    <td class="text-center">{{ producto.cantidad }}</td>
+                    <!-- Mostrar precio sin IVA -->
+                    <td class="text-end">{{ formatearMoneda(producto.precioUnitarioSinIva) }}</td>
+                    <!-- Mostrar subtotal calculado -->
+                    <td class="text-end">{{ formatearMoneda(producto.subtotalCalculado) }}</td>
                   </tr>
                 </tbody>
               </table>
