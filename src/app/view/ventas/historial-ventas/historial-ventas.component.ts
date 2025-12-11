@@ -130,6 +130,11 @@ export class HistorialVentasComponent implements OnInit {
     this.suscribirCambiosConfiguracion();
     this.cargarDatosIniciales();
     this.setMaxDate();
+
+    // Suscribirse a cambios en el monto abonado
+    this.editarVentaForm.get('montoAbonado')?.valueChanges.subscribe(value => {
+      this.validarMontoAbono();
+    });
   }
 
   ngOnDestroy(): void {
@@ -740,9 +745,8 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private recargarListaVentas(): void {
-    this.loader.showWithMessage('🔄 Venta cancelada exitosamente, actualizando historial...');
+    this.loader.showWithMessage('🔄 Actualizando historial de ventas...');
 
-    // Recargar la página actual con los mismos filtros
     this.historialVentaService.obtenerHistorialVentas(
       this.paginacion.paginaActual,
       this.paginacion.itemsPorPagina,
@@ -762,7 +766,7 @@ export class HistorialVentasComponent implements OnInit {
 
         setTimeout(() => {
           this.loader.hide();
-        }, 1500);
+        }, 500);
       },
       error: (error) => {
         console.error('Error al recargar ventas:', error);
@@ -813,67 +817,26 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  /**
-   * Procesa la edición/abono de una venta usando el API real
-   */
-  private procesarEdicionVenta(modal: any, formData: any): void {
-    if (!this.selectedVenta?.key) {
-      this.swalService.showError('Error', 'No se puede actualizar la venta: falta información.');
+  validarMontoAbono(): void {
+    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value;
+    const deudaPendiente = this.calcularMontoDeuda();
+
+    // Si el valor es null, undefined o vacío, no hacer validación
+    if (montoAbonado === null || montoAbonado === undefined || montoAbonado === '') {
       return;
     }
 
-    const datosActualizados = {
-      montoAbonado: formData.montoAbonado,
-      observaciones: formData.observaciones,
-      metodosPago: formData.metodosPago,
-      fechaActualizacion: new Date().toISOString()
-    };
+    if (montoAbonado > deudaPendiente) {
+      this.swalService.showWarning(
+        'Monto excedido',
+        `El monto a abonar (${this.formatearMoneda(montoAbonado, this.getMonedaVenta())}) excede la deuda pendiente (${this.formatearMoneda(deudaPendiente, this.getMonedaVenta())}). Se establecerá el monto máximo permitido.`
+      );
 
-    this.historialVentaService.realizarAbono(this.selectedVenta.key, datosActualizados)
-      .subscribe({
-        next: (response: any) => {
-          if (response.success || response.message === 'ok') {
-            this.swalService.showSuccess('Éxito', 'Venta actualizada correctamente.');
-
-            // Actualizar la venta localmente
-            const ventaActualizada = {
-              ...this.selectedVenta,
-              montoAbonado: formData.montoAbonado,
-              observaciones: formData.observaciones,
-              metodosPago: formData.metodosPago
-            };
-
-            this.actualizarVentaEnListas(ventaActualizada);
-            modal.close();
-
-          } else {
-            this.swalService.showError('Error', response.message || 'No se pudo actualizar la venta.');
-          }
-        },
-        error: (error) => {
-          console.error('Error al actualizar venta:', error);
-
-          let mensajeError = 'No se pudo actualizar la venta. Verifique su conexión.';
-          if (error.error?.message) {
-            mensajeError = error.error.message;
-          }
-
-          this.swalService.showError('Error', mensajeError);
-        }
+      // Establecer el monto máximo como valor por defecto
+      this.editarVentaForm.patchValue({
+        montoAbonado: deudaPendiente
       });
-  }
-
-  private actualizarVentaEnListas(ventaActualizada: any): void {
-    // Solo actualizar en ventas filtradas (las que se están mostrando)
-    const indexFiltrado = this.ventasFiltradas.findIndex(v => v.key === ventaActualizada.key);
-    if (indexFiltrado !== -1) {
-      this.ventasFiltradas[indexFiltrado] = {
-        ...this.ventasFiltradas[indexFiltrado],
-        ...ventaActualizada
-      };
     }
-
-    this.cambiarOrden();
   }
 
   /**
@@ -965,8 +928,116 @@ export class HistorialVentasComponent implements OnInit {
     return montoAbonado !== null && montoAbonado !== undefined && montoAbonado !== this.selectedVenta?.montoAbonado;
   }
 
-  guardarEdicionVenta(modal: any): void {
+  private prepararMetodosPagoParaAPI(): any[] {
+    const metodosPagoParaAPI = [];
 
+    this.metodosPagoArray.controls.forEach((control, index) => {
+      const metodo = control.value;
+      const monedaMetodo = this.getMonedaParaMetodo(index);
+
+      // Convertir moneda al formato exacto que espera el backend
+      const monedaFormatoBackend = this.convertirMonedaParaBackend(monedaMetodo);
+
+      // Limpiar valores - convertir cadenas vacías a null
+      const referencia = metodo.referencia?.trim() || null;
+      const bancoCodigo = metodo.bancoCodigo?.trim() || null;
+      const bancoNombre = metodo.bancoNombre?.trim() || null;
+
+      // Calcular monto en moneda de venta para referencia
+      const montoEnMonedaVenta = this.convertirMonto(
+        Number(metodo.monto) || 0,
+        monedaFormatoBackend,
+        this.getMonedaVenta()
+      );
+
+      const metodoFormateado = {
+        tipo: metodo.tipo || 'efectivo',
+        monto: Number(metodo.monto) || 0,
+        moneda: monedaFormatoBackend,
+        referencia: referencia,
+        bancoCodigo: bancoCodigo,
+        bancoNombre: bancoNombre,
+
+        // Campos adicionales para debug y validación
+        montoEnMonedaVenta: montoEnMonedaVenta,
+        tasaConversion: this.obtenerTasaConversion(monedaFormatoBackend, this.getMonedaVenta()),
+        monedaOriginal: monedaFormatoBackend,
+        monedaVenta: this.getMonedaVenta()
+      };
+
+      console.log(`🔍 Método ${index} preparado:`, {
+        tipo: metodoFormateado.tipo,
+        montoOriginal: metodoFormateado.monto,
+        monedaOriginal: metodoFormateado.moneda,
+        montoEnMonedaVenta: metodoFormateado.montoEnMonedaVenta,
+        tasa: metodoFormateado.tasaConversion
+      });
+
+      metodosPagoParaAPI.push(metodoFormateado);
+    });
+
+    return metodosPagoParaAPI;
+  }
+
+  private convertirMonedaParaBackend(monedaId: string): string {
+    const mapeo: { [key: string]: string } = {
+      'dolar': 'dolar',
+      'usd': 'dolar',
+      'euro': 'euro',
+      'eur': 'euro',
+      'bolivar': 'bolivar',
+      'ves': 'bolivar',
+      'bs': 'bolivar'
+    };
+
+    const clave = monedaId?.toLowerCase() || 'dolar';
+    return mapeo[clave] || 'dolar';
+  }
+
+  private actualizarVentaDespuesAbono(ventaActualizadaAPI: any): void {
+    if (!ventaActualizadaAPI || !this.selectedVenta) return;
+
+    console.log('🔄 Actualizando venta local con datos del backend:', ventaActualizadaAPI);
+
+    // Obtener los nuevos métodos de pago del backend
+    const nuevosMetodosPago = ventaActualizadaAPI.metodosPago || [];
+
+    // Calcular nuevo monto abonado (suma de todos los métodos en moneda de venta)
+    const nuevoMontoAbonado = nuevosMetodosPago.reduce((total: number, metodo: any) => {
+      return total + (metodo.monto_en_moneda_de_venta || metodo.monto || 0);
+    }, 0);
+
+    // Actualizar la venta seleccionada
+    this.selectedVenta = {
+      ...this.selectedVenta,
+      montoAbonado: nuevoMontoAbonado,
+      metodosPago: [...(this.selectedVenta.metodosPago || []), ...nuevosMetodosPago],
+      observaciones: this.editarVentaForm?.get('observaciones')?.value || this.selectedVenta.observaciones,
+      deudaPendiente: ventaActualizadaAPI.formaPago?.deudaPendiente ||
+        Math.max(0, this.selectedVenta.total - nuevoMontoAbonado)
+    };
+
+    // Actualizar en la lista de ventas filtradas
+    const index = this.ventasFiltradas.findIndex(v => v.key === this.selectedVenta.key);
+    if (index !== -1) {
+      this.ventasFiltradas[index] = {
+        ...this.ventasFiltradas[index],
+        montoAbonado: this.selectedVenta.montoAbonado,
+        metodosPago: this.selectedVenta.metodosPago,
+        observaciones: this.selectedVenta.observaciones,
+        deudaPendiente: this.selectedVenta.deudaPendiente
+      };
+    }
+
+    console.log('✅ Venta actualizada localmente:', {
+      key: this.selectedVenta.key,
+      montoAbonado: this.selectedVenta.montoAbonado,
+      deudaPendiente: this.selectedVenta.deudaPendiente,
+      totalMetodos: this.selectedVenta.metodosPago?.length || 0
+    });
+  }
+
+  guardarEdicionVenta(modal: any): void {
     // Primero forzar validación de todos los métodos
     this.metodosPagoArray.controls.forEach((control, index) => {
       this.validarMontoMetodoPago(index);
@@ -979,36 +1050,311 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     const formValue = this.editarVentaForm.value;
-    const totalMetodosPago = this.calcularTotalMetodosPago();
+    const metodosPago = this.prepararMetodosPagoParaAPI();
 
-    if (Math.abs(totalMetodosPago - formValue.montoAbonado) > 0.01) {
-
-      const totalMetodosStr = totalMetodosPago.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
-      const montoAbonadoStr = formValue.montoAbonado.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
-
-      this.swalService.showWarning('Advertencia',
-        `La suma de los métodos de pago (${totalMetodosStr}) no coincide con el monto abonado (${montoAbonadoStr}).`);
+    // Validar métodos antes de enviar
+    if (!this.validarMetodosPagoAntesDeEnviar(metodosPago)) {
       return;
     }
 
-    // Formatear los valores para el mensaje de confirmación
-    const nuevoMontoStr = formValue.montoAbonado.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
-    const nuevoSaldoStr = (this.selectedVenta.total - formValue.montoAbonado).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
+    const totalMetodosEnMonedaVenta = this.calcularTotalMetodosPagoEnMonedaVenta();
+
+    // Mostrar confirmación detallada
+    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
+    const nuevoAbono = formValue.montoAbonado;
+    const totalAbonado = montoAbonadoAnterior + nuevoAbono;
+
+    const totalVenta = this.selectedVenta.total || 0;
+    const nuevaDeudaPendiente = Math.max(0, totalVenta - totalAbonado);
+
+    let mensajeConfirmacion = `
+    <strong>📋 Confirmar abono de ${this.formatearMoneda(nuevoAbono)}</strong><br><br>
+    
+    <strong>Resumen de la venta:</strong><br>
+    • Total venta: ${this.formatearMoneda(totalVenta)}<br>
+    • Abonado anterior: ${this.formatearMoneda(montoAbonadoAnterior)}<br>
+    • Nuevo abono: ${this.formatearMoneda(nuevoAbono)}<br>
+    • Total abonado: ${this.formatearMoneda(totalAbonado)}<br>
+    • Nueva deuda: ${this.formatearMoneda(nuevaDeudaPendiente)}<br><br>
+    
+    <strong>💳 Métodos de pago a registrar (${metodosPago.length}):</strong><br>
+  `;
+
+    metodosPago.forEach((metodo, index) => {
+      const montoEnMonedaVenta = this.convertirMonto(
+        metodo.monto,
+        metodo.moneda,
+        this.getMonedaVenta()
+      );
+
+      mensajeConfirmacion += `
+      ${index + 1}. ${metodo.tipo}: ${this.formatearMoneda(metodo.monto, metodo.moneda)}
+      ${metodo.moneda !== this.getMonedaVenta() ? `(≈ ${this.formatearMoneda(montoEnMonedaVenta)})` : ''}<br>
+    `;
+    });
+
+    mensajeConfirmacion += `<br><strong>💰 Total en ${this.getMonedaVenta()}: ${this.formatearMoneda(totalMetodosEnMonedaVenta)}</strong>`;
 
     this.swalService.showConfirm(
-      'Confirmar Edición',
-      `¿Está seguro de actualizar el abono de esta venta?<br>
-     <strong>Nuevo monto abonado:</strong> ${nuevoMontoStr}<br>
-     <strong>Nuevo saldo pendiente:</strong> ${nuevoSaldoStr}`,
-      'Sí, Guardar Cambios',
-      'Revisar'
+      'Confirmar Abono Completo',
+      mensajeConfirmacion,
+      '✅ Sí, Registrar Abono Completo',
+      '❌ Cancelar'
     ).then((result) => {
       if (result.isConfirmed) {
-        this.procesarEdicionVenta(modal, formValue);
+        this.procesarAbono(modal, formValue);
       }
     });
   }
 
+  private procesarAbono(modal: any, formData: any): void {
+    if (!this.selectedVenta?.key) {
+      this.swalService.showWarning('Error', 'No se puede registrar el abono: falta información de la venta.');
+      return;
+    }
+
+    // Obtener TODOS los métodos de pago preparados
+    const metodosPago = this.prepararMetodosPagoParaAPI();
+
+    if (metodosPago.length === 0) {
+      this.swalService.showWarning('Error', 'Debe agregar al menos un método de pago.');
+      return;
+    }
+
+    // Calcular el total abonado en moneda de venta para verificación
+    const totalMetodosEnMonedaVenta = this.calcularTotalMetodosPagoEnMonedaVenta();
+    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+
+    // Verificar que la suma coincida
+    if (Math.abs(totalMetodosEnMonedaVenta - montoAbonado) > 0.01) {
+      this.swalService.showWarning(
+        'Advertencia',
+        `La suma de los métodos de pago no coincide con el monto abonado. ` +
+        `Monto abonado: ${this.formatearMoneda(montoAbonado)}, ` +
+        `Suma métodos: ${this.formatearMoneda(totalMetodosEnMonedaVenta)}. ` +
+        `Por favor, ajuste los montos.`
+      );
+      return;
+    }
+
+    // Preparar el request según lo que espera el backend
+    const requestData = this.prepararRequestParaBackend(metodosPago, montoAbonado);
+
+    console.log('📤 Enviando al backend:', requestData);
+    console.log('📊 Métodos de pago:', metodosPago);
+    console.log('💰 Total abonado:', montoAbonado);
+    console.log('💵 Moneda de venta:', this.getMonedaVenta());
+
+    this.enviarAbonoCompleto(modal, requestData);
+  }
+
+  private prepararRequestParaBackend(metodosPago: any[], montoAbonado: number): any {
+    // Estructura base del request
+    const request: any = {
+      // Información del abono
+      montoAbonado: montoAbonado,
+
+      // Lista completa de métodos de pago
+      metodosPago: metodosPago.map(metodo => ({
+        tipo: metodo.tipo || 'efectivo',
+        monto: Number(metodo.monto) || 0,
+        moneda: metodo.moneda || 'dolar',
+        referencia: metodo.referencia || null,
+        bancoCodigo: metodo.bancoCodigo || null,
+        bancoNombre: metodo.bancoNombre || null,
+
+        // Información adicional para el backend (opcional)
+        montoEnMonedaVenta: this.convertirMonto(
+          metodo.monto,
+          metodo.moneda,
+          this.getMonedaVenta()
+        )
+      })),
+
+      // Información adicional
+      observaciones: this.editarVentaForm?.get('observaciones')?.value || ''
+    };
+
+    return request;
+  }
+
+  private validarMetodosPagoAntesDeEnviar(metodosPago: any[]): boolean {
+    let errores: string[] = [];
+
+    // Verificar que todos los métodos tengan monto > 0
+    metodosPago.forEach((metodo, index) => {
+      if (!metodo.monto || metodo.monto <= 0) {
+        errores.push(`El método ${index + 1} (${metodo.tipo}) no tiene un monto válido`);
+      }
+
+      if (!metodo.moneda) {
+        errores.push(`El método ${index + 1} (${metodo.tipo}) no tiene moneda especificada`);
+      }
+    });
+
+    // Verificar conversiones
+    const monedaVenta = this.getMonedaVenta();
+    let totalCalculado = 0;
+
+    metodosPago.forEach((metodo, index) => {
+      try {
+        const montoConvertido = this.convertirMonto(
+          metodo.monto,
+          metodo.moneda,
+          monedaVenta
+        );
+        totalCalculado += montoConvertido;
+      } catch (error) {
+        errores.push(`Error al convertir monto del método ${index + 1}: ${error}`);
+      }
+    });
+
+    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
+
+    if (Math.abs(totalCalculado - montoAbonado) > 0.01) {
+      errores.push(
+        `La suma de los métodos (${this.formatearMoneda(totalCalculado)}) ` +
+        `no coincide con el monto abonado (${this.formatearMoneda(montoAbonado)})`
+      );
+    }
+
+    if (errores.length > 0) {
+      this.swalService.showWarning(
+        'Errores de validación',
+        `<strong>Por favor corrija los siguientes errores:</strong><br><br>` +
+        errores.map(error => `• ${error}`).join('<br>')
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  private enviarAbonoCompleto(modal: any, requestData: any): void {
+    this.loader.showWithMessage('💳 Procesando abono con múltiples métodos...');
+
+    this.historialVentaService.realizarAbono(this.selectedVenta.key, requestData)
+      .subscribe({
+        next: (response: any) => {
+          this.loader.hide();
+
+          this.manejarRespuestaAbono(response, modal);
+        },
+        error: (error) => {
+          this.loader.hide();
+          this.manejarErrorAbono(error);
+        }
+      });
+  }
+
+  private manejarErrorAbono(error: any): void {
+    console.error('❌ Error al registrar abono:', error);
+
+    let mensajeError = 'No se pudo registrar el abono. Verifique su conexión.';
+    let detallesError = '';
+
+    if (error.error) {
+      // Error del backend
+      if (error.error.message) {
+        mensajeError = error.error.message;
+      }
+
+      if (error.error.errors) {
+        // Si hay errores de validación específicos
+        detallesError = Object.entries(error.error.errors)
+          .map(([campo, mensajes]: [string, any]) =>
+            `<strong>${campo}:</strong> ${mensajes.join(', ')}`
+          )
+          .join('<br>');
+      }
+    } else if (error.message) {
+      // Error de red u otro
+      mensajeError = error.message;
+    }
+
+    // Mostrar error con detalles si existen
+    if (detallesError) {
+      this.swalService.showError(
+        '❌ Error al procesar abono',
+        `${mensajeError}<br><br><strong>Detalles:</strong><br>${detallesError}`
+      );
+    } else {
+      this.swalService.showError('❌ Error', mensajeError);
+    }
+
+    // Opcional: Log detallado para debug
+    console.error('Detalles del error:', {
+      status: error.status,
+      statusText: error.statusText,
+      url: error.url,
+      headers: error.headers,
+      error: error.error
+    });
+  }
+
+  private manejarRespuestaAbono(response: any, modal: any): void {
+    if (response.success || response.message === 'ok') {
+      // Mostrar resumen del abono procesado
+      this.mostrarResumenAbonoProcesado(response);
+
+      this.swalService.showSuccess(
+        '✅ Abono registrado',
+        'El abono se ha registrado correctamente con todos los métodos de pago.'
+      );
+
+      // Actualizar la venta localmente con los datos del backend
+      this.actualizarVentaDespuesAbono(response.ventaActualizada || response.data);
+
+      // Cerrar el modal
+      modal.close();
+
+      // Recargar la lista de ventas
+      setTimeout(() => {
+        this.recargarListaVentas();
+      }, 500);
+
+    } else {
+      const mensajeError = response.message || response.error || 'No se pudo registrar el abono.';
+      this.swalService.showError('❌ Error', mensajeError);
+    }
+  }
+
+  private mostrarResumenAbonoProcesado(response: any): void {
+    if (!response.venta) return;
+
+    const venta = response.venta;
+    const metodosRegistrados = venta.metodosPago || [];
+
+    let resumen = '<strong>✅ Abono procesado correctamente</strong><br><br>';
+    resumen += `<strong>Venta:</strong> ${venta.venta?.numero_venta || 'N/A'}<br>`;
+    resumen += `<strong>Total venta:</strong> ${this.formatearMoneda(venta.totales?.total)}<br>`;
+    resumen += `<strong>Total abonado anterior:</strong> ${this.formatearMoneda(this.selectedVenta?.montoAbonado || 0)}<br>`;
+    resumen += `<strong>Nuevo abono:</strong> ${this.formatearMoneda(this.editarVentaForm?.get('montoAbonado')?.value || 0)}<br>`;
+    resumen += `<strong>Total abonado ahora:</strong> ${this.formatearMoneda(venta.totales?.totalPagado || 0)}<br>`;
+    resumen += `<strong>Deuda pendiente:</strong> ${this.formatearMoneda(venta.formaPago?.deudaPendiente || 0)}<br><br>`;
+
+    resumen += '<strong>📋 Métodos de pago registrados:</strong><br>';
+
+    metodosRegistrados.forEach((metodo: any, index: number) => {
+      resumen += `${index + 1}. ${metodo.tipo}: `;
+      resumen += `${metodo.monto} ${metodo.moneda_id}`;
+
+      if (metodo.monto_en_moneda_de_venta && metodo.moneda_id !== this.getMonedaVenta()) {
+        resumen += ` (≈ ${this.formatearMoneda(metodo.monto_en_moneda_de_venta)})`;
+      }
+
+      resumen += '<br>';
+    });
+
+    // Mostrar en consola para debug
+    console.log('🎯 Resumen del abono procesado:', {
+      venta: venta.venta?.numero_venta,
+      totalVenta: venta.totales?.total,
+      totalPagado: venta.totales?.totalPagado,
+      deudaPendiente: venta.formaPago?.deudaPendiente,
+      metodosRegistrados: metodosRegistrados
+    });
+  }
 
   private generarNuevoRecibo(venta: any): void {
     //   console.log('Generando nuevo recibo para venta:', venta);
@@ -1038,15 +1384,129 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   onMontoAbonadoChange() {
+    // Validar el monto ingresado
+    this.validarMontoAbono();
+
+    // Ajustar montos de métodos de pago si hay un valor válido
+    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value;
+    if (montoAbonado !== null && montoAbonado !== undefined && montoAbonado !== '') {
+      setTimeout(() => {
+        this.ajustarMontosMetodosPago();
+      });
+    }
+  }
+
+  getConversionDisplay(): string {
+    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value;
+
+    // Si no hay valor, mostrar el mensaje por defecto
+    if (montoAbonado === null || montoAbonado === undefined || montoAbonado === '') {
+      return '';
+    }
+
+    const monedaVenta = this.getMonedaVenta();
+    const simbolo = this.getSimboloMonedaVenta();
+
+    let display = `${simbolo} ${montoAbonado?.toFixed(2)}`;
+
+    // Agregar conversión a bolívares si aplica
+    if (monedaVenta !== 'bolivar') {
+      const conversionBs = this.getConversionBs(montoAbonado);
+      display += ` ⇄ ${conversionBs.toFixed(2)} Bs`;
+    }
+
+    // Agregar información de máximo permitido
+    const maxPermitido = this.getMontoMaximoPermitido();
+    display += ` (Máx: ${simbolo} ${maxPermitido.toFixed(2)})`;
+
+    return display;
+  }
+
+  // Método para seleccionar moneda para un método de pago específico
+  seleccionarMonedaEfectivo(index: number, moneda: string): void {
+    const metodoControl = this.metodosPagoArray.at(index);
+
+    // Validar que el método sea efectivo
+    if (metodoControl.get('tipo')?.value !== 'efectivo') {
+      return;
+    }
+
+    // Actualizar la moneda de efectivo global (para mantener compatibilidad)
+    switch (moneda.toLowerCase()) {
+      case 'usd':
+      case 'dolar':
+        this.monedaEfectivo = 'USD';
+        break;
+      case 'eur':
+      case 'euro':
+        this.monedaEfectivo = 'EUR';
+        break;
+      case 'bs':
+      case 'bolivar':
+        this.monedaEfectivo = 'Bs';
+        break;
+    }
+
+    // Forzar recálculo de montos y validaciones
     setTimeout(() => {
+      this.validarMontoMetodoPago(index);
       this.ajustarMontosMetodosPago();
     });
   }
 
+  // Modificar getMonedaParaMetodo para usar monedas específicas por método
+  getMonedaParaMetodo(index: number): string {
+    const metodoControl = this.metodosPagoArray.at(index);
+    const tipoPago = metodoControl?.get('tipo')?.value;
+
+    switch (tipoPago) {
+      case 'efectivo':
+        // Para efectivo, usar la moneda seleccionada globalmente
+        return this.monedaEfectivo.toLowerCase() === 'bs' ? 'bolivar' :
+          this.monedaEfectivo.toLowerCase() === 'eur' ? 'euro' : 'dolar';
+      case 'pagomovil':
+      case 'transferencia':
+      case 'debito':
+      case 'credito':
+        return 'bolivar';
+      case 'zelle':
+        return 'dolar';
+      default:
+        return this.getMonedaVenta();
+    }
+  }
+
+  // Modificar getSimboloMonedaMetodo para ser consistente
+  getSimboloMonedaMetodo(tipoPago: string): string {
+    switch (tipoPago) {
+      case 'efectivo':
+        // Para efectivo, usar el símbolo de la moneda global
+        return this.getSimboloMonedaEfectivo();
+      case 'pagomovil':
+      case 'transferencia':
+      case 'debito':
+      case 'credito':
+        return 'Bs. ';
+      case 'zelle':
+        return '$';
+      default:
+        return this.simboloMonedaSistema;
+    }
+  }
+
+  // Método mejorado para obtener símbolo de moneda de efectivo
+  getSimboloMonedaEfectivo(): string {
+    switch (this.monedaEfectivo) {
+      case 'USD': return '$';
+      case 'EUR': return '€';
+      case 'Bs': return 'Bs. ';
+      default: return '$';
+    }
+  }
+
   /**
- * Calcular porcentaje abonado para el modal de edición
- * Usa el monto del formulario, no requiere parámetro
- */
+   * Calcular porcentaje abonado para el modal de edición
+   */
   calcularPorcentajeAbonadoEnModal(): number {
     if (!this.selectedVenta || !this.selectedVenta.total) return 0;
 
@@ -1126,6 +1586,17 @@ export class HistorialVentasComponent implements OnInit {
     const index = this.metodosPagoArray.length;
     this.metodosPagoArray.push(metodoGroup);
 
+    // Si es efectivo y tiene moneda específica, actualizar la global
+    if (metodo.tipo === 'efectivo' && metodo.moneda_id) {
+      if (metodo.moneda_id === 'bolivar') {
+        this.monedaEfectivo = 'Bs';
+      } else if (metodo.moneda_id === 'euro') {
+        this.monedaEfectivo = 'EUR';
+      } else {
+        this.monedaEfectivo = 'USD';
+      }
+    }
+
     metodoGroup.get('monto')?.valueChanges.subscribe(value => {
       if (value !== null && value !== undefined) {
         this.validarMontoMetodoPago(index);
@@ -1161,24 +1632,29 @@ export class HistorialVentasComponent implements OnInit {
     const abonado = this.selectedVenta.montoAbonado || 0;
     const deuda = total - abonado;
 
-    return Math.max(0, deuda);
+    // Redondear a 2 decimales para evitar problemas de precisión
+    return Math.max(0, this.redondear(deuda, 2));
   }
 
-  /* calcularPorcentajeAbonado(): number {
-     if (!this.selectedVenta || !this.selectedVenta.total) return 0;
- 
-     const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
-     const nuevoMontoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
- 
-     const totalAbonado = montoAbonadoAnterior + nuevoMontoAbonado;
- 
-     let porcentaje = (totalAbonado / this.selectedVenta.total) * 100;
-     porcentaje = Math.min(porcentaje, 100);
- 
-     return Math.round(porcentaje);
-   }*/
+  // Y actualizar tu función redondear para permitir decimales específicos
+  private redondear(valor: number, decimales: number = 2): number {
+    const factor = Math.pow(10, decimales);
+    return Math.round(valor * factor) / factor;
+  }
 
-  // CORRECCIÓN: Obtener monto máximo permitido en moneda de venta
+  // También asegúrate que getConversionBs redondee correctamente
+  getConversionBs(monto: number): number {
+    const monedaVenta = this.getMonedaVenta();
+
+    if (monedaVenta === 'bolivar') {
+      return this.redondear(monto, 2);
+    }
+
+    const tasa = this.tasasPorId[monedaVenta] || 1;
+    return this.redondear(monto * tasa, 2);
+  }
+
+  // Obtener monto máximo permitido en moneda de venta
   getMontoMaximoPermitido(): number {
     return this.calcularMontoDeuda();
   }
@@ -1186,11 +1662,10 @@ export class HistorialVentasComponent implements OnInit {
   reinicializarFormularioConDeuda() {
     const montoDeuda = this.calcularMontoDeuda();
 
-    // console.log('Reinicializando formulario con deuda:', montoDeuda, 'Moneda:', this.getMonedaVenta());
-
     if (this.editarVentaForm) {
+      // Inicializar con valor vacío (null) en lugar del monto de deuda
       this.editarVentaForm.patchValue({
-        montoAbonado: montoDeuda,
+        montoAbonado: null, // Cambiado de montoDeuda a null
         observaciones: this.selectedVenta.observaciones || ''
       });
 
@@ -1207,8 +1682,8 @@ export class HistorialVentasComponent implements OnInit {
       this.inicializarFormulario();
     }
 
+    // Actualizar validadores para permitir valores vacíos inicialmente
     this.editarVentaForm.get('montoAbonado')?.setValidators([
-      Validators.required,
       Validators.min(0),
       Validators.max(this.selectedVenta.total)
     ]);
@@ -1239,58 +1714,6 @@ export class HistorialVentasComponent implements OnInit {
 
     const simbolo = this.getSimboloMonedaVenta();
     return `${simbolo}${totalAbonado.toFixed(2)} / ${simbolo}${this.selectedVenta.total.toFixed(2)}`;
-  }
-
-  getSimboloMonedaMetodo(tipoPago: string): string {
-    switch (tipoPago) {
-      case 'efectivo':
-        // Para efectivo, usar la moneda seleccionada en el selector
-        return this.getSimboloMonedaEfectivo();
-      case 'pagomovil':
-      case 'transferencia':
-      case 'debito':
-      case 'credito':
-        return 'Bs. '; // Siempre bolívares para métodos locales
-      case 'zelle':
-        return '$'; // Siempre dólares para Zelle
-      default:
-        return this.simboloMonedaSistema; // ← Usar símbolo del sistema por defecto
-    }
-  }
-
-  getSimboloMonedaEfectivo(): string {
-    // Si el sistema está configurado en bolívares, usar Bs. para efectivo
-    if (this.monedaSistema === 'BS' || this.monedaSistema === 'VES' || this.monedaSistema === 'Bs') {
-      return 'Bs. ';
-    }
-
-    // Para otros casos, usar el selector local
-    switch (this.monedaEfectivo) {
-      case 'USD': return '$';
-      case 'EUR': return '€';
-      case 'Bs': return 'Bs. ';
-      default: return this.simboloMonedaSistema; // ← Usar símbolo del sistema por defecto
-    }
-  }
-
-  getMonedaParaMetodo(index: number): string {
-    const metodoControl = this.metodosPagoArray.at(index);
-    const tipoPago = metodoControl?.get('tipo')?.value;
-
-    switch (tipoPago) {
-      case 'efectivo':
-        return this.monedaEfectivo.toLowerCase() === 'bs' ? 'bolivar' :
-          this.monedaEfectivo.toLowerCase() === 'eur' ? 'euro' : 'dolar';
-      case 'pagomovil':
-      case 'transferencia':
-      case 'debito':
-      case 'credito':
-        return 'bolivar';
-      case 'zelle':
-        return 'dolar';
-      default:
-        return this.getMonedaVenta();
-    }
   }
 
   convertirMonto(monto: number, origen: string, destino: string): number {
@@ -1432,38 +1855,37 @@ export class HistorialVentasComponent implements OnInit {
     return this.getMonedaVenta() !== 'bolivar';
   }
 
-  getConversionBs(monto: number): number {
-    const monedaVenta = this.getMonedaVenta();
-
-    if (monedaVenta === 'bolivar') {
-      return monto;
-    }
-
-    const tasa = this.tasasPorId[monedaVenta] || 1;
-    return this.redondear(monto * tasa);
-  }
-
   obtenerEquivalenteBs(monto: number): number {
     const moneda = this.getMonedaVenta();
     const tasa = this.tasasPorId?.[moneda] ?? 1;
     return moneda === 'bolivar' ? monto : monto * tasa;
   }
 
-  // CORRECCIÓN: Redondear números
-  private redondear(valor: number, decimales: number = 2): number {
-    return Math.round(valor * Math.pow(10, decimales)) / Math.pow(10, decimales);
-  }
-
-  // CORRECCIÓN: Al cambiar método de pago
   onMetodoPagoChange(index: number) {
     const metodoControl = this.metodosPagoArray.at(index);
-    const tipoPago = metodoControl?.get('tipo')?.value;
-
-    //console.log(`Método ${index} cambiado a: ${tipoPago}, Símbolo: ${this.getSimboloParaMetodo(index)}`);
+    const tipoAnterior = metodoControl.get('tipo')?.value;
+    const tipoNuevo = metodoControl.get('tipo')?.value;
 
     // Resetear monto si el tipo de pago cambia
     metodoControl.patchValue({
       monto: 0
+    });
+
+    // Si se cambia a efectivo, establecer moneda por defecto
+    if (tipoNuevo === 'efectivo') {
+      // Establecer moneda por defecto basada en la moneda del sistema o venta
+      if (this.monedaSistema === 'BS' || this.monedaSistema === 'VES') {
+        this.monedaEfectivo = 'Bs';
+      } else if (this.monedaSistema === 'EUR') {
+        this.monedaEfectivo = 'EUR';
+      } else {
+        this.monedaEfectivo = 'USD';
+      }
+    }
+
+    // Forzar recálculo después del cambio
+    setTimeout(() => {
+      this.validarMontoMetodoPago(index);
     });
   }
 
@@ -3032,7 +3454,7 @@ export class HistorialVentasComponent implements OnInit {
           cantidad: cantidad,
           precio_unitario_sin_iva: precioUnitarioSinIva,
           precio_unitario: prod.precio_unitario || 0,
-          subtotal: subtotal, 
+          subtotal: subtotal,
           total: prod.total || 0,
           tiene_iva: prod.tiene_iva === 1
         };
@@ -3965,7 +4387,7 @@ export class HistorialVentasComponent implements OnInit {
       if (!ventanaImpresion.closed) {
         ventanaImpresion.close();
       }
-    }, 10000); 
+    }, 10000);
   }
 }
 

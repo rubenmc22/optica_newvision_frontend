@@ -1,0 +1,698 @@
+<div class="gestion-ordenes-container">
+  <!-- Header -->
+  <div class="ordenes-header">
+    <div class="header-content">
+      <div class="header-title">
+        <i class="bi bi-clipboard-check"></i>
+        <h1>Gestión de Órdenes de Trabajo</h1>
+      </div>
+      <div class="header-actions">
+        <div class="search-container">
+          <input type="text" class="form-control search-input" placeholder="Buscar orden, cliente o producto..."
+            [(ngModel)]="filtroBusqueda" (input)="aplicarFiltros()">
+          <i class="bi bi-search search-icon"></i>
+        </div>
+
+        <div class="filtros-container">
+          <select class="form-select filtro-select" [(ngModel)]="filtroEstado" (change)="aplicarFiltros()">
+            <option value="">Todos los estados</option>
+            <option value="en_tienda">En Tienda</option>
+            <option value="proceso_laboratorio">En Laboratorio</option>
+            <option value="listo_laboratorio">Listo en Laboratorio</option>
+            <option value="pendiente_retiro">Pendiente por Retirar</option>
+            <option value="entregado">Entregado</option>
+          </select>
+
+          <button class="btn btn-refresh" (click)="recargarOrdenes()" title="Recargar">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #e3f2fd;">
+          <i class="bi bi-shop" style="color: #1976d2;"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-count">{{ estadisticas.enTienda }}</span>
+          <span class="stat-label">En Tienda</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #fff3e0;">
+          <i class="bi bi-gear" style="color: #f57c00;"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-count">{{ estadisticas.enProceso }}</span>
+          <span class="stat-label">En Proceso</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #e8f5e9;">
+          <i class="bi bi-check-circle" style="color: #388e3c;"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-count">{{ estadisticas.listoLaboratorio }}</span>
+          <span class="stat-label">Listo en Lab</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #fff8e1;">
+          <i class="bi bi-clock-history" style="color: #ffa000;"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-count">{{ estadisticas.pendienteRetiro }}</span>
+          <span class="stat-label">Pendiente Retiro</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #f3e5f5;">
+          <i class="bi bi-box-seam" style="color: #7b1fa2;"></i>
+        </div>
+        <div class="stat-info">
+          <span class="stat-count">{{ estadisticas.total }}</span>
+          <span class="stat-label">Total Órdenes</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista Kanban -->
+  <div class="kanban-container" cdkDropListGroup>
+    <!-- Columna: En Tienda -->
+    <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesEnTienda"
+      (cdkDropListDropped)="drop($event, 'en_tienda')">
+      <div class="column-header" style="border-color: #1976d2;">
+        <div class="column-title">
+          <span class="column-badge" style="background: #1976d2;">{{ ordenesEnTienda.length }}</span>
+          <h3><i class="bi bi-shop"></i> En Tienda</h3>
+          <!-- Botón para mover todos -->
+          <div class="column-actions" *ngIf="ordenesEnTienda.length > 0">
+            <button class="btn-move-all" (click)="moverTodos(ordenesEnTienda, 'en_tienda', 'proceso_laboratorio')"
+              title="Mover todos a Laboratorio">
+              <i class="bi bi-arrow-right-circle"></i> Mover Todos
+            </button>
+          </div>
+        </div>
+        <small>Órdenes recibidas</small>
+      </div>
+
+      <div class="ordenes-list" *ngIf="ordenesEnTienda.length > 0; else emptyTienda"
+        [class.limited-view]="ordenesEnTienda.length > maxOrdenesPorColumna">
+        <div class="orden-card" *ngFor="let orden of (ordenesEnTienda | slice:0:maxOrdenesPorColumna)" cdkDrag
+          [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
+          <div class="orden-card-header">
+            <span class="orden-prioridad" [ngClass]="'prioridad-' + orden.prioridad">
+              {{ getPrioridadTexto(orden.prioridad) }}
+            </span>
+            <span class="orden-fecha">
+              {{ orden.fechaCreacion | date:'dd/MM' }}
+            </span>
+          </div>
+
+          <div class="orden-cliente">
+            <i class="bi bi-person"></i>
+            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 20)
+              }}</span>
+          </div>
+
+          <div class="orden-producto">
+            <i class="bi bi-eyeglasses"></i>
+            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 25) }}</span>
+          </div>
+
+          <div class="orden-meta">
+            <div class="meta-item">
+              <i class="bi bi-calendar"></i>
+              <small>Entrega: {{ orden.fechaEntregaEstimada | date:'dd/MM' }}</small>
+            </div>
+            <div class="meta-item" *ngIf="orden.diasRestantes !== undefined">
+              <i class="bi bi-clock"></i>
+              <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
+                {{ orden.diasRestantes }} días
+              </small>
+            </div>
+          </div>
+
+          <div class="orden-actions">
+            <button class="btn-action" (click)="cambiarEstado(orden, 'proceso_laboratorio'); $event.stopPropagation()"
+              title="Mover a Laboratorio">
+              <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Indicador de más órdenes -->
+        <div class="more-orders-indicator" *ngIf="ordenesEnTienda.length > maxOrdenesPorColumna">
+          <span class="badge bg-secondary">
+            +{{ ordenesEnTienda.length - maxOrdenesPorColumna }} más
+          </span>
+          <button class="btn-view-all" (click)="verTodasOrdenes('en_tienda')">
+            Ver todas
+          </button>
+        </div>
+      </div>
+
+      <ng-template #emptyTienda>
+        <div class="empty-column">
+          <i class="bi bi-inbox"></i>
+          <p>No hay órdenes en tienda</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Columna: En Laboratorio -->
+    <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesEnProceso"
+      (cdkDropListDropped)="drop($event, 'proceso_laboratorio')">
+      <div class="column-header" style="border-color: #f57c00;">
+        <div class="column-title">
+          <span class="column-badge" style="background: #f57c00;">{{ ordenesEnProceso.length }}</span>
+          <h3><i class="bi bi-gear"></i> En Laboratorio</h3>
+          <!-- Botón para mover todos -->
+          <div class="column-actions" *ngIf="ordenesEnProceso.length > 0">
+            <button class="btn-move-all"
+              (click)="moverTodos(ordenesEnProceso, 'proceso_laboratorio', 'listo_laboratorio')"
+              title="Marcar todos como listos">
+              <i class="bi bi-check-circle"></i> Marcar Todos Listos
+            </button>
+          </div>
+        </div>
+        <small>En proceso de creación</small>
+      </div>
+
+      <div class="ordenes-list" *ngIf="ordenesEnProceso.length > 0; else emptyProceso"
+        [class.limited-view]="ordenesEnProceso.length > maxOrdenesPorColumna">
+        <div class="orden-card" *ngFor="let orden of (ordenesEnProceso | slice:0:maxOrdenesPorColumna)" cdkDrag
+          [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
+          <div class="orden-progreso">
+            <div class="progreso-bar">
+              <div class="progreso-fill" [style.width.%]="orden.progreso || 0"></div>
+            </div>
+            <small>{{ orden.progreso || 0 }}%</small>
+          </div>
+
+          <div class="orden-cliente">
+            <i class="bi bi-person"></i>
+            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 20)
+              }}</span>
+          </div>
+
+          <div class="orden-producto">
+            <i class="bi bi-eyeglasses"></i>
+            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 25) }}</span>
+          </div>
+
+          <div class="orden-meta">
+            <div class="meta-item">
+              <i class="bi bi-person-badge"></i>
+              <small [title]="orden.tecnicoAsignado || 'Sin asignar'">
+                Téc: {{ truncarTexto(orden.tecnicoAsignado || 'Sin asignar', 15) }}
+              </small>
+            </div>
+            <div class="meta-item">
+              <i class="bi bi-calendar"></i>
+              <small>Inicio: {{ orden.fechaInicioProceso | date:'dd/MM' }}</small>
+            </div>
+          </div>
+
+          <div class="orden-actions">
+            <button class="btn-action" (click)="actualizarProgreso(orden); $event.stopPropagation()"
+              title="Actualizar progreso">
+              <i class="bi bi-percent"></i>
+            </button>
+            <button class="btn-action" (click)="cambiarEstado(orden, 'listo_laboratorio'); $event.stopPropagation()"
+              title="Marcar como listo">
+              <i class="bi bi-check-circle"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Indicador de más órdenes -->
+        <div class="more-orders-indicator" *ngIf="ordenesEnProceso.length > maxOrdenesPorColumna">
+          <span class="badge bg-secondary">
+            +{{ ordenesEnProceso.length - maxOrdenesPorColumna }} más
+          </span>
+          <button class="btn-view-all" (click)="verTodasOrdenes('proceso_laboratorio')">
+            Ver todas
+          </button>
+        </div>
+      </div>
+
+      <ng-template #emptyProceso>
+        <div class="empty-column">
+          <i class="bi bi-gear"></i>
+          <p>No hay órdenes en proceso</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Columna: Listo en Laboratorio -->
+    <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesListasLaboratorio"
+      (cdkDropListDropped)="drop($event, 'listo_laboratorio')">
+      <div class="column-header" style="border-color: #388e3c;">
+        <div class="column-title">
+          <span class="column-badge" style="background: #388e3c;">{{ ordenesListasLaboratorio.length }}</span>
+          <h3><i class="bi bi-check-circle"></i> Listo en Lab</h3>
+          <!-- Botón para mover todos -->
+          <div class="column-actions" *ngIf="ordenesListasLaboratorio.length > 0">
+            <button class="btn-move-all"
+              (click)="moverTodos(ordenesListasLaboratorio, 'listo_laboratorio', 'pendiente_retiro')"
+              title="Enviar todos a tienda">
+              <i class="bi bi-truck"></i> Enviar Todos
+            </button>
+          </div>
+        </div>
+        <small>Órdenes terminadas</small>
+      </div>
+
+      <div class="ordenes-list" *ngIf="ordenesListasLaboratorio.length > 0; else emptyListo"
+        [class.limited-view]="ordenesListasLaboratorio.length > maxOrdenesPorColumna">
+        <div class="orden-card" *ngFor="let orden of (ordenesListasLaboratorio | slice:0:maxOrdenesPorColumna)" cdkDrag
+          [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
+          <div class="orden-card-header">
+            <span class="badge-success">
+              <i class="bi bi-check-lg"></i> Terminado
+            </span>
+            <span class="orden-fecha">
+              {{ orden.fechaTerminacion | date:'dd/MM' }}
+            </span>
+          </div>
+
+          <div class="orden-cliente">
+            <i class="bi bi-person"></i>
+            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 20)
+              }}</span>
+          </div>
+
+          <div class="orden-producto">
+            <i class="bi bi-eyeglasses"></i>
+            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 25) }}</span>
+          </div>
+
+          <div class="orden-meta">
+            <div class="meta-item">
+              <i class="bi bi-person-badge"></i>
+              <small [title]="orden.tecnicoAsignado">
+                Téc: {{ truncarTexto(orden.tecnicoAsignado, 15) }}
+              </small>
+            </div>
+            <div class="meta-item">
+              <i class="bi bi-clock-history"></i>
+              <small>Listo hace: {{ calcularDiasDesde(orden.fechaTerminacion) }} días</small>
+            </div>
+          </div>
+
+          <div class="orden-actions">
+            <button class="btn-action" (click)="cambiarEstado(orden, 'pendiente_retiro'); $event.stopPropagation()"
+              title="Enviar a tienda">
+              <i class="bi bi-truck"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Indicador de más órdenes -->
+        <div class="more-orders-indicator" *ngIf="ordenesListasLaboratorio.length > maxOrdenesPorColumna">
+          <span class="badge bg-secondary">
+            +{{ ordenesListasLaboratorio.length - maxOrdenesPorColumna }} más
+          </span>
+          <button class="btn-view-all" (click)="verTodasOrdenes('listo_laboratorio')">
+            Ver todas
+          </button>
+        </div>
+      </div>
+
+      <ng-template #emptyListo>
+        <div class="empty-column">
+          <i class="bi bi-check-circle"></i>
+          <p>No hay órdenes listas</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Columna: Pendiente por Retirar -->
+    <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesPendienteRetiro"
+      (cdkDropListDropped)="drop($event, 'pendiente_retiro')">
+      <div class="column-header" style="border-color: #ffa000;">
+        <div class="column-title">
+          <span class="column-badge" style="background: #ffa000;">{{ ordenesPendienteRetiro.length }}</span>
+          <h3><i class="bi bi-clock-history"></i> Pendiente Retiro</h3>
+          <!-- Botón para mover todos -->
+          <div class="column-actions" *ngIf="ordenesPendienteRetiro.length > 0">
+            <button class="btn-move-all" (click)="moverTodos(ordenesPendienteRetiro, 'pendiente_retiro', 'entregado')"
+              title="Marcar todos como entregados">
+              <i class="bi bi-box-seam"></i> Marcar Todos Entregados
+            </button>
+          </div>
+        </div>
+        <small>En tienda, listas para entregar</small>
+      </div>
+
+      <div class="ordenes-list" *ngIf="ordenesPendienteRetiro.length > 0; else emptyPendiente"
+        [class.limited-view]="ordenesPendienteRetiro.length > maxOrdenesPorColumna">
+        <div class="orden-card alert-card" *ngFor="let orden of (ordenesPendienteRetiro | slice:0:maxOrdenesPorColumna)"
+          cdkDrag [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
+          <div class="orden-card-header">
+            <span class="badge-warning">
+              <i class="bi bi-exclamation-triangle"></i> Pendiente
+            </span>
+            <span class="orden-fecha">
+              {{ orden.fechaRecepcionTienda | date:'dd/MM' }}
+            </span>
+          </div>
+
+          <div class="orden-cliente">
+            <i class="bi bi-person"></i>
+            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 20)
+              }}</span>
+          </div>
+
+          <div class="orden-producto">
+            <i class="bi bi-eyeglasses"></i>
+            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 25) }}</span>
+          </div>
+
+          <div class="orden-alerta" *ngIf="orden.diasEnEspera > 7">
+            <i class="bi bi-bell"></i>
+            <small class="text-danger">¡Alerta! {{ orden.diasEnEspera }} días esperando</small>
+          </div>
+
+          <div class="orden-meta">
+            <div class="meta-item">
+              <i class="bi bi-telephone"></i>
+              <small [title]="orden.clienteTelefono">
+                Tel: {{ truncarTexto(orden.clienteTelefono, 12) }}
+              </small>
+            </div>
+            <div class="meta-item">
+              <i class="bi bi-calendar"></i>
+              <small>Espera: {{ orden.diasEnEspera }} días</small>
+            </div>
+          </div>
+
+          <div class="orden-actions">
+            <button class="btn-action btn-success" (click)="cambiarEstado(orden, 'entregado'); $event.stopPropagation()"
+              title="Marcar como entregado">
+              <i class="bi bi-box-seam"></i>
+            </button>
+            <button class="btn-action" (click)="notificarCliente(orden); $event.stopPropagation()"
+              title="Notificar al cliente">
+              <i class="bi bi-chat-dots"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Indicador de más órdenes -->
+        <div class="more-orders-indicator" *ngIf="ordenesPendienteRetiro.length > maxOrdenesPorColumna">
+          <span class="badge bg-secondary">
+            +{{ ordenesPendienteRetiro.length - maxOrdenesPorColumna }} más
+          </span>
+          <button class="btn-view-all" (click)="verTodasOrdenes('pendiente_retiro')">
+            Ver todas
+          </button>
+        </div>
+      </div>
+
+      <ng-template #emptyPendiente>
+        <div class="empty-column">
+          <i class="bi bi-clock-history"></i>
+          <p>No hay órdenes pendientes</p>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- Historial de Entregas (Acordeón) -->
+  <div class="archivo-container">
+    <!-- Encabezado plegable -->
+    <div class="archivo-header" (click)="mostrarArchivo = !mostrarArchivo">
+      <h3>
+        <i class="bi bi-archive"></i>
+        Historial de Entregas
+        <span class="badge bg-purple">{{ordenesEntregadas.length + ordenesArchivadas.length}}</span>
+        <i class="bi bi-chevron-down toggle-icon" [class.rotated]="mostrarArchivo"></i>
+      </h3>
+      <div class="archivo-actions">
+        <button class="btn btn-sm btn-outline-purple" (click)="abrirModalArchivo(); $event.stopPropagation()">
+          <i class="bi bi-box-archive"></i> Ver Archivadas ({{ordenesArchivadas.length}})
+        </button>
+        <button class="btn btn-sm btn-outline-secondary"
+          (click)="configurarDiasAutoArchivo(); $event.stopPropagation()">
+          <i class="bi bi-gear"></i> Config. Auto-Archivo
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenido plegable -->
+    <div class="archivo-content" *ngIf="mostrarArchivo">
+      <!-- Pestañas para Entregados Recientes vs Archivados -->
+      <div class="archivo-tabs">
+        <div class="tab-buttons">
+          <button class="tab-button" [class.active]="tabActiva === 'entregados'" (click)="tabActiva = 'entregados'">
+            <i class="bi bi-box-seam"></i>
+            Entregados Recientes
+            <span class="badge">{{ordenesEntregadas.length}}</span>
+          </button>
+          <button class="tab-button" [class.active]="tabActiva === 'archivados'" (click)="abrirModalArchivo()">
+            <i class="bi bi-archive"></i>
+            Archivados
+            <span class="badge">{{ordenesArchivadas.length}}</span>
+          </button>
+        </div>
+
+        <!-- Contenido de entregados recientes -->
+        <div class="tab-content" *ngIf="tabActiva === 'entregados'">
+          <div class="recent-deliveries">
+            <!-- Miniaturas de órdenes entregadas recientemente -->
+            <div class="delivery-minicard" *ngFor="let orden of ordenesEntregadas.slice(0, 4)"
+              (click)="verDetalleOrden(orden)">
+              <div class="minicard-header">
+                <small>{{orden.codigo}}</small>
+                <span class="days-ago">{{calcularDiasDesde(orden.fechaEntrega)}} días</span>
+              </div>
+              <div class="minicard-body">
+                <div class="minicard-cliente">{{truncarTexto(orden.clienteNombre, 15)}}</div>
+                <div class="minicard-producto">{{truncarTexto(orden.productoNombre, 20)}}</div>
+              </div>
+              <div class="minicard-actions">
+                <button class="btn-icon" (click)="archivarOrden(orden, false); $event.stopPropagation()"
+                  title="Archivar">
+                  <i class="bi bi-archive"></i>
+                </button>
+                <button class="btn-icon" (click)="generarFactura(orden); $event.stopPropagation()" title="Factura">
+                  <i class="bi bi-receipt"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Ver todas -->
+            <div class="view-all-container" *ngIf="ordenesEntregadas.length > 4">
+              <button class="btn-view-all" (click)="verTodasOrdenes('entregado')">
+                Ver todas las {{ordenesEntregadas.length}} entregas
+                <i class="bi bi-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra inferior -->
+  <div class="ordenes-footer">
+    <div class="footer-info">
+      <span class="text-muted">
+        <i class="bi bi-info-circle"></i>
+        Arrastra las tarjetas para cambiar su estado • Haz clic para ver detalles
+      </span>
+    </div>
+    <div class="footer-actions">
+      <button class="btn btn-secondary" (click)="exportarReporte()">
+        <i class="bi bi-file-earmark-excel"></i> Exportar
+      </button>
+      <button class="btn btn-primary" (click)="generarReporte()">
+        <i class="bi bi-printer"></i> Imprimir Reporte
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalle Orden -->
+<div class="modal-backdrop" *ngIf="mostrarModalDetalle" (click)="cerrarModalDetalle()"></div>
+<div class="modal-detalle-orden" *ngIf="mostrarModalDetalle">
+  <div class="modal-header">
+    <h2>
+      <i class="bi bi-clipboard-data"></i>
+      Orden #{{ ordenSeleccionada?.codigo }}
+    </h2>
+    <button class="btn-close-modal" (click)="cerrarModalDetalle()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <!-- Detalle de la orden seleccionada -->
+    <app-detalle-orden [orden]="ordenSeleccionada" (estadoCambiado)="onEstadoCambiado($event)">
+    </app-detalle-orden>
+  </div>
+</div>
+
+<!-- Modal de Archivadas -->
+<div class="modal-backdrop" *ngIf="mostrarModalArchivo" (click)="mostrarModalArchivo = false"></div>
+<div class="modal-archivadas" *ngIf="mostrarModalArchivo">
+  <div class="modal-header">
+    <h2>
+      <i class="bi bi-archive"></i>
+      Órdenes Archivadas
+      <span class="badge bg-white text-purple ms-2">{{ordenesArchivadas.length}}</span>
+    </h2>
+    <button class="btn-close-modal" (click)="mostrarModalArchivo = false">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <div class="search-archivo">
+      <input type="text" [(ngModel)]="filtroArchivo" (input)="filtrarArchivadas()" placeholder="Buscar en archivadas..."
+        class="form-control">
+    </div>
+
+    <div class="archivadas-grid" *ngIf="ordenesFiltradasArchivadas.length > 0; else emptyArchivo">
+      <div class="archivada-card" *ngFor="let orden of ordenesFiltradasArchivadas">
+        <div class="archivada-header">
+          <div class="archivada-codigo">
+            <strong>{{orden.codigo}}</strong>
+            <span class="badge" [ngClass]="'prioridad-' + orden.prioridad">
+              {{getPrioridadTexto(orden.prioridad)}}
+            </span>
+          </div>
+          <span class="archivada-fecha">
+            Archivada: {{orden.fechaArchivado | date:'dd/MM/yy'}}
+          </span>
+        </div>
+
+        <div class="archivada-info">
+          <div class="info-row">
+            <i class="bi bi-person"></i>
+            <span>{{orden.clienteNombre}}</span>
+          </div>
+          <div class="info-row">
+            <i class="bi bi-eyeglasses"></i>
+            <span>{{orden.productoNombre}}</span>
+          </div>
+          <div class="info-row">
+            <i class="bi bi-calendar-check"></i>
+            <span>Entregada: {{orden.fechaEntrega | date:'dd/MM/yy'}}</span>
+          </div>
+        </div>
+
+        <div class="archivada-meta">
+          <div class="meta-item">
+            <i class="bi bi-clock-history"></i>
+            <small>Tiempo total: {{calcularDiasDuracion(orden)}} días</small>
+          </div>
+          <div class="meta-item">
+            <i class="bi bi-info-circle"></i>
+            <small>{{orden.motivoArchivo || 'Sin motivo'}}</small>
+          </div>
+        </div>
+
+        <div class="archivada-actions">
+          <button class="btn btn-sm btn-outline-success" (click)="restaurarOrden(orden)">
+            <i class="bi bi-arrow-counterclockwise"></i> Restaurar
+          </button>
+          <button class="btn btn-sm btn-outline-primary" (click)="generarFactura(orden)">
+            <i class="bi bi-receipt"></i> Factura
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #emptyArchivo>
+      <div class="empty-state">
+        <i class="bi bi-archive" style="font-size: 48px; color: #e2e8f0;"></i>
+        <h4>No hay órdenes archivadas</h4>
+        <p class="text-muted">Las órdenes se archivan automáticamente después de {{diasParaAutoArchivo}} días de
+          entrega.</p>
+      </div>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Modal para ver todas las órdenes -->
+<div class="modal-backdrop" *ngIf="mostrarModalOrdenes" (click)="cerrarModalOrdenes()"></div>
+<div class="modal-ordenes" *ngIf="mostrarModalOrdenes">
+  <div class="modal-header">
+    <h2>
+      <i class="bi bi-list-ul"></i>
+      {{tituloModalOrdenes}}
+      <span class="badge bg-primary ms-2">{{ordenesModal.length}}</span>
+    </h2>
+    <button class="btn-close-modal" (click)="cerrarModalOrdenes()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+  
+  <div class="modal-body">
+    <div class="ordenes-modal-list">
+      <div class="orden-modal-card" *ngFor="let orden of ordenesModal" (click)="verDetalleOrden(orden)">
+        <div class="orden-modal-header">
+          <div class="orden-info">
+            <strong>{{orden.codigo}}</strong>
+            <span class="badge" [ngClass]="'prioridad-' + orden.prioridad">
+              {{getPrioridadTexto(orden.prioridad)}}
+            </span>
+          </div>
+          <span class="orden-estado">
+            {{getEstadoTexto(orden.estado)}}
+          </span>
+        </div>
+        
+        <div class="orden-modal-body">
+          <div class="orden-cliente-modal">
+            <i class="bi bi-person"></i>
+            <span>{{orden.clienteNombre}}</span>
+          </div>
+          <div class="orden-producto-modal">
+            <i class="bi bi-eyeglasses"></i>
+            <span>{{orden.productoNombre}}</span>
+          </div>
+          <div class="orden-meta-modal">
+            <div class="meta-item">
+              <i class="bi bi-calendar"></i>
+              <small>Creación: {{orden.fechaCreacion | date:'dd/MM/yy'}}</small>
+            </div>
+            <div class="meta-item" *ngIf="orden.fechaEntregaEstimada">
+              <i class="bi bi-clock"></i>
+              <small>Entrega estimada: {{orden.fechaEntregaEstimada | date:'dd/MM/yy'}}</small>
+            </div>
+          </div>
+        </div>
+        
+        <div class="orden-modal-actions">
+          <button class="btn-action" (click)="verDetalleOrden(orden); $event.stopPropagation()" title="Ver detalles">
+            <i class="bi bi-eye"></i>
+          </button>
+          <button class="btn-action" 
+                  *ngIf="estadoModalActual !== 'entregado' && estadoModalActual !== 'pendiente_retiro'"
+                  (click)="cambiarEstado(orden, getNextEstado(estadoModalActual)); $event.stopPropagation()"
+                  title="Avanzar estado">
+            <i class="bi bi-arrow-right"></i>
+          </button>
+          <button class="btn-action btn-success" 
+                  *ngIf="estadoModalActual === 'pendiente_retiro'"
+                  (click)="cambiarEstado(orden, 'entregado'); $event.stopPropagation()"
+                  title="Marcar como entregado">
+            <i class="bi bi-check-lg"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -82,12 +82,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       icon: 'fas fa-clipboard-list',
       routerLink: '/ordenes-de-trabajo',
       roles: ['admin', 'gerente', 'asesor-optico'],
-      submenu: [
-        { label: 'Órdenes de trabajo', routerLink: '/ordenes-de-trabajo', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Presupuesto', routerLink: '/Ventas/presupuesto', roles: ['admin', 'gerente', 'asesor-optico'] },
-        { label: 'Cierre de caja', routerLink: '/Ventas/cierre-de-caja', roles: ['admin', 'gerente'] }
-      ],
-      underConstruction: true
+      underConstruction: false
     },
     {
       label: 'Gestión de Usuarios',

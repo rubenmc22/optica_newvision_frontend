@@ -54,54 +54,54 @@ export class HistorialVentaService {
     return this.http.get(`${this.apiUrl}/ventas-estadisticas`, { params });
   }
 
-// Modifica temporalmente el método anularVenta para más detalle
-anularVenta(ventaKey: string, motivo: string): Observable<any> {
+  // Modifica temporalmente el método anularVenta para más detalle
+  anularVenta(ventaKey: string, motivo: string): Observable<any> {
     const url = `${this.apiUrl}/ventas-anular/${ventaKey}`;
-    
+
     console.log('🔍 DEBUG - URL:', url);
     console.log('🔍 DEBUG - Motivo:', motivo);
-    
+
     const body = {
-        motivo_cancelacion: motivo
+      motivo_cancelacion: motivo
     };
-    
+
     console.log('🔍 DEBUG - Body:', JSON.stringify(body));
-    
+
     return this.http.put<any>(url, body, {
-        observe: 'response' // Esto nos da toda la respuesta HTTP
+      observe: 'response' // Esto nos da toda la respuesta HTTP
     }).pipe(
-        tap(response => {
-            console.log('✅ Respuesta completa:', {
-                status: response.status,
-                statusText: response.statusText,
-                headers: response.headers,
-                body: response.body
-            });
-        }),
-        map(response => response.body), // Extraer solo el body para compatibilidad
-        catchError(error => {
-            console.error('❌ Error HTTP completo:', {
-                name: error.name,
-                message: error.message,
-                status: error.status,
-                statusText: error.statusText,
-                error: error.error,
-                url: error.url,
-                headers: error.headers
-            });
-            
-            // Mostrar el error específico del backend si existe
-            if (error.error) {
-                console.error('❌ Error del backend:', error.error);
-            }
-            
-            return throwError(() => error);
-        })
+      tap(response => {
+        console.log('✅ Respuesta completa:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers,
+          body: response.body
+        });
+      }),
+      map(response => response.body), // Extraer solo el body para compatibilidad
+      catchError(error => {
+        console.error('❌ Error HTTP completo:', {
+          name: error.name,
+          message: error.message,
+          status: error.status,
+          statusText: error.statusText,
+          error: error.error,
+          url: error.url,
+          headers: error.headers
+        });
+
+        // Mostrar el error específico del backend si existe
+        if (error.error) {
+          console.error('❌ Error del backend:', error.error);
+        }
+
+        return throwError(() => error);
+      })
     );
-}
+  }
 
   realizarAbono(ventaKey: string, datosAbono: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/ventas-abonar/${ventaKey}`, datosAbono);
+    return this.http.put(`${this.apiUrl}/ventas-abonar/${ventaKey}`, datosAbono);
   }
 
   obtenerDetalleVenta(ventaKey: string): Observable<any> {

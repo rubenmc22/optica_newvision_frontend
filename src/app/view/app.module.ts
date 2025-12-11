@@ -11,6 +11,7 @@ import { GraficoTotalSedeComponent } from './dashboard/graficos/grafico-total-se
 import { GraficoPacientesPorMesComponent } from './dashboard/graficos/grafico-pacientes-por-mes/grafico-pacientes-por-mes.component';
 import { NgbTooltipModule } from '@ng-bootstrap/ng-bootstrap';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 // Componentes
 import { AppComponent } from '../app.component';
@@ -37,6 +38,10 @@ import { SafeUrlPipe } from './ventas/generar-venta/safe-url.pipe';
 import { LoaderComponent } from './../shared/loader/loader.component';
 import { SystemConfigComponent } from './system-config/system-config.component';
 import { clientesComponent } from './clientes/clientes.component';
+import { GestionOrdenesTrabajoComponent } from './gestion-ordenes-trabajo/gestion-ordenes-trabajo.component';
+import { DetalleOrdenComponent } from './gestion-ordenes-trabajo/detalle-orden/detalle-orden.component';
+
+
 
 
 
@@ -76,7 +81,9 @@ import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
     PresupuestoComponent,
     CierreCajaComponent,
     clientesComponent,
-    SystemConfigComponent
+    SystemConfigComponent,
+    GestionOrdenesTrabajoComponent,
+    DetalleOrdenComponent
   ],
   imports: [
     NgChartsModule,
@@ -91,6 +98,7 @@ import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
     NgxSkeletonLoaderModule,
     SafeUrlPipe,
     NgbDropdownModule,
+    DragDropModule,
 
     RouterModule.forRoot(appRoutes, {
       onSameUrlNavigation: 'reload',
