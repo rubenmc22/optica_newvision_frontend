@@ -87,17 +87,17 @@
   <!-- Vista Kanban -->
   <div class="kanban-container" cdkDropListGroup>
     <!-- Columna: En Tienda -->
+    <!-- Columna: En Tienda (ejemplo - aplica a todas) -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesEnTienda"
       (cdkDropListDropped)="drop($event, 'en_tienda')">
       <div class="column-header" style="border-color: #1976d2;">
         <div class="column-title">
           <span class="column-badge" style="background: #1976d2;">{{ ordenesEnTienda.length }}</span>
           <h3><i class="bi bi-shop"></i> En Tienda</h3>
-          <!-- Botón para mover todos -->
           <div class="column-actions" *ngIf="ordenesEnTienda.length > 0">
             <button class="btn-move-all" (click)="moverTodos(ordenesEnTienda, 'en_tienda', 'proceso_laboratorio')"
               title="Mover todos a Laboratorio">
-              <i class="bi bi-arrow-right-circle"></i> Mover Todos
+              <i class="bi bi-arrow-right-circle"></i>
             </button>
           </div>
         </div>
@@ -119,13 +119,13 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 20)
+            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 25) }}</span>
+            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 22) }}</span>
           </div>
 
           <div class="orden-meta">
@@ -136,7 +136,7 @@
             <div class="meta-item" *ngIf="orden.diasRestantes !== undefined">
               <i class="bi bi-clock"></i>
               <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
-                {{ orden.diasRestantes }} días
+                {{ orden.diasRestantes }}d
               </small>
             </div>
           </div>
@@ -149,10 +149,9 @@
           </div>
         </div>
 
-        <!-- Indicador de más órdenes -->
         <div class="more-orders-indicator" *ngIf="ordenesEnTienda.length > maxOrdenesPorColumna">
           <span class="badge bg-secondary">
-            +{{ ordenesEnTienda.length - maxOrdenesPorColumna }} más
+            +{{ ordenesEnTienda.length - maxOrdenesPorColumna }}
           </span>
           <button class="btn-view-all" (click)="verTodasOrdenes('en_tienda')">
             Ver todas
@@ -163,35 +162,34 @@
       <ng-template #emptyTienda>
         <div class="empty-column">
           <i class="bi bi-inbox"></i>
-          <p>No hay órdenes en tienda</p>
+          <p>No hay órdenes</p>
         </div>
       </ng-template>
     </div>
 
-    <!-- Columna: En Laboratorio -->
+    <!-- Para la columna "En Laboratorio" - más compacta -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesEnProceso"
       (cdkDropListDropped)="drop($event, 'proceso_laboratorio')">
       <div class="column-header" style="border-color: #f57c00;">
         <div class="column-title">
           <span class="column-badge" style="background: #f57c00;">{{ ordenesEnProceso.length }}</span>
           <h3><i class="bi bi-gear"></i> En Laboratorio</h3>
-          <!-- Botón para mover todos -->
           <div class="column-actions" *ngIf="ordenesEnProceso.length > 0">
             <button class="btn-move-all"
               (click)="moverTodos(ordenesEnProceso, 'proceso_laboratorio', 'listo_laboratorio')"
               title="Marcar todos como listos">
-              <i class="bi bi-check-circle"></i> Marcar Todos Listos
+              <i class="bi bi-check-circle"></i>
             </button>
           </div>
         </div>
-        <small>En proceso de creación</small>
+        <small>En proceso</small>
       </div>
 
       <div class="ordenes-list" *ngIf="ordenesEnProceso.length > 0; else emptyProceso"
         [class.limited-view]="ordenesEnProceso.length > maxOrdenesPorColumna">
         <div class="orden-card" *ngFor="let orden of (ordenesEnProceso | slice:0:maxOrdenesPorColumna)" cdkDrag
           [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
-          <div class="orden-progreso">
+          <div class="orden-progreso" *ngIf="orden.progreso > 0">
             <div class="progreso-bar">
               <div class="progreso-fill" [style.width.%]="orden.progreso || 0"></div>
             </div>
@@ -200,25 +198,21 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 20)
+            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 25) }}</span>
+            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 22) }}</span>
           </div>
 
           <div class="orden-meta">
             <div class="meta-item">
               <i class="bi bi-person-badge"></i>
               <small [title]="orden.tecnicoAsignado || 'Sin asignar'">
-                Téc: {{ truncarTexto(orden.tecnicoAsignado || 'Sin asignar', 15) }}
+                {{ truncarTexto(orden.tecnicoAsignado || 'Sin asignar', 12) }}
               </small>
-            </div>
-            <div class="meta-item">
-              <i class="bi bi-calendar"></i>
-              <small>Inicio: {{ orden.fechaInicioProceso | date:'dd/MM' }}</small>
             </div>
           </div>
 
@@ -234,10 +228,9 @@
           </div>
         </div>
 
-        <!-- Indicador de más órdenes -->
         <div class="more-orders-indicator" *ngIf="ordenesEnProceso.length > maxOrdenesPorColumna">
           <span class="badge bg-secondary">
-            +{{ ordenesEnProceso.length - maxOrdenesPorColumna }} más
+            +{{ ordenesEnProceso.length - maxOrdenesPorColumna }}
           </span>
           <button class="btn-view-all" (click)="verTodasOrdenes('proceso_laboratorio')">
             Ver todas
@@ -248,28 +241,27 @@
       <ng-template #emptyProceso>
         <div class="empty-column">
           <i class="bi bi-gear"></i>
-          <p>No hay órdenes en proceso</p>
+          <p>No hay órdenes</p>
         </div>
       </ng-template>
     </div>
 
-    <!-- Columna: Listo en Laboratorio -->
+    <!-- Para "Listo en Laboratorio" - más compacto -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesListasLaboratorio"
       (cdkDropListDropped)="drop($event, 'listo_laboratorio')">
       <div class="column-header" style="border-color: #388e3c;">
         <div class="column-title">
           <span class="column-badge" style="background: #388e3c;">{{ ordenesListasLaboratorio.length }}</span>
-          <h3><i class="bi bi-check-circle"></i> Listo en Lab</h3>
-          <!-- Botón para mover todos -->
+          <h3><i class="bi bi-check-circle"></i> Listo</h3>
           <div class="column-actions" *ngIf="ordenesListasLaboratorio.length > 0">
             <button class="btn-move-all"
               (click)="moverTodos(ordenesListasLaboratorio, 'listo_laboratorio', 'pendiente_retiro')"
               title="Enviar todos a tienda">
-              <i class="bi bi-truck"></i> Enviar Todos
+              <i class="bi bi-truck"></i>
             </button>
           </div>
         </div>
-        <small>Órdenes terminadas</small>
+        <small>Terminadas</small>
       </div>
 
       <div class="ordenes-list" *ngIf="ordenesListasLaboratorio.length > 0; else emptyListo"
@@ -278,7 +270,7 @@
           [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
           <div class="orden-card-header">
             <span class="badge-success">
-              <i class="bi bi-check-lg"></i> Terminado
+              <i class="bi bi-check-lg"></i>
             </span>
             <span class="orden-fecha">
               {{ orden.fechaTerminacion | date:'dd/MM' }}
@@ -287,25 +279,21 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 20)
+            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 25) }}</span>
+            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 22) }}</span>
           </div>
 
           <div class="orden-meta">
             <div class="meta-item">
               <i class="bi bi-person-badge"></i>
               <small [title]="orden.tecnicoAsignado">
-                Téc: {{ truncarTexto(orden.tecnicoAsignado, 15) }}
+                {{ truncarTexto(orden.tecnicoAsignado, 12) }}
               </small>
-            </div>
-            <div class="meta-item">
-              <i class="bi bi-clock-history"></i>
-              <small>Listo hace: {{ calcularDiasDesde(orden.fechaTerminacion) }} días</small>
             </div>
           </div>
 
@@ -317,10 +305,9 @@
           </div>
         </div>
 
-        <!-- Indicador de más órdenes -->
         <div class="more-orders-indicator" *ngIf="ordenesListasLaboratorio.length > maxOrdenesPorColumna">
           <span class="badge bg-secondary">
-            +{{ ordenesListasLaboratorio.length - maxOrdenesPorColumna }} más
+            +{{ ordenesListasLaboratorio.length - maxOrdenesPorColumna }}
           </span>
           <button class="btn-view-all" (click)="verTodasOrdenes('listo_laboratorio')">
             Ver todas
@@ -331,27 +318,26 @@
       <ng-template #emptyListo>
         <div class="empty-column">
           <i class="bi bi-check-circle"></i>
-          <p>No hay órdenes listas</p>
+          <p>No hay órdenes</p>
         </div>
       </ng-template>
     </div>
 
-    <!-- Columna: Pendiente por Retirar -->
+    <!-- Para "Pendiente por Retirar" - más compacto -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesPendienteRetiro"
       (cdkDropListDropped)="drop($event, 'pendiente_retiro')">
       <div class="column-header" style="border-color: #ffa000;">
         <div class="column-title">
           <span class="column-badge" style="background: #ffa000;">{{ ordenesPendienteRetiro.length }}</span>
-          <h3><i class="bi bi-clock-history"></i> Pendiente Retiro</h3>
-          <!-- Botón para mover todos -->
+          <h3><i class="bi bi-clock-history"></i> Pendiente</h3>
           <div class="column-actions" *ngIf="ordenesPendienteRetiro.length > 0">
             <button class="btn-move-all" (click)="moverTodos(ordenesPendienteRetiro, 'pendiente_retiro', 'entregado')"
               title="Marcar todos como entregados">
-              <i class="bi bi-box-seam"></i> Marcar Todos Entregados
+              <i class="bi bi-box-seam"></i>
             </button>
           </div>
         </div>
-        <small>En tienda, listas para entregar</small>
+        <small>Listas para entregar</small>
       </div>
 
       <div class="ordenes-list" *ngIf="ordenesPendienteRetiro.length > 0; else emptyPendiente"
@@ -360,7 +346,7 @@
           cdkDrag [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
           <div class="orden-card-header">
             <span class="badge-warning">
-              <i class="bi bi-exclamation-triangle"></i> Pendiente
+              <i class="bi bi-exclamation-triangle"></i>
             </span>
             <span class="orden-fecha">
               {{ orden.fechaRecepcionTienda | date:'dd/MM' }}
@@ -369,30 +355,26 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 20)
+            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 25) }}</span>
+            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 22) }}</span>
           </div>
 
           <div class="orden-alerta" *ngIf="orden.diasEnEspera > 7">
             <i class="bi bi-bell"></i>
-            <small class="text-danger">¡Alerta! {{ orden.diasEnEspera }} días esperando</small>
+            <small class="text-danger">{{ orden.diasEnEspera }}d</small>
           </div>
 
           <div class="orden-meta">
             <div class="meta-item">
               <i class="bi bi-telephone"></i>
               <small [title]="orden.clienteTelefono">
-                Tel: {{ truncarTexto(orden.clienteTelefono, 12) }}
+                {{ truncarTexto(orden.clienteTelefono, 10) }}
               </small>
-            </div>
-            <div class="meta-item">
-              <i class="bi bi-calendar"></i>
-              <small>Espera: {{ orden.diasEnEspera }} días</small>
             </div>
           </div>
 
@@ -408,10 +390,9 @@
           </div>
         </div>
 
-        <!-- Indicador de más órdenes -->
         <div class="more-orders-indicator" *ngIf="ordenesPendienteRetiro.length > maxOrdenesPorColumna">
           <span class="badge bg-secondary">
-            +{{ ordenesPendienteRetiro.length - maxOrdenesPorColumna }} más
+            +{{ ordenesPendienteRetiro.length - maxOrdenesPorColumna }}
           </span>
           <button class="btn-view-all" (click)="verTodasOrdenes('pendiente_retiro')">
             Ver todas
@@ -422,7 +403,7 @@
       <ng-template #emptyPendiente>
         <div class="empty-column">
           <i class="bi bi-clock-history"></i>
-          <p>No hay órdenes pendientes</p>
+          <p>No hay órdenes</p>
         </div>
       </ng-template>
     </div>
@@ -638,7 +619,7 @@
       <i class="bi bi-x-lg"></i>
     </button>
   </div>
-  
+
   <div class="modal-body">
     <div class="ordenes-modal-list">
       <div class="orden-modal-card" *ngFor="let orden of ordenesModal" (click)="verDetalleOrden(orden)">
@@ -653,7 +634,7 @@
             {{getEstadoTexto(orden.estado)}}
           </span>
         </div>
-        
+
         <div class="orden-modal-body">
           <div class="orden-cliente-modal">
             <i class="bi bi-person"></i>
@@ -674,21 +655,19 @@
             </div>
           </div>
         </div>
-        
+
         <div class="orden-modal-actions">
           <button class="btn-action" (click)="verDetalleOrden(orden); $event.stopPropagation()" title="Ver detalles">
             <i class="bi bi-eye"></i>
           </button>
-          <button class="btn-action" 
-                  *ngIf="estadoModalActual !== 'entregado' && estadoModalActual !== 'pendiente_retiro'"
-                  (click)="cambiarEstado(orden, getNextEstado(estadoModalActual)); $event.stopPropagation()"
-                  title="Avanzar estado">
+          <button class="btn-action"
+            *ngIf="estadoModalActual !== 'entregado' && estadoModalActual !== 'pendiente_retiro'"
+            (click)="cambiarEstado(orden, getNextEstado(estadoModalActual)); $event.stopPropagation()"
+            title="Avanzar estado">
             <i class="bi bi-arrow-right"></i>
           </button>
-          <button class="btn-action btn-success" 
-                  *ngIf="estadoModalActual === 'pendiente_retiro'"
-                  (click)="cambiarEstado(orden, 'entregado'); $event.stopPropagation()"
-                  title="Marcar como entregado">
+          <button class="btn-action btn-success" *ngIf="estadoModalActual === 'pendiente_retiro'"
+            (click)="cambiarEstado(orden, 'entregado'); $event.stopPropagation()" title="Marcar como entregado">
             <i class="bi bi-check-lg"></i>
           </button>
         </div>
