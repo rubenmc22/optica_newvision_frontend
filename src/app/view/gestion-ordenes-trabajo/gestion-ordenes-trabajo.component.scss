@@ -364,83 +364,83 @@
 // Tarjeta de orden COMPACTA
 .orden-card {
     background: white;
-    border-radius: 12px; // Reducido de 16px
-    padding: 16px; // Reducido de 20px
-    margin-bottom: 12px; // Reducido de 16px
-    border: 1px solid #e2e8f0; // Reducido de 2px
+    border-radius: 12px;  
+    padding: 16px; 
+    margin-bottom: 12px; 
+    border: 1px solid #e2e8f0; 
     cursor: grab;
-    transition: all 0.2s ease; // Más rápido
+    transition: all 0.2s ease; 
     position: relative;
 
     &:hover {
         border-color: var(--color-en-tienda);
-        transform: translateY(-1px); // Reducido de -2px
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); // Reducido
+        transform: translateY(-1px); 
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
     }
 
     &.cdk-drag-preview {
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); // Reducido
-        transform: rotate(1deg); // Reducido
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); 
+        transform: rotate(1deg); 
     }
 
     .orden-card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 12px; // Reducido
+        margin-bottom: 12px; 
 
         .orden-prioridad {
-            font-size: 10px; // Reducido
+            font-size: 10px; 
             font-weight: 600;
-            padding: 3px 8px; // Reducido
+            padding: 3px 8px; 
             border-radius: 50px;
         }
 
         .orden-fecha {
-            font-size: 10px; // Reducido
+            font-size: 10px; 
             color: #64748b;
             background: #f8fafc;
-            padding: 3px 6px; // Reducido
-            border-radius: 4px; // Reducido
+            padding: 3px 6px; 
+            border-radius: 4px; 
         }
 
         .badge-success,
         .badge-warning,
         .badge-delivered {
-            font-size: 10px; // Reducido
+            font-size: 10px; 
             font-weight: 600;
-            padding: 3px 8px; // Reducido
+            padding: 3px 8px; 
             border-radius: 50px;
             display: inline-flex;
             align-items: center;
-            gap: 3px; // Reducido
+            gap: 3px; 
 
             i {
-                font-size: 9px; // Reducido
+                font-size: 9px; 
             }
         }
     }
 
     .orden-progreso {
-        margin-bottom: 12px; // Reducido
+        margin-bottom: 12px; 
 
         .progreso-bar {
-            height: 6px; // Reducido
+            height: 6px; 
             background: #e2e8f0;
-            border-radius: 3px; // Reducido
+            border-radius: 3px; 
             overflow: hidden;
-            margin-bottom: 6px; // Reducido
+            margin-bottom: 6px; 
 
             .progreso-fill {
                 height: 100%;
                 background: linear-gradient(90deg, var(--color-en-proceso), #ffb74d);
-                border-radius: 3px; // Reducido
-                transition: width 0.3s ease; // Más rápido
+                border-radius: 3px; 
+                transition: width 0.3s ease; 
             }
         }
 
         small {
-            font-size: 10px; // Reducido
+            font-size: 10px; 
             color: #64748b;
             font-weight: 600;
         }
@@ -450,18 +450,18 @@
     .orden-producto {
         display: flex;
         align-items: center;
-        gap: 8px; // Reducido
-        margin-bottom: 8px; // Reducido
+        gap: 8px; 
+        margin-bottom: 8px; 
 
         i {
             color: #94a3b8;
-            font-size: 14px; // Reducido
+            font-size: 14px; 
             flex-shrink: 0;
-            width: 14px; // Añadido para alineación
+            width: 14px; 
         }
 
         span {
-            font-size: 12px; // Reducido
+            font-size: 12px; 
             color: #334155;
             font-weight: 500;
             line-height: 1.3;
@@ -475,20 +475,20 @@
 
     .orden-alerta {
         background: #fff2f2;
-        border-radius: 6px; // Reducido
-        padding: 6px 8px; // Reducido
-        margin-bottom: 8px; // Reducido
+        border-radius: 6px; 
+        padding: 6px 8px; 
+        margin-bottom: 8px; 
         display: flex;
         align-items: center;
-        gap: 6px; // Reducido
+        gap: 6px; 
 
         i {
             color: var(--color-alta);
-            font-size: 10px; // Reducido
+            font-size: 10px; 
         }
 
         small {
-            font-size: 10px; // Reducido
+            font-size: 10px; 
             font-weight: 600;
             line-height: 1.2;
         }
@@ -497,23 +497,23 @@
     .orden-meta {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 8px; // Reducido
-        margin-bottom: 12px; // Reducido
+        gap: 8px; 
+        margin-bottom: 12px; 
 
         .meta-item {
             display: flex;
             align-items: center;
-            gap: 4px; // Reducido
+            gap: 4px; 
 
             i {
                 color: #94a3b8;
-                font-size: 10px; // Reducido
+                font-size: 10px; 
                 flex-shrink: 0;
-                width: 10px; // Añadido para alineación
+                width: 10px; 
             }
 
             small {
-                font-size: 10px; // Reducido
+                font-size: 10px; 
                 color: #64748b;
                 line-height: 1.2;
             }
@@ -522,12 +522,12 @@
 
     .orden-actions {
         display: flex;
-        gap: 6px; // Reducido
+        gap: 6px; 
         justify-content: flex-end;
 
         .btn-action {
-            width: 28px; // Reducido
-            height: 28px; // Reducido
+            width: 28px; 
+            height: 28px; 
             border-radius: 50%;
             border: 1px solid #e2e8f0;
             background: white;
@@ -536,14 +536,14 @@
             align-items: center;
             justify-content: center;
             transition: all 0.2s ease;
-            font-size: 12px; // Reducido
+            font-size: 12px; 
             cursor: pointer;
 
             &:hover {
                 background: #f1f5f9;
                 border-color: var(--color-en-tienda);
                 color: var(--color-en-tienda);
-                transform: scale(1.05); // Reducido
+                transform: scale(1.05); 
             }
         }
     }
@@ -552,15 +552,15 @@
 // Tarjetas más compactas en el modal de archivo
 .delivery-minicard {
     background: white;
-    border-radius: 10px; // Reducido
-    padding: 12px; // Reducido
+    border-radius: 10px; 
+    padding: 12px; 
     border: 1px solid #e2e8f0;
     cursor: pointer;
     transition: all 0.15s ease; // Más rápido
 
     &:hover {
-        transform: translateY(-1px); // Reducido
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); // Reducido
+        transform: translateY(-1px); 
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); 
         border-color: #7b1fa2;
     }
 
@@ -568,16 +568,16 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 8px; // Reducido
+        margin-bottom: 8px; 
 
         small {
             font-weight: 600;
             color: #475569;
-            font-size: 11px; // Reducido
+            font-size: 11px; 
         }
 
         .days-ago {
-            font-size: 9px; // Reducido
+            font-size: 9px; 
             background: #e8f5e9;
             color: #388e3c;
             padding: 2px 6px;
@@ -586,17 +586,17 @@
     }
 
     .minicard-body {
-        margin-bottom: 8px; // Reducido
+        margin-bottom: 8px; 
 
         .minicard-cliente {
             font-weight: 600;
-            font-size: 12px; // Reducido
+            font-size: 12px; 
             color: #1e293b;
-            margin-bottom: 2px; // Reducido
+            margin-bottom: 2px; 
         }
 
         .minicard-producto {
-            font-size: 11px; // Reducido
+            font-size: 11px; 
             color: #64748b;
         }
     }
@@ -604,11 +604,11 @@
     .minicard-actions {
         display: flex;
         justify-content: flex-end;
-        gap: 6px; // Reducido
+        gap: 6px; 
 
         .btn-icon {
-            width: 24px; // Reducido
-            height: 24px; // Reducido
+            width: 24px; 
+            height: 24px; 
             border-radius: 50%;
             border: 1px solid #e2e8f0;
             background: white;
@@ -616,8 +616,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px; // Reducido
-            transition: all 0.15s ease; // Más rápido
+            font-size: 11px; 
+            transition: all 0.15s ease; 
             cursor: pointer;
 
             &:hover {
@@ -631,15 +631,15 @@
 
 // Ajustar altura de columnas para más tarjetas
 .kanban-column {
-    min-height: 350px; // Reducido de 400px
-    max-height: 550px; // Reducido de 600px
+    min-height: 350px; 
+    max-height: 550px; 
 
     .ordenes-list.limited-view {
-        max-height: 600px; // Aumentado para 4 tarjetas
+        max-height: 600px; 
 
         .orden-card {
             &:nth-child(n+5) {
-                // Cambiado de n+3 a n+5
+                
                 opacity: 0.7;
             }
         }
@@ -648,57 +648,57 @@
 
 // Reducir padding general en columnas
 .kanban-column {
-    padding: 16px; // Reducido de 20px
+    padding: 16px; 
 }
 
 // Columnas más compactas en responsive
 @media (max-width: 768px) {
     .kanban-column {
-        padding: 12px; // Más reducido en móvil
-        min-height: 300px; // Más reducido en móvil
+        padding: 12px; 
+        min-height: 300px;
     }
 }
 
 // Ajustar espaciado vertical general
 .gestion-ordenes-container {
-    padding: 16px; // Reducido de 20px
+    padding: 16px; 
 }
 
 // Reducir header
 .ordenes-header {
-    padding: 20px; // Reducido de 24px
-    margin-bottom: 20px; // Reducido de 24px
+    padding: 20px; 
+    margin-bottom: 20px; 
 
     .header-content {
-        margin-bottom: 20px; // Reducido de 24px
+        margin-bottom: 20px;
     }
 }
 
 // Estadísticas más compactas
 .stats-container {
-    gap: 16px; // Reducido de 20px
+    gap: 16px; 
 
     .stat-card {
-        padding: 16px; // Reducido de 20px
-        min-width: 160px; // Reducido de 180px
+        padding: 16px; 
+        min-width: 160px; 
 
         .stat-icon {
-            width: 48px; // Reducido de 56px
-            height: 48px; // Reducido de 56px
-            border-radius: 12px; // Reducido de 14px
+            width: 48px;
+            height: 48px; 
+            border-radius: 12px;
 
             i {
-                font-size: 20px; // Reducido de 24px
+                font-size: 20px;
             }
         }
 
         .stat-info {
             .stat-count {
-                font-size: 24px; // Reducido de 28px
+                font-size: 24px; 
             }
 
             .stat-label {
-                font-size: 13px; // Reducido de 14px
+                font-size: 13px; 
             }
         }
     }
@@ -706,59 +706,59 @@
 
 // Footer más compacto
 .ordenes-footer {
-    padding: 16px 20px; // Reducido
-    margin-top: 16px; // Reducido
+    padding: 16px 20px; 
+    margin-top: 16px; 
 
     .footer-actions .btn {
-        padding: 8px 20px; // Reducido
-        font-size: 13px; // Reducido
+        padding: 8px 20px; 
+        font-size: 13px; 
     }
 }
 
 // Archivo container más compacto
 .archivo-container {
     .archivo-header {
-        padding: 16px; // Reducido de 20px
+        padding: 16px; 
     }
 
     .archivo-content {
-        padding: 16px; // Reducido de 20px
+        padding: 16px; 
     }
 }
 
 // Modal de órdenes más compacto
 .modal-ordenes {
     .modal-header {
-        padding: 20px 24px; // Reducido
+        padding: 20px 24px; 
     }
 
     .modal-body {
-        padding: 20px; // Reducido
+        padding: 20px; 
 
         .orden-modal-card {
-            padding: 16px; // Reducido
-            margin-bottom: 10px; // Reducido
+            padding: 16px; 
+            margin-bottom: 10px; 
         }
     }
 }
 
 // Ajustar grid gap
 .kanban-container {
-    gap: 20px; // Reducido de 24px
+    gap: 20px; 
 }
 
 // Columnas vacías más compactas
 .empty-column {
-    padding: 30px 16px; // Reducido
-    min-height: 200px; // Reducido
+    padding: 30px 16px; 
+    min-height: 200px; 
 
     i {
-        font-size: 36px; // Reducido de 48px
-        margin-bottom: 12px; // Reducido
+        font-size: 36px; 
+        margin-bottom: 12px; 
     }
 
     p {
-        font-size: 13px; // Reducido
+        font-size: 13px; 
     }
 }
 
@@ -1420,46 +1420,102 @@
     }
 }
 
-// Estilos para tooltips
-[title] {
-    position: relative;
-
-    &:hover::after {
-        content: attr(title);
-        position: absolute;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #1e293b;
-        color: white;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 12px;
-        white-space: nowrap;
-        z-index: 1000;
-        margin-bottom: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-
-        // Flecha
-        &::before {
-            content: '';
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            border: 6px solid transparent;
-            border-top-color: #1e293b;
-        }
+// Tooltips
+[data-tooltip] {
+  position: relative;
+  cursor: help;
+  
+  &:hover::before {
+    content: attr(data-tooltip);
+    position: fixed;
+    top: calc(var(--mouse-y, 0px) - 50px);
+    left: calc(var(--mouse-x, 0px) - 50px);
+    background: #1e293b;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    white-space: normal;
+    word-wrap: break-word;
+    max-width: 300px;
+    min-width: 150px;
+    z-index: 2147483647;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    text-align: left;
+    pointer-events: none;
+    display: block;
+    
+    // Flecha
+    &::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 30px;
+      border: 8px solid transparent;
+      border-top-color: #1e293b;
     }
+  }
 }
 
-// Para los textos truncados que queremos tooltip
-.cliente-nombre,
-.orden-producto span {
-    cursor: default;
+// Deshabilitar tooltips nativos
+[data-tooltip] {
+  border-bottom: none; // Remover subrayado nativo
+  border: none;
+  visibility: none;
+}
 
-    &:hover {
-        color: var(--color-en-tienda);
+// Posicionamiento específico para botones
+.btn-action[data-tooltip]:hover::before {
+  left: calc(var(--mouse-x, 0px) - 50px) !important; 
+}
+
+// Posicionamiento específico para elementos en tarjetas
+.orden-card [data-tooltip]:hover::before {
+  left: calc(var(--mouse-x, 0px) - 120px) !important; 
+}
+
+// Asegurar que los contenedores no corten tooltips
+.kanban-column,
+.ordenes-list,
+.orden-card {
+    overflow: visible !important;
+}
+
+// Solución específica para tooltips en tarjetas
+.orden-card {
+    .cliente-nombre,
+    .orden-producto span {
+        position: relative;
+        display: inline-block;
+
+        &:hover::after {
+            content: attr(title);
+            position: fixed !important; 
+            top: var(--mouse-y, 100px);
+            left: calc(var(--mouse-x, 50%) - 100px) !important; 
+            transform: translateX(0) !important;
+            background: #1e293b;
+            color: white;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            white-space: normal;
+            word-wrap: break-word;
+            max-width: 300px;
+            z-index: 2147483647 !important; 
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            text-align: left;
+            pointer-events: none;
+
+            &::before {
+                content: '';
+                position: absolute;
+                top: 100%;
+                left: 30px; 
+                border: 8px solid transparent;
+                border-top-color: #1e293b;
+            }
+        }
     }
 }
 
@@ -1793,6 +1849,313 @@
                     }
                 }
             }
+        }
+    }
+}
+
+// Estilos para el buscador del modal
+.modal-search-container {
+    margin-bottom: 24px;
+
+    .search-box {
+        position: relative;
+        margin-bottom: 16px;
+
+        .search-input {
+            padding: 12px 20px 12px 45px;
+            border-radius: 50px;
+            border: 2px solid #e3e8f0;
+            background: #f8fafc;
+            font-size: 14px;
+            width: 100%;
+            transition: all 0.3s ease;
+
+            &:focus {
+                border-color: var(--color-en-tienda);
+                box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+                background: white;
+                outline: none;
+            }
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 16px;
+        }
+
+        .btn-clear-search {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+
+            &:hover {
+                background: #e2e8f0;
+                color: #475569;
+            }
+        }
+    }
+
+    .filtros-rapidos {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+
+        .btn-group {
+            .btn {
+                padding: 6px 12px;
+                font-size: 12px;
+                font-weight: 600;
+
+                &.active {
+                    background-color: var(--color-en-tienda);
+                    border-color: var(--color-en-tienda);
+                    color: white;
+                }
+
+                &.btn-outline-danger.active {
+                    background-color: var(--color-alta);
+                    border-color: var(--color-alta);
+                }
+
+                &.btn-outline-warning.active {
+                    background-color: var(--color-media);
+                    border-color: var(--color-media);
+                    color: #212529;
+                }
+
+                &.btn-outline-success.active {
+                    background-color: var(--color-baja);
+                    border-color: var(--color-baja);
+                }
+            }
+        }
+
+        .sort-select {
+            border-radius: 50px;
+            border: 2px solid #e3e8f0;
+            padding: 6px 12px;
+            font-size: 12px;
+            min-width: 180px;
+            cursor: pointer;
+        }
+    }
+}
+
+// Información de resultados
+.resultados-info {
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    font-size: 13px;
+
+    small {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        span {
+            padding: 2px 6px;
+            background: #e2e8f0;
+            border-radius: 4px;
+        }
+    }
+}
+
+// Indicador de coincidencia en búsqueda
+.search-match-indicator {
+    background: #e3f2fd;
+    color: var(--color-en-tienda);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    margin-left: 8px;
+}
+
+// Resaltado de texto coincidente
+.highlight {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+// Sin resultados
+.no-results {
+    text-align: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+
+    i {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    h4 {
+        margin: 0 0 8px 0;
+        color: #64748b;
+    }
+
+    p {
+        font-size: 14px;
+
+        a {
+            text-decoration: none;
+
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+    }
+}
+
+// Paginación
+.modal-pagination {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .pagination-info {
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+
+        .btn-pagination {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+
+            &:hover:not(:disabled) {
+                background: #f1f5f9;
+                border-color: var(--color-en-tienda);
+                color: var(--color-en-tienda);
+            }
+
+            &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+        }
+
+        .pagina-info {
+            font-size: 13px;
+            color: #64748b;
+        }
+    }
+}
+
+// Botón para mover rápido
+.btn-action.btn-info {
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #17a2b8;
+
+    &:hover {
+        background: #17a2b8;
+        border-color: #17a2b8;
+        color: white;
+    }
+}
+
+// Tarjetas más compactas en el modal
+.orden-modal-card {
+    .orden-modal-header {
+        .orden-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+
+            strong {
+                font-size: 14px;
+            }
+
+            .badge {
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+        }
+    }
+
+    .orden-modal-body {
+
+        .orden-cliente-modal,
+        .orden-producto-modal {
+            span {
+                font-size: 13px;
+                line-height: 1.4;
+            }
+        }
+    }
+}
+
+// Responsive para el modal
+@media (max-width: 768px) {
+    .modal-ordenes {
+        width: 95%;
+
+        .modal-search-container {
+            .filtros-rapidos {
+                flex-direction: column;
+                align-items: stretch;
+
+                .btn-group {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+
+                    .btn {
+                        padding: 8px 4px;
+                        font-size: 11px;
+                    }
+                }
+
+                .sort-select {
+                    width: 100%;
+                }
+            }
+        }
+
+        .modal-pagination {
+            flex-direction: column;
+            gap: 12px;
         }
     }
 }

@@ -224,22 +224,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     this.verificarAutoArchivo();
   }
 
-  // 🔥 NUEVO: Método para ver órdenes en modal
-  verOrdenesEnModal(ordenes: any[], titulo: string, estado: string) {
-    this.ordenesModal = [...ordenes];
-    this.tituloModalOrdenes = titulo;
-    this.estadoModalActual = estado;
-    this.mostrarModalOrdenes = true;
-  }
-
-  // 🔥 NUEVO: Método para cerrar modal de órdenes
-  cerrarModalOrdenes() {
-    this.mostrarModalOrdenes = false;
-    this.ordenesModal = [];
-    this.tituloModalOrdenes = '';
-    this.estadoModalActual = '';
-  }
-
   // 🔥 NUEVO: Método para ver todas las órdenes de un estado
   verTodasOrdenes(estado: string) {
     const ordenes = this.getOrdenesPorEstado(estado);
@@ -458,7 +442,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     } else {
       orden.fechaEntrega = new Date();
       orden.entregadoPor = 'Usuario Actual';
-      console.log(`📦 Orden ${orden.codigo} marcada como entregada`);
 
       // Añadir a entregadas
       this.ordenesEntregadas.push(orden);
@@ -522,7 +505,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     }
   }
 
-  // 🔥 NUEVO: Método actualizado para entregas individuales
+  // Método actualizado para entregas individuales
   marcarComoEntregado(orden: any) {
     this.cambiarEstado(orden, 'entregado');
   }
@@ -692,4 +675,202 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
     return flujo[estadoActual] || estadoActual;
   }
+
+
+
+
+
+
+
+
+
+
+  // Agrega estas propiedades al componente
+filtroModal: string = '';
+filtroPrioridadModal: string = '';
+ordenModal: string = 'fechaCreacion_desc';
+ordenesModalFiltradas: any[] = [];
+paginaActual: number = 0;
+tamanoPagina: number = 20; // Órdenes por página
+
+// Método para filtrar órdenes en el modal
+filtrarOrdenesModal() {
+  if (!this.filtroModal && !this.filtroPrioridadModal) {
+    this.ordenesModalFiltradas = [...this.ordenesModal];
+  } else {
+    this.ordenesModalFiltradas = this.ordenesModal.filter(orden => {
+      // Filtrar por texto de búsqueda
+      let coincideTexto = true;
+      if (this.filtroModal) {
+        const busqueda = this.filtroModal.toLowerCase();
+        coincideTexto = 
+          orden.codigo.toLowerCase().includes(busqueda) ||
+          orden.clienteNombre.toLowerCase().includes(busqueda) ||
+          orden.productoNombre.toLowerCase().includes(busqueda) ||
+          orden.ventaId.toLowerCase().includes(busqueda) ||
+          orden.tecnicoAsignado?.toLowerCase().includes(busqueda) ||
+          false;
+      }
+
+      // Filtrar por prioridad
+      let coincidePrioridad = true;
+      if (this.filtroPrioridadModal) {
+        coincidePrioridad = orden.prioridad === this.filtroPrioridadModal;
+      }
+
+      return coincideTexto && coincidePrioridad;
+    });
+  }
+
+  // Ordenar los resultados
+  this.ordenarOrdenesModal();
+  
+  // Reiniciar paginación
+  this.paginaActual = 0;
+}
+
+// Método para ordenar órdenes
+ordenarOrdenesModal() {
+  const [campo, direccion] = this.ordenModal.split('_');
+  
+  this.ordenesModalFiltradas.sort((a, b) => {
+    let valorA = a[campo];
+    let valorB = b[campo];
+    
+    // Manejar prioridades especiales
+    if (campo === 'prioridad') {
+      const ordenPrioridad = { 'alta': 3, 'media': 2, 'baja': 1 };
+      valorA = ordenPrioridad[a.prioridad] || 0;
+      valorB = ordenPrioridad[b.prioridad] || 0;
+    }
+    
+    // Manejar fechas
+    if (valorA instanceof Date) valorA = valorA.getTime();
+    if (valorB instanceof Date) valorB = valorB.getTime();
+    
+    // Orden ascendente/descendente
+    if (direccion === 'desc') {
+      return valorB > valorA ? 1 : valorB < valorA ? -1 : 0;
+    } else {
+      return valorA > valorB ? 1 : valorA < valorB ? -1 : 0;
+    }
+  });
+}
+
+// Método para resaltar texto coincidente
+resaltarTexto(texto: string, busqueda: string): string {
+  if (!busqueda || !texto) return texto;
+  
+  const busquedaLower = busqueda.toLowerCase();
+  const textoLower = texto.toLowerCase();
+  const indice = textoLower.indexOf(busquedaLower);
+  
+  if (indice === -1) return texto;
+  
+  const antes = texto.substring(0, indice);
+  const coincidencia = texto.substring(indice, indice + busqueda.length);
+  const despues = texto.substring(indice + busqueda.length);
+  
+  return `${antes}<span class="highlight">${coincidencia}</span>${despues}`;
+}
+
+// Verificar si una orden tiene coincidencia
+tieneCoincidencia(orden: any): boolean {
+  if (!this.filtroModal) return false;
+  
+  const busqueda = this.filtroModal.toLowerCase();
+  return [
+    orden.codigo.toLowerCase(),
+    orden.clienteNombre.toLowerCase(),
+    orden.productoNombre.toLowerCase(),
+    orden.ventaId.toLowerCase(),
+    orden.tecnicoAsignado?.toLowerCase() || ''
+  ].some(texto => texto.includes(busqueda));
+}
+
+// Establecer filtro de prioridad
+setFiltroPrioridadModal(prioridad: string) {
+  this.filtroPrioridadModal = prioridad;
+  this.filtrarOrdenesModal();
+}
+
+// Limpiar todos los filtros
+limpiarFiltroModal() {
+  this.filtroModal = '';
+  this.filtroPrioridadModal = '';
+  this.filtrarOrdenesModal();
+}
+
+// Método para mover orden rápidamente (mover al siguiente estado)
+moverOrdenRapido(orden: any) {
+  const siguienteEstado = this.getNextEstado(this.estadoModalActual);
+  if (siguienteEstado && confirm(`¿Mover orden ${orden.codigo} a ${this.getEstadoTexto(siguienteEstado)}?`)) {
+    this.cambiarEstado(orden, siguienteEstado);
+    
+    // Remover del array de órdenes filtradas
+    this.ordenesModalFiltradas = this.ordenesModalFiltradas.filter(o => o.id !== orden.id);
+    
+    // Actualizar contador
+    alert(`Orden ${orden.codigo} movida a ${this.getEstadoTexto(siguienteEstado)}`);
+  }
+}
+
+// Método actualizado para abrir el modal
+verOrdenesEnModal(ordenes: any[], titulo: string, estado: string) {
+  this.ordenesModal = [...ordenes];
+  this.tituloModalOrdenes = titulo;
+  this.estadoModalActual = estado;
+  
+  // Reiniciar filtros
+  this.filtroModal = '';
+  this.filtroPrioridadModal = '';
+  this.ordenModal = 'fechaCreacion_desc';
+  
+  // Filtrar y mostrar
+  this.filtrarOrdenesModal();
+  this.mostrarModalOrdenes = true;
+}
+
+// Método actualizado para cerrar el modal
+cerrarModalOrdenes() {
+  this.mostrarModalOrdenes = false;
+  this.ordenesModal = [];
+  this.ordenesModalFiltradas = [];
+  this.tituloModalOrdenes = '';
+  this.estadoModalActual = '';
+  this.filtroModal = '';
+  this.filtroPrioridadModal = '';
+  this.paginaActual = 0;
+}
+
+// Propiedades calculadas para paginación
+get inicioPaginacion(): number {
+  return this.paginaActual * this.tamanoPagina;
+}
+
+get finPaginacion(): number {
+  return Math.min((this.paginaActual + 1) * this.tamanoPagina, this.ordenesModalFiltradas.length);
+}
+
+get totalPaginas(): number {
+  return Math.ceil(this.ordenesModalFiltradas.length / this.tamanoPagina);
+}
+
+// Métodos de paginación
+paginaAnterior() {
+  if (this.paginaActual > 0) {
+    this.paginaActual--;
+  }
+}
+
+paginaSiguiente() {
+  if (this.paginaActual < this.totalPaginas - 1) {
+    this.paginaActual++;
+  }
+}
+
+// Obtener órdenes paginadas para mostrar
+get ordenesModalPagina(): any[] {
+  return this.ordenesModalFiltradas.slice(this.inicioPaginacion, this.finPaginacion);
+}
 }

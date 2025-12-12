@@ -23,7 +23,7 @@
             <option value="entregado">Entregado</option>
           </select>
 
-          <button class="btn btn-refresh" (click)="recargarOrdenes()" title="Recargar">
+          <button class="btn btn-refresh" [attr.data-tooltip]="'Recargar'" (click)="recargarOrdenes()">
             <i class="bi bi-arrow-clockwise"></i>
           </button>
         </div>
@@ -87,7 +87,6 @@
   <!-- Vista Kanban -->
   <div class="kanban-container" cdkDropListGroup>
     <!-- Columna: En Tienda -->
-    <!-- Columna: En Tienda (ejemplo - aplica a todas) -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesEnTienda"
       (cdkDropListDropped)="drop($event, 'en_tienda')">
       <div class="column-header" style="border-color: #1976d2;">
@@ -96,7 +95,7 @@
           <h3><i class="bi bi-shop"></i> En Tienda</h3>
           <div class="column-actions" *ngIf="ordenesEnTienda.length > 0">
             <button class="btn-move-all" (click)="moverTodos(ordenesEnTienda, 'en_tienda', 'proceso_laboratorio')"
-              title="Mover todos a Laboratorio">
+              [attr.data-tooltip]="'Mover todos a Laboratorio'">
               <i class="bi bi-arrow-right-circle"></i>
             </button>
           </div>
@@ -109,9 +108,6 @@
         <div class="orden-card" *ngFor="let orden of (ordenesEnTienda | slice:0:maxOrdenesPorColumna)" cdkDrag
           [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
           <div class="orden-card-header">
-            <span class="orden-prioridad" [ngClass]="'prioridad-' + orden.prioridad">
-              {{ getPrioridadTexto(orden.prioridad) }}
-            </span>
             <span class="orden-fecha">
               {{ orden.fechaCreacion | date:'dd/MM' }}
             </span>
@@ -119,13 +115,14 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 18)
+            <span class="cliente-nombre" >{{ truncarTexto(orden.clienteNombre,
+              18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 22) }}</span>
+            <span >{{ truncarTexto(orden.productoNombre, 22) }}</span>
           </div>
 
           <div class="orden-meta">
@@ -143,7 +140,7 @@
 
           <div class="orden-actions">
             <button class="btn-action" (click)="cambiarEstado(orden, 'proceso_laboratorio'); $event.stopPropagation()"
-              title="Mover a Laboratorio">
+              [attr.data-tooltip]="'Mover a Laboratorio'">
               <i class="bi bi-arrow-right"></i>
             </button>
           </div>
@@ -167,7 +164,7 @@
       </ng-template>
     </div>
 
-    <!-- Para la columna "En Laboratorio" - más compacta -->
+    <!-- Columna: En Laboratorio -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesEnProceso"
       (cdkDropListDropped)="drop($event, 'proceso_laboratorio')">
       <div class="column-header" style="border-color: #f57c00;">
@@ -177,7 +174,7 @@
           <div class="column-actions" *ngIf="ordenesEnProceso.length > 0">
             <button class="btn-move-all"
               (click)="moverTodos(ordenesEnProceso, 'proceso_laboratorio', 'listo_laboratorio')"
-              title="Marcar todos como listos">
+              [attr.data-tooltip]="'Marcar todos como listos'">
               <i class="bi bi-check-circle"></i>
             </button>
           </div>
@@ -198,19 +195,20 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 18)
+            <span class="cliente-nombre" >{{ truncarTexto(orden.clienteNombre,
+              18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 22) }}</span>
+            <span >{{ truncarTexto(orden.productoNombre, 22) }}</span>
           </div>
 
           <div class="orden-meta">
             <div class="meta-item">
               <i class="bi bi-person-badge"></i>
-              <small [title]="orden.tecnicoAsignado || 'Sin asignar'">
+              <small>
                 {{ truncarTexto(orden.tecnicoAsignado || 'Sin asignar', 12) }}
               </small>
             </div>
@@ -218,11 +216,11 @@
 
           <div class="orden-actions">
             <button class="btn-action" (click)="actualizarProgreso(orden); $event.stopPropagation()"
-              title="Actualizar progreso">
+              [attr.data-tooltip]="'Actualizar progreso'">
               <i class="bi bi-percent"></i>
             </button>
             <button class="btn-action" (click)="cambiarEstado(orden, 'listo_laboratorio'); $event.stopPropagation()"
-              title="Marcar como listo">
+              [attr.data-tooltip]="'Marcar como listo'">
               <i class="bi bi-check-circle"></i>
             </button>
           </div>
@@ -256,7 +254,7 @@
           <div class="column-actions" *ngIf="ordenesListasLaboratorio.length > 0">
             <button class="btn-move-all"
               (click)="moverTodos(ordenesListasLaboratorio, 'listo_laboratorio', 'pendiente_retiro')"
-              title="Enviar todos a tienda">
+              [attr.data-tooltip]="'Enviar todos a tienda'">
               <i class="bi bi-truck"></i>
             </button>
           </div>
@@ -279,19 +277,20 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 18)
+            <span class="cliente-nombre" >{{ truncarTexto(orden.clienteNombre,
+              18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 22) }}</span>
+            <span >{{ truncarTexto(orden.productoNombre, 22) }}</span>
           </div>
 
           <div class="orden-meta">
             <div class="meta-item">
               <i class="bi bi-person-badge"></i>
-              <small [title]="orden.tecnicoAsignado">
+              <small>
                 {{ truncarTexto(orden.tecnicoAsignado, 12) }}
               </small>
             </div>
@@ -299,7 +298,7 @@
 
           <div class="orden-actions">
             <button class="btn-action" (click)="cambiarEstado(orden, 'pendiente_retiro'); $event.stopPropagation()"
-              title="Enviar a tienda">
+              [attr.data-tooltip]="'Enviar a tienda'">
               <i class="bi bi-truck"></i>
             </button>
           </div>
@@ -332,7 +331,7 @@
           <h3><i class="bi bi-clock-history"></i> Pendiente</h3>
           <div class="column-actions" *ngIf="ordenesPendienteRetiro.length > 0">
             <button class="btn-move-all" (click)="moverTodos(ordenesPendienteRetiro, 'pendiente_retiro', 'entregado')"
-              title="Marcar todos como entregados">
+              [attr.data-tooltip]="'Marcar todos como entregados'">
               <i class="bi bi-box-seam"></i>
             </button>
           </div>
@@ -355,13 +354,14 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre" [title]="orden.clienteNombre">{{ truncarTexto(orden.clienteNombre, 18)
+            <span class="cliente-nombre">{{ truncarTexto(orden.clienteNombre,
+              18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span [title]="orden.productoNombre">{{ truncarTexto(orden.productoNombre, 22) }}</span>
+            <span>{{ truncarTexto(orden.productoNombre, 22) }}</span>
           </div>
 
           <div class="orden-alerta" *ngIf="orden.diasEnEspera > 7">
@@ -372,7 +372,7 @@
           <div class="orden-meta">
             <div class="meta-item">
               <i class="bi bi-telephone"></i>
-              <small [title]="orden.clienteTelefono">
+              <small >
                 {{ truncarTexto(orden.clienteTelefono, 10) }}
               </small>
             </div>
@@ -380,11 +380,11 @@
 
           <div class="orden-actions">
             <button class="btn-action btn-success" (click)="cambiarEstado(orden, 'entregado'); $event.stopPropagation()"
-              title="Marcar como entregado">
+              [attr.data-tooltip]="'Marcar como entregado'">
               <i class="bi bi-box-seam"></i>
             </button>
             <button class="btn-action" (click)="notificarCliente(orden); $event.stopPropagation()"
-              title="Notificar al cliente">
+              [attr.data-tooltip]="'Notificar al cliente'">
               <i class="bi bi-chat-dots"></i>
             </button>
           </div>
@@ -420,11 +420,12 @@
         <i class="bi bi-chevron-down toggle-icon" [class.rotated]="mostrarArchivo"></i>
       </h3>
       <div class="archivo-actions">
-        <button class="btn btn-sm btn-outline-purple" (click)="abrirModalArchivo(); $event.stopPropagation()">
+        <button class="btn btn-sm btn-outline-purple" (click)="abrirModalArchivo(); $event.stopPropagation()"
+          [attr.data-tooltip]="'Ver todas las órdenes archivadas'">
           <i class="bi bi-box-archive"></i> Ver Archivadas ({{ordenesArchivadas.length}})
         </button>
-        <button class="btn btn-sm btn-outline-secondary"
-          (click)="configurarDiasAutoArchivo(); $event.stopPropagation()">
+        <button class="btn btn-sm btn-outline-secondary" (click)="configurarDiasAutoArchivo(); $event.stopPropagation()"
+          [attr.data-tooltip]="'Configurar días para auto-archivado'">
           <i class="bi bi-gear"></i> Config. Auto-Archivo
         </button>
       </div>
@@ -440,11 +441,6 @@
             Entregados Recientes
             <span class="badge">{{ordenesEntregadas.length}}</span>
           </button>
-          <button class="tab-button" [class.active]="tabActiva === 'archivados'" (click)="abrirModalArchivo()">
-            <i class="bi bi-archive"></i>
-            Archivados
-            <span class="badge">{{ordenesArchivadas.length}}</span>
-          </button>
         </div>
 
         <!-- Contenido de entregados recientes -->
@@ -458,15 +454,18 @@
                 <span class="days-ago">{{calcularDiasDesde(orden.fechaEntrega)}} días</span>
               </div>
               <div class="minicard-body">
-                <div class="minicard-cliente">{{truncarTexto(orden.clienteNombre, 15)}}</div>
-                <div class="minicard-producto">{{truncarTexto(orden.productoNombre, 20)}}</div>
+                <div class="minicard-cliente" >
+                  {{truncarTexto(orden.clienteNombre, 15)}}</div>
+                <div class="minicard-producto">
+                  {{truncarTexto(orden.productoNombre, 20)}}</div>
               </div>
               <div class="minicard-actions">
                 <button class="btn-icon" (click)="archivarOrden(orden, false); $event.stopPropagation()"
-                  title="Archivar">
+                  [attr.data-tooltip]="'Archivar orden'">
                   <i class="bi bi-archive"></i>
                 </button>
-                <button class="btn-icon" (click)="generarFactura(orden); $event.stopPropagation()" title="Factura">
+                <button class="btn-icon" (click)="generarFactura(orden); $event.stopPropagation()"
+                  [attr.data-tooltip]="'Generar factura'">
                   <i class="bi bi-receipt"></i>
                 </button>
               </div>
@@ -494,10 +493,10 @@
       </span>
     </div>
     <div class="footer-actions">
-      <button class="btn btn-secondary" (click)="exportarReporte()">
+      <button class="btn btn-secondary" (click)="exportarReporte()" [attr.data-tooltip]="'Exportar reporte a Excel'">
         <i class="bi bi-file-earmark-excel"></i> Exportar
       </button>
-      <button class="btn btn-primary" (click)="generarReporte()">
+      <button class="btn btn-primary" (click)="generarReporte()" [attr.data-tooltip]="'Generar e imprimir reporte PDF'">
         <i class="bi bi-printer"></i> Imprimir Reporte
       </button>
     </div>
@@ -549,9 +548,6 @@
         <div class="archivada-header">
           <div class="archivada-codigo">
             <strong>{{orden.codigo}}</strong>
-            <span class="badge" [ngClass]="'prioridad-' + orden.prioridad">
-              {{getPrioridadTexto(orden.prioridad)}}
-            </span>
           </div>
           <span class="archivada-fecha">
             Archivada: {{orden.fechaArchivado | date:'dd/MM/yy'}}
@@ -613,7 +609,7 @@
     <h2>
       <i class="bi bi-list-ul"></i>
       {{tituloModalOrdenes}}
-      <span class="badge bg-primary ms-2">{{ordenesModal.length}}</span>
+      <span class="badge bg-primary ms-2">{{ordenesModalFiltradas.length}}</span>
     </h2>
     <button class="btn-close-modal" (click)="cerrarModalOrdenes()">
       <i class="bi bi-x-lg"></i>
@@ -621,13 +617,47 @@
   </div>
 
   <div class="modal-body">
-    <div class="ordenes-modal-list">
-      <div class="orden-modal-card" *ngFor="let orden of ordenesModal" (click)="verDetalleOrden(orden)">
+    <!-- Barra de búsqueda y filtros -->
+    <div class="modal-search-container">
+      <div class="search-box">
+        <input type="text" class="form-control search-input" placeholder="Buscar orden, cliente, producto o venta..."
+          [(ngModel)]="filtroModal" (input)="filtrarOrdenesModal()">
+        <i class="bi bi-search search-icon"></i>
+        <button class="btn-clear-search" *ngIf="filtroModal" (click)="limpiarFiltroModal()">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+
+      <!-- Filtros adicionales -->
+      <div class="filtros-rapidos">
+        <!-- Ordenamiento -->
+        <select class="form-select sort-select" [(ngModel)]="ordenModal" (change)="ordenarOrdenesModal()">
+          <option value="fechaCreacion_desc">Más recientes primero</option>
+          <option value="fechaCreacion_asc">Más antiguos primero</option>
+          <option value="diasRestantes_asc">Próximas a vencer</option>
+          <option value="clienteNombre_asc">Cliente A-Z</option>
+          <option value="clienteNombre_desc">Cliente Z-A</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Contador de resultados -->
+    <div class="resultados-info" *ngIf="filtroModal || filtroPrioridadModal">
+      <small class="text-muted">
+        Mostrando {{ordenesModalFiltradas.length}} de {{ordenesModal.length}} órdenes
+        <span *ngIf="filtroModal">• Buscando: "{{filtroModal}}"</span>
+      </small>
+    </div>
+
+    <!-- Lista de órdenes filtradas -->
+    <div class="ordenes-modal-list" *ngIf="ordenesModalFiltradas.length > 0; else sinResultados">
+      <div class="orden-modal-card" *ngFor="let orden of ordenesModalPagina" (click)="verDetalleOrden(orden)">
         <div class="orden-modal-header">
           <div class="orden-info">
             <strong>{{orden.codigo}}</strong>
-            <span class="badge" [ngClass]="'prioridad-' + orden.prioridad">
-              {{getPrioridadTexto(orden.prioridad)}}
+            <!-- Indicador de coincidencia en búsqueda -->
+            <span class="search-match-indicator" *ngIf="tieneCoincidencia(orden)">
+              <i class="bi bi-search"></i>
             </span>
           </div>
           <span class="orden-estado">
@@ -638,11 +668,11 @@
         <div class="orden-modal-body">
           <div class="orden-cliente-modal">
             <i class="bi bi-person"></i>
-            <span>{{orden.clienteNombre}}</span>
+            <span [innerHTML]="resaltarTexto(orden.clienteNombre, filtroModal)"></span>
           </div>
           <div class="orden-producto-modal">
             <i class="bi bi-eyeglasses"></i>
-            <span>{{orden.productoNombre}}</span>
+            <span [innerHTML]="resaltarTexto(orden.productoNombre, filtroModal)"></span>
           </div>
           <div class="orden-meta-modal">
             <div class="meta-item">
@@ -651,7 +681,10 @@
             </div>
             <div class="meta-item" *ngIf="orden.fechaEntregaEstimada">
               <i class="bi bi-clock"></i>
-              <small>Entrega estimada: {{orden.fechaEntregaEstimada | date:'dd/MM/yy'}}</small>
+              <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
+                Entrega: {{orden.fechaEntregaEstimada | date:'dd/MM/yy'}}
+                <span *ngIf="orden.diasRestantes !== undefined">({{orden.diasRestantes}}d)</span>
+              </small>
             </div>
           </div>
         </div>
@@ -671,6 +704,37 @@
             <i class="bi bi-check-lg"></i>
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Mensaje cuando no hay resultados -->
+    <ng-template #sinResultados>
+      <div class="no-results">
+        <i class="bi bi-search"></i>
+        <h4>No se encontraron órdenes</h4>
+        <p *ngIf="filtroModal || filtroPrioridadModal">
+          No hay órdenes que coincidan con tu búsqueda.
+          <a href="javascript:void(0)" (click)="limpiarFiltroModal()" class="text-primary">
+            Limpiar filtros
+          </a>
+        </p>
+        <p *ngIf="!filtroModal && !filtroPrioridadModal">No hay órdenes en este estado.</p>
+      </div>
+    </ng-template>
+
+    <!-- Paginación si hay muchas órdenes -->
+    <div class="modal-pagination" *ngIf="ordenesModalFiltradas.length > 20">
+      <div class="pagination-info">
+        Mostrando {{inicioPaginacion + 1}} - {{finPaginacion}} de {{ordenesModalFiltradas.length}}
+      </div>
+      <div class="pagination-controls">
+        <button class="btn-pagination" [disabled]="paginaActual === 0" (click)="paginaAnterior()">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <span class="pagina-info">Página {{paginaActual + 1}} de {{totalPaginas}}</span>
+        <button class="btn-pagination" [disabled]="paginaActual === totalPaginas - 1" (click)="paginaSiguiente()">
+          <i class="bi bi-chevron-right"></i>
+        </button>
       </div>
     </div>
   </div>
