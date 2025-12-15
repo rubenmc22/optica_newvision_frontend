@@ -115,14 +115,14 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre" >{{ truncarTexto(orden.clienteNombre,
+            <span class="cliente-nombre">{{ truncarTexto(orden.clienteNombre,
               18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span >{{ truncarTexto(orden.productoNombre, 22) }}</span>
+            <span>{{ truncarTexto(orden.productoNombre, 22) }}</span>
           </div>
 
           <div class="orden-meta">
@@ -195,14 +195,14 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre" >{{ truncarTexto(orden.clienteNombre,
+            <span class="cliente-nombre">{{ truncarTexto(orden.clienteNombre,
               18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span >{{ truncarTexto(orden.productoNombre, 22) }}</span>
+            <span>{{ truncarTexto(orden.productoNombre, 22) }}</span>
           </div>
 
           <div class="orden-meta">
@@ -277,14 +277,14 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre" >{{ truncarTexto(orden.clienteNombre,
+            <span class="cliente-nombre">{{ truncarTexto(orden.clienteNombre,
               18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span >{{ truncarTexto(orden.productoNombre, 22) }}</span>
+            <span>{{ truncarTexto(orden.productoNombre, 22) }}</span>
           </div>
 
           <div class="orden-meta">
@@ -372,7 +372,7 @@
           <div class="orden-meta">
             <div class="meta-item">
               <i class="bi bi-telephone"></i>
-              <small >
+              <small>
                 {{ truncarTexto(orden.clienteTelefono, 10) }}
               </small>
             </div>
@@ -454,7 +454,7 @@
                 <span class="days-ago">{{calcularDiasDesde(orden.fechaEntrega)}} días</span>
               </div>
               <div class="minicard-body">
-                <div class="minicard-cliente" >
+                <div class="minicard-cliente">
                   {{truncarTexto(orden.clienteNombre, 15)}}</div>
                 <div class="minicard-producto">
                   {{truncarTexto(orden.productoNombre, 20)}}</div>
@@ -507,19 +507,295 @@
 <div class="modal-backdrop" *ngIf="mostrarModalDetalle" (click)="cerrarModalDetalle()"></div>
 <div class="modal-detalle-orden" *ngIf="mostrarModalDetalle">
   <div class="modal-header">
-    <h2>
-      <i class="bi bi-clipboard-data"></i>
-      Orden #{{ ordenSeleccionada?.codigo }}
-    </h2>
-    <button class="btn-close-modal" (click)="cerrarModalDetalle()">
-      <i class="bi bi-x-lg"></i>
-    </button>
+    <div class="header-left">
+      <h2>
+        <i class="bi bi-clipboard-data"></i>
+        Orden #{{ ordenSeleccionada?.ordenId || ordenSeleccionada?.codigo }}
+      </h2>
+      <div class="orden-status">
+        <span class="badge" [ngClass]="getEstadoClass(ordenSeleccionada?.estado)">
+          {{ getEstadoTexto(ordenSeleccionada?.estado) }}
+        </span>
+        <span class="text-muted">
+          <i class="bi bi-calendar"></i>
+          {{ ordenSeleccionada?.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="btn-close-modal" (click)="cerrarModalDetalle()" aria-label="Cerrar">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
   </div>
 
   <div class="modal-body">
-    <!-- Detalle de la orden seleccionada -->
-    <app-detalle-orden [orden]="ordenSeleccionada" (estadoCambiado)="onEstadoCambiado($event)">
-    </app-detalle-orden>
+    <!-- Grid de 2 columnas -->
+    <div class="detalle-grid">
+
+      <!-- COLUMNA IZQUIERDA -->
+      <div class="detalle-columna">
+
+        <!-- Información del Cliente -->
+        <div class="info-card">
+          <div class="info-header">
+            <i class="bi bi-person-circle"></i>
+            <h4>Información del Cliente</h4>
+          </div>
+          <div class="info-content compact">
+            <!-- Línea 1: Nombre y Cédula combinados -->
+            <div class="info-row">
+              <span class="info-label">Paciente:</span>
+              <div class="info-value">
+                <div class="cliente-principal">
+                  <strong>{{ ordenSeleccionada?.cliente?.informacion?.nombreCompleto ||
+                    ordenSeleccionada?.clienteNombre ||
+                    'Nombre no especificado' }}</strong>
+                  <span *ngIf="ordenSeleccionada?.cliente?.informacion?.cedula || ordenSeleccionada?.clienteCedula"
+                    class="cliente-cedula">
+                    • C.I. {{ ordenSeleccionada?.cliente?.informacion?.cedula || ordenSeleccionada?.clienteCedula }}
+                  </span>
+                </div>
+                <div *ngIf="!(ordenSeleccionada?.cliente?.informacion?.cedula || ordenSeleccionada?.clienteCedula)"
+                  class="text-muted small-text">
+                  Sin cédula registrada
+                </div>
+              </div>
+            </div>
+
+            <!-- Línea 2: Contacto unificado -->
+            <div class="info-row">
+              <span class="info-label">Contacto:</span>
+              <div class="info-value contacto-unificado">
+                <!-- Teléfono -->
+                <a *ngIf="ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono"
+                  href="tel:{{ ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono }}"
+                  class="contacto-link">
+                  <i class="bi bi-telephone"></i>
+                  {{ ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono }}
+                </a>
+                <span *ngIf="!(ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono)"
+                  class="text-muted">
+                  <i class="bi bi-telephone"></i> Sin teléfono
+                </span>
+
+                <!-- Separador si hay ambos -->
+                <span *ngIf="(ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono) && 
+                     ordenSeleccionada?.cliente?.informacion?.email" class="separador-contacto">|</span>
+
+                <!-- Email -->
+                <a *ngIf="ordenSeleccionada?.cliente?.informacion?.email"
+                  href="mailto:{{ ordenSeleccionada?.cliente?.informacion?.email }}" class="contacto-link">
+                  <i class="bi bi-envelope"></i>
+                  {{ ordenSeleccionada?.cliente?.informacion?.email }}
+                </a>
+                <span *ngIf="!ordenSeleccionada?.cliente?.informacion?.email && 
+                     (ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono)"
+                  class="text-muted">
+                  <i class="bi bi-envelope"></i> Sin email
+                </span>
+              </div>
+            </div>
+
+            <!-- Línea 3: Información adicional si existe -->
+            <div class="info-row" *ngIf="ordenSeleccionada?.cliente?.informacion?.tipoPersona">
+              <span class="info-label">Tipo:</span>
+              <span class="info-value">
+                <span class="badge-tipo" [ngClass]="{'tipo-natural': ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'natural',
+                          'tipo-juridico': ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'juridico'}">
+                  {{ ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'natural' ? 'Persona Natural' :
+                  ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'juridico' ? 'Persona Jurídica' :
+                  ordenSeleccionada?.cliente?.informacion?.tipoPersona }}
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulación -->
+        <div class="info-card" *ngIf="ordenSeleccionada?.formulacion">
+          <div class="info-header">
+            <i class="bi bi-eyeglasses"></i>
+            <h4>Formulación</h4>
+          </div>
+          <div class="info-content compact formulacion-compact">
+            <div class="formulacion-row">
+              <div class="formulacion-col ojo-col">
+                <div class="ojo-label">OD</div>
+                <div class="formulacion-valor">{{ ordenSeleccionada?.formulacion?.esferaOD || '--' }}</div>
+                <div class="formulacion-extra" *ngIf="ordenSeleccionada?.formulacion?.cilindroOD">
+                  <small>{{ ordenSeleccionada?.formulacion?.cilindroOD }} x {{ ordenSeleccionada?.formulacion?.ejeOD
+                    }}°</small>
+                </div>
+              </div>
+
+              <div class="formulacion-col ojo-col">
+                <div class="ojo-label">OI</div>
+                <div class="formulacion-valor">{{ ordenSeleccionada?.formulacion?.esferaOI || '--' }}</div>
+                <div class="formulacion-extra" *ngIf="ordenSeleccionada?.formulacion?.cilindroOI">
+                  <small>{{ ordenSeleccionada?.formulacion?.cilindroOI }} x {{ ordenSeleccionada?.formulacion?.ejeOI
+                    }}°</small>
+                </div>
+              </div>
+
+              <div class="formulacion-col add-col" *ngIf="ordenSeleccionada?.formulacion?.adicion">
+                <div class="ojo-label">Add</div>
+                <div class="formulacion-valor">{{ ordenSeleccionada?.formulacion?.adicion }}</div>
+              </div>
+            </div>
+
+            <!-- Información adicional si existe -->
+            <div class="formulacion-extra-info" *ngIf="ordenSeleccionada?.formulacion?.observaciones">
+              <small>
+                <i class="bi bi-info-circle"></i>
+                {{ ordenSeleccionada?.formulacion?.observaciones }}
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Observaciones -->
+        <div class="info-card">
+          <div class="info-header">
+            <i class="bi bi-chat-left-text"></i>
+            <h4>Observaciones</h4>
+          </div>
+          <div class="info-content compact">
+            <div *ngIf="ordenSeleccionada?.observaciones; else sinObservaciones" class="observaciones-content">
+              {{ ordenSeleccionada?.observaciones }}
+            </div>
+            <ng-template #sinObservaciones>
+              <div class="text-center">
+                <i class="bi bi-chat-left"></i>
+                <span class="text-muted">Sin observaciones</span>
+              </div>
+            </ng-template>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMNA DERECHA -->
+      <div class="detalle-columna">
+
+        <!-- Productos -->
+        <div class="info-card">
+          <div class="info-header">
+            <i class="bi bi-box-seam"></i>
+            <h4>Productos ({{ ordenSeleccionada?.productos?.length || 1 }})</h4>
+          </div>
+          <div class="info-content compact productos-list">
+            <!-- Si tiene estructura de productos del API -->
+            <div class="producto-item"
+              *ngFor="let producto of ordenSeleccionada?.productos; trackBy: trackByProductoId">
+              <div class="producto-header">
+                <strong>{{ producto?.datos?.nombre || 'Producto sin nombre' }}</strong>
+                <span class="badge">{{ producto?.cantidad || 1 }} unidad{{ (producto?.cantidad || 1) > 1 ? 'es' : ''
+                  }}</span>
+              </div>
+              <div class="producto-details">
+                <small>
+                  <span class="text-muted">Marca:</span> {{ producto?.datos?.marca || 'N/A' }}
+                  <span class="separator">•</span>
+                  <span class="text-muted">Código:</span> {{ producto?.datos?.codigo || 'N/A' }}
+                </small>
+              </div>
+              <div class="producto-meta">
+                <small class="text-muted">
+                  {{ producto?.datos?.modelo || producto?.datos?.categoria || '' }}
+                  <span *ngIf="producto?.datos?.material"> • {{ producto?.datos?.material }}</span>
+                </small>
+              </div>
+            </div>
+
+            <!-- Si tiene la estructura antigua (solo un producto) -->
+            <div class="producto-item" *ngIf="!ordenSeleccionada?.productos && ordenSeleccionada?.productoNombre">
+              <div class="producto-header">
+                <strong>{{ ordenSeleccionada?.productoNombre }}</strong>
+                <span class="badge">1 unidad</span>
+              </div>
+              <div class="producto-details">
+                <small>
+                  <span class="text-muted">Código:</span> {{ ordenSeleccionada?.codigo || 'N/A' }}
+                </small>
+              </div>
+            </div>
+
+            <!-- Si no hay productos -->
+            <div class="text-center" *ngIf="!ordenSeleccionada?.productos && !ordenSeleccionada?.productoNombre">
+              <i class="bi bi-box"></i>
+              <span class="text-muted">Sin productos registrados</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Personal Asignado -->
+        <div class="info-card">
+          <div class="info-header">
+            <i class="bi bi-person-badge"></i>
+            <h4>Personal Asignado</h4>
+          </div>
+          <div class="info-content compact">
+            <div class="info-row" *ngIf="ordenSeleccionada?.especialista">
+              <span class="info-label">Especialista:</span>
+              <div class="info-value">
+                <div>{{ ordenSeleccionada?.especialista?.nombre || 'No especificado' }}</div>
+                <small class="text-muted">{{ ordenSeleccionada?.especialista?.cargo || 'Optometrista' }}</small>
+              </div>
+            </div>
+            <div class="info-row" *ngIf="ordenSeleccionada?.asesor">
+              <span class="info-label">Asesor:</span>
+              <div class="info-value">
+                <div>{{ ordenSeleccionada?.asesor?.nombre || 'No especificado' }}</div>
+                <small class="text-muted" *ngIf="ordenSeleccionada?.asesor?.cedula">C.I. {{
+                  ordenSeleccionada?.asesor?.cedula }}</small>
+              </div>
+            </div>
+
+            <!-- Si no hay personal asignado -->
+            <div class="text-center"
+              *ngIf="!ordenSeleccionada?.especialista && !ordenSeleccionada?.asesor && !ordenSeleccionada?.tecnicoAsignado">
+              <i class="bi bi-person-x"></i>
+              <span class="text-muted">Sin personal asignado</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Acciones según estado -->
+    <div class="modal-actions" *ngIf="ordenSeleccionada">
+      <div class="actions-left">
+        <div class="venta-id" *ngIf="ordenSeleccionada?.ventaId"
+          title="ID de Venta Relacionada - Haga clic para ver detalles">
+          <i class="bi bi-receipt"></i>
+          <span>{{ ordenSeleccionada?.ventaId }}</span>
+          <small *ngIf="ordenSeleccionada?.clienteNombre" class="venta-cliente">
+            • {{ ordenSeleccionada?.clienteNombre }}
+          </small>
+        </div>
+      </div>
+      <div class="actions-right">
+        <button *ngIf="ordenSeleccionada.estado === 'en_tienda'" class="btn btn-primary"
+          (click)="cambiarEstado(ordenSeleccionada, 'proceso_laboratorio'); cerrarModalDetalle()">
+          <i class="bi bi-arrow-right"></i> Mover a Laboratorio
+        </button>
+        <button *ngIf="ordenSeleccionada.estado === 'proceso_laboratorio'" class="btn btn-success"
+          (click)="cambiarEstado(ordenSeleccionada, 'listo_laboratorio'); cerrarModalDetalle()">
+          <i class="bi bi-check-circle"></i> Marcar como Listo
+        </button>
+        <button *ngIf="ordenSeleccionada.estado === 'listo_laboratorio'" class="btn btn-warning"
+          (click)="cambiarEstado(ordenSeleccionada, 'pendiente_retiro'); cerrarModalDetalle()">
+          <i class="bi bi-truck"></i> Enviar a Tienda
+        </button>
+        <button *ngIf="ordenSeleccionada.estado === 'pendiente_retiro'" class="btn btn-success"
+          (click)="cambiarEstado(ordenSeleccionada, 'entregado'); cerrarModalDetalle()">
+          <i class="bi bi-box-seam"></i> Marcar como Entregado
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
