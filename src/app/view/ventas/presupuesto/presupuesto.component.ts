@@ -17,11 +17,14 @@ export class PresupuestoComponent implements OnInit {
   mostrarModalNuevoPresupuesto: boolean = false;
   mostrarModalDetallePresupuesto: boolean = false;
   mostrarModalEliminar: boolean = false;
+  modoEditable: boolean = false;
+
 
   filtroBusqueda: string = '';
   filtroEstado: string = '';
   tabActiva: string = 'vigentes';
   diasParaAutoArchivo: number = 30;
+  diasVencimientoSeleccionado: number = 7;
 
   // En tu componente
   terminoBusqueda: string = '';
@@ -89,10 +92,10 @@ export class PresupuestoComponent implements OnInit {
   ngOnInit() {
     this.cargarDatos();
     this.inicializarNuevoPresupuesto();
+    this.diasVencimientoSeleccionado = 7;
   }
 
   // ========== MÉTODOS PARA CLIENTE (usando tu código existente) ==========
-
   getClienteVacio() {
     return {
       tipoPersona: 'natural',
@@ -577,31 +580,6 @@ export class PresupuestoComponent implements OnInit {
     this.busquedaProducto = '';
   }
 
-  verDetallePresupuesto(presupuesto: any) {
-    this.presupuestoSeleccionado = { ...presupuesto };
-    this.mostrarModalDetallePresupuesto = true;
-  }
-
-  cerrarModalDetalle() {
-    this.mostrarModalDetallePresupuesto = false;
-    this.presupuestoSeleccionado = null;
-  }
-
-  guardarCambiosPresupuesto() {
-    if (!this.presupuestoSeleccionado) return;
-
-    // Simular actualización
-    const index = this.presupuestosVigentes.findIndex(p => p.id === this.presupuestoSeleccionado.id);
-    if (index !== -1) {
-      this.presupuestosVigentes[index] = { ...this.presupuestoSeleccionado };
-      this.snackBar.open('Presupuesto actualizado correctamente', 'Cerrar', {
-        duration: 3000,
-        panelClass: ['snackbar-success']
-      });
-    }
-    this.cerrarModalDetalle();
-  }
-
   confirmarEliminarPresupuesto(presupuesto: any) {
     this.presupuestoAEliminar = presupuesto;
     this.mostrarModalEliminar = true;
@@ -610,6 +588,16 @@ export class PresupuestoComponent implements OnInit {
   cerrarModalEliminar() {
     this.mostrarModalEliminar = false;
     this.presupuestoAEliminar = null;
+  }
+
+  // Método para calcular descuento total
+  calcularDescuentoTotalPresupuesto(): number {
+    if (!this.presupuestoSeleccionado) return 0;
+
+    return this.presupuestoSeleccionado.productos.reduce((total: number, producto: any) => {
+      const subtotalProducto = producto.precio * producto.cantidad;
+      return total + (subtotalProducto * (producto.descuento / 100));
+    }, 0);
   }
 
   eliminarPresupuesto() {
@@ -781,17 +769,6 @@ export class PresupuestoComponent implements OnInit {
 
     this.presupuestoSeleccionado.iva = this.presupuestoSeleccionado.subtotal * 0.16;
     this.presupuestoSeleccionado.total = this.presupuestoSeleccionado.subtotal + this.presupuestoSeleccionado.iva;
-  }
-
-  onFechaVencimientoChange(event: any) {
-    const fecha = new Date(event.target.value);
-    this.presupuestoSeleccionado!.fechaVencimiento = fecha;
-
-    // Calcular días restantes
-    const hoy = new Date();
-    const diasRestantes = Math.ceil((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-    this.presupuestoSeleccionado!.diasRestantes = diasRestantes;
-    this.presupuestoSeleccionado!.estadoColor = this.getEstadoColor(diasRestantes);
   }
 
   // Agrega este método a tu clase PresupuestoComponent
@@ -1068,6 +1045,199 @@ export class PresupuestoComponent implements OnInit {
     const baseImponible = this.nuevoPresupuesto.subtotal - this.nuevoPresupuesto.descuentoTotal;
     this.nuevoPresupuesto.iva = baseImponible * 0.16;
     this.nuevoPresupuesto.total = baseImponible + this.nuevoPresupuesto.iva;
+  }
+
+  // En el método verDetallePresupuesto, agregar:
+  verDetallePresupuesto(presupuesto: any) {
+    this.presupuestoSeleccionado = JSON.parse(JSON.stringify(presupuesto)); // Copia profunda
+    this.modoEditable = false; // Siempre empieza en modo vista
+    this.diasVencimientoSeleccionado = presupuesto.diasVencimiento || 7;
+    this.mostrarModalDetallePresupuesto = true;
+  }
+
+  // Método para seleccionar días de vencimiento en modal de detalle
+  seleccionarDiasVencimientoDetalle(dias: number): void {
+    if (!this.presupuestoSeleccionado || !this.modoEditable) return;
+
+    this.diasVencimientoSeleccionado = dias;
+
+    // Calcular nueva fecha de vencimiento
+    const fechaVencimiento = new Date(this.presupuestoSeleccionado.fechaCreacion);
+    fechaVencimiento.setDate(fechaVencimiento.getDate() + dias);
+
+    this.presupuestoSeleccionado.fechaVencimiento = fechaVencimiento;
+    this.presupuestoSeleccionado.diasVencimiento = dias;
+
+    // Recalcular días restantes
+    this.actualizarDiasRestantes();
+  }
+
+  // Método para actualizar días restantes
+  actualizarDiasRestantes(): void {
+    if (!this.presupuestoSeleccionado) return;
+
+    const hoy = new Date();
+    const fechaVencimiento = new Date(this.presupuestoSeleccionado.fechaVencimiento);
+    const diffTiempo = fechaVencimiento.getTime() - hoy.getTime();
+    const diasRestantes = Math.ceil(diffTiempo / (1000 * 3600 * 24));
+
+    this.presupuestoSeleccionado.diasRestantes = diasRestantes;
+    this.presupuestoSeleccionado.estadoColor = this.getEstadoColor(diasRestantes);
+  }
+
+  // Método para calcular días de validez (ya existe, pero actualizado)
+  calcularDiasValidez(): number {
+    if (!this.presupuestoSeleccionado) return 0;
+
+    const fechaCreacion = new Date(this.presupuestoSeleccionado.fechaCreacion);
+    const fechaVencimiento = new Date(this.presupuestoSeleccionado.fechaVencimiento);
+    const diffTiempo = fechaVencimiento.getTime() - fechaCreacion.getTime();
+    return Math.ceil(diffTiempo / (1000 * 3600 * 24));
+  }
+
+  // Método para actualizar fecha de vencimiento cuando se cambia manualmente
+  // Método para actualizar fecha de vencimiento (ya existe, pero actualizado)
+  onFechaVencimientoChange(event: any): void {
+    if (!this.presupuestoSeleccionado || !this.modoEditable) return;
+
+    const fecha = new Date(event.target.value);
+    this.presupuestoSeleccionado.fechaVencimiento = fecha;
+
+    // Recalcular días de validez basado en la fecha de creación
+    const fechaCreacion = new Date(this.presupuestoSeleccionado.fechaCreacion);
+    const diffTiempo = fecha.getTime() - fechaCreacion.getTime();
+    const diasValidez = Math.ceil(diffTiempo / (1000 * 3600 * 24));
+
+    // Actualizar días de vencimiento
+    this.diasVencimientoSeleccionado = diasValidez;
+    this.presupuestoSeleccionado.diasVencimiento = diasValidez;
+
+    // Recalcular días restantes
+    this.actualizarDiasRestantes();
+
+    // Encontrar la opción de vencimiento más cercana
+    const opcionesDias = [7, 10, 20, 30];
+    let opcionMasCercana = 7;
+    let diferenciaMinima = Math.abs(diasValidez - 7);
+
+    opcionesDias.forEach(opcion => {
+      const diferencia = Math.abs(diasValidez - opcion);
+      if (diferencia < diferenciaMinima) {
+        diferenciaMinima = diferencia;
+        opcionMasCercana = opcion;
+      }
+    });
+
+    // Actualizar botón seleccionado
+    this.diasVencimientoSeleccionado = opcionMasCercana;
+  }
+
+  // Método para resetear el estado de edición al cerrar el modal
+  resetearEstadoEdicion(): void {
+    this.modoEditable = false;
+    this.diasVencimientoSeleccionado = 7;
+  }
+
+  // Actualizar el método cerrarModalDetalle
+  cerrarModalDetalle(): void {
+    this.mostrarModalDetallePresupuesto = false;
+    this.presupuestoSeleccionado = null;
+    this.resetearEstadoEdicion();
+  }
+
+  // Método para calcular porcentaje de descuento
+  calcularPorcentajeDescuento(): number {
+    if (!this.presupuestoSeleccionado ||
+      !this.presupuestoSeleccionado.subtotal ||
+      this.presupuestoSeleccionado.subtotal === 0) {
+      return 0;
+    }
+
+    const porcentaje = (this.presupuestoSeleccionado.descuentoTotal / this.presupuestoSeleccionado.subtotal) * 100;
+    return Math.round(porcentaje * 100) / 100; // Redondear a 2 decimales
+  }
+
+  // Método para guardar cambios del presupuesto
+  guardarCambiosPresupuesto(): void {
+    if (!this.presupuestoSeleccionado) return;
+
+    // Actualizar días de vencimiento según la selección actual
+    if (this.modoEditable) {
+      this.presupuestoSeleccionado.diasVencimiento = this.diasVencimientoSeleccionado;
+    }
+
+    // Buscar y actualizar el presupuesto en la lista correspondiente
+    let listaPresupuestos: any[];
+    let indice: number;
+
+    // Determinar en qué lista está el presupuesto
+    if (this.presupuestoSeleccionado.estadoColor === 'vencido') {
+      listaPresupuestos = this.presupuestosVencidos;
+    } else {
+      listaPresupuestos = this.presupuestosVigentes;
+    }
+
+    indice = listaPresupuestos.findIndex(p => p.id === this.presupuestoSeleccionado.id);
+
+    if (indice !== -1) {
+      // Si cambió de estado, moverlo a la lista correspondiente
+      const presupuestoOriginal = listaPresupuestos[indice];
+
+      if (presupuestoOriginal.estadoColor !== this.presupuestoSeleccionado.estadoColor) {
+        // Remover de la lista actual
+        listaPresupuestos.splice(indice, 1);
+
+        // Agregar a la nueva lista
+        if (this.presupuestoSeleccionado.estadoColor === 'vencido') {
+          this.presupuestosVencidos.push(this.presupuestoSeleccionado);
+        } else {
+          this.presupuestosVigentes.push(this.presupuestoSeleccionado);
+        }
+      } else {
+        // Actualizar en la misma lista
+        listaPresupuestos[indice] = { ...this.presupuestoSeleccionado };
+      }
+
+      // Recalcular estadísticas
+      this.calcularEstadisticas();
+
+      // Mostrar mensaje de éxito
+      this.snackBar.open('Presupuesto actualizado correctamente', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-success']
+      });
+
+      // Cerrar modal
+      this.cerrarModalDetalle();
+    } else {
+      // Si no se encuentra, mostrar error
+      this.snackBar.open('Error: No se encontró el presupuesto', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-error']
+      });
+    }
+  }
+
+  // Método para obtener texto de días restantes para un presupuesto específico
+  getTextoDiasRestantesParaPresupuesto(presupuesto: any): string {
+    if (!presupuesto || presupuesto.diasRestantes === undefined) return '';
+
+    const diasRestantes = presupuesto.diasRestantes;
+
+    if (diasRestantes < 0) {
+      return `Vencido hace ${Math.abs(diasRestantes)} día${Math.abs(diasRestantes) !== 1 ? 's' : ''}`;
+    } else if (diasRestantes === 0) {
+      return 'Vence hoy';
+    } else if (diasRestantes === 1) {
+      return 'Vence mañana';
+    } else {
+      return `Vence en ${diasRestantes} días`;
+    }
+  }
+
+  // Y modificar el original para usar con presupuestoSeleccionado
+  getTextoDiasRestantes(): string {
+    return this.getTextoDiasRestantesParaPresupuesto(this.presupuestoSeleccionado);
   }
 
 }

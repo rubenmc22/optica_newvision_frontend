@@ -110,7 +110,7 @@
                 <i class="bi bi-calendar"></i>
                 Vence: {{ formatFecha(presupuesto.fechaVencimiento) }}
                 <span *ngIf="presupuesto.diasRestantes >= 0" class="dias-restantes">
-                  ({{ presupuesto.diasRestantes }} día{{ presupuesto.diasRestantes !== 1 ? 's' : '' }})
+                    {{ getTextoDiasRestantes() }}
                 </span>
               </small>
             </div>
@@ -413,7 +413,7 @@
     </div>
     </div>
 
-         <!-- Productos -->
+    <!-- Productos -->
     <div class="form-section">
         <h3><i class="bi bi-box"></i> Productos</h3>
 
@@ -569,72 +569,9 @@
   </div>
 </div>
 
-<!-- Modal para Agregar Producto -->
-<div class="modal-backdrop" *ngIf="mostrarModalAgregarProducto" (click)="cerrarModalAgregarProducto()"></div>
-<div class="modal-agregar-producto" *ngIf="mostrarModalAgregarProducto">
-  <div class="modal-header">
-    <div class="header-left">
-      <h2>
-        <i class="bi bi-box-plus"></i>
-        Agregar Producto
-      </h2>
-    </div>
-    <div class="header-right">
-      <button class="btn-close-modal" (click)="cerrarModalAgregarProducto()" aria-label="Cerrar">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
-  </div>
-
-  <div class="modal-body">
-    <!-- Buscar productos -->
-    <div class="search-product-container">
-      <i class="bi bi-search"></i>
-      <input type="text" 
-             placeholder="Buscar productos por código o descripción..."
-             [(ngModel)]="busquedaProducto"
-             (keyup)="buscarProductos(busquedaProducto)">
-    </div>
-
-    <!-- Lista de productos -->
-    <div class="productos-disponibles-list scrollable-list">
-      <div class="producto-item" 
-           *ngFor="let producto of productosFiltrados"
-           (click)="agregarProducto(producto)">
-        <div class="producto-info">
-          <strong>{{ producto.descripcion }}</strong>
-          <small>Código: {{ producto.codigo }}</small>
-          <small>Categoría: {{ producto.categoria }}</small>
-        </div>
-        <div class="producto-precio">
-          {{ formatMoneda(producto.precio) }}
-        </div>
-        <div class="producto-action">
-          <button class="btn-agregar">
-            <i class="bi bi-plus"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Estado vacío -->
-      <div class="empty-state" *ngIf="productosFiltrados.length === 0">
-        <i class="bi bi-search"></i>
-        <p>No se encontraron productos</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-actions">
-    <button class="btn btn-secondary" (click)="cerrarModalAgregarProducto()">
-      <i class="bi bi-x-circle"></i>
-      Cerrar
-    </button>
-  </div>
-</div>
-
 <!-- Modal Detalle/Edición Presupuesto -->
 <div class="modal-backdrop" *ngIf="mostrarModalDetallePresupuesto" (click)="cerrarModalDetalle()"></div>
-<div class="modal-detalle-presupuesto" *ngIf="mostrarModalDetallePresupuesto && presupuestoSeleccionado">
+<div class="modal-nuevo-presupuesto" *ngIf="mostrarModalDetallePresupuesto && presupuestoSeleccionado">
   <div class="modal-header">
     <div class="header-left">
       <h2>
@@ -647,10 +584,28 @@
         </span>
         <span class="text-muted">
           <i class="bi bi-calendar"></i>
-          {{ formatFecha(presupuestoSeleccionado.fechaCreacion) }}
+          Creado: {{ formatFecha(presupuestoSeleccionado.fechaCreacion) }}
         </span>
       </div>
     </div>
+    
+    <!-- Switch Modo Editable -->
+    <div class="header-center">
+      <div class="editable-toggle">
+        <label class="toggle-label">
+          <i class="bi bi-pencil-square"></i>
+          Modo Editable
+        </label>
+        <label class="switch">
+          <input type="checkbox" [(ngModel)]="modoEditable">
+          <span class="slider round"></span>
+        </label>
+        <small class="toggle-hint" *ngIf="modoEditable">
+          Solo fecha de vencimiento y observaciones son editables
+        </small>
+      </div>
+    </div>
+    
     <div class="header-right">
       <button class="btn-close-modal" (click)="cerrarModalDetalle()" aria-label="Cerrar">
         <i class="bi bi-x-lg"></i>
@@ -659,186 +614,211 @@
   </div>
 
   <div class="modal-body scrollable-modal">
-    <!-- Información del Cliente -->
+    <!-- Información del Cliente  -->
     <div class="info-card">
-      <div class="info-header">
+    <div class="info-header">
         <i class="bi bi-person-circle"></i>
         <h4>Información del Cliente</h4>
-      </div>
-      <div class="info-content">
-        <div class="form-section">
-          <div class="form-grid">
-            <!-- Tipo de Persona -->
-            <div class="form-group">
-              <label>Tipo de Persona</label>
-              <div class="switch-container">
-                <div class="switch-options">
-                  <div class="switch-option" [class.active]="presupuestoSeleccionado.cliente.tipoPersona === 'natural'">
-                    <i class="bi bi-person"></i>
-                    <span>Persona Natural</span>
-                  </div>
-                  <div class="switch-option" [class.active]="presupuestoSeleccionado.cliente.tipoPersona === 'juridica'">
-                    <i class="bi bi-building"></i>
-                    <span>Persona Jurídica</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+    </div>
+    <div class="info-content">
+        <div class="cliente-info-view">
+        <div class="cliente-header">
+            <!-- Badge de Tipo de Persona -->
+            <span class="badge-tipo-persona" [ngClass]="{
+                'badge-natural': presupuestoSeleccionado.cliente.tipoPersona === 'natural',
+                'badge-juridica': presupuestoSeleccionado.cliente.tipoPersona === 'juridica'
+                }">
+            <i class="bi" [class.bi-person]="presupuestoSeleccionado.cliente.tipoPersona === 'natural'"
+                [class.bi-building]="presupuestoSeleccionado.cliente.tipoPersona === 'juridica'"></i>
+            {{ presupuestoSeleccionado.cliente.tipoPersona === 'natural' ? 'Persona Natural' : 'Persona Jurídica' }}
+            </span>
             
-            <!-- Cédula/RIF -->
-            <div class="form-group">
-              <label>{{ presupuestoSeleccionado.cliente.tipoPersona === 'natural' ? 'Cédula' : 'RIF' }}</label>
-              <input type="text" class="form-control" [(ngModel)]="presupuestoSeleccionado.cliente.cedula">
+            <!-- Información compacta -->
+            <div class="cliente-datos-compactos">
+            <div class="cliente-dato">
+                <span class="dato-label">{{ presupuestoSeleccionado.cliente.tipoPersona === 'natural' ? 'Cédula:' : 'RIF:' }}</span>
+                <span class="dato-valor">{{ presupuestoSeleccionado.cliente.cedula }}</span>
             </div>
-            
-            <!-- Nombre/Razón Social -->
-            <div class="form-group">
-              <label>{{ presupuestoSeleccionado.cliente.tipoPersona === 'natural' ? 'Nombre' : 'Razón Social' }}</label>
-              <input type="text" class="form-control" [(ngModel)]="presupuestoSeleccionado.cliente.nombreCompleto">
             </div>
-            
-            <!-- Teléfono -->
-            <div class="form-group">
-              <label>Teléfono</label>
-              <input type="tel" class="form-control" [(ngModel)]="presupuestoSeleccionado.cliente.telefono">
-            </div>
-            
-            <!-- Email -->
-            <div class="form-group">
-              <label>Email</label>
-              <input type="email" class="form-control" [(ngModel)]="presupuestoSeleccionado.cliente.email">
-            </div>
-            
-            <!-- Dirección -->
-            <div class="form-group full-width">
-              <label>Dirección</label>
-              <textarea class="form-control" [(ngModel)]="presupuestoSeleccionado.cliente.direccion" rows="2"></textarea>
-            </div>
-          </div>
         </div>
-      </div>
+        
+        <!-- Nombre/Razón Social -->
+        <div class="cliente-nombre">
+            <label>{{ presupuestoSeleccionado.cliente.tipoPersona === 'natural' ? 'Nombre:' : 'Razón Social:' }}</label>
+            <div class="nombre-valor">{{ presupuestoSeleccionado.cliente.nombreCompleto }}</div>
+        </div>
+        
+        <!-- Información de contacto en grid -->
+        <div class="cliente-contacto-grid">
+            <div class="contacto-item">
+            <i class="bi bi-telephone"></i>
+            <div>
+                <label>Teléfono</label>
+                <span class="contacto-valor">{{ presupuestoSeleccionado.cliente.telefono || 'No especificado' }}</span>
+            </div>
+            </div>
+            
+            <div class="contacto-item">
+            <i class="bi bi-envelope"></i>
+            <div>
+                <label>Email</label>
+                <span class="contacto-valor">{{ presupuestoSeleccionado.cliente.email || 'No especificado' }}</span>
+            </div>
+            </div>
+            
+            <div class="contacto-item full-width">
+            <i class="bi bi-geo-alt"></i>
+            <div>
+                <label>Dirección</label>
+                <span class="contacto-valor">{{ presupuestoSeleccionado.cliente.direccion || 'No especificada' }}</span>
+            </div>
+            </div>
+        </div>
+        </div>
+    </div>
     </div>
 
-    <!-- Productos -->
+    <!-- Fechas y Vencimiento -->
+    <div class="info-card">
+        <div class="info-header">
+            <i class="bi bi-calendar"></i>
+            <h4>Vencimiento</h4>
+        </div>
+        <div class="info-content">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Válido por (días)</label>
+                    <div *ngIf="modoEditable; else diasVencimientoView">
+                        <div class="dias-vencimiento-buttons">
+                            <button *ngFor="let opcion of opcionesVencimiento"
+                                    [class.active]="diasVencimientoSeleccionado === opcion.valor"
+                                    (click)="seleccionarDiasVencimientoDetalle(opcion.valor)"
+                                    class="btn-dias">
+                                {{ opcion.texto }}
+                            </button>
+                        </div>
+                    </div>
+                    <ng-template #diasVencimientoView>
+                        <div class="dias-vencimiento-display">
+                            {{ presupuestoSeleccionado.diasVencimiento }} días
+                        </div>
+                    </ng-template>
+                    <small class="text-muted" *ngIf="modoEditable">
+                        Vence el: {{ formatFecha(presupuestoSeleccionado.fechaVencimiento) }}
+                    </small>
+                </div>
+                
+                <!-- Columna vacía para mantener el grid -->
+                <div class="form-group"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Productos (SOLO VISTA) -->
     <div class="info-card">
       <div class="info-header">
         <i class="bi bi-box-seam"></i>
         <h4>Productos ({{ presupuestoSeleccionado.productos.length }})</h4>
       </div>
       <div class="info-content">
-        <table class="productos-table">
-          <thead>
-            <tr>
-              <th>Descripción</th>
-              <th>Código</th>
-              <th>Precio</th>
-              <th>Cantidad</th>
-              <th>Descuento %</th>
-              <th>Total</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let producto of presupuestoSeleccionado.productos; let i = index">
-              <td>{{ producto.descripcion }}</td>
-              <td>{{ producto.codigo }}</td>
-              <td>
-                <input type="number" class="form-control small-input" 
-                       [(ngModel)]="producto.precio" 
-                       (change)="actualizarProductoDetalle(i)">
-              </td>
-              <td>
-                <input type="number" class="form-control small-input" 
-                       [(ngModel)]="producto.cantidad" 
-                       (change)="actualizarProductoDetalle(i)" min="1">
-              </td>
-              <td>
-                <input type="number" class="form-control small-input" 
-                       [(ngModel)]="producto.descuento" 
-                       (change)="actualizarProductoDetalle(i)" min="0" max="100">
-              </td>
-              <td>{{ formatMoneda(producto.total) }}</td>
-              <td>
-                <button class="btn-action btn-danger" (click)="eliminarProductoDetalle(i)">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        
-        <button class="btn btn-outline-primary btn-sm mt-3" (click)="abrirModalAgregarProducto()">
-          <i class="bi bi-plus-circle"></i> Agregar Producto
-        </button>
+        <div class="productos-view-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Descripción</th>
+                <th>Código</th>
+                <th>Precio Unit.</th>
+                <th>Cantidad</th>
+                <th>Descuento %</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let producto of presupuestoSeleccionado.productos">
+                <td>
+                  <div class="producto-desc">
+                    <strong>{{ producto.descripcion }}</strong>
+                  </div>
+                </td>
+                <td>{{ producto.codigo }}</td>
+                <td>{{ formatMoneda(producto.precio) }}</td>
+                <td>{{ producto.cantidad }}</td>
+                <td>
+                  <span *ngIf="producto.descuento > 0" class="descuento-badge">
+                    {{ producto.descuento }}%
+                  </span>
+                  <span *ngIf="producto.descuento === 0">-</span>
+                </td>
+                <td class="total-producto">{{ formatMoneda(producto.total) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- Información del Presupuesto -->
+    <!-- Observaciones -->
     <div class="info-card">
       <div class="info-header">
-        <i class="bi bi-info-circle"></i>
-        <h4>Información del Presupuesto</h4>
+        <i class="bi bi-chat-left-text"></i>
+        <h4>Observaciones</h4>
       </div>
       <div class="info-content">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Fecha de Vencimiento</label>
-            <input type="date" class="form-control" 
-                   [value]="presupuestoSeleccionado.fechaVencimiento | date:'yyyy-MM-dd'"
-                   (change)="onFechaVencimientoChange($event)">
-          </div>
-          
-          <div class="form-group">
-            <label>Días de Validez</label>
-            <select class="form-control" [(ngModel)]="presupuestoSeleccionado.diasVencimiento">
-              <option *ngFor="let opcion of opcionesVencimiento" [value]="opcion.valor">
-                {{ opcion.texto }}
-              </option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label>Vendedor</label>
-            <input type="text" class="form-control" [(ngModel)]="presupuestoSeleccionado.vendedor">
-          </div>
+        <div *ngIf="modoEditable; else observacionesView">
+          <textarea [(ngModel)]="presupuestoSeleccionado.observaciones" 
+                    placeholder="Observaciones adicionales..."
+                    rows="3" class="form-control modern-input"></textarea>
+          <small class="text-muted">Puede modificar las observaciones del presupuesto</small>
         </div>
-        
-        <div class="form-group">
-          <label>Observaciones</label>
-          <textarea class="form-control" [(ngModel)]="presupuestoSeleccionado.observaciones" rows="3"></textarea>
-        </div>
+        <ng-template #observacionesView>
+          <div class="observaciones-view">
+            <i class="bi bi-chat-left"></i>
+            <p>{{ presupuestoSeleccionado.observaciones || 'No hay observaciones' }}</p>
+          </div>
+        </ng-template>
       </div>
     </div>
 
     <!-- Totales -->
-    <div class="info-card totales-card">
-      <div class="info-header">
-        <i class="bi bi-calculator"></i>
-        <h4>Totales</h4>
-      </div>
-      <div class="info-content">
-        <div class="total-row">
-          <span>Subtotal:</span>
-          <span>{{ formatMoneda(presupuestoSeleccionado.subtotal) }}</span>
+  
+        <div class="info-content">
+            <div class="totales-section">
+                <div class="total-row">
+                    <span>Subtotal:</span>
+                    <span>{{ formatMoneda(presupuestoSeleccionado.subtotal) }}</span>
+                </div>
+                
+                <div class="total-row" *ngIf="presupuestoSeleccionado.descuentoTotal > 0">
+                    <span>Descuento total:</span>
+                    <span class="descuento-total">{{ formatMoneda(presupuestoSeleccionado.descuentoTotal) }}</span>
+                </div>
+                
+                <div class="total-row">
+                    <span>IVA (16%):</span>
+                    <span>{{ formatMoneda(presupuestoSeleccionado.iva) }}</span>
+                </div>
+                
+                <div class="total-row total-final">
+                    <strong>Total:</strong>
+                    <strong>{{ formatMoneda(presupuestoSeleccionado.total) }}</strong>
+                </div>
+            </div>
         </div>
-        <div class="total-row">
-          <span>IVA (16%):</span>
-          <span>{{ formatMoneda(presupuestoSeleccionado.iva) }}</span>
-        </div>
-        <div class="total-row total-final">
-          <strong>Total:</strong>
-          <strong>{{ formatMoneda(presupuestoSeleccionado.total) }}</strong>
-        </div>
-      </div>
-    </div>
+ 
   </div>
 
   <div class="modal-actions">
     <button class="btn btn-secondary" (click)="cerrarModalDetalle()">
-      <i class="bi bi-x-circle"></i> Cancelar
+      <i class="bi bi-x-circle"></i>
+      Cancelar
     </button>
-    <button class="btn btn-primary" (click)="guardarCambiosPresupuesto()">
-      <i class="bi bi-check-circle"></i> Guardar Cambios
+    <button *ngIf="modoEditable" class="btn btn-primary" (click)="guardarCambiosPresupuesto()">
+      <i class="bi bi-check-circle"></i>
+      Guardar Cambios
+    </button>
+    <button class="btn btn-info" (click)="imprimirPresupuesto(presupuestoSeleccionado)">
+      <i class="bi bi-printer"></i>
+      Imprimir
     </button>
   </div>
 </div>
