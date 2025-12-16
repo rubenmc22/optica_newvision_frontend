@@ -32,7 +32,6 @@ import { ProductosListComponent } from './productos/productos-list/productos-lis
 import { GenerarVentaComponent } from './ventas/generar-venta/generar-venta.component';
 import { VentasDashboardComponent } from './ventas/ventas-dashboard.component';
 import { HistorialVentasComponent } from './ventas/historial-ventas/historial-ventas.component';
-import { PresupuestoComponent } from './ventas/presupuesto/presupuesto.component';
 import { CierreCajaComponent } from './ventas/cierre-caja/cierre-caja.component';
 import { SafeUrlPipe } from './ventas/generar-venta/safe-url.pipe';
 import { LoaderComponent } from './../shared/loader/loader.component';
@@ -40,6 +39,7 @@ import { SystemConfigComponent } from './system-config/system-config.component';
 import { clientesComponent } from './clientes/clientes.component';
 import { GestionOrdenesTrabajoComponent } from './gestion-ordenes-trabajo/gestion-ordenes-trabajo.component';
 import { DetalleOrdenComponent } from './gestion-ordenes-trabajo/detalle-orden/detalle-orden.component';
+import { PresupuestoComponent } from './ventas/presupuesto/presupuesto.component';
 
 
 
