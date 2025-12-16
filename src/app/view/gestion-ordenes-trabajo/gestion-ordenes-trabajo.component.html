@@ -531,13 +531,13 @@
   </div>
 
   <div class="modal-body">
-    <!-- Grid de 2 columnas -->
-    <div class="detalle-grid">
+    <!-- Grid de 3 filas -->
+    <div class="detalle-grid-rows">
 
-      <!-- COLUMNA IZQUIERDA -->
-      <div class="detalle-columna">
+      <!-- FILA 1: Cliente y Productos -->
+      <div class="detalle-fila detalle-fila-1">
 
-        <!-- Información del Cliente -->
+        <!-- Columna Cliente -->
         <div class="info-card">
           <div class="info-header">
             <i class="bi bi-person-circle"></i>
@@ -613,13 +613,78 @@
           </div>
         </div>
 
-        <!-- Formulación -->
-        <div class="info-card" *ngIf="ordenSeleccionada?.formulacion">
+        <!-- Columna Productos -->
+        <div class="info-card">
+          <div class="info-header">
+            <i class="bi bi-box-seam"></i>
+            <h4>Productos ({{ ordenSeleccionada?.productos?.length || 1 }})</h4>
+          </div>
+          <div class="info-content compact productos-list">
+            <!-- Si tiene estructura de productos del API -->
+            <div class="producto-item"
+              *ngFor="let producto of ordenSeleccionada?.productos; trackBy: trackByProductoId">
+              <div class="producto-header">
+                <strong>{{ producto?.datos?.nombre || 'Producto sin nombre' }}</strong>
+                <span class="badge"> {{ producto?.cantidad || 1 }}  unidad{{ (producto?.cantidad || 1) > 1 ? 'es' : ''
+                  }}</span>
+              </div>
+              <div class="producto-details">
+                <small>
+                  <span class="text-muted">Marca:</span> {{ producto?.datos?.marca || 'N/A' }}
+                  <span class="separator">•</span>
+                  <span class="text-muted"> Código:</span> {{ producto?.datos?.codigo || 'N/A' }}
+                </small>
+              </div>
+            </div>
+
+            <!-- Si tiene la estructura antigua (solo un producto) -->
+            <div class="producto-item" *ngIf="!ordenSeleccionada?.productos && ordenSeleccionada?.productoNombre">
+              <div class="producto-header">
+                <strong>{{ ordenSeleccionada?.productoNombre }}</strong>
+                <span class="badge">1 unidad</span>
+              </div>
+              <div class="producto-details">
+                <small>
+                  <span class="text-muted">Código:</span> {{ ordenSeleccionada?.codigo || 'N/A' }}
+                </small>
+              </div>
+            </div>
+
+            <!-- Si no hay productos -->
+            <div class="text-center" *ngIf="!ordenSeleccionada?.productos && !ordenSeleccionada?.productoNombre">
+              <i class="bi bi-box"></i>
+              <span class="text-muted">Sin productos registrados</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- FILA 2: Formulación (ancho completo) -->
+      <div class="detalle-fila detalle-fila-2" *ngIf="ordenSeleccionada?.formulacion">
+        <div class="info-card formulacion-full">
           <div class="info-header">
             <i class="bi bi-eyeglasses"></i>
             <h4>Formulación</h4>
           </div>
           <div class="info-content compact formulacion-compact">
+
+            <!-- Campos de Material y Tipo de Visión -->
+            <div class="formulacion-metadata"
+              *ngIf="ordenSeleccionada?.formulacion?.material || ordenSeleccionada?.formulacion?.tipoVision">
+              <div class="metadata-row">
+                <div class="metadata-item" *ngIf="ordenSeleccionada?.formulacion?.material">
+                  <span class="metadata-label">Material:</span>
+                  <span class="metadata-value">{{ ordenSeleccionada?.formulacion?.material }}</span>
+                </div>
+                <div class="metadata-item" *ngIf="ordenSeleccionada?.formulacion?.tipoVision">
+                  <span class="metadata-label">Tipo de Visión:</span>
+                  <span class="metadata-value">{{ ordenSeleccionada?.formulacion?.tipoVision }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Campos de fórmula ocular -->
             <div class="formulacion-row">
               <div class="formulacion-col ojo-col">
                 <div class="ojo-label">OD</div>
@@ -654,8 +719,12 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Observaciones -->
+      <!-- FILA 3: Observaciones y Personal Asignado -->
+      <div class="detalle-fila detalle-fila-3">
+
+        <!-- Columna Observaciones -->
         <div class="info-card">
           <div class="info-header">
             <i class="bi bi-chat-left-text"></i>
@@ -674,63 +743,7 @@
           </div>
         </div>
 
-      </div>
-
-      <!-- COLUMNA DERECHA -->
-      <div class="detalle-columna">
-
-        <!-- Productos -->
-        <div class="info-card">
-          <div class="info-header">
-            <i class="bi bi-box-seam"></i>
-            <h4>Productos ({{ ordenSeleccionada?.productos?.length || 1 }})</h4>
-          </div>
-          <div class="info-content compact productos-list">
-            <!-- Si tiene estructura de productos del API -->
-            <div class="producto-item"
-              *ngFor="let producto of ordenSeleccionada?.productos; trackBy: trackByProductoId">
-              <div class="producto-header">
-                <strong>{{ producto?.datos?.nombre || 'Producto sin nombre' }}</strong>
-                <span class="badge">{{ producto?.cantidad || 1 }} unidad{{ (producto?.cantidad || 1) > 1 ? 'es' : ''
-                  }}</span>
-              </div>
-              <div class="producto-details">
-                <small>
-                  <span class="text-muted">Marca:</span> {{ producto?.datos?.marca || 'N/A' }}
-                  <span class="separator">•</span>
-                  <span class="text-muted">Código:</span> {{ producto?.datos?.codigo || 'N/A' }}
-                </small>
-              </div>
-              <div class="producto-meta">
-                <small class="text-muted">
-                  {{ producto?.datos?.modelo || producto?.datos?.categoria || '' }}
-                  <span *ngIf="producto?.datos?.material"> • {{ producto?.datos?.material }}</span>
-                </small>
-              </div>
-            </div>
-
-            <!-- Si tiene la estructura antigua (solo un producto) -->
-            <div class="producto-item" *ngIf="!ordenSeleccionada?.productos && ordenSeleccionada?.productoNombre">
-              <div class="producto-header">
-                <strong>{{ ordenSeleccionada?.productoNombre }}</strong>
-                <span class="badge">1 unidad</span>
-              </div>
-              <div class="producto-details">
-                <small>
-                  <span class="text-muted">Código:</span> {{ ordenSeleccionada?.codigo || 'N/A' }}
-                </small>
-              </div>
-            </div>
-
-            <!-- Si no hay productos -->
-            <div class="text-center" *ngIf="!ordenSeleccionada?.productos && !ordenSeleccionada?.productoNombre">
-              <i class="bi bi-box"></i>
-              <span class="text-muted">Sin productos registrados</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Personal Asignado -->
+        <!-- Columna Personal Asignado -->
         <div class="info-card">
           <div class="info-header">
             <i class="bi bi-person-badge"></i>
@@ -763,6 +776,7 @@
         </div>
 
       </div>
+
     </div>
 
     <!-- Acciones según estado -->

@@ -77,6 +77,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
       entregadoPor: '',
       archivada: false,
       formulacion: {
+        material: "CRISTALES-SERVILENTES-",  // Nuevo campo
+        tipoVision: "Progressivo / Multifocal",
         esferaOD: '+1.50',
         esferaOI: '+1.75',
         cilindroOD: '-0.50',
@@ -147,6 +149,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
       entregadoPor: '',
       archivada: false,
       formulacion: {
+        material: "CRISTALES-SERVILENTES-",  // Nuevo campo
+        tipoVision: "Progressivo / Multifocal",
         esferaOD: '-2.25',
         esferaOI: '-2.00',
         cilindroOD: '-0.75',
@@ -216,6 +220,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
       entregadoPor: '',
       archivada: false,
       formulacion: {
+        material: "CRISTALES-SERVILENTES-",  // Nuevo campo
+        tipoVision: "Progressivo / Multifocal",
         esferaOD: '+0.75',
         esferaOI: '+1.00',
         cilindroOD: null,
@@ -298,6 +304,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
       entregadoPor: '',
       archivada: false,
       formulacion: {
+        material: "CRISTALES-SERVILENTES-",  // Nuevo campo
+        tipoVision: "Progressivo / Multifocal",
         esferaOD: '-3.25',
         esferaOI: '-3.50',
         cilindroOD: '-1.25',
@@ -369,6 +377,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
       fechaArchivado: null,
       motivoArchivo: null,
       formulacion: {
+        material: "CRISTALES-SERVILENTES-",  // Nuevo campo
+        tipoVision: "Progressivo / Multifocal",
         esferaOD: '+0.50',
         esferaOI: '+0.75',
         cilindroOD: '-0.25',
