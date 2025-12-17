@@ -1238,7 +1238,7 @@ textarea.form-control-moderno {
 }
 
 .btn-primary-moderno {
-    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+    background: var(--degradado-color) !important;
     border: none;
     color: white;
     padding: 0.75rem 1.5rem;

@@ -680,21 +680,6 @@ export class PresupuestoComponent implements OnInit {
     return estados[estadoColor] || 'Vigente';
   }
 
-  formatFecha(fecha: Date): string {
-    return new Date(fecha).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  }
-
-  formatMoneda(valor: number): string {
-    return new Intl.NumberFormat('es-ES', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(valor);
-  }
-
   calcularEstadisticas() {
     this.estadisticas.totalVigentes = this.presupuestosVigentes.length;
     this.estadisticas.totalVencidos = this.presupuestosVencidos.length;
@@ -771,197 +756,289 @@ export class PresupuestoComponent implements OnInit {
     this.presupuestoSeleccionado.total = this.presupuestoSeleccionado.subtotal + this.presupuestoSeleccionado.iva;
   }
 
-  // Agrega este método a tu clase PresupuestoComponent
+  // Método para imprimir presupuesto con auto-impresión y cierre automático
   imprimirPresupuesto(presupuesto: any) {
     console.log('🖨️ Imprimiendo presupuesto:', presupuesto);
 
-    // Aquí puedes implementar la lógica de impresión
-    // Por ejemplo, abrir una ventana de impresión o generar PDF
+    // Calcular descuento total si no existe
+    if (!presupuesto.descuentoTotal) {
+      presupuesto.descuentoTotal = this.calcularDescuentoTotalPresupuestoParaImpresion(presupuesto);
+    }
 
-    // Simulación de impresión
-    const contenidoImpresion = `
-    ==================================
-           NEW VISION LENS 2020
-    ==================================
-    
-    PRESUPUESTO: ${presupuesto.codigo}
-    Fecha: ${this.formatFecha(new Date())}
-    
-    CLIENTE:
-    ${presupuesto.cliente.nombreCompleto}
-    ${presupuesto.cliente.cedula}
-    Tel: ${presupuesto.cliente.telefono}
-    
-    VENDEDOR: ${presupuesto.vendedor}
-    
-    PRODUCTOS:
-    ==================================
-    ${presupuesto.productos.map((p: any, i: number) =>
-      `${i + 1}. ${p.descripcion} - ${p.cantidad} x ${this.formatMoneda(p.precio)} = ${this.formatMoneda(p.total)}`
-    ).join('\n')}
-    
-    ==================================
-    Subtotal: ${this.formatMoneda(presupuesto.subtotal)}
-    IVA (16%): ${this.formatMoneda(presupuesto.iva)}
-    TOTAL: ${this.formatMoneda(presupuesto.total)}
-    
-    ==================================
-    Vence: ${this.formatFecha(presupuesto.fechaVencimiento)}
-    Estado: ${this.getEstadoTexto(presupuesto.estadoColor)}
-    
-    Observaciones:
-    ${presupuesto.observaciones || 'Ninguna'}
-    
-    ==================================
-    Maked by optolapp.com
-  `;
-
-    // Abrir ventana de impresión
-    const ventanaImpresion = window.open('', '_blank');
-    if (ventanaImpresion) {
-      ventanaImpresion.document.write(`
-      <html>
-        <head>
-          <title>Presupuesto ${presupuesto.codigo}</title>
-          <style>
-            body { 
-              font-family: 'Courier New', monospace; 
-              font-size: 12px; 
+    // Crear contenido HTML para impresión
+    const contenidoHTML = `
+    <html>
+      <head>
+        <title>Presupuesto ${presupuesto.codigo}</title>
+        <style>
+          /* Estilos de impresión */
+          @media print {
+            @page {
+              margin: 10mm;
+              size: A4 portrait;
+            }
+            
+            body {
+              margin: 0;
+              font-family: 'Arial', sans-serif;
+              font-size: 12px;
               line-height: 1.4;
-              margin: 20px;
+              color: #000;
+              background: white;
             }
-            .header { 
-              text-align: center; 
-              margin-bottom: 20px;
-              border-bottom: 2px solid #000;
+            
+            .no-print, button {
+              display: none !important;
+            }
+            
+            .header {
+              text-align: center;
+              margin-bottom: 15px;
               padding-bottom: 10px;
+              border-bottom: 2px solid #000;
             }
+            
             .info-cliente {
-              margin-bottom: 20px;
+              margin-bottom: 15px;
               padding: 10px;
               border: 1px solid #ccc;
+              background: #f9f9f9;
             }
+            
             table {
               width: 100%;
               border-collapse: collapse;
-              margin: 20px 0;
+              margin: 15px 0;
             }
+            
             th, td {
               border: 1px solid #000;
-              padding: 8px;
-              text-align: left;
+              padding: 6px;
+              text-align: center;
+              vertical-align: middle;
+              font-size: 11px;
             }
+            
             th {
               background-color: #f0f0f0;
+              font-weight: bold;
             }
+            
             .totales {
               margin-top: 20px;
               border-top: 2px solid #000;
               padding-top: 10px;
             }
+            
             .total-final {
               font-weight: bold;
-              font-size: 14px;
+              font-size: 13px;
             }
+            
             .footer {
-              margin-top: 30px;
+              margin-top: 25px;
               text-align: center;
               font-size: 10px;
               color: #666;
             }
-            @media print {
-              body { margin: 0; }
-              .no-print { display: none; }
+            
+            .text-center {
+              text-align: center !important;
             }
-          </style>
-        </head>
-        <body>
+          }
+          
+          /* Estilos para vista previa */
+          @media screen {
+            body {
+              font-family: 'Arial', sans-serif;
+              font-size: 12px;
+              line-height: 1.4;
+              margin: 20px;
+              background: #f5f5f5;
+            }
+            
+            .container {
+              max-width: 800px;
+              margin: 0 auto;
+              background: white;
+              padding: 20px;
+              box-shadow: 0 0 10px rgba(0,0,0,0.1);
+              border-radius: 5px;
+            }
+            
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+            }
+            
+            th, td {
+              border: 1px solid #000;
+              padding: 8px;
+              text-align: center;
+              vertical-align: middle;
+            }
+            
+            th {
+              background-color: #f0f0f0;
+              font-weight: bold;
+            }
+            
+            .text-center {
+              text-align: center !important;
+              vertical-align: middle !important;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <!-- Cabecera -->
           <div class="header">
-            <h2>NEW VISION LENS 2020</h2>
+            <h1>NEW VISION LENS 2020</h1>
             <p>Calle Confecio Centro Comercial Candelaria Plaza Planta Baja Local PB</p>
             <p>Teléfono: 022.365.394.2 | Email: newvisionlens2020@email.com</p>
           </div>
           
-          <h3>PRESUPUESTO N° ${presupuesto.codigo}</h3>
+          <h2 class="text-center">PRESUPUESTO N° ${presupuesto.codigo}</h2>
           
+          <!-- Información del cliente -->
           <div class="info-cliente">
-            <h4>CLIENTE</h4>
-            <p><strong>${presupuesto.cliente.nombreCompleto}</strong></p>
-            <p>${presupuesto.cliente.direccion || 'Dirección no especificada'}</p>
-            <p>Teléfono: ${presupuesto.cliente.telefono}</p>
-            <p>Fecha: ${this.formatFecha(new Date())}</p>
+            <h3 class="text-center">CLIENTE</h3>
+            <div style="text-align: center;">
+              <p><strong>Nombre:</strong> ${presupuesto.cliente.nombreCompleto}</p>
+              <p><strong>Cédula/RIF:</strong> ${presupuesto.cliente.cedula}</p>
+              <p><strong>Teléfono:</strong> ${presupuesto.cliente.telefono || 'No especificado'}</p>
+              <p><strong>Dirección:</strong> ${presupuesto.cliente.direccion || 'No especificada'}</p>
+            </div>
           </div>
           
-          <h4>PRODUCTOS</h4>
+          <!-- Productos -->
+          <h3 class="text-center">DETALLE DE PRODUCTOS</h3>
           <table>
             <thead>
               <tr>
-                <th>DESCRIPCIÓN</th>
-                <th>PRECIO</th>
-                <th>CANTIDAD</th>
-                <th>DESCUENTO %</th>
-                <th>TOTAL</th>
+                <th class="text-center">#</th>
+                <th class="text-center">DESCRIPCIÓN</th>
+                <th class="text-center">CÓDIGO</th>
+                <th class="text-center">PRECIO UNIT.</th>
+                <th class="text-center">CANTIDAD</th>
+                <th class="text-center">DESCUENTO %</th>
+                <th class="text-center">TOTAL</th>
               </tr>
             </thead>
             <tbody>
-              ${presupuesto.productos.map((p: any) => `
+              ${presupuesto.productos.map((p: any, i: number) => `
                 <tr>
-                  <td>${p.descripcion}</td>
-                  <td>${this.formatMoneda(p.precio)}</td>
-                  <td>${p.cantidad}</td>
-                  <td>${p.descuento}%</td>
-                  <td>${this.formatMoneda(p.total)}</td>
+                  <td class="text-center">${i + 1}</td>
+                  <td class="text-center">${p.descripcion}</td>
+                  <td class="text-center">${p.codigo || '-'}</td>
+                  <td class="text-center">${this.formatMoneda(p.precio)}</td>
+                  <td class="text-center">${p.cantidad}</td>
+                  <td class="text-center">${p.descuento > 0 ? p.descuento + '%' : '-'}</td>
+                  <td class="text-center">${this.formatMoneda(p.total)}</td>
                 </tr>
               `).join('')}
             </tbody>
           </table>
           
+          <!-- Totales -->
           <div class="totales">
-            <p><strong>Subtotal:</strong> ${this.formatMoneda(presupuesto.subtotal)}</p>
-            <p><strong>IVA Total (16%):</strong> ${this.formatMoneda(presupuesto.iva)}</p>
-            <p class="total-final"><strong>TOTAL:</strong> ${this.formatMoneda(presupuesto.total)}</p>
+            <div style="display: flex; justify-content: space-between;">
+              <span>Subtotal:</span>
+              <span>${this.formatMoneda(presupuesto.subtotal)}</span>
+            </div>
+            ${presupuesto.descuentoTotal > 0 ? `
+            <div style="display: flex; justify-content: space-between;">
+              <span>Descuento total:</span>
+              <span>- ${this.formatMoneda(presupuesto.descuentoTotal)}</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between;">
+              <span>IVA (16%):</span>
+              <span>${this.formatMoneda(presupuesto.iva)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;" class="total-final">
+              <strong>TOTAL:</strong>
+              <strong>${this.formatMoneda(presupuesto.total)}</strong>
+            </div>
           </div>
           
-          <div class="info-adicional">
-            <p><strong>Fecha de Vencimiento:</strong> ${this.formatFecha(presupuesto.fechaVencimiento)}</p>
-            <p><strong>Válido por:</strong> ${presupuesto.diasVencimiento} días</p>
-            ${presupuesto.observaciones ? `<p><strong>Observaciones:</strong> ${presupuesto.observaciones}</p>` : ''}
-          </div>
-          
+          <!-- Firma -->
           <div class="footer">
-            <p>________________________________</p>
-            <p>Firma del Cliente</p>
-            <p>Maked by optolapp.com</p>
-            <button class="no-print" onclick="window.print()">🖨️ Imprimir</button>
-            <button class="no-print" onclick="window.close()">❌ Cerrar</button>
+            <div style="text-align: center; margin-bottom: 30px;">
+              <p>________________________________</p>
+              <p>Firma del Cliente</p>
+            </div>
+            <p class="text-center">Presupuesto válido por ${presupuesto.diasVencimiento} días</p>
+            <p class="text-center">Estado: ${this.getEstadoTexto(presupuesto.estadoColor)}</p>
           </div>
+        </div>
+        
+        <script>
+          // Imprimir automáticamente al cargar
+          window.onload = function() {
+            window.print();
+          };
           
-          <script>
-            // Auto-imprimir si se desea
-            // window.print();
-          </script>
-        </body>
-      </html>
-    `);
-      ventanaImpresion.document.close();
-    }
+          // Cerrar la ventana después de imprimir
+          window.onafterprint = function() {
+            setTimeout(function() {
+              window.close();
+            }, 500);
+          };
+        </script>
+      </body>
+    </html>
+  `;
 
-    // También puedes usar un snackbar para notificar
-    this.snackBar.open(`Preparando impresión del presupuesto ${presupuesto.codigo}`, 'Cerrar', {
-      duration: 3000,
-      panelClass: ['snackbar-info']
+    // Abrir ventana de impresión
+    const ventanaImpresion = window.open('', '_blank');
+
+    if (ventanaImpresion) {
+      ventanaImpresion.document.write(contenidoHTML);
+      ventanaImpresion.document.close();
+
+      // Notificación
+      this.snackBar.open(`Preparando impresión del presupuesto ${presupuesto.codigo}`, 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-info']
+      });
+    } else {
+      this.snackBar.open('Por favor, permite las ventanas emergentes para imprimir', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-warning']
+      });
+    }
+  }
+
+  // Método auxiliar para calcular descuento total para impresión
+  calcularDescuentoTotalPresupuestoParaImpresion(presupuesto: any): number {
+    if (!presupuesto || !presupuesto.productos) return 0;
+
+    return presupuesto.productos.reduce((total: number, producto: any) => {
+      const subtotalProducto = producto.precio * producto.cantidad;
+      return total + (subtotalProducto * (producto.descuento / 100));
+    }, 0);
+  }
+
+  // Método para formatear fecha (ya existe, pero lo incluyo por referencia)
+  formatFecha(fecha: Date): string {
+    return new Date(fecha).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
     });
   }
 
-  // También necesitas este método auxiliar para la impresión
-  formatFechaParaImpresion(fecha: Date): string {
-    return fecha.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  // Método para formatear moneda (ya existe, pero lo incluyo por referencia)
+  formatMoneda(valor: number): string {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(valor);
   }
 
   agregarProducto(producto: any) {
