@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@an
 import { lastValueFrom } from 'rxjs';
 import { ClienteService } from './../../clientes/clientes.services';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { ExcelExportService } from './../../../core/services/excel-export/excel-export.service';
 
 @Component({
   selector: 'app-presupuesto',
@@ -29,6 +30,16 @@ export class PresupuestoComponent implements OnInit {
   // En tu componente
   terminoBusqueda: string = '';
   productosFiltrados: any[] = [];
+
+  // Agrega estas variables al componente
+  mostrarMenuExportar: boolean = false;
+  opcionesExportar = [
+    { id: 'vigentes', texto: 'Exportar Vigentes', icono: 'bi-file-earmark-check' },
+    { id: 'vencidos', texto: 'Exportar Vencidos', icono: 'bi-file-earmark-x' },
+    { id: 'todos', texto: 'Exportar Todos', icono: 'bi-files' }
+  ];
+  // Variables para el menú de exportar
+  timeoutCerrarMenu: any;
 
   // Nuevo presupuesto
   nuevoPresupuesto: any = {
@@ -86,7 +97,8 @@ export class PresupuestoComponent implements OnInit {
   constructor(
     private clienteService: ClienteService,
     private snackBar: MatSnackBar,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private excelExportService: ExcelExportService,
   ) { }
 
   ngOnInit() {
@@ -451,6 +463,10 @@ export class PresupuestoComponent implements OnInit {
   cargarPresupuestos() {
     // Simular carga de datos
     setTimeout(() => {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0); // Establecer hora a medianoche para cálculos precisos
+
+      // Presupuestos VIGENTES (con diferentes días restantes)
       this.presupuestosVigentes = [
         {
           id: 1,
@@ -463,9 +479,9 @@ export class PresupuestoComponent implements OnInit {
             email: 'ruben.martinez@email.com',
             direccion: 'Las rosas, conj res, country villas'
           },
-          fechaCreacion: new Date('2025-06-11'),
-          fechaVencimiento: new Date('2025-06-25'),
-          diasVencimiento: 14,
+          fechaCreacion: new Date(hoy.getTime() - 3 * 24 * 60 * 60 * 1000), // Hace 3 días
+          fechaVencimiento: new Date(hoy.getTime() + 14 * 24 * 60 * 60 * 1000), // 14 días en el futuro
+          diasVencimiento: 17,
           vendedor: '12332',
           productos: [
             {
@@ -475,19 +491,497 @@ export class PresupuestoComponent implements OnInit {
               cantidad: 1,
               descuento: 0,
               total: 1108.23
+            },
+            {
+              descripcion: 'Lente Blue Filter',
+              codigo: 'PR-000038',
+              precio: 380.00,
+              cantidad: 2,
+              descuento: 5,
+              total: 722.00
             }
           ],
-          subtotal: 1108.23,
-          iva: 177.32,
-          total: 1285.55,
-          observaciones: '',
+          subtotal: 1488.23,
+          iva: 238.12,
+          descuentoTotal: 38.00,
+          total: 1688.35,
+          observaciones: 'Cliente regular, 5% de descuento especial',
           estado: 'vigente',
           diasRestantes: 14,
           estadoColor: 'vigente'
+        },
+        {
+          id: 2,
+          codigo: 'P-2025-002',
+          cliente: {
+            tipoPersona: 'juridica',
+            cedula: 'J-123456789',
+            nombreCompleto: 'Óptica Vision Plus C.A.',
+            telefono: '+584141234567',
+            email: 'ventas@opticavisionplus.com',
+            direccion: 'Av. Principal, Centro Comercial Galerías'
+          },
+          fechaCreacion: new Date(hoy.getTime() - 2 * 24 * 60 * 60 * 1000), // Hace 2 días
+          fechaVencimiento: new Date(hoy.getTime() + 7 * 24 * 60 * 60 * 1000), // 7 días en el futuro
+          diasVencimiento: 9,
+          vendedor: '45678',
+          productos: [
+            {
+              descripcion: 'Lente Progresivo Essilor',
+              codigo: 'PR-000001',
+              precio: 850.00,
+              cantidad: 3,
+              descuento: 10,
+              total: 2295.00
+            },
+            {
+              descripcion: 'Armazón Ray-Ban',
+              codigo: 'PR-000042',
+              precio: 320.50,
+              cantidad: 5,
+              descuento: 15,
+              total: 1362.13
+            }
+          ],
+          subtotal: 5852.50,
+          iva: 936.40,
+          descuentoTotal: 1001.87,
+          total: 5787.03,
+          observaciones: 'Empresa cliente, descuento por volumen',
+          estado: 'vigente',
+          diasRestantes: 7,
+          estadoColor: 'vigente'
+        },
+        {
+          id: 3,
+          codigo: 'P-2025-003',
+          cliente: {
+            tipoPersona: 'natural',
+            cedula: '23456789',
+            nombreCompleto: 'María Gabriela López Pérez',
+            telefono: '+584147894561',
+            email: 'maria.gabriela@email.com',
+            direccion: 'Urbanización Los Naranjos, Calle 5'
+          },
+          fechaCreacion: new Date(hoy.getTime() - 1 * 24 * 60 * 60 * 1000), // Hace 1 día
+          fechaVencimiento: new Date(hoy.getTime() + 3 * 24 * 60 * 60 * 1000), // 3 días en el futuro
+          diasVencimiento: 4,
+          vendedor: '78901',
+          productos: [
+            {
+              descripcion: 'Lente Fotocromático',
+              codigo: 'PR-000027',
+              precio: 720.00,
+              cantidad: 1,
+              descuento: 0,
+              total: 720.00
+            },
+            {
+              descripcion: 'Armazón Oakley',
+              codigo: 'PR-000045',
+              precio: 450.00,
+              cantidad: 1,
+              descuento: 0,
+              total: 450.00
+            }
+          ],
+          subtotal: 1170.00,
+          iva: 187.20,
+          descuentoTotal: 0,
+          total: 1357.20,
+          observaciones: '',
+          estado: 'vigente',
+          diasRestantes: 3,
+          estadoColor: 'proximo'
+        },
+        {
+          id: 4,
+          codigo: 'P-2025-004',
+          cliente: {
+            tipoPersona: 'juridica',
+            cedula: 'J-987654321',
+            nombreCompleto: 'Clínica Visual Integral',
+            telefono: '+584242345678',
+            email: 'info@clinicavisual.com',
+            direccion: 'Centro Médico Las Mercedes'
+          },
+          fechaCreacion: new Date(hoy.getTime() - 2 * 24 * 60 * 60 * 1000), // Hace 2 días
+          fechaVencimiento: new Date(hoy.getTime() + 1 * 24 * 60 * 60 * 1000), // 1 día en el futuro
+          diasVencimiento: 3,
+          vendedor: '12332',
+          productos: [
+            {
+              descripcion: 'Lente Antirreflejo',
+              codigo: 'PR-000015',
+              precio: 550.00,
+              cantidad: 4,
+              descuento: 8,
+              total: 2024.00
+            }
+          ],
+          subtotal: 2200.00,
+          iva: 352.00,
+          descuentoTotal: 176.00,
+          total: 2376.00,
+          observaciones: 'Entrega urgente requerida',
+          estado: 'vigente',
+          diasRestantes: 1,
+          estadoColor: 'proximo'
+        },
+        {
+          id: 5,
+          codigo: 'P-2025-005',
+          cliente: {
+            tipoPersona: 'natural',
+            cedula: '34567890',
+            nombreCompleto: 'Carlos Eduardo Rodríguez',
+            telefono: '+584148765432',
+            email: 'carlos.rodriguez@email.com',
+            direccion: 'Residencias El Bosque'
+          },
+          fechaCreacion: new Date(hoy.getTime() - 1 * 24 * 60 * 60 * 1000), // Hace 1 día
+          fechaVencimiento: new Date(hoy.getTime()), // Vence hoy
+          diasVencimiento: 1,
+          vendedor: '45678',
+          productos: [
+            {
+              descripcion: '758684-RETRO-0',
+              codigo: '758684-RETRO-0',
+              precio: 1108.23,
+              cantidad: 1,
+              descuento: 0,
+              total: 1108.23
+            },
+            {
+              descripcion: 'Lente Blue Filter',
+              codigo: 'PR-000038',
+              precio: 380.00,
+              cantidad: 1,
+              descuento: 0,
+              total: 380.00
+            }
+          ],
+          subtotal: 1488.23,
+          iva: 238.12,
+          descuentoTotal: 0,
+          total: 1726.35,
+          observaciones: 'Cliente nuevo',
+          estado: 'vigente',
+          diasRestantes: 0,
+          estadoColor: 'hoy'
         }
       ];
+
+      // Presupuestos VENCIDOS (con fechas pasadas)
+      this.presupuestosVencidos = [
+        {
+          id: 6,
+          codigo: 'P-2025-006',
+          cliente: {
+            tipoPersona: 'natural',
+            cedula: '45678901',
+            nombreCompleto: 'Ana Isabel Contreras',
+            telefono: '+584142345678',
+            email: 'ana.contreras@email.com',
+            direccion: 'Sector La Victoria'
+          },
+          fechaCreacion: new Date(hoy.getTime() - 27 * 24 * 60 * 60 * 1000), // Hace 27 días
+          fechaVencimiento: new Date(hoy.getTime() - 13 * 24 * 60 * 60 * 1000), // Hace 13 días
+          diasVencimiento: 14,
+          vendedor: '78901',
+          productos: [
+            {
+              descripcion: 'Armazón Ray-Ban',
+              codigo: 'PR-000042',
+              precio: 320.50,
+              cantidad: 2,
+              descuento: 10,
+              total: 576.90
+            }
+          ],
+          subtotal: 641.00,
+          iva: 102.56,
+          descuentoTotal: 64.10,
+          total: 679.46,
+          observaciones: 'Presupuesto vencido hace 13 días',
+          estado: 'vencido',
+          diasRestantes: -13,
+          estadoColor: 'vencido'
+        },
+        {
+          id: 7,
+          codigo: 'P-2025-007',
+          cliente: {
+            tipoPersona: 'juridica',
+            cedula: 'J-456789123',
+            nombreCompleto: 'Centro Óptico Moderno',
+            telefono: '+584261234567',
+            email: 'ventas@opticomoderno.com',
+            direccion: 'Centro Comercial Sambil'
+          },
+          fechaCreacion: new Date(hoy.getTime() - 22 * 24 * 60 * 60 * 1000), // Hace 22 días
+          fechaVencimiento: new Date(hoy.getTime() - 8 * 24 * 60 * 60 * 1000), // Hace 8 días
+          diasVencimiento: 14,
+          vendedor: '12332',
+          productos: [
+            {
+              descripcion: 'Lente Progresivo Essilor',
+              codigo: 'PR-000001',
+              precio: 850.00,
+              cantidad: 2,
+              descuento: 12,
+              total: 1496.00
+            },
+            {
+              descripcion: 'Lente Fotocromático',
+              codigo: 'PR-000027',
+              precio: 720.00,
+              cantidad: 3,
+              descuento: 12,
+              total: 1900.80
+            },
+            {
+              descripcion: 'Lente Antirreflejo',
+              codigo: 'PR-000015',
+              precio: 550.00,
+              cantidad: 2,
+              descuento: 12,
+              total: 968.00
+            }
+          ],
+          subtotal: 4370.00,
+          iva: 699.20,
+          descuentoTotal: 616.20,
+          total: 4453.00,
+          observaciones: 'Gran pedido corporativo - Vencido hace 8 días',
+          estado: 'vencido',
+          diasRestantes: -8,
+          estadoColor: 'vencido'
+        },
+        {
+          id: 8,
+          codigo: 'P-2025-008',
+          cliente: {
+            tipoPersona: 'natural',
+            cedula: '56789012',
+            nombreCompleto: 'José Gregorio Méndez',
+            telefono: '+584143216789',
+            email: 'jose.mendez@email.com',
+            direccion: 'Urbanización Los Samanes'
+          },
+          fechaCreacion: new Date(hoy.getTime() - 15 * 24 * 60 * 60 * 1000), // Hace 15 días
+          fechaVencimiento: new Date(hoy.getTime() - 8 * 24 * 60 * 60 * 1000), // Hace 8 días
+          diasVencimiento: 7,
+          vendedor: '45678',
+          productos: [
+            {
+              descripcion: 'Armazón Oakley',
+              codigo: 'PR-000045',
+              precio: 450.00,
+              cantidad: 1,
+              descuento: 5,
+              total: 427.50
+            }
+          ],
+          subtotal: 450.00,
+          iva: 72.00,
+          descuentoTotal: 22.50,
+          total: 499.50,
+          observaciones: 'Vencido hace 8 días',
+          estado: 'vencido',
+          diasRestantes: -8,
+          estadoColor: 'vencido'
+        },
+        {
+          id: 9,
+          codigo: 'P-2025-009',
+          cliente: {
+            tipoPersona: 'juridica',
+            cedula: 'J-789123456',
+            nombreCompleto: 'Laboratorio Óptico Premium',
+            telefono: '+584263456789',
+            email: 'lab@opticopremium.com',
+            direccion: 'Zona Industrial La Yaguara'
+          },
+          fechaCreacion: new Date(hoy.getTime() - 25 * 24 * 60 * 60 * 1000), // Hace 25 días
+          fechaVencimiento: new Date(hoy.getTime() - 11 * 24 * 60 * 60 * 1000), // Hace 11 días
+          diasVencimiento: 14,
+          vendedor: '78901',
+          productos: [
+            {
+              descripcion: '758684-RETRO-0',
+              codigo: '758684-RETRO-0',
+              precio: 1108.23,
+              cantidad: 5,
+              descuento: 18,
+              total: 4543.74
+            },
+            {
+              descripcion: 'Lente Blue Filter',
+              codigo: 'PR-000038',
+              precio: 380.00,
+              cantidad: 10,
+              descuento: 18,
+              total: 3116.00
+            }
+          ],
+          subtotal: 9141.15,
+          iva: 1462.58,
+          descuentoTotal: 1804.91,
+          total: 8798.82,
+          observaciones: 'Pedido mayorista - Vencido hace 11 días',
+          estado: 'vencido',
+          diasRestantes: -11,
+          estadoColor: 'vencido'
+        },
+        {
+          id: 10,
+          codigo: 'P-2025-010',
+          cliente: {
+            tipoPersona: 'natural',
+            cedula: '67890123',
+            nombreCompleto: 'Laura Valentina Sánchez',
+            telefono: '+584144567890',
+            email: 'laura.sanchez@email.com',
+            direccion: 'Residencias El Paraíso'
+          },
+          fechaCreacion: new Date(hoy.getTime() - 12 * 24 * 60 * 60 * 1000), // Hace 12 días
+          fechaVencimiento: new Date(hoy.getTime() - 5 * 24 * 60 * 60 * 1000), // Hace 5 días
+          diasVencimiento: 7,
+          vendedor: '12332',
+          productos: [
+            {
+              descripcion: 'Lente Antirreflejo',
+              codigo: 'PR-000015',
+              precio: 550.00,
+              cantidad: 1,
+              descuento: 0,
+              total: 550.00
+            },
+            {
+              descripcion: 'Armazón Ray-Ban',
+              codigo: 'PR-000042',
+              precio: 320.50,
+              cantidad: 1,
+              descuento: 0,
+              total: 320.50
+            }
+          ],
+          subtotal: 870.50,
+          iva: 139.28,
+          descuentoTotal: 0,
+          total: 1009.78,
+          observaciones: 'Presupuesto vencido hace 5 días',
+          estado: 'vencido',
+          diasRestantes: -5,
+          estadoColor: 'vencido'
+        },
+        {
+          id: 11,
+          codigo: 'P-2025-011',
+          cliente: {
+            tipoPersona: 'natural',
+            cedula: '78901234',
+            nombreCompleto: 'Pedro Antonio Rojas',
+            telefono: '+584145678901',
+            email: 'pedro.rojas@email.com',
+            direccion: 'Urbanización Los Jardines'
+          },
+          fechaCreacion: new Date(hoy.getTime() - 10 * 24 * 60 * 60 * 1000), // Hace 10 días
+          fechaVencimiento: new Date(hoy.getTime() - 3 * 24 * 60 * 60 * 1000), // Hace 3 días
+          diasVencimiento: 7,
+          vendedor: '45678',
+          productos: [
+            {
+              descripcion: 'Lente Fotocromático',
+              codigo: 'PR-000027',
+              precio: 720.00,
+              cantidad: 2,
+              descuento: 7,
+              total: 1339.20
+            }
+          ],
+          subtotal: 1440.00,
+          iva: 230.40,
+          descuentoTotal: 100.80,
+          total: 1569.60,
+          observaciones: 'Vencido recientemente hace 3 días',
+          estado: 'vencido',
+          diasRestantes: -3,
+          estadoColor: 'vencido'
+        }
+      ];
+
+      // Llamar al método para calcular días restantes dinámicamente
+      this.actualizarDiasRestantesDinamicos();
+
       this.calcularEstadisticas();
     }, 500);
+  }
+
+  actualizarDiasRestantesDinamicos(): void {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0); // Establece la hora a medianoche para comparar solo fechas
+
+    // Actualizar presupuestos vigentes
+    this.presupuestosVigentes.forEach(presupuesto => {
+      const fechaVencimiento = new Date(presupuesto.fechaVencimiento);
+      fechaVencimiento.setHours(0, 0, 0, 0); // Solo fecha
+
+      // Calcular diferencia en días
+      const diffTiempo = fechaVencimiento.getTime() - hoy.getTime();
+      const diasRestantes = Math.ceil(diffTiempo / (1000 * 3600 * 24));
+
+      presupuesto.diasRestantes = diasRestantes;
+
+      // IMPORTANTE: Actualizar estadoColor basado en díasRestantes
+      if (diasRestantes < 0) {
+        // Si está vencido, moverlo a vencidos
+        presupuesto.estadoColor = 'vencido';
+        this.moverPresupuestoAVencidos(presupuesto);
+      } else {
+        // Mantener en vigentes con el estado correcto
+        presupuesto.estadoColor = this.getEstadoColor(diasRestantes);
+      }
+    });
+
+    // Actualizar presupuestos vencidos
+    this.presupuestosVencidos.forEach(presupuesto => {
+      const fechaVencimiento = new Date(presupuesto.fechaVencimiento);
+      fechaVencimiento.setHours(0, 0, 0, 0);
+
+      const diffTiempo = fechaVencimiento.getTime() - hoy.getTime();
+      const diasRestantes = Math.ceil(diffTiempo / (1000 * 3600 * 24));
+
+      presupuesto.diasRestantes = diasRestantes;
+      presupuesto.estadoColor = 'vencido'; // Siempre vencido en esta lista
+    });
+
+    this.calcularEstadisticas();
+  }
+
+  // Método para mover presupuesto a vencidos
+  moverPresupuestoAVencidos(presupuesto: any): void {
+    // Remover de vigentes
+    this.presupuestosVigentes = this.presupuestosVigentes.filter(p => p.id !== presupuesto.id);
+
+    // Agregar a vencidos (si no existe ya)
+    if (!this.presupuestosVencidos.some(p => p.id === presupuesto.id)) {
+      this.presupuestosVencidos.push(presupuesto);
+    }
+  }
+
+  // Asegúrate de que getEstadoColor esté definido
+  getEstadoColor(diasRestantes: number): string {
+    if (diasRestantes < 0) {
+      return 'vencido';
+    } else if (diasRestantes === 0) {
+      return 'hoy';
+    } else if (diasRestantes <= 3) {
+      return 'proximo';
+    } else {
+      return 'vigente';
+    }
   }
 
   cargarProductos() {
@@ -621,6 +1115,7 @@ export class PresupuestoComponent implements OnInit {
 
   cambiarTab(tab: string) {
     this.tabActiva = tab;
+    this.actualizarDiasRestantesDinamicos();
   }
 
   seleccionarDiasVencimiento(dias: number) {
@@ -663,13 +1158,6 @@ export class PresupuestoComponent implements OnInit {
     });
   }
 
-  getEstadoColor(diasRestantes: number): string {
-    if (diasRestantes < 0) return 'vencido';
-    if (diasRestantes === 0) return 'hoy';
-    if (diasRestantes <= 3) return 'proximo';
-    return 'vigente';
-  }
-
   getEstadoTexto(estadoColor: string): string {
     const estados = {
       'vigente': 'Vigente',
@@ -691,15 +1179,84 @@ export class PresupuestoComponent implements OnInit {
     this.estadisticas.proximosAVencer = this.presupuestosVigentes.filter(p => p.diasRestantes! <= 3).length;
   }
 
+  // Método para exportar con opciones
+  exportarExcel(tipo: 'vigentes' | 'vencidos' | 'todos' = 'vigentes'): void {
+    try {
+      let presupuestos: any[] = [];
+      let nombre = '';
+
+      switch (tipo) {
+        case 'vigentes':
+          presupuestos = this.presupuestosVigentes;
+          nombre = 'Presupuestos_Vigentes';
+          break;
+        case 'vencidos':
+          presupuestos = this.presupuestosVencidos;
+          nombre = 'Presupuestos_Vencidos';
+          break;
+        case 'todos':
+          presupuestos = [...this.presupuestosVigentes, ...this.presupuestosVencidos];
+          nombre = 'Todos_Presupuestos';
+          break;
+        default:
+          presupuestos = this.presupuestosVigentes;
+          nombre = 'Presupuestos';
+      }
+
+      this.excelExportService.exportPresupuestos(presupuestos, nombre);
+
+      this.snackBar.open(`Exportado ${presupuestos.length} presupuesto(s) a Excel`, 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-success']
+      });
+
+    } catch (error: any) {
+      console.error('Error al exportar a Excel:', error);
+      this.snackBar.open(`Error: ${error.message}`, 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-error']
+      });
+    }
+  }
+
   filtrarPresupuestos() {
     this.calcularEstadisticas();
   }
 
-  exportarExcel() {
-    this.snackBar.open('Funcionalidad de exportación en desarrollo', 'Cerrar', {
-      duration: 3000,
-      panelClass: ['snackbar-info']
-    });
+  // Métodos para controlar el menú desplegable
+  abrirMenuExportar(): void {
+    if (this.timeoutCerrarMenu) {
+      clearTimeout(this.timeoutCerrarMenu);
+    }
+    this.mostrarMenuExportar = true;
+  }
+
+  cerrarMenuExportar(): void {
+    // Usar timeout para permitir mover el mouse entre el botón y el menú
+    this.timeoutCerrarMenu = setTimeout(() => {
+      this.mostrarMenuExportar = false;
+    }, 300);
+  }
+
+  mantenerMenuAbierto(): void {
+    if (this.timeoutCerrarMenu) {
+      clearTimeout(this.timeoutCerrarMenu);
+    }
+  }
+
+  seleccionarOpcionExportar(tipo: 'vigentes' | 'vencidos' | 'todos'): void {
+    this.exportarExcel(tipo);
+    this.mostrarMenuExportar = false;
+    if (this.timeoutCerrarMenu) {
+      clearTimeout(this.timeoutCerrarMenu);
+    }
+  }
+
+  // Limpiar timeout cuando se destruye el componente
+  ngOnDestroy() {
+    if (this.timeoutCerrarMenu) {
+      clearTimeout(this.timeoutCerrarMenu);
+    }
   }
 
   convertirAVenta(presupuesto: any) {

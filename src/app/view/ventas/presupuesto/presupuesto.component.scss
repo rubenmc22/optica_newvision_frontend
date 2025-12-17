@@ -643,6 +643,192 @@
             }
         }
     }
+
+    // Estilos para el botón de exportar con menú
+    .export-button-container {
+        position: relative;
+        display: inline-block;
+
+        // Esto es CRÍTICO para el posicionamiento
+        &:hover .export-dropdown {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .btn-export-excel {
+        background: linear-gradient(135deg, #1d6f42 0%, #21a366 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: relative;
+        z-index: 1001;
+
+        &:hover {
+            background: linear-gradient(135deg, #166534 0%, #1e8a5a 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        &:active {
+            transform: translateY(0);
+        }
+
+        &.active {
+            background: linear-gradient(135deg, #14532d 0%, #1a7c4c 100%);
+        }
+
+        i {
+            font-size: 1.1rem;
+        }
+    }
+
+    // Menú desplegable - ABRE HACIA ARRIBA
+    .export-dropdown {
+        position: absolute;
+        bottom: 100%; // Esto hace que abra hacia arriba
+        right: 0;
+        min-width: 280px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        margin-bottom: 8px; // Espacio entre botón y menú
+        z-index: 9999; // Z-index MUY alto
+        overflow: hidden;
+        visibility: hidden;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.2s ease-out;
+
+        // Asegurar que esté por encima de TODO
+        &[style*="display: block"],
+        &.visible {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .dropdown-header {
+            padding: 12px 16px;
+            background: #f8f9fa;
+            color: #495057;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #e9ecef;
+
+            i {
+                color: #21a366;
+            }
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: #e9ecef;
+            margin: 0;
+        }
+
+        .dropdown-item {
+            width: 100%;
+            padding: 12px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #495057;
+
+            &:hover {
+                background: #f8f9fa;
+                color: #212529;
+
+                i {
+                    color: #21a366;
+                }
+            }
+
+            &.active {
+                background: rgba(33, 163, 102, 0.1);
+                color: #14532d;
+                border-left: 3px solid #21a366;
+
+                i {
+                    color: #21a366;
+                }
+            }
+
+            i {
+                font-size: 1.2rem;
+                color: #6c757d;
+                width: 24px;
+                text-align: center;
+            }
+
+            .item-content {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+
+                .item-title {
+                    font-weight: 500;
+                    font-size: 0.95rem;
+                }
+
+                .item-subtitle {
+                    font-size: 0.8rem;
+                    color: #6c757d;
+                }
+            }
+
+            .badge {
+                font-size: 0.7rem;
+                padding: 2px 6px;
+                border-radius: 4px;
+            }
+        }
+    }
+
+    // Asegurar que el menú esté por encima de modales
+    .modal-open {
+        .export-button-container {
+            z-index: 99999; // Aún más alto cuando hay modal
+        }
+
+        .export-dropdown {
+            z-index: 99998;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); // Más sombra para destacar
+        }
+    }
+}
+
+// Si el footer tiene position relative o sticky, asegurar z-index
+.presupuestos-footer {
+    position: relative;
+    z-index: 100;
+}
+
+// Clase global para forzar el menú visible
+.export-dropdown-visible {
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+    display: block !important;
+
 }
 
 // ============================================
@@ -834,7 +1020,7 @@
             }
 
             input:checked+.slider {
-                background-color: #4caf50;
+                background: #6c757d !important
             }
 
             input:checked+.slider:before {
@@ -2417,13 +2603,20 @@
             }
 
             &.btn-info {
-                background: #17a2b8;
-                border-color: #17a2b8;
+                background: var(--degradado-color) !important;
+                border: none;
                 color: white;
+                padding: 0.75rem 1.5rem;
+                border-radius: 8px;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                transition: all 0.3s ease;
 
-                &:hover {
-                    background: #138496;
-                    border-color: #138496;
+                &:hover:not(:disabled) {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
                 }
             }
 
@@ -2552,6 +2745,162 @@
                 width: 100%;
                 justify-content: center;
             }
+        }
+
+        // Estilos para el botón de exportar con menú
+        .export-button-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .btn-export-excel {
+            background: linear-gradient(135deg, #1d6f42 0%, #21a366 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+            &:hover {
+                background: linear-gradient(135deg, #166534 0%, #1e8a5a 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            }
+
+            &:active {
+                transform: translateY(0);
+            }
+
+            &.active {
+                background: linear-gradient(135deg, #14532d 0%, #1a7c4c 100%);
+            }
+
+            i {
+                font-size: 1.1rem;
+            }
+        }
+
+        // Menú desplegable
+        .export-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            min-width: 280px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            margin-top: 8px;
+            z-index: 1000;
+            overflow: hidden;
+            animation: slideDown 0.2s ease;
+
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .dropdown-header {
+                padding: 12px 16px;
+                background: #f8f9fa;
+                color: #495057;
+                font-weight: 600;
+                font-size: 0.9rem;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                border-bottom: 1px solid #e9ecef;
+
+                i {
+                    color: #21a366;
+                }
+            }
+
+            .dropdown-divider {
+                height: 1px;
+                background: #e9ecef;
+                margin: 0;
+            }
+
+            .dropdown-item {
+                width: 100%;
+                padding: 12px 16px;
+                background: none;
+                border: none;
+                text-align: left;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                color: #495057;
+
+                &:hover {
+                    background: #f8f9fa;
+                    color: #212529;
+
+                    i {
+                        color: #21a366;
+                    }
+                }
+
+                &.active {
+                    background: rgba(33, 163, 102, 0.1);
+                    color: #14532d;
+                    border-left: 3px solid #21a366;
+
+                    i {
+                        color: #21a366;
+                    }
+                }
+
+                i {
+                    font-size: 1.2rem;
+                    color: #6c757d;
+                    width: 24px;
+                    text-align: center;
+                }
+
+                .item-content {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+
+                    .item-title {
+                        font-weight: 500;
+                        font-size: 0.95rem;
+                    }
+
+                    .item-subtitle {
+                        font-size: 0.8rem;
+                        color: #6c757d;
+                    }
+                }
+
+                .badge {
+                    font-size: 0.7rem;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                }
+            }
+        }
+
+        // Asegurar que el menú esté por encima de otros elementos
+        .modal-open .export-dropdown {
+            z-index: 1055;
         }
     }
 
