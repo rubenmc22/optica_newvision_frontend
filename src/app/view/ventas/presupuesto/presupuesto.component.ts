@@ -1313,7 +1313,6 @@ export class PresupuestoComponent implements OnInit {
     this.presupuestoSeleccionado.total = this.presupuestoSeleccionado.subtotal + this.presupuestoSeleccionado.iva;
   }
 
-  // Método para imprimir presupuesto con auto-impresión y cierre automático
   imprimirPresupuesto(presupuesto: any) {
     console.log('🖨️ Imprimiendo presupuesto:', presupuesto);
 
@@ -1322,251 +1321,693 @@ export class PresupuestoComponent implements OnInit {
       presupuesto.descuentoTotal = this.calcularDescuentoTotalPresupuestoParaImpresion(presupuesto);
     }
 
-    // Crear contenido HTML para impresión
+    // Calcular subtotal neto
+    const subtotalNeto = presupuesto.subtotal - presupuesto.descuentoTotal;
+
+    // Formatear fechas
+    const fechaActual = new Date().toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+
+    const fechaVencimiento = new Date(presupuesto.fechaVencimiento).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+
+    // Calcular porcentaje de descuento
+    const porcentajeDescuento = presupuesto.subtotal > 0 ?
+      Math.round((presupuesto.descuentoTotal / presupuesto.subtotal) * 10000) / 100 : 0;
+
+    // Estado del presupuesto
+    const estadoTexto = this.getEstadoTexto(presupuesto.estadoColor);
+    const diasInfo = presupuesto.diasRestantes >= 0 ?
+      `${presupuesto.diasRestantes} días restantes` :
+      `Vencido hace ${Math.abs(presupuesto.diasRestantes)} días`;
+
+    // Crear contenido HTML para impresión compacta
     const contenidoHTML = `
+    <!DOCTYPE html>
     <html>
-      <head>
+    <head>
         <title>Presupuesto ${presupuesto.codigo}</title>
+        <meta charset="UTF-8">
         <style>
-          /* Estilos de impresión */
-          @media print {
-            @page {
-              margin: 10mm;
-              size: A4 portrait;
+            /* ===== ESTILOS BASE COMPACTOS ===== */
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
             }
             
             body {
-              margin: 0;
-              font-family: 'Arial', sans-serif;
-              font-size: 12px;
-              line-height: 1.4;
-              color: #000;
-              background: white;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-size: 11px;
+                line-height: 1.3;
+                color: #333;
+                background: #ffffff;
+                padding: 10mm 8mm;
             }
             
-            .no-print, button {
-              display: none !important;
+            /* ===== ESTILOS DE IMPRESIÓN ===== */
+            @media print {
+                @page {
+                    margin: 10mm 8mm;
+                    size: A4 portrait;
+                }
+                
+                body {
+                    padding: 0;
+                }
+                
+                .no-print {
+                    display: none !important;
+                }
+                
+                /* Mantener todo en una página */
+                .presupuesto-container {
+                    max-height: 277mm; /* A4 height - margins */
+                    overflow: hidden;
+                }
             }
             
-            .header {
-              text-align: center;
-              margin-bottom: 15px;
-              padding-bottom: 10px;
-              border-bottom: 2px solid #000;
+            /* ===== CONTAINER PRINCIPAL COMPACTO ===== */
+            .presupuesto-container {
+                max-width: 190mm;
+                margin: 0 auto;
             }
             
-            .info-cliente {
-              margin-bottom: 15px;
-              padding: 10px;
-              border: 1px solid #ccc;
-              background: #f9f9f9;
+            /* ===== ENCABEZADO COMPACTO ===== */
+            .header-compact {
+                display: grid;
+                grid-template-columns: 1fr auto;
+                gap: 15px;
+                margin-bottom: 12px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #2c5aa0;
             }
             
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 15px 0;
+            .empresa-info-compact {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
             }
             
-            th, td {
-              border: 1px solid #000;
-              padding: 6px;
-              text-align: center;
-              vertical-align: middle;
-              font-size: 11px;
+            .empresa-nombre-compact {
+                font-size: 16px;
+                font-weight: 700;
+                color: #2c5aa0;
+                margin-bottom: 2px;
+                letter-spacing: 0.5px;
             }
             
-            th {
-              background-color: #f0f0f0;
-              font-weight: bold;
+            .empresa-datos-compact {
+                font-size: 9px;
+                color: #666;
+                line-height: 1.3;
             }
             
-            .totales {
-              margin-top: 20px;
-              border-top: 2px solid #000;
-              padding-top: 10px;
+            .logo-mini {
+                width: 60px;
+                height: 60px;
+                background: linear-gradient(135deg, #2c5aa0, #3498db);
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: 20px;
+            }
+            
+            /* ===== TÍTULO Y DATOS PRINCIPALES ===== */
+            .titulo-principal {
+                text-align: center;
+                margin: 10px 0 15px 0;
+                padding: 8px;
+                background: linear-gradient(135deg, #2c5aa0, #3498db);
+                color: white;
+                border-radius: 6px;
+            }
+            
+            .titulo-principal h1 {
+                font-size: 16px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
+            }
+            
+            /* ===== METADATOS COMPACTOS ===== */
+            .metadata-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+            
+            .metadata-card {
+                background: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 6px 8px;
+                text-align: center;
+            }
+            
+            .metadata-label {
+                font-size: 8px;
+                color: #6c757d;
+                font-weight: 600;
+                text-transform: uppercase;
+                margin-bottom: 2px;
+                display: block;
+            }
+            
+            .metadata-valor {
+                font-size: 10px;
+                font-weight: 600;
+                color: #2c5aa0;
+            }
+            
+            .estado-badge {
+                display: inline-block;
+                padding: 2px 6px;
+                border-radius: 10px;
+                font-size: 8px;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            
+            .estado-vigente { background: #d4edda; color: #155724; }
+            .estado-proximo { background: #fff3cd; color: #856404; }
+            .estado-hoy { background: #cce5ff; color: #004085; }
+            .estado-vencido { background: #f8d7da; color: #721c24; }
+            
+            /* ===== CLIENTE COMPACTO ===== */
+            .cliente-compact {
+                background: #f8f9fa;
+                border-radius: 6px;
+                padding: 10px;
+                margin-bottom: 12px;
+                border: 1px solid #dee2e6;
+            }
+            
+            .cliente-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 8px;
+                padding-bottom: 6px;
+                border-bottom: 1px solid #dee2e6;
+            }
+            
+            .cliente-header h3 {
+                font-size: 11px;
+                font-weight: 600;
+                color: #2c5aa0;
+                margin: 0;
+            }
+            
+            .cliente-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+                font-size: 10px;
+            }
+            
+            .cliente-item {
+                display: flex;
+                align-items: flex-start;
+            }
+            
+            .cliente-label {
+                font-weight: 600;
+                color: #495057;
+                min-width: 70px;
+                margin-right: 5px;
+            }
+            
+            .cliente-valor {
+                color: #212529;
+                flex: 1;
+            }
+            
+            /* ===== TABLA COMPACTA ===== */
+            .tabla-compacta {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 12px;
+                font-size: 9px;
+            }
+            
+            .tabla-compacta thead {
+                background: #2c5aa0;
+                color: white;
+            }
+            
+            .tabla-compacta th {
+                padding: 6px 4px;
+                font-weight: 600;
+                text-align: center;
+                font-size: 9px;
+                border: none;
+            }
+            
+            .tabla-compacta td {
+                padding: 5px 4px;
+                text-align: center;
+                border-bottom: 1px solid #e9ecef;
+                vertical-align: middle;
+            }
+            
+            .tabla-compacta tbody tr:nth-child(even) {
+                background-color: #f8f9fa;
+            }
+            
+            .tabla-compacta .descripcion {
+                text-align: left;
+                font-size: 9.5px;
+                max-width: 120px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            
+            .tabla-compacta .cantidad {
+                font-family: 'Courier New', monospace;
+                font-weight: 600;
+            }
+            
+            .tabla-compacta .precio, 
+            .tabla-compacta .total {
+                font-family: 'Courier New', monospace;
+                font-weight: 600;
+                text-align: right;
+                min-width: 60px;
+            }
+            
+            /* ===== RESUMEN FINANCIERO COMPACTO ===== */
+            .resumen-compacto {
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 15px;
+                margin-bottom: 12px;
+            }
+            
+            .totales-compactos {
+                background: #f8f9fa;
+                border-radius: 6px;
+                padding: 10px;
+                border: 1px solid #dee2e6;
+            }
+            
+            .total-line {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 4px 0;
+            }
+            
+            .total-line:not(:last-child) {
+                border-bottom: 1px dashed #dee2e6;
+            }
+            
+            .total-label {
+                font-size: 10px;
+                color: #495057;
+            }
+            
+            .total-valor {
+                font-family: 'Courier New', monospace;
+                font-weight: 600;
+                font-size: 10px;
             }
             
             .total-final {
-              font-weight: bold;
-              font-size: 13px;
+                background: #e7f1ff;
+                border-radius: 4px;
+                padding: 6px 8px;
+                margin-top: 6px;
+                border-left: 3px solid #2c5aa0;
             }
             
-            .footer {
-              margin-top: 25px;
-              text-align: center;
-              font-size: 10px;
-              color: #666;
+            .total-final .total-label {
+                font-weight: 700;
+                font-size: 11px;
+                color: #2c5aa0;
             }
             
-            .text-center {
-              text-align: center !important;
-            }
-          }
-          
-          /* Estilos para vista previa */
-          @media screen {
-            body {
-              font-family: 'Arial', sans-serif;
-              font-size: 12px;
-              line-height: 1.4;
-              margin: 20px;
-              background: #f5f5f5;
+            .total-final .total-valor {
+                font-weight: 800;
+                font-size: 12px;
+                color: #2c5aa0;
             }
             
-            .container {
-              max-width: 800px;
-              margin: 0 auto;
-              background: white;
-              padding: 20px;
-              box-shadow: 0 0 10px rgba(0,0,0,0.1);
-              border-radius: 5px;
+            .info-lateral {
+                background: #fff9db;
+                border: 1px solid #ffeaa7;
+                border-radius: 6px;
+                padding: 10px;
             }
             
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 20px 0;
+            .info-lateral h4 {
+                font-size: 10px;
+                color: #856404;
+                margin-bottom: 6px;
+                padding-bottom: 4px;
+                border-bottom: 1px solid #ffeaa7;
             }
             
-            th, td {
-              border: 1px solid #000;
-              padding: 8px;
-              text-align: center;
-              vertical-align: middle;
+            .info-item {
+                font-size: 9px;
+                margin-bottom: 4px;
             }
             
-            th {
-              background-color: #f0f0f0;
-              font-weight: bold;
+            .info-item strong {
+                color: #495057;
+                display: inline-block;
+                min-width: 70px;
             }
             
-            .text-center {
-              text-align: center !important;
-              vertical-align: middle !important;
+            /* ===== OBSERVACIONES Y FIRMA COMPACTAS ===== */
+            .observaciones-compactas {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                margin-bottom: 15px;
             }
-          }
+            
+            .obs-section {
+                background: #f1f5f9;
+                border-radius: 6px;
+                padding: 8px;
+                border: 1px solid #dee2e6;
+            }
+            
+            .obs-section h4 {
+                font-size: 10px;
+                color: #2c5aa0;
+                margin-bottom: 6px;
+                padding-bottom: 4px;
+                border-bottom: 1px solid #dee2e6;
+            }
+            
+            .obs-content {
+                font-size: 9px;
+                color: #495057;
+                line-height: 1.3;
+                min-height: 30px;
+            }
+            
+            .firma-line {
+                width: 80%;
+                height: 1px;
+                background: #333;
+                margin: 20px auto 5px;
+            }
+            
+            .firma-text {
+                font-size: 8px;
+                color: #6c757d;
+                text-align: center;
+            }
+            
+            /* ===== TÉRMINOS Y PIE DE PÁGINA ===== */
+            .terminos-compactos {
+                background: #f8f9fa;
+                border-radius: 6px;
+                padding: 8px;
+                margin-bottom: 10px;
+                border: 1px solid #dee2e6;
+            }
+            
+            .terminos-compactos h4 {
+                font-size: 10px;
+                color: #495057;
+                margin-bottom: 4px;
+            }
+            
+            .terminos-lista {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
+                font-size: 7.5px;
+                color: #6c757d;
+                line-height: 1.2;
+            }
+            
+            .terminos-lista li {
+                margin-bottom: 2px;
+            }
+            
+            .footer-compacto {
+                text-align: center;
+                font-size: 7px;
+                color: #6c757d;
+                padding-top: 6px;
+                border-top: 1px solid #dee2e6;
+                line-height: 1.2;
+            }
+            
+            /* ===== RESPONSIVE PARA PANTALLA ===== */
+            @media screen and (max-width: 768px) {
+                body {
+                    padding: 5mm;
+                }
+                
+                .metadata-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+                
+                .cliente-grid {
+                    grid-template-columns: 1fr;
+                }
+                
+                .resumen-compacto,
+                .observaciones-compactas {
+                    grid-template-columns: 1fr;
+                    gap: 8px;
+                }
+                
+                .terminos-lista {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
         </style>
-      </head>
-      <body>
-        <div class="container">
-          <!-- Cabecera -->
-          <div class="header">
-            <h1>NEW VISION LENS 2020</h1>
-            <p>Calle Confecio Centro Comercial Candelaria Plaza Planta Baja Local PB</p>
-            <p>Teléfono: 022.365.394.2 | Email: newvisionlens2020@email.com</p>
-          </div>
-          
-          <h2 class="text-center">PRESUPUESTO N° ${presupuesto.codigo}</h2>
-          
-          <!-- Información del cliente -->
-          <div class="info-cliente">
-            <h3 class="text-center">CLIENTE</h3>
-            <div style="text-align: center;">
-              <p><strong>Nombre:</strong> ${presupuesto.cliente.nombreCompleto}</p>
-              <p><strong>Cédula/RIF:</strong> ${presupuesto.cliente.cedula}</p>
-              <p><strong>Teléfono:</strong> ${presupuesto.cliente.telefono || 'No especificado'}</p>
-              <p><strong>Dirección:</strong> ${presupuesto.cliente.direccion || 'No especificada'}</p>
+    </head>
+    <body>
+        <div class="presupuesto-container">
+            <!-- ENCABEZADO COMPACTO -->
+            <div class="header-compact">
+                <div class="empresa-info-compact">
+                    <div class="empresa-nombre-compact">NEW VISION LENS 2020</div>
+                    <div class="empresa-datos-compact">
+                        Calle Confecio CC Candelaria Plaza PB Local PB<br>
+                        📞 022.365.394.2 | ✉️ newvisionlens2020@email.com
+                    </div>
+                </div>
+                <div class="logo-mini">NVL</div>
             </div>
-          </div>
-          
-          <!-- Productos -->
-          <h3 class="text-center">DETALLE DE PRODUCTOS</h3>
-          <table>
-            <thead>
-              <tr>
-                <th class="text-center">#</th>
-                <th class="text-center">DESCRIPCIÓN</th>
-                <th class="text-center">CÓDIGO</th>
-                <th class="text-center">PRECIO UNIT.</th>
-                <th class="text-center">CANTIDAD</th>
-                <th class="text-center">DESCUENTO %</th>
-                <th class="text-center">TOTAL</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${presupuesto.productos.map((p: any, i: number) => `
-                <tr>
-                  <td class="text-center">${i + 1}</td>
-                  <td class="text-center">${p.descripcion}</td>
-                  <td class="text-center">${p.codigo || '-'}</td>
-                  <td class="text-center">${this.formatMoneda(p.precio)}</td>
-                  <td class="text-center">${p.cantidad}</td>
-                  <td class="text-center">${p.descuento > 0 ? p.descuento + '%' : '-'}</td>
-                  <td class="text-center">${this.formatMoneda(p.total)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          
-          <!-- Totales -->
-          <div class="totales">
-            <div style="display: flex; justify-content: space-between;">
-              <span>Subtotal:</span>
-              <span>${this.formatMoneda(presupuesto.subtotal)}</span>
+            
+            <!-- TÍTULO PRINCIPAL -->
+            <div class="titulo-principal">
+                <h1>PRESUPUESTO N° ${presupuesto.codigo}</h1>
             </div>
-            ${presupuesto.descuentoTotal > 0 ? `
-            <div style="display: flex; justify-content: space-between;">
-              <span>Descuento total:</span>
-              <span>- ${this.formatMoneda(presupuesto.descuentoTotal)}</span>
+            
+            <!-- METADATOS RÁPIDOS -->
+            <div class="metadata-grid">
+                <div class="metadata-card">
+                    <span class="metadata-label">EMISIÓN</span>
+                    <span class="metadata-valor">${fechaActual}</span>
+                </div>
+                <div class="metadata-card">
+                    <span class="metadata-label">VENCIMIENTO</span>
+                    <span class="metadata-valor">${fechaVencimiento}</span>
+                </div>
+                <div class="metadata-card">
+                    <span class="metadata-label">VENDEDOR</span>
+                    <span class="metadata-valor">${presupuesto.vendedor || 'N/A'}</span>
+                </div>
+                <div class="metadata-card">
+                    <span class="metadata-label">ESTADO</span>
+                    <span class="metadata-valor">
+                        <span class="estado-badge estado-${presupuesto.estadoColor}">${estadoTexto}</span>
+                    </span>
+                </div>
             </div>
-            ` : ''}
-            <div style="display: flex; justify-content: space-between;">
-              <span>IVA (16%):</span>
-              <span>${this.formatMoneda(presupuesto.iva)}</span>
+            
+            <!-- CLIENTE COMPACTO -->
+            <div class="cliente-compact">
+                <div class="cliente-header">
+                    <h3>CLIENTE</h3>
+                    <div style="font-size: 9px; color: #6c757d;">${diasInfo}</div>
+                </div>
+                <div class="cliente-grid">
+                    <div class="cliente-item">
+                        <span class="cliente-label">Nombre:</span>
+                        <span class="cliente-valor">${presupuesto.cliente.nombreCompleto}</span>
+                    </div>
+                    <div class="cliente-item">
+                        <span class="cliente-label">${presupuesto.cliente.tipoPersona === 'juridica' ? 'RIF:' : 'Cédula:'}</span>
+                        <span class="cliente-valor">${presupuesto.cliente.cedula}</span>
+                    </div>
+                    <div class="cliente-item">
+                        <span class="cliente-label">Teléfono:</span>
+                        <span class="cliente-valor">${presupuesto.cliente.telefono || 'N/A'}</span>
+                    </div>
+                    <div class="cliente-item">
+                        <span class="cliente-label">Email:</span>
+                        <span class="cliente-valor">${presupuesto.cliente.email || 'N/A'}</span>
+                    </div>
+                </div>
             </div>
-            <div style="display: flex; justify-content: space-between;" class="total-final">
-              <strong>TOTAL:</strong>
-              <strong>${this.formatMoneda(presupuesto.total)}</strong>
+            
+            <!-- TABLA DE PRODUCTOS COMPACTA -->
+            <table class="tabla-compacta">
+                <thead>
+                    <tr>
+                        <th width="5%">#</th>
+                        <th width="40%">DESCRIPCIÓN</th>
+                        <th width="10%">CÓDIGO</th>
+                        <th width="15%">PRECIO UNIT.</th>
+                        <th width="8%">CANT.</th>
+                        <th width="10%">DTO %</th>
+                        <th width="12%">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${presupuesto.productos.map((p: any, i: number) => `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td class="descripcion" title="${p.descripcion}">${p.descripcion}</td>
+                        <td>${p.codigo || '-'}</td>
+                        <td class="precio">${this.formatMoneda(p.precio)}</td>
+                        <td class="cantidad">${p.cantidad}</td>
+                        <td>${p.descuento > 0 ? p.descuento + '%' : '-'}</td>
+                        <td class="total">${this.formatMoneda(p.total)}</td>
+                    </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            
+            <!-- RESUMEN FINANCIERO COMPACTO -->
+            <div class="resumen-compacto">
+                <div class="totales-compactos">
+                    <div class="total-line">
+                        <span class="total-label">Subtotal:</span>
+                        <span class="total-valor">${this.formatMoneda(presupuesto.subtotal)}</span>
+                    </div>
+                    ${presupuesto.descuentoTotal > 0 ? `
+                    <div class="total-line">
+                        <span class="total-label">Descuento (${porcentajeDescuento}%):</span>
+                        <span class="total-valor" style="color: #dc3545;">- ${this.formatMoneda(presupuesto.descuentoTotal)}</span>
+                    </div>
+                    <div class="total-line">
+                        <span class="total-label">Subtotal Neto:</span>
+                        <span class="total-valor">${this.formatMoneda(subtotalNeto)}</span>
+                    </div>
+                    ` : ''}
+                    <div class="total-line">
+                        <span class="total-label">IVA (16%):</span>
+                        <span class="total-valor">${this.formatMoneda(presupuesto.iva)}</span>
+                    </div>
+                    <div class="total-final total-line">
+                        <span class="total-label">TOTAL A PAGAR:</span>
+                        <span class="total-valor">${this.formatMoneda(presupuesto.total)}</span>
+                    </div>
+                </div>
+                
+                <div class="info-lateral">
+                    <h4>INFORMACIÓN</h4>
+                    <div class="info-item">
+                        <strong>Validez:</strong> ${presupuesto.diasVencimiento || 7} días
+                    </div>
+                    <div class="info-item">
+                        <strong>Productos:</strong> ${presupuesto.productos.length}
+                    </div>
+                    <div class="info-item">
+                        <strong>Incluye IVA :</strong> 16%
+                    </div>
+                </div>
             </div>
-          </div>
-          
-          <!-- Firma -->
-          <div class="footer">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <p>________________________________</p>
-              <p>Firma del Cliente</p>
+            
+            <!-- OBSERVACIONES Y FIRMA COMPACTAS -->
+            <div class="observaciones-compactas">
+                <div class="obs-section">
+                    <h4>OBSERVACIONES</h4>
+                    <div class="obs-content">
+                        ${presupuesto.observaciones || 'Sin observaciones adicionales.'}
+                    </div>
+                </div>
+                
+                <div class="obs-section">
+                    <h4>ACEPTACIÓN</h4>
+                    <div class="firma-line"></div>
+                    <div class="firma-text">Firma del Cliente</div>
+                    <div class="firma-text" style="font-size: 7px; margin-top: 2px;">
+                        Fecha: ${fechaActual}
+                    </div>
+                </div>
             </div>
-            <p class="text-center">Presupuesto válido por ${presupuesto.diasVencimiento} días</p>
-            <p class="text-center">Estado: ${this.getEstadoTexto(presupuesto.estadoColor)}</p>
-          </div>
+                        
+            <!-- PIE DE PÁGINA COMPACTO -->
+            <div class="footer-compacto">
+            <br><br>
+                NEW VISION LENS 2020 • Calle Confecio CC Candelaria Plaza PB Local PB<br>
+                📞 022.365.394.2 • ✉️ newvisionlens2020@email.com • 📍 Barquisimeto, Lara<br>
+            </div>
         </div>
         
         <script>
-          // Imprimir automáticamente al cargar
-          window.onload = function() {
-            window.print();
-          };
-          
-          // Cerrar la ventana después de imprimir
-          window.onafterprint = function() {
-            setTimeout(function() {
-              window.close();
-            }, 500);
-          };
+            // Imprimir automáticamente con retardo para que cargue el CSS
+            window.onload = function() {
+                setTimeout(function() {
+                    window.print();
+                }, 300);
+            };
+            
+            // Cerrar ventana después de imprimir
+            window.onafterprint = function() {
+                setTimeout(function() {
+                    window.close();
+                }, 800);
+            };
+            
+            // Para vista previa en pantalla
+            window.onbeforeprint = function() {
+                console.log('Iniciando impresión del presupuesto compacto...');
+            };
         </script>
-      </body>
+    </body>
     </html>
-  `;
+    `;
 
     // Abrir ventana de impresión
-    const ventanaImpresion = window.open('', '_blank');
+    const ventanaImpresion = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
 
     if (ventanaImpresion) {
       ventanaImpresion.document.write(contenidoHTML);
       ventanaImpresion.document.close();
 
       // Notificación
-      this.snackBar.open(`Preparando impresión del presupuesto ${presupuesto.codigo}`, 'Cerrar', {
-        duration: 3000,
+      this.snackBar.open(`Imprimiendo presupuesto ${presupuesto.codigo} (formato compacto)`, 'Cerrar', {
+        duration: 2000,
         panelClass: ['snackbar-info']
       });
     } else {
-      this.snackBar.open('Por favor, permite las ventanas emergentes para imprimir', 'Cerrar', {
-        duration: 4000,
+      this.snackBar.open('Permite ventanas emergentes para imprimir', 'Cerrar', {
+        duration: 3000,
         panelClass: ['snackbar-warning']
       });
     }
+  }
+
+  // Método auxiliar para calcular porcentaje de descuento
+  calcularPorcentajeDescuento(presupuesto: any): number {
+    if (!presupuesto || !presupuesto.subtotal || presupuesto.subtotal === 0) return 0;
+
+    const porcentaje = (presupuesto.descuentoTotal / presupuesto.subtotal) * 100;
+    return Math.round(porcentaje * 100) / 100;
   }
 
   // Método auxiliar para calcular descuento total para impresión
@@ -1777,18 +2218,6 @@ export class PresupuestoComponent implements OnInit {
     this.mostrarModalDetallePresupuesto = false;
     this.presupuestoSeleccionado = null;
     this.resetearEstadoEdicion();
-  }
-
-  // Método para calcular porcentaje de descuento
-  calcularPorcentajeDescuento(): number {
-    if (!this.presupuestoSeleccionado ||
-      !this.presupuestoSeleccionado.subtotal ||
-      this.presupuestoSeleccionado.subtotal === 0) {
-      return 0;
-    }
-
-    const porcentaje = (this.presupuestoSeleccionado.descuentoTotal / this.presupuestoSeleccionado.subtotal) * 100;
-    return Math.round(porcentaje * 100) / 100; // Redondear a 2 decimales
   }
 
   // Método para guardar cambios del presupuesto

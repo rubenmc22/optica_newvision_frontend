@@ -308,7 +308,7 @@
 // Grid de presupuestos
 .presupuestos-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 20px;
 
     &.scrollable-grid {
@@ -3571,4 +3571,247 @@
 /* Evitar scroll del body cuando el modal está abierto */
 body.modal-open {
     overflow: hidden;
+}
+
+// =============================================
+// ESTILOS ESPECÍFICOS PARA EL MODAL DE ELIMINAR
+// =============================================
+.modal-eliminar {
+   /* position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 500px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    z-index: 1060; // Mayor que el backdrop
+    animation: slideInUp 0.4s ease-out;*/
+        position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 500px;
+  //  max-height: 85vh;
+    background: white;
+    border-radius: 16px;
+    z-index: 1000;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalSlideIn 0.2s ease-out;
+
+    @media (max-width: 768px) {
+        width: 95%;
+        max-width: 95%;
+        margin: 1rem;
+    }
+}
+
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.modal-header {
+    padding: 16px 24px;
+    background: var(--degradado-color) !important;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    position: relative;
+
+    .header-left {
+        flex: 1;
+        min-width: 0;
+
+        h2 {
+            margin: 0 0 6px 0;
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            i {
+                color: rgba(255, 255, 255, 0.9);
+                font-size: 20px;
+                flex-shrink: 0;
+            }
+        }
+    }
+}
+
+.modal-body {
+    padding: 1.5rem;
+    flex: 1;
+
+    .warning-message {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+
+        i {
+            font-size: 3rem;
+            color: #dc3545;
+        }
+
+        h4 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #dc3545;
+        }
+
+        p {
+            margin: 0.5rem 0;
+            color: #6c757d;
+        }
+
+        .presupuesto-info {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+
+            strong {
+                font-size: 1.1rem;
+                color: #212529;
+            }
+
+            small {
+                color: #6c757d;
+                font-size: 0.9rem;
+            }
+        }
+
+        .text-danger {
+            margin-top: 1rem;
+            font-size: 1rem;
+        }
+    }
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1rem 1.5rem 1.5rem 1.5rem;
+    border-top: 1px solid #e9ecef;
+
+    @media (max-width: 576px) {
+        flex-direction: column;
+
+        button {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    .btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        min-height: 48px;
+
+        i {
+            font-size: 1.1rem;
+        }
+
+        &.btn-secondary {
+            background: #6c757d;
+            border: none;
+            color: white;
+
+            &:hover {
+                background: #5a6268;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+            }
+        }
+
+        &.btn-danger {
+            background: #dc3545;
+            border: none;
+            color: white;
+
+            &:hover {
+                background: #c82333;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+            }
+        }
+    }
+}
+
+// Animaciones
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -40%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .modal-eliminar {
+        margin: 1rem;
+        width: calc(100% - 2rem);
+    }
+
+    .modal-header h2 {
+        font-size: 1.3rem;
+    }
+
+    .modal-body .warning-message h4 {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal-eliminar {
+        margin: 0.5rem;
+        width: calc(100% - 1rem);
+    }
+
+    .modal-actions {
+        flex-direction: column;
+    }
 }
