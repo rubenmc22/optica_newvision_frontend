@@ -1336,11 +1336,7 @@
             <div class="mini-principal">
               <span class="mini-monto">{{ formatearMoneda(selectedVenta?.total, getMonedaVenta()) }}</span>
             </div>
-            <div *ngIf="mostrarConversionBs()" class="mini-conversion">
-              <span class="conversion-simbolo">⇄</span>
-              <span class="conversion-monto">{{ getConversionBs(selectedVenta?.total) | number:'1.2-2' }}</span>
-              <span class="conversion-label">Bs</span>
-            </div>
+ 
           </div>
         </div>
 
@@ -1362,10 +1358,7 @@
               <span class="progreso-text">{{ ((selectedVenta?.montoAbonado || 0) / (selectedVenta?.total || 1) * 100) |
                 number:'1.0-0' }}%</span>
             </div>
-            <div *ngIf="mostrarConversionBs()" class="mini-conversion">
-              <span class="conversion-monto">{{ getConversionBs(selectedVenta?.montoAbonado) | number:'1.2-2' }}</span>
-              <span class="conversion-label">Bs</span>
-            </div>
+         
           </div>
         </div>
 
@@ -1480,7 +1473,7 @@
             <div *ngFor="let metodo of metodosPagoArray.controls; let i = index" [formGroupName]="i"
               class="metodo-item-compact">
 
-                <!-- Selector de moneda para efectivo -->
+              <!-- Selector de moneda para efectivo -->
               <div class="metodo-currency-indicator" *ngIf="metodo.get('tipo')?.value === 'efectivo'">
                 <div class="currency-selector-header">
                   <i class="bi bi-currency-exchange"></i>
@@ -1579,7 +1572,7 @@
                 </div>
               </div>
 
-            
+
               <!-- Indicador de moneda NO EFECTIVO (solo lectura) -->
               <div class="metodo-currency-indicator"
                 *ngIf="metodo.get('tipo')?.value && metodo.get('tipo')?.value !== 'efectivo'">

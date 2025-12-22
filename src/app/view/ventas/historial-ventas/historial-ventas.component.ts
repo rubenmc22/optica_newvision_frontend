@@ -21,7 +21,6 @@ import { LoaderService } from './../../../shared/loader/loader.service';
 
 export class HistorialVentasComponent implements OnInit {
 
-
   @ViewChild('cancelarVentaModal') cancelarVentaModal!: TemplateRef<any>;
   @ViewChild('detalleVentaModal') detalleVentaModal!: TemplateRef<any>;
   @ViewChild('editarVentaModal') editarVentaModal!: TemplateRef<any>;
@@ -529,9 +528,9 @@ export class HistorialVentasComponent implements OnInit {
       total: totales.total,
 
       // Información de pago
-      montoAbonado: totalPagadoEnMonedaVenta,
       pagoCompleto: totalPagadoEnMonedaVenta >= totales.total,
-      deudaPendiente: Math.max(0, totales.total - totalPagadoEnMonedaVenta),
+      montoAbonado: formaPago?.totalPagadoAhora || 0, // Usar totalPagadoAhora del API
+      deudaPendiente: formaPago?.deudaPendiente || 0, // Asegurar que existe
 
       // Configuración de la venta
       moneda: venta.moneda,
@@ -865,23 +864,39 @@ export class HistorialVentasComponent implements OnInit {
     return `#${id.toString().padStart(3, '0')}`;
   }
 
+  // Método para obtener el total pagado de una venta
   getTotalPagadoVenta(venta: any): number {
-    if (!venta || !venta.metodosPago || !venta.metodosPago.length) {
-      // Intentar obtener de otras propiedades
-      if (venta?.formaPago?.totalPagadoAhora) {
-        return venta.formaPago.totalPagadoAhora;
-      }
-      if (venta?.totales?.totalPagado) {
-        return venta.totales.totalPagado;
-      }
-      return 0;
+    if (!venta) return 0;
+
+    // PRIORIDAD 1: Usar totalPagado del objeto formaPago (si existe y es válido)
+    if (venta?.formaPago?.totalPagadoAhora !== undefined &&
+      venta?.formaPago?.totalPagadoAhora !== null) {
+      console.log('💰 Usando totalPagadoAhora del API:', venta.formaPago.totalPagadoAhora);
+      return venta.formaPago.totalPagadoAhora;
     }
 
-    // Sumar todos los montos en la moneda de la venta
-    return venta.metodosPago.reduce((total: number, pago: any) => {
-      const montoPagado = pago.monto_en_moneda_de_venta || 0;
-      return total + montoPagado;
-    }, 0);
+    // PRIORIDAD 2: Usar montoAbonado directamente
+    if (venta?.montoAbonado !== undefined && venta?.montoAbonado !== null) {
+      console.log('💰 Usando montoAbonado:', venta.montoAbonado);
+      return venta.montoAbonado;
+    }
+
+    // PRIORIDAD 3: Calcular sumando métodos de pago (fallback)
+    if (venta?.metodosPago && venta.metodosPago.length > 0) {
+      let totalCalculado = 0;
+
+      // Sumar montos en la moneda de la venta
+      venta.metodosPago.forEach((pago: any) => {
+        const montoPagado = pago.monto_en_moneda_de_venta || 0;
+        totalCalculado += montoPagado;
+      });
+
+      console.log('💰 Calculando sumando métodos de pago:', totalCalculado);
+      return totalCalculado;
+    }
+
+    // Si no hay nada, devolver 0
+    return 0;
   }
 
   mostrarBotonEditar(venta: any): boolean {
@@ -1628,12 +1643,32 @@ export class HistorialVentasComponent implements OnInit {
   calcularMontoDeuda(): number {
     if (!this.selectedVenta) return 0;
 
-    const total = this.selectedVenta.total || 0;
-    const abonado = this.selectedVenta.montoAbonado || 0;
-    const deuda = total - abonado;
+    // PRIMERO: Intentar usar la deuda del API si está disponible
+    if (this.selectedVenta?.formaPago?.deudaPendiente !== undefined &&
+      this.selectedVenta?.formaPago?.deudaPendiente !== null) {
+      console.log('🔍 Usando deudaPendiente del API en modal:', this.selectedVenta.formaPago.deudaPendiente);
+      return Math.max(0, this.selectedVenta.formaPago.deudaPendiente);
+    }
 
-    // Redondear a 2 decimales para evitar problemas de precisión
-    return Math.max(0, this.redondear(deuda, 2));
+    // SEGUNDO: Intentar usar la propiedad mapeada
+    if (this.selectedVenta?.deudaPendiente !== undefined &&
+      this.selectedVenta?.deudaPendiente !== null) {
+      console.log('🔍 Usando deudaPendiente mapeada en modal:', this.selectedVenta.deudaPendiente);
+      return Math.max(0, this.selectedVenta.deudaPendiente);
+    }
+
+    // TERCERO: Calcular manualmente usando totalPagado del API
+    const totalVenta = this.selectedVenta.total || 0;
+    const totalPagado = this.selectedVenta?.formaPago?.totalPagadoAhora ||
+      this.selectedVenta?.montoAbonado || 0;
+
+    console.log('🔍 Calculando deuda manualmente en modal:', {
+      totalVenta: totalVenta,
+      totalPagado: totalPagado,
+      deuda: Math.max(0, totalVenta - totalPagado)
+    });
+
+    return Math.max(0, totalVenta - totalPagado);
   }
 
   // Y actualizar tu función redondear para permitir decimales específicos
@@ -1958,6 +1993,7 @@ export class HistorialVentasComponent implements OnInit {
     return Math.max(0, deudaRestante);
   }
 
+  // Método MEJORADO para obtener la deuda pendiente
   getDeudaPendiente(venta: any): number {
     if (!venta) return 0;
 
@@ -1966,26 +2002,52 @@ export class HistorialVentasComponent implements OnInit {
       return 0;
     }
 
-    // Para ventas con Cashea, usar la deuda pendiente del API
-    if (venta.formaPago === 'cashea' && venta.financiado) {
-      return venta.deudaPendiente || 0;
+    console.log('🔍 Calculando deuda para venta:', {
+      numeroControl: venta.numeroControl,
+      estado: venta.estado,
+      formaPago: venta.formaPago,
+      formaPagoCompleto: venta.formaPagoCompleto
+    });
+
+    // PRIORIDAD 1: Usar deudaPendiente del API si está disponible
+    // Forma 1: deudaPendiente directo en formaPago
+    if (venta?.formaPago?.deudaPendiente !== undefined &&
+      venta?.formaPago?.deudaPendiente !== null) {
+      const deudaAPI = venta.formaPago.deudaPendiente;
+      console.log('📊 Usando deudaPendiente del API:', deudaAPI);
+      return Math.max(0, deudaAPI);
     }
 
-    // Para abonos, calcular la diferencia
-    if (venta.formaPago === 'abono') {
-      const total = venta.total || 0;
-      const abonado = venta.montoAbonado || 0;
-      return Math.max(0, total - abonado);
+    // Forma 2: Buscar en formaPagoCompleto
+    if (venta?.formaPagoCompleto?.deudaPendiente !== undefined &&
+      venta?.formaPagoCompleto?.deudaPendiente !== null) {
+      const deudaAPI = venta.formaPagoCompleto.deudaPendiente;
+      console.log('📊 Usando deudaPendiente de formaPagoCompleto:', deudaAPI);
+      return Math.max(0, deudaAPI);
     }
 
-    // Para contado, verificar si el pago está completo
-    if (venta.formaPago === 'contado') {
-      const total = venta.total || 0;
-      const pagado = this.getTotalPagadoVenta(venta) || 0;
-      return Math.max(0, total - pagado);
+    // Forma 3: Buscar en propiedades mapeadas
+    const deudaPendienteMapeada = venta?.deudaPendiente;
+    if (deudaPendienteMapeada !== undefined && deudaPendienteMapeada !== null) {
+      console.log('📊 Usando deudaPendiente mapeada:', deudaPendienteMapeada);
+      return Math.max(0, deudaPendienteMapeada);
     }
 
-    return 0;
+    // PRIORIDAD 2: Calcular basado en total y pagado
+    const totalVenta = venta.total || 0;
+    const totalPagado = this.getTotalPagadoVenta(venta);
+
+    console.log('📊 Calculando deuda manualmente:', {
+      totalVenta: totalVenta,
+      totalPagado: totalPagado,
+      diferencia: totalVenta - totalPagado
+    });
+
+    // Para evitar errores de precisión, redondear
+    const deudaCalculada = Math.max(0, totalVenta - totalPagado);
+    const deudaRedondeada = Math.round(deudaCalculada * 100) / 100;
+
+    return deudaRedondeada;
   }
 
   // Método para obtener el estatus de pago

@@ -19,13 +19,16 @@ export class PresupuestoComponent implements OnInit {
   mostrarModalDetallePresupuesto: boolean = false;
   mostrarModalEliminar: boolean = false;
   modoEditable: boolean = false;
-
-
   filtroBusqueda: string = '';
   filtroEstado: string = '';
   tabActiva: string = 'vigentes';
   diasParaAutoArchivo: number = 30;
   diasVencimientoSeleccionado: number = 7;
+
+  // Agregar estas variables al inicio de la clase (después de las otras variables)
+  presupuestosFiltradosVigentes: any[] = [];
+  presupuestosFiltradosVencidos: any[] = [];
+  presupuestosCombinados: any[] = []; // Para cuando no hay filtro activo
 
   // En tu componente
   terminoBusqueda: string = '';
@@ -105,9 +108,25 @@ export class PresupuestoComponent implements OnInit {
     this.cargarDatos();
     this.inicializarNuevoPresupuesto();
     this.diasVencimientoSeleccionado = 7;
+    this.inicializarPresupuestosFiltrados();
   }
 
-  // ========== MÉTODOS PARA CLIENTE (usando tu código existente) ==========
+  inicializarPresupuestosFiltrados() {
+    // Inicializar con todos los presupuestos
+    if (this.presupuestosVigentes) {
+      this.presupuestosFiltradosVigentes = [...this.presupuestosVigentes];
+    }
+
+    if (this.presupuestosVencidos) {
+      this.presupuestosFiltradosVencidos = [...this.presupuestosVencidos];
+    }
+
+    this.presupuestosCombinados = [
+      ...(this.presupuestosFiltradosVigentes || []),
+      ...(this.presupuestosFiltradosVencidos || [])
+    ];
+  }
+
   getClienteVacio() {
     return {
       tipoPersona: 'natural',
@@ -914,7 +933,8 @@ export class PresupuestoComponent implements OnInit {
 
       // Llamar al método para calcular días restantes dinámicamente
       this.actualizarDiasRestantesDinamicos();
-
+      this.inicializarPresupuestosFiltrados();
+      this.filtrarPresupuestos();
       this.calcularEstadisticas();
     }, 500);
   }
@@ -1169,14 +1189,54 @@ export class PresupuestoComponent implements OnInit {
   }
 
   calcularEstadisticas() {
-    this.estadisticas.totalVigentes = this.presupuestosVigentes.length;
-    this.estadisticas.totalVencidos = this.presupuestosVencidos.length;
+    this.estadisticas.totalVigentes = this.presupuestosFiltradosVigentes.length;
+    this.estadisticas.totalVencidos = this.presupuestosFiltradosVencidos.length;
 
-    const totalVigentes = this.presupuestosVigentes.reduce((sum, p) => sum + p.total, 0);
-    const totalVencidos = this.presupuestosVencidos.reduce((sum, p) => sum + p.total, 0);
+    const totalVigentes = this.presupuestosFiltradosVigentes.reduce((sum, p) => sum + (p.total || 0), 0);
+    const totalVencidos = this.presupuestosFiltradosVencidos.reduce((sum, p) => sum + (p.total || 0), 0);
     this.estadisticas.totalValor = totalVigentes + totalVencidos;
 
-    this.estadisticas.proximosAVencer = this.presupuestosVigentes.filter(p => p.diasRestantes! <= 3).length;
+    this.estadisticas.proximosAVencer = this.presupuestosFiltradosVigentes.filter(p => p.diasRestantes! <= 3).length;
+  }
+
+  // Método para limpiar búsqueda
+  limpiarBusqueda() {
+    this.filtroBusqueda = '';
+    // Restablecer los arrays filtrados a los originales
+    this.presupuestosFiltradosVigentes = [...this.presupuestosVigentes];
+    this.presupuestosFiltradosVencidos = [...this.presupuestosVencidos];
+    // Actualizar estadísticas
+    this.calcularEstadisticas();
+  }
+
+  // Método para limpiar filtro de estado
+  limpiarFiltroEstado() {
+    this.filtroEstado = '';
+    this.presupuestosFiltradosVigentes = [...this.presupuestosVigentes];
+    this.presupuestosFiltradosVencidos = [...this.presupuestosVencidos];
+    this.calcularEstadisticas();
+  }
+
+  // Método para limpiar todos los filtros
+  limpiarFiltros() {
+    this.filtroBusqueda = '';
+    this.filtroEstado = '';
+    this.presupuestosFiltradosVigentes = [...this.presupuestosVigentes];
+    this.presupuestosFiltradosVencidos = [...this.presupuestosVencidos];
+    this.calcularEstadisticas();
+
+    // Mostrar mensaje
+    this.snackBar.open('Filtros limpiados correctamente', 'Cerrar', {
+      duration: 2000,
+      panelClass: ['snackbar-info']
+    });
+  }
+
+  // Método para manejar el evento keyup.enter en el buscador
+  onSearchEnter(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      this.filtrarPresupuestos();
+    }
   }
 
   // Método para exportar con opciones
@@ -1219,8 +1279,223 @@ export class PresupuestoComponent implements OnInit {
     }
   }
 
+  // Método mejorado para filtrar presupuestos con búsqueda flexible
   filtrarPresupuestos() {
+    // Primero, asegurarse de tener los datos actualizados
+    if (!this.presupuestosVigentes && !this.presupuestosVencidos) {
+      return;
+    }
+
+    // Convertir filtro de búsqueda a minúsculas para búsqueda case-insensitive
+    const busqueda = this.filtroBusqueda ? this.filtroBusqueda.toLowerCase().trim() : '';
+
+    // Filtrar presupuestos VIGENTES
+    this.presupuestosFiltradosVigentes = this.presupuestosVigentes.filter(presupuesto => {
+      // 1. Filtrar por estado (si hay filtro de estado)
+      let pasaFiltroEstado = true;
+      if (this.filtroEstado) {
+        pasaFiltroEstado = presupuesto.estadoColor === this.filtroEstado;
+      }
+
+      // 2. Filtrar por búsqueda (si hay búsqueda)
+      let pasaFiltroBusqueda = true;
+      if (busqueda) {
+        // Normalizar el código del presupuesto para búsqueda flexible
+        const codigoNormalizado = this.normalizarCodigoParaBusqueda(presupuesto.codigo || '');
+
+        // Normalizar la búsqueda del usuario
+        const busquedaNormalizada = this.normalizarBusqueda(busqueda);
+
+        // Buscar en múltiples campos
+        const camposBusqueda = [
+          codigoNormalizado,
+          presupuesto.cliente?.nombreCompleto?.toLowerCase() || '',
+          presupuesto.cliente?.cedula?.toLowerCase() || '',
+          presupuesto.cliente?.nombre?.toLowerCase() || '',
+          presupuesto.cliente?.apellido?.toLowerCase() || '',
+          presupuesto.vendedor?.toLowerCase() || ''
+        ].join(' ');
+
+        // Verificar si coincide en algún campo
+        pasaFiltroBusqueda = camposBusqueda.includes(busquedaNormalizada) ||
+          // Búsqueda específica por código normalizado
+          codigoNormalizado.includes(busquedaNormalizada) ||
+          // Búsqueda parcial por último dígitos del código
+          this.coincideCodigoParcial(presupuesto.codigo, busqueda);
+      }
+
+      return pasaFiltroEstado && pasaFiltroBusqueda;
+    });
+
+    // Filtrar presupuestos VENCIDOS
+    this.presupuestosFiltradosVencidos = this.presupuestosVencidos.filter(presupuesto => {
+      // 1. Filtrar por estado (si hay filtro de estado)
+      let pasaFiltroEstado = true;
+      if (this.filtroEstado) {
+        pasaFiltroEstado = presupuesto.estadoColor === this.filtroEstado;
+      }
+
+      // 2. Filtrar por búsqueda (si hay búsqueda)
+      let pasaFiltroBusqueda = true;
+      if (busqueda) {
+        // Normalizar el código del presupuesto para búsqueda flexible
+        const codigoNormalizado = this.normalizarCodigoParaBusqueda(presupuesto.codigo || '');
+
+        // Normalizar la búsqueda del usuario
+        const busquedaNormalizada = this.normalizarBusqueda(busqueda);
+
+        // Buscar en múltiples campos
+        const camposBusqueda = [
+          codigoNormalizado,
+          presupuesto.cliente?.nombreCompleto?.toLowerCase() || '',
+          presupuesto.cliente?.cedula?.toLowerCase() || '',
+          presupuesto.cliente?.nombre?.toLowerCase() || '',
+          presupuesto.cliente?.apellido?.toLowerCase() || '',
+          presupuesto.vendedor?.toLowerCase() || ''
+        ].join(' ');
+
+        // Verificar si coincide en algún campo
+        pasaFiltroBusqueda = camposBusqueda.includes(busquedaNormalizada) ||
+          // Búsqueda específica por código normalizado
+          codigoNormalizado.includes(busquedaNormalizada) ||
+          // Búsqueda parcial por último dígitos del código
+          this.coincideCodigoParcial(presupuesto.codigo, busqueda);
+      }
+
+      return pasaFiltroEstado && pasaFiltroBusqueda;
+    });
+
+    // Actualizar estadísticas
     this.calcularEstadisticas();
+  }
+
+  // Método auxiliar para normalizar código para búsqueda
+  normalizarCodigoParaBusqueda(codigo: string): string {
+    if (!codigo) return '';
+
+    // Remover caracteres especiales, guiones, espacios
+    return codigo.toLowerCase()
+      .replace(/[^a-z0-9]/g, '')  // Remover todo excepto letras y números
+      .replace(/p/g, '')          // Remover la P inicial común
+      .trim();
+  }
+
+  // Método auxiliar para normalizar búsqueda del usuario
+  normalizarBusqueda(busqueda: string): string {
+    if (!busqueda) return '';
+
+    // Remover caracteres especiales, guiones, espacios
+    return busqueda.toLowerCase()
+      .replace(/[^a-z0-9]/g, '')  // Remover todo excepto letras y números
+      .replace(/p/g, '')          // Remover la P inicial si la incluyó
+      .trim();
+  }
+
+  // Método para verificar coincidencia parcial del código
+  coincideCodigoParcial(codigo: string, busqueda: string): boolean {
+    if (!codigo || !busqueda) return false;
+
+    // Extraer solo los números del código
+    const numerosCodigo = codigo.replace(/\D/g, '');
+    const numerosBusqueda = busqueda.replace(/\D/g, '');
+
+    // Verificar si los números de búsqueda están contenidos en los números del código
+    return numerosCodigo.includes(numerosBusqueda);
+  }
+
+  // Método para verificar si hay filtros activos (actualizado)
+  hayFiltrosActivos(): boolean {
+    return !!this.filtroBusqueda || !!this.filtroEstado;
+  }
+
+  // Método para obtener el texto de resultados filtrados (actualizado)
+  getTextoResultadosFiltrados(): string {
+    const totalFiltradosVigentes = this.presupuestosFiltradosVigentes?.length || 0;
+    const totalFiltradosVencidos = this.presupuestosFiltradosVencidos?.length || 0;
+    const totalFiltrados = totalFiltradosVigentes + totalFiltradosVencidos;
+
+    const totalVigentes = this.presupuestosVigentes?.length || 0;
+    const totalVencidos = this.presupuestosVencidos?.length || 0;
+    const totalGeneral = totalVigentes + totalVencidos;
+
+    // Si no hay filtros o si todos están mostrados
+    if ((!this.filtroBusqueda && !this.filtroEstado) || totalFiltrados === totalGeneral) {
+      return '';
+    }
+
+    let texto = '';
+
+    if (this.tabActiva === 'vigentes') {
+      texto = `${totalFiltradosVigentes} de ${totalVigentes} presupuestos vigentes`;
+    } else {
+      texto = `${totalFiltradosVencidos} de ${totalVencidos} presupuestos vencidos`;
+    }
+
+    if (this.filtroBusqueda) {
+      texto += ` para "${this.filtroBusqueda}"`;
+    }
+
+    if (this.filtroEstado) {
+      const estadoTexto = this.getEstadoTexto(this.filtroEstado);
+      texto += ` (${estadoTexto})`;
+    }
+
+    return texto;
+  }
+
+  // Método para búsqueda más específica (opcional)
+  buscarPresupuestoDetallado(valor: string) {
+    const busqueda = valor.toLowerCase().trim();
+
+    if (!busqueda) {
+      this.presupuestosFiltradosVigentes = [...this.presupuestosVigentes];
+      this.presupuestosFiltradosVencidos = [...this.presupuestosVencidos];
+      return;
+    }
+
+    this.presupuestosFiltradosVigentes = this.presupuestosVigentes.filter(presupuesto => {
+      // Buscar en código del presupuesto
+      const coincideCodigo = presupuesto.codigo?.toLowerCase().includes(busqueda);
+
+      // Buscar en cédula del cliente
+      const coincideCedula = presupuesto.cliente?.cedula?.toLowerCase().includes(busqueda);
+
+      // Buscar en nombre completo del cliente
+      const coincideNombreCompleto = presupuesto.cliente?.nombreCompleto?.toLowerCase().includes(busqueda);
+
+      // Buscar en nombre y apellido por separado
+      const coincideNombre = presupuesto.cliente?.nombre?.toLowerCase().includes(busqueda);
+      const coincideApellido = presupuesto.cliente?.apellido?.toLowerCase().includes(busqueda);
+
+      // Buscar en vendedor
+      const coincideVendedor = presupuesto.vendedor?.toLowerCase().includes(busqueda);
+
+      // Buscar en productos (descripción o código)
+      const coincideProductos = presupuesto.productos?.some((producto: any) => {
+        return producto.descripcion?.toLowerCase().includes(busqueda) ||
+          producto.codigo?.toLowerCase().includes(busqueda);
+      });
+
+      return coincideCodigo || coincideCedula || coincideNombreCompleto ||
+        coincideNombre || coincideApellido || coincideVendedor || coincideProductos;
+    });
+
+    this.presupuestosFiltradosVencidos = this.presupuestosVencidos.filter(presupuesto => {
+      // Mismos criterios para vencidos
+      const coincideCodigo = presupuesto.codigo?.toLowerCase().includes(busqueda);
+      const coincideCedula = presupuesto.cliente?.cedula?.toLowerCase().includes(busqueda);
+      const coincideNombreCompleto = presupuesto.cliente?.nombreCompleto?.toLowerCase().includes(busqueda);
+      const coincideNombre = presupuesto.cliente?.nombre?.toLowerCase().includes(busqueda);
+      const coincideApellido = presupuesto.cliente?.apellido?.toLowerCase().includes(busqueda);
+      const coincideVendedor = presupuesto.vendedor?.toLowerCase().includes(busqueda);
+      const coincideProductos = presupuesto.productos?.some((producto: any) => {
+        return producto.descripcion?.toLowerCase().includes(busqueda) ||
+          producto.codigo?.toLowerCase().includes(busqueda);
+      });
+
+      return coincideCodigo || coincideCedula || coincideNombreCompleto ||
+        coincideNombre || coincideApellido || coincideVendedor || coincideProductos;
+    });
   }
 
   // Métodos para controlar el menú desplegable
@@ -2301,6 +2576,62 @@ export class PresupuestoComponent implements OnInit {
   // Y modificar el original para usar con presupuestoSeleccionado
   getTextoDiasRestantes(): string {
     return this.getTextoDiasRestantesParaPresupuesto(this.presupuestoSeleccionado);
+  }
+
+  // Agrega estos métodos a tu componente
+  getTituloEstadoVacio(): string {
+    if (this.hayFiltrosActivos()) {
+      return 'No se encontraron coincidencias';
+    }
+
+    if (this.tabActiva === 'vigentes') {
+      return 'No hay presupuestos vigentes';
+    } else {
+      return 'No hay presupuestos vencidos';
+    }
+  }
+
+  getMensajeEstadoVacio(): string {
+    if (this.hayFiltrosActivos()) {
+      let mensaje = 'No hay presupuestos ';
+      mensaje += this.tabActiva === 'vigentes' ? 'vigentes' : 'vencidos';
+      mensaje += ' que coincidan con ';
+
+      if (this.filtroBusqueda && this.filtroEstado) {
+        mensaje += 'la búsqueda y el filtro de estado.';
+      } else if (this.filtroBusqueda) {
+        mensaje += 'la búsqueda.';
+      } else if (this.filtroEstado) {
+        const estadoTexto = this.getEstadoTexto(this.filtroEstado);
+        mensaje += `el filtro de estado (${estadoTexto}).`;
+      }
+
+      return mensaje;
+    }
+
+    if (this.tabActiva === 'vigentes') {
+      return 'Comienza creando tu primer presupuesto para organizar tus cotizaciones y ventas.';
+    } else {
+      return 'Todos tus presupuestos están vigentes o no han vencido aún.';
+    }
+  }
+
+  // Método para obtener detalles del filtro activo (opcional)
+  getDetallesFiltroActivo(): string {
+    if (!this.hayFiltrosActivos()) return '';
+
+    let detalles = '';
+
+    if (this.filtroBusqueda) {
+      detalles += `Búsqueda: "${this.filtroBusqueda}"`;
+    }
+
+    if (this.filtroEstado) {
+      if (detalles) detalles += ' • ';
+      detalles += `Estado: ${this.getEstadoTexto(this.filtroEstado)}`;
+    }
+
+    return detalles;
   }
 
 }

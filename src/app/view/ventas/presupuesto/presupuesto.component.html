@@ -4,30 +4,55 @@
         <div class="header-content">
             <div class="header-title">
                 <i class="bi bi-file-earmark-text"></i>
-                <h1>Presupuestos</h1>
+                <div class="header-text">
+                    <h1>Presupuestos</h1>
+                    <div class="header-subtitle">Consulta y gestiona todos tus presupuestos activos</div>
+                </div>
             </div>
             <div class="header-actions">
-                <div class="search-container">
-                    <i class="bi bi-search search-icon"></i>
-                    <input type="text" class="search-input" placeholder="Buscar presupuesto o cliente..."
-                        [(ngModel)]="filtroBusqueda" (keyup)="filtrarPresupuestos()">
+                <div class="search-section">
+                    <div class="search-container">
+                        <i class="bi bi-search search-icon"></i>
+                        <input type="text" class="search-input" 
+                            placeholder="Buscar por código (P-2025-001, 2025001, 001), cédula o nombre..."
+                            [(ngModel)]="filtroBusqueda" 
+                            (keyup)="filtrarPresupuestos()"
+                            (keyup.enter)="filtrarPresupuestos()">
+                        <button *ngIf="filtroBusqueda" class="btn-clear-search" (click)="limpiarBusqueda()" 
+                                title="Limpiar búsqueda">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    <!-- Mensaje de resultados filtrados - mejorado visualmente -->
+                    <div class="search-results-info" *ngIf="hayFiltrosActivos() && getTextoResultadosFiltrados()">
+                        <span class="results-badge">
+                            <i class="bi bi-funnel-fill"></i>
+                            {{getTextoResultadosFiltrados()}}
+                            <button class="btn-clear-all" (click)="limpiarFiltros()" title="Limpiar todos los filtros">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </span>
+                    </div>
                 </div>
-                <div class="filtros-container">
-                    <select class="filtro-select" [(ngModel)]="filtroEstado" (change)="filtrarPresupuestos()">
-                        <option value="">Todos los estados</option>
-                        <option value="vigente">Vigentes</option>
-                        <option value="proximo">Próximos a vencer</option>
-                        <option value="hoy">Vence hoy</option>
-                        <option value="vencido">Vencidos</option>
-                    </select>
-                    <button class="btn-refresh" (click)="cargarDatos()">
-                        <i class="bi bi-arrow-clockwise"></i>
+                <div class="header-filters">
+                    <div class="filter-group">
+                        <select class="filtro-select" [(ngModel)]="filtroEstado" (change)="filtrarPresupuestos()">
+                            <option value="">Todos los estados</option>
+                            <option value="vigente">Vigentes</option>
+                            <option value="proximo">Próximos a vencer</option>
+                            <option value="hoy">Vence hoy</option>
+                            <option value="vencido">Vencidos</option>
+                        </select>
+                        <button *ngIf="filtroEstado" class="btn-clear-filter" (click)="limpiarFiltroEstado()" 
+                                title="Limpiar filtro de estado">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                    </div>
+                    <button class="btn btn-primary" (click)="abrirModalNuevoPresupuesto()">
+                        <i class="bi bi-plus-circle"></i>
+                        Nuevo Presupuesto
                     </button>
                 </div>
-                <button class="btn btn-primary" (click)="abrirModalNuevoPresupuesto()">
-                    <i class="bi bi-plus-circle"></i>
-                    Nuevo Presupuesto
-                </button>
             </div>
         </div>
     </div>
@@ -90,7 +115,7 @@
         <!-- Contenido - Presupuestos Vigentes -->
         <div class="tab-content" [class.active]="tabActiva === 'vigentes'">
             <div class="presupuestos-grid scrollable-grid">
-                <div class="presupuesto-card" *ngFor="let presupuesto of presupuestosVigentes">
+                <div class="presupuesto-card" *ngFor="let presupuesto of presupuestosFiltradosVigentes">
                     <div class="presupuesto-header">
                         <div class="presupuesto-codigo">
                             <strong>{{ presupuesto.codigo }}</strong>
@@ -145,19 +170,54 @@
                     </div>
                 </div>
 
-                <!-- Estado vacío -->
-                <div class="empty-state" *ngIf="presupuestosVigentes.length === 0">
-                    <i class="bi bi-file-earmark-text"></i>
-                    <h4>No hay presupuestos vigentes</h4>
-                    <p class="text-muted">Crea tu primer presupuesto haciendo clic en "Nuevo Presupuesto"</p>
-                </div>
+                <div class="empty-state" *ngIf="presupuestosFiltradosVigentes.length === 0">
+                    <div class="empty-state-container">
+                        <div class="empty-state-icon">
+                            <i *ngIf="hayFiltrosActivos()" class="bi bi-search-x"></i>
+                            <i *ngIf="!hayFiltrosActivos() && tabActiva === 'vigentes'" class="bi bi-file-earmark-text"></i>
+                            <i *ngIf="!hayFiltrosActivos() && tabActiva === 'vencidos'" class="bi bi-file-earmark-x"></i>
+                        </div>
+                        
+                        <div class="empty-state-content">
+                            <h4 class="empty-state-title">
+                                {{ getTituloEstadoVacio() }}
+                            </h4>
+                            
+                            <p class="empty-state-message">
+                                {{ getMensajeEstadoVacio() }}
+                            </p>
+                            
+                            <div *ngIf="hayFiltrosActivos()" class="empty-state-actions">
+                                <button class="btn btn-primary btn-sm" (click)="limpiarFiltros()">
+                                    <i class="bi bi-funnel"></i>
+                                    Limpiar filtros
+                                </button>
+                                <button *ngIf="filtroBusqueda" class="btn btn-outline-secondary btn-sm" (click)="limpiarBusqueda()">
+                                    <i class="bi bi-search"></i>
+                                    Limpiar búsqueda
+                                </button>
+                                <button *ngIf="filtroEstado" class="btn btn-outline-secondary btn-sm" (click)="limpiarFiltroEstado()">
+                                    <i class="bi bi-filter"></i>
+                                    Limpiar estado
+                                </button>
+                            </div>
+                            
+                            <div *ngIf="!hayFiltrosActivos() && tabActiva === 'vigentes'" class="empty-state-actions">
+                                <button class="btn btn-primary" (click)="abrirModalNuevoPresupuesto()">
+                                    <i class="bi bi-plus-circle"></i>
+                                    Crear primer presupuesto
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+</div>
             </div>
         </div>
 
         <!-- Contenido - Presupuestos Vencidos -->
         <div class="tab-content" [class.active]="tabActiva === 'vencidos'">
             <div class="presupuestos-grid scrollable-grid">
-                <div class="presupuesto-card" *ngFor="let presupuesto of presupuestosVencidos">
+                <div class="presupuesto-card" *ngFor="let presupuesto of presupuestosFiltradosVencidos">
                     <div class="presupuesto-header">
                         <div class="presupuesto-codigo">
                             <strong>{{ presupuesto.codigo }}</strong>
@@ -198,11 +258,36 @@
                     </div>
                 </div>
 
-                <!-- Estado vacío -->
-                <div class="empty-state" *ngIf="presupuestosVencidos.length === 0">
-                    <i class="bi bi-file-earmark-x"></i>
-                    <h4>No hay presupuestos vencidos</h4>
-                    <p class="text-muted">Todos los presupuestos están vigentes</p>
+                <!-- Estado vacío para presupuestos vencidos -->
+                <div class="empty-state" *ngIf="presupuestosFiltradosVencidos.length === 0">
+                    <div class="empty-state-container">
+                        <div class="empty-state-icon">
+                            <i *ngIf="hayFiltrosActivos()" class="bi bi-search-x"></i>
+                            <i *ngIf="!hayFiltrosActivos()" class="bi bi-file-earmark-x"></i>
+                        </div>
+                        
+                        <div class="empty-state-content">
+                            <h4 class="empty-state-title">
+                                {{ getTituloEstadoVacio() }}
+                            </h4>
+                            
+                            <p class="empty-state-message">
+                                {{ getMensajeEstadoVacio() }}
+                            </p>
+                            
+                            <div *ngIf="hayFiltrosActivos()" class="empty-state-actions">
+                                <button class="btn btn-primary btn-sm" (click)="limpiarFiltros()">
+                                    <i class="bi bi-funnel"></i>
+                                    Limpiar filtros
+                                </button>
+                            </div>
+                            
+                            <div *ngIf="!hayFiltrosActivos()" class="empty-state-info">
+                                <i class="bi bi-check-circle"></i>
+                                ¡Excelente! No tienes presupuestos vencidos.
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
