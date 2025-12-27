@@ -504,6 +504,133 @@
 }
 
 // Estilos para el modal de detalle moderno
+.metodos-pago-detalle .pago-group {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.metodos-pago-detalle .pago-group:last-child {
+    border-bottom: none;
+}
+
+.metodos-pago-detalle .pago-group-header {
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.metodos-pago-detalle .metodo-item-detalle {
+    display: flex;
+    align-items: flex-start;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    margin-bottom: 0.5rem;
+}
+
+// Añade esto al SCSS en la sección de métodos de pago
+.metodos-pago-detalle {
+    .metodo-icono {
+        i {
+            font-size: 1.5rem !important;
+            min-width: 24px;
+            min-height: 24px;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+
+            // Colores específicos por tipo de pago
+            &.bi-cash {
+                color: #28a745 !important; // Verde para efectivo
+            }
+
+            &.bi-credit-card,
+            &.bi-credit-card-fill {
+                color: #007bff !important; // Azul para débito/crédito
+            }
+
+            &.bi-phone {
+                color: #6f42c1 !important; // Púrpura para pago móvil
+            }
+
+            &.bi-bank {
+                color: #fd7e14 !important; // Naranja para transferencia
+            }
+
+            &.bi-currency-dollar {
+                color: #6610f2 !important; // Violeta para zelle
+            }
+
+            &.bi-question-circle {
+                color: #6c757d !important; // Gris para desconocido
+            }
+        }
+    }
+}
+
+.metodos-pago-detalle .metodo-info-detalle {
+    flex: 1;
+}
+
+.metodos-pago-detalle .metodo-tipo {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.25rem;
+}
+
+.metodos-pago-detalle .montos-linea {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.metodos-pago-detalle .monto-simple {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.metodos-pago-detalle .monto-convertido {
+    font-size: 0.85rem;
+}
+
+.metodos-pago-detalle .metodo-detalles-adicionales {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.metodos-pago-detalle .detalle-adicional {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.metodos-pago-detalle .detalle-adicional i {
+    margin-right: 0.25rem;
+}
+
+.metodos-pago-detalle .pago-group-observaciones {
+    background: #fff3cd;
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #856404;
+    display: flex;
+    align-items: center;
+}
+
+.metodos-pago-detalle .pago-group-observaciones i {
+    margin-right: 0.5rem;
+}
+
 .modal-header-detalle {
     display: flex;
     justify-content: space-between;

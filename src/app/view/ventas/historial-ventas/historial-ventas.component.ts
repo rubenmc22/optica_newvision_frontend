@@ -10,6 +10,7 @@ import { SystemConfigService } from '../../system-config/system-config.service';
 import { Subscription, Subject } from 'rxjs';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
+import { UserStateService, SedeInfo } from '../../../core/services/userState/user-state-service';
 
 
 @Component({
@@ -57,6 +58,8 @@ export class HistorialVentasComponent implements OnInit {
   tasasPorId: { [key: string]: number } = {};
   tasasDisponibles: any[] = [];
   monedasDisponibles: any[] = [];
+  sedeInfo: SedeInfo | null = null;
+  sedesDisponibles: SedeInfo[] = [];
 
   // Propiedades para moneda del sistema
   monedaSistema: string = 'USD';
@@ -120,6 +123,7 @@ export class HistorialVentasComponent implements OnInit {
     private systemConfigService: SystemConfigService,
     private empleadosService: EmpleadosService,
     private loader: LoaderService,
+    private userStateService: UserStateService
   ) {
     this.inicializarFormularioEdicion();
   }
@@ -134,6 +138,22 @@ export class HistorialVentasComponent implements OnInit {
     this.editarVentaForm.get('montoAbonado')?.valueChanges.subscribe(value => {
       this.validarMontoAbono();
     });
+
+    // Obtener sede actual
+    this.userStateService.sedeActual$.subscribe(sede => {
+      this.sedeInfo = sede;
+    });
+
+    // Obtener todas las sedes (ya cargadas por el dashboard)
+    this.userStateService.sedes$.subscribe(sedes => {
+      this.sedesDisponibles = sedes;
+    });
+  }
+
+  filtrarPorSede(sedeKey: string): void {
+    // Usar sedes ya cargadas
+    const sedeSeleccionada = this.userStateService.getSedePorKey(sedeKey);
+    // ... lógica de filtrado
   }
 
   ngOnDestroy(): void {
@@ -225,7 +245,6 @@ export class HistorialVentasComponent implements OnInit {
   private cargarEmpleados(): void {
     this.empleadosService.getAllEmpleados().subscribe({
       next: (response: any) => {
-        console.log('Respuesta completa del servicio de empleados:', response);
 
         let usuarios: any[] = [];
 
@@ -233,16 +252,16 @@ export class HistorialVentasComponent implements OnInit {
         if (Array.isArray(response)) {
           // Caso 1: El servicio retorna un array directamente
           usuarios = response;
-          console.log('Se recibió array directamente de empleados:', usuarios.length);
-        } else if (response && response.message === 'ok' && Array.isArray(response.usuarios)) {
+        }
+        else if (response && response.message === 'ok' && Array.isArray(response.usuarios)) {
           // Caso 2: El servicio retorna {message: "ok", usuarios: [...]}
           usuarios = response.usuarios;
-          console.log('Se recibió respuesta estructurada de empleados:', usuarios.length);
-        } else if (response && Array.isArray(response)) {
+        }
+        else if (response && Array.isArray(response)) {
           // Caso 3: El servicio retorna un array en otra propiedad
           usuarios = response;
-          console.log('Se recibió array en propiedad de empleados:', usuarios.length);
-        } else {
+        }
+        else {
           console.error('Formato de respuesta inesperado del servicio de empleados:', response);
           return;
         }
@@ -265,9 +284,7 @@ export class HistorialVentasComponent implements OnInit {
       usuario.estatus === true || usuario.activo === true
     );
 
-    console.log('Empleados activos encontrados:', empleadosActivos.length);
-
-    // ASESORES: Todos los empleados activos sin importar el cargo
+    //Todos los empleados activos sin importar el cargo
     this.asesores = empleadosActivos.map(usuario => ({
       id: usuario.id,
       nombre: usuario.nombre,
@@ -297,7 +314,6 @@ export class HistorialVentasComponent implements OnInit {
         estatus: usuario.estatus
       }));
 
-    console.log('Asesores cargados:', this.asesores);
     console.log('Especialistas cargados:', this.especialistas);
 
     // Si no hay especialistas, mostrar advertencia
@@ -394,7 +410,7 @@ export class HistorialVentasComponent implements OnInit {
 
     this.historialVentaService.obtenerHistorialVentas().subscribe({
       next: (response: any) => {
-        console.log('📦 RESPUESTA DEL API:');
+        console.log('📦 RESPUESTA DEL API:', response.ventas);
         console.log('- Total ventas recibidas:', response.ventas?.length);
 
         if (response.message === 'ok' && response.ventas) {
@@ -419,7 +435,7 @@ export class HistorialVentasComponent implements OnInit {
         }
       },
       error: (error) => {
-        console.error('❌ ERROR al cargar ventas:', error);
+        console.error('ERROR al cargar ventas:', error);
         this.loader.hide();
       }
     });
@@ -431,54 +447,49 @@ export class HistorialVentasComponent implements OnInit {
     const cliente = ventaApi.cliente;
     const asesor = ventaApi.asesor;
     const productos = ventaApi.productos;
-    const metodosPago = ventaApi.metodosPago;
+    const metodosPagoApi = ventaApi.metodosPago;
     const formaPago = ventaApi.formaPago;
+
+    console.log('📊 Métodos de pago del API:', metodosPagoApi);
 
     // Determinar el estado para filtros
     const estadoVenta = this.determinarEstadoVenta(venta.estatus_venta);
 
-    // Calcular el total pagado en la moneda de la venta
-    const totalPagadoEnMonedaVenta = metodosPago.reduce((total: number, metodo: any) => {
-      return total + (metodo.monto_en_moneda_de_venta || 0);
+    // Calcular el total pagado en la moneda de la venta, necesitamos sumar todos los montoAbonado de cada grupo
+    const totalPagadoEnMonedaVenta = metodosPagoApi.reduce((total: number, grupo: any) => {
+      return total + (grupo.montoAbonado || 0);
     }, 0);
 
     // Determinar si es Cashea
     const esCashea = formaPago?.tipo === 'cashea';
 
-    // Preparar métodos de pago limpios
-    const metodosPagoLimpios = metodosPago.map((metodo: any) => {
-      const metodoLimpio: any = {
-        tipo: metodo.tipo,
-        monto: metodo.monto,
-        montoPagado: metodo.monto_en_moneda_de_venta || metodo.monto,
-        moneda_id: metodo.moneda_id,
-        monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta,
-        referencia: metodo.referencia
+    // Preparar métodos de pago manteniendo la estructura de grupos
+    const metodosPagoAdaptados = metodosPagoApi.map((grupo: any) => {
+      console.log('📊 Procesando grupo de pago:', grupo);
+
+      return {
+        numero_pago: grupo.numero_pago || 1,
+        montoAbonado: grupo.montoAbonado || 0,
+        observaciones: grupo.observaciones,
+        metodosPago: (grupo.metodosPago || []).map((metodo: any) => {
+          console.log('📊 Procesando método dentro del grupo:', metodo);
+
+          return {
+            tipo: metodo.tipo || 'efectivo',
+            monto: metodo.monto || 0,
+            moneda_id: metodo.moneda_id || 'dolar',
+            monto_en_moneda_de_venta: metodo.monto_moneda_base || metodo.monto || 0,
+            referencia: metodo.referencia,
+            bancoCodigo: metodo.bancoCodigo,
+            bancoNombre: metodo.bancoNombre,
+            fechaRegistro: metodo.fechaRegistro,
+            tasa_moneda: metodo.tasa_moneda
+          };
+        })
       };
-
-      // Solo agregar información bancaria si existe
-      if (metodo.bancoNombre) {
-        metodoLimpio.bancoCodigo = metodo.bancoCodigo;
-        metodoLimpio.bancoNombre = metodo.bancoNombre;
-
-        // Solo crear propiedad 'banco' si ambos existen
-        if (metodo.bancoCodigo && metodo.bancoNombre) {
-          metodoLimpio.banco = `${metodo.bancoCodigo} - ${metodo.bancoNombre}`;
-        } else if (metodo.bancoNombre) {
-          metodoLimpio.banco = metodo.bancoNombre;
-        }
-      }
-
-      // Solo agregar conversión si es diferente de bolívar
-      if (metodo.moneda_id !== 'bolivar') {
-        metodoLimpio.conversionBs = this.calcularConversionBs(
-          metodo.monto_en_moneda_de_venta || metodo.monto,
-          metodo.moneda_id
-        );
-      }
-
-      return metodoLimpio;
     });
+
+    console.log('📊 Métodos de pago adaptados:', metodosPagoAdaptados);
 
     // Preparar productos limpios
     const productosLimpios = productos.map((prod: any) => {
@@ -529,8 +540,8 @@ export class HistorialVentasComponent implements OnInit {
 
       // Información de pago
       pagoCompleto: totalPagadoEnMonedaVenta >= totales.total,
-      montoAbonado: formaPago?.totalPagadoAhora || 0, // Usar totalPagadoAhora del API
-      deudaPendiente: formaPago?.deudaPendiente || 0, // Asegurar que existe
+      montoAbonado: totalPagadoEnMonedaVenta, // Usar la suma calculada
+      deudaPendiente: formaPago?.deudaPendiente || Math.max(0, totales.total - totalPagadoEnMonedaVenta),
 
       // Configuración de la venta
       moneda: venta.moneda,
@@ -554,13 +565,12 @@ export class HistorialVentasComponent implements OnInit {
         id: 0,
         nombre: 'No asignado'
       },
-      //asesorNombre: asesor.nombre,
 
       // Contenido de la venta
       productos: productosLimpios,
       productosOriginales: ventaApi.productos,
       servicios: [],
-      metodosPago: metodosPagoLimpios,
+      metodosPago: metodosPagoAdaptados, // ← Aquí usamos la estructura adaptada
 
       // Configuración local
       mostrarDetalle: false,
@@ -600,6 +610,12 @@ export class HistorialVentasComponent implements OnInit {
     } else {
       ventaAdaptada.financiado = false;
     }
+
+    console.log('✅ Venta adaptada final:', {
+      key: ventaAdaptada.key,
+      numeroControl: ventaAdaptada.numeroControl,
+      metodosPago: ventaAdaptada.metodosPago
+    });
 
     return ventaAdaptada;
   }
@@ -710,7 +726,6 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   cancelarVenta(venta: any) {
-    console.log('Cancelar venta:', venta);
     this.selectedVenta = venta;
     this.motivoCancelacion = '';
 
@@ -775,13 +790,11 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private procesarCancelacion(): void {
-    console.log('this.selectedVenta', this.selectedVenta);
     if (!this.selectedVenta?.key) {
       this.swalService.showError('Error', 'No se puede cancelar la venta: falta información.');
       return;
     }
 
-    console.log('this.motivoCancelacion', this.motivoCancelacion);
     let motivo_cancelacion = this.motivoCancelacion;
 
     this.historialVentaService.anularVenta(
@@ -846,8 +859,27 @@ export class HistorialVentasComponent implements OnInit {
     this.motivoCancelacion = '';
   }
 
-  verDetalleCompleto(venta: any) {
+  /*verDetalleCompleto(venta: any) {
     console.log('Ver detalle completo:', venta);
+
+    this.selectedVenta = venta;
+
+    this.modalService.open(this.detalleVentaModal, {
+      centered: true,
+      size: 'lg',
+      backdrop: true,
+      keyboard: true
+    });
+  }*/
+  verDetalleCompleto(venta: any) {
+    console.log('🔍 Ver detalle completo:', venta);
+    console.log('📊 Métodos de pago completos:', venta.metodosPago);
+    console.log('📊 Métodos de pago string:', JSON.stringify(venta.metodosPago, null, 2));
+
+    if (venta.metodosPago?.length) {
+      console.log('📊 Primer grupo:', venta.metodosPago[0]);
+      console.log('📊 Métodos dentro del grupo:', venta.metodosPago[0]?.metodosPago);
+    }
 
     this.selectedVenta = venta;
 
@@ -868,20 +900,18 @@ export class HistorialVentasComponent implements OnInit {
   getTotalPagadoVenta(venta: any): number {
     if (!venta) return 0;
 
-    // PRIORIDAD 1: Usar totalPagado del objeto formaPago (si existe y es válido)
+    //Usar totalPagado del objeto formaPago (si existe y es válido)
     if (venta?.formaPago?.totalPagadoAhora !== undefined &&
       venta?.formaPago?.totalPagadoAhora !== null) {
-      console.log('💰 Usando totalPagadoAhora del API:', venta.formaPago.totalPagadoAhora);
       return venta.formaPago.totalPagadoAhora;
     }
 
-    // PRIORIDAD 2: Usar montoAbonado directamente
+    //Usar montoAbonado directamente
     if (venta?.montoAbonado !== undefined && venta?.montoAbonado !== null) {
-      console.log('💰 Usando montoAbonado:', venta.montoAbonado);
       return venta.montoAbonado;
     }
 
-    // PRIORIDAD 3: Calcular sumando métodos de pago (fallback)
+    //Calcular sumando métodos de pago (fallback)
     if (venta?.metodosPago && venta.metodosPago.length > 0) {
       let totalCalculado = 0;
 
@@ -1012,8 +1042,6 @@ export class HistorialVentasComponent implements OnInit {
   private actualizarVentaDespuesAbono(ventaActualizadaAPI: any): void {
     if (!ventaActualizadaAPI || !this.selectedVenta) return;
 
-    console.log('🔄 Actualizando venta local con datos del backend:', ventaActualizadaAPI);
-
     // Obtener los nuevos métodos de pago del backend
     const nuevosMetodosPago = ventaActualizadaAPI.metodosPago || [];
 
@@ -1043,13 +1071,6 @@ export class HistorialVentasComponent implements OnInit {
         deudaPendiente: this.selectedVenta.deudaPendiente
       };
     }
-
-    console.log('✅ Venta actualizada localmente:', {
-      key: this.selectedVenta.key,
-      montoAbonado: this.selectedVenta.montoAbonado,
-      deudaPendiente: this.selectedVenta.deudaPendiente,
-      totalMetodos: this.selectedVenta.metodosPago?.length || 0
-    });
   }
 
   guardarEdicionVenta(modal: any): void {
@@ -1155,10 +1176,7 @@ export class HistorialVentasComponent implements OnInit {
     // Preparar el request según lo que espera el backend
     const requestData = this.prepararRequestParaBackend(metodosPago, montoAbonado);
 
-    console.log('📤 Enviando al backend:', requestData);
     console.log('📊 Métodos de pago:', metodosPago);
-    console.log('💰 Total abonado:', montoAbonado);
-    console.log('💵 Moneda de venta:', this.getMonedaVenta());
 
     this.enviarAbonoCompleto(modal, requestData);
   }
@@ -1359,15 +1377,6 @@ export class HistorialVentasComponent implements OnInit {
       }
 
       resumen += '<br>';
-    });
-
-    // Mostrar en consola para debug
-    console.log('🎯 Resumen del abono procesado:', {
-      venta: venta.venta?.numero_venta,
-      totalVenta: venta.totales?.total,
-      totalPagado: venta.totales?.totalPagado,
-      deudaPendiente: venta.formaPago?.deudaPendiente,
-      metodosRegistrados: metodosRegistrados
     });
   }
 
@@ -1643,30 +1652,22 @@ export class HistorialVentasComponent implements OnInit {
   calcularMontoDeuda(): number {
     if (!this.selectedVenta) return 0;
 
-    // PRIMERO: Intentar usar la deuda del API si está disponible
+    //Intentar usar la deuda del API si está disponible
     if (this.selectedVenta?.formaPago?.deudaPendiente !== undefined &&
       this.selectedVenta?.formaPago?.deudaPendiente !== null) {
-      console.log('🔍 Usando deudaPendiente del API en modal:', this.selectedVenta.formaPago.deudaPendiente);
       return Math.max(0, this.selectedVenta.formaPago.deudaPendiente);
     }
 
-    // SEGUNDO: Intentar usar la propiedad mapeada
+    //Intentar usar la propiedad mapeada
     if (this.selectedVenta?.deudaPendiente !== undefined &&
       this.selectedVenta?.deudaPendiente !== null) {
-      console.log('🔍 Usando deudaPendiente mapeada en modal:', this.selectedVenta.deudaPendiente);
       return Math.max(0, this.selectedVenta.deudaPendiente);
     }
 
-    // TERCERO: Calcular manualmente usando totalPagado del API
+    //Calcular manualmente usando totalPagado del API
     const totalVenta = this.selectedVenta.total || 0;
     const totalPagado = this.selectedVenta?.formaPago?.totalPagadoAhora ||
       this.selectedVenta?.montoAbonado || 0;
-
-    console.log('🔍 Calculando deuda manualmente en modal:', {
-      totalVenta: totalVenta,
-      totalPagado: totalPagado,
-      deuda: Math.max(0, totalVenta - totalPagado)
-    });
 
     return Math.max(0, totalVenta - totalPagado);
   }
@@ -1828,11 +1829,7 @@ export class HistorialVentasComponent implements OnInit {
     const montoIngresado = metodoControl?.get('monto')?.value || 0;
     const montoMaximo = this.getMontoMaximoParaMetodo(index);
 
-    // console.log(`Validando método ${index}: Ingresado=${montoIngresado}, Máximo=${montoMaximo}, Moneda=${this.getMonedaParaMetodo(index)}`);
-
     if (montoIngresado > montoMaximo) {
-      //console.log(`Ajustando monto del método ${index} de ${montoIngresado} a ${montoMaximo}`);
-
       metodoControl.patchValue({
         monto: montoMaximo
       }, { emitEvent: false });
@@ -2002,19 +1999,10 @@ export class HistorialVentasComponent implements OnInit {
       return 0;
     }
 
-    console.log('🔍 Calculando deuda para venta:', {
-      numeroControl: venta.numeroControl,
-      estado: venta.estado,
-      formaPago: venta.formaPago,
-      formaPagoCompleto: venta.formaPagoCompleto
-    });
-
-    // PRIORIDAD 1: Usar deudaPendiente del API si está disponible
     // Forma 1: deudaPendiente directo en formaPago
     if (venta?.formaPago?.deudaPendiente !== undefined &&
       venta?.formaPago?.deudaPendiente !== null) {
       const deudaAPI = venta.formaPago.deudaPendiente;
-      console.log('📊 Usando deudaPendiente del API:', deudaAPI);
       return Math.max(0, deudaAPI);
     }
 
@@ -2022,26 +2010,18 @@ export class HistorialVentasComponent implements OnInit {
     if (venta?.formaPagoCompleto?.deudaPendiente !== undefined &&
       venta?.formaPagoCompleto?.deudaPendiente !== null) {
       const deudaAPI = venta.formaPagoCompleto.deudaPendiente;
-      console.log('📊 Usando deudaPendiente de formaPagoCompleto:', deudaAPI);
       return Math.max(0, deudaAPI);
     }
 
     // Forma 3: Buscar en propiedades mapeadas
     const deudaPendienteMapeada = venta?.deudaPendiente;
     if (deudaPendienteMapeada !== undefined && deudaPendienteMapeada !== null) {
-      console.log('📊 Usando deudaPendiente mapeada:', deudaPendienteMapeada);
       return Math.max(0, deudaPendienteMapeada);
     }
 
     // PRIORIDAD 2: Calcular basado en total y pagado
     const totalVenta = venta.total || 0;
     const totalPagado = this.getTotalPagadoVenta(venta);
-
-    console.log('📊 Calculando deuda manualmente:', {
-      totalVenta: totalVenta,
-      totalPagado: totalPagado,
-      diferencia: totalVenta - totalPagado
-    });
 
     // Para evitar errores de precisión, redondear
     const deudaCalculada = Math.max(0, totalVenta - totalPagado);
@@ -2943,14 +2923,6 @@ export class HistorialVentasComponent implements OnInit {
 
       console.log('venta', venta)
 
-      console.log('✅ Venta preparada para recibo:', {
-        key: this.ventaParaRecibo.key,
-        numeroControl: this.ventaParaRecibo.numeroControl,
-        formaPago: this.ventaParaRecibo.formaPago,
-        montoAbonado: this.ventaParaRecibo.montoAbonado,
-        total: this.ventaParaRecibo.total
-      });
-
       // Preparar datos para el recibo
       this.prepararDatosRecibo(this.ventaParaRecibo);
 
@@ -2961,13 +2933,6 @@ export class HistorialVentasComponent implements OnInit {
         // Forzar detección de cambios
         setTimeout(() => {
           this.scrollToTop();
-
-          // Log para depuración
-          console.log('🎯 Modal de recibo mostrado:', {
-            mostrarModalRecibo: this.mostrarModalRecibo,
-            ventaParaRecibo: !!this.ventaParaRecibo,
-            datosRecibo: !!this.datosRecibo
-          });
         }, 50);
       }, 50);
 
@@ -3174,11 +3139,6 @@ export class HistorialVentasComponent implements OnInit {
    * Obtener productos seguros
    */
   getProductosSeguros(): any[] {
-    console.log('📦 Productos disponibles:', {
-      productosProcesados: this.ventaParaRecibo?.productos,
-      productosOriginales: this.ventaParaRecibo?.productosOriginales
-    });
-
     if (!this.ventaParaRecibo) {
       return [];
     }
@@ -3187,8 +3147,6 @@ export class HistorialVentasComponent implements OnInit {
     if (this.ventaParaRecibo.productosOriginales &&
       this.ventaParaRecibo.productosOriginales.length > 0) {
 
-      console.log('✅ Usando productos originales del API');
-
       return this.ventaParaRecibo.productosOriginales.map((prod: any) => {
         // Precio unitario sin IVA del API original
         const precioUnitarioSinIva = prod.precio_unitario_sin_iva || 0;
@@ -3196,13 +3154,6 @@ export class HistorialVentasComponent implements OnInit {
 
         // Calcular subtotal: precio sin IVA × cantidad
         const subtotalCalculado = precioUnitarioSinIva * cantidad;
-
-        console.log(`📊 Producto original "${prod.datos?.nombre}":`, {
-          precio_unitario_sin_iva: precioUnitarioSinIva,
-          cantidad: cantidad,
-          subtotalCalculado: subtotalCalculado,
-          totalOriginal: prod.total
-        });
 
         return {
           nombre: prod.datos?.nombre || 'Producto sin nombre',
@@ -3217,8 +3168,6 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     // PRIORIDAD 2: Usar productos procesados como fallback
-    console.log('⚠️ Usando productos procesados (fallback)');
-
     return (this.ventaParaRecibo.productos || []).map((prod: any) => {
       // Calcular precio sin IVA basado en el impuesto
       const impuesto = this.ventaParaRecibo.impuesto || 16;
@@ -3321,7 +3270,6 @@ export class HistorialVentasComponent implements OnInit {
     const pagado = this.getTotalPagadoSeguro();
     const deuda = Math.max(0, total - pagado);
 
-    console.log('Cálculo de deuda:', { total, pagado, deuda });
     return deuda;
   }
 
@@ -3337,7 +3285,6 @@ export class HistorialVentasComponent implements OnInit {
     const porcentaje = (pagado / total) * 100;
     const porcentajeRedondeado = Math.round(porcentaje);
 
-    console.log('Cálculo de porcentaje:', { total, pagado, porcentaje, porcentajeRedondeado });
     return porcentajeRedondeado;
   }
 
@@ -3500,9 +3447,6 @@ export class HistorialVentasComponent implements OnInit {
     if (this.ventaParaRecibo.productosOriginales &&
       this.ventaParaRecibo.productosOriginales.length > 0) {
 
-      console.log('🖨️ Preparando productos ORIGINALES para impresión:',
-        this.ventaParaRecibo.productosOriginales);
-
       return this.ventaParaRecibo.productosOriginales.map((prod: any) => {
         // Precio unitario sin IVA del API
         const precioUnitarioSinIva = prod.precio_unitario_sin_iva || 0;
@@ -3522,10 +3466,6 @@ export class HistorialVentasComponent implements OnInit {
         };
       });
     }
-
-    // Prioridad 2: Calcular a partir de productos procesados
-    console.log('🖨️ Preparando productos PROCESADOS para impresión:',
-      this.ventaParaRecibo.productos);
 
     return (this.ventaParaRecibo.productos || []).map((prod: any) => {
       const impuesto = this.ventaParaRecibo.impuesto || 16;
@@ -4107,8 +4047,6 @@ export class HistorialVentasComponent implements OnInit {
           // Usar subtotal que viene de prepararProductosParaRecibo
           const subtotal = producto.subtotal || 0;
 
-          console.log('producto HTML', producto);
-
           return `
                           <tr>
                               <td class="text-center">${index + 1}</td>
@@ -4451,6 +4389,28 @@ export class HistorialVentasComponent implements OnInit {
       }
     }, 10000);
   }
+
+  // En tu componente TypeScript
+  getIconoMetodoPago(tipo: string): string {
+    switch (tipo?.toLowerCase()) {
+      case 'efectivo':
+        return 'bi-cash';
+      case 'debito':
+        return 'bi-credit-card';
+      case 'credito':
+        return 'bi-credit-card-fill';
+      case 'pagomovil':
+        return 'bi-phone';
+      case 'transferencia':
+        return 'bi-bank';
+      case 'zelle':
+        return 'bi-currency-dollar';
+      default:
+        return 'bi-question-circle'; 
+    }
+  }
+
+
 }
 
 

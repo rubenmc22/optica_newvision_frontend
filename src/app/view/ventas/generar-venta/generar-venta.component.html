@@ -1427,13 +1427,26 @@
             <!-- Body del Recibo -->
             <div class="modal-body p-3">
                 <div class="recibo-container compacto" id="contenidoRecibo">
-                    <!-- Encabezado compacto -->
+                <!-- Encabezado compacto -->
                     <div class="recibo-header text-center mb-3">
-                        <h4 class="empresa-nombre mb-1">NEW VISION LENS</h4>
+                        <!-- Nombre de la sede desde la información de sede -->
+                        <h4 class="empresa-nombre mb-1">{{ datosRecibo?.sede?.nombre || '' }}</h4>
+                        
+                        <!-- Información de contacto dinámica -->
                         <div class="empresa-info small text-muted">
-                            <p class="mb-0">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</p>
-                            <p class="mb-0">RIF: J-123456789 | newvisionlens2020gmail.com</p>
+                            <!-- Dirección desde sedeInfo -->
+                            <p class="mb-0">{{ datosRecibo?.sede?.direccion || '' }}</p>
+                            
+                            <!-- Teléfono y RIF desde sedeInfo -->
+                            <p class="mb-0">
+                                Tel: {{ datosRecibo?.sede?.telefono || '' }} | 
+                                RIF: {{ datosRecibo?.sede?.rif || '' }}
+                            </p>
+                            
+                            <!-- Email desde sedeInfo -->
+                            <p class="mb-0">Email: {{ datosRecibo?.sede?.email || '' }}</p>
                         </div>
+                        
                         <h5 class="titulo-venta mt-2 mb-0 text-dark">{{ getTituloRecibo() }}</h5>
                     </div>
 
@@ -1507,19 +1520,19 @@
                         </div>
                     </div>
 
-                    <!-- Métodos de pago compactos -->
+                  <!-- Métodos de pago compactos -->
                     <div class="metodos-compactos mb-3" *ngIf="getMetodosPagoSeguros().length > 0">
                         <h6 class="fw-bold mb-2 text-primary border-bottom pb-1">PAGOS</h6>
                         <div class="row g-1">
                             <div class="col-12" *ngFor="let metodo of getMetodosPagoSeguros()">
-                                <div class="d-flex justify-content-between align-items-center small py-1">
-                                    <span>
+                                <!-- Quita la clase "small" que está causando el problema -->
+                                <div class="d-flex justify-content-between align-items-center py-1">
+                                    <span class="metodo-pago-info">
                                         <span class="badge bg-primary me-1">{{ formatearTipoPago(metodo.tipo) }}</span>
-                                        <!-- CORRECCIÓN: Pasar la moneda específica del método -->
-                                        {{ formatearMoneda(metodo.monto, metodo.moneda) }}
-                                        <span *ngIf="metodo.referencia" class="text-muted ms-1">(Ref: {{
-                                            metodo.referencia }})</span>
-                                        <span *ngIf="metodo.banco" class="text-muted ms-1">- {{ metodo.banco }}</span>
+                                        <!-- Pasar la moneda específica del método -->
+                                        <span class="monto-text">{{ formatearMoneda(metodo.monto, metodo.moneda) }}</span>
+                                        <span *ngIf="metodo.referencia" class="text-muted ms-1 referencia-text">(Ref: {{ metodo.referencia }})</span>
+                                        <span *ngIf="metodo.banco" class="text-muted ms-1 banco-text">- {{ metodo.banco }}</span>
                                     </span>
                                 </div>
                             </div>
@@ -1865,10 +1878,10 @@
                             </button>
                             <div class="dropdown-menu" ngbDropdownMenu>
                                 <!-- Descargar PDF dentro del menú -->
-                                <button ngbDropdownItem (click)="descargarPDF()">
+                                <!-- <button ngbDropdownItem (click)="descargarPDF()">
                                     <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
                                     Descargar PDF
-                                </button>
+                                </button> -->
                                 <div class="dropdown-divider"></div>
                                 <button ngbDropdownItem (click)="compartirWhatsApp()">
                                     <i class="bi bi-whatsapp text-success me-2"></i>

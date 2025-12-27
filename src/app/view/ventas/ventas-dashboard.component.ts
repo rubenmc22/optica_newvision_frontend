@@ -1,17 +1,16 @@
-import { Component, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
+import { Component, Output, EventEmitter, ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
 import { Producto, ProductoDto, MonedaVisual } from '../productos/producto.model';
 import { ProductoService } from '../productos/producto.service';
-import { Sede } from '../../view/login/login-interface';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TasaCambiariaService } from '../../core/services/tasaCambiaria/tasaCambiaria.service';
 import { Tasa } from '../../Interfaces/models-interface';
 import { SwalService } from '../../core/services/swal/swal.service';
-import { of, forkJoin, map } from 'rxjs';
+import { of, forkJoin, map, Subscription, interval } from 'rxjs';
 import { take, catchError } from 'rxjs/operators';
 import { LoaderService } from './../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../core/services/auth/auth.service';
-import { UserStateService } from '../../core/services/userState/user-state-service';
+import { UserStateService, SedeInfo } from '../../core/services/userState/user-state-service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { PacientesService } from '../../core/services/pacientes/pacientes.service';
 import { HistoriaMedicaService } from '../../core/services/historias-medicas/historias-medicas.service';
@@ -23,7 +22,7 @@ import { HistoriaMedica } from './../historias-medicas/historias_medicas-interfa
     templateUrl: './ventas-dashboard.component.html',
     styleUrl: './ventas-dashboard.component.scss'
 })
-export class VentasDashboardComponent {
+export class VentasDashboardComponent implements OnInit, OnDestroy {
     vista: 'generacion-de-ventas' | 'presupuestos' | 'historial-de-ventas' | 'cierre-de-caja' = 'generacion-de-ventas';
 
     totalVentas = 0;
@@ -37,7 +36,7 @@ export class VentasDashboardComponent {
     modoModal: 'agregar' | 'editar' | 'ver' = 'agregar';
     cargando: boolean = false;
     productosFiltradosPorSede: Producto[] = [];
-    sedesDisponibles: Sede[] = [];
+    sedesDisponibles: SedeInfo[] = [];
     tareasPendientes = 0;
     dataIsReady = false;
     venta: {
@@ -55,11 +54,17 @@ export class VentasDashboardComponent {
     // FILTROS
     sedeActiva: string = '';
     sedeFiltro: string = this.sedeActiva;
+    sedeInfo: SedeInfo | null = null;
+    sedesCargadas: boolean = false;
 
     // TASAS DE CAMBIO
     moneda: MonedaVisual[] = [];
     tasaDolar = 0;
     tasaEuro = 0;
+
+    // AUTO-REFRESH
+    private autoRefreshSubscription!: Subscription;
+    private readonly AUTO_REFRESH_INTERVAL = 300000; // 5 minutos
 
     constructor(
         private productoService: ProductoService,
@@ -79,15 +84,114 @@ export class VentasDashboardComponent {
     // =========== LIFECYCLE HOOKS ===========
     ngOnInit(): void {
         this.inicializarVista();
-        this.cargarDatosIniciales();
+
+        // Cargar sedes antes que cualquier otra cosa
+        this.cargarSedesUnaVez().then(() => {
+            // Inicializar el resto
+            this.cargarDatosIniciales();
+
+            // Suscribirse a los cambios de sedes
+            this.userStateService.sedes$.subscribe(sedes => {
+                this.sedesDisponibles = sedes;
+                console.log('Sedes disponibles en dashboard:', this.sedesDisponibles.length);
+            });
+
+            // Suscribirse a los cambios de sede actual
+            this.userStateService.sedeActual$.subscribe(sede => {
+                this.sedeInfo = sede;
+                console.log('Sede actual en dashboard:', this.sedeInfo?.nombre);
+            });
+
+            // Iniciar auto-refresh después de cargar datos iniciales
+            this.iniciarAutoRefresh();
+        });
+    }
+
+    ngOnDestroy(): void {
+        // Limpiar suscripción de auto-refresh
+        if (this.autoRefreshSubscription) {
+            this.autoRefreshSubscription.unsubscribe();
+        }
+    }
+
+    // =========== AUTO-REFRESH SIMPLIFICADO ===========
+    private iniciarAutoRefresh(): void {
+        console.log('🔄 Iniciando auto-refresh cada 5 minutos...');
+
+        // Actualizar sedes automáticamente cada 5 minutos
+        this.autoRefreshSubscription = interval(this.AUTO_REFRESH_INTERVAL).subscribe(() => {
+            console.log('🔄 Auto-refresh: actualizando sedes...');
+            this.actualizarSedesAuto();
+        });
+    }
+
+    private actualizarSedesAuto(): void {
+        this.authService.getSedes().subscribe({
+            next: (response: any) => {
+                if (response.message === 'ok' && response.sedes) {
+                    const nuevasSedes = response.sedes;
+                    this.userStateService.setSedes(nuevasSedes);
+                    console.log('✅ Sede actualizada por auto-refresh');
+                }
+            },
+            error: (error) => {
+                console.warn('⚠️ Error en auto-refresh de sedes:', error);
+            }
+        });
+    }
+
+    // =========== MÉTODO: CARGAR SEDES ===========
+    private async cargarSedesUnaVez(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            console.log('🔄 Cargando sedes desde API...');
+
+            this.authService.getSedes().subscribe({
+                next: (response: any) => {
+                    if (response.message === 'ok' && response.sedes) {
+                        const sedes = response.sedes;
+                        this.userStateService.setSedes(sedes);
+                        console.log('✅ Sedes cargadas:', sedes.length);
+                        resolve();
+                    } else {
+                        reject(new Error('Respuesta inválida del servidor'));
+                    }
+                },
+                error: (error) => {
+                    console.error('❌ Error al cargar sedes:', error);
+
+                    // Intentar usar datos del localStorage como fallback
+                    const sedesCache = localStorage.getItem('sedesCache');
+                    if (sedesCache) {
+                        try {
+                            const sedes = JSON.parse(sedesCache);
+                            this.userStateService.setSedes(sedes);
+                            console.log('✅ Usando sedes de caché:', sedes.length);
+                            resolve();
+                            return;
+                        } catch (e) {
+                            console.error('Error al parsear caché de sedes:', e);
+                        }
+                    }
+
+                    reject(error);
+                }
+            });
+        });
+    }
+
+    // =========== NOTIFICAR A COMPONENTES HIJOS ===========
+    private notificarSedesDisponibles(): void {
+        // Puedes emitir un evento o simplemente confiar en que UserStateService
+        // ya tiene los datos y los componentes hijos se suscribirán
+        console.log('📢 Sedes disponibles para todos los componentes');
     }
 
     cambiarVista(v: typeof this.vista): void {
         this.vista = v;
         this.actualizarEstadoVista(v);
-        // Forzar detección de cambios para actualizar la vista inmediatamente
         this.cdr.detectChanges();
     }
+
 
     esVistaActiva(vista: string): boolean {
         return this.vista === vista;
@@ -97,19 +201,15 @@ export class VentasDashboardComponent {
         this.iniciarCarga();
         this.tareaIniciada();
         this.obtenerTasasCambio();
+
         this.cargarProductosYSedes();
     }
 
     // =========== GESTIÓN DE VISTA Y URL ===========
-    /**
-     * Inicializa la vista combinando URL y sessionStorage
-     */
-
     private inicializarVista(): void {
         this.route.queryParams.subscribe(params => {
             const vistaDesdeUrl = params['vista'];
 
-            // Solo respetar la URL si existe y es válida, de lo contrario usar "generacion-de-ventas"
             if (vistaDesdeUrl && this.esVistaValida(vistaDesdeUrl)) {
                 this.vista = vistaDesdeUrl as typeof this.vista;
             } else {
@@ -117,14 +217,12 @@ export class VentasDashboardComponent {
                 this.actualizarUrlSinNavegacion('generacion-de-ventas');
             }
 
-            // Forzar actualización visual
             this.cdr.detectChanges();
         });
     }
 
     private actualizarEstadoVista(vista: 'generacion-de-ventas' | 'presupuestos' | 'historial-de-ventas' | 'cierre-de-caja'): void {
         this.vista = vista;
-
         this.actualizarUrlSinNavegacion(vista);
     }
 
@@ -141,26 +239,13 @@ export class VentasDashboardComponent {
         return ['generacion-de-ventas', 'presupuestos', 'historial-de-ventas', 'cierre-de-caja'].includes(vista);
     }
 
-    // =========== RESTORED METHODS ===========
+    // =========== MÉTODO MODIFICADO PARA CARGAR PRODUCTOS Y SEDES ===========
     private cargarProductosYSedes(): void {
         this.iniciarCarga();
         this.tareaIniciada();
 
         forkJoin({
-            productos: this.productoService.getProductos().pipe(
-                take(1)
-            ),
-            sedes: this.authService.getSedes().pipe(
-                take(1),
-                catchError(error => {
-                    console.error('Error al cargar sedes:', error);
-                    this.snackBar.open('⚠️ No se pudieron cargar las sedes disponibles.', 'Cerrar', {
-                        duration: 5000,
-                        panelClass: ['snackbar-warning']
-                    });
-                    return of({ sedes: [] });
-                })
-            ),
+            //  productos: this.productoService.getProductos().pipe(take(1)),
             user: this.userStateService.currentUser$.pipe(
                 take(1),
                 catchError(error => {
@@ -172,8 +257,11 @@ export class VentasDashboardComponent {
                     return of(null);
                 })
             )
-        }).subscribe(({ productos, sedes, user }) => {
-            this.sedesDisponibles = (sedes.sedes ?? [])
+        }).subscribe(({ user }) => {
+            // Las sedes ya están cargadas en UserStateService
+            const sedesCargadas = this.userStateService.getSedes();
+
+            this.sedesDisponibles = sedesCargadas
                 .map(s => ({
                     ...s,
                     key: s.key?.trim().toLowerCase() || '',
@@ -193,8 +281,21 @@ export class VentasDashboardComponent {
             this.sedeActiva = sedeValida ? sedeUsuario : '';
             this.sedeFiltro = this.sedeActiva;
 
+            // Obtener la información completa de la sede actual
+            if (this.sedeActiva) {
+                this.sedeInfo = this.userStateService.getSedePorKey(this.sedeActiva);
+            }
+
+            console.log('Dashboard - Sede activa:', this.sedeActiva);
+            console.log('Dashboard - Info sede actual:', this.sedeInfo);
+
             this.tareaFinalizada();
         });
+    }
+
+    // =========== GETTER PARA COMPONENTES HIJOS ===========
+    get estanSedesCargadas(): boolean {
+        return this.sedesCargadas;
     }
 
     cargarPacientes(): void {
@@ -316,6 +417,24 @@ export class VentasDashboardComponent {
 
     get pacientesFiltradosPorSede(): any[] {
         return this.pacientes.filter(p => p.sede === this.sedeActiva);
+    }
+
+    // =========== MÉTODO PARA OBTENER ENCABEZADO DE RECIBO ===========
+    getEncabezadoRecibo(): string {
+        if (this.sedeInfo) {
+            return `
+                <div class="empresa-nombre">${this.sedeInfo.nombre_optica}</div>
+                <div class="empresa-info">${this.sedeInfo.direccion} | Tel: ${this.sedeInfo.telefono}</div>
+                <div class="empresa-info">RIF: ${this.sedeInfo.rif} | ${this.sedeInfo.email}</div>
+            `;
+        }
+
+        // Fallback si no hay información de sede
+        return `
+            <div class="empresa-nombre">NEW VISION LENS</div>
+            <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
+            <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
+        `;
     }
 
     formatearFecha(fechaIso: string): string {

@@ -10,7 +10,7 @@ import { take } from 'rxjs/operators';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../../core/services/auth/auth.service';
-import { UserStateService } from '../../../core/services/userState/user-state-service';
+import { UserStateService, SedeInfo } from '../../../core/services/userState/user-state-service';
 import { PacientesService } from '../../../core/services/pacientes/pacientes.service';
 import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
 import { Paciente } from '../../pacientes/paciente-interface';
@@ -24,8 +24,11 @@ import { Subscription } from 'rxjs';
 import { ProductoConversionService } from '../../productos/productos-list/producto-conversion.service';
 import { ClienteService } from '../../clientes/clientes.services';
 import { NgSelectComponent } from '@ng-select/ng-select';
-import * as jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+
+
 
 @Component({
     selector: 'app-generar-venta',
@@ -57,7 +60,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         private swalService: SwalService,
         private userStateService: UserStateService,
         private snackBar: MatSnackBar,
-        private authService: AuthService,
         private cdr: ChangeDetectorRef,
         private loader: LoaderService,
         private pacientesService: PacientesService,
@@ -87,6 +89,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     montoExcedido: boolean = false;
     maximoCuotasPermitidas = 6;
     cantidadCuotasCashea = 3;
+    sedeInfo: SedeInfo | null = null; // Nueva propiedad para la sede
 
     productos: Producto[] = [];
     pacientes: any[] = [];
@@ -150,6 +153,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     datosRecibo: any = null;
     currentYear: number = new Date().getFullYear();
     informacionVenta: any = null;
+    // OBTENER INFORMACIÓN DE LA SEDE DESDE EL COMPONENTE
 
     venta: VentaDto = {
         productos: [],
@@ -187,6 +191,26 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.obtenerConfiguracionSistema();
         this.suscribirCambiosConfiguracion();
         this.cargarDatosIniciales();
+
+        // SUSCRIBIRSE A LA SEDE DESDE UserStateService (ya cargada por el dashboard)
+        this.userStateService.sedeActual$.subscribe(sede => {
+            this.sedeInfo = sede;
+            console.log('Sede cargada en generar-venta (desde UserStateService):', this.sedeInfo);
+
+            // Actualizar filtros si es necesario
+            if (this.sedeInfo) {
+                this.sedeActiva = this.sedeInfo.key;
+                this.sedeFiltro = this.sedeActiva;
+
+                // Filtrar productos por la sede
+                this.productosFiltradosPorSede = this.productos
+                    .filter(p =>
+                        p.sede?.trim().toLowerCase() === this.sedeActiva &&
+                        p.activo === true &&
+                        (p.stock ?? 0) > 0
+                    );
+            }
+        });
     }
 
     ngOnDestroy(): void {
@@ -1804,7 +1828,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return 'Sin asesor asignado';
         }
 
-        return `${asesor.nombre} — ${asesor.cargoNombre || 'Asesor'}`;
+        return `${asesor.nombre}` || 'Asesor';
     }
 
     getNombreAsesorSeleccionado(): string {
@@ -2299,7 +2323,30 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // OBTENER LA TASA ACTUAL UTILIZADA
         const tasaUtilizada = this.obtenerTasaUtilizada();
 
-        // Preparar datos del cliente
+        // OBTENER INFORMACIÓN DEL ESPECIALISTA (MÉDICO) DESDE LA HISTORIA MÉDICA
+        let especialistaData = null;
+        let historiaMedicaData = null;
+
+        if (this.historiaMedicaSeleccionada) {
+            // Buscar el profesional en la historia médica
+            const profesional = this.historiaMedicaSeleccionada.datosConsulta?.medico
+
+            if (profesional) {
+                especialistaData = {
+                    cedula: profesional.cedula || null
+                };
+            }
+
+            // Preparar datos de la historia médica para incluir en cliente
+            historiaMedicaData = {
+                id: this.historiaMedicaSeleccionada.id,
+                key: this.historiaMedicaSeleccionada.id || null,
+                nHistoria: this.historiaMedicaSeleccionada.nHistoria,
+                fechaCreacion: this.historiaMedicaSeleccionada.auditoria?.fechaCreacion || fechaActual.toISOString()
+            };
+        }
+
+        // Preparar datos del cliente CON LA HISTORIA MÉDICA DENTRO
         let clienteData: any = {};
         if (this.requierePaciente && this.pacienteSeleccionado) {
             clienteData = {
@@ -2311,12 +2358,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
                     email: this.pacienteSeleccionado.informacionPersonal?.email
                 },
-                // AGREGAR HISTORIA MÉDICA AL CLIENTE
-                historiaMedica: this.historiaMedicaSeleccionada ? {
-                    id: this.historiaMedicaSeleccionada.id,
-                    nHistoria: this.historiaMedicaSeleccionada.nHistoria,
-                } : null
-
+                // HISTORIA MÉDICA DENTRO DEL OBJETO CLIENTE
+                historiaMedica: historiaMedicaData,
+                // ESPECIALISTA/MÉDICO TAMBIÉN DENTRO DEL CLIENTE
+                especialista: especialistaData
             };
         } else if (!this.requierePaciente) {
             clienteData = {
@@ -2328,8 +2373,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     telefono: this.clienteSinPaciente.telefono,
                     email: this.clienteSinPaciente.email
                 },
-                // Para cliente general, no hay historia médica
-                historiaMedica: null
+                // Para cliente general, no hay historia médica ni especialista
+                historiaMedica: null,
+                especialista: null
             };
         }
 
@@ -2389,7 +2435,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 totalPagado = this.totalPagadoPorMetodos;
         }
 
-        //Usar las variables correctas en totales**
+        // Construir el objeto final PARA API
         const datosParaAPI: any = {
             venta: {
                 fecha: fechaActual.toISOString(),
@@ -2506,9 +2552,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.generarVentaService.crearVenta(datosParaAPI).subscribe({
                 next: async (resultado: any) => {
                     if (resultado.message === 'ok' && resultado.venta) {
-                        const numeroVenta = resultado.venta.venta?.key ||
-                            resultado.venta.numeroVenta ||
-                            `V-${Date.now().toString().slice(-6)}`;
+                        console.log(resultado, resultado);
+                        const numeroVenta = resultado.venta.venta.numero_venta
 
                         this.loader.updateMessage('✅ Venta generada exitosamente');
                         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -2604,6 +2649,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
         };
 
+        console.log('datosRecibo', datosRecibo);
+
         // Agregar información específica de forma de pago si es necesario
         this.agregarInfoFormaPagoEspecifica(datosRecibo);
 
@@ -2636,11 +2683,22 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Obtiene información de la sede (constante, podrías cachearla)
+     * Obtiene información de la sede
      */
     private obtenerInfoSede(): any {
+        if (this.sedeInfo) {
+            return {
+                nombre: this.sedeInfo.nombre_optica || '',
+                direccion: this.sedeInfo.direccion || '',
+                telefono: this.sedeInfo.telefono || '',
+                rif: this.sedeInfo.rif || '',
+                email: this.sedeInfo.email || ''
+            };
+        }
+
+        // Fallback si no hay información de sede
         return {
-            nombre: this.currentUser?.sede || 'Sede Principal',
+            nombre: 'NEW VISION LENS',
             direccion: 'C.C. Candelaria, Local PB-04, Guarenas',
             telefono: '0212-365-39-42',
             rif: 'J-123456789',
@@ -2805,6 +2863,15 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const mostrarTotalAPagar = this.debeMostrarTotalAPagar(formaPago, datos);
         const textoTotalAPagar = this.getTextoTotalAPagarParaHTML(formaPago);
 
+        // OBTENER INFORMACIÓN DE LA SEDE DESDE EL COMPONENTE
+        const sedeInfo = this.sedeInfo || this.userStateService.getSedeActual();
+
+        // FUNCIÓN PARA LIMPIAR EL RIF (por si acaso)
+        const limpiarRif = (rif: string): string => {
+            if (!rif) return '';
+            return rif.replace(/^rif/i, '').trim();
+        };
+
         // CREAR UNA FUNCIÓN LOCAL PARA FORMATEAR MONEDA
         const formatearMonedaLocal = (monto: number | null | undefined, moneda?: string) => {
             if (monto === null || monto === undefined || isNaN(monto)) {
@@ -2824,663 +2891,678 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return `${simbolo}${montoNumerico.toFixed(2)}`;
         };
 
+        // GENERAR ENCABEZADO DINÁMICO
+        const generarEncabezadoSede = () => {
+            if (sedeInfo) {
+                const rifLimpio = limpiarRif(sedeInfo.rif || '');
+                return `
+            <div class="empresa-nombre">${sedeInfo.nombre_optica || sedeInfo.nombre || 'NEW VISION LENS'}</div>
+            <div class="empresa-info">${sedeInfo.direccion || 'C.C. Candelaria, Local PB-04, Guarenas'} | Tel: ${sedeInfo.telefono || '0212-365-39-42'}</div>
+            <div class="empresa-info">RIF: ${rifLimpio || 'J-123456789'} | ${sedeInfo.email || 'newvisionlens2020@gmail.com'}</div>
+        `;
+            }
+
+            // Fallback si no hay información de sede
+            return `
+        <div class="empresa-nombre">NEW VISION LENS</div>
+        <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
+        <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
+    `;
+        };
+
         return `
 <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Recibo - ${datos.numeroVenta}</title>
-        <style>
-            /* Tus estilos CSS existentes se mantienen igual */
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recibo - ${datos.numeroVenta}</title>
+    <style>
+        /* ESTILOS MEJORADOS - FUENTES AUMENTADAS */
+        @page {
+            margin: 0;
+            size: A4;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 12px; /* Aumentado de 10px a 12px */
+            line-height: 1.25; /* Aumentado de 1.15 a 1.25 */
+            color: #333;
+            background: white;
+            padding: 15mm 12mm 12mm 12mm; /* Padding ajustado */
+            width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+        }
+        
+        .recibo-container {
+            width: 100%;
+            max-width: 186mm; /* Ajustado por padding */
+            margin: 0 auto;
+            background: white;
+            padding: 0;
+            height: auto;
+            max-height: 255mm; /* Ajustado por padding */
+            overflow: hidden;
+        }
+        
+        .recibo-header {
+            text-align: center;
+            border-bottom: 2px solid #2c5aa0;
+            padding-bottom: 8px; /* Aumentado de 6px a 8px */
+            margin-bottom: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .empresa-nombre {
+            font-size: 18px; /* Aumentado de 16px a 18px */
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 3px; /* Aumentado de 2px a 3px */
+        }
+        
+        .empresa-info {
+            font-size: 10px; /* Aumentado de 8px a 10px */
+            color: #666;
+            margin-bottom: 2px; /* Aumentado de 1px a 2px */
+            line-height: 1.3; /* Aumentado de 1.1 a 1.3 */
+        }
+        
+        .titulo-venta {
+            font-size: 14px; /* Aumentado de 12px a 14px */
+            font-weight: 600;
+            color: #2c5aa0;
+            margin: 8px 0 4px 0; /* Aumentado de 6px/2px a 8px/4px */
+        }
+        
+        .info-rapida {
+            background: #f8f9fa;
+            padding: 6px; /* Aumentado de 4px a 6px */
+            border-radius: 3px; /* Aumentado de 2px a 3px */
+            border: 1px solid #dee2e6;
+            margin-bottom: 10px; /* Aumentado de 8px a 10px */
+            font-size: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .cliente-compacto {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 3px solid #2c5aa0; /* Aumentado de 2px a 3px */
+            padding: 8px; /* Aumentado de 6px a 8px */
+            font-size: 10px; /* Aumentado de 8px a 10px */
+            margin-bottom: 10px; /* Aumentado de 8px a 10px */
+            border-radius: 3px; /* Aumentado de 2px a 3px */
+        }
+        
+        .tabla-productos {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px; /* Aumentado de 8px a 10px */
+            font-size: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .tabla-productos th {
+            background: #2c5aa0;
+            color: white;
+            font-weight: 600;
+            padding: 4px 5px; /* Aumentado de 3px/4px a 4px/5px */
+            text-align: left;
+            border: 1px solid #dee2e6;
+            font-size: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .tabla-productos td {
+            border: 1px solid #dee2e6;
+            padding: 3px 4px; /* Aumentado de 2px/3px a 3px/4px */
+            vertical-align: middle;
+            font-size: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+        
+        .metodos-compactos {
+            margin-bottom: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .metodo-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px; /* Aumentado de 3px a 4px */
+            padding: 3px 0; /* Aumentado de 2px a 3px */
+            border-bottom: 1px dashed #dee2e6;
+            font-size: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .resumen-cashea {
+            background: #f8f9fa;
+            padding: 8px; /* Aumentado de 6px a 8px */
+            border-radius: 4px; /* Aumentado de 3px a 4px */
+            margin: 8px 0; /* Aumentado de 6px a 8px */
+            border-left: 3px solid #0dcaf0; /* Aumentado de 2px a 3px */
+        }
+        
+        .pagos-section {
+            margin-bottom: 8px; /* Aumentado de 6px a 8px */
+        }
+        
+        .pago-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px; /* Aumentado de 3px a 4px */
+            padding: 4px 0; /* Aumentado de 3px a 4px */
+            border-bottom: 1px dashed #dee2e6;
+            font-size: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .pago-total {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px; /* Aumentado de 4px a 6px */
+            padding-top: 6px; /* Aumentado de 4px a 6px */
+            border-top: 1px solid #ccc;
+            font-size: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .resumen-cuotas-compacto {
+            display: flex;
+            justify-content: center;
+            gap: 18px; /* Aumentado de 15px a 18px */
+            margin-top: 8px; /* Aumentado de 6px a 8px */
+            text-align: center;
+        }
+        
+        .cuota-info {
+            text-align: center;
+        }
+        
+        .monto-cuota {
+            font-size: 9px; /* Aumentado de 7px a 9px */
+            color: #666;
+            margin-top: 2px; /* Aumentado de 1px a 2px */
+        }
+        
+        .resumen-abono {
+            background: #f8f9fa;
+            padding: 8px; /* Aumentado de 6px a 8px */
+            border-radius: 4px; /* Aumentado de 3px a 4px */
+            margin: 8px 0; /* Aumentado de 6px a 8px */
+            border-left: 3px solid #ffc107; /* Aumentado de 2px a 3px */
+        }
+        
+        .abonos-section {
+            margin-bottom: 8px; /* Aumentado de 6px a 8px */
+        }
+        
+        .abono-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px; /* Aumentado de 3px a 4px */
+            padding: 4px 0; /* Aumentado de 3px a 4px */
+            border-bottom: 1px dashed #dee2e6;
+            font-size: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .total-abonado {
+            border-top: 1px solid #ccc;
+            padding-top: 4px; /* Aumentado de 3px a 4px */
+            margin-top: 4px; /* Aumentado de 3px a 4px */
+        }
+        
+        .resumen-financiero {
+            background: white;
+            padding: 8px; /* Aumentado de 6px a 8px */
+            border-radius: 4px; /* Aumentado de 3px a 4px */
+            border: 1px solid #e9ecef;
+            margin: 8px 0; /* Aumentado de 6px a 8px */
+        }
+        
+        .deuda-section, .progreso-section {
+            text-align: center;
+            margin-bottom: 8px; /* Aumentado de 6px a 8px */
+        }
+        
+        .deuda-label, .progreso-label {
+            font-size: 9px; /* Aumentado de 7px a 9px */
+            color: #666;
+            margin-bottom: 2px; /* Aumentado de 1px a 2px */
+        }
+        
+        .deuda-monto, .progreso-porcentaje {
+            font-size: 12px; /* Aumentado de 10px a 12px */
+            font-weight: bold;
+        }
+        
+        .resumen-contado {
+            background: #f8f9fa;
+            padding: 8px; /* Aumentado de 6px a 8px */
+            border-radius: 4px; /* Aumentado de 3px a 4px */
+            margin: 8px 0; /* Aumentado de 6px a 8px */
+            border-left: 3px solid #198754; /* Aumentado de 2px a 3px */
+            text-align: center;
+        }
+        
+        .totales-compactos {
+            margin-bottom: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .totales-compactos table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px; /* Aumentado de 9px a 11px */
+        }
+        
+        .totales-compactos td {
+            padding: 4px 5px; /* Aumentado de 3px/4px a 4px/5px */
+            border: 1px solid #dee2e6;
+        }
+        
+        .table-success {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        }
+        
+        .table-info {
+            background: linear-gradient(135deg, #d1ecf1, #c3e6ff);
+        }
+        
+        .observaciones-compactas {
+            margin-bottom: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 6px; /* Aumentado de 4px a 6px */
+            border-radius: 3px; /* Aumentado de 2px a 3px */
+            font-size: 10px; /* Aumentado de 8px a 10px */
+        }
+        
+        .terminos-compactos {
+            border-top: 1px solid #ddd;
+            padding-top: 8px; /* Aumentado de 6px a 8px */
+            margin-top: 10px; /* Aumentado de 8px a 10px */
+            font-size: 9px; /* Aumentado de 7px a 9px */
+            color: #666;
+        }
+        
+        .mensaje-final {
+            text-align: center;
+            border-top: 1px solid #ddd;
+            padding-top: 8px; /* Aumentado de 6px a 8px */
+            margin-top: 8px; /* Aumentado de 6px a 8px */
+            font-size: 11px; /* Aumentado de 9px a 11px */
+            color: #2c5aa0;
+            font-weight: bold;
+        }
+        
+        .text-danger { color: #dc3545; }
+        .text-success { color: #198754; }
+        .text-warning { color: #ffc107; }
+        .text-primary { color: #2c5aa0; }
+        .text-muted { color: #666; }
+        
+        .badge {
+            display: inline-block;
+            padding: 2px 4px; /* Aumentado de 1px/3px a 2px/4px */
+            font-size: 9px; /* Aumentado de 7px a 9px */
+            font-weight: 600;
+            line-height: 1.2; /* Aumentado de 1 a 1.2 */
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 2px; /* Aumentado de 1px a 2px */
+        }
+        
+        .bg-primary { background-color: #2c5aa0; color: white; }
+        .bg-success { background-color: #198754; color: white; }
+        .bg-info { background-color: #0dcaf0; color: black; }
+        .bg-warning { background-color: #ffc107; color: black; }
+        
+        .progress {
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            height: 4px; /* Aumentado de 3px a 4px */
+            margin: 3px auto; /* Aumentado de 2px a 3px */
+            width: 60%; /* Aumentado de 50% a 60% */
+        }
+        
+        .progress-bar {
+            background-color: #198754;
+            height: 100%;
+            transition: width 0.6s ease;
+        }
+        
+        .fw-bold { font-weight: bold; }
+        .small { font-size: 9px; } /* Aumentado de 7px a 9px */
+        .fs-6 { font-size: 12px; } /* Aumentado de 10px a 12px */
+
+        .page-break-avoid {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        @media print {
+            body {
+                padding: 15mm 12mm 12mm 12mm;
+                margin: 0;
+                width: 210mm;
+                height: 297mm;
+                font-size: 11px; /* Aumentado de 9px a 11px */
+            }
+            
+            .recibo-container {
+                border: none;
+                padding: 0;
+                box-shadow: none;
+                max-height: 255mm;
+                overflow: hidden;
+            }
+
             @page {
                 margin: 0;
                 size: A4;
             }
             
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
-            
             body {
-                font-family: 'Arial', sans-serif;
-                font-size: 10px;
-                line-height: 1.15;
-                color: #333;
-                background: white;
-                padding: 20mm 10mm 10mm 10mm;
-                width: 210mm;
-                height: 297mm;
-                margin: 0 auto;
+                margin: 0;
+                -webkit-print-color-adjust: exact;
             }
-            
-            .recibo-container {
-                width: 100%;
-                max-width: 190mm;
-                margin: 0 auto;
-                background: white;
-                padding: 0;
-                height: auto;
-                max-height: 257mm;
-                overflow: hidden;
-            }
-            
-            .recibo-header {
-                text-align: center;
-                border-bottom: 2px solid #2c5aa0;
-                padding-bottom: 6px;
-                margin-bottom: 8px;
-            }
-            
-            .empresa-nombre {
-                font-size: 16px;
-                font-weight: bold;
-                color: #2c5aa0;
-                margin-bottom: 2px;
-            }
-            
-            .empresa-info {
-                font-size: 8px;
-                color: #666;
-                margin-bottom: 1px;
-                line-height: 1.1;
-            }
-            
-            .titulo-venta {
-                font-size: 12px;
-                font-weight: 600;
-                color: #2c5aa0;
-                margin: 6px 0 2px 0;
-            }
-            
-            .info-rapida {
-                background: #f8f9fa;
-                padding: 4px;
-                border-radius: 2px;
-                border: 1px solid #dee2e6;
-                margin-bottom: 8px;
-                font-size: 8px;
-            }
-            
-            .cliente-compacto {
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                border-left: 2px solid #2c5aa0;
-                padding: 6px;
-                font-size: 8px;
-                margin-bottom: 8px;
-                border-radius: 2px;
-            }
-            
-            .tabla-productos {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 8px;
-                font-size: 8px;
-            }
-            
-            .tabla-productos th {
-                background: #2c5aa0;
-                color: white;
-                font-weight: 600;
-                padding: 3px 4px;
-                text-align: left;
-                border: 1px solid #dee2e6;
-                font-size: 8px;
-            }
-            
-            .tabla-productos td {
-                border: 1px solid #dee2e6;
-                padding: 2px 3px;
-                vertical-align: middle;
-                font-size: 8px;
-            }
-            
-            .text-center { text-align: center; }
-            .text-end { text-align: right; }
-            
-            .metodos-compactos {
-                margin-bottom: 8px;
-            }
-            
-            .metodo-item {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 3px;
-                padding: 2px 0;
-                border-bottom: 1px dashed #dee2e6;
-                font-size: 8px;
-            }
-            
-            .resumen-cashea {
-                background: #f8f9fa;
-                padding: 6px;
-                border-radius: 3px;
-                margin: 6px 0;
-                border-left: 2px solid #0dcaf0;
-            }
-            
-            .pagos-section {
-                margin-bottom: 6px;
-            }
-            
-            .pago-item {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 3px;
-                padding: 3px 0;
-                border-bottom: 1px dashed #dee2e6;
-                font-size: 8px;
-            }
-            
-            .pago-total {
-                display: flex;
-                justify-content: space-between;
-                margin-top: 4px;
-                padding-top: 4px;
-                border-top: 1px solid #ccc;
-                font-size: 8px;
-            }
-            
-            .resumen-cuotas-compacto {
-                display: flex;
-                justify-content: center;
-                gap: 15px;
-                margin-top: 6px;
-                text-align: center;
-            }
-            
-            .cuota-info {
-                text-align: center;
-            }
-            
-            .monto-cuota {
-                font-size: 7px;
-                color: #666;
-                margin-top: 1px;
-            }
-            
-            .resumen-abono {
-                background: #f8f9fa;
-                padding: 6px;
-                border-radius: 3px;
-                margin: 6px 0;
-                border-left: 2px solid #ffc107;
-            }
-            
-            .abonos-section {
-                margin-bottom: 6px;
-            }
-            
-            .abono-item {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 3px;
-                padding: 3px 0;
-                border-bottom: 1px dashed #dee2e6;
-                font-size: 8px;
-            }
-            
-            .total-abonado {
-                border-top: 1px solid #ccc;
-                padding-top: 3px;
-                margin-top: 3px;
-            }
-            
-            .resumen-financiero {
-                background: white;
-                padding: 6px;
-                border-radius: 3px;
-                border: 1px solid #e9ecef;
-                margin: 6px 0;
-            }
-            
-            .deuda-section, .progreso-section {
-                text-align: center;
-                margin-bottom: 6px;
-            }
-            
-            .deuda-label, .progreso-label {
-                font-size: 7px;
-                color: #666;
-                margin-bottom: 1px;
-            }
-            
-            .deuda-monto, .progreso-porcentaje {
-                font-size: 10px;
-                font-weight: bold;
-            }
-            
-            .resumen-contado {
-                background: #f8f9fa;
-                padding: 6px;
-                border-radius: 3px;
-                margin: 6px 0;
-                border-left: 2px solid #198754;
-                text-align: center;
-            }
-            
-            .totales-compactos {
-                margin-bottom: 8px;
-            }
-            
-            .totales-compactos table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 9px;
-            }
-            
-            .totales-compactos td {
-                padding: 3px 4px;
-                border: 1px solid #dee2e6;
-            }
-            
-            .table-success {
-                background: linear-gradient(135deg, #d4edda, #c3e6cb);
-            }
-            
-            .table-info {
-                background: linear-gradient(135deg, #d1ecf1, #c3e6ff);
-            }
-            
-            .observaciones-compactas {
-                margin-bottom: 8px;
-            }
-            
-            .alert-warning {
-                background: #fff3cd;
-                border: 1px solid #ffeaa7;
-                color: #856404;
-                padding: 4px;
-                border-radius: 2px;
-                font-size: 8px;
-            }
-            
-            .terminos-compactos {
-                border-top: 1px solid #ddd;
-                padding-top: 6px;
-                margin-top: 8px;
-                font-size: 7px;
-                color: #666;
-            }
-            
-            .mensaje-final {
-                text-align: center;
-                border-top: 1px solid #ddd;
-                padding-top: 6px;
-                margin-top: 6px;
-                font-size: 9px;
-                color: #2c5aa0;
-                font-weight: bold;
-            }
-            
-            .text-danger { color: #dc3545; }
-            .text-success { color: #198754; }
-            .text-warning { color: #ffc107; }
-            .text-primary { color: #2c5aa0; }
-            .text-muted { color: #666; }
-            
-            .badge {
-                display: inline-block;
-                padding: 1px 3px;
-                font-size: 7px;
-                font-weight: 600;
-                line-height: 1;
-                text-align: center;
-                white-space: nowrap;
-                vertical-align: baseline;
-                border-radius: 1px;
-            }
-            
-            .bg-primary { background-color: #2c5aa0; color: white; }
-            .bg-success { background-color: #198754; color: white; }
-            .bg-info { background-color: #0dcaf0; color: black; }
-            .bg-warning { background-color: #ffc107; color: black; }
-            
-            .progress {
-                background-color: #e9ecef;
-                border-radius: 4px;
-                overflow: hidden;
-                height: 3px;
-                margin: 2px auto;
-                width: 50%;
-            }
-            
-            .progress-bar {
-                background-color: #198754;
-                height: 100%;
-                transition: width 0.6s ease;
-            }
-            
-            .fw-bold { font-weight: bold; }
-            .small { font-size: 7px; }
-            .fs-6 { font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="recibo-container page-break-avoid">
+        <!-- ENCABEZADO DINÁMICO CON INFO DE SEDE -->
+        <div class="recibo-header page-break-avoid">
+            ${generarEncabezadoSede()}
+            <div class="titulo-venta">${tituloRecibo}</div>
+        </div>
 
-            .page-break-avoid {
-                page-break-inside: avoid;
-                break-inside: avoid;
-            }
-
-            @media print {
-                body {
-                    padding: 20mm 10mm 10mm 10mm;
-                    margin: 0;
-                    width: 210mm;
-                    height: 297mm;
-                    font-size: 9px;
-                }
-                
-                .recibo-container {
-                    border: none;
-                    padding: 0;
-                    box-shadow: none;
-                    max-height: 257mm;
-                    overflow: hidden;
-                }
-
-                @page {
-                    margin: 0;
-                    size: A4;
-                }
-                
-                body {
-                    margin: 0;
-                    -webkit-print-color-adjust: exact;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="recibo-container page-break-avoid">
-            <!-- Encabezado -->
-            <div class="recibo-header page-break-avoid">
-                <div class="empresa-nombre">NEW VISION LENS</div>
-                <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
-                <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
-                <div class="titulo-venta">${tituloRecibo}</div>
-            </div>
-
-            <!-- Información rápida -->
-            <div class="info-rapida page-break-avoid">
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px;">
-                    <div><strong>Recibo:</strong> ${datos.numeroVenta}</div>
-                    <div><strong>Fecha:</strong> ${datos.fecha}</div>
-                    <div><strong>Hora:</strong> ${datos.hora}</div>
-                    <div><strong>Vendedor:</strong> ${datos.vendedor}</div>
-                </div>
-            </div>
-
-            <!-- Cliente -->
-            <div class="cliente-compacto page-break-avoid">
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
-                    <div><strong>Cliente:</strong> ${datos.cliente.nombre}</div>
-                    <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
-                    <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
-                </div>
-            </div>
-
-            <!-- Productos -->
-            <div class="productos-compactos page-break-avoid">
-                <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">PRODUCTOS</h6>
-                <table class="tabla-productos">
-                    <thead>
-                        <tr>
-                            <th width="5%" class="text-center">#</th>
-                            <th width="55%">Descripción</th>
-                            <th width="10%" class="text-center">Cant</th>
-                            <th width="15%" class="text-end">P. Unitario</th>
-                            <th width="15%" class="text-end">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${datos.productos.map((producto: any, index: number) => `
-                            <tr>
-                                <td class="text-center">${index + 1}</td>
-                                <td>${producto.nombre}</td>
-                                <td class="text-center">${producto.cantidad || 1}</td>
-                                <td class="text-end">${formatearMonedaLocal(producto.precioUnitario)}</td>
-                                <td class="text-end">${formatearMonedaLocal(producto.subtotal)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Métodos de pago -->
-            ${datos.metodosPago.map((metodo: any) => `
-                <div class="metodo-item">
-                    <span>
-                        <span class="badge bg-primary"> ${this.formatearTipoPago(metodo.tipo)} </span>
-                        ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}
-                        ${metodo.banco ? '- ' + metodo.banco : ''}
-                    </span>
-                    <span> ${formatearMonedaLocal(metodo.monto, metodo.moneda)}</span>
-                </div>
-            `).join('')}
-
-            <!-- SECCIÓN CASHEA COMPLETA - CORREGIDA -->
-            ${datos.cashea ? `
-                <div class="resumen-venta page-break-avoid">
-                    <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
-                    
-                    <div class="resumen-cashea">
-                        <!-- Forma de pago -->
-                        <div style="text-align: center; margin-bottom: 8px;">
-                            <span class="badge bg-info fs-6">PLAN CASHEA</span>
-                        </div>
-
-                        <!-- Información del plan Cashea -->
-                        <div style="text-align: center; margin-bottom: 8px;">
-                            <div class="cashea-info">
-                                <div class="nivel-cashea" style="margin-bottom: 4px;">
-                                    <small class="text-muted">NIVEL</small>
-                                    <div class="fw-bold text-primary" style="font-size: 10px;">${this.obtenerNombreNivelCashea(datos.cashea.nivel)}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Desglose de pagos - CORREGIDO -->
-                        <div class="pagos-section">
-                            <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 10px;">DESGLOSE DE PAGOS</h6>
-
-                            <!-- Pago inicial -->
-                            <div class="pago-item">
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 9px;">Pago Inicial</strong>
-                                </div>
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 9px;">${this.formatearMoneda(datos.cashea.inicial)}</strong>
-                                </div>
-                            </div>
-
-                            <!-- Cuotas adelantadas -->
-                            ${datos.cashea.cuotasAdelantadas > 0 ? `
-                                <div class="pago-item">
-                                    <div style="text-align: center; width: 50%;">
-                                        <strong style="font-size: 9px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong>
-                                    </div>
-                                    <div style="text-align: center; width: 50%;">
-                                        <strong style="font-size: 9px;">${this.formatearMoneda(datos.cashea.montoAdelantado)}</strong>
-                                    </div>
-                                </div>
-                            ` : ''}
-
-                            <!-- Total pagado ahora - CORREGIDO: MISMA FILA QUE LOS TÍTULOS -->
-                            <div class="pago-total">
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 9px;">TOTAL PAGADO AHORA:</strong>
-                                </div>
-                                <div style="text-align: center; width: 50%;">
-                                    <strong class="text-success" style="font-size: 9px;">${this.formatearMoneda(datos.totales.totalPagado)}</strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Resumen de cuotas -->
-                        <div class="resumen-cuotas-compacto">
-                            <div class="cuota-info">
-                                <small class="text-muted" style="font-size: 8px;">CUOTAS PENDIENTES</small>
-                                <div class="fw-bold text-warning" style="font-size: 10px;">${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}</div>
-                                <div class="monto-cuota">${this.formatearMoneda(datos.cashea.montoPorCuota)} c/u</div>
-                            </div>
-                            <div class="cuota-info">
-                                <small class="text-muted" style="font-size: 8px;">DEUDA PENDIENTE</small>
-                                <div class="fw-bold text-danger" style="font-size: 10px;">${this.formatearMoneda(datos.cashea.deudaPendiente)}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            ` : ''}
-
-            <!-- Resto del código se mantiene igual -->
-            ${datos.abono ? `
-                <div class="resumen-venta page-break-avoid">
-                    <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
-                    
-                    <div class="resumen-abono">
-                        <!-- Forma de pago -->
-                        <div style="text-align: center; margin-bottom: 8px;">
-                            <span class="badge bg-warning text-dark fs-6">ABONO PARCIAL</span>
-                        </div>
-
-                        <!-- Abonos realizados -->
-                        <div class="abonos-section">
-                            <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 10px;">ABONOS REALIZADOS</h6>
-
-                            <div class="abonos-list">
-                                <div class="abono-item">
-                                    <div style="text-align: center; width: 50%;">
-                                        <strong style="font-size: 9px;">${datos.fecha}</strong>
-                                    </div>
-                                    <div style="text-align: center; width: 50%;">
-                                        <strong style="font-size: 9px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong>
-                                    </div>
-                                </div>
-                                
-                                <!-- Total abonado EN LA MISMA SECCIÓN -->
-                                <div class="abono-item total-abonado" style="border-top: 1px solid #ccc; padding-top: 4px; margin-top: 4px;">
-                                    <div style="text-align: center; width: 50%;">
-                                        <strong style="font-size: 9px;">TOTAL ABONADO:</strong>
-                                    </div>
-                                    <div style="text-align: center; width: 50%;">
-                                        <strong class="text-success" style="font-size: 9px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Resumen financiero -->
-                        <div class="resumen-financiero">
-                            <div class="deuda-section">
-                                <div class="deuda-label">DEUDA PENDIENTE</div>
-                                <div class="deuda-monto text-danger">${this.formatearMoneda(datos.abono.deudaPendiente)}</div>
-                            </div>
-
-                            <div class="progreso-section">
-                                <div class="progreso-label">PORCENTAJE PAGADO</div>
-                                <div class="progreso-porcentaje text-success">${Math.round(datos.abono.porcentajePagado)}%</div>
-                                <div class="progress">
-                                    <div class="progress-bar" style="width: ${datos.abono.porcentajePagado}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            ` : ''}
-
-            ${!datos.cashea && !datos.abono ? `
-                <div class="resumen-venta page-break-avoid">
-                    <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
-                    
-                    <div class="resumen-contado">
-                        <div style="margin-bottom: 6px;">
-                            <strong style="font-size: 10px;">Forma de pago:</strong><br>
-                            <span class="badge bg-success">CONTADO</span>
-                        </div>
-                        <div>
-                            <strong style="font-size: 10px;">Monto total:</strong><br>
-                            ${this.formatearMoneda(datos.totales.totalPagado)}
-                        </div>
-                        <div style="margin-top: 6px; font-size: 9px; color: #666;">
-                            El pago ha sido realizado en su totalidad
-                        </div>
-                    </div>
-                </div>
-            ` : ''}
-
-            <!-- Totales - MODIFICADO PARA INCLUIR "TOTAL A PAGAR" -->
-            <div class="totales-compactos page-break-avoid">
-                <div style="display: flex; justify-content: flex-end;">
-                    <div style="width: 50%;">
-                        <table style="width: 100%;">
-                            <tr>
-                                <td class="fw-bold" style="font-size: 10px;">Subtotal:</td>
-                                <td class="text-end" style="font-size: 10px;">${this.formatearMoneda(datos.totales.subtotal)}</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-bold" style="font-size: 10px;">Descuento:</td>
-                                <td class="text-end text-danger" style="font-size: 10px;">- ${this.formatearMoneda(datos.totales.descuento)}</td>
-                            </tr>
-                            <tr>
-                                <td class="fw-bold" style="font-size: 10px;">IVA:</td>
-                                <td class="text-end" style="font-size: 10px;">${this.formatearMoneda(datos.totales.iva)}</td>
-                            </tr>
-                            ${mostrarTotalAPagar ? `
-                                <tr class="table-info">
-                                    <td class="fw-bold" style="font-size: 11px;">${textoTotalAPagar}:</td>
-                                    <td class="text-end fw-bold" style="font-size: 11px;">${this.formatearMoneda(datos.totales.total)}</td>
-                                </tr>
-                            ` : ''}
-                            <tr class="table-success">
-                                <td class="fw-bold" style="font-size: 11px;">${this.getTextoTotalPagadoParaHTML(formaPago)}:</td>
-                                <td class="text-end fw-bold" style="font-size: 11px;">${this.formatearMoneda(datos.totales.totalPagado)}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Observaciones -->
-            ${datos.configuracion?.observaciones ? `
-                <div class="observaciones-compactas page-break-avoid">
-                    <div class="alert-warning">
-                        <strong>Observación:</strong> ${datos.configuracion.observaciones}
-                    </div>
-                </div>
-            ` : ''}
-
-            <!-- Términos y condiciones -->
-            <div class="terminos-compactos page-break-avoid">
-                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 6px;">
-                    <div>
-                        <p style="margin-bottom: 2px;">
-                            <i class="bi bi-exclamation-triangle"></i>
-                            Pasados 30 días no nos hacemos responsables de trabajos no retirados
-                        </p>
-                        <p style="margin-bottom: 0;">
-                            <i class="bi bi-info-circle"></i>
-                            Estado de orden: tracking.optolapp.com
-                        </p>
-                    </div>
-                    <div style="text-align: right;">
-                        <small>${new Date().getFullYear()} © New Vision Lens</small>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Mensaje final -->
-            <div class="mensaje-final page-break-avoid">
-                <i class="bi bi-check-circle"></i>
-                ${mensajeFinal}
+        <!-- Información rápida -->
+        <div class="info-rapida page-break-avoid">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;"> <!-- Aumentado gap de 6px a 8px -->
+                <div><strong>Recibo:</strong> ${datos.numeroVenta}</div>
+                <div><strong>Fecha:</strong> ${datos.fecha}</div>
+                <div><strong>Hora:</strong> ${datos.hora}</div>
+                <div><strong>Vendedor:</strong> ${datos.vendedor}</div>
             </div>
         </div>
-    </body>
-    </html>
-    `;
-    }
 
-    // === MÉTODOS AUXILIARES NUEVOS ===
+        <!-- Cliente -->
+        <div class="cliente-compacto page-break-avoid">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;"> <!-- Aumentado gap de 6px a 8px -->
+                <div><strong>Cliente:</strong> ${datos.cliente.nombre}</div>
+                <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
+                <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
+            </div>
+        </div>
+
+        <!-- Productos -->
+        <div class="productos-compactos page-break-avoid">
+            <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">PRODUCTOS</h6> <!-- Aumentado margin-bottom y padding-bottom -->
+            <table class="tabla-productos">
+                <thead>
+                    <tr>
+                        <th width="5%" class="text-center">#</th>
+                        <th width="55%">Descripción</th>
+                        <th width="10%" class="text-center">Cant</th>
+                        <th width="15%" class="text-end">P. Unitario</th>
+                        <th width="15%" class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${datos.productos.map((producto: any, index: number) => `
+                        <tr>
+                            <td class="text-center">${index + 1}</td>
+                            <td>${producto.nombre}</td>
+                            <td class="text-center">${producto.cantidad || 1}</td>
+                            <td class="text-end">${formatearMonedaLocal(producto.precioUnitario)}</td>
+                            <td class="text-end">${formatearMonedaLocal(producto.subtotal)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Métodos de pago -->
+        ${datos.metodosPago.map((metodo: any) => `
+            <div class="metodo-item">
+                <span>
+                    <span class="badge bg-primary"> ${this.formatearTipoPago(metodo.tipo)} </span>
+                    ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}
+                    ${metodo.banco ? '- ' + metodo.banco : ''}
+                </span>
+                <span> ${formatearMonedaLocal(metodo.monto, metodo.moneda)}</span>
+            </div>
+        `).join('')}
+
+        <!-- SECCIÓN CASHEA COMPLETA - CORREGIDA -->
+        ${datos.cashea ? `
+            <div class="resumen-venta page-break-avoid">
+                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6> <!-- Aumentado margin-bottom y padding-bottom -->
+                
+                <div class="resumen-cashea">
+                    <!-- Forma de pago -->
+                    <div style="text-align: center; margin-bottom: 10px;"> <!-- Aumentado de 8px a 10px -->
+                        <span class="badge bg-info fs-6">PLAN CASHEA</span>
+                    </div>
+
+                    <!-- Información del plan Cashea -->
+                    <div style="text-align: center; margin-bottom: 10px;"> <!-- Aumentado de 8px a 10px -->
+                        <div class="cashea-info">
+                            <div class="nivel-cashea" style="margin-bottom: 5px;"> <!-- Aumentado de 4px a 5px -->
+                                <small class="text-muted">NIVEL</small>
+                                <div class="fw-bold text-primary" style="font-size: 12px;">${this.obtenerNombreNivelCashea(datos.cashea.nivel)}</div> <!-- Aumentado de 10px a 12px -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desglose de pagos - CORREGIDO -->
+                    <div class="pagos-section">
+                        <h6 style="text-align: center; margin-bottom: 10px; font-weight: bold; color: #2c5aa0; font-size: 12px;">DESGLOSE DE PAGOS</h6> <!-- Aumentado margin-bottom y font-size -->
+
+                        <!-- Pago inicial -->
+                        <div class="pago-item">
+                            <div style="text-align: center; width: 50%;">
+                                <strong style="font-size: 11px;">Pago Inicial</strong> <!-- Aumentado de 9px a 11px -->
+                            </div>
+                            <div style="text-align: center; width: 50%;">
+                                <strong style="font-size: 11px;">${this.formatearMoneda(datos.cashea.inicial)}</strong> <!-- Aumentado de 9px a 11px -->
+                            </div>
+                        </div>
+
+                        <!-- Cuotas adelantadas -->
+                        ${datos.cashea.cuotasAdelantadas > 0 ? `
+                            <div class="pago-item">
+                                <div style="text-align: center; width: 50%;">
+                                    <strong style="font-size: 11px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong> <!-- Aumentado de 9px a 11px -->
+                                </div>
+                                <div style="text-align: center; width: 50%;">
+                                    <strong style="font-size: 11px;">${this.formatearMoneda(datos.cashea.montoAdelantado)}</strong> <!-- Aumentado de 9px a 11px -->
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <!-- Total pagado ahora - CORREGIDO: MISMA FILA QUE LOS TÍTULOS -->
+                        <div class="pago-total">
+                            <div style="text-align: center; width: 50%;">
+                                <strong style="font-size: 11px;">TOTAL PAGADO AHORA:</strong> <!-- Aumentado de 9px a 11px -->
+                            </div>
+                            <div style="text-align: center; width: 50%;">
+                                <strong class="text-success" style="font-size: 11px;">${this.formatearMoneda(datos.totales.totalPagado)}</strong> <!-- Aumentado de 9px a 11px -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resumen de cuotas -->
+                    <div class="resumen-cuotas-compacto">
+                        <div class="cuota-info">
+                            <small class="text-muted" style="font-size: 10px;">CUOTAS PENDIENTES</small> <!-- Aumentado de 8px a 10px -->
+                            <div class="fw-bold text-warning" style="font-size: 12px;">${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}</div> <!-- Aumentado de 10px a 12px -->
+                            <div class="monto-cuota">${this.formatearMoneda(datos.cashea.montoPorCuota)} c/u</div>
+                        </div>
+                        <div class="cuota-info">
+                            <small class="text-muted" style="font-size: 10px;">DEUDA PENDIENTE</small> <!-- Aumentado de 8px a 10px -->
+                            <div class="fw-bold text-danger" style="font-size: 12px;">${this.formatearMoneda(datos.cashea.deudaPendiente)}</div> <!-- Aumentado de 10px a 12px -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        ` : ''}
+
+        <!-- Resto del código se mantiene igual -->
+        ${datos.abono ? `
+            <div class="resumen-venta page-break-avoid">
+                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6> <!-- Aumentado margin-bottom y padding-bottom -->
+                
+                <div class="resumen-abono">
+                    <!-- Forma de pago -->
+                    <div style="text-align: center; margin-bottom: 10px;"> <!-- Aumentado de 8px a 10px -->
+                        <span class="badge bg-warning text-dark fs-6">ABONO PARCIAL</span>
+                    </div>
+
+                    <!-- Abonos realizados -->
+                    <div class="abonos-section">
+                        <h6 style="text-align: center; margin-bottom: 10px; font-weight: bold; color: #2c5aa0; font-size: 12px;">ABONOS REALIZADOS</h6> <!-- Aumentado margin-bottom y font-size -->
+
+                        <div class="abonos-list">
+                            <div class="abono-item">
+                                <div style="text-align: center; width: 50%;">
+                                    <strong style="font-size: 11px;">${datos.fecha}</strong> <!-- Aumentado de 9px a 11px -->
+                                </div>
+                                <div style="text-align: center; width: 50%;">
+                                    <strong style="font-size: 11px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong> <!-- Aumentado de 9px a 11px -->
+                                </div>
+                            </div>
+                            
+                            <!-- Total abonado EN LA MISMA SECCIÓN -->
+                            <div class="abono-item total-abonado" style="border-top: 1px solid #ccc; padding-top: 5px; margin-top: 5px;"> <!-- Aumentado padding-top y margin-top -->
+                                <div style="text-align: center; width: 50%;">
+                                    <strong style="font-size: 11px;">TOTAL ABONADO:</strong> <!-- Aumentado de 9px a 11px -->
+                                </div>
+                                <div style="text-align: center; width: 50%;">
+                                    <strong class="text-success" style="font-size: 11px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong> <!-- Aumentado de 9px a 11px -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resumen financiero -->
+                    <div class="resumen-financiero">
+                        <div class="deuda-section">
+                            <div class="deuda-label">DEUDA PENDIENTE</div>
+                            <div class="deuda-monto text-danger">${this.formatearMoneda(datos.abono.deudaPendiente)}</div>
+                        </div>
+
+                        <div class="progreso-section">
+                            <div class="progreso-label">PORCENTAJE PAGADO</div>
+                            <div class="progreso-porcentaje text-success">${Math.round(datos.abono.porcentajePagado)}%</div>
+                            <div class="progress">
+                                <div class="progress-bar" style="width: ${datos.abono.porcentajePagado}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        ` : ''}
+
+        ${!datos.cashea && !datos.abono ? `
+            <div class="resumen-venta page-break-avoid">
+                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6> <!-- Aumentado margin-bottom y padding-bottom -->
+                
+                <div class="resumen-contado">
+                    <div style="margin-bottom: 8px;"> <!-- Aumentado de 6px a 8px -->
+                        <strong style="font-size: 12px;">Forma de pago:</strong><br> <!-- Aumentado de 10px a 12px -->
+                        <span class="badge bg-success">CONTADO</span>
+                    </div>
+                    <div>
+                        <strong style="font-size: 12px;">Monto total:</strong><br> <!-- Aumentado de 10px a 12px -->
+                        ${this.formatearMoneda(datos.totales.totalPagado)}
+                    </div>
+                    <div style="margin-top: 8px; font-size: 11px; color: #666;"> <!-- Aumentado margin-top y font-size -->
+                        El pago ha sido realizado en su totalidad
+                    </div>
+                </div>
+            </div>
+        ` : ''}
+
+        <!-- Totales - MODIFICADO PARA INCLUIR "TOTAL A PAGAR" -->
+        <div class="totales-compactos page-break-avoid">
+            <div style="display: flex; justify-content: flex-end;">
+                <div style="width: 50%;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td class="fw-bold" style="font-size: 12px;">Subtotal:</td> <!-- Aumentado de 10px a 12px -->
+                            <td class="text-end" style="font-size: 12px;">${this.formatearMoneda(datos.totales.subtotal)}</td> <!-- Aumentado de 10px a 12px -->
+                        </tr>
+                        <tr>
+                            <td class="fw-bold" style="font-size: 12px;">Descuento:</td> <!-- Aumentado de 10px a 12px -->
+                            <td class="text-end text-danger" style="font-size: 12px;">- ${this.formatearMoneda(datos.totales.descuento)}</td> <!-- Aumentado de 10px a 12px -->
+                        </tr>
+                        <tr>
+                            <td class="fw-bold" style="font-size: 12px;">IVA:</td> <!-- Aumentado de 10px a 12px -->
+                            <td class="text-end" style="font-size: 12px;">${this.formatearMoneda(datos.totales.iva)}</td> <!-- Aumentado de 10px a 12px -->
+                        </tr>
+                        ${mostrarTotalAPagar ? `
+                            <tr class="table-info">
+                                <td class="fw-bold" style="font-size: 13px;">${textoTotalAPagar}:</td> <!-- Aumentado de 11px a 13px -->
+                                <td class="text-end fw-bold" style="font-size: 13px;">${this.formatearMoneda(datos.totales.total)}</td> <!-- Aumentado de 11px a 13px -->
+                            </tr>
+                        ` : ''}
+                        <tr class="table-success">
+                            <td class="fw-bold" style="font-size: 13px;">${this.getTextoTotalPagadoParaHTML(formaPago)}:</td> <!-- Aumentado de 11px a 13px -->
+                            <td class="text-end fw-bold" style="font-size: 13px;">${this.formatearMoneda(datos.totales.totalPagado)}</td> <!-- Aumentado de 11px a 13px -->
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Observaciones -->
+        ${datos.configuracion?.observaciones ? `
+            <div class="observaciones-compactas page-break-avoid">
+                <div class="alert-warning">
+                    <strong>Observación:</strong> ${datos.configuracion.observaciones}
+                </div>
+            </div>
+        ` : ''}
+
+        <!-- Términos y condiciones -->
+        <div class="terminos-compactos page-break-avoid">
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px;"> <!-- Aumentado gap de 6px a 8px -->
+                <div>
+                    <p style="margin-bottom: 3px;"> <!-- Aumentado de 2px a 3px -->
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Pasados 30 días no nos hacemos responsables de trabajos no retirados
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        <i class="bi bi-info-circle"></i>
+                        Estado de orden: tracking.optolapp.com
+                    </p>
+                </div>
+                <div style="text-align: right;">
+                    <small>${new Date().getFullYear()} © ${sedeInfo?.nombre_optica || 'New Vision Lens'}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensaje final -->
+        <div class="mensaje-final page-break-avoid">
+            <i class="bi bi-check-circle"></i>
+            ${mensajeFinal}
+        </div>
+    </div>
+</body>
+</html>
+`;
+    }
 
     /**
      * Determina si debe mostrar el "Total a pagar" según la forma de pago
@@ -3733,231 +3815,502 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return tipos[tipo] || tipo.toUpperCase();
     }
 
-    private resetearVenta(): void {
-        this.venta = {
-            productos: [],
-            moneda: 'dolar',
-            formaPago: 'contado',
-            descuento: 0,
-            impuesto: 16,
-            observaciones: '',
-            montoInicial: 0,
-            numeroCuotas: 0,
-            montoAbonado: 0,
-            metodosDePago: []
-        };
-
-        this.pacienteSeleccionado = null;
-        this.productoSeleccionado = null;
-        this.asesorSeleccionado = this.currentUser?.id ?? null;
-
-        this.clienteSinPaciente = {
-            tipoPersona: 'natural',
-            nombreCompleto: '',
-            cedula: '',
-            telefono: '',
-            email: ''
-        };
-
-        this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
-        this.cuotasCashea = [];
-        this.valorInicialTemporal = '';
-        this.valorTemporal = '';
-        this.nivelCashea = 'nivel3';
-        this.cantidadCuotasCashea = 3;
-
-        this.requierePaciente = false;
-        this.historiaMedica = null;
-        this.mostrarSelectorAsesor = false;
-
-        this.monedaEfectivo = 'USD';
-
-        this.actualizarProductosConDetalle();
-
-        // Forzar scroll al inicio
-        setTimeout(() => {
-            const modalBody = document.querySelector('.modal-body-detalle');
-            if (modalBody) {
-                modalBody.scrollTop = 0;
-            }
-        }, 100);
-    }
-
     async descargarPDF(): Promise<void> {
-        let datos: any;
-
         try {
+            // Preparar datos si es necesario
             if (this.venta.formaPago === 'cashea' && (!this.cuotasCashea || this.cuotasCashea.length === 0)) {
                 this.generarCuotasCashea();
             }
 
-            datos = this.datosRecibo || this.crearDatosReciboReal();
-            await this.generarPDFSeguro(datos);
+            const datos = this.datosRecibo || this.crearDatosReciboReal();
+
+            // Mostrar loading
+            this.swalService.showLoadingAlert('🖨️ Generando PDF...');
+
+            // Llamar directamente al método que genera PDF
+            await this.generarPDFConTexto(datos);
 
         } catch (error) {
             console.error('Error al generar PDF:', error);
             this.swalService.closeLoading();
 
-            if (datos) {
-                this.descargarPDFSimple(datos);
-            } else {
-                const datosFallback = this.datosRecibo || this.crearDatosReciboReal();
-                this.descargarPDFSimple(datosFallback);
-            }
+            // Mostrar error al usuario
+            this.swalService.showError(
+                'Error al generar PDF',
+                'No se pudo generar el archivo PDF. Por favor, intente de nuevo.'
+            );
         }
     }
 
-    private async generarPDFSeguro(datos: any): Promise<void> {
-        return new Promise((resolve, reject) => {
-            try {
-                const iframe = document.createElement('iframe');
-                iframe.style.position = 'fixed';
-                iframe.style.right = '0';
-                iframe.style.bottom = '0';
-                iframe.style.width = '210mm';
-                iframe.style.height = '297mm';
-                iframe.style.border = 'none';
-                iframe.style.visibility = 'hidden';
+    private generarPDFConTexto(datos: any): void {
+        try {
+            this.swalService.showLoadingAlert('🖨️ Generando PDF...');
 
-                document.body.appendChild(iframe);
+            // Crear PDF
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
 
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            // Márgenes reducidos para más espacio
+            const marginLeft = 10;
+            const marginTop = 10;
+            const pageWidth = 210;
+            const contentWidth = pageWidth - (marginLeft * 2);
+            let currentY = marginTop;
 
-                if (!iframeDoc) {
-                    document.body.removeChild(iframe);
-                    reject(new Error('No se pudo acceder al documento del iframe'));
-                    return;
+            // Obtener información de la sede desde UserStateService
+            const sedeInfo = this.userStateService.getSedeActual() || this.obtenerInfoSede();
+
+            // ===== 1. ENCABEZADO DE LA EMPRESA =====
+            pdf.setFontSize(14);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(0, 0, 0);
+            pdf.text(sedeInfo.nombre_optica || sedeInfo.nombre || 'NEW VISION LENS', 105, currentY, { align: 'center' });
+            currentY += 6;
+
+            pdf.setFontSize(8);
+            pdf.setFont('helvetica', 'normal');
+
+            // Dirección
+            const direccion = sedeInfo.direccion || 'C.C. Candelaria, Local PB-04, Guarenas';
+            pdf.text(direccion, 105, currentY, { align: 'center' });
+            currentY += 4;
+
+            // Teléfono y RIF
+            const telefono = sedeInfo.telefono || '0212-365-39-42';
+            const rif = sedeInfo.rif ? sedeInfo.rif.replace(/^rif/i, '').trim() : 'J-123456789';
+            pdf.text(`Tel: ${telefono} | RIF: ${rif}`, 105, currentY, { align: 'center' });
+            currentY += 4;
+
+            // Email
+            const email = sedeInfo.email || 'newvisionlens2020@gmail.com';
+            pdf.text(`Email: ${email}`, 105, currentY, { align: 'center' });
+            currentY += 6;
+
+            // Línea separadora
+            pdf.setDrawColor(44, 90, 160);
+            pdf.setLineWidth(0.5);
+            pdf.line(marginLeft, currentY, 195, currentY);
+            currentY += 8;
+
+            // Título del recibo
+            pdf.setFontSize(12);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(44, 90, 160);
+            pdf.text('RECIBO DE VENTA', 105, currentY, { align: 'center' });
+            currentY += 8;
+
+            // ===== 2. INFORMACIÓN RÁPIDA =====
+            // Fondo gris claro
+            pdf.setFillColor(248, 249, 250);
+            pdf.roundedRect(marginLeft, currentY, contentWidth, 10, 1, 1, 'F');
+
+            // Bordes
+            pdf.setDrawColor(222, 226, 230);
+            pdf.setLineWidth(0.2);
+            pdf.roundedRect(marginLeft, currentY, contentWidth, 10, 1, 1, 'S');
+
+            pdf.setFontSize(8);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(51, 51, 51);
+
+            const gridWidth = contentWidth / 4;
+            const gridX = [marginLeft, marginLeft + gridWidth, marginLeft + (gridWidth * 2), marginLeft + (gridWidth * 3)];
+            const gridTextY = currentY + 7;
+
+            // Recibo
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Recibo:', gridX[0] + 3, gridTextY);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(datos.numeroVenta, gridX[0] + 15, gridTextY);
+
+            // Fecha
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Fecha:', gridX[1] + 3, gridTextY);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(datos.fecha, gridX[1] + 15, gridTextY);
+
+            // Hora
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Hora:', gridX[2] + 3, gridTextY);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(datos.hora, gridX[2] + 12, gridTextY);
+
+            // Vendedor
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Vendedor:', gridX[3] + 3, gridTextY);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(datos.vendedor, gridX[3] + 20, gridTextY);
+
+            currentY += 12;
+
+            // ===== 3. INFORMACIÓN DEL CLIENTE =====
+            // Fondo con borde izquierdo
+            pdf.setFillColor(248, 249, 250);
+            pdf.roundedRect(marginLeft, currentY, contentWidth, 12, 1, 1, 'F');
+
+            // Borde izquierdo azul
+            pdf.setDrawColor(44, 90, 160);
+            pdf.setLineWidth(2);
+            pdf.line(marginLeft, currentY, marginLeft, currentY + 12);
+
+            // Bordes restantes
+            pdf.setDrawColor(222, 226, 230);
+            pdf.setLineWidth(0.2);
+            pdf.roundedRect(marginLeft, currentY, contentWidth, 12, 1, 1, 'S');
+
+            pdf.setFontSize(8);
+            pdf.setTextColor(51, 51, 51);
+
+            const clienteGridWidth = contentWidth / 3;
+            const clienteGridX = [marginLeft, marginLeft + clienteGridWidth, marginLeft + (clienteGridWidth * 2)];
+            const clienteTextY = currentY + 8;
+
+            // Cliente
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Cliente:', clienteGridX[0] + 3, clienteTextY);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(datos.cliente.nombre, clienteGridX[0] + 16, clienteTextY);
+
+            // Cédula
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Cédula:', clienteGridX[1] + 3, clienteTextY);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(datos.cliente.cedula, clienteGridX[1] + 15, clienteTextY);
+
+            // Teléfono
+            pdf.setFont('helvetica', 'bold');
+            pdf.text('Teléfono:', clienteGridX[2] + 3, clienteTextY);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(datos.cliente.telefono, clienteGridX[2] + 20, clienteTextY);
+
+            currentY += 14;
+
+            // ===== 4. TABLA DE PRODUCTOS =====
+            pdf.setFontSize(10);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(44, 90, 160);
+            pdf.text('PRODUCTOS', marginLeft, currentY);
+
+            // Línea debajo del título
+            pdf.setDrawColor(44, 90, 160);
+            pdf.setLineWidth(0.5);
+            pdf.line(marginLeft, currentY + 1, marginLeft + 25, currentY + 1);
+
+            currentY += 6;
+
+            // Preparar datos para la tabla
+            const tableData = datos.productos.map((producto: any, index: number) => [
+                (index + 1).toString(),
+                producto.nombre,
+                producto.cantidad.toString(),
+                this.formatearMonedaParaPDF(producto.precioUnitario),
+                this.formatearMonedaParaPDF(producto.subtotal)
+            ]);
+
+            // Crear tabla con autoTable
+            autoTable(pdf, {
+                startY: currentY,
+                margin: { left: marginLeft, right: 10 },
+                head: [['#', 'Descripción', 'Cant', 'P. Unitario', 'Subtotal']],
+                body: tableData,
+                headStyles: {
+                    fillColor: [44, 90, 160], // Azul
+                    textColor: [255, 255, 255], // Blanco
+                    fontStyle: 'bold',
+                    fontSize: 8,
+                    cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
+                    halign: 'left'
+                },
+                bodyStyles: {
+                    fontSize: 8,
+                    cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
+                    textColor: [51, 51, 51],
+                    lineColor: [222, 226, 230]
+                },
+                styles: {
+                    lineWidth: 0.2,
+                    lineColor: [222, 226, 230]
+                },
+                columnStyles: {
+                    0: {
+                        cellWidth: 10,
+                        halign: 'center',
+                        cellPadding: { top: 2, right: 1, bottom: 2, left: 1 }
+                    },
+                    1: {
+                        cellWidth: 90,
+                        cellPadding: { top: 2, right: 2, bottom: 2, left: 2 }
+                    },
+                    2: {
+                        cellWidth: 15,
+                        halign: 'center',
+                        cellPadding: { top: 2, right: 1, bottom: 2, left: 1 }
+                    },
+                    3: {
+                        cellWidth: 25,
+                        halign: 'right',
+                        cellPadding: { top: 2, right: 3, bottom: 2, left: 1 }
+                    },
+                    4: {
+                        cellWidth: 25,
+                        halign: 'right',
+                        cellPadding: { top: 2, right: 3, bottom: 2, left: 1 }
+                    }
+                },
+                theme: 'grid',
+                didDrawPage: (data) => {
+                    // Evitar que la tabla se corte mal
+                    if (data.cursor.y > 250) {
+                        pdf.addPage();
+                        currentY = marginTop;
+                    }
+                }
+            });
+
+            // Obtener la posición Y después de la tabla
+            currentY = (pdf as any).lastAutoTable.finalY + 8;
+
+            // ===== 5. MÉTODOS DE PAGO =====
+            if (datos.metodosPago && datos.metodosPago.length > 0) {
+                datos.metodosPago.forEach((metodo: any) => {
+                    const metodoX = marginLeft;
+                    const metodoWidth = contentWidth;
+
+                    // Línea punteada
+                    const dashPattern = [2, 2];
+                    pdf.setLineDashPattern(dashPattern, 0);
+                    pdf.setDrawColor(222, 226, 230);
+                    pdf.setLineWidth(0.3);
+                    pdf.line(metodoX, currentY, metodoX + metodoWidth, currentY);
+                    pdf.setLineDashPattern([], 0);
+
+                    currentY += 3;
+
+                    // Badge del tipo de pago
+                    pdf.setFillColor(44, 90, 160);
+                    pdf.roundedRect(metodoX, currentY - 1, 15, 4, 1, 1, 'F');
+
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(7);
+                    pdf.setTextColor(255, 255, 255);
+                    const tipoPagoAbrev = this.formatearTipoPago(metodo.tipo).substring(0, 8);
+                    pdf.text(tipoPagoAbrev, metodoX + 2, currentY + 1);
+
+                    // Texto del método
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(51, 51, 51);
+                    pdf.setFont('helvetica', 'normal');
+
+                    let metodoText = '';
+                    if (metodo.referencia) {
+                        metodoText += ` - Ref: ${metodo.referencia}`;
+                    }
+                    if (metodo.banco) {
+                        metodoText += ` - ${metodo.banco}`;
+                    }
+
+                    if (metodoText) {
+                        pdf.text(metodoText, metodoX + 18, currentY + 1);
+                    }
+
+                    // Monto
+                    pdf.text(this.formatearMonedaParaPDF(metodo.monto, metodo.moneda),
+                        metodoX + metodoWidth - 2, currentY + 1, { align: 'right' });
+
+                    currentY += 6;
+                });
+                currentY += 2;
+            }
+
+            // ===== 6. SECCIÓN DE FORMA DE PAGO =====
+            const formaPago = datos.configuracion?.formaPago || 'contado';
+
+            if (formaPago === 'contado') {
+                pdf.setFillColor(248, 249, 250);
+                pdf.roundedRect(marginLeft, currentY, contentWidth, 20, 2, 2, 'F');
+
+                pdf.setDrawColor(25, 135, 84);
+                pdf.setLineWidth(2);
+                pdf.line(marginLeft, currentY, marginLeft, currentY + 20);
+
+                pdf.setDrawColor(222, 226, 230);
+                pdf.setLineWidth(0.2);
+                pdf.roundedRect(marginLeft, currentY, contentWidth, 20, 2, 2, 'S');
+
+                const centerX = marginLeft + (contentWidth / 2);
+                const contentStartY = currentY + 8;
+
+                pdf.setFontSize(10);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setTextColor(51, 51, 51);
+                pdf.text('Forma de pago:', centerX, contentStartY, { align: 'center' });
+
+                // Badge CONTADO
+                pdf.setFillColor(25, 135, 84);
+                pdf.roundedRect(centerX - 15, contentStartY + 4, 30, 6, 3, 3, 'F');
+
+                pdf.setFontSize(9);
+                pdf.setTextColor(255, 255, 255);
+                pdf.text('CONTADO', centerX, contentStartY + 7, { align: 'center' });
+
+                pdf.setFontSize(10);
+                pdf.setTextColor(51, 51, 51);
+                pdf.text('Monto total:', centerX, contentStartY + 16, { align: 'center' });
+
+                pdf.text(this.formatearMonedaParaPDF(datos.totales.totalPagado), centerX, contentStartY + 22, { align: 'center' });
+
+                currentY += 25;
+            }
+
+            // ===== 7. TOTALES =====
+            currentY += 4;
+
+            const totalesWidth = contentWidth / 2;
+            const totalesX = marginLeft + (contentWidth - totalesWidth);
+
+            // Crear tabla de totales
+            const totalesData = [
+                ['Subtotal:', this.formatearMonedaParaPDF(datos.totales.subtotal)],
+                ['Descuento:', `- ${this.formatearMonedaParaPDF(datos.totales.descuento)}`],
+                ['IVA:', this.formatearMonedaParaPDF(datos.totales.iva)],
+                ['TOTAL:', this.formatearMonedaParaPDF(datos.totales.totalPagado)]
+            ];
+
+            // Dibujar tabla de totales
+            let totalY = currentY;
+            totalesData.forEach((row, index) => {
+                const isTotal = index === 3;
+
+                // Fondo para total
+                if (isTotal) {
+                    pdf.setFillColor(212, 237, 218);
+                    pdf.rect(totalesX, totalY - 3, totalesWidth, 6, 'F');
                 }
 
-                // Escribir contenido en el iframe
-                iframeDoc.open();
-                iframeDoc.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <style>
-                        body { 
-                            margin: 0; 
-                            padding: 15mm; 
-                            background: white;
-                            width: 210mm;
-                            min-height: 297mm;
-                            font-family: Arial, sans-serif;
-                        }
-                        * {
-                            box-sizing: border-box;
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${this.generarReciboHTML(datos)}
-                </body>
-                </html>
-            `);
-                iframeDoc.close();
+                // Bordes
+                pdf.setDrawColor(222, 226, 230);
+                pdf.setLineWidth(0.2);
+                pdf.rect(totalesX, totalY - 3, totalesWidth, 6, 'S');
 
-                setTimeout(async () => {
-                    try {
-                        const canvas = await html2canvas(iframeDoc.body, {
-                            scale: 1.5,
-                            useCORS: true,
-                            logging: false,
-                            backgroundColor: '#ffffff',
-                            allowTaint: false,
-                            foreignObjectRendering: false
-                        });
+                // Texto
+                pdf.setFontSize(isTotal ? 11 : 10);
+                pdf.setFont('helvetica', 'bold');
 
-                        // Limpiar
-                        document.body.removeChild(iframe);
+                if (index === 1) { // Descuento
+                    pdf.setTextColor(220, 53, 69);
+                } else if (isTotal) {
+                    pdf.setTextColor(25, 135, 84);
+                } else {
+                    pdf.setTextColor(51, 51, 51);
+                }
 
-                        // Crear PDF
-                        const pdf = new jsPDF.jsPDF({
-                            orientation: 'portrait',
-                            unit: 'mm',
-                            format: 'a4'
-                        });
+                // Etiqueta
+                pdf.text(row[0], totalesX + 4, totalY);
 
-                        const imgWidth = 210;
-                        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                        const imgData = canvas.toDataURL('image/jpeg', 0.8);
+                // Valor
+                pdf.text(row[1], totalesX + totalesWidth - 4, totalY, { align: 'right' });
 
-                        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-                        pdf.save(`Recibo_${datos.numeroVenta}.pdf`);
+                totalY += 6;
+            });
 
-                        this.swalService.closeLoading();
-                        this.swalService.showSuccess('PDF Descargado', 'El recibo se ha descargado correctamente.');
-                        resolve();
+            currentY = totalY + 8;
 
-                    } catch (canvasError) {
-                        document.body.removeChild(iframe);
-                        reject(canvasError);
-                    }
-                }, 1000);
+            // ===== 8. OBSERVACIONES =====
+            if (datos.configuracion?.observaciones) {
+                pdf.setFillColor(255, 243, 205);
+                pdf.setDrawColor(255, 234, 167);
+                pdf.setLineWidth(0.5);
+                pdf.roundedRect(marginLeft, currentY, contentWidth, 8, 1, 1, 'FD');
 
-            } catch (error) {
-                reject(error);
+                pdf.setFontSize(8);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setTextColor(133, 100, 4);
+                pdf.text(`Observación: ${datos.configuracion.observaciones}`, marginLeft + 4, currentY + 5);
+
+                currentY += 10;
             }
-        });
-    }
 
-    private descargarPDFSimple(datos: any): void {
-        try {
-            const htmlContent = this.generarReciboHTML(datos);
+            // ===== 9. TÉRMINOS Y CONDICIONES =====
+            const terminosY = Math.min(currentY, 270);
 
-            // Crear blob y descargar como HTML que puede ser impreso como PDF
-            const blob = new Blob([`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Recibo_${datos.numeroVenta}</title>
-                <style>
-                    @media print {
-                        @page { margin: 0; size: A4; }
-                        body { margin: 15mm; }
-                    }
-                    body { 
-                        font-family: Arial, sans-serif; 
-                        margin: 20px;
-                        -webkit-print-color-adjust: exact !important;
-                    }
-                </style>
-            </head>
-            <body>
-                ${htmlContent}
-                <script>
-                    // Auto-abrir diálogo de impresión al cargar
-                    window.onload = function() {
-                        setTimeout(() => {
-                            window.print();
-                        }, 500);
-                    };
-                </script>
-            </body>
-            </html>
-        `], { type: 'text/html' });
+            // Línea separadora
+            pdf.setDrawColor(221, 221, 221);
+            pdf.setLineWidth(0.5);
+            pdf.line(marginLeft, terminosY, 195, terminosY);
 
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `Recibo_${datos.numeroVenta}.html`;
-            link.style.display = 'none';
+            pdf.setFontSize(7);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(102, 102, 102);
 
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // Términos
+            pdf.text('Pasados 30 días no nos hacemos responsables de trabajos no retirados',
+                marginLeft, terminosY + 6);
+            pdf.text('Estado de orden: tracking.optolapp.com',
+                marginLeft, terminosY + 12);
 
-            setTimeout(() => URL.revokeObjectURL(url), 100);
+            // Copyright
+            const copyrightText = `${new Date().getFullYear()} © ${sedeInfo.nombre_optica || sedeInfo.nombre || 'New Vision Lens'}`;
+            pdf.text(copyrightText, 195, terminosY + 18, { align: 'right' });
 
-            this.swalService.showInfo(
-                'Descarga HTML',
-                'Se ha descargado el recibo como HTML. Ábrelo y usa "Imprimir → Guardar como PDF" para obtener el PDF.'
-            );
+            // ===== 10. MENSAJE FINAL =====
+            const mensajeFinalY = Math.min(terminosY + 24, 285);
+
+            pdf.setFontSize(9);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(44, 90, 160);
+            pdf.text('✓ ¡Gracias por su compra!', 105, mensajeFinalY, { align: 'center' });
+
+            // ===== 11. GUARDAR PDF =====
+            pdf.save(`Recibo_${datos.numeroVenta}.pdf`);
+
+            // Cerrar loading
+            setTimeout(() => {
+                this.swalService.closeLoading();
+            }, 500);
 
         } catch (error) {
-            console.error('Error en método simple:', error);
-            this.swalService.showError('Error', 'No se pudo generar el archivo.');
+            console.error('Error generando PDF con texto:', error);
+            this.swalService.closeLoading();
+            this.swalService.showError('Error', 'No se pudo generar el PDF.');
+            throw error;
         }
+    }
+
+    // Mantén este método auxiliar para formatear moneda
+    private formatearMonedaParaPDF(monto: number | null | undefined, moneda?: string): string {
+        if (monto === null || monto === undefined || isNaN(monto)) {
+            return '$0,00';
+        }
+
+        const montoNumerico = Number(monto);
+        if (isNaN(montoNumerico)) {
+            return '$0,00';
+        }
+
+        // Formatear al estilo venezolano
+        const partes = montoNumerico.toFixed(2).split('.');
+        let parteEntera = partes[0];
+        let parteDecimal = partes[1] || '00';
+
+        // Agregar separadores de miles
+        parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+        // Determinar símbolo
+        let simbolo = '$';
+        if (moneda) {
+            const monedaNormalizada = moneda.toLowerCase();
+            if (monedaNormalizada === 'bolivar' || monedaNormalizada === 'ves' || monedaNormalizada === 'bs') {
+                simbolo = 'Bs.';
+                return `${simbolo} ${parteEntera},${parteDecimal}`;
+            } else if (monedaNormalizada === 'euro' || monedaNormalizada === 'eur') {
+                simbolo = '€';
+            }
+        }
+
+        return `${simbolo}${parteEntera},${parteDecimal}`;
     }
 
     async copiarEnlace(): Promise<void> {
@@ -3966,24 +4319,27 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             const datos = this.datosRecibo || this.crearDatosReciboReal();
 
-            // Generar el PDF y obtener el Blob
-            const pdfBlob = await this.generarPDFBlob(datos);
-
-            // Crear URL del Blob
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-
-            // Crear texto con el enlace de descarga REAL
-            const texto = `📋 NEW VISION LENS - Recibo de Venta\n\n` +
+            // EN LUGAR de generar PDF, creamos un texto con la información
+            let texto = `📋 NEW VISION LENS - Recibo de Venta\n\n` +
                 `Recibo: ${datos.numeroVenta}\n` +
                 `Fecha: ${datos.fecha}\n` +
                 `Hora: ${datos.hora}\n` +
                 `Cliente: ${datos.cliente.nombre}\n` +
+                `Cédula: ${datos.cliente.cedula}\n` +
+                `Teléfono: ${datos.cliente.telefono}\n` +
                 `Total: ${this.formatearMoneda(datos.totales.totalPagado)}\n` +
-                `Forma de pago: ${this.venta.formaPago.toUpperCase()}\n\n` +
-                `📎 DESCARGAR RECIBO EN PDF:\n` +
-                `${pdfUrl}\n\n` +
-                `¡Gracias por su compra! 🛍️\n\n` +
-                `*Instrucciones:* Copie y pegue este enlace en su navegador para descargar el PDF.`;
+                `Forma de pago: ${this.venta.formaPago.toUpperCase()}\n\n`;
+
+            // Agregar productos
+            texto += `PRODUCTOS:\n`;
+            datos.productos.forEach((producto: any, index: number) => {
+                texto += `${index + 1}. ${producto.nombre} x${producto.cantidad} - ${this.formatearMoneda(producto.subtotal)}\n`;
+            });
+
+            texto += `\n📍 NEW VISION LENS\n`;
+            texto += `🏪 C.C. Candelaria, Local PB-04, Guarenas\n`;
+            texto += `📞 0212-365-39-42\n\n`;
+            texto += `_Conserve este comprobante para cualquier reclamo._`;
 
             // Copiar al portapapeles
             const copiado = await this.copiarAlPortapapeles(texto);
@@ -3991,128 +4347,26 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.swalService.closeLoading();
 
             if (copiado) {
-                this.swalService.showSuccess('✅ Enlace Copiado',
-                    `Se ha generado un enlace de descarga para el recibo ${datos.numeroVenta}.\n\n` +
-                    `🔗 *El enlace ha sido copiado al portapapeles*\n\n` +
-                    `El cliente puede:\n` +
-                    `• Pegar el enlace en su navegador\n` +
-                    `• Descargar el PDF directamente\n` +
-                    `• Compartirlo por cualquier medio\n\n` +
-                    `⏰ *El enlace estará disponible por 24 horas*`
+                this.swalService.showSuccess('✅ Información Copiada',
+                    `Se ha copiado la información del recibo ${datos.numeroVenta}.\n\n` +
+                    `El cliente puede recibir esta información por WhatsApp o Email.`
                 );
-
-                // Programar limpieza automática después de 24 horas
-                setTimeout(() => {
-                    URL.revokeObjectURL(pdfUrl);
-                }, 24 * 60 * 60 * 1000);
-
             } else {
-                this.swalService.showError('Error', 'No se pudo copiar el enlace automáticamente.');
+                this.swalService.showError('Error', 'No se pudo copiar la información automáticamente.');
             }
 
         } catch (error) {
             this.swalService.closeLoading();
-            console.error('Error al generar enlace:', error);
+            console.error('Error al copiar enlace:', error);
             this.swalService.showError('Error',
-                'No se pudo generar el enlace de descarga. Por favor, use el botón "Descargar PDF" para obtener el archivo.'
+                'No se pudo copiar la información. Por favor, use el botón "Descargar PDF" para obtener el archivo.'
             );
         }
     }
 
     /**
-     * Genera el PDF y retorna el Blob
-     */
-    private async generarPDFBlob(datos: any): Promise<Blob> {
-        return new Promise((resolve, reject) => {
-            try {
-                // Crear un iframe temporal para renderizar el HTML
-                const iframe = document.createElement('iframe');
-                iframe.style.position = 'fixed';
-                iframe.style.right = '0';
-                iframe.style.bottom = '0';
-                iframe.style.width = '210mm';
-                iframe.style.height = '297mm';
-                iframe.style.border = 'none';
-                iframe.style.visibility = 'hidden';
-                iframe.style.zIndex = '-1';
-
-                document.body.appendChild(iframe);
-
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-
-                if (!iframeDoc) {
-                    document.body.removeChild(iframe);
-                    reject(new Error('No se pudo acceder al documento del iframe'));
-                    return;
-                }
-
-                // Escribir contenido en el iframe
-                iframeDoc.open();
-                iframeDoc.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <style>
-                        body { 
-                            margin: 0; 
-                            padding: 15mm; 
-                            background: white;
-                            width: 210mm;
-                            min-height: 297mm;
-                            font-family: Arial, sans-serif;
-                        }
-                        * {
-                            box-sizing: border-box;
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${this.generarReciboHTML(datos)}
-                </body>
-                </html>
-            `);
-                iframeDoc.close();
-
-                // Esperar a que el contenido se cargue
-                setTimeout(async () => {
-                    try {
-                        const canvas = await html2canvas(iframeDoc.body, {
-                            scale: 1.5,
-                            useCORS: true,
-                            logging: false,
-                            backgroundColor: '#ffffff',
-                            allowTaint: false,
-                            foreignObjectRendering: false
-                        });
-
-                        // Limpiar el iframe
-                        document.body.removeChild(iframe);
-
-                        // Convertir canvas a Blob
-                        canvas.toBlob((blob) => {
-                            if (blob) {
-                                resolve(blob);
-                            } else {
-                                reject(new Error('No se pudo generar el Blob del PDF'));
-                            }
-                        }, 'application/pdf', 0.9); // 90% de calidad
-
-                    } catch (canvasError) {
-                        document.body.removeChild(iframe);
-                        reject(canvasError);
-                    }
-                }, 1500); // Dar más tiempo para cargar
-
-            } catch (error) {
-                reject(error);
-            }
-        });
-    }
-
-    /**
-     * Método simple y confiable para copiar al portapapeles
-     */
+    * Método simple y confiable para copiar al portapapeles
+    */
     private async copiarAlPortapapeles(texto: string): Promise<boolean> {
         try {
             // Método moderno
@@ -4266,11 +4520,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     private crearDatosReciboReal(): any {
         const fechaActual = new Date();
 
-        // Obtener información de la sede del usuario actual
-        const sedeInfo = this.currentUser?.sede || 'Sede Principal';
-        const telefonoSede = '0212-365-39-42';
-        const rifSede = 'J-123456789';
-
+        const sedeInfo = this.obtenerInfoSede();
         const vendedorInfo = this.getResumenAsesor();
 
         // 1. Calcular subtotal REAL (suma de precios sin IVA)
@@ -4350,13 +4600,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             vendedor: vendedorInfo,
 
             // Información de la sede
-            sede: {
-                nombre: sedeInfo,
-                direccion: 'C.C. Candelaria, Local PB-04, Guarenas',
-                telefono: telefonoSede,
-                rif: rifSede,
-                email: 'newvisionlens2020@gmail.com'
-            },
+            sede: sedeInfo,
 
             // INFORMACIÓNCLIENTE
             cliente: clienteInfo,
@@ -5603,6 +5847,24 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return mapaMonedas[moneda.toLowerCase()] || moneda.toLowerCase();
     }
 
+    // Método para obtener encabezado del recibo
+    getEncabezadoRecibo(): string {
+        const sedeInfo = this.userStateService.getSedeActual();
 
+        if (sedeInfo) {
+            return `${sedeInfo.nombre_optica}<br>
+                ${sedeInfo.direccion}<br>
+                Telf.: ${sedeInfo.telefono} | Rif: ${sedeInfo.rif}<br>
+                Email: ${sedeInfo.email}`;
+        }
+
+        // Fallback
+        return `NEW VISION LENS<br>
+            C.C. Candelaria, Local PB-04, Guarenas<br>
+            Tel: 0212-365-39-42 | RIF: J-123456789<br>
+            Email: newvisionlens2020@gmail.com`;
+    }
 
 }
+
+

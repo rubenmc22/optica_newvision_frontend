@@ -513,7 +513,7 @@
     border-radius: 16px;
     border: 1px solid #e2e8f0;
     @include hover-lift;
-    
+
     .selector-historia-header {
         display: flex;
         align-items: center;
@@ -521,23 +521,23 @@
         margin-bottom: 1.5rem;
         padding-bottom: 1rem;
         border-bottom: 2px solid #e2e8f0;
-        
+
         .header-icon-container {
             @include flex-center;
             width: 56px;
             height: 56px;
             background: var(--degradado-color);
             border-radius: 14px;
-            
+
             i {
                 font-size: 1.75rem;
                 color: white;
             }
         }
-        
+
         .header-content {
             flex: 1;
-            
+
             .selector-title {
                 margin: 0;
                 font-size: 1.25rem;
@@ -545,12 +545,12 @@
                 color: #1e293b;
                 letter-spacing: -0.5px;
             }
-            
+
             .selector-subtitle {
                 margin: 0.25rem 0 0 0;
                 font-size: 0.875rem;
                 color: #64748b;
-                
+
                 .historia-count {
                     font-weight: 600;
                     color: var(--primary-color);
@@ -572,11 +572,11 @@
         font-weight: 600;
         color: #334155;
         font-size: 0.95rem;
-        
+
         i {
             color: var(--primary-color);
         }
-        
+
         .selected-badge {
             margin-left: auto;
             padding: 0.25rem 0.75rem;
@@ -585,7 +585,7 @@
             border-radius: 20px;
             font-size: 0.75rem;
             font-weight: 500;
-            
+
             i {
                 color: white;
                 margin-right: 0.25rem;
@@ -603,13 +603,13 @@
         padding: 1rem;
         min-height: auto;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        
+
         &:hover {
             border-color: #94a3b8;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
     }
-    
+
     &.ng-focused .ng-select-container {
         border-color: var(--primary-color);
         box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1);
@@ -619,13 +619,13 @@
 // Etiqueta seleccionada
 .selected-history-label {
     width: 100%;
-    
+
     .selected-history-main {
         display: flex;
         align-items: center;
         gap: 0.75rem;
         margin-bottom: 0.5rem;
-        
+
         .selected-history-number {
             font-weight: 700;
             color: var(--primary-color);
@@ -634,19 +634,19 @@
             border-radius: 8px;
             font-size: 0.875rem;
         }
-        
+
         .selected-history-date {
             font-weight: 600;
             color: #334155;
             font-size: 0.95rem;
         }
     }
-    
+
     .selected-history-info {
         display: flex;
         gap: 1rem;
         align-items: center;
-        
+
         .profession-badge {
             display: inline-flex;
             align-items: center;
@@ -656,12 +656,12 @@
             color: #475569;
             border-radius: 6px;
             font-size: 0.825rem;
-            
+
             i {
                 font-size: 0.875rem;
             }
         }
-        
+
         .formula-status {
             display: inline-flex;
             align-items: center;
@@ -670,20 +670,20 @@
             border-radius: 6px;
             font-size: 0.825rem;
             font-weight: 500;
-            
+
             &.has-formula {
                 background: #d1fae5;
                 color: #065f46;
-                
+
                 i {
                     color: #10b981;
                 }
             }
-            
+
             &.no-formula {
                 background: #fee2e2;
                 color: #991b1b;
-                
+
                 i {
                     color: #ef4444;
                 }
@@ -701,44 +701,44 @@
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
-    
+
     &:hover {
         border-color: var(--primary-color);
         transform: translateY(-2px);
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     }
-    
+
     &.recent-history {
         border-left: 4px solid #f59e0b;
     }
-    
+
     &.has-formula {
         border-top: 2px solid #10b981;
     }
-    
+
     &.selected {
         border-color: var(--primary-color);
         box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
     }
-    
+
     .history-card-header {
         padding: 1rem;
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         border-bottom: 1px solid #e2e8f0;
-        
+
         .history-card-badge {
             display: flex;
             align-items: center;
             gap: 0.75rem;
             margin-bottom: 0.5rem;
-            
+
             .history-number {
                 font-weight: 800;
                 color: var(--primary-color);
                 font-size: 1.125rem;
                 letter-spacing: -0.5px;
             }
-            
+
             .recent-badge {
                 display: inline-flex;
                 align-items: center;
@@ -749,12 +749,12 @@
                 border-radius: 20px;
                 font-size: 0.75rem;
                 font-weight: 600;
-                
+
                 i {
                     font-size: 0.75rem;
                 }
             }
-            
+
             .default-badge {
                 display: inline-flex;
                 align-items: center;
@@ -767,7 +767,7 @@
                 font-weight: 600;
             }
         }
-        
+
         .history-card-date {
             display: flex;
             align-items: center;
@@ -775,16 +775,16 @@
             color: #64748b;
             font-size: 0.875rem;
             font-weight: 500;
-            
+
             i {
                 color: #94a3b8;
             }
         }
     }
-    
+
     .history-card-body {
         padding: 1rem;
-        
+
         .history-professional {
             display: flex;
             align-items: center;
@@ -792,7 +792,7 @@
             margin-bottom: 1rem;
             padding-bottom: 1rem;
             border-bottom: 1px solid #f1f5f9;
-            
+
             .professional-avatar {
                 @include flex-center;
                 width: 40px;
@@ -800,35 +800,35 @@
                 background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
                 color: white;
                 border-radius: 10px;
-                
+
                 i {
                     font-size: 1.25rem;
                 }
             }
-            
+
             .professional-info {
                 flex: 1;
-                
+
                 .professional-name {
                     font-weight: 600;
                     color: #1e293b;
                     margin-bottom: 0.125rem;
                 }
-                
+
                 .professional-role {
                     display: flex;
                     align-items: center;
                     gap: 0.375rem;
                     font-size: 0.875rem;
                     color: #64748b;
-                    
+
                     i {
                         color: #f59e0b;
                     }
                 }
             }
         }
-        
+
         .history-formula-status {
             .formula-indicator {
                 display: flex;
@@ -836,39 +836,39 @@
                 gap: 1rem;
                 padding: 0.875rem;
                 border-radius: 10px;
-                
+
                 &.has-data {
                     background: #f0fdf4;
                     border: 1px solid #bbf7d0;
                 }
-                
+
                 &.no-data {
                     background: #fef2f2;
                     border: 1px solid #fecaca;
                 }
-                
+
                 .formula-icon {
                     @include flex-center;
                     width: 36px;
                     height: 36px;
                     border-radius: 8px;
-                    
+
                     i {
                         font-size: 1.25rem;
-                        
+
                         .has-data & {
                             color: #10b981;
                         }
-                        
+
                         .no-data & {
                             color: #ef4444;
                         }
                     }
                 }
-                
+
                 .formula-text {
                     flex: 1;
-                    
+
                     .formula-title {
                         font-size: 0.75rem;
                         color: #64748b;
@@ -876,7 +876,7 @@
                         letter-spacing: 0.5px;
                         margin-bottom: 0.125rem;
                     }
-                    
+
                     .formula-value {
                         font-weight: 600;
                         color: #1e293b;
@@ -887,16 +887,16 @@
             }
         }
     }
-    
+
     .history-card-footer {
         padding: 1rem;
         background: #f8fafc;
         border-top: 1px solid #e2e8f0;
-        
+
         .action-buttons {
             display: flex;
             justify-content: flex-end;
-            
+
             .btn-select-history {
                 display: inline-flex;
                 align-items: center;
@@ -910,13 +910,13 @@
                 font-size: 0.875rem;
                 cursor: pointer;
                 transition: all 0.3s ease;
-                
+
                 &:hover {
                     background: #0056b3; // Color oscuro fijo
                     transform: translateY(-1px);
                     box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
                 }
-                
+
                 &:active {
                     transform: translateY(0);
                 }
@@ -929,7 +929,7 @@
 .no-history-found {
     padding: 2rem;
     text-align: center;
-    
+
     .no-history-icon {
         @include flex-center;
         width: 64px;
@@ -937,20 +937,20 @@
         margin: 0 auto 1rem;
         background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
         border-radius: 16px;
-        
+
         i {
             font-size: 2rem;
             color: #94a3b8;
         }
     }
-    
+
     .no-history-text {
         h6 {
             margin: 0 0 0.5rem 0;
             color: #334155;
             font-weight: 600;
         }
-        
+
         p {
             margin: 0;
             color: #64748b;
@@ -962,7 +962,7 @@
 // Indicador de estado
 .selector-status {
     margin-top: 1rem;
-    
+
     .status-indicator {
         display: flex;
         align-items: center;
@@ -970,26 +970,26 @@
         padding: 0.875rem;
         border-radius: 10px;
         font-size: 0.875rem;
-        
+
         &.has-formula {
             background: #f0fdf4;
             border: 1px solid #bbf7d0;
             color: #065f46;
-            
+
             i {
                 color: #10b981;
             }
         }
-        
+
         &:not(.has-formula) {
             background: #fffbeb;
             border: 1px solid #fde68a;
             color: #92400e;
-            
+
             i {
                 color: #f59e0b;
             }
-            
+
             .warning-text {
                 font-weight: 500;
             }
@@ -1007,14 +1007,14 @@
     background: rgba(var(--primary-rgb), 0.05);
     border-radius: 10px;
     border-left: 4px solid var(--primary-color);
-    
+
     i {
         color: var(--primary-color);
         font-size: 1.125rem;
         flex-shrink: 0;
         margin-top: 0.125rem;
     }
-    
+
     span {
         color: #475569;
         font-size: 0.875rem;
@@ -1027,19 +1027,19 @@
     .selector-historia-moderno {
         padding: 1rem;
         border-radius: 12px;
-        
+
         .selector-historia-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 0.75rem;
-            
+
             .header-icon-container {
                 width: 48px;
                 height: 48px;
             }
         }
     }
-    
+
     .history-option-card {
         .history-card-body {
             .history-professional {
@@ -1049,14 +1049,14 @@
             }
         }
     }
-    
+
     .selected-history-label {
         .selected-history-main {
             flex-direction: column;
             align-items: flex-start;
             gap: 0.5rem;
         }
-        
+
         .selected-history-info {
             flex-direction: column;
             align-items: flex-start;
@@ -1067,9 +1067,12 @@
 
 // Animaciones específicas
 @keyframes pulse-glow {
-    0%, 100% {
+
+    0%,
+    100% {
         box-shadow: 0 0 0 0 rgba(var(--primary-rgb), 0.4);
     }
+
     50% {
         box-shadow: 0 0 0 6px rgba(var(--primary-rgb), 0);
     }
@@ -1604,7 +1607,7 @@
 // Estilo específico para el botón de VES si es necesario
 .moneda-btn .moneda-symbol {
     font-weight: bold;
-    
+
     // Para el símbolo de Bolívares
     &:contains("Bs") {
         font-size: 0.9em;
@@ -2556,7 +2559,7 @@
             }
 
             small {
-                font-size: 0.75rem;
+                font-size: 14px !important;
                 color: #64748b;
             }
         }
@@ -3581,7 +3584,7 @@ input:checked+.slider:before {
     &::after {
         content: "*";
         color: #dc3545;
-       // margin-left: -0.3rem;
+        // margin-left: -0.3rem;
     }
 }
 
@@ -3650,7 +3653,7 @@ input:checked+.slider:before {
         padding: 1rem;
         border-radius: 4px;
         border: 1px solid #dee2e6;
-        font-size: 1rem;
+        font-size: 1.1rem;
 
         .row {
             margin-bottom: 0.5rem;
@@ -3694,8 +3697,19 @@ input:checked+.slider:before {
     // MÉTODOS DE PAGO MÁS VISIBLES
     .metodos-compactos {
         .badge {
-            font-size: 1rem !important;
+            font-size: 1.1rem !important;
             padding: 0.5rem 1rem;
+        }
+
+        .metodo-pago-info {
+            font-size: 14px;
+        }
+
+        /* O específicamente para cada parte */
+        .monto-text,
+        .referencia-text,
+        .banco-text {
+            font-size: 14px;
         }
     }
 
@@ -4214,35 +4228,35 @@ input:checked+.slider:before {
     }
 
     .total-abonado {
-    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
-    border-left: 4px solid #ffc107;
-    padding: 8px 12px;
-    border-radius: 4px;
-}
+        background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+        border-left: 4px solid #ffc107;
+        padding: 8px 12px;
+        border-radius: 4px;
+    }
 
-.total-abonado .total-amount {
-    color: #856404;
-    font-weight: bold;
-    font-size: 1.1em;
-}
+    .total-abonado .total-amount {
+        color: #856404;
+        font-weight: bold;
+        font-size: 1.1em;
+    }
 
-.porcentaje-abonado {
-    font-size: 0.8em;
-    color: #666;
-    margin-left: 8px;
-}
+    .porcentaje-abonado {
+        font-size: 0.8em;
+        color: #666;
+        margin-left: 8px;
+    }
 
-.deuda-pendiente {
-    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
-    border-left: 4px solid #dc3545;
-    padding: 8px 12px;
-    border-radius: 4px;
-}
+    .deuda-pendiente {
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        border-left: 4px solid #dc3545;
+        padding: 8px 12px;
+        border-radius: 4px;
+    }
 
-.deuda-pendiente .resumen-value {
-    color: #721c24;
-    font-weight: bold;
-}
+    .deuda-pendiente .resumen-value {
+        color: #721c24;
+        font-weight: bold;
+    }
 
     .deuda-section,
     .progreso-section {

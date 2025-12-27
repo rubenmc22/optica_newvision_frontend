@@ -950,7 +950,7 @@
         <div class="personal-grid">
           <div class="info-item-detalle">
             <label>👨‍💼 Asesor</label>
-            <div class="value">{{selectedVenta?.asesorNombre}}</div>
+            <div class="value">{{selectedVenta?.asesor?.nombre || 'No asignado'}}</div>
           </div>
           <div class="info-item-detalle">
             <label>👨‍⚕️ Especialista</label>
@@ -1175,69 +1175,90 @@
 
     <!-- Tarjeta de Métodos de Pago -->
     <div class="info-card metodos-pago-detalle" *ngIf="selectedVenta?.metodosPago?.length">
-      <div class="card-header-detalle">
-        <i class="bi bi-wallet2"></i>
-        <span>Métodos de Pago</span>
-      </div>
-      <div class="card-body-detalle">
-        <div class="metodos-grid">
-          <div *ngFor="let metodo of selectedVenta?.metodosPago" class="metodo-item-detalle">
-            <div class="metodo-icono">
-              <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
-                [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
-                [class.bi-phone]="metodo.tipo === 'pagomovil'" [class.bi-bank]="metodo.tipo === 'transferencia'"
-                [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
-            </div>
-            <div class="metodo-info-detalle">
-              <div class="metodo-tipo">{{ getTipoPagoDisplay(metodo.tipo) }}</div>
-
-              <!-- DISPLAY CORREGIDO DE MONTOS -->
-              <div class="montos-linea">
-                <!-- Pago en BOLIVARES - SOLO MONTO EN BS ALINEADO -->
-                <div *ngIf="metodo.moneda_id === 'bolivar'" class="monto-simple text-success">
-                  {{ metodo.monto | number:'1.2-2' }} Bs.
-                </div>
-
-                <!-- Pago en DÓLARES -->
-                <div *ngIf="metodo.moneda_id === 'dolar'" class="monto-simple text-success">
-                  {{ metodo.monto | number:'1.2-2' }} USD
-                </div>
-
-                <!-- Pago en EUROS -->
-                <div *ngIf="metodo.moneda_id === 'euro'" class="monto-simple text-success">
-                  {{ metodo.monto | number:'1.2-2' }} EUR
-                </div>
-              </div>
-
-              <!-- INFORMACIÓN ADICIONAL CORREGIDA -->
-              <div class="metodo-detalles-adicionales">
-                <!-- Referencia - mostrar siempre que exista -->
-                <div class="detalle-adicional" *ngIf="metodo.referencia">
-                  <i class="bi bi-receipt"></i>
-                  <span>Ref: {{metodo.referencia}}</span>
-                </div>
-
-                <!-- Banco - mostrar siempre que exista -->
-                <div class="detalle-adicional" *ngIf="metodo.bancoNombre">
-                  <i class="bi bi-building"></i>
-                  <span>Banco: {{metodo.bancoNombre}} {{metodo.bancoCodigo ? '(' + metodo.bancoCodigo + ')' :
-                    ''}}</span>
-                </div>
-
-                <!-- Tasa de cambio y equivalente - solo para pagos en bolívares, al final -->
-                <div *ngIf="metodo.moneda_id === 'bolivar' && metodo.monto_en_moneda_de_venta"
-                  class="detalle-adicional">
-                  <i class="bi bi-arrow-left-right"></i>
-                  <span>
-                    {{ getSimboloMonedaVenta() }}{{ metodo.monto_en_moneda_de_venta | number:'1.2-2' }}
-                    (Tasa: 1 {{ getMonedaVentaDisplay() }} = {{ getTasaBolivar() | number:'1.2-2' }} Bs)
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div class="card-header-detalle">
+            <i class="bi bi-wallet2"></i>
+            <span>Métodos de Pago</span>
         </div>
-      </div>
+        <div class="card-body-detalle">
+            <div class="metodos-grid">
+                <!-- Iterar sobre los grupos de pago -->
+                <div *ngFor="let pagoGroup of selectedVenta?.metodosPago" class="pago-group">
+                    <!-- Mostrar información del grupo si existe -->
+                    <div class="pago-group-header" *ngIf="selectedVenta?.metodosPago?.length > 1">
+                        <span class="badge bg-info">Abono #{{pagoGroup.numero_pago}}</span>
+                        <span class="ms-2">Total: {{pagoGroup.montoAbonado | number:'1.2-2'}} {{getMonedaVentaDisplay()}}</span>
+                    </div>
+                    
+                    <!-- Iterar sobre los métodos dentro de cada grupo -->
+                    <div *ngFor="let metodo of pagoGroup.metodosPago" class="metodo-item-detalle">
+                          <div class="metodo-icono">
+                              <i [class]="'bi ' + getIconoMetodoPago(metodo.tipo)"></i>
+                          </div>
+                          <div class="metodo-info-detalle">
+                            <div class="metodo-tipo">{{ getTipoPagoDisplay(metodo.tipo) }}</div>
+
+                            <!-- DISPLAY MONTOS -->
+                            <div class="montos-linea">
+                                <!-- Pago en BOLIVARES -->
+                                <div *ngIf="metodo.moneda_id === 'bolivar'" class="monto-simple text-success">
+                                    {{ metodo.monto | number:'1.2-2' }} Bs.
+                                </div>
+
+                                <!-- Pago en DÓLARES -->
+                                <div *ngIf="metodo.moneda_id === 'dolar'" class="monto-simple text-success">
+                                    {{ metodo.monto | number:'1.2-2' }} USD
+                                </div>
+
+                                <!-- Pago en EUROS -->
+                                <div *ngIf="metodo.moneda_id === 'euro'" class="monto-simple text-success">
+                                    {{ metodo.monto | number:'1.2-2' }} EUR
+                                </div>
+
+                                <!-- Mostrar conversión si aplica -->
+                                <div *ngIf="metodo.monto_moneda_base && metodo.moneda_id !== selectedVenta?.moneda" 
+                                    class="monto-convertido small text-muted ms-2">
+                                    ≈ {{ metodo.monto_moneda_base | number:'1.2-2' }} {{getMonedaVentaDisplay()}}
+                                </div>
+                            </div>
+
+                            <!-- INFORMACIÓN ADICIONAL -->
+                            <div class="metodo-detalles-adicionales">
+                                <!-- Referencia -->
+                                <div class="detalle-adicional" *ngIf="metodo.referencia">
+                                    <i class="bi bi-receipt"></i>
+                                    <span>Ref: {{metodo.referencia}}</span>
+                                </div>
+
+                                <!-- Banco -->
+                                <div class="detalle-adicional" *ngIf="metodo.bancoNombre">
+                                    <i class="bi bi-building"></i>
+                                    <span>Banco: {{metodo.bancoNombre}}</span>
+                                </div>
+
+                                <!-- Fecha -->
+                                <div class="detalle-adicional">
+                                    <i class="bi bi-calendar"></i>
+                                    <span>{{metodo.fechaRegistro | date:'dd/MM/yyyy HH:mm'}}</span>
+                                </div>
+
+                                <!-- Tasa de cambio si aplica -->
+                                <div *ngIf="metodo.moneda_id === 'bolivar' && metodo.tasa_moneda && metodo.tasa_moneda !== 1" 
+                                    class="detalle-adicional">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    <span>Tasa: 1 {{getMonedaVentaDisplay()}} = {{metodo.tasa_moneda | number:'1.2-2'}} Bs</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Observaciones del grupo -->
+                    <div class="pago-group-observaciones" *ngIf="pagoGroup.observaciones">
+                        <i class="bi bi-chat-left-text"></i>
+                        <span>{{pagoGroup.observaciones}}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Tarjeta de Resumen Financiero -->
