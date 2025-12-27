@@ -788,7 +788,7 @@
                                         <small class="validation-text">
                                             Mínimo: {{ formatearMoneda(calcularInicialCasheaPorNivel(montoTotal,
                                             nivelCashea), venta.moneda) }}
-                                            <span *ngIf="venta.moneda !== 'bolivar'">⇄ {{
+                                            <span *ngIf="venta.moneda !== 'bolivar'"> {{
                                                 obtenerEquivalenteBs(calcularInicialCasheaPorNivel(montoTotal,
                                                 nivelCashea)) | number:'1.2-2' }} Bs</span>
                                         </small>
@@ -871,7 +871,7 @@
                                             <div class="progress-label">
                                                 <span>{{ porcentajeAbonadoDelTotal }}% del total cubierto</span>
                                                 <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                    ⇄ {{ formatearMoneda(obtenerEquivalenteBs(venta.montoAbonado ?? 0),
+                                                     {{ formatearMoneda(obtenerEquivalenteBs(venta.montoAbonado ?? 0),
                                                     'bolivar') }}
                                                 </span>
                                             </div>
@@ -892,7 +892,7 @@
                                             {{ formatearMoneda(montoTotal - (venta.montoAbonado ?? 0), venta.moneda) }}
                                         </span>
                                         <small *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                            ⇄ {{ formatearMoneda(obtenerEquivalenteBs(montoTotal - (venta.montoAbonado
+                                             {{ formatearMoneda(obtenerEquivalenteBs(montoTotal - (venta.montoAbonado
                                             ?? 0)), 'bolivar') }}
                                         </small>
                                     </div>
@@ -1102,7 +1102,7 @@
 
                                             <!-- Mostrar conversión clara -->
                                             <span *ngIf="metodo.monto && metodo.monto > 0" class="conversion-text">
-                                                <i class="bi bi-arrow-left-right"></i>
+                                                <i class="bi"></i>
                                                 {{ formatearMoneda(metodo.monto, getMonedaParaMetodo(metodo.tipo)) }}
                                                 = {{ getInfoConversionMetodo(metodo) }}
                                                 <span *ngIf="getMonedaParaMetodo(metodo.tipo) !== 'bolivar'"
@@ -1164,7 +1164,7 @@
                                 <span class="total-amount">
                                     {{ formatearMoneda(redondearDosDecimales(montoTotal), venta.moneda) }}
                                     <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                        ⇄ {{ formatearMoneda(redondearDosDecimales(obtenerEquivalenteBs(montoTotal)),
+                                         {{ formatearMoneda(redondearDosDecimales(obtenerEquivalenteBs(montoTotal)),
                                         'bolivar') }}
                                     </span>
                                 </span>
@@ -1189,7 +1189,7 @@
                                     <span class="detalle-value">
                                         {{ formatearMoneda(redondearDosDecimales(montoTotal), venta.moneda) }}
                                         <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                            ⇄ {{
+                                             {{
                                             formatearMoneda(redondearDosDecimales(obtenerEquivalenteBs(montoTotal)),
                                             'bolivar') }}
                                         </span>
@@ -1214,7 +1214,7 @@
                                             {{ formatearMoneda(redondearDosDecimales(venta.montoInicial), venta.moneda)
                                             }}
                                             <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                ⇄ {{
+                                                 {{
                                                 formatearMoneda(redondearDosDecimales(obtenerEquivalenteBs(venta.montoInicial)),
                                                 'bolivar') }}
                                             </span>
@@ -1232,7 +1232,7 @@
                                         <span class="detalle-value">
                                             {{ formatearMoneda(resumenCashea.total, venta.moneda) }}
                                             <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                ⇄ {{ formatearMoneda(resumenCashea.totalBs, 'bolivar') }}
+                                                 {{ formatearMoneda(resumenCashea.totalBs, 'bolivar') }}
                                             </span>
                                             <small class="detail-text">({{ resumenCashea.cantidad }} cuota{{
                                                 resumenCashea.cantidad > 1 ? 's' : '' }})</small>
@@ -1245,7 +1245,7 @@
                                         <span class="detalle-value total-pagado-value">
                                             <strong>{{ formatearMoneda(totalPagadoCashea, venta.moneda) }}</strong>
                                             <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                ⇄ {{ formatearMoneda(totalPagadoCasheaBs, 'bolivar') }}
+                                                 {{ formatearMoneda(totalPagadoCasheaBs, 'bolivar') }}
                                             </span>
                                             <small class="detail-text">
                                                 (Inicial {{ formatearMoneda(redondearDosDecimales(venta.montoInicial),
@@ -1268,7 +1268,7 @@
                                             {{ formatearMoneda(redondearDosDecimales(venta.montoAbonado ?? 0),
                                             venta.moneda) }}
                                             <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                ⇄ {{
+                                                 {{
                                                 formatearMoneda(redondearDosDecimales(obtenerEquivalenteBs(venta.montoAbonado
                                                 ?? 0)), 'bolivar') }}
                                             </span>
@@ -1291,30 +1291,48 @@
                                 <i class="bi bi-wallet2"></i>
                                 Métodos de pago aplicados
                             </h6>
+                            
                             <div class="metodos-list">
-                                <div *ngFor="let metodo of venta.metodosDePago" class="metodo-resumen-item">
+                                <div *ngFor="let metodo of venta.metodosDePago" 
+                                    class="metodo-resumen-item"
+                                    [class.con-datos]="metodo.referencia || metodo.banco"
+                                    [class.pago-movil]="metodo.tipo === 'pago_movil' || metodo.tipo === 'pagomovil'"
+                                    [class.transferencia]="metodo.tipo === 'transferencia'">
+                                    
                                     <div class="metodo-info">
-                                        <span class="metodo-tipo">{{ metodo.tipo | titlecase }}</span>
-
-                                        <!-- Mostrar referencia si existe -->
-                                        <span *ngIf="metodo.referencia" class="metodo-referencia">
-                                            Ref: {{ metodo.referencia }}
+                                        <!-- Tipo de método de pago -->
+                                        <span class="metodo-tipo">
+                                            {{ metodo.tipo | titlecase }}
                                         </span>
-
-                                        <!-- Mostrar banco si existe -->
-                                        <span *ngIf="metodo.banco" class="metodo-banco">
-                                            Banco: {{ metodo.banco }}
-                                        </span>
+                                        
+                                        <!-- Contenedor para referencia y banco (solo visible si existen) -->
+                                        <div *ngIf="metodo.referencia || metodo.banco" class="metodo-datos-container">
+                                            
+                                            <!-- Mostrar referencia si existe -->
+                                            <span *ngIf="metodo.referencia" class="metodo-referencia">
+                                                <span class="referencia-label">Ref:</span>
+                                                <span class="referencia-value">{{ metodo.referencia }}</span>
+                                            </span>
+                                            
+                                            <!-- Mostrar banco si existe -->
+                                            <span *ngIf="metodo.banco" class="metodo-banco">
+                                                <span class="banco-label">Banco:</span>
+                                                <span class="banco-value">{{ metodo.banco }}</span>
+                                            </span>
+                                            
+                                        </div>
                                     </div>
-
+                                    
+                                    <!-- Monto y conversión -->
                                     <span class="metodo-monto">
-                                        {{ formatearMoneda(redondear(metodo.monto ?? 0),
-                                        getMonedaParaMetodo(metodo.tipo)) }}
-
-                                        <span *ngIf="getMonedaParaMetodo(metodo.tipo) !== 'bolivar'"
-                                            class="conversion-text">
-                                            ⇄ {{ formatearMoneda(redondear(calcularConversionBs(metodo.monto ?? 0,
-                                            metodo.tipo)), 'bolivar') }}
+                                        <span class="monto-principal">
+                                            {{ formatearMoneda(redondear(metodo.monto ?? 0), getMonedaParaMetodo(metodo.tipo)) }}
+                                        </span>
+                                        
+                                        <span *ngIf="getMonedaParaMetodo(metodo.tipo) !== 'bolivar'" class="conversion-text">
+                                            <span class="conversion-value">
+                                                {{ formatearMoneda(redondear(calcularConversionBs(metodo.monto ?? 0, metodo.tipo)), 'bolivar') }}
+                                            </span>
                                         </span>
                                     </span>
                                 </div>
@@ -1323,7 +1341,7 @@
                     </div>
                 </div>
 
-                <!-- 👨‍💼 Selección de Asesor - Switch en header, selector a la derecha -->
+                <!-- Selección de Asesor - Switch en header, selector a la derecha -->
                 <div class="info-card asesor asesor-container">
                     <div class="card-header-detalle">
                         <i class="bi bi-person-gear"></i>

@@ -1948,7 +1948,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return ''; // No mostrar conversión si es la misma moneda
         }
 
-        return `⇄ ${this.formatearMoneda(montoEnSistema, this.venta.moneda)}`;
+        return `⇄${this.formatearMoneda(montoEnSistema, this.venta.moneda)}`;
     }
 
     calcularConversionBs(monto: number, tipoMetodo: string): number {

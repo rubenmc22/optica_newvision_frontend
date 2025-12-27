@@ -2378,7 +2378,6 @@
 
         .conversion-text {
             color: var(--primary-color) !important;
-            ;
         }
     }
 }
@@ -2479,7 +2478,6 @@
 
     .conversion-text {
         color: var(--primary-color) !important;
-        ;
     }
 
     .maximo-text {
@@ -2706,7 +2704,6 @@
         .detail-text {
             font-size: 0.75rem;
             color: var(--primary-color) !important;
-            ;
             display: block;
             margin-top: 0.125rem;
         }
@@ -2841,41 +2838,371 @@
 }
 
 // Métodos resumen
+/* ============================================= */
+/* ESTILOS MEJORADOS PARA MÉTODOS DE PAGO */
+/* ============================================= */
+
 .metodos-resumen {
     margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #e9ecef;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.detalle-title {
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+
+    i {
+        font-size: 1.2rem;
+        color: var(--primary-color);
+        background: rgba(var(--primary-rgb), 0.1);
+        padding: 0.5rem;
+        border-radius: 10px;
+    }
 }
 
 .metodos-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
 }
 
 .metodo-resumen-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding: 1rem;
+    align-items: flex-start;
+    padding: 1.25rem;
     background: white;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
 
-    .metodo-tipo {
-        font-weight: 500;
-        color: #495057;
+    &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transform: translateY(-1px);
+        border-color: #cbd5e1;
+    }
+}
+
+.metodo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+    /* Permite que el contenido se ajuste */
+}
+
+/* Badge para el tipo de pago */
+.metodo-tipo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1) 0%, rgba(var(--primary-rgb), 0.05) 100%);
+    color: var(--primary-color);
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-left: 3px solid var(--primary-color);
+    max-width: fit-content;
+
+    &:before {
+        content: '';
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: var(--primary-color);
+        border-radius: 50%;
+    }
+}
+
+/* Contenedor para referencia y banco */
+.metodo-datos-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Estilos para referencia */
+.metodo-referencia {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid #d1fae5;
+    border-radius: 6px;
+    color: #065f46;
+    font-weight: 500;
+    font-size: 0.9rem;
+    flex: 1;
+    min-width: 200px;
+
+    &:before {
+        content: '🔗';
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    .referencia-label {
+        font-weight: 600;
+        color: #047857;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    .referencia-value {
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        color: #064e3b;
+        margin-left: 0.5rem;
+        letter-spacing: 0.5px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* Estilos para banco */
+.metodo-banco {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid #dbeafe;
+    border-radius: 6px;
+    color: #1e40af;
+    font-weight: 500;
+    font-size: 0.9rem;
+    flex: 1;
+    min-width: 200px;
+
+    &:before {
+        content: '🏦';
+        font-size: 0.8rem;
+        opacity: 0.8;
+    }
+
+    .banco-label {
+        font-weight: 600;
+        color: #1d4ed8;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    .banco-value {
+        font-weight: 600;
+        color: #1e3a8a;
+        margin-left: 0.5rem;
+        letter-spacing: 0.5px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* Monto del método de pago */
+.metodo-monto {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    min-width: 180px;
+    margin-left: 1.5rem;
+    text-align: right;
+}
+
+.monto-principal {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* Texto de conversión */
+.conversion-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.1rem 0rem;
+   // background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    //border: 1px solid #fbbf24;
+
+    &:before {
+        content: '⇄';
+        font-weight: 600;
+        opacity: 0.8;
+    }
+
+    .conversion-value {
+        font-weight: 600;
+        margin-left: 0.25rem;
+        font-family: 'Courier New', monospace;
+    }
+}
+
+/* ============================================= */
+/* VERSIÓN COMPACTA PARA MÓVILES */
+/* ============================================= */
+@media (max-width: 768px) {
+    .metodos-resumen {
+        padding: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .metodo-resumen-item {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
     }
 
     .metodo-monto {
-        font-weight: 600;
-        color: #495057;
+        align-items: flex-start;
+        margin-left: 0;
+        min-width: auto;
+        width: 100%;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 1rem;
+    }
 
-        .conversion-text {
-            font-size: 0.875rem;
-            color: #6c757d;
-            margin-left: 0.5rem;
+    .monto-principal {
+        font-size: 1.1rem;
+    }
+
+    .metodo-datos-container {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .metodo-referencia,
+    .metodo-banco {
+        min-width: 100%;
+        width: 100%;
+    }
+
+    .detalle-title {
+        font-size: 1rem;
+        margin-bottom: 1.25rem;
+
+        i {
+            padding: 0.4rem;
+            font-size: 1rem;
         }
+    }
+}
+
+/* ============================================= */
+/* ESTILOS PARA MÉTODOS SIN REFERENCIA/BANCO */
+/* ============================================= */
+.metodo-resumen-item:not([class*="con-datos"]) .metodo-datos-container {
+    display: none;
+}
+
+/* ============================================= */
+/* ANIMACIONES */
+/* ============================================= */
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.metodo-resumen-item {
+    animation: fadeInSlide 0.3s ease-out forwards;
+}
+
+/* ============================================= */
+/* ESTILOS PARA ESTADOS ESPECIALES */
+/* ============================================= */
+
+/* Efecto para pagos completados */
+.metodo-resumen-item.completado {
+    border-left: 4px solid #10b981;
+
+    .metodo-tipo {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        color: #065f46;
+        border-left-color: #10b981;
+    }
+}
+
+/* Efecto para pagos pendientes */
+.metodo-resumen-item.pendiente {
+    border-left: 4px solid #f59e0b;
+
+    .metodo-tipo {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #92400e;
+        border-left-color: #f59e0b;
+    }
+}
+
+/* Estilos específicos para Pago Móvil */
+.metodo-resumen-item.pago-movil {
+    .metodo-tipo:before {
+        content: '📱';
+        background: none;
+        width: auto;
+        height: auto;
+    }
+}
+
+/* Estilos específicos para Transferencia */
+.metodo-resumen-item.transferencia {
+    .metodo-tipo:before {
+        content: '💳';
+        background: none;
+        width: auto;
+        height: auto;
+    }
+}
+
+/* ============================================= */
+/* MEJORAS PARA LA VISTA DE RECIBO */
+/* ============================================= */
+.recibo-compacto .metodos-resumen {
+    background: white;
+    border: 2px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+    .metodo-resumen-item {
+        box-shadow: none;
+        border: 1px solid #d1d5db;
+
+        &:hover {
+            transform: none;
+            box-shadow: none;
+        }
+    }
+
+    .metodo-datos-container {
+        background: #f9fafb;
     }
 }
 
