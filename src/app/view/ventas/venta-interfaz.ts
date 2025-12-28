@@ -54,8 +54,8 @@ export interface MetodoPago {
     bancoCodigo?: string;
     bancoNombre?: string;
     banco?: string;
-    bancoObject?: { codigo: string; nombre: string }; 
-     moneda?: string;
+    bancoObject?: { codigo: string; nombre: string };
+    moneda?: string;
 }
 
 export interface DatosRecibo {
@@ -125,8 +125,10 @@ export interface ProductoVentaCalculado {
     iva: number;
     total: number;
     precioConvertido: number;
+    precioConIva: number;
     aplicaIva: boolean;
     stock: number;
+
 }
 
 export interface CuotaCashea {

@@ -28,8 +28,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 
-
-
 @Component({
     selector: 'app-generar-venta',
     standalone: false,
@@ -89,7 +87,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     montoExcedido: boolean = false;
     maximoCuotasPermitidas = 6;
     cantidadCuotasCashea = 3;
-    sedeInfo: SedeInfo | null = null; // Nueva propiedad para la sede
+    sedeInfo: SedeInfo | null = null; 
 
     productos: Producto[] = [];
     pacientes: any[] = [];
@@ -133,6 +131,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     ventaGenerada: boolean = false;
     urlRecibo: string = '';
     errorGeneracion: string = '';
+    mostrarDetalleDescuento: boolean = false;
 
     // === PROPIEDADES PARA CLIENTE API ===
     validandoCliente: boolean = false;
@@ -691,7 +690,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return item.id;
     }
 
-    // === CÁLCULOS DE PRODUCTOS ===
     actualizarProductosConDetalle(): void {
         const monedaDestino = this.venta.moneda;
         const tasaDestino = this.tasasDisponibles.find(t => t.nombre.toLowerCase() === monedaDestino)?.valor ?? 1;
@@ -701,36 +699,75 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const aplicaIva = p.aplicaIva ?? false;
             const tasaOrigen = this.tasasDisponibles.find(t => t.nombre.toLowerCase() === p.moneda)?.valor ?? 1;
 
-            // **SUBTOTAL**: precio sin IVA × cantidad
+            // PRECIO SIN IVA: precio base convertido
             const precioUnitarioSinIvaConvertido = +(p.precio * (tasaOrigen / tasaDestino)).toFixed(2);
-            const subtotal = +(precioUnitarioSinIvaConvertido * cantidad).toFixed(2);
 
-            // **IVA**: solo si aplica IVA
-            const iva = aplicaIva ? +(subtotal * (this.ivaPorcentaje / 100)).toFixed(2) : 0;
+            // SUBTOTAL SIN IVA: precio sin IVA × cantidad
+            const subtotalSinIva = +(precioUnitarioSinIvaConvertido * cantidad).toFixed(2);
 
-            // **TOTAL**: subtotal + iva
-            const total = +(subtotal + iva).toFixed(2);
+            // CALCULAR IVA ORIGINAL: solo si aplica IVA
+            const ivaOriginal = aplicaIva ?
+                +(subtotalSinIva * (this.ivaPorcentaje / 100)).toFixed(2) : 0;
+
+            // PRECIO CON IVA: para referencia si es necesario
+            const precioUnitarioConIva = aplicaIva ?
+                +(precioUnitarioSinIvaConvertido * (1 + (this.ivaPorcentaje / 100))).toFixed(2) :
+                precioUnitarioSinIvaConvertido;
+
+            // TOTAL ORIGINAL por producto: subtotal sin IVA + IVA
+            const totalOriginal = subtotalSinIva + ivaOriginal;
+
+            // Cálculos con descuento (si aplica)
+            const proporcionProducto = this.calcularProporcionProducto({
+                precioConvertido: precioUnitarioSinIvaConvertido,
+                cantidad,
+                aplicaIva
+            });
+
+            const descuentoProducto = this.calcularDescuento() * proporcionProducto;
+            const baseConDescuento = Math.max(subtotalSinIva - descuentoProducto, 0);
+
+            const ivaConDescuento = aplicaIva ?
+                +(baseConDescuento * (this.ivaPorcentaje / 100)).toFixed(2) : 0;
+
+            const totalConDescuento = baseConDescuento + ivaConDescuento;
 
             return {
                 ...p,
                 codigo: p.codigo,
                 cantidad,
                 precioConvertido: precioUnitarioSinIvaConvertido,
-                subtotal: subtotal,    // PRECIO × CANTIDAD (sin IVA)
-                iva,                  // IVA sobre subtotal
-                total: total,         // SUBTOTAL + IVA
-                stock: p.stock
+                precioConIva: precioUnitarioConIva,
+                subtotal: subtotalSinIva,      // ← SUBTOTAL SIN IVA
+                iva: ivaOriginal,              // IVA ORIGINAL
+                total: totalOriginal,          // TOTAL ORIGINAL
+                descuentoAsignado: descuentoProducto,
+                baseConDescuento: baseConDescuento,
+                ivaConDescuento: ivaConDescuento,
+                totalConDescuento: totalConDescuento,
+                stock: p.stock,
+                aplicaIva: aplicaIva
             };
         });
 
-        this.totalProductos = this.calcularTotalProductos();
+        // Actualizar el total de productos (subtotal sin IVA)
+        this.totalProductos = this.productosConDetalle.reduce((acc, producto) => {
+            return acc + (producto.subtotal || 0);
+        }, 0);
+
+        // Debug para verificar cálculos
+        this.debugCalculos();
     }
 
     calcularTotalProductos(): number {
         if (!Array.isArray(this.productosConDetalle)) return 0;
+
+        // Calcular subtotal con IVA: suma de (precio con IVA * cantidad)
         return this.productosConDetalle.reduce((acc, p) => {
-            const total = +p.total || 0;  // SUBTOTAL + IVA
-            return acc + total;
+            // Si el producto aplica IVA, usar precioConIva, sino usar precioConvertido
+            const precioUnitarioConIva = p.aplicaIva ? (p.precioConIva || 0) : (p.precioConvertido || 0);
+            const subtotalProducto = precioUnitarioConIva * (p.cantidad || 1);
+            return acc + subtotalProducto;
         }, 0);
     }
 
@@ -1007,12 +1044,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.redondear(sumaExacta);
     }
 
-    get montoTotal(): number {
-        const descuento = this.venta.descuento ?? 0;
-        const totalConDescuento = this.totalProductos * (1 - descuento / 100);
-        return this.redondear(totalConDescuento);
-    }
-
     get restantePorMetodos(): number {
         const pagado = this.totalPagadoPorMetodos;
         const requerido = this.montoCubiertoPorMetodos;
@@ -1170,12 +1201,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (this.venta.descuento < 0) this.venta.descuento = 0;
         if (this.venta.descuento > 100) this.venta.descuento = 100;
 
+        // Recalcular productos con los nuevos valores de descuento
         this.actualizarProductosConDetalle();
 
         if (this.venta.formaPago === 'cashea') {
             this.actualizarMontoInicialCashea();
             this.generarCuotasCashea();
         }
+
+        // Forzar actualización de la vista
+        this.cdr.detectChanges();
     }
 
     actualizarMontoInicialCashea(): void {
@@ -1589,6 +1624,54 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     // === MÉTODOS DE VENTA ===
+    /* abrirModalResumen(): void {
+         if (this.venta.productos.length === 0) {
+             this.swalService.showWarning('Sin productos', 'Debes agregar al menos un producto para continuar.');
+             return;
+         }
+ 
+         const hayFormulacion = !!this.historiaMedica?.examenOcular?.refraccionFinal;
+         if (hayFormulacion && !this.pacienteSeleccionado) {
+             this.swalService.showWarning('Paciente requerido', 'Debes seleccionar un paciente para aplicar la formulación.');
+             return;
+         }
+ 
+         this.actualizarProductosConDetalle();
+ 
+         const modalElement = document.getElementById('resumenVentaModal');
+         if (modalElement) {
+             const modal = new bootstrap.Modal(modalElement);
+             modal.show();
+         }
+     }*/
+
+    // === MÉTODOS DE DIAGNÓSTICO ===
+    debugSubtotales(): void {
+        console.log('=== DEBUG DE SUBTOTALES ===');
+
+        // Mostrar detalles de cada producto
+        this.productosConDetalle.forEach((producto, index) => {
+            console.log(`Producto ${index + 1}: ${producto.nombre}`);
+            console.log(`  - Precio original: ${producto.precio}`);
+            console.log(`  - Precio convertido: ${producto.precioConvertido}`);
+            console.log(`  - Precio con IVA: ${producto.precioConIva}`);
+            console.log(`  - Cantidad: ${producto.cantidad}`);
+            console.log(`  - Subtotal sin IVA: ${producto.precioConvertido * producto.cantidad}`);
+            console.log(`  - Subtotal con IVA: ${producto.precioConIva * producto.cantidad}`);
+            console.log(`  - IVA individual: ${producto.iva}`);
+        });
+
+        console.log(`Subtotal sin IVA (calcularSubtotalSinIva): ${this.calcularSubtotalSinIva()}`);
+        console.log(`Subtotal sin IVA (subtotalCorregido): ${this.subtotalCorregido}`);
+        console.log(`Subtotal con IVA (calcularTotalProductos): ${this.calcularTotalProductos()}`);
+        console.log(`Subtotal con IVA (subtotalConIvaCorregido): ${this.subtotalConIvaCorregido}`);
+        console.log(`IVA total: ${this.calcularIvaTotal()}`);
+        console.log(`Descuento: ${this.calcularDescuento()}`);
+        console.log(`Monto total: ${this.montoTotal}`);
+        console.log('=== FIN DEBUG ===');
+    }
+
+    // Llama a este método cuando abras el modal para ver qué está pasando
     abrirModalResumen(): void {
         if (this.venta.productos.length === 0) {
             this.swalService.showWarning('Sin productos', 'Debes agregar al menos un producto para continuar.');
@@ -1603,12 +1686,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         this.actualizarProductosConDetalle();
 
+        // DEBUG: Ver cálculos antes de abrir el modal
+        this.debugSubtotales();
+
         const modalElement = document.getElementById('resumenVentaModal');
         if (modalElement) {
             const modal = new bootstrap.Modal(modalElement);
             modal.show();
         }
     }
+
 
     limpiarTodosLosSelects(): void {
         // Limpiar modelos
@@ -2396,28 +2483,28 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             bancoNombre: metodo.bancoNombre || null
         }));
 
-        // CALCULAR TOTALES
-        const productosParaCalculo = this.obtenerProductosParaCalculoTotales();
+        // CALCULAR TOTALES CORRECTAMENTE
+        // 1. Calcular SUBTOTAL CORRECTO: suma de (precio con IVA * cantidad)
+        const subtotalConIva = this.calcularTotalProductos(); // Usar el método existente
 
-        // 1. Calcular subtotal CORRECTO: precio sin IVA × cantidad
-        const subtotalCorrecto = productosParaCalculo.reduce((total, producto) => {
-            const precioUnitarioSinIva = producto.precioConvertido || producto.precio || 0;
-            return total + (precioUnitarioSinIva * (producto.cantidad || 1));
-        }, 0);
+        // 1. Base imponible SIN IVA
+        const baseImponible = this.subtotalCorregido;
+        // 2. Descuento sobre base imponible (SIN IVA)
+        const descuentoMonto = this.venta.descuento ? (baseImponible * (this.venta.descuento / 100)) : 0;
+        const baseConDescuento = baseImponible - descuentoMonto;
 
-        // 2. Calcular IVA CORRECTO: solo productos que aplican IVA
-        const ivaCorrecto = productosParaCalculo.reduce((total, producto) => {
-            if (producto.aplicaIva) {
-                const precioUnitarioSinIva = producto.precioConvertido || producto.precio || 0;
-                const subtotalProducto = precioUnitarioSinIva * (producto.cantidad || 1);
-                return total + (subtotalProducto * (this.ivaPorcentaje / 100));
-            }
-            return total;
-        }, 0);
+        // 3. IVA sobre base con descuento
+        const ivaCorrecto = this.calcularIvaSobreBaseConDescuento(baseConDescuento);
 
-        // 3. Calcular total CORRECTO: subtotal + IVA - descuento
-        const descuentoMonto = this.venta.descuento ? (subtotalCorrecto * (this.venta.descuento / 100)) : 0;
-        const totalCorrecto = subtotalCorrecto + ivaCorrecto - descuentoMonto;
+        // 4. Total final
+        const totalCorrecto = baseConDescuento + ivaCorrecto;
+
+        // 6. Verificar cálculos
+        console.log('CÁLCULOS CORREGIDOS:');
+        console.log('Subtotal (con IVA):', subtotalConIva);
+        console.log('IVA total:', ivaCorrecto);
+        console.log('Descuento aplicado:', descuentoMonto);
+        console.log('Total final (subtotal - descuento):', totalCorrecto);
 
         // Determinar total pagado según forma de pago
         let totalPagado = 0;
@@ -2448,10 +2535,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 tasa_cambio: tasaUtilizada,
             },
             totales: {
-                subtotal: this.redondear(subtotalCorrecto),
-                descuento: this.redondear(descuentoMonto),
-                iva: this.redondear(ivaCorrecto),
-                total: this.redondear(totalCorrecto),
+                subtotal: this.redondear(subtotalConIva),     // Subtotal CON IVA
+                descuento: this.redondear(descuentoMonto),       // Descuento sobre subtotal con IVA
+                iva: this.redondear(ivaCorrecto),                // IVA total
+                total: this.redondear(totalCorrecto),            // Subtotal con IVA - descuento
                 totalPagado: this.redondear(totalPagado)
             },
             cliente: clienteData,
@@ -2471,7 +2558,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             datosParaAPI.formaPago = {
                 tipo: 'cashea',
                 nivel: this.nivelCashea,
-                montoTotal: this.redondear(totalCorrecto),
+                montoTotal: this.redondear(totalCorrecto),  // Usar el total corregido
                 montoInicial: this.venta.montoInicial,
                 cantidadCuotas: this.cantidadCuotasCashea.toString(),
                 montoPorCuota: this.montoPrimeraCuota,
@@ -2501,7 +2588,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         } else if (this.venta.formaPago === 'contado') {
             datosParaAPI.formaPagoDetalle = {
                 tipo: 'contado',
-                montoTotal: this.redondear(totalCorrecto),
+                montoTotal: this.redondear(totalCorrecto),  // Usar el total corregido
                 totalPagado: this.redondear(totalPagado)
             };
         }
@@ -2719,30 +2806,48 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }));
     }
 
-    /**
-     * Obtiene productos con detalles optimizados (sin recalcular)
-     */
     private obtenerProductosConDetallesOptimizado(): any[] {
         return this.venta.productos.map((p, index) => {
             const productoCalculado = this.productosConDetalle.find(pc => pc.id === p.id);
 
             if (productoCalculado) {
+                // Usar precioConIva para el subtotal (que incluye IVA si aplica)
+                const precioUnitarioConIva = productoCalculado.precioConIva || 0;
+                const subtotalConIva = precioUnitarioConIva * (p.cantidad || 1);
+
                 return {
                     nombre: p.nombre || 'Producto',
                     codigo: p.codigo || 'N/A',
                     cantidad: p.cantidad || 1,
-                    precioUnitario: p.precio || 0,
-                    precioConIva: p.precioConIva || 0,
-                    subtotal: productoCalculado.subtotal || 0,
+                    precioUnitario: productoCalculado.precioConvertido || 0, // Precio sin IVA
+                    precioConIva: precioUnitarioConIva, // Precio con IVA
+                    subtotal: subtotalConIva, // cantidad × precio con IVA
                     iva: productoCalculado.iva || 0,
-                    total: productoCalculado.total || 0,
+                    total: subtotalConIva, // El total es el mismo que subtotal (ya incluye IVA)
                     aplicaIva: p.aplicaIva || false,
                     moneda: p.moneda
                 };
             }
 
-            // Fallback solo si es necesario
-            return this.crearProductoFallback(p);
+            // Fallback - mantén la lógica existente
+            const cantidad = p.cantidad || 1;
+            const precioSinIva = p.precio || 0;
+            const ivaCalculado = p.aplicaIva ? precioSinIva * cantidad * (this.ivaPorcentaje / 100) : 0;
+            const precioConIva = p.aplicaIva ? precioSinIva * (1 + (this.ivaPorcentaje / 100)) : precioSinIva;
+            const subtotalConIva = precioConIva * cantidad;
+
+            return {
+                nombre: p.nombre || 'Producto',
+                codigo: p.codigo || 'N/A',
+                cantidad: cantidad,
+                precioUnitario: precioSinIva, // Sin IVA
+                precioConIva: precioConIva, // Con IVA
+                subtotal: subtotalConIva, // cantidad × precio con IVA
+                iva: ivaCalculado,
+                total: subtotalConIva,
+                aplicaIva: p.aplicaIva || false,
+                moneda: p.moneda
+            };
         });
     }
 
@@ -2849,7 +2954,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 1500);
     }
 
-    // === MÉTODOS DE RECIBO ===
     generarReciboHTML(datos: any): string {
         if (!datos) {
             datos = this.crearDatosReciboReal();
@@ -2866,7 +2970,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // OBTENER INFORMACIÓN DE LA SEDE DESDE EL COMPONENTE
         const sedeInfo = this.sedeInfo || this.userStateService.getSedeActual();
 
-        // FUNCIÓN PARA LIMPIAR EL RIF (por si acaso)
+        // FUNCIÓN PARA LIMPIAR EL RIF
         const limpiarRif = (rif: string): string => {
             if (!rif) return '';
             return rif.replace(/^rif/i, '').trim();
@@ -2888,7 +2992,19 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const monedaFinal = moneda || datos.configuracion?.moneda || 'dolar';
             const simbolo = this.obtenerSimboloMoneda(monedaFinal);
 
-            return `${simbolo}${montoNumerico.toFixed(2)}`;
+            // Formatear al estilo venezolano
+            const valorRedondeado = Math.round(montoNumerico * 100) / 100;
+            const partes = valorRedondeado.toString().split('.');
+            let parteEntera = partes[0];
+            let parteDecimal = partes[1] || '00';
+            parteDecimal = parteDecimal.padEnd(2, '0');
+            parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+            if (simbolo === 'Bs.') {
+                return `${simbolo} ${parteEntera},${parteDecimal}`;
+            } else {
+                return `${simbolo}${parteEntera},${parteDecimal}`;
+            }
         };
 
         // GENERAR ENCABEZADO DINÁMICO
@@ -2896,672 +3012,707 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             if (sedeInfo) {
                 const rifLimpio = limpiarRif(sedeInfo.rif || '');
                 return `
-            <div class="empresa-nombre">${sedeInfo.nombre_optica || sedeInfo.nombre || 'NEW VISION LENS'}</div>
-            <div class="empresa-info">${sedeInfo.direccion || 'C.C. Candelaria, Local PB-04, Guarenas'} | Tel: ${sedeInfo.telefono || '0212-365-39-42'}</div>
-            <div class="empresa-info">RIF: ${rifLimpio || 'J-123456789'} | ${sedeInfo.email || 'newvisionlens2020@gmail.com'}</div>
-        `;
+                <div class="empresa-nombre">${sedeInfo.nombre_optica || sedeInfo.nombre || 'NEW VISION LENS'}</div>
+                <div class="empresa-info">${sedeInfo.direccion || 'C.C. Candelaria, Local PB-04, Guarenas'} | Tel: ${sedeInfo.telefono || '0212-365-39-42'}</div>
+                <div class="empresa-info">RIF: ${rifLimpio || 'J-123456789'} | ${sedeInfo.email || 'newvisionlens2020@gmail.com'}</div>
+            `;
             }
 
             // Fallback si no hay información de sede
             return `
-        <div class="empresa-nombre">NEW VISION LENS</div>
-        <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
-        <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
-    `;
+            <div class="empresa-nombre">NEW VISION LENS</div>
+            <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
+            <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
+        `;
+        };
+
+        // GENERAR TABLA DE PRODUCTOS CORREGIDA
+        const generarTablaProductos = () => {
+            if (!datos.productos || datos.productos.length === 0) {
+                return '<div class="alert alert-warning">No hay productos</div>';
+            }
+
+            return `
+            <div class="productos-compactos page-break-avoid">
+                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">PRODUCTOS</h6>
+                <table class="tabla-productos">
+                    <thead>
+                        <tr>
+                            <th width="5%" class="text-center">#</th>
+                            <th width="55%">Descripción</th>
+                            <th width="10%" class="text-center">Cant</th>
+                            <th width="15%" class="text-end">P. Unitario</th>
+                            <th width="15%" class="text-end">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${datos.productos.map((producto: any, index: number) => {
+                // Asegurar que los valores son correctos
+                const precioUnitario = producto.precioUnitario || 0;
+                const cantidad = producto.cantidad || 1;
+                const subtotalCalculado = precioUnitario * cantidad;
+
+                return `
+                                <tr>
+                                    <td class="text-center">${index + 1}</td>
+                                    <td>${producto.nombre || 'Producto'}</td>
+                                    <td class="text-center">${cantidad}</td>
+                                    <td class="text-end">${formatearMonedaLocal(precioUnitario)}</td>
+                                    <td class="text-end">${formatearMonedaLocal(subtotalCalculado)}</td>
+                                </tr>
+                            `;
+            }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+        };
+
+        // GENERAR RESUMEN DE FORMA DE PAGO
+        const generarResumenFormaPago = () => {
+            let contenido = '';
+
+            if (datos.cashea) {
+                contenido = `
+                            <div class="resumen-venta page-break-avoid">
+                                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6>
+                                
+                                <div class="resumen-cashea">
+                                    <!-- Forma de pago -->
+                                    <div style="text-align: center; margin-bottom: 10px;">
+                                        <span class="badge bg-info fs-6">PLAN CASHEA</span>
+                                    </div>
+
+                                    <!-- Información del plan Cashea -->
+                                    <div style="text-align: center; margin-bottom: 10px;">
+                                        <div class="cashea-info">
+                                            <div class="nivel-cashea" style="margin-bottom: 5px;">
+                                                <small class="text-muted">NIVEL</small>
+                                                <div class="fw-bold text-primary" style="font-size: 12px;">${this.obtenerNombreNivelCashea(datos.cashea.nivel)}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Desglose de pagos -->
+                                    <div class="pagos-section">
+                                        <h6 style="text-align: center; margin-bottom: 10px; font-weight: bold; color: #2c5aa0; font-size: 12px;">DESGLOSE DE PAGOS</h6>
+
+                                        <!-- Pago inicial -->
+                                        <div class="pago-item">
+                                            <div style="text-align: center; width: 50%;">
+                                                <strong style="font-size: 11px;">Pago Inicial</strong>
+                                            </div>
+                                            <div style="text-align: center; width: 50%;">
+                                                <strong style="font-size: 11px;">${formatearMonedaLocal(datos.cashea.inicial)}</strong>
+                                            </div>
+                                        </div>
+
+                                        <!-- Cuotas adelantadas -->
+                                        ${datos.cashea.cuotasAdelantadas > 0 ? `
+                                            <div class="pago-item">
+                                                <div style="text-align: center; width: 50%;">
+                                                    <strong style="font-size: 11px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong>
+                                                </div>
+                                                <div style="text-align: center; width: 50%;">
+                                                    <strong style="font-size: 11px;">${formatearMonedaLocal(datos.cashea.montoAdelantado)}</strong>
+                                                </div>
+                                            </div>
+                                        ` : ''}
+
+                                        <!-- Total pagado ahora -->
+                                        <div class="pago-total">
+                                            <div style="text-align: center; width: 50%;">
+                                                <strong style="font-size: 11px;">TOTAL PAGADO AHORA:</strong>
+                                            </div>
+                                            <div style="text-align: center; width: 50%;">
+                                                <strong class="text-success" style="font-size: 11px;">${formatearMonedaLocal(datos.totales.totalPagado)}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Resumen de cuotas -->
+                                    <div class="resumen-cuotas-compacto">
+                                        <div class="cuota-info">
+                                            <small class="text-muted" style="font-size: 10px;">CUOTAS PENDIENTES</small>
+                                            <div class="fw-bold text-warning" style="font-size: 12px;">${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}</div>
+                                            <div class="monto-cuota">${formatearMonedaLocal(datos.cashea.montoPorCuota)} c/u</div>
+                                        </div>
+                                        <div class="cuota-info">
+                                            <small class="text-muted" style="font-size: 10px;">DEUDA PENDIENTE</small>
+                                            <div class="fw-bold text-danger" style="font-size: 12px;">${formatearMonedaLocal(datos.cashea.deudaPendiente)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+            } else if (datos.abono) {
+                contenido = `
+                            <div class="resumen-venta page-break-avoid">
+                                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6>
+                                
+                                <div class="resumen-abono">
+                                    <!-- Forma de pago -->
+                                    <div style="text-align: center; margin-bottom: 10px;">
+                                        <span class="badge bg-warning text-dark fs-6">ABONO PARCIAL</span>
+                                    </div>
+
+                                    <!-- Abonos realizados -->
+                                    <div class="abonos-section">
+                                        <h6 style="text-align: center; margin-bottom: 10px; font-weight: bold; color: #2c5aa0; font-size: 12px;">ABONOS REALIZADOS</h6>
+
+                                        <div class="abonos-list">
+                                            <div class="abono-item">
+                                                <div style="text-align: center; width: 50%;">
+                                                    <strong style="font-size: 11px;">${datos.fecha}</strong>
+                                                </div>
+                                                <div style="text-align: center; width: 50%;">
+                                                    <strong style="font-size: 11px;">${formatearMonedaLocal(datos.abono.montoAbonado)}</strong>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Total abonado -->
+                                            <div class="abono-item total-abonado" style="border-top: 1px solid #ccc; padding-top: 5px; margin-top: 5px;">
+                                                <div style="text-align: center; width: 50%;">
+                                                    <strong style="font-size: 11px;">TOTAL ABONADO:</strong>
+                                                </div>
+                                                <div style="text-align: center; width: 50%;">
+                                                    <strong class="text-success" style="font-size: 11px;">${formatearMonedaLocal(datos.abono.montoAbonado)}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Resumen financiero -->
+                                    <div class="resumen-financiero">
+                                        <div class="deuda-section">
+                                            <div class="deuda-label">DEUDA PENDIENTE</div>
+                                            <div class="deuda-monto text-danger">${formatearMonedaLocal(datos.abono.deudaPendiente)}</div>
+                                        </div>
+
+                                        <div class="progreso-section">
+                                            <div class="progreso-label">PORCENTAJE PAGADO</div>
+                                            <div class="progreso-porcentaje text-success">${Math.round(datos.abono.porcentajePagado)}%</div>
+                                            <div class="progress">
+                                                <div class="progress-bar" style="width: ${datos.abono.porcentajePagado}%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+            } else {
+                contenido = `
+                            <div class="resumen-venta page-break-avoid">
+                                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6>
+                                
+                                <div class="resumen-contado">
+                                    <div style="margin-bottom: 8px;">
+                                        <strong style="font-size: 12px;">Forma de pago:</strong><br>
+                                        <span class="badge bg-success">CONTADO</span>
+                                    </div>
+                                    <div>
+                                        <strong style="font-size: 12px;">Monto total:</strong><br>
+                                        ${formatearMonedaLocal(datos.totales.totalPagado)}
+                                    </div>
+                                    <div style="margin-top: 8px; font-size: 11px; color: #666;">
+                                        El pago ha sido realizado en su totalidad
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+            }
+
+            return contenido;
+        };
+
+        // GENERAR MÉTODOS DE PAGO
+        const generarMetodosPago = () => {
+            if (!datos.metodosPago || datos.metodosPago.length === 0) {
+                return '';
+            }
+
+            return `
+                        <div class="metodos-pago page-break-avoid" style="margin-bottom: 10px;">
+                            <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">MÉTODOS DE PAGO</h6>
+                            ${datos.metodosPago.map((metodo: any) => `
+                                <div class="metodo-item">
+                                    <span>
+                                        <span class="badge bg-primary">${this.formatearTipoPago(metodo.tipo)}</span>
+                                        ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}
+                                        ${metodo.banco ? '- ' + metodo.banco : ''}
+                                    </span>
+                                    <span>${formatearMonedaLocal(metodo.monto, metodo.moneda)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+        };
+
+        // GENERAR TOTALES
+        const generarTotales = () => {
+            const mostrarTotalAPagar = this.debeMostrarTotalAPagar(formaPago, datos);
+            const textoTotalAPagar = this.getTextoTotalAPagarParaHTML(formaPago);
+            const textoTotalPagado = this.getTextoTotalPagadoParaHTML(formaPago);
+
+            return `
+                        <div class="totales-compactos page-break-avoid">
+                            <div style="display: flex; justify-content: flex-end;">
+                                <div style="width: 50%;">
+                                    <table style="width: 100%;">
+                                        <tr>
+                                            <td class="fw-bold" style="font-size: 12px;">Subtotal:</td>
+                                            <td class="text-end" style="font-size: 12px;">${formatearMonedaLocal(datos.totales.subtotal)}</td>
+                                        </tr>
+                                        ${datos.totales.descuento > 0 ? `
+                                            <tr>
+                                                <td class="fw-bold" style="font-size: 12px;">Descuento:</td>
+                                                <td class="text-end text-danger" style="font-size: 12px;">- ${formatearMonedaLocal(datos.totales.descuento)}</td>
+                                            </tr>
+                                        ` : ''}
+                                        <tr>
+                                            <td class="fw-bold" style="font-size: 12px;">IVA:</td>
+                                            <td class="text-end" style="font-size: 12px;">${formatearMonedaLocal(datos.totales.iva)}</td>
+                                        </tr>
+                                        ${mostrarTotalAPagar ? `
+                                            <tr class="table-info">
+                                                <td class="fw-bold" style="font-size: 13px;">${textoTotalAPagar}:</td>
+                                                <td class="text-end fw-bold" style="font-size: 13px;">${formatearMonedaLocal(datos.totales.total)}</td>
+                                            </tr>
+                                        ` : ''}
+                                        <tr class="table-success">
+                                            <td class="fw-bold" style="font-size: 13px;">${textoTotalPagado}:</td>
+                                            <td class="text-end fw-bold" style="font-size: 13px;">${formatearMonedaLocal(datos.totales.totalPagado)}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
         };
 
         return `
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recibo - ${datos.numeroVenta}</title>
-    <style>
-        /* ESTILOS MEJORADOS - FUENTES AUMENTADAS */
-        @page {
-            margin: 0;
-            size: A4;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            font-size: 12px; /* Aumentado de 10px a 12px */
-            line-height: 1.25; /* Aumentado de 1.15 a 1.25 */
-            color: #333;
-            background: white;
-            padding: 15mm 12mm 12mm 12mm; /* Padding ajustado */
-            width: 210mm;
-            height: 297mm;
-            margin: 0 auto;
-        }
-        
-        .recibo-container {
-            width: 100%;
-            max-width: 186mm; /* Ajustado por padding */
-            margin: 0 auto;
-            background: white;
-            padding: 0;
-            height: auto;
-            max-height: 255mm; /* Ajustado por padding */
-            overflow: hidden;
-        }
-        
-        .recibo-header {
-            text-align: center;
-            border-bottom: 2px solid #2c5aa0;
-            padding-bottom: 8px; /* Aumentado de 6px a 8px */
-            margin-bottom: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .empresa-nombre {
-            font-size: 18px; /* Aumentado de 16px a 18px */
-            font-weight: bold;
-            color: #2c5aa0;
-            margin-bottom: 3px; /* Aumentado de 2px a 3px */
-        }
-        
-        .empresa-info {
-            font-size: 10px; /* Aumentado de 8px a 10px */
-            color: #666;
-            margin-bottom: 2px; /* Aumentado de 1px a 2px */
-            line-height: 1.3; /* Aumentado de 1.1 a 1.3 */
-        }
-        
-        .titulo-venta {
-            font-size: 14px; /* Aumentado de 12px a 14px */
-            font-weight: 600;
-            color: #2c5aa0;
-            margin: 8px 0 4px 0; /* Aumentado de 6px/2px a 8px/4px */
-        }
-        
-        .info-rapida {
-            background: #f8f9fa;
-            padding: 6px; /* Aumentado de 4px a 6px */
-            border-radius: 3px; /* Aumentado de 2px a 3px */
-            border: 1px solid #dee2e6;
-            margin-bottom: 10px; /* Aumentado de 8px a 10px */
-            font-size: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .cliente-compacto {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-left: 3px solid #2c5aa0; /* Aumentado de 2px a 3px */
-            padding: 8px; /* Aumentado de 6px a 8px */
-            font-size: 10px; /* Aumentado de 8px a 10px */
-            margin-bottom: 10px; /* Aumentado de 8px a 10px */
-            border-radius: 3px; /* Aumentado de 2px a 3px */
-        }
-        
-        .tabla-productos {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 10px; /* Aumentado de 8px a 10px */
-            font-size: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .tabla-productos th {
-            background: #2c5aa0;
-            color: white;
-            font-weight: 600;
-            padding: 4px 5px; /* Aumentado de 3px/4px a 4px/5px */
-            text-align: left;
-            border: 1px solid #dee2e6;
-            font-size: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .tabla-productos td {
-            border: 1px solid #dee2e6;
-            padding: 3px 4px; /* Aumentado de 2px/3px a 3px/4px */
-            vertical-align: middle;
-            font-size: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .text-center { text-align: center; }
-        .text-end { text-align: right; }
-        
-        .metodos-compactos {
-            margin-bottom: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .metodo-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px; /* Aumentado de 3px a 4px */
-            padding: 3px 0; /* Aumentado de 2px a 3px */
-            border-bottom: 1px dashed #dee2e6;
-            font-size: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .resumen-cashea {
-            background: #f8f9fa;
-            padding: 8px; /* Aumentado de 6px a 8px */
-            border-radius: 4px; /* Aumentado de 3px a 4px */
-            margin: 8px 0; /* Aumentado de 6px a 8px */
-            border-left: 3px solid #0dcaf0; /* Aumentado de 2px a 3px */
-        }
-        
-        .pagos-section {
-            margin-bottom: 8px; /* Aumentado de 6px a 8px */
-        }
-        
-        .pago-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px; /* Aumentado de 3px a 4px */
-            padding: 4px 0; /* Aumentado de 3px a 4px */
-            border-bottom: 1px dashed #dee2e6;
-            font-size: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .pago-total {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 6px; /* Aumentado de 4px a 6px */
-            padding-top: 6px; /* Aumentado de 4px a 6px */
-            border-top: 1px solid #ccc;
-            font-size: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .resumen-cuotas-compacto {
-            display: flex;
-            justify-content: center;
-            gap: 18px; /* Aumentado de 15px a 18px */
-            margin-top: 8px; /* Aumentado de 6px a 8px */
-            text-align: center;
-        }
-        
-        .cuota-info {
-            text-align: center;
-        }
-        
-        .monto-cuota {
-            font-size: 9px; /* Aumentado de 7px a 9px */
-            color: #666;
-            margin-top: 2px; /* Aumentado de 1px a 2px */
-        }
-        
-        .resumen-abono {
-            background: #f8f9fa;
-            padding: 8px; /* Aumentado de 6px a 8px */
-            border-radius: 4px; /* Aumentado de 3px a 4px */
-            margin: 8px 0; /* Aumentado de 6px a 8px */
-            border-left: 3px solid #ffc107; /* Aumentado de 2px a 3px */
-        }
-        
-        .abonos-section {
-            margin-bottom: 8px; /* Aumentado de 6px a 8px */
-        }
-        
-        .abono-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px; /* Aumentado de 3px a 4px */
-            padding: 4px 0; /* Aumentado de 3px a 4px */
-            border-bottom: 1px dashed #dee2e6;
-            font-size: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .total-abonado {
-            border-top: 1px solid #ccc;
-            padding-top: 4px; /* Aumentado de 3px a 4px */
-            margin-top: 4px; /* Aumentado de 3px a 4px */
-        }
-        
-        .resumen-financiero {
-            background: white;
-            padding: 8px; /* Aumentado de 6px a 8px */
-            border-radius: 4px; /* Aumentado de 3px a 4px */
-            border: 1px solid #e9ecef;
-            margin: 8px 0; /* Aumentado de 6px a 8px */
-        }
-        
-        .deuda-section, .progreso-section {
-            text-align: center;
-            margin-bottom: 8px; /* Aumentado de 6px a 8px */
-        }
-        
-        .deuda-label, .progreso-label {
-            font-size: 9px; /* Aumentado de 7px a 9px */
-            color: #666;
-            margin-bottom: 2px; /* Aumentado de 1px a 2px */
-        }
-        
-        .deuda-monto, .progreso-porcentaje {
-            font-size: 12px; /* Aumentado de 10px a 12px */
-            font-weight: bold;
-        }
-        
-        .resumen-contado {
-            background: #f8f9fa;
-            padding: 8px; /* Aumentado de 6px a 8px */
-            border-radius: 4px; /* Aumentado de 3px a 4px */
-            margin: 8px 0; /* Aumentado de 6px a 8px */
-            border-left: 3px solid #198754; /* Aumentado de 2px a 3px */
-            text-align: center;
-        }
-        
-        .totales-compactos {
-            margin-bottom: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .totales-compactos table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px; /* Aumentado de 9px a 11px */
-        }
-        
-        .totales-compactos td {
-            padding: 4px 5px; /* Aumentado de 3px/4px a 4px/5px */
-            border: 1px solid #dee2e6;
-        }
-        
-        .table-success {
-            background: linear-gradient(135deg, #d4edda, #c3e6cb);
-        }
-        
-        .table-info {
-            background: linear-gradient(135deg, #d1ecf1, #c3e6ff);
-        }
-        
-        .observaciones-compactas {
-            margin-bottom: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .alert-warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 6px; /* Aumentado de 4px a 6px */
-            border-radius: 3px; /* Aumentado de 2px a 3px */
-            font-size: 10px; /* Aumentado de 8px a 10px */
-        }
-        
-        .terminos-compactos {
-            border-top: 1px solid #ddd;
-            padding-top: 8px; /* Aumentado de 6px a 8px */
-            margin-top: 10px; /* Aumentado de 8px a 10px */
-            font-size: 9px; /* Aumentado de 7px a 9px */
-            color: #666;
-        }
-        
-        .mensaje-final {
-            text-align: center;
-            border-top: 1px solid #ddd;
-            padding-top: 8px; /* Aumentado de 6px a 8px */
-            margin-top: 8px; /* Aumentado de 6px a 8px */
-            font-size: 11px; /* Aumentado de 9px a 11px */
-            color: #2c5aa0;
-            font-weight: bold;
-        }
-        
-        .text-danger { color: #dc3545; }
-        .text-success { color: #198754; }
-        .text-warning { color: #ffc107; }
-        .text-primary { color: #2c5aa0; }
-        .text-muted { color: #666; }
-        
-        .badge {
-            display: inline-block;
-            padding: 2px 4px; /* Aumentado de 1px/3px a 2px/4px */
-            font-size: 9px; /* Aumentado de 7px a 9px */
-            font-weight: 600;
-            line-height: 1.2; /* Aumentado de 1 a 1.2 */
-            text-align: center;
-            white-space: nowrap;
-            vertical-align: baseline;
-            border-radius: 2px; /* Aumentado de 1px a 2px */
-        }
-        
-        .bg-primary { background-color: #2c5aa0; color: white; }
-        .bg-success { background-color: #198754; color: white; }
-        .bg-info { background-color: #0dcaf0; color: black; }
-        .bg-warning { background-color: #ffc107; color: black; }
-        
-        .progress {
-            background-color: #e9ecef;
-            border-radius: 4px;
-            overflow: hidden;
-            height: 4px; /* Aumentado de 3px a 4px */
-            margin: 3px auto; /* Aumentado de 2px a 3px */
-            width: 60%; /* Aumentado de 50% a 60% */
-        }
-        
-        .progress-bar {
-            background-color: #198754;
-            height: 100%;
-            transition: width 0.6s ease;
-        }
-        
-        .fw-bold { font-weight: bold; }
-        .small { font-size: 9px; } /* Aumentado de 7px a 9px */
-        .fs-6 { font-size: 12px; } /* Aumentado de 10px a 12px */
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Recibo - ${datos.numeroVenta}</title>
+                <style>
+                    /* ESTILOS MEJORADOS - FUENTES AUMENTADAS */
+                    @page {
+                        margin: 0;
+                        size: A4;
+                    }
+                    
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
+                    
+                    body {
+                        font-family: 'Arial', sans-serif;
+                        font-size: 12px;
+                        line-height: 1.25;
+                        color: #333;
+                        background: white;
+                        padding: 15mm 12mm 12mm 12mm;
+                        width: 210mm;
+                        height: 297mm;
+                        margin: 0 auto;
+                    }
+                    
+                    .recibo-container {
+                        width: 100%;
+                        max-width: 186mm;
+                        margin: 0 auto;
+                        background: white;
+                        padding: 0;
+                        height: auto;
+                        max-height: 255mm;
+                        overflow: hidden;
+                    }
+                    
+                    .recibo-header {
+                        text-align: center;
+                        border-bottom: 2px solid #2c5aa0;
+                        padding-bottom: 8px;
+                        margin-bottom: 10px;
+                    }
+                    
+                    .empresa-nombre {
+                        font-size: 18px;
+                        font-weight: bold;
+                        color: #2c5aa0;
+                        margin-bottom: 3px;
+                    }
+                    
+                    .empresa-info {
+                        font-size: 10px;
+                        color: #666;
+                        margin-bottom: 2px;
+                        line-height: 1.3;
+                    }
+                    
+                    .titulo-venta {
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #2c5aa0;
+                        margin: 8px 0 4px 0;
+                    }
+                    
+                    .info-rapida {
+                        background: #f8f9fa;
+                        padding: 6px;
+                        border-radius: 3px;
+                        border: 1px solid #dee2e6;
+                        margin-bottom: 10px;
+                        font-size: 10px;
+                    }
+                    
+                    .cliente-compacto {
+                        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                        border-left: 3px solid #2c5aa0;
+                        padding: 8px;
+                        font-size: 10px;
+                        margin-bottom: 10px;
+                        border-radius: 3px;
+                    }
+                    
+                    .tabla-productos {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-bottom: 10px;
+                        font-size: 10px;
+                    }
+                    
+                    .tabla-productos th {
+                        background: #2c5aa0;
+                        color: white;
+                        font-weight: 600;
+                        padding: 4px 5px;
+                        text-align: left;
+                        border: 1px solid #dee2e6;
+                        font-size: 10px;
+                    }
+                    
+                    .tabla-productos td {
+                        border: 1px solid #dee2e6;
+                        padding: 3px 4px;
+                        vertical-align: middle;
+                        font-size: 10px;
+                    }
+                    
+                    .text-center { text-align: center; }
+                    .text-end { text-align: right; }
+                    
+                    .metodo-item {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 4px;
+                        padding: 3px 0;
+                        border-bottom: 1px dashed #dee2e6;
+                        font-size: 10px;
+                    }
+                    
+                    .resumen-cashea {
+                        background: #f8f9fa;
+                        padding: 8px;
+                        border-radius: 4px;
+                        margin: 8px 0;
+                        border-left: 3px solid #0dcaf0;
+                    }
+                    
+                    .pago-item {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 4px;
+                        padding: 4px 0;
+                        border-bottom: 1px dashed #dee2e6;
+                        font-size: 10px;
+                    }
+                    
+                    .pago-total {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-top: 6px;
+                        padding-top: 6px;
+                        border-top: 1px solid #ccc;
+                        font-size: 10px;
+                    }
+                    
+                    .resumen-cuotas-compacto {
+                        display: flex;
+                        justify-content: center;
+                        gap: 18px;
+                        margin-top: 8px;
+                        text-align: center;
+                    }
+                    
+                    .monto-cuota {
+                        font-size: 9px;
+                        color: #666;
+                        margin-top: 2px;
+                    }
+                    
+                    .resumen-abono {
+                        background: #f8f9fa;
+                        padding: 8px;
+                        border-radius: 4px;
+                        margin: 8px 0;
+                        border-left: 3px solid #ffc107;
+                    }
+                    
+                    .abono-item {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 4px;
+                        padding: 4px 0;
+                        border-bottom: 1px dashed #dee2e6;
+                        font-size: 10px;
+                    }
+                    
+                    .total-abonado {
+                        border-top: 1px solid #ccc;
+                        padding-top: 4px;
+                        margin-top: 4px;
+                    }
+                    
+                    .resumen-financiero {
+                        background: white;
+                        padding: 8px;
+                        border-radius: 4px;
+                        border: 1px solid #e9ecef;
+                        margin: 8px 0;
+                    }
+                    
+                    .deuda-section, .progreso-section {
+                        text-align: center;
+                        margin-bottom: 8px;
+                    }
+                    
+                    .deuda-label, .progreso-label {
+                        font-size: 9px;
+                        color: #666;
+                        margin-bottom: 2px;
+                    }
+                    
+                    .deuda-monto, .progreso-porcentaje {
+                        font-size: 12px;
+                        font-weight: bold;
+                    }
+                    
+                    .resumen-contado {
+                        background: #f8f9fa;
+                        padding: 8px;
+                        border-radius: 4px;
+                        margin: 8px 0;
+                        border-left: 3px solid #198754;
+                        text-align: center;
+                    }
+                    
+                    .totales-compactos table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 11px;
+                    }
+                    
+                    .totales-compactos td {
+                        padding: 4px 5px;
+                        border: 1px solid #dee2e6;
+                    }
+                    
+                    .table-success {
+                        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+                    }
+                    
+                    .table-info {
+                        background: linear-gradient(135deg, #d1ecf1, #c3e6ff);
+                    }
+                    
+                    .observaciones-compactas {
+                        margin-bottom: 10px;
+                    }
+                    
+                    .alert-warning {
+                        background: #fff3cd;
+                        border: 1px solid #ffeaa7;
+                        color: #856404;
+                        padding: 6px;
+                        border-radius: 3px;
+                        font-size: 10px;
+                    }
+                    
+                    .terminos-compactos {
+                        border-top: 1px solid #ddd;
+                        padding-top: 8px;
+                        margin-top: 10px;
+                        font-size: 9px;
+                        color: #666;
+                    }
+                    
+                    .mensaje-final {
+                        text-align: center;
+                        border-top: 1px solid #ddd;
+                        padding-top: 8px;
+                        margin-top: 8px;
+                        font-size: 11px;
+                        color: #2c5aa0;
+                        font-weight: bold;
+                    }
+                    
+                    .text-danger { color: #dc3545; }
+                    .text-success { color: #198754; }
+                    .text-warning { color: #ffc107; }
+                    .text-primary { color: #2c5aa0; }
+                    .text-muted { color: #666; }
+                    
+                    .badge {
+                        display: inline-block;
+                        padding: 2px 4px;
+                        font-size: 9px;
+                        font-weight: 600;
+                        line-height: 1.2;
+                        text-align: center;
+                        white-space: nowrap;
+                        vertical-align: baseline;
+                        border-radius: 2px;
+                    }
+                    
+                    .bg-primary { background-color: #2c5aa0; color: white; }
+                    .bg-success { background-color: #198754; color: white; }
+                    .bg-info { background-color: #0dcaf0; color: black; }
+                    .bg-warning { background-color: #ffc107; color: black; }
+                    
+                    .progress {
+                        background-color: #e9ecef;
+                        border-radius: 4px;
+                        overflow: hidden;
+                        height: 4px;
+                        margin: 3px auto;
+                        width: 60%;
+                    }
+                    
+                    .progress-bar {
+                        background-color: #198754;
+                        height: 100%;
+                        transition: width 0.6s ease;
+                    }
+                    
+                    .fw-bold { font-weight: bold; }
+                    .small { font-size: 9px; }
+                    .fs-6 { font-size: 12px; }
 
-        .page-break-avoid {
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
+                    .page-break-avoid {
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                    }
 
-        @media print {
-            body {
-                padding: 15mm 12mm 12mm 12mm;
-                margin: 0;
-                width: 210mm;
-                height: 297mm;
-                font-size: 11px; /* Aumentado de 9px a 11px */
-            }
-            
-            .recibo-container {
-                border: none;
-                padding: 0;
-                box-shadow: none;
-                max-height: 255mm;
-                overflow: hidden;
-            }
+                    @media print {
+                        body {
+                            padding: 15mm 12mm 12mm 12mm;
+                            margin: 0;
+                            width: 210mm;
+                            height: 297mm;
+                            font-size: 11px;
+                        }
+                        
+                        .recibo-container {
+                            border: none;
+                            padding: 0;
+                            box-shadow: none;
+                            max-height: 255mm;
+                            overflow: hidden;
+                        }
 
-            @page {
-                margin: 0;
-                size: A4;
-            }
-            
-            body {
-                margin: 0;
-                -webkit-print-color-adjust: exact;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="recibo-container page-break-avoid">
-        <!-- ENCABEZADO DINÁMICO CON INFO DE SEDE -->
-        <div class="recibo-header page-break-avoid">
-            ${generarEncabezadoSede()}
-            <div class="titulo-venta">${tituloRecibo}</div>
-        </div>
-
-        <!-- Información rápida -->
-        <div class="info-rapida page-break-avoid">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;"> <!-- Aumentado gap de 6px a 8px -->
-                <div><strong>Recibo:</strong> ${datos.numeroVenta}</div>
-                <div><strong>Fecha:</strong> ${datos.fecha}</div>
-                <div><strong>Hora:</strong> ${datos.hora}</div>
-                <div><strong>Vendedor:</strong> ${datos.vendedor}</div>
-            </div>
-        </div>
-
-        <!-- Cliente -->
-        <div class="cliente-compacto page-break-avoid">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;"> <!-- Aumentado gap de 6px a 8px -->
-                <div><strong>Cliente:</strong> ${datos.cliente.nombre}</div>
-                <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
-                <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
-            </div>
-        </div>
-
-        <!-- Productos -->
-        <div class="productos-compactos page-break-avoid">
-            <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">PRODUCTOS</h6> <!-- Aumentado margin-bottom y padding-bottom -->
-            <table class="tabla-productos">
-                <thead>
-                    <tr>
-                        <th width="5%" class="text-center">#</th>
-                        <th width="55%">Descripción</th>
-                        <th width="10%" class="text-center">Cant</th>
-                        <th width="15%" class="text-end">P. Unitario</th>
-                        <th width="15%" class="text-end">Subtotal</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${datos.productos.map((producto: any, index: number) => `
-                        <tr>
-                            <td class="text-center">${index + 1}</td>
-                            <td>${producto.nombre}</td>
-                            <td class="text-center">${producto.cantidad || 1}</td>
-                            <td class="text-end">${formatearMonedaLocal(producto.precioUnitario)}</td>
-                            <td class="text-end">${formatearMonedaLocal(producto.subtotal)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Métodos de pago -->
-        ${datos.metodosPago.map((metodo: any) => `
-            <div class="metodo-item">
-                <span>
-                    <span class="badge bg-primary"> ${this.formatearTipoPago(metodo.tipo)} </span>
-                    ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}
-                    ${metodo.banco ? '- ' + metodo.banco : ''}
-                </span>
-                <span> ${formatearMonedaLocal(metodo.monto, metodo.moneda)}</span>
-            </div>
-        `).join('')}
-
-        <!-- SECCIÓN CASHEA COMPLETA - CORREGIDA -->
-        ${datos.cashea ? `
-            <div class="resumen-venta page-break-avoid">
-                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6> <!-- Aumentado margin-bottom y padding-bottom -->
-                
-                <div class="resumen-cashea">
-                    <!-- Forma de pago -->
-                    <div style="text-align: center; margin-bottom: 10px;"> <!-- Aumentado de 8px a 10px -->
-                        <span class="badge bg-info fs-6">PLAN CASHEA</span>
+                        @page {
+                            margin: 0;
+                            size: A4;
+                        }
+                        
+                        body {
+                            margin: 0;
+                            -webkit-print-color-adjust: exact;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="recibo-container page-break-avoid">
+                    <!-- ENCABEZADO DINÁMICO CON INFO DE SEDE -->
+                    <div class="recibo-header page-break-avoid">
+                        ${generarEncabezadoSede()}
+                        <div class="titulo-venta">${tituloRecibo}</div>
                     </div>
 
-                    <!-- Información del plan Cashea -->
-                    <div style="text-align: center; margin-bottom: 10px;"> <!-- Aumentado de 8px a 10px -->
-                        <div class="cashea-info">
-                            <div class="nivel-cashea" style="margin-bottom: 5px;"> <!-- Aumentado de 4px a 5px -->
-                                <small class="text-muted">NIVEL</small>
-                                <div class="fw-bold text-primary" style="font-size: 12px;">${this.obtenerNombreNivelCashea(datos.cashea.nivel)}</div> <!-- Aumentado de 10px a 12px -->
+                    <!-- Información rápida -->
+                    <div class="info-rapida page-break-avoid">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;">
+                            <div><strong>Recibo:</strong> ${datos.numeroVenta}</div>
+                            <div><strong>Fecha:</strong> ${datos.fecha}</div>
+                            <div><strong>Hora:</strong> ${datos.hora}</div>
+                            <div><strong>Vendedor:</strong> ${datos.vendedor}</div>
+                        </div>
+                    </div>
+
+                    <!-- Cliente -->
+                    <div class="cliente-compacto page-break-avoid">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                            <div><strong>Cliente:</strong> ${datos.cliente.nombre}</div>
+                            <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
+                            <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
+                        </div>
+                    </div>
+
+                    <!-- Productos -->
+                    ${generarTablaProductos()}
+
+                    <!-- Métodos de pago -->
+                    ${generarMetodosPago()}
+
+                    <!-- Sección de Forma de Pago -->
+                    ${generarResumenFormaPago()}
+
+                    <!-- Totales -->
+                    ${generarTotales()}
+
+                    <!-- Observaciones -->
+                    ${datos.configuracion?.observaciones ? `
+                        <div class="observaciones-compactas page-break-avoid">
+                            <div class="alert-warning">
+                                <strong>Observación:</strong> ${datos.configuracion.observaciones}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Términos y condiciones -->
+                    <div class="terminos-compactos page-break-avoid">
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px;">
+                            <div>
+                                <p style="margin-bottom: 3px;">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Pasados 30 días no nos hacemos responsables de trabajos no retirados
+                                </p>
+                                <p style="margin-bottom: 0;">
+                                    <i class="bi bi-info-circle"></i>
+                                    Estado de orden: tracking.optolapp.com
+                                </p>
+                            </div>
+                            <div style="text-align: right;">
+                                <small>${new Date().getFullYear()} © ${sedeInfo?.nombre_optica || 'New Vision Lens'}</small>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Desglose de pagos - CORREGIDO -->
-                    <div class="pagos-section">
-                        <h6 style="text-align: center; margin-bottom: 10px; font-weight: bold; color: #2c5aa0; font-size: 12px;">DESGLOSE DE PAGOS</h6> <!-- Aumentado margin-bottom y font-size -->
-
-                        <!-- Pago inicial -->
-                        <div class="pago-item">
-                            <div style="text-align: center; width: 50%;">
-                                <strong style="font-size: 11px;">Pago Inicial</strong> <!-- Aumentado de 9px a 11px -->
-                            </div>
-                            <div style="text-align: center; width: 50%;">
-                                <strong style="font-size: 11px;">${this.formatearMoneda(datos.cashea.inicial)}</strong> <!-- Aumentado de 9px a 11px -->
-                            </div>
-                        </div>
-
-                        <!-- Cuotas adelantadas -->
-                        ${datos.cashea.cuotasAdelantadas > 0 ? `
-                            <div class="pago-item">
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 11px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong> <!-- Aumentado de 9px a 11px -->
-                                </div>
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 11px;">${this.formatearMoneda(datos.cashea.montoAdelantado)}</strong> <!-- Aumentado de 9px a 11px -->
-                                </div>
-                            </div>
-                        ` : ''}
-
-                        <!-- Total pagado ahora - CORREGIDO: MISMA FILA QUE LOS TÍTULOS -->
-                        <div class="pago-total">
-                            <div style="text-align: center; width: 50%;">
-                                <strong style="font-size: 11px;">TOTAL PAGADO AHORA:</strong> <!-- Aumentado de 9px a 11px -->
-                            </div>
-                            <div style="text-align: center; width: 50%;">
-                                <strong class="text-success" style="font-size: 11px;">${this.formatearMoneda(datos.totales.totalPagado)}</strong> <!-- Aumentado de 9px a 11px -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Resumen de cuotas -->
-                    <div class="resumen-cuotas-compacto">
-                        <div class="cuota-info">
-                            <small class="text-muted" style="font-size: 10px;">CUOTAS PENDIENTES</small> <!-- Aumentado de 8px a 10px -->
-                            <div class="fw-bold text-warning" style="font-size: 12px;">${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}</div> <!-- Aumentado de 10px a 12px -->
-                            <div class="monto-cuota">${this.formatearMoneda(datos.cashea.montoPorCuota)} c/u</div>
-                        </div>
-                        <div class="cuota-info">
-                            <small class="text-muted" style="font-size: 10px;">DEUDA PENDIENTE</small> <!-- Aumentado de 8px a 10px -->
-                            <div class="fw-bold text-danger" style="font-size: 12px;">${this.formatearMoneda(datos.cashea.deudaPendiente)}</div> <!-- Aumentado de 10px a 12px -->
-                        </div>
+                    <!-- Mensaje final -->
+                    <div class="mensaje-final page-break-avoid">
+                        <i class="bi bi-check-circle"></i>
+                        ${mensajeFinal}
                     </div>
                 </div>
-            </div>
-        ` : ''}
-
-        <!-- Resto del código se mantiene igual -->
-        ${datos.abono ? `
-            <div class="resumen-venta page-break-avoid">
-                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6> <!-- Aumentado margin-bottom y padding-bottom -->
-                
-                <div class="resumen-abono">
-                    <!-- Forma de pago -->
-                    <div style="text-align: center; margin-bottom: 10px;"> <!-- Aumentado de 8px a 10px -->
-                        <span class="badge bg-warning text-dark fs-6">ABONO PARCIAL</span>
-                    </div>
-
-                    <!-- Abonos realizados -->
-                    <div class="abonos-section">
-                        <h6 style="text-align: center; margin-bottom: 10px; font-weight: bold; color: #2c5aa0; font-size: 12px;">ABONOS REALIZADOS</h6> <!-- Aumentado margin-bottom y font-size -->
-
-                        <div class="abonos-list">
-                            <div class="abono-item">
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 11px;">${datos.fecha}</strong> <!-- Aumentado de 9px a 11px -->
-                                </div>
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 11px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong> <!-- Aumentado de 9px a 11px -->
-                                </div>
-                            </div>
-                            
-                            <!-- Total abonado EN LA MISMA SECCIÓN -->
-                            <div class="abono-item total-abonado" style="border-top: 1px solid #ccc; padding-top: 5px; margin-top: 5px;"> <!-- Aumentado padding-top y margin-top -->
-                                <div style="text-align: center; width: 50%;">
-                                    <strong style="font-size: 11px;">TOTAL ABONADO:</strong> <!-- Aumentado de 9px a 11px -->
-                                </div>
-                                <div style="text-align: center; width: 50%;">
-                                    <strong class="text-success" style="font-size: 11px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong> <!-- Aumentado de 9px a 11px -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Resumen financiero -->
-                    <div class="resumen-financiero">
-                        <div class="deuda-section">
-                            <div class="deuda-label">DEUDA PENDIENTE</div>
-                            <div class="deuda-monto text-danger">${this.formatearMoneda(datos.abono.deudaPendiente)}</div>
-                        </div>
-
-                        <div class="progreso-section">
-                            <div class="progreso-label">PORCENTAJE PAGADO</div>
-                            <div class="progreso-porcentaje text-success">${Math.round(datos.abono.porcentajePagado)}%</div>
-                            <div class="progress">
-                                <div class="progress-bar" style="width: ${datos.abono.porcentajePagado}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        ` : ''}
-
-        ${!datos.cashea && !datos.abono ? `
-            <div class="resumen-venta page-break-avoid">
-                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6> <!-- Aumentado margin-bottom y padding-bottom -->
-                
-                <div class="resumen-contado">
-                    <div style="margin-bottom: 8px;"> <!-- Aumentado de 6px a 8px -->
-                        <strong style="font-size: 12px;">Forma de pago:</strong><br> <!-- Aumentado de 10px a 12px -->
-                        <span class="badge bg-success">CONTADO</span>
-                    </div>
-                    <div>
-                        <strong style="font-size: 12px;">Monto total:</strong><br> <!-- Aumentado de 10px a 12px -->
-                        ${this.formatearMoneda(datos.totales.totalPagado)}
-                    </div>
-                    <div style="margin-top: 8px; font-size: 11px; color: #666;"> <!-- Aumentado margin-top y font-size -->
-                        El pago ha sido realizado en su totalidad
-                    </div>
-                </div>
-            </div>
-        ` : ''}
-
-        <!-- Totales - MODIFICADO PARA INCLUIR "TOTAL A PAGAR" -->
-        <div class="totales-compactos page-break-avoid">
-            <div style="display: flex; justify-content: flex-end;">
-                <div style="width: 50%;">
-                    <table style="width: 100%;">
-                        <tr>
-                            <td class="fw-bold" style="font-size: 12px;">Subtotal:</td> <!-- Aumentado de 10px a 12px -->
-                            <td class="text-end" style="font-size: 12px;">${this.formatearMoneda(datos.totales.subtotal)}</td> <!-- Aumentado de 10px a 12px -->
-                        </tr>
-                        <tr>
-                            <td class="fw-bold" style="font-size: 12px;">Descuento:</td> <!-- Aumentado de 10px a 12px -->
-                            <td class="text-end text-danger" style="font-size: 12px;">- ${this.formatearMoneda(datos.totales.descuento)}</td> <!-- Aumentado de 10px a 12px -->
-                        </tr>
-                        <tr>
-                            <td class="fw-bold" style="font-size: 12px;">IVA:</td> <!-- Aumentado de 10px a 12px -->
-                            <td class="text-end" style="font-size: 12px;">${this.formatearMoneda(datos.totales.iva)}</td> <!-- Aumentado de 10px a 12px -->
-                        </tr>
-                        ${mostrarTotalAPagar ? `
-                            <tr class="table-info">
-                                <td class="fw-bold" style="font-size: 13px;">${textoTotalAPagar}:</td> <!-- Aumentado de 11px a 13px -->
-                                <td class="text-end fw-bold" style="font-size: 13px;">${this.formatearMoneda(datos.totales.total)}</td> <!-- Aumentado de 11px a 13px -->
-                            </tr>
-                        ` : ''}
-                        <tr class="table-success">
-                            <td class="fw-bold" style="font-size: 13px;">${this.getTextoTotalPagadoParaHTML(formaPago)}:</td> <!-- Aumentado de 11px a 13px -->
-                            <td class="text-end fw-bold" style="font-size: 13px;">${this.formatearMoneda(datos.totales.totalPagado)}</td> <!-- Aumentado de 11px a 13px -->
-                        </tr>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Observaciones -->
-        ${datos.configuracion?.observaciones ? `
-            <div class="observaciones-compactas page-break-avoid">
-                <div class="alert-warning">
-                    <strong>Observación:</strong> ${datos.configuracion.observaciones}
-                </div>
-            </div>
-        ` : ''}
-
-        <!-- Términos y condiciones -->
-        <div class="terminos-compactos page-break-avoid">
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px;"> <!-- Aumentado gap de 6px a 8px -->
-                <div>
-                    <p style="margin-bottom: 3px;"> <!-- Aumentado de 2px a 3px -->
-                        <i class="bi bi-exclamation-triangle"></i>
-                        Pasados 30 días no nos hacemos responsables de trabajos no retirados
-                    </p>
-                    <p style="margin-bottom: 0;">
-                        <i class="bi bi-info-circle"></i>
-                        Estado de orden: tracking.optolapp.com
-                    </p>
-                </div>
-                <div style="text-align: right;">
-                    <small>${new Date().getFullYear()} © ${sedeInfo?.nombre_optica || 'New Vision Lens'}</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mensaje final -->
-        <div class="mensaje-final page-break-avoid">
-            <i class="bi bi-check-circle"></i>
-            ${mensajeFinal}
-        </div>
-    </div>
-</body>
-</html>
-`;
+            </body>
+            </html>
+            `;
     }
 
     /**
@@ -4419,7 +4570,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     getSubtotalSeguro(): number {
-        return this.datosRecibo?.totales?.subtotal || this.totalProductos;
+        if (this.datosRecibo?.totales?.subtotal) {
+            return this.datosRecibo.totales.subtotal;
+        }
+
+        // Devolver el subtotal con IVA para que sea consistente
+        return this.calcularTotalProductos();
     }
 
     getDescuentoSeguro(): number {
@@ -4523,21 +4679,19 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const sedeInfo = this.obtenerInfoSede();
         const vendedorInfo = this.getResumenAsesor();
 
-        // 1. Calcular subtotal REAL (suma de precios sin IVA)
-        const subtotalReal = this.productosConDetalle?.reduce((sum, p) => {
-            return sum + (p.subtotal || 0);
-        }, 0) || 0;
+        // 1. Calcular SUBTOTAL REAL con IVA
+        const subtotalConIva = this.calcularTotalProductos(); // Total con IVA
 
-        // 2. Calcular IVA REAL (suma de IVA de todos los productos)
+        // 2. Calcular IVA REAL (ya está en productosConDetalle)
         const ivaReal = this.productosConDetalle?.reduce((sum, p) => {
             return sum + (p.iva || 0);
         }, 0) || 0;
 
-        // 3. Calcular descuento (sobre el subtotal + IVA)
-        const baseParaDescuento = subtotalReal + ivaReal;
+        // 3. Calcular descuento sobre el subtotal con IVA
+        const baseParaDescuento = subtotalConIva;
         const descuento = this.venta?.descuento ? (baseParaDescuento * (this.venta.descuento / 100)) : 0;
 
-        // 4. Calcular total REAL (subtotal + IVA - descuento)
+        // 4. Calcular total REAL (subtotal con IVA - descuento)
         const totalReal = baseParaDescuento - descuento;
 
         // Determinar el total pagado según la forma de pago REAL
@@ -4613,7 +4767,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             // Totales reales
             totales: {
-                subtotal: subtotalReal,
+                subtotal: subtotalConIva,
                 descuento: descuento,
                 iva: ivaReal,
                 total: totalReal,
@@ -4661,24 +4815,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return datosRecibo;
     }
 
-
-
     private obtenerProductosConDetalles(): any[] {
         return this.venta.productos.map((p, index) => {
-            // Buscar el producto en productosConDetalle
             const productoCalculado = this.productosConDetalle.find(pc => pc.id === p.id);
 
             if (productoCalculado) {
-                const precioUnitarioSinIva = p.aplicaIva ? p.precio : productoCalculado.precioConvertido;
-                const subtotal = precioUnitarioSinIva * (p.cantidad || 1);
+                const precioUnitarioSinIva = productoCalculado.precioConvertido || 0;
+                const subtotalSinIva = precioUnitarioSinIva * (p.cantidad || 1);
 
                 return {
                     nombre: p.nombre || 'Producto',
                     codigo: p.codigo || 'N/A',
                     cantidad: p.cantidad || 1,
-                    precioUnitario: precioUnitarioSinIva,
-                    precioConIva: p.precioConIva || 0,
-                    subtotal: subtotal,
+                    precioUnitario: precioUnitarioSinIva, // Sin IVA
+                    precioConIva: productoCalculado.precioConIva || 0,
+                    subtotal: subtotalSinIva, // cantidad × precio sin IVA
                     iva: productoCalculado.iva || 0,
                     total: productoCalculado.total || 0,
                     aplicaIva: p.aplicaIva || false,
@@ -4696,9 +4847,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 nombre: p.nombre || 'Producto',
                 codigo: p.codigo || 'N/A',
                 cantidad: cantidad,
-                precioUnitario: precioSinIva,
+                precioUnitario: precioSinIva, // Sin IVA
                 precioConIva: p.precioConIva || 0,
-                subtotal: subtotalCalculado,
+                subtotal: subtotalCalculado, // cantidad × precio sin IVA
                 iva: ivaCalculado,
                 total: totalCalculado,
                 aplicaIva: p.aplicaIva || false,
@@ -5865,6 +6016,345 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             Email: newvisionlens2020@gmail.com`;
     }
 
+
+    // Nuevos métodos
+    getPrecioSinIva(producto: any): number {
+        return producto.precioConvertido || 0;
+    }
+
+    get subtotalConIvaCorregido(): number {
+        // Calcula el subtotal CON IVA
+        if (!Array.isArray(this.productosConDetalle) || this.productosConDetalle.length === 0) {
+            return 0;
+        }
+
+        const subtotal = this.productosConDetalle.reduce((acc, producto) => {
+            // Usamos precioConIva (que ya incluye IVA si aplica)
+            const precioUnitario = producto.precioConIva || 0;
+            const cantidad = producto.cantidad || 1;
+            return acc + (precioUnitario * cantidad);
+        }, 0);
+
+        return this.redondear(subtotal);
+    }
+
+    calcularDescuentoSobreBaseImponible(): number {
+        // Descuento sobre el subtotal SIN IVA
+        const baseImponible = this.subtotalCorregido; // ← SIN IVA
+        return this.venta.descuento ? (baseImponible * (this.venta.descuento / 100)) : 0;
+    }
+
+    calcularBaseImponibleConDescuento(): number {
+        // Base imponible después del descuento
+        const baseImponible = this.subtotalCorregido;
+        const descuento = this.calcularDescuentoSobreBaseImponible();
+        return baseImponible - descuento;
+    }
+
+    calcularIvaSobreBaseConDescuento(baseConDescuento: number): number {
+        if (!Array.isArray(this.productosConDetalle)) return 0;
+
+        // Calcular qué porcentaje del total representa cada producto que aplica IVA
+        const subtotalSinIva = this.calcularSubtotalSinIva();
+        if (subtotalSinIva === 0) return 0;
+
+        let ivaTotal = 0;
+
+        this.productosConDetalle.forEach(producto => {
+            if (producto.aplicaIva) {
+                // Calcular qué porcentaje representa este producto del total sin IVA
+                const precioSinIva = producto.precioConvertido || 0;
+                const cantidad = producto.cantidad || 1;
+                const subtotalProducto = precioSinIva * cantidad;
+                const porcentajeProducto = subtotalProducto / subtotalSinIva;
+
+                // Aplicar ese porcentaje a la base con descuento
+                const baseProductoConDescuento = baseConDescuento * porcentajeProducto;
+                ivaTotal += baseProductoConDescuento * (this.ivaPorcentaje / 100);
+            }
+        });
+
+        return this.redondear(ivaTotal);
+    }
+
+    calcularIvaTotal(): number {
+        if (!Array.isArray(this.productosConDetalle)) return 0;
+
+        // IVA sobre subtotal SIN IVA (para mostrar en resumen)
+        return this.productosConDetalle.reduce((acc, producto) => {
+            const subtotalSinIva = this.calcularSubtotalSinIvaProducto(producto);
+            const aplicaIva = producto.aplicaIva ?? false;
+
+            return aplicaIva ?
+                acc + (subtotalSinIva * (this.ivaPorcentaje / 100)) :
+                acc;
+        }, 0);
+    }
+
+    // === MÉTODOS DE CÁLCULO BASE ===
+    calcularSubtotalSinIvaProducto(producto: any): number {
+        const precioSinIva = producto.precioConvertido || 0;
+        const cantidad = producto.cantidad || 1;
+        return precioSinIva * cantidad;
+    }
+
+    calcularSubtotalSinIva(): number {
+        if (!Array.isArray(this.productosConDetalle) || this.productosConDetalle.length === 0) {
+            return 0;
+        }
+
+        return this.productosConDetalle.reduce((acc, producto) => {
+            return acc + this.calcularSubtotalSinIvaProducto(producto);
+        }, 0);
+    }
+
+    calcularIvaPorProductoOriginal(producto: any): number {
+        if (!producto.aplicaIva) return 0;
+
+        const subtotalSinIva = this.calcularSubtotalSinIvaProducto(producto);
+        return subtotalSinIva * (this.ivaPorcentaje / 100);
+    }
+
+    calcularTotalIvaOriginal(): number {
+        if (!Array.isArray(this.productosConDetalle)) return 0;
+
+        return this.productosConDetalle.reduce((acc, producto) => {
+            return acc + this.calcularIvaPorProductoOriginal(producto);
+        }, 0);
+    }
+
+    // === MÉTODOS PARA DESCUENTO PROPORCIONAL ===
+
+    calcularDescuento(): number {
+        const subtotalSinIva = this.calcularSubtotalSinIva();
+        const descuentoPorcentaje = this.venta.descuento ?? 0;
+
+        // Descuento sobre subtotal SIN IVA
+        return this.redondear(subtotalSinIva * (descuentoPorcentaje / 100));
+    }
+
+    calcularProporcionProducto(producto: any): number {
+        const subtotalTotalSinIva = this.calcularSubtotalSinIva();
+        if (subtotalTotalSinIva === 0) return 0;
+
+        const subtotalProducto = this.calcularSubtotalSinIvaProducto(producto);
+        return subtotalProducto / subtotalTotalSinIva;
+    }
+
+    calcularDescuentoPorProducto(producto: any): number {
+        const descuentoTotal = this.calcularDescuento();
+        const proporcion = this.calcularProporcionProducto(producto);
+
+        return descuentoTotal * proporcion;
+    }
+
+    calcularBaseConDescuentoPorProducto(producto: any): number {
+        const subtotalProducto = this.calcularSubtotalSinIvaProducto(producto);
+        const descuentoProducto = this.calcularDescuentoPorProducto(producto);
+
+        return subtotalProducto - descuentoProducto;
+    }
+
+    // === MÉTODOS PARA IVA DESPUÉS DEL DESCUENTO ===
+
+    calcularIvaDespuesDescuentoPorProducto(producto: any): number {
+        if (!producto.aplicaIva) return 0;
+
+        const baseConDescuento = this.calcularBaseConDescuentoPorProducto(producto);
+        return baseConDescuento * (this.ivaPorcentaje / 100);
+    }
+
+    calcularTotalIvaDespuesDescuento(): number {
+        if (!Array.isArray(this.productosConDetalle) || this.productosConDetalle.length === 0) {
+            return 0;
+        }
+
+        let ivaTotal = 0;
+
+        this.productosConDetalle.forEach(producto => {
+            if (producto.aplicaIva) {
+                ivaTotal += this.calcularIvaDespuesDescuentoPorProducto(producto);
+            }
+        });
+
+        return this.redondear(ivaTotal);
+    }
+
+    // === MÉTODOS PARA TOTALES FINALES ===
+
+    get montoTotal(): number {
+        // 1. Subtotal sin IVA después del descuento (suma de todas las bases con descuento)
+        let baseTotalConDescuento = 0;
+
+        this.productosConDetalle.forEach(producto => {
+            baseTotalConDescuento += this.calcularBaseConDescuentoPorProducto(producto);
+        });
+
+        // 2. IVA después del descuento
+        const ivaDespuesDescuento = this.calcularTotalIvaDespuesDescuento();
+
+        // 3. Total final
+        const totalFinal = baseTotalConDescuento + ivaDespuesDescuento;
+
+        return this.redondear(totalFinal);
+    }
+
+    // Método para depuración y verificación
+    debugCalculos(): void {
+        console.log('=== DEBUG CÁLCULOS DETALLADOS ===');
+        console.log('Número de productos:', this.productosConDetalle.length);
+
+        let subtotalSinIvaTotal = 0;
+        let descuentoTotal = 0;
+        let baseConDescuentoTotal = 0;
+        let ivaOriginalTotal = 0;
+        let ivaDespuesDescuentoTotal = 0;
+
+        this.productosConDetalle.forEach((producto, index) => {
+            console.log(`\n--- Producto ${index + 1}: ${producto.nombre} ---`);
+            console.log('Aplica IVA:', producto.aplicaIva);
+            console.log('Cantidad:', producto.cantidad);
+            console.log('Precio sin IVA:', producto.precioConvertido);
+
+            const subtotalProducto = this.calcularSubtotalSinIvaProducto(producto);
+            subtotalSinIvaTotal += subtotalProducto;
+            console.log('Subtotal sin IVA:', subtotalProducto);
+
+            const proporcion = this.calcularProporcionProducto(producto);
+            console.log('Proporción en subtotal:', (proporcion * 100).toFixed(2) + '%');
+
+            const descuentoProducto = this.calcularDescuentoPorProducto(producto);
+            descuentoTotal += descuentoProducto;
+            console.log('Descuento asignado:', descuentoProducto);
+
+            const baseConDescuento = this.calcularBaseConDescuentoPorProducto(producto);
+            baseConDescuentoTotal += baseConDescuento;
+            console.log('Base con descuento:', baseConDescuento);
+
+            if (producto.aplicaIva) {
+                const ivaOriginal = this.calcularIvaPorProductoOriginal(producto);
+                ivaOriginalTotal += ivaOriginal;
+                console.log('IVA original:', ivaOriginal);
+
+                const ivaDespuesDescuento = this.calcularIvaDespuesDescuentoPorProducto(producto);
+                ivaDespuesDescuentoTotal += ivaDespuesDescuento;
+                console.log('IVA después descuento:', ivaDespuesDescuento);
+            }
+        });
+
+        console.log('\n=== RESUMEN TOTAL ===');
+        console.log('Subtotal sin IVA total:', subtotalSinIvaTotal);
+        console.log('Descuento total calculado:', this.calcularDescuento());
+        console.log('Descuento distribuido:', descuentoTotal);
+        console.log('Base con descuento total:', baseConDescuentoTotal);
+        console.log('IVA original total:', ivaOriginalTotal);
+        console.log('IVA después descuento total:', ivaDespuesDescuentoTotal);
+        console.log('Monto total final:', this.montoTotal);
+        console.log('=== FIN DEBUG ===');
+    }
+
+    // === MÉTODOS PARA EL RESUMEN EN HTML ===
+
+    get subtotalCorregido(): number {
+        return this.calcularSubtotalSinIva();
+    }
+
+    get ivaCorregido(): number {
+        // Para mostrar en el resumen, usamos el IVA después del descuento
+        return this.calcularTotalIvaDespuesDescuento();
+    }
+
+    get descuentoCorregido(): number {
+        return this.calcularDescuento();
+    }
+
+    get baseImponibleConDescuento(): number {
+        let total = 0;
+        this.productosConDetalle.forEach(producto => {
+            total += this.calcularBaseConDescuentoPorProducto(producto);
+        });
+        return this.redondear(total);
+    }
+
+    // === MÉTODOS MEJORADOS PARA EL RESUMEN ===
+    get tieneDescuento(): boolean {
+        return (this.venta.descuento ?? 0) > 0;
+    }
+
+    get subtotalSinIva(): number {
+        return this.calcularSubtotalSinIva();
+    }
+
+    get descuentoAplicado(): number {
+        return this.calcularDescuento();
+    }
+
+    get subtotalConDescuento(): number {
+        let total = 0;
+        this.productosConDetalle.forEach(producto => {
+            total += this.calcularBaseConDescuentoPorProducto(producto);
+        });
+        return this.redondear(total);
+    }
+
+    get ivaCalculado(): number {
+        return this.calcularTotalIvaDespuesDescuento();
+    }
+
+    get totalPagar(): number {
+        return this.montoTotal;
+    }
+
+    get porcentajeDescuento(): number {
+        return this.venta.descuento ?? 0;
+    }
+
+    get resumenLineas(): any[] {
+        const lineas = [];
+
+        // Línea 1: Subtotal
+        lineas.push({
+            label: 'Subtotal (sin IVA)',
+            value: this.formatearMoneda(this.subtotalSinIva, this.venta.moneda),
+            tipo: 'subtotal',
+            icono: 'bi-cart'
+        });
+
+        // Línea 2: Descuento (solo si hay)
+        if (this.tieneDescuento) {
+            lineas.push({
+                label: `Descuento (${this.porcentajeDescuento}%)`,
+                value: `-${this.formatearMoneda(this.descuentoAplicado, this.venta.moneda)}`,
+                tipo: 'descuento',
+                icono: 'bi-tag'
+            });
+
+            // Línea 3: Subtotal con descuento (solo si hay descuento)
+            lineas.push({
+                label: 'Subtotal con descuento',
+                value: this.formatearMoneda(this.subtotalConDescuento, this.venta.moneda),
+                tipo: 'subtotal-descuento',
+                icono: 'bi-calculator'
+            });
+        }
+
+        // Línea 4: IVA
+        lineas.push({
+            label: `IVA (${this.ivaPorcentaje}%)`,
+            value: this.formatearMoneda(this.ivaCalculado, this.venta.moneda),
+            tipo: 'iva',
+            icono: 'bi-percent'
+        });
+
+        // Línea 5: Total
+        lineas.push({
+            label: 'Total a pagar',
+            value: this.formatearMoneda(this.totalPagar, this.venta.moneda),
+            tipo: 'total',
+            icono: 'bi-cash-stack'
+        });
+
+        return lineas;
+    }
+    
 }
-
-

@@ -126,7 +126,8 @@
                     </div>
 
                     <!-- En la sección de formulación clínica -->
-                    <div *ngIf="historiaMedica && tieneFormulaCompletaTemplate(historiaMedica)" class="formulacion-section">
+                    <div *ngIf="historiaMedica && tieneFormulaCompletaTemplate(historiaMedica)"
+                        class="formulacion-section">
                         <div class="section-header">
                             <h5>Formulación Clínica</h5>
                             <i class="bi bi-eyeglasses"></i>
@@ -302,10 +303,7 @@
                                         <th class="text-center">Precio Unit.</th>
                                         <th class="text-center">Cant.</th>
                                         <th class="text-center">Subtotal</th>
-                                        <th class="text-center">
-                                            IVA <span class="text-muted">(16%)</span>
-                                        </th>
-                                        <th class="text-center">Total</th>
+                                        <!-- QUITAMOS la columna de IVA -->
                                         <th class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
@@ -324,6 +322,7 @@
                                         <!-- Columna Precio -->
                                         <td class="text-center precio">
                                             <span class="precio-unitario">
+                                                <!-- Mostrar precio SIN IVA -->
                                                 {{ formatearMoneda(getPrecioParaMostrar(p)) }}
                                             </span>
                                             <!-- Referencia en Bs si no es bolívar -->
@@ -351,26 +350,8 @@
 
                                         <!-- Columna Subtotal -->
                                         <td class="text-center subtotal">
+                                            <!-- Mostrar subtotal SIN IVA -->
                                             {{ formatearMoneda(p.subtotal) }}
-                                        </td>
-
-                                        <!-- Columna IVA -->
-                                        <td class="text-center iva">
-                                            <ng-container *ngIf="p.iva && p.iva > 0; else sinIva">
-                                                <span class="iva-monto">
-                                                    {{ formatearMoneda(p.iva) }}
-                                                </span>
-                                            </ng-container>
-                                            <ng-template #sinIva>
-                                                <span class="sin-iva text-muted">—</span>
-                                            </ng-template>
-                                        </td>
-
-                                        <!-- Columna Total -->
-                                        <td class="text-center total">
-                                            <strong class="total-monto">
-                                                {{ formatearMoneda(p.total) }}
-                                            </strong>
                                         </td>
 
                                         <!-- Columna Acciones -->
@@ -391,7 +372,7 @@
                         <div class="resumen-content">
                             <div class="monto-total">
                                 <i class="bi bi-receipt"></i>
-                                <span class="resumen-label">Monto total:</span>
+                                <span class="resumen-label">Monto total (sin IVA):</span>
                                 <span class="monto-valor">
                                     {{ formatearMoneda(totalProductos) }}
                                 </span>
@@ -871,7 +852,7 @@
                                             <div class="progress-label">
                                                 <span>{{ porcentajeAbonadoDelTotal }}% del total cubierto</span>
                                                 <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                     {{ formatearMoneda(obtenerEquivalenteBs(venta.montoAbonado ?? 0),
+                                                    {{ formatearMoneda(obtenerEquivalenteBs(venta.montoAbonado ?? 0),
                                                     'bolivar') }}
                                                 </span>
                                             </div>
@@ -892,7 +873,7 @@
                                             {{ formatearMoneda(montoTotal - (venta.montoAbonado ?? 0), venta.moneda) }}
                                         </span>
                                         <small *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                             {{ formatearMoneda(obtenerEquivalenteBs(montoTotal - (venta.montoAbonado
+                                            {{ formatearMoneda(obtenerEquivalenteBs(montoTotal - (venta.montoAbonado
                                             ?? 0)), 'bolivar') }}
                                         </small>
                                     </div>
@@ -1139,7 +1120,7 @@
                     </div>
                 </div>
 
-                <!-- 🧾 Totales - Modernizado -->
+                 <!-- 🧾 Totales - Modernizado -->
                 <div class="info-card resumen">
                     <div class="card-header-detalle">
                         <i class="bi bi-graph-up"></i>
@@ -1148,26 +1129,70 @@
                     <div class="card-body-detalle">
                         <!-- Totales principales -->
                         <div class="resumen-grid">
+                            <!-- Subtotal -->
                             <div class="resumen-item">
-                                <span class="resumen-label">Subtotal (productos)</span>
-                                <span class="resumen-value">{{ formatearMoneda(totalProductos, venta.moneda) }}</span>
+                                <span class="resumen-label">
+                                    <i class="bi bi-cart me-1"></i>
+                                    Subtotal (sin IVA)
+                                </span>
+                                <span class="resumen-value">{{ formatearMoneda(subtotalSinIva, venta.moneda) }}</span>
                             </div>
-                            <div class="resumen-item">
-                                <span class="resumen-label">Descuento</span>
+                            
+                            <!-- Descuento (solo si existe) -->
+                            <div *ngIf="tieneDescuento" class="resumen-item">
+                                <span class="resumen-label">
+                                    <i class="bi bi-tag me-1"></i>
+                                    Descuento ({{ venta.descuento }}%)
+                                </span>
                                 <span class="resumen-value descuento">
-                                    {{ formatearMoneda(truncarDosDecimales(venta.descuento ? (totalProductos *
-                                    (venta.descuento / 100)) : 0), venta.moneda) }}
+                                    -{{ formatearMoneda(descuentoAplicado, venta.moneda) }}
                                 </span>
                             </div>
-                            <div class="resumen-item total">
-                                <span class="resumen-label">Monto total</span>
-                                <span class="total-amount">
-                                    {{ formatearMoneda(redondearDosDecimales(montoTotal), venta.moneda) }}
-                                    <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                         {{ formatearMoneda(redondearDosDecimales(obtenerEquivalenteBs(montoTotal)),
-                                        'bolivar') }}
-                                    </span>
+                            
+                            <!-- Subtotal con descuento (solo si hay descuento) -->
+                            <div *ngIf="tieneDescuento" class="resumen-item subtotal-con-descuento">
+                                <span class="resumen-label">
+                                    <i class="bi bi-calculator me-1"></i>
+                                    Subtotal con descuento
                                 </span>
+                                <span class="resumen-value">
+                                    {{ formatearMoneda(subtotalConDescuento, venta.moneda) }}
+                                </span>
+                            </div>
+                            
+                            <!-- IVA -->
+                            <div class="resumen-item iva">
+                                <span class="resumen-label">
+                                    <i class="bi bi-percent me-1"></i>
+                                    IVA ({{ ivaPorcentaje }}%)
+                                </span>
+                                <span class="resumen-value">
+                                    {{ formatearMoneda(ivaCalculado, venta.moneda) }}
+                                </span>
+                            </div>
+                            
+                            <!-- Separador visual (solo si hay descuento) -->
+                            <div *ngIf="tieneDescuento" class="resumen-separator">
+                                <i class="bi bi-arrow-down"></i>
+                            </div>
+                            
+                            <!-- Total a pagar -->
+                            <div class="resumen-item total-pagar">
+                                <span class="resumen-label">
+                                    <i class="bi bi-cash-stack me-1"></i>
+                                    Total a pagar
+                                </span>
+                                <span class="resumen-value total-amount">
+                                    {{ formatearMoneda(totalPagar, venta.moneda) }}
+                                </span>
+                            </div>
+                            
+                            <!-- Mini resumen (si hay descuento) -->
+                            <div *ngIf="tieneDescuento" class="resumen-info">
+                                <small>
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Incluye {{ venta.descuento }}% de descuento
+                                </small>
                             </div>
                         </div>
 
@@ -1445,26 +1470,26 @@
             <!-- Body del Recibo -->
             <div class="modal-body p-3">
                 <div class="recibo-container compacto" id="contenidoRecibo">
-                <!-- Encabezado compacto -->
+                    <!-- Encabezado compacto -->
                     <div class="recibo-header text-center mb-3">
                         <!-- Nombre de la sede desde la información de sede -->
                         <h4 class="empresa-nombre mb-1">{{ datosRecibo?.sede?.nombre || '' }}</h4>
-                        
+
                         <!-- Información de contacto dinámica -->
                         <div class="empresa-info small text-muted">
                             <!-- Dirección desde sedeInfo -->
                             <p class="mb-0">{{ datosRecibo?.sede?.direccion || '' }}</p>
-                            
+
                             <!-- Teléfono y RIF desde sedeInfo -->
                             <p class="mb-0">
-                                Tel: {{ datosRecibo?.sede?.telefono || '' }} | 
+                                Tel: {{ datosRecibo?.sede?.telefono || '' }} |
                                 RIF: {{ datosRecibo?.sede?.rif || '' }}
                             </p>
-                            
+
                             <!-- Email desde sedeInfo -->
                             <p class="mb-0">Email: {{ datosRecibo?.sede?.email || '' }}</p>
                         </div>
-                        
+
                         <h5 class="titulo-venta mt-2 mb-0 text-dark">{{ getTituloRecibo() }}</h5>
                     </div>
 
@@ -1538,7 +1563,7 @@
                         </div>
                     </div>
 
-                  <!-- Métodos de pago compactos -->
+                    <!-- Métodos de pago compactos -->
                     <div class="metodos-compactos mb-3" *ngIf="getMetodosPagoSeguros().length > 0">
                         <h6 class="fw-bold mb-2 text-primary border-bottom pb-1">PAGOS</h6>
                         <div class="row g-1">
@@ -1548,9 +1573,12 @@
                                     <span class="metodo-pago-info">
                                         <span class="badge bg-primary me-1">{{ formatearTipoPago(metodo.tipo) }}</span>
                                         <!-- Pasar la moneda específica del método -->
-                                        <span class="monto-text">{{ formatearMoneda(metodo.monto, metodo.moneda) }}</span>
-                                        <span *ngIf="metodo.referencia" class="text-muted ms-1 referencia-text">(Ref: {{ metodo.referencia }})</span>
-                                        <span *ngIf="metodo.banco" class="text-muted ms-1 banco-text">- {{ metodo.banco }}</span>
+                                        <span class="monto-text">{{ formatearMoneda(metodo.monto, metodo.moneda)
+                                            }}</span>
+                                        <span *ngIf="metodo.referencia" class="text-muted ms-1 referencia-text">(Ref: {{
+                                            metodo.referencia }})</span>
+                                        <span *ngIf="metodo.banco" class="text-muted ms-1 banco-text">- {{ metodo.banco
+                                            }}</span>
                                     </span>
                                 </div>
                             </div>

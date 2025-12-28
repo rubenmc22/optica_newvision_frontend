@@ -1350,57 +1350,469 @@
 }
 
 // Resumen Financiero
-.resumen-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
+// =============================================
+// RESUMEN FINANCIERO - ESTILOS COMPLETOS
+// =============================================
 
-.resumen-item {
+.info-card.resumen {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin: 1.5rem;
+  animation: fadeInUp 0.4s ease-out;
+  
+  .card-header-detalle {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #e9ecef;
+    gap: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, #2c5aa0 0%, #1a3d7c 100%);
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+    color: white;
+    font-size: 1.1rem;
 
-    &:last-child {
-        border-bottom: none;
+    i {
+      font-size: 1.3rem;
+      color: white;
     }
+  }
 
-    &.total {
-        border-top: 2px solid #28a745;
-        margin-top: 0.5rem;
-        padding-top: 1rem;
-
+  .card-body-detalle {
+    padding: 1.5rem;
+    
+    // Resumen Grid
+    .resumen-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      
+      .resumen-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e9ecef;
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
         .resumen-label {
+          font-weight: 500;
+          color: #495057;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          
+          .bi {
+            font-size: 1rem;
+            color: #6c757d;
+          }
+        }
+        
+        .resumen-value {
+          font-weight: 600;
+          color: #495057;
+          font-family: 'Courier New', monospace;
+          letter-spacing: 0.5px;
+          
+          &.descuento {
+            color: #dc3545 !important;
+            font-weight: 700;
+          }
+        }
+        
+        // Estilos específicos por tipo
+        &.subtotal-con-descuento {
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          border-radius: 8px;
+          padding: 0.75rem 1rem;
+          margin: 0.5rem 0;
+          border-left: 4px solid #0dcaf0;
+          border-top: 2px dashed #dee2e6;
+          border-bottom: 2px dashed #dee2e6;
+          
+          .resumen-label {
+            color: #0dcaf0;
+            font-weight: 600;
+            
+            .bi {
+              color: #0dcaf0;
+            }
+          }
+          
+          .resumen-value {
+            color: #0dcaf0;
+            font-weight: 700;
+            font-size: 1.1rem;
+          }
+        }
+        
+        &.iva {
+          .resumen-label {
+            color: #6f42c1;
+            
+            .bi {
+              color: #6f42c1;
+            }
+          }
+          
+          .resumen-value {
+            color: #6f42c1;
+          }
+        }
+        
+        &.total-pagar {
+          background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+          border-radius: 8px;
+          padding: 1rem;
+          margin-top: 0.5rem;
+          border: 2px solid #198754;
+          
+          .resumen-label {
             font-size: 1.1rem;
             font-weight: 700;
-        }
-
-        .total-amount {
+            color: #2c5aa0;
+          }
+          
+          .resumen-value {
             font-size: 1.3rem;
-            font-weight: 700;
-            color: #28a745;
+            font-weight: 800;
+            color: #198754;
+          }
         }
+      }
     }
-
-    .resumen-label {
-        font-weight: 500;
-        color: #495057;
-    }
-
-    .resumen-value {
+    
+    // Detalles de forma de pago
+    .forma-pago-detalle {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid #dee2e6;
+      
+      .detalle-title {
         font-weight: 600;
-
-        &.iva {
-            color: #17a2b8;
+        color: #2c5aa0;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+        
+        .bi {
+          font-size: 1.1rem;
         }
-
-        &.descuento {
-            color: #dc3545;
+      }
+      
+      .detalle-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.75rem;
+        
+        @media (max-width: 768px) {
+          grid-template-columns: 1fr;
         }
+      }
+      
+      .detalle-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e9ecef;
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
+        .detalle-label {
+          font-weight: 500;
+          color: #495057;
+          font-size: 0.9rem;
+        }
+        
+        .detalle-value {
+          font-weight: 600;
+          color: #2c5aa0;
+          text-align: right;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+          
+          .conversion-text {
+            font-size: 0.8rem;
+            color: #6c757d;
+            font-weight: 500;
+          }
+          
+          .detail-text {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 0.125rem;
+          }
+        }
+        
+        &.total-pagado-item {
+          background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+          border-radius: 8px;
+          padding: 0.75rem;
+          margin-top: 0.5rem;
+          border: 1px solid #ffc107;
+          
+          .detalle-label {
+            font-weight: 600;
+            color: #856404;
+          }
+          
+          .detalle-value {
+            color: #856404;
+            
+            strong {
+              font-size: 1.1rem;
+            }
+          }
+        }
+      }
     }
+    
+    // Resumen de métodos de pago
+    .metodos-resumen {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 12px;
+      padding: 1.25rem;
+      border: 1px solid #e2e8f0;
+      
+      .detalle-title {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+        
+        .bi {
+          font-size: 1.1rem;
+          color: #2c5aa0;
+        }
+      }
+      
+      .metodos-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        
+        .metodo-resumen-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.75rem;
+          background: white;
+          border-radius: 8px;
+          border: 1px solid #e9ecef;
+          transition: all 0.2s ease;
+          
+          &:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+          }
+          
+          &.con-datos {
+            border-left: 3px solid #0dcaf0;
+          }
+          
+          &.pago-movil {
+            border-left-color: #6f42c1;
+          }
+          
+          &.transferencia {
+            border-left-color: #fd7e14;
+          }
+          
+          .metodo-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            
+            .metodo-tipo {
+              font-weight: 600;
+              color: #2c5aa0;
+              font-size: 0.95rem;
+            }
+            
+            .metodo-datos-container {
+              display: flex;
+              gap: 1rem;
+              align-items: center;
+              flex-wrap: wrap;
+              
+              .metodo-referencia,
+              .metodo-banco {
+                display: flex;
+                align-items: center;
+                gap: 0.25rem;
+                font-size: 0.8rem;
+                
+                .referencia-label,
+                .banco-label {
+                  font-weight: 500;
+                  color: #6c757d;
+                }
+                
+                .referencia-value,
+                .banco-value {
+                  font-weight: 600;
+                  color: #495057;
+                  font-family: 'Courier New', monospace;
+                }
+              }
+            }
+          }
+          
+          .metodo-monto {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.25rem;
+            
+            .monto-principal {
+              font-weight: 700;
+              color: #198754;
+              font-size: 1rem;
+              font-family: 'Courier New', monospace;
+            }
+            
+            .conversion-text {
+              font-size: 0.8rem;
+              color: #6c757d;
+              
+              .conversion-value {
+                font-weight: 500;
+                font-family: 'Courier New', monospace;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
+
+// =============================================
+// ANIMACIONES
+// =============================================
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// =============================================
+// RESPONSIVE
+// =============================================
+@media (max-width: 768px) {
+  .info-card.resumen {
+    margin: 1rem;
+    
+    .card-body-detalle {
+      padding: 1rem;
+      
+      .resumen-grid {
+        .resumen-item {
+          padding: 0.5rem 0;
+          
+          &.total-pagar {
+            padding: 0.75rem;
+            
+            .resumen-label {
+              font-size: 1rem;
+            }
+            
+            .resumen-value {
+              font-size: 1.1rem;
+            }
+          }
+        }
+      }
+      
+      .forma-pago-detalle,
+      .metodos-resumen {
+        padding: 1rem;
+      }
+      
+      .metodos-resumen {
+        .metodos-list {
+          .metodo-resumen-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+            
+            .metodo-monto {
+              align-items: flex-start;
+              width: 100%;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Separador visual para el flujo del resumen
+.resumen-separator {
+  text-align: center;
+  padding: 0.5rem 0;
+  color: #0dcaf0;
+  
+  .bi-arrow-down {
+    font-size: 1.2rem;
+    background: #f8f9fa;
+    border-radius: 50%;
+    padding: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+// Información adicional sobre descuento
+.resumen-info {
+  background: #e9ecef;
+  border-radius: 6px;
+  padding: 0.75rem;
+  text-align: center;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #495057;
+  
+  small {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    
+    .bi {
+      color: #0dcaf0;
+    }
+  }
+}
+
+// Para resaltar cuando hay descuento
+.resumen-grid:has(.subtotal-con-descuento) {
+  .total-pagar {
+    margin-top: 1rem;
+  }
+}
+
 
 // Observaciones
 .observaciones-text {
