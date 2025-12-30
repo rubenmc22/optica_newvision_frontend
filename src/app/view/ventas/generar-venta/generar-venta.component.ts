@@ -87,7 +87,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     montoExcedido: boolean = false;
     maximoCuotasPermitidas = 6;
     cantidadCuotasCashea = 3;
-    sedeInfo: SedeInfo | null = null; 
+    sedeInfo: SedeInfo | null = null;
 
     productos: Producto[] = [];
     pacientes: any[] = [];
@@ -2484,11 +2484,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }));
 
         // CALCULAR TOTALES CORRECTAMENTE
-        // 1. Calcular SUBTOTAL CORRECTO: suma de (precio con IVA * cantidad)
-        const subtotalConIva = this.calcularTotalProductos(); // Usar el método existente
+        // 1. Calcular SUBTOTAL CORRECTO: suma de (precio SIN IVA * cantidad)
+        const subtotalSinIva = this.subtotalCorregido;  // ← Usar subtotal SIN IVA
 
         // 1. Base imponible SIN IVA
-        const baseImponible = this.subtotalCorregido;
+        const baseImponible = this.subtotalCorregido; // ← Esto ya es SIN IVA
         // 2. Descuento sobre base imponible (SIN IVA)
         const descuentoMonto = this.venta.descuento ? (baseImponible * (this.venta.descuento / 100)) : 0;
         const baseConDescuento = baseImponible - descuentoMonto;
@@ -2500,11 +2500,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const totalCorrecto = baseConDescuento + ivaCorrecto;
 
         // 6. Verificar cálculos
-        console.log('CÁLCULOS CORREGIDOS:');
-        console.log('Subtotal (con IVA):', subtotalConIva);
+        console.log('CÁLCULOS CORREGIDOS PARA API:');
+        console.log('Subtotal (SIN IVA):', subtotalSinIva);
+        console.log('Descuento:', descuentoMonto);
+        console.log('Base con descuento:', baseConDescuento);
         console.log('IVA total:', ivaCorrecto);
-        console.log('Descuento aplicado:', descuentoMonto);
-        console.log('Total final (subtotal - descuento):', totalCorrecto);
+        console.log('Total final:', totalCorrecto);
 
         // Determinar total pagado según forma de pago
         let totalPagado = 0;
@@ -2535,7 +2536,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 tasa_cambio: tasaUtilizada,
             },
             totales: {
-                subtotal: this.redondear(subtotalConIva),     // Subtotal CON IVA
+                subtotal: this.redondear(subtotalSinIva),     // Subtotal CON IVA
                 descuento: this.redondear(descuentoMonto),       // Descuento sobre subtotal con IVA
                 iva: this.redondear(ivaCorrecto),                // IVA total
                 total: this.redondear(totalCorrecto),            // Subtotal con IVA - descuento
@@ -6356,5 +6357,5 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         return lineas;
     }
-    
+
 }
