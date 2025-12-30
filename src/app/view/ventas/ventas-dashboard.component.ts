@@ -93,13 +93,11 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
             // Suscribirse a los cambios de sedes
             this.userStateService.sedes$.subscribe(sedes => {
                 this.sedesDisponibles = sedes;
-                console.log('Sedes disponibles en dashboard:', this.sedesDisponibles.length);
             });
 
             // Suscribirse a los cambios de sede actual
             this.userStateService.sedeActual$.subscribe(sede => {
                 this.sedeInfo = sede;
-                console.log('Sede actual en dashboard:', this.sedeInfo?.nombre);
             });
 
             // Iniciar auto-refresh después de cargar datos iniciales
@@ -116,11 +114,8 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
 
     // =========== AUTO-REFRESH SIMPLIFICADO ===========
     private iniciarAutoRefresh(): void {
-        console.log('🔄 Iniciando auto-refresh cada 5 minutos...');
-
         // Actualizar sedes automáticamente cada 5 minutos
         this.autoRefreshSubscription = interval(this.AUTO_REFRESH_INTERVAL).subscribe(() => {
-            console.log('🔄 Auto-refresh: actualizando sedes...');
             this.actualizarSedesAuto();
         });
     }
@@ -131,7 +126,6 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
                 if (response.message === 'ok' && response.sedes) {
                     const nuevasSedes = response.sedes;
                     this.userStateService.setSedes(nuevasSedes);
-                    console.log('✅ Sede actualizada por auto-refresh');
                 }
             },
             error: (error) => {
@@ -143,14 +137,12 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
     // =========== MÉTODO: CARGAR SEDES ===========
     private async cargarSedesUnaVez(): Promise<void> {
         return new Promise((resolve, reject) => {
-            console.log('🔄 Cargando sedes desde API...');
 
             this.authService.getSedes().subscribe({
                 next: (response: any) => {
                     if (response.message === 'ok' && response.sedes) {
                         const sedes = response.sedes;
                         this.userStateService.setSedes(sedes);
-                        console.log('✅ Sedes cargadas:', sedes.length);
                         resolve();
                     } else {
                         reject(new Error('Respuesta inválida del servidor'));
@@ -165,7 +157,6 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
                         try {
                             const sedes = JSON.parse(sedesCache);
                             this.userStateService.setSedes(sedes);
-                            console.log('✅ Usando sedes de caché:', sedes.length);
                             resolve();
                             return;
                         } catch (e) {
@@ -183,7 +174,6 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
     private notificarSedesDisponibles(): void {
         // Puedes emitir un evento o simplemente confiar en que UserStateService
         // ya tiene los datos y los componentes hijos se suscribirán
-        console.log('📢 Sedes disponibles para todos los componentes');
     }
 
     cambiarVista(v: typeof this.vista): void {
@@ -285,9 +275,6 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
             if (this.sedeActiva) {
                 this.sedeInfo = this.userStateService.getSedePorKey(this.sedeActiva);
             }
-
-            console.log('Dashboard - Sede activa:', this.sedeActiva);
-            console.log('Dashboard - Info sede actual:', this.sedeInfo);
 
             this.tareaFinalizada();
         });

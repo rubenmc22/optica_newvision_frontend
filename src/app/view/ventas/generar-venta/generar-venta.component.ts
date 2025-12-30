@@ -9,7 +9,6 @@ import { forkJoin, map, Subject, Observable, of, lastValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { AuthService } from '../../../core/services/auth/auth.service';
 import { UserStateService, SedeInfo } from '../../../core/services/userState/user-state-service';
 import { PacientesService } from '../../../core/services/pacientes/pacientes.service';
 import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
@@ -195,7 +194,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // SUSCRIBIRSE A LA SEDE DESDE UserStateService (ya cargada por el dashboard)
         this.userStateService.sedeActual$.subscribe(sede => {
             this.sedeInfo = sede;
-            console.log('Sede cargada en generar-venta (desde UserStateService):', this.sedeInfo);
 
             // Actualizar filtros si es necesario
             if (this.sedeInfo) {
@@ -470,11 +468,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
                 // Asegurarse de que la historia seleccionada por defecto también tenga key como string
                 if (this.historiasMedicas.length > 0) {
-                    this.historiaSeleccionadaId = this.historiasMedicas[0].key; // Esto ya es string
+                    this.historiaSeleccionadaId = this.historiasMedicas[0].key;
                     this.historiaMedica = this.historiasMedicas[0].data;
                     this.historiaMedicaSeleccionada = this.historiasMedicas[0].data;
                 }
-                // Seleccionar automáticamente la historia más reciente (por defecto)
+                // Seleccionar automáticamente la historia más reciente 
                 if (this.historiasMedicas.length > 0) {
                     this.historiaSeleccionadaId = this.historiasMedicas[0].key;
                     this.historiaMedica = this.historiasMedicas[0].data;
@@ -514,7 +512,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return material || '--';
     }
 
-    // Método mejorado para verificar fórmula
     private tieneFormulaCompleta(historia: any): boolean {
         if (!historia?.examenOcular?.refraccionFinal) {
             return false;
@@ -522,14 +519,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         const ref = historia.examenOcular.refraccionFinal;
 
-        // Verificar si tiene datos significativos (no strings vacíos)
         const odTieneDatos = !!ref.esf_od || ref.esf_od === 0 || !!ref.cil_od || ref.cil_od === 0;
         const oiTieneDatos = !!ref.esf_oi || ref.esf_oi === 0 || !!ref.cil_oi || ref.cil_oi === 0;
 
         return odTieneDatos || oiTieneDatos;
     }
 
-    // Método público para el template
     tieneFormulaCompletaTemplate(historia: any): boolean {
         return this.tieneFormulaCompleta(historia);
     }
@@ -559,12 +554,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     onProductoSeleccionadoChange(event: any): void {
-        //SOLUCIÓN: Ignorar eventos con valores null/undefined
         if (event === null || event === undefined) {
             return;
         }
 
-        // Si es un objeto, extraer el ID
         let productoId: string;
 
         if (typeof event === 'object' && event !== null) {
@@ -583,11 +576,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         if (producto) {
             this.agregarProductoAlCarrito(producto);
-            // Limpiar la selección después de agregar
+
             setTimeout(() => {
-                //   this.productoSeleccionado = null;
                 this.cdr.detectChanges();
             }, 100);
+
         } else {
             console.error('Producto no encontrado para ID:', productoId);
             this.swalService.showWarning('Error', 'No se pudo encontrar el producto seleccionado.');
@@ -595,7 +588,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     agregarProductoAlCarrito(producto: any): void {
-        // Validación CRÍTICA: Verificar que el producto existe y tiene ID
         if (!producto || !producto.id) {
             console.error('Producto inválido o sin ID:', producto);
             this.swalService.showWarning('Error', 'No se puede agregar un producto inválido al carrito.');
@@ -628,7 +620,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
 
             yaExiste.cantidad = nuevaCantidad;
-            //this.swalService.showInfo('Producto actualizado', 'Se incrementó la cantidad en el carrito.');
+
         } else {
             this.venta.productos.push({
                 id: producto.id,
@@ -642,11 +634,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 stock: producto.stock ?? 0
             });
 
-            //   this.swalService.showSuccess('Producto agregado', `${producto.nombre} se agregó al carrito.`);
         }
 
         this.actualizarProductosConDetalle();
-        // this.limpiarSelectProductos();
 
         setTimeout(() => {
             this.cdr.detectChanges();
@@ -700,22 +690,22 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const aplicaIva = p.aplicaIva ?? false;
             const tasaOrigen = this.tasasDisponibles.find(t => t.nombre.toLowerCase() === p.moneda)?.valor ?? 1;
 
-            // PRECIO SIN IVA: precio base convertido
+            // PRECIO SIN IVA
             const precioUnitarioSinIvaConvertido = +(p.precio * (tasaOrigen / tasaDestino)).toFixed(2);
 
-            // SUBTOTAL SIN IVA: precio sin IVA × cantidad
+            // SUBTOTAL SIN IVA
             const subtotalSinIva = +(precioUnitarioSinIvaConvertido * cantidad).toFixed(2);
 
-            // CALCULAR IVA ORIGINAL: solo si aplica IVA
+            // CALCULAR IVA ORIGINAL
             const ivaOriginal = aplicaIva ?
                 +(subtotalSinIva * (this.ivaPorcentaje / 100)).toFixed(2) : 0;
 
-            // PRECIO CON IVA: para referencia si es necesario
+            // PRECIO CON IVA
             const precioUnitarioConIva = aplicaIva ?
                 +(precioUnitarioSinIvaConvertido * (1 + (this.ivaPorcentaje / 100))).toFixed(2) :
                 precioUnitarioSinIvaConvertido;
 
-            // TOTAL ORIGINAL por producto: subtotal sin IVA + IVA
+
             const totalOriginal = subtotalSinIva + ivaOriginal;
 
             // Cálculos con descuento (si aplica)
@@ -739,9 +729,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 cantidad,
                 precioConvertido: precioUnitarioSinIvaConvertido,
                 precioConIva: precioUnitarioConIva,
-                subtotal: subtotalSinIva,      // ← SUBTOTAL SIN IVA
-                iva: ivaOriginal,              // IVA ORIGINAL
-                total: totalOriginal,          // TOTAL ORIGINAL
+                subtotal: subtotalSinIva,
+                iva: ivaOriginal,
+                total: totalOriginal,
                 descuentoAsignado: descuentoProducto,
                 baseConDescuento: baseConDescuento,
                 ivaConDescuento: ivaConDescuento,
@@ -756,8 +746,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return acc + (producto.subtotal || 0);
         }, 0);
 
-        // Debug para verificar cálculos
-        this.debugCalculos();
     }
 
     calcularTotalProductos(): number {
@@ -893,7 +881,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     formatearMonto(): void {
-        const limpio = this.valorTemporal.replace(/[^\d.,]/g, '').trim(); // Permitir coma
+        const limpio = this.valorTemporal.replace(/[^\d.,]/g, '').trim();
 
         if (!limpio) {
             this.venta.montoAbonado = 0;
@@ -1625,54 +1613,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     // === MÉTODOS DE VENTA ===
-    /* abrirModalResumen(): void {
-         if (this.venta.productos.length === 0) {
-             this.swalService.showWarning('Sin productos', 'Debes agregar al menos un producto para continuar.');
-             return;
-         }
- 
-         const hayFormulacion = !!this.historiaMedica?.examenOcular?.refraccionFinal;
-         if (hayFormulacion && !this.pacienteSeleccionado) {
-             this.swalService.showWarning('Paciente requerido', 'Debes seleccionar un paciente para aplicar la formulación.');
-             return;
-         }
- 
-         this.actualizarProductosConDetalle();
- 
-         const modalElement = document.getElementById('resumenVentaModal');
-         if (modalElement) {
-             const modal = new bootstrap.Modal(modalElement);
-             modal.show();
-         }
-     }*/
-
-    // === MÉTODOS DE DIAGNÓSTICO ===
-    debugSubtotales(): void {
-        console.log('=== DEBUG DE SUBTOTALES ===');
-
-        // Mostrar detalles de cada producto
-        this.productosConDetalle.forEach((producto, index) => {
-            console.log(`Producto ${index + 1}: ${producto.nombre}`);
-            console.log(`  - Precio original: ${producto.precio}`);
-            console.log(`  - Precio convertido: ${producto.precioConvertido}`);
-            console.log(`  - Precio con IVA: ${producto.precioConIva}`);
-            console.log(`  - Cantidad: ${producto.cantidad}`);
-            console.log(`  - Subtotal sin IVA: ${producto.precioConvertido * producto.cantidad}`);
-            console.log(`  - Subtotal con IVA: ${producto.precioConIva * producto.cantidad}`);
-            console.log(`  - IVA individual: ${producto.iva}`);
-        });
-
-        console.log(`Subtotal sin IVA (calcularSubtotalSinIva): ${this.calcularSubtotalSinIva()}`);
-        console.log(`Subtotal sin IVA (subtotalCorregido): ${this.subtotalCorregido}`);
-        console.log(`Subtotal con IVA (calcularTotalProductos): ${this.calcularTotalProductos()}`);
-        console.log(`Subtotal con IVA (subtotalConIvaCorregido): ${this.subtotalConIvaCorregido}`);
-        console.log(`IVA total: ${this.calcularIvaTotal()}`);
-        console.log(`Descuento: ${this.calcularDescuento()}`);
-        console.log(`Monto total: ${this.montoTotal}`);
-        console.log('=== FIN DEBUG ===');
-    }
-
-    // Llama a este método cuando abras el modal para ver qué está pasando
     abrirModalResumen(): void {
         if (this.venta.productos.length === 0) {
             this.swalService.showWarning('Sin productos', 'Debes agregar al menos un producto para continuar.');
@@ -1687,9 +1627,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         this.actualizarProductosConDetalle();
 
-        // DEBUG: Ver cálculos antes de abrir el modal
-        this.debugSubtotales();
-
         const modalElement = document.getElementById('resumenVentaModal');
         if (modalElement) {
             const modal = new bootstrap.Modal(modalElement);
@@ -1699,16 +1636,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
 
     limpiarTodosLosSelects(): void {
-        // Limpiar modelos
         this.productoSeleccionado = null;
         this.pacienteSeleccionado = null;
 
-        // Limpiar los componentes ng-select directamente usando ViewChild
         setTimeout(() => {
             if (this.productoSelect) {
                 this.productoSelect.clearModel();
                 this.productoSelect.close();
-                // Forzar limpieza del input de búsqueda - CORREGIDO
+
                 if (this.productoSelect.searchInput) {
                     this.productoSelect.searchInput.nativeElement.value = '';
                     this.productoSelect.searchInput.nativeElement.dispatchEvent(new Event('input'));
@@ -1718,7 +1653,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             if (this.selectorPaciente) {
                 this.selectorPaciente.clearModel();
                 this.selectorPaciente.close();
-                // Forzar limpieza del input de búsqueda - CORREGIDO
+
                 if (this.selectorPaciente.searchInput) {
                     this.selectorPaciente.searchInput.nativeElement.value = '';
                     this.selectorPaciente.searchInput.nativeElement.dispatchEvent(new Event('input'));
@@ -1735,19 +1670,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         setTimeout(() => {
             if (this.productoSelect) {
-                // 1. Cerrar el dropdown primero
                 this.productoSelect.close();
-
-                // 2. Limpiar el modelo
                 this.productoSelect.clearModel();
 
-                // 3. Limpiar el input de búsqueda
                 if (this.productoSelect.searchInput) {
                     this.productoSelect.searchInput.nativeElement.value = '';
                     this.productoSelect.searchInput.nativeElement.dispatchEvent(new Event('input'));
                 }
 
-                // 4. Forzar el cierre del dropdown nuevamente
                 setTimeout(() => {
                     if (this.productoSelect) {
                         this.productoSelect.close();
@@ -1852,7 +1782,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.venta.montoAbonado = 0;
         this.venta.metodosDePago = [];
 
-        // 3. Solo resetear formaPago si se solicita explícitamente
         if (resetFormaPago) {
             this.venta.formaPago = 'contado';
         }
@@ -1938,10 +1867,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     onAsesorChange(): void {
-        // Forzar actualización de la vista
         this.cdr.detectChanges();
 
-        // Verificar que el asesor existe
         if (this.asesorSeleccionado) {
             const asesor = this.empleadosDisponibles.find(e => e.id == this.asesorSeleccionado);
         }
@@ -1970,12 +1897,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     cambiarMonedaEfectivo(nuevaMoneda: string): void {
         this.monedaEfectivo = nuevaMoneda;
 
-        // ACTUALIZAR LA MONEDA EN TODOS LOS MÉTODOS DE EFECTIVO EXISTENTES
         this.venta.metodosDePago.forEach(metodo => {
             if (metodo.tipo === 'efectivo') {
                 metodo.moneda = this.getMonedaParaMetodo('efectivo');
 
-                // También actualizar el valor temporal con el nuevo formato
                 if (metodo.monto && metodo.monto > 0) {
                     metodo.valorTemporal = this.formatearMoneda(metodo.monto, metodo.moneda);
                 }
@@ -1988,7 +1913,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     onTipoMetodoChange(index: number): void {
         const metodo = this.venta.metodosDePago[index];
 
-        // FORZAR LA ASIGNACIÓN DE MONEDA
         metodo.moneda = this.getMonedaParaMetodo(metodo.tipo);
 
         metodo.monto = 0;
@@ -2012,7 +1936,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             bancoNombre: '',
             banco: '',
             bancoObject: null,
-            moneda: '' // ← AGREGAR MONEDA VACÍA
+            moneda: ''
         });
     }
 
@@ -2033,7 +1957,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const montoEnSistema = this.convertirMontoExacto(metodo.monto, monedaMetodo, this.venta.moneda);
 
         if (monedaMetodo === this.venta.moneda) {
-            return ''; // No mostrar conversión si es la misma moneda
+            return '';
         }
 
         return `⇄${this.formatearMoneda(montoEnSistema, this.venta.moneda)}`;
@@ -2238,18 +2162,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         // 4. Verificar que todos los métodos de pago estén completamente configurados
         const metodosCompletos = this.venta.metodosDePago.every(metodo => {
-            // Verificar tipo de pago seleccionado
             if (!metodo.tipo) return false;
 
-            // Verificar monto válido
             if (!metodo.monto || metodo.monto <= 0) return false;
 
-            // Para métodos que requieren banco (pago móvil, transferencia)
             if (this.necesitaBanco(metodo.tipo)) {
                 if (!metodo.banco || !metodo.bancoObject) return false;
             }
 
-            // Para métodos que requieren referencia (pago móvil, transferencia)
             if (this.necesitaReferencia(metodo.tipo)) {
                 if (!metodo.referencia || metodo.referencia.trim() === '') return false;
             }
@@ -2509,14 +2429,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // 4. Total final
         const totalCorrecto = baseConDescuento + ivaCorrecto;
 
-        // 6. Verificar cálculos
-        console.log('CÁLCULOS CORREGIDOS PARA API:');
-        console.log('Subtotal (SIN IVA):', subtotalSinIva);
-        console.log('Descuento:', descuentoMonto);
-        console.log('Base con descuento:', baseConDescuento);
-        console.log('IVA total:', ivaCorrecto);
-        console.log('Total final:', totalCorrecto);
-
         // Determinar total pagado según forma de pago
         let totalPagado = 0;
         switch (this.venta.formaPago) {
@@ -2671,7 +2583,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.generarVentaService.crearVenta(datosParaAPI).subscribe({
                 next: async (resultado: any) => {
                     if (resultado.message === 'ok' && resultado.venta) {
-                        console.log(resultado, resultado);
                         const numeroVenta = resultado.venta.venta.numero_venta
 
                         this.loader.updateMessage('✅ Venta generada exitosamente');
@@ -2704,202 +2615,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    private obtenerInfoClienteDesdeApi(datosApi: any): any {
-        if (datosApi.cliente?.informacion) {
-            // Determinar si es paciente o cliente
-            const esPaciente = datosApi.cliente.tipo === 'paciente';
-            const tipoTexto = esPaciente ? 'PACIENTE' : 'CLIENTE';
-
-            return {
-                nombre: datosApi.cliente.informacion.nombreCompleto || tipoTexto,
-                cedula: datosApi.cliente.informacion.cedula || 'N/A',
-                telefono: datosApi.cliente.informacion.telefono || 'N/A',
-                email: datosApi.cliente.informacion.email || '',
-                tipo: tipoTexto, // Agregar el tipo
-                esPaciente: esPaciente // Bandera para usar en el HTML
-            };
-        }
-
-        // Fallback a la lógica existente
-        const infoCliente = this.obtenerInfoCliente();
-        return {
-            ...infoCliente,
-            tipo: 'CLIENTE GENERAL',
-            esPaciente: false
-        };
-    }
-
-    // === MÉTODOS OPTIMIZADOS PARA RECIBO ===
     /*
      * Prepara el recibo local ANTES de llamar al API
      */
     private prepararReciboLocal(): void {
-        const datosRecibo = this.crearDatosReciboOptimizado();
-        this.datosRecibo = datosRecibo;
+        this.datosRecibo = this.crearDatosReciboReal();
     }
 
-    private crearDatosReciboOptimizado(): any {
-        const fechaActual = new Date();
-
-        // 1. USAR LOS DATOS QUE YA PREPARAMOS PARA EL API
-        const datosParaAPI = this.prepararDatosParaAPI();
-
-        console.log('Datos del API para recibo:', datosParaAPI);
-
-        // 2. OBTENER INFORMACIÓN DE PRODUCTOS CON DETALLES
-        const productosConDetalles = this.obtenerProductosConDetallesParaRecibo();
-        console.log('productosConDetalles', productosConDetalles);
-
-        // 3. PREPARAR DATOS DEL RECIBO BASADOS EN EL API
-        const datosRecibo: any = {
-            // Información general
-            numeroVenta: 'V-' + Date.now().toString().slice(-6),
-            fecha: fechaActual.toLocaleDateString('es-VE'),
-            hora: fechaActual.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
-            vendedor: this.getResumenAsesor(),
-
-            // Información de la sede
-            sede: this.obtenerInfoSede(),
-
-            // Cliente (usar los datos del API si están disponibles)
-            cliente: this.obtenerInfoCliente(),
-
-            // Productos (detalles para mostrar en recibo)
-            productos: productosConDetalles,
-
-            // Métodos de pago (usar los del componente actual)
-            metodosPago: this.obtenerMetodosPagoOptimizados(),
-
-            // Totales - USAR LOS DEL API QUE SON CORRECTOS
-            totales: {
-                subtotal: datosParaAPI.totales?.subtotal || this.calcularSubtotalSinIva(),
-                descuento: datosParaAPI.totales?.descuento || 0,
-                iva: datosParaAPI.totales?.iva || 0,
-                total: datosParaAPI.totales?.total || this.montoTotal,
-                totalPagado: datosParaAPI.totales?.totalPagado || this.obtenerTotalPagadoSegunFormaPago()
-            },
-
-            // Configuración
-            configuracion: {
-                formaPago: datosParaAPI.venta?.formaPago || this.venta.formaPago,
-                moneda: datosParaAPI.venta?.moneda || this.venta.moneda,
-                descuento: this.venta.descuento, // Mantener el descuento configurado
-                observaciones: datosParaAPI.venta?.observaciones || this.venta.observaciones,
-                impuesto: datosParaAPI.venta?.impuesto || this.ivaPorcentaje
-            }
-
-            // Mantener referencia a los datos del API
-            // datosApi: datosParaAPI
-        };
-
-        // 4. AGREGAR INFORMACIÓN ESPECÍFICA SEGÚN FORMA DE PAGO
-        if (datosParaAPI.formaPagoDetalle) {
-            datosRecibo.formaPagoDetalle = datosParaAPI.formaPagoDetalle;
-        }
-
-        if (datosParaAPI.formaPago) {
-            datosRecibo.cashea = datosParaAPI.formaPago;
-        }
-
-        console.log('Recibo generado con datos del API:', datosRecibo);
-        return datosRecibo;
-    }
-
-    private obtenerProductosConDetallesParaRecibo(): any[] {
-        return this.venta.productos.map((p, index) => {
-            const productoCalculado = this.productosConDetalle.find(pc => pc.id === p.id);
-
-            if (productoCalculado) {
-                return {
-                    nombre: p.nombre || 'Producto',
-                    codigo: p.codigo || 'N/A',
-                    cantidad: p.cantidad || 1,
-                    precioUnitario: productoCalculado.precioConvertido || 0,
-                    precioConIva: productoCalculado.precioConIva || 0,
-                    subtotal: (productoCalculado.precioConvertido || 0) * (p.cantidad || 1),
-                    iva: productoCalculado.iva || 0,
-                    total: productoCalculado.total || 0,
-                    aplicaIva: p.aplicaIva || false,
-                    moneda: p.moneda
-                };
-            }
-
-            // Fallback si no encontramos el producto calculado
-            return {
-                nombre: p.nombre || 'Producto',
-                codigo: p.codigo || 'N/A',
-                cantidad: p.cantidad || 1,
-                precioUnitario: p.precio || 0,
-                precioConIva: p.precioConIva || 0,
-                subtotal: (p.precio || 0) * (p.cantidad || 1),
-                iva: p.aplicaIva ? ((p.precio || 0) * (p.cantidad || 1) * (this.ivaPorcentaje / 100)) : 0,
-                total: 0,
-                aplicaIva: p.aplicaIva || false,
-                moneda: p.moneda
-            };
-        });
-    }
-
-    private obtenerInfoCliente(): any {
-        // Usar los datos del API si están disponibles
-        const datosApi = this.prepararDatosParaAPI();
-
-        if (datosApi.cliente?.informacion) {
-            // Determinar tipo basado en datos del API
-            const esPaciente = datosApi.cliente.tipo === 'paciente';
-            const tipoTexto = esPaciente ? 'PACIENTE' : 'CLIENTE';
-
-            return {
-                nombre: datosApi.cliente.informacion.nombreCompleto || tipoTexto,
-                cedula: datosApi.cliente.informacion.cedula || 'N/A',
-                telefono: datosApi.cliente.informacion.telefono || 'N/A',
-                email: datosApi.cliente.informacion.email || '',
-                tipo: tipoTexto,
-                esPaciente: esPaciente,
-                origen: 'api'
-            };
-        }
-
-        // Fallback a la lógica existente
-        if (this.requierePaciente && this.pacienteSeleccionado) {
-            return {
-                nombre: this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'PACIENTE',
-                cedula: this.pacienteSeleccionado?.informacionPersonal?.cedula || 'N/A',
-                telefono: this.pacienteSeleccionado?.informacionPersonal?.telefono || 'N/A',
-                email: this.pacienteSeleccionado?.informacionPersonal?.email || '',
-                tipo: 'PACIENTE',                    // ← PACIENTE
-                esPaciente: true,                    // ← true
-                origen: 'paciente_seleccionado'
-            };
-        } else if (!this.requierePaciente) {
-            return {
-                nombre: this.clienteSinPaciente.nombreCompleto?.trim() || 'CLIENTE GENERAL',
-                cedula: this.clienteSinPaciente.cedula?.trim() || 'N/A',
-                telefono: this.clienteSinPaciente.telefono?.trim() || 'N/A',
-                email: this.clienteSinPaciente.email || '',
-                tipo: 'CLIENTE GENERAL',             // ← CLIENTE GENERAL
-                esPaciente: false,                   // ← false
-                origen: 'cliente_sin_paciente'
-            };
-        }
-
-        return {
-            nombre: 'CLIENTE GENERAL',
-            cedula: 'N/A',
-            telefono: 'N/A',
-            email: '',
-            tipo: 'CLIENTE GENERAL',
-            esPaciente: false,
-            origen: 'default'
-        };
-    }
-
-    // Y en el método que actualiza el número de venta después de la respuesta del API
     private actualizarNumeroVentaRecibo(numeroVenta: string): void {
         if (this.datosRecibo) {
             this.datosRecibo.numeroVenta = numeroVenta;
-
-            // También podemos actualizar los totales con los datos exactos del API si es necesario
             const datosApi = this.prepararDatosParaAPI();
 
             if (datosApi.totales) {
@@ -2913,31 +2638,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
         }
     }
-
-    /**
-     * Obtiene información del cliente optimizada
-     */
-    /*private obtenerInfoCliente(): any {
-        if (this.requierePaciente && this.pacienteSeleccionado) {
-            return {
-                nombre: this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'PACIENTE',
-                cedula: this.pacienteSeleccionado?.informacionPersonal?.cedula || 'N/A',
-                telefono: this.pacienteSeleccionado?.informacionPersonal?.telefono || 'N/A'
-            };
-        } else if (!this.requierePaciente) {
-            return {
-                nombre: this.clienteSinPaciente.nombreCompleto?.trim() || 'CLIENTE GENERAL',
-                cedula: this.clienteSinPaciente.cedula?.trim() || 'N/A',
-                telefono: this.clienteSinPaciente.telefono?.trim() || 'N/A'
-            };
-        }
-
-        return {
-            nombre: 'CLIENTE GENERAL',
-            cedula: 'N/A',
-            telefono: 'N/A'
-        };
-    }*/
 
     /**
      * Obtiene información de la sede
@@ -2962,133 +2662,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             email: 'newvisionlens2020@gmail.com'
         };
     }
-
-    /**
-     * Obtiene métodos de pago optimizados
-     */
-    private obtenerMetodosPagoOptimizados(): any[] {
-        return this.venta.metodosDePago.map(m => ({
-            tipo: m.tipo || 'efectivo',
-            monto: m.monto || 0,
-            referencia: m.referencia || '',
-            banco: m.banco || '',
-            moneda: m.moneda || this.getMonedaParaMetodo(m.tipo)
-        }));
-    }
-
-    private obtenerProductosConDetallesOptimizado(): any[] {
-        return this.venta.productos.map((p, index) => {
-            const productoCalculado = this.productosConDetalle.find(pc => pc.id === p.id);
-
-            if (productoCalculado) {
-                // Usar precioConIva para el subtotal (que incluye IVA si aplica)
-                const precioUnitarioConIva = productoCalculado.precioConIva || 0;
-                const subtotalConIva = precioUnitarioConIva * (p.cantidad || 1);
-
-                return {
-                    nombre: p.nombre || 'Producto',
-                    codigo: p.codigo || 'N/A',
-                    cantidad: p.cantidad || 1,
-                    precioUnitario: productoCalculado.precioConvertido || 0, // Precio sin IVA
-                    precioConIva: precioUnitarioConIva, // Precio con IVA
-                    subtotal: subtotalConIva, // cantidad × precio con IVA
-                    iva: productoCalculado.iva || 0,
-                    total: subtotalConIva, // El total es el mismo que subtotal (ya incluye IVA)
-                    aplicaIva: p.aplicaIva || false,
-                    moneda: p.moneda
-                };
-            }
-
-            // Fallback - mantén la lógica existente
-            const cantidad = p.cantidad || 1;
-            const precioSinIva = p.precio || 0;
-            const ivaCalculado = p.aplicaIva ? precioSinIva * cantidad * (this.ivaPorcentaje / 100) : 0;
-            const precioConIva = p.aplicaIva ? precioSinIva * (1 + (this.ivaPorcentaje / 100)) : precioSinIva;
-            const subtotalConIva = precioConIva * cantidad;
-
-            return {
-                nombre: p.nombre || 'Producto',
-                codigo: p.codigo || 'N/A',
-                cantidad: cantidad,
-                precioUnitario: precioSinIva, // Sin IVA
-                precioConIva: precioConIva, // Con IVA
-                subtotal: subtotalConIva, // cantidad × precio con IVA
-                iva: ivaCalculado,
-                total: subtotalConIva,
-                aplicaIva: p.aplicaIva || false,
-                moneda: p.moneda
-            };
-        });
-    }
-
-    /**
-     * Obtiene total pagado según forma de pago (reutilizando lógica existente)
-     */
-    private obtenerTotalPagadoSegunFormaPago(): number {
-        switch (this.venta.formaPago) {
-            case 'contado':
-                return this.totalPagadoPorMetodos;
-            case 'abono':
-                return this.venta.montoAbonado || 0;
-            case 'cashea':
-                return this.totalPagadoCashea;
-            default:
-                return this.totalPagadoPorMetodos;
-        }
-    }
-
-    /**
-     * Agrega información específica de forma de pago
-     */
-    private agregarInfoFormaPagoEspecifica(datosRecibo: any): void {
-        if (this.venta.formaPago === 'cashea') {
-            datosRecibo.cashea = {
-                nivel: this.nivelCashea,
-                inicial: this.venta.montoInicial || 0,
-                cuotasAdelantadas: this.resumenCashea.cantidad,
-                montoAdelantado: this.resumenCashea.total,
-                cantidadCuotas: this.cantidadCuotasCashea,
-                montoPorCuota: this.montoPrimeraCuota,
-                deudaPendiente: this.getDeudaPendienteCashea()
-            };
-        } else if (this.venta.formaPago === 'abono') {
-            datosRecibo.abono = {
-                montoAbonado: this.venta.montoAbonado || 0,
-                deudaPendiente: this.getDeudaPendienteAbono(),
-                porcentajePagado: this.porcentajeAbonadoDelTotal
-            };
-        }
-    }
-
-    private crearProductoFallback(p: any): any {
-        const cantidad = p.cantidad || 1;
-        const precio = p.precio || 0;
-        const subtotal = precio * cantidad;
-        const iva = p.aplicaIva ? subtotal * (this.ivaPorcentaje / 100) : 0;
-
-        return {
-            nombre: p.nombre || 'Producto',
-            codigo: p.codigo || 'N/A',
-            cantidad: cantidad,
-            precioUnitario: precio,
-            precioConIva: p.precioConIva || 0,
-            subtotal: subtotal,
-            iva: iva,
-            total: subtotal + iva,
-            aplicaIva: p.aplicaIva || false,
-            moneda: p.moneda
-        };
-    }
-
-    /*  private actualizarNumeroVentaRecibo(numeroVenta: string): void {
-           if (this.datosRecibo) {
-               this.datosRecibo.numeroVenta = numeroVenta;
-           }
-       }*/
-
+  
     private mostrarReciboAutomatico(): void {
         if (!this.datosRecibo) {
-            this.datosRecibo = this.crearDatosReciboOptimizado();
+            this.datosRecibo = this.crearDatosReciboReal();
         }
 
         this.informacionVenta = {
@@ -3099,8 +2676,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             formaPago: this.datosRecibo.configuracion.formaPago,
             moneda: this.datosRecibo.configuracion.moneda
         };
-
-        console.log('informacionVenta', this.informacionVenta);
 
         this.mostrarModalRecibo = true;
         this.ventaGenerada = true;
@@ -3911,12 +3486,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             case 'cashea':
                 // Cashea: mostrar si hay deuda pendiente
                 const deudaCashea = datos.cashea?.deudaPendiente || 0;
-                return deudaCashea > 0.01; // Tolerancia para decimales
+                return deudaCashea > 0.01;
 
             case 'abono':
                 // Abono: mostrar si hay deuda pendiente
                 const deudaAbono = datos.abono?.deudaPendiente || 0;
-                return deudaAbono > 0.01; // Tolerancia para decimales
+                return deudaAbono > 0.01;
 
             default:
                 return false;
@@ -4056,25 +3631,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // Nueva función para formatear números al estilo venezolano
     private formatearNumeroVenezolano(valor: number, simbolo: string): string {
-        // Redondear a 2 decimales
         const valorRedondeado = Math.round(valor * 100) / 100;
 
-        // Separar parte entera y decimal
         const partes = valorRedondeado.toString().split('.');
         let parteEntera = partes[0];
         let parteDecimal = partes[1] || '00';
-
-        // Asegurar 2 decimales
         parteDecimal = parteDecimal.padEnd(2, '0');
-
-        // Formatear parte entera con separadores de miles (puntos)
         parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
-        // Para bolívares, usar el formato específico
         if (simbolo === 'Bs.') {
             return `${simbolo} ${parteEntera},${parteDecimal}`;
         } else {
-            // Para otras monedas
             return `${simbolo}${parteEntera},${parteDecimal}`;
         }
     }
@@ -4109,7 +3676,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.cdr.detectChanges();
         }, 300);
     }
-
 
     private cerrarModalResumen(): void {
         const modalElement = document.getElementById('resumenVentaModal');
@@ -4724,7 +4290,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 textArea.style.left = '-9999px';
                 document.body.appendChild(textArea);
                 textArea.select();
-                textArea.setSelectionRange(0, 99999); // Para móviles
+                textArea.setSelectionRange(0, 99999);
                 const result = document.execCommand('copy');
                 document.body.removeChild(textArea);
                 return result;
@@ -4886,13 +4452,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // 4. Calcular total REAL (subtotal con IVA - descuento)
         const totalReal = baseParaDescuento - descuento;
 
-        console.log('subtotalConIva', subtotalConIva);
-        console.log('ivaReal', ivaReal);
-        console.log('baseParaDescuento', baseParaDescuento);
-        console.log('descuento', descuento);
-        console.log('totalReal', totalReal);
-
-
         // Determinar el total pagado según la forma de pago REAL
         let totalPagado = 0;
         switch (this.venta.formaPago) {
@@ -4908,28 +4467,28 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             default:
                 totalPagado = this.totalPagadoPorMetodos;
         }
-        // Obtener productos con detalles calculados
         const productosConDetalles = this.obtenerProductosConDetalles();
-        console.log('productosConDetalles', productosConDetalles);
 
-        // Obtener información del cliente CORRECTAMENTE
         let clienteInfo = {
             nombre: 'CLIENTE GENERAL',
             cedula: 'N/A',
-            telefono: 'N/A'
+            telefono: 'N/A',
+            esPaciente: false // ← AGREGAR esta propiedad
         };
 
         if (this.requierePaciente && this.pacienteSeleccionado) {
             clienteInfo = {
                 nombre: this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'PACIENTE',
                 cedula: this.pacienteSeleccionado?.informacionPersonal?.cedula || 'N/A',
-                telefono: this.pacienteSeleccionado?.informacionPersonal?.telefono || 'N/A'
+                telefono: this.pacienteSeleccionado?.informacionPersonal?.telefono || 'N/A',
+                esPaciente: true // ← AGREGAR esta propiedad
             };
         } else if (!this.requierePaciente) {
             clienteInfo = {
                 nombre: this.clienteSinPaciente.nombreCompleto?.trim() || 'CLIENTE GENERAL',
                 cedula: this.clienteSinPaciente.cedula?.trim() || 'N/A',
-                telefono: this.clienteSinPaciente.telefono?.trim() || 'N/A'
+                telefono: this.clienteSinPaciente.telefono?.trim() || 'N/A',
+                esPaciente: false // ← AGREGAR esta propiedad
             };
         }
 
@@ -4956,7 +4515,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Información de la sede
             sede: sedeInfo,
 
-            // INFORMACIÓNCLIENTE
+            // INFORMACIÓN CLIENTE - ahora incluye esPaciente
             cliente: clienteInfo,
 
             // Productos
@@ -5011,8 +4570,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 ]
             };
         }
-        console.log('datosRecibo RECIBO REAL', datosRecibo);
-
         return datosRecibo;
     }
 
@@ -5196,123 +4753,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.swalService.showSuccess('WhatsApp', 'Redirigiendo a WhatsApp para enviar mensaje');
     }
 
-
-    private solicitarEmailParaEnvio(datos: any): void {
-        // Mostrar el email actual si existe
-        const emailActual = this.obtenerEmailCliente();
-        const placeholder = emailActual ? emailActual : 'ejemplo@correo.com';
-
-        const htmlContent = `
-        <div class="text-start">
-            <p class="mb-3">Ingresa la dirección de email del cliente:</p>
-            <input type="email" 
-                   id="emailInput" 
-                   class="form-control" 
-                   placeholder="${placeholder}"
-                   value="${emailActual || ''}"
-                   required>
-            <small class="form-text text-muted">Se enviará el recibo a esta dirección</small>
-        </div>
-    `;
-
-        this.swalService.showConfirm(
-            'Enviar por Email',
-            htmlContent,
-            'Enviar',
-            'Cancelar'
-        ).then((result) => {
-            if (result.isConfirmed) {
-                const emailInput = document.getElementById('emailInput') as HTMLInputElement;
-                if (emailInput && emailInput.value) {
-                    const email = emailInput.value.trim();
-
-                    if (this.validarEmail(email)) {
-                        this.enviarEmailDirecto(email, datos);
-                    } else {
-                        this.swalService.showError('Error', 'Por favor ingresa una dirección de email válida.');
-                        this.solicitarEmailParaEnvio(datos);
-                    }
-                }
-            }
-        });
-
-        // Focus y seleccionar texto en el input después de que se abra el modal
-        setTimeout(() => {
-            const emailInput = document.getElementById('emailInput') as HTMLInputElement;
-            if (emailInput) {
-                emailInput.focus();
-                emailInput.select();
-            }
-        }, 300);
-    }
-
-    private enviarEmailDirecto(email: string, datos: any): void {
-        const asunto = `Recibo de Venta ${datos.numeroVenta} - New Vision Lens`;
-
-        let cuerpo = `Estimado/a ${datos.cliente.nombre},\n\n`;
-        cuerpo += `Le enviamos los detalles de su compra en NEW VISION LENS:\n\n`;
-        cuerpo += `========================================\n`;
-        cuerpo += `           RECIBO DE VENTA\n`;
-        cuerpo += `========================================\n\n`;
-        cuerpo += `Número de recibo: ${datos.numeroVenta}\n`;
-        cuerpo += `Fecha: ${datos.fecha}\n`;
-        cuerpo += `Hora: ${datos.hora}\n`;
-        cuerpo += `Cliente: ${datos.cliente.nombre}\n`;
-        cuerpo += `Cédula: ${datos.cliente.cedula}\n\n`;
-
-        cuerpo += `PRODUCTOS:\n`;
-        cuerpo += `----------------------------------------\n`;
-        datos.productos.forEach((producto: any, index: number) => {
-            cuerpo += `${index + 1}. ${producto.nombre}\n`;
-            cuerpo += `   Cantidad: ${producto.cantidad}\n`;
-            cuerpo += `   Precio: ${this.formatearMoneda(producto.precioUnitario)}\n`;
-            cuerpo += `   Subtotal: ${this.formatearMoneda(producto.subtotal)}\n\n`;
-        });
-
-        cuerpo += `----------------------------------------\n`;
-        cuerpo += `Subtotal: ${this.formatearMoneda(datos.totales.subtotal)}\n`;
-        if (datos.totales.descuento > 0) {
-            cuerpo += `Descuento: -${this.formatearMoneda(datos.totales.descuento)}\n`;
-        }
-        cuerpo += `IVA: ${this.formatearMoneda(datos.totales.iva)}\n`;
-        cuerpo += `TOTAL: ${this.formatearMoneda(datos.totales.totalPagado)}\n\n`;
-
-        cuerpo += `Forma de pago: ${this.venta.formaPago.toUpperCase()}\n\n`;
-
-        if (datos.metodosPago && datos.metodosPago.length > 0) {
-            cuerpo += `Métodos de pago utilizados:\n`;
-            datos.metodosPago.forEach((metodo: any) => {
-                cuerpo += `• ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.monto, metodo.moneda)}\n`;
-                if (metodo.referencia) {
-                    cuerpo += `  Referencia: ${metodo.referencia}\n`;
-                }
-                if (metodo.banco) {
-                    cuerpo += `  Banco: ${metodo.banco}\n`;
-                }
-            });
-            cuerpo += `\n`;
-        }
-
-        cuerpo += `========================================\n`;
-        cuerpo += `NEW VISION LENS\n`;
-        cuerpo += `C.C. Candelaria, Local PB-04, Guarenas\n`;
-        cuerpo += `Teléfono: 0212-365-39-42\n`;
-        cuerpo += `Email: newvisionlens2020@gmail.com\n\n`;
-
-        cuerpo += `¡Gracias por su compra!\n`;
-        cuerpo += `Conserve este comprobante para cualquier reclamo.\n\n`;
-        cuerpo += `Atentamente,\n`;
-        cuerpo += `El equipo de New Vision Lens`;
-
-        // Crear enlace mailto
-        const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
-
-        // Abrir cliente de email
-        window.location.href = mailtoLink;
-
-        this.swalService.showSuccess('Email', `Se ha abierto tu cliente de email para enviar a ${email}`);
-    }
-
     private obtenerEmojiMetodoPago(tipo: string): string {
         const emojis: { [key: string]: string } = {
             'efectivo': '💵',
@@ -5348,11 +4788,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const emailCliente = this.obtenerEmailCliente();
 
             if (!emailCliente || !this.validarEmail(emailCliente)) {
-                this.solicitarEmailParaEnvio(datos);
+                // this.solicitarEmailParaEnvio(datos);
                 return;
             }
 
-            this.enviarEmailDirecto(emailCliente, datos);
+            //  this.enviarEmailDirecto(emailCliente, datos);
 
         } catch (error) {
             console.error('Error al compartir por email:', error);
@@ -5453,9 +4893,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 return 'Completado';
         }
     }
-
-    // === MÉTODOS DE VALIDACIÓN PARA CLIENTE SIN PACIENTE ===
-
     // Validar email (ahora obligatorio)
     validarEmail(email: string): boolean {
         if (!email || email.trim() === '') return false;
@@ -5567,7 +5004,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     private formatearTelefonoVenezuela(telefono: string): string {
         if (!telefono) return '';
 
-        // Limpiar el teléfono (pero mantener espacios para detectar formato)
         const telefonoLimpio = telefono.replace(/[\-\(\)]/g, '').trim();
 
         // Caso 1: Ya tiene formato correcto con +, dejarlo como está
@@ -5659,7 +5095,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     formatearTelefono(telefono: string): string {
         if (!telefono) return '';
 
-        const telefonoLimpio = telefono.replace(/\D/g, ''); // Remover todo excepto números
+        const telefonoLimpio = telefono.replace(/\D/g, '');
 
         // Si empieza con código de país (más de 8 dígitos), formatear con espacio después del código
         if (telefonoLimpio.length > 8) {
@@ -5717,12 +5153,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.limpiarErrorNombre();
         }
         this.actualizarEstadoValidacion();
-    }
-
-    // Actualizar estado de validación general
-    actualizarEstadoValidacion(): void {
-        const valido = this.validarClienteSinPaciente();
-        // Puedes usar esta función para habilitar/deshabilitar botones, etc.
     }
 
     // Métodos para mostrar/ocultar errores
@@ -5851,19 +5281,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.clienteSinPaciente.tipoPersona = 'juridica';
         }
 
-        // Autocompletar campos - mapear los nombres de campos según tu API
         this.clienteSinPaciente.nombreCompleto = datosCliente.nombre || datosCliente.nombreCompleto || '';
         this.clienteSinPaciente.telefono = datosCliente.telefono || '';
         this.clienteSinPaciente.email = datosCliente.email || '';
-
-        // La cédula ya debería estar en el campo, pero por si acaso
         this.clienteSinPaciente.cedula = datosCliente.cedula || this.clienteSinPaciente.cedula;
 
         // Limpiar errores de validación
         this.limpiarErroresValidacion();
-
-        // Forzar validación de los campos autocompletados
-        this.actualizarEstadoValidacion();
     }
 
     private limpiarErroresValidacion(): void {
@@ -5910,9 +5334,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.actualizarEstadoValidacion();
     }
 
-    /**
-     * Método para validar cuando el usuario sale del campo (blur)
-     */
+    actualizarEstadoValidacion(): void {
+        const valido = this.validarClienteSinPaciente();
+        // Puedes usar esta función para habilitar/deshabilitar botones, etc.
+    }
+
     onCedulaBlur(): void {
         const cedula = this.clienteSinPaciente.cedula?.trim();
         const tipoPersona = this.clienteSinPaciente.tipoPersona;
@@ -5934,9 +5360,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    /**
-     * Método para forzar validación manual
-     */
     forzarValidacionCliente(): void {
         const cedula = this.clienteSinPaciente.cedula?.trim();
 
@@ -5953,9 +5376,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.validarClientePorCedula();
     }
 
-    /**
-     * TODO: Implementar cuando el API esté listo
-     */
     buscarClientePorCedula(cedula: string): Observable<any> {
         // Por ahora retornamos un observable vacío
         return of({
@@ -5965,20 +5385,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * TODO: Implementar cuando el API esté listo
+     * Obtener clase CSS para el botón de validación
      */
-    guardarCliente(datosCliente: any): Observable<any> {
-        // Por ahora retornamos un observable vacío
-        return of({
-            success: true,
-            mensaje: 'Cliente guardado exitosamente',
-            clienteId: 'CLI-' + Date.now()
-        });
-    }
-
-    /**
- * Obtener clase CSS para el botón de validación
- */
     getClaseBotonValidar(): string {
         let clase = 'btn-validar-compact';
 
@@ -6205,20 +5613,22 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     getEncabezadoRecibo(): string {
         const sedeInfo = this.userStateService.getSedeActual();
 
-        if (sedeInfo) {
-            return `${sedeInfo.nombre_optica}<br>
-                ${sedeInfo.direccion}<br>
-                Telf.: ${sedeInfo.telefono} | Rif: ${sedeInfo.rif}<br>
-                Email: ${sedeInfo.email}`;
+        let encabezado = '';
+
+        if (sedeInfo && sedeInfo.nombre_optica) {
+            const nombre = sedeInfo.nombre_optica || 'NEW VISION LENS';
+            const direccion = sedeInfo.direccion || 'C.C. Candelaria, Local PB-04, Guarenas';
+            const telefono = sedeInfo.telefono || '0212-365-39-42';
+            const rif = sedeInfo.rif || 'J-123456789';
+            const email = sedeInfo.email || 'newvisionlens2020@gmail.com';
+
+            encabezado = `${nombre}<br>${direccion}<br>Telf.: ${telefono} | Rif: ${rif}<br>Email: ${email}`;
+        } else {
+            encabezado = 'NEW VISION LENS<br>C.C. Candelaria, Local PB-04, Guarenas<br>Telf.: 0212-365-39-42 | Rif: J-123456789<br>Email: newvisionlens2020@gmail.com';
         }
 
-        // Fallback
-        return `NEW VISION LENS<br>
-            C.C. Candelaria, Local PB-04, Guarenas<br>
-            Tel: 0212-365-39-42 | RIF: J-123456789<br>
-            Email: newvisionlens2020@gmail.com`;
+        return encabezado; // Siempre retorna un string
     }
-
 
     // Nuevos métodos
     getPrecioSinIva(producto: any): number {
@@ -6248,7 +5658,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     calcularBaseImponibleConDescuento(): number {
-        // Base imponible después del descuento
         const baseImponible = this.subtotalCorregido;
         const descuento = this.calcularDescuentoSobreBaseImponible();
         return baseImponible - descuento;
@@ -6283,7 +5692,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     calcularIvaTotal(): number {
         if (!Array.isArray(this.productosConDetalle)) return 0;
 
-        // IVA sobre subtotal SIN IVA (para mostrar en resumen)
         return this.productosConDetalle.reduce((acc, producto) => {
             const subtotalSinIva = this.calcularSubtotalSinIvaProducto(producto);
             const aplicaIva = producto.aplicaIva ?? false;
@@ -6294,7 +5702,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 0);
     }
 
-    // === MÉTODOS DE CÁLCULO BASE ===
     calcularSubtotalSinIvaProducto(producto: any): number {
         const precioSinIva = producto.precioConvertido || 0;
         const cantidad = producto.cantidad || 1;
@@ -6326,8 +5733,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 0);
     }
 
-    // === MÉTODOS PARA DESCUENTO PROPORCIONAL ===
-
     calcularDescuento(): number {
         const subtotalSinIva = this.calcularSubtotalSinIva();
         const descuentoPorcentaje = this.venta.descuento ?? 0;
@@ -6358,8 +5763,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return subtotalProducto - descuentoProducto;
     }
 
-    // === MÉTODOS PARA IVA DESPUÉS DEL DESCUENTO ===
-
     calcularIvaDespuesDescuentoPorProducto(producto: any): number {
         if (!producto.aplicaIva) return 0;
 
@@ -6383,10 +5786,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.redondear(ivaTotal);
     }
 
-    // === MÉTODOS PARA TOTALES FINALES ===
 
     get montoTotal(): number {
-        // 1. Subtotal sin IVA después del descuento (suma de todas las bases con descuento)
+        // 1. Subtotal sin IVA después del descuento
         let baseTotalConDescuento = 0;
 
         this.productosConDetalle.forEach(producto => {
@@ -6402,59 +5804,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.redondear(totalFinal);
     }
 
-    // Método para depuración y verificación
-    debugCalculos(): void {
-        console.log('=== DEBUG CÁLCULOS DETALLADOS ===');
-        console.log('Número de productos:', this.productosConDetalle.length);
-
-        let subtotalSinIvaTotal = 0;
-        let descuentoTotal = 0;
-        let baseConDescuentoTotal = 0;
-        let ivaOriginalTotal = 0;
-        let ivaDespuesDescuentoTotal = 0;
-
-        this.productosConDetalle.forEach((producto, index) => {
-            console.log(`\n--- Producto ${index + 1}: ${producto.nombre} ---`);
-            console.log('Aplica IVA:', producto.aplicaIva);
-            console.log('Cantidad:', producto.cantidad);
-            console.log('Precio sin IVA:', producto.precioConvertido);
-
-            const subtotalProducto = this.calcularSubtotalSinIvaProducto(producto);
-            subtotalSinIvaTotal += subtotalProducto;
-            console.log('Subtotal sin IVA:', subtotalProducto);
-
-            const proporcion = this.calcularProporcionProducto(producto);
-            console.log('Proporción en subtotal:', (proporcion * 100).toFixed(2) + '%');
-
-            const descuentoProducto = this.calcularDescuentoPorProducto(producto);
-            descuentoTotal += descuentoProducto;
-            console.log('Descuento asignado:', descuentoProducto);
-
-            const baseConDescuento = this.calcularBaseConDescuentoPorProducto(producto);
-            baseConDescuentoTotal += baseConDescuento;
-            console.log('Base con descuento:', baseConDescuento);
-
-            if (producto.aplicaIva) {
-                const ivaOriginal = this.calcularIvaPorProductoOriginal(producto);
-                ivaOriginalTotal += ivaOriginal;
-                console.log('IVA original:', ivaOriginal);
-
-                const ivaDespuesDescuento = this.calcularIvaDespuesDescuentoPorProducto(producto);
-                ivaDespuesDescuentoTotal += ivaDespuesDescuento;
-                console.log('IVA después descuento:', ivaDespuesDescuento);
-            }
-        });
-
-        console.log('\n=== RESUMEN TOTAL ===');
-        console.log('Subtotal sin IVA total:', subtotalSinIvaTotal);
-        console.log('Descuento total calculado:', this.calcularDescuento());
-        console.log('Descuento distribuido:', descuentoTotal);
-        console.log('Base con descuento total:', baseConDescuentoTotal);
-        console.log('IVA original total:', ivaOriginalTotal);
-        console.log('IVA después descuento total:', ivaDespuesDescuentoTotal);
-        console.log('Monto total final:', this.montoTotal);
-        console.log('=== FIN DEBUG ===');
-    }
 
     // === MÉTODOS PARA EL RESUMEN EN HTML ===
 
