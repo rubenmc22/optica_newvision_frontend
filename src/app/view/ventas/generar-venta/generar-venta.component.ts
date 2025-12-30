@@ -2673,6 +2673,31 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
+    private obtenerInfoClienteDesdeApi(datosApi: any): any {
+        if (datosApi.cliente?.informacion) {
+            // Determinar si es paciente o cliente
+            const esPaciente = datosApi.cliente.tipo === 'paciente';
+            const tipoTexto = esPaciente ? 'PACIENTE' : 'CLIENTE';
+
+            return {
+                nombre: datosApi.cliente.informacion.nombreCompleto || tipoTexto,
+                cedula: datosApi.cliente.informacion.cedula || 'N/A',
+                telefono: datosApi.cliente.informacion.telefono || 'N/A',
+                email: datosApi.cliente.informacion.email || '',
+                tipo: tipoTexto, // Agregar el tipo
+                esPaciente: esPaciente // Bandera para usar en el HTML
+            };
+        }
+
+        // Fallback a la lógica existente
+        const infoCliente = this.obtenerInfoCliente();
+        return {
+            ...infoCliente,
+            tipo: 'CLIENTE GENERAL',
+            esPaciente: false
+        };
+    }
+
     // === MÉTODOS OPTIMIZADOS PARA RECIBO ===
     /*
      * Prepara el recibo local ANTES de llamar al API
@@ -2685,21 +2710,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     private crearDatosReciboOptimizado(): any {
         const fechaActual = new Date();
 
-        // REUTILIZAR datos ya calculados en lugar de recalcular
-        const productosConDetalles = this.obtenerProductosConDetallesOptimizado();
+        // 1. USAR LOS DATOS QUE YA PREPARAMOS PARA EL API
+        const datosParaAPI = this.prepararDatosParaAPI();
 
-        // REUTILIZAR totales ya existentes
-        const subtotalReal = this.productosConDetalle?.reduce((sum, p) => sum + (p.subtotal || 0), 0) || 0;
-        const ivaReal = this.productosConDetalle?.reduce((sum, p) => sum + (p.iva || 0), 0) || 0;
+        console.log('Datos del API para recibo:', datosParaAPI);
 
-        // Calcular descuento una sola vez
-        const baseParaDescuento = subtotalReal + ivaReal;
-        const descuento = this.venta?.descuento ? (baseParaDescuento * (this.venta.descuento / 100)) : 0;
-        const totalReal = baseParaDescuento - descuento;
+        // 2. OBTENER INFORMACIÓN DE PRODUCTOS CON DETALLES
+        const productosConDetalles = this.obtenerProductosConDetallesParaRecibo();
+        console.log('productosConDetalles', productosConDetalles);
 
-        // REUTILIZAR método existente para total pagado
-        const totalPagado = this.obtenerTotalPagadoSegunFormaPago();
-
+        // 3. PREPARAR DATOS DEL RECIBO BASADOS EN EL API
         const datosRecibo: any = {
             // Información general
             numeroVenta: 'V-' + Date.now().toString().slice(-6),
@@ -2707,48 +2727,166 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             hora: fechaActual.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
             vendedor: this.getResumenAsesor(),
 
-            // Información de la sede (constante, podrías cachearla)
+            // Información de la sede
             sede: this.obtenerInfoSede(),
 
-            // Cliente (reutilizar lógica existente)
+            // Cliente (usar los datos del API si están disponibles)
             cliente: this.obtenerInfoCliente(),
 
-            // Productos (ya procesados)
+            // Productos (detalles para mostrar en recibo)
             productos: productosConDetalles,
 
-            // Métodos de pago (optimizado)
+            // Métodos de pago (usar los del componente actual)
             metodosPago: this.obtenerMetodosPagoOptimizados(),
 
-            // Totales (calculados una vez)
+            // Totales - USAR LOS DEL API QUE SON CORRECTOS
             totales: {
-                subtotal: subtotalReal,
-                descuento: descuento,
-                iva: ivaReal,
-                total: totalReal,
-                totalPagado: totalPagado
+                subtotal: datosParaAPI.totales?.subtotal || this.calcularSubtotalSinIva(),
+                descuento: datosParaAPI.totales?.descuento || 0,
+                iva: datosParaAPI.totales?.iva || 0,
+                total: datosParaAPI.totales?.total || this.montoTotal,
+                totalPagado: datosParaAPI.totales?.totalPagado || this.obtenerTotalPagadoSegunFormaPago()
             },
 
-            // Configuración (directo del modelo)
+            // Configuración
             configuracion: {
-                formaPago: this.venta.formaPago,
-                moneda: this.venta.moneda,
-                descuento: this.venta.descuento,
-                observaciones: this.venta.observaciones
+                formaPago: datosParaAPI.venta?.formaPago || this.venta.formaPago,
+                moneda: datosParaAPI.venta?.moneda || this.venta.moneda,
+                descuento: this.venta.descuento, // Mantener el descuento configurado
+                observaciones: datosParaAPI.venta?.observaciones || this.venta.observaciones,
+                impuesto: datosParaAPI.venta?.impuesto || this.ivaPorcentaje
             }
+
+            // Mantener referencia a los datos del API
+            // datosApi: datosParaAPI
         };
 
-        console.log('datosRecibo', datosRecibo);
+        // 4. AGREGAR INFORMACIÓN ESPECÍFICA SEGÚN FORMA DE PAGO
+        if (datosParaAPI.formaPagoDetalle) {
+            datosRecibo.formaPagoDetalle = datosParaAPI.formaPagoDetalle;
+        }
 
-        // Agregar información específica de forma de pago si es necesario
-        this.agregarInfoFormaPagoEspecifica(datosRecibo);
+        if (datosParaAPI.formaPago) {
+            datosRecibo.cashea = datosParaAPI.formaPago;
+        }
 
+        console.log('Recibo generado con datos del API:', datosRecibo);
         return datosRecibo;
+    }
+
+    private obtenerProductosConDetallesParaRecibo(): any[] {
+        return this.venta.productos.map((p, index) => {
+            const productoCalculado = this.productosConDetalle.find(pc => pc.id === p.id);
+
+            if (productoCalculado) {
+                return {
+                    nombre: p.nombre || 'Producto',
+                    codigo: p.codigo || 'N/A',
+                    cantidad: p.cantidad || 1,
+                    precioUnitario: productoCalculado.precioConvertido || 0,
+                    precioConIva: productoCalculado.precioConIva || 0,
+                    subtotal: (productoCalculado.precioConvertido || 0) * (p.cantidad || 1),
+                    iva: productoCalculado.iva || 0,
+                    total: productoCalculado.total || 0,
+                    aplicaIva: p.aplicaIva || false,
+                    moneda: p.moneda
+                };
+            }
+
+            // Fallback si no encontramos el producto calculado
+            return {
+                nombre: p.nombre || 'Producto',
+                codigo: p.codigo || 'N/A',
+                cantidad: p.cantidad || 1,
+                precioUnitario: p.precio || 0,
+                precioConIva: p.precioConIva || 0,
+                subtotal: (p.precio || 0) * (p.cantidad || 1),
+                iva: p.aplicaIva ? ((p.precio || 0) * (p.cantidad || 1) * (this.ivaPorcentaje / 100)) : 0,
+                total: 0,
+                aplicaIva: p.aplicaIva || false,
+                moneda: p.moneda
+            };
+        });
+    }
+
+    private obtenerInfoCliente(): any {
+        // Usar los datos del API si están disponibles
+        const datosApi = this.prepararDatosParaAPI();
+
+        if (datosApi.cliente?.informacion) {
+            // Determinar tipo basado en datos del API
+            const esPaciente = datosApi.cliente.tipo === 'paciente';
+            const tipoTexto = esPaciente ? 'PACIENTE' : 'CLIENTE';
+
+            return {
+                nombre: datosApi.cliente.informacion.nombreCompleto || tipoTexto,
+                cedula: datosApi.cliente.informacion.cedula || 'N/A',
+                telefono: datosApi.cliente.informacion.telefono || 'N/A',
+                email: datosApi.cliente.informacion.email || '',
+                tipo: tipoTexto,
+                esPaciente: esPaciente,
+                origen: 'api'
+            };
+        }
+
+        // Fallback a la lógica existente
+        if (this.requierePaciente && this.pacienteSeleccionado) {
+            return {
+                nombre: this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'PACIENTE',
+                cedula: this.pacienteSeleccionado?.informacionPersonal?.cedula || 'N/A',
+                telefono: this.pacienteSeleccionado?.informacionPersonal?.telefono || 'N/A',
+                email: this.pacienteSeleccionado?.informacionPersonal?.email || '',
+                tipo: 'PACIENTE',                    // ← PACIENTE
+                esPaciente: true,                    // ← true
+                origen: 'paciente_seleccionado'
+            };
+        } else if (!this.requierePaciente) {
+            return {
+                nombre: this.clienteSinPaciente.nombreCompleto?.trim() || 'CLIENTE GENERAL',
+                cedula: this.clienteSinPaciente.cedula?.trim() || 'N/A',
+                telefono: this.clienteSinPaciente.telefono?.trim() || 'N/A',
+                email: this.clienteSinPaciente.email || '',
+                tipo: 'CLIENTE GENERAL',             // ← CLIENTE GENERAL
+                esPaciente: false,                   // ← false
+                origen: 'cliente_sin_paciente'
+            };
+        }
+
+        return {
+            nombre: 'CLIENTE GENERAL',
+            cedula: 'N/A',
+            telefono: 'N/A',
+            email: '',
+            tipo: 'CLIENTE GENERAL',
+            esPaciente: false,
+            origen: 'default'
+        };
+    }
+
+    // Y en el método que actualiza el número de venta después de la respuesta del API
+    private actualizarNumeroVentaRecibo(numeroVenta: string): void {
+        if (this.datosRecibo) {
+            this.datosRecibo.numeroVenta = numeroVenta;
+
+            // También podemos actualizar los totales con los datos exactos del API si es necesario
+            const datosApi = this.prepararDatosParaAPI();
+
+            if (datosApi.totales) {
+                this.datosRecibo.totales = {
+                    subtotal: datosApi.totales.subtotal,
+                    descuento: datosApi.totales.descuento,
+                    iva: datosApi.totales.iva,
+                    total: datosApi.totales.total,
+                    totalPagado: datosApi.totales.totalPagado
+                };
+            }
+        }
     }
 
     /**
      * Obtiene información del cliente optimizada
      */
-    private obtenerInfoCliente(): any {
+    /*private obtenerInfoCliente(): any {
         if (this.requierePaciente && this.pacienteSeleccionado) {
             return {
                 nombre: this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto || 'PACIENTE',
@@ -2768,7 +2906,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             cedula: 'N/A',
             telefono: 'N/A'
         };
-    }
+    }*/
 
     /**
      * Obtiene información de la sede
@@ -2911,11 +3049,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         };
     }
 
-    private actualizarNumeroVentaRecibo(numeroVenta: string): void {
-        if (this.datosRecibo) {
-            this.datosRecibo.numeroVenta = numeroVenta;
-        }
-    }
+    /*  private actualizarNumeroVentaRecibo(numeroVenta: string): void {
+           if (this.datosRecibo) {
+               this.datosRecibo.numeroVenta = numeroVenta;
+           }
+       }*/
 
     private mostrarReciboAutomatico(): void {
         if (!this.datosRecibo) {
@@ -2930,6 +3068,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             formaPago: this.datosRecibo.configuracion.formaPago,
             moneda: this.datosRecibo.configuracion.moneda
         };
+
+        console.log('informacionVenta', this.informacionVenta);
 
         this.mostrarModalRecibo = true;
         this.ventaGenerada = true;
@@ -3027,7 +3167,25 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         `;
         };
 
-        // GENERAR TABLA DE PRODUCTOS CORREGIDA
+        // GENERAR CLIENTE
+        const generarClienteHTML = () => {
+            // Determinar si es paciente basado en datos.cliente.tipo o datos.cliente.esPaciente
+            const esPaciente = datos.cliente?.tipo === 'PACIENTE' || datos.cliente?.esPaciente === true;
+            const labelCliente = esPaciente ? 'Paciente:' : 'Cliente:';
+            const nombreDefault = esPaciente ? 'PACIENTE' : 'CLIENTE GENERAL';
+
+            return `
+                <div class="cliente-compacto page-break-avoid">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                        <div><strong>${labelCliente}</strong> ${datos.cliente.nombre || nombreDefault}</div>
+                        <div><strong>Cédula:</strong> ${datos.cliente.cedula || 'N/A'}</div>
+                        <div><strong>Teléfono:</strong> ${datos.cliente.telefono || 'N/A'}</div>
+                    </div>
+                </div>
+            `;
+        };
+
+       // GENERAR TABLA DE PRODUCTOS CORREGIDA
         const generarTablaProductos = () => {
             if (!datos.productos || datos.productos.length === 0) {
                 return '<div class="alert alert-warning">No hay productos</div>';
@@ -3036,37 +3194,37 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return `
             <div class="productos-compactos page-break-avoid">
                 <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">PRODUCTOS</h6>
-                <table class="tabla-productos">
+                <table class="tabla-productos" style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr>
-                            <th width="5%" class="text-center">#</th>
-                            <th width="55%">Descripción</th>
-                            <th width="10%" class="text-center">Cant</th>
-                            <th width="15%" class="text-end">P. Unitario</th>
-                            <th width="15%" class="text-end">Subtotal</th>
+                            <th width="5%" style="text-align: center; padding: 4px; background-color: #2c5aa0; color: white; font-weight: bold;">#</th>
+                            <th width="55%" style="text-align: left; padding: 4px; background-color: #2c5aa0; color: white; font-weight: bold;">Producto</th>
+                            <th width="15%" style="text-align: center; padding: 4px; background-color: #2c5aa0; color: white; font-weight: bold;">P. Unitario</th>
+                            <th width="10%" style="text-align: center; padding: 4px; background-color: #2c5aa0; color: white; font-weight: bold;">Cant</th>
+                            <th width="15%" style="text-align: center; padding: 4px; background-color: #2c5aa0; color: white; font-weight: bold;">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${datos.productos.map((producto: any, index: number) => {
-                // Asegurar que los valores son correctos
-                const precioUnitario = producto.precioUnitario || 0;
-                const cantidad = producto.cantidad || 1;
-                const subtotalCalculado = precioUnitario * cantidad;
+                            // Asegurar que los valores son correctos
+                            const precioUnitario = producto.precioUnitario || 0;
+                            const cantidad = producto.cantidad || 1;
+                            const subtotalCalculado = precioUnitario * cantidad;
 
-                return `
-                                <tr>
-                                    <td class="text-center">${index + 1}</td>
-                                    <td>${producto.nombre || 'Producto'}</td>
-                                    <td class="text-center">${cantidad}</td>
-                                    <td class="text-end">${formatearMonedaLocal(precioUnitario)}</td>
-                                    <td class="text-end">${formatearMonedaLocal(subtotalCalculado)}</td>
-                                </tr>
+                            return `
+                            <tr>
+                                <td style="text-align: center; padding: 4px; border-bottom: 1px solid #dee2e6;">${index + 1}</td>
+                                <td style="text-align: left; padding: 4px; border-bottom: 1px solid #dee2e6;">${producto.nombre || 'Producto'}</td>
+                                <td style="text-align: right; padding: 4px; border-bottom: 1px solid #dee2e6;">${formatearMonedaLocal(precioUnitario)}</td>
+                                <td style="text-align: center; padding: 4px; border-bottom: 1px solid #dee2e6;">${cantidad}</td>
+                                <td style="text-align: right; padding: 4px; border-bottom: 1px solid #dee2e6;">${formatearMonedaLocal(subtotalCalculado)}</td>
+                            </tr>
                             `;
-            }).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+            `;
         };
 
         // GENERAR RESUMEN DE FORMA DE PAGO
@@ -3657,13 +3815,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     </div>
 
                     <!-- Cliente -->
-                    <div class="cliente-compacto page-break-avoid">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                            <div><strong>Cliente:</strong> ${datos.cliente.nombre}</div>
-                            <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
-                            <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
-                        </div>
-                    </div>
+                    ${generarClienteHTML()}
 
                     <!-- Productos -->
                     ${generarTablaProductos()}
@@ -4015,6 +4167,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Obtener información de la sede desde UserStateService
             const sedeInfo = this.userStateService.getSedeActual() || this.obtenerInfoSede();
 
+            // Determinar si es paciente
+            const esPaciente = datos.cliente?.tipo === 'PACIENTE' || datos.cliente?.esPaciente === true;
+            const labelCliente = esPaciente ? 'Paciente:' : 'Cliente:';
+            const nombreDefault = esPaciente ? 'PACIENTE' : 'CLIENTE GENERAL';
+
             // ===== 1. ENCABEZADO DE LA EMPRESA =====
             pdf.setFontSize(14);
             pdf.setFont('helvetica', 'bold');
@@ -4098,13 +4255,15 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             currentY += 12;
 
-            // ===== 3. INFORMACIÓN DEL CLIENTE =====
-            // Fondo con borde izquierdo
-            pdf.setFillColor(248, 249, 250);
-            pdf.roundedRect(marginLeft, currentY, contentWidth, 12, 1, 1, 'F');
+            // ==== 3. INFORMACIÓN DEL CLIENTE ====
+            const colorPaciente = [13, 202, 240]; 
+            const colorCliente = [44, 90, 160]; 
 
-            // Borde izquierdo azul
-            pdf.setDrawColor(44, 90, 160);
+            pdf.setDrawColor(
+                esPaciente ? colorPaciente[0] : colorCliente[0],
+                esPaciente ? colorPaciente[1] : colorCliente[1],
+                esPaciente ? colorPaciente[2] : colorCliente[2]
+            );
             pdf.setLineWidth(2);
             pdf.line(marginLeft, currentY, marginLeft, currentY + 12);
 
@@ -4120,23 +4279,24 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const clienteGridX = [marginLeft, marginLeft + clienteGridWidth, marginLeft + (clienteGridWidth * 2)];
             const clienteTextY = currentY + 8;
 
-            // Cliente
+            // Cliente - USAR LABEL DINÁMICO
             pdf.setFont('helvetica', 'bold');
-            pdf.text('Cliente:', clienteGridX[0] + 3, clienteTextY);
+            pdf.text(labelCliente, clienteGridX[0] + 3, clienteTextY);
             pdf.setFont('helvetica', 'normal');
-            pdf.text(datos.cliente.nombre, clienteGridX[0] + 16, clienteTextY);
+            // Usar nombreDefault si no hay nombre
+            pdf.text(datos.cliente.nombre || nombreDefault, clienteGridX[0] + 20, clienteTextY);
 
             // Cédula
             pdf.setFont('helvetica', 'bold');
             pdf.text('Cédula:', clienteGridX[1] + 3, clienteTextY);
             pdf.setFont('helvetica', 'normal');
-            pdf.text(datos.cliente.cedula, clienteGridX[1] + 15, clienteTextY);
+            pdf.text(datos.cliente.cedula || 'N/A', clienteGridX[1] + 15, clienteTextY);
 
             // Teléfono
             pdf.setFont('helvetica', 'bold');
             pdf.text('Teléfono:', clienteGridX[2] + 3, clienteTextY);
             pdf.setFont('helvetica', 'normal');
-            pdf.text(datos.cliente.telefono, clienteGridX[2] + 20, clienteTextY);
+            pdf.text(datos.cliente.telefono || 'N/A', clienteGridX[2] + 20, clienteTextY);
 
             currentY += 14;
 
@@ -4695,6 +4855,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // 4. Calcular total REAL (subtotal con IVA - descuento)
         const totalReal = baseParaDescuento - descuento;
 
+        console.log('subtotalConIva', subtotalConIva);
+        console.log('ivaReal', ivaReal);
+        console.log('baseParaDescuento', baseParaDescuento);
+        console.log('descuento', descuento);
+        console.log('totalReal', totalReal);
+
+
         // Determinar el total pagado según la forma de pago REAL
         let totalPagado = 0;
         switch (this.venta.formaPago) {
@@ -4712,6 +4879,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
         // Obtener productos con detalles calculados
         const productosConDetalles = this.obtenerProductosConDetalles();
+        console.log('productosConDetalles', productosConDetalles);
 
         // Obtener información del cliente CORRECTAMENTE
         let clienteInfo = {
@@ -4812,6 +4980,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 ]
             };
         }
+        console.log('datosRecibo RECIBO REAL', datosRecibo);
 
         return datosRecibo;
     }
@@ -4821,16 +4990,18 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const productoCalculado = this.productosConDetalle.find(pc => pc.id === p.id);
 
             if (productoCalculado) {
-                const precioUnitarioSinIva = productoCalculado.precioConvertido || 0;
-                const subtotalSinIva = precioUnitarioSinIva * (p.cantidad || 1);
+                // Usar precio SIN IVA para mostrar en tabla
+                const precioSinIva = productoCalculado.precioConvertido || 0;
+                const cantidad = p.cantidad || 1;
+                const subtotalSinIva = precioSinIva * cantidad;
 
                 return {
                     nombre: p.nombre || 'Producto',
                     codigo: p.codigo || 'N/A',
-                    cantidad: p.cantidad || 1,
-                    precioUnitario: precioUnitarioSinIva, // Sin IVA
+                    cantidad: cantidad,
+                    precioUnitario: precioSinIva,
                     precioConIva: productoCalculado.precioConIva || 0,
-                    subtotal: subtotalSinIva, // cantidad × precio sin IVA
+                    subtotal: subtotalSinIva,
                     iva: productoCalculado.iva || 0,
                     total: productoCalculado.total || 0,
                     aplicaIva: p.aplicaIva || false,
@@ -4838,21 +5009,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 };
             }
 
+            // Fallback
             const cantidad = p.cantidad || 1;
             const precioSinIva = p.precio || 0;
-            const subtotalCalculado = precioSinIva * cantidad;
-            const ivaCalculado = p.aplicaIva ? subtotalCalculado * (this.ivaPorcentaje / 100) : 0;
-            const totalCalculado = subtotalCalculado + ivaCalculado;
+            const subtotalSinIva = precioSinIva * cantidad;
+            const ivaCalculado = p.aplicaIva ? subtotalSinIva * (this.ivaPorcentaje / 100) : 0;
 
             return {
                 nombre: p.nombre || 'Producto',
                 codigo: p.codigo || 'N/A',
                 cantidad: cantidad,
-                precioUnitario: precioSinIva, // Sin IVA
+                precioUnitario: precioSinIva, // SIN IVA
                 precioConIva: p.precioConIva || 0,
-                subtotal: subtotalCalculado, // cantidad × precio sin IVA
+                subtotal: subtotalSinIva, // cantidad × precio SIN IVA
                 iva: ivaCalculado,
-                total: totalCalculado,
+                total: subtotalSinIva + ivaCalculado,
                 aplicaIva: p.aplicaIva || false,
                 moneda: p.moneda
             };

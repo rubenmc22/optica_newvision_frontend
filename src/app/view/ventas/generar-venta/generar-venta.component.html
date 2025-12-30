@@ -1490,7 +1490,7 @@
                         <h5 class="titulo-venta mt-2 mb-0 text-dark">{{ getTituloRecibo() }}</h5>
                     </div>
 
-                    <!-- Información compacta en una línea -->
+                    <!-- Información -->
                     <div class="info-rapida mb-3">
                         <div class="row g-2 small">
                             <div class="col-md-3">
@@ -1512,7 +1512,11 @@
                     <div class="cliente-compacto mb-3 p-2 bg-light rounded small">
                         <div class="row g-2">
                             <div class="col-md-4">
-                                <strong>Cliente:</strong> {{ datosRecibo?.cliente?.nombre || 'CLIENTE GENERAL' }}
+                                <!-- Cambiar "Cliente:" por "Paciente:" o "Cliente:" -->
+                                <strong>
+                                    {{ datosRecibo?.cliente?.esPaciente ? 'Paciente:' : 'Cliente:' }}
+                                </strong> 
+                                {{ datosRecibo?.cliente?.nombre || (datosRecibo?.cliente?.esPaciente ? 'PACIENTE' : 'CLIENTE GENERAL') }}
                             </div>
                             <div class="col-md-4">
                                 <strong>Cédula:</strong> {{ datosRecibo?.cliente?.cedula || 'N/A' }}
@@ -1531,28 +1535,36 @@
                                 <thead>
                                     <tr>
                                         <th width="5%">#</th>
-                                        <th width="45%">Producto</th>
-                                        <th width="15%" class="text-end">Precio Unit.</th>
+                                        <th width="45%" class="text-center">Producto</th>
+                                        <th width="15%" class="text-center">Precio Unit.</th>
                                         <th width="10%" class="text-center">Cant.</th>
-                                        <th width="15%" class="text-end">Total</th>
+                                        <th width="15%" class="text-center">SubTotal</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- USAR datosRecibo.productos en lugar de productosConDetalle -->
-                                    <tr *ngFor="let producto of datosRecibo?.productos || []; let i = index">
+                                    <!-- Solo mostrar datosRecibo.productos -->
+                                    <tr *ngFor="let producto of datosRecibo?.productos; let i = index">
                                         <td class="text-center">{{ i + 1 }}</td>
                                         <td>
                                             <div class="fw-bold small">{{ producto.nombre }}</div>
                                             <div class="text-muted extra-small">{{ producto.codigo || 'N/A' }}</div>
                                         </td>
                                         <td class="text-end">
-                                            {{ formatearMoneda(producto.precioUnitario, producto.moneda) }}
+                                            {{ formatearMoneda(producto.precioUnitario, producto.moneda || datosRecibo?.configuracion?.moneda) }}
                                         </td>
                                         <td class="text-center">
                                             {{ producto.cantidad || 1 }}
                                         </td>
                                         <td class="text-end">
-                                            {{ formatearMoneda(producto.subtotal, producto.moneda) }}
+                                            {{ formatearMoneda(producto.subtotal, producto.moneda || datosRecibo?.configuracion?.moneda) }}
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- Mensaje si no hay productos -->
+                                    <tr *ngIf="!datosRecibo?.productos || datosRecibo.productos.length === 0">
+                                        <td colspan="5" class="text-center text-muted py-3">
+                                            <i class="bi bi-exclamation-triangle me-2"></i>
+                                            No hay productos para mostrar
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1596,7 +1608,7 @@
                                 </div>
                                 <div class="col-6 text-end">
                                     <strong>Monto total:</strong><br>
-                                    {{ formatearMoneda(getTotalPagadoSeguro()) }}
+                                    {{ formatearMoneda(datosRecibo?.totales?.total, datosRecibo?.configuracion?.moneda) }}
                                 </div>
                             </div>
                         </div>
@@ -1812,65 +1824,52 @@
                         <div class="row justify-content-end">
                             <div class="col-md-6">
                                 <table class="table table-sm table-bordered">
+                                    <!-- Subtotal - usar datosRecibo.totales.subtotal -->
                                     <tr>
-                                        <td class="fw-bold">Subtotal:</td>
-                                        <td class="text-end">{{ formatearMoneda(getSubtotalSeguro()) }}</td>
+                                        <td class="fw-bold">Subtotal (sin IVA):</td>
+                                        <td class="text-end">{{ formatearMoneda(datosRecibo?.totales?.subtotal, datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
-                                    <tr *ngIf="getDescuentoSeguro() > 0">
-                                        <td class="fw-bold">Descuento:</td>
-                                        <td class="text-end text-danger">- {{ formatearMoneda(getDescuentoSeguro()) }}
-                                        </td>
+                                    
+                                    <!-- Descuento - solo si existe -->
+                                    <tr *ngIf="datosRecibo?.totales?.descuento > 0">
+                                        <td class="fw-bold">Descuento ({{ datosRecibo?.configuracion?.descuento }}%):</td>
+                                        <td class="text-end text-danger">- {{ formatearMoneda(datosRecibo?.totales?.descuento, datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
+                                    
+                                    <!-- Subtotal con descuento - solo si hay descuento -->
+                                    <tr *ngIf="datosRecibo?.totales?.descuento > 0">
+                                        <td class="fw-bold">Subtotal con descuento:</td>
+                                        <td class="text-end">{{ formatearMoneda(datosRecibo?.totales?.subtotal - datosRecibo?.totales?.descuento, datosRecibo?.configuracion?.moneda) }}</td>
+                                    </tr>
+                                    
+                                    <!-- IVA -->
                                     <tr>
-                                        <td class="fw-bold">IVA:</td>
-                                        <td class="text-end">{{ formatearMoneda(getIvaSeguro()) }}</td>
+                                        <td class="fw-bold">IVA ({{ datosRecibo?.configuracion?.impuesto || ivaPorcentaje }}%):</td>
+                                        <td class="text-end">{{ formatearMoneda(datosRecibo?.totales?.iva, datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
-
-                                    <!-- ========== CONTADO ========== -->
-                                    <!-- CONTADO: Solo línea de éxito -->
-                                    <tr *ngIf="venta.formaPago === 'contado'" class="table-success">
+                                    
+                                    <!-- Mostrar según forma de pago -->
+                                    <tr *ngIf="datosRecibo?.configuracion?.formaPago === 'contado'" class="table-success">
                                         <td class="fw-bold">Total pagado:</td>
-                                        <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(datosRecibo?.totales?.totalPagado, datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
 
-                                    <!-- ========== CASHEA ========== -->
-                                    <!-- CASHEA SIN DEUDA: Solo total pagado -->
-                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() <= 0"
-                                        class="table-success">
-                                        <td class="fw-bold">Total pagado:</td>
-                                        <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
-                                    </tr>
-
-                                    <!-- CASHEA CON DEUDA: Total a pagar + total pagado ahora -->
-                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() > 0"
-                                        class="table-info">
+                                    <tr *ngIf="datosRecibo?.configuracion?.formaPago === 'cashea'" class="table-info">
                                         <td class="fw-bold">Total a pagar:</td>
-                                        <td class="text-end fw-bold">{{ formatearMoneda(getMontoTotalSeguro()) }}</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(datosRecibo?.totales?.total, datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
-                                    <tr *ngIf="venta.formaPago === 'cashea' && getDeudaPendienteCashea() > 0"
-                                        class="table-warning">
+                                    <tr *ngIf="datosRecibo?.configuracion?.formaPago === 'cashea'" class="table-warning">
                                         <td class="fw-bold">Total pagado ahora:</td>
-                                        <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(datosRecibo?.totales?.totalPagado, datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
 
-                                    <!-- ========== ABONO ========== -->
-                                    <!-- ABONO SIN DEUDA: Solo total abonado -->
-                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() <= 0"
-                                        class="table-success">
-                                        <td class="fw-bold">Total abonado:</td>
-                                        <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
-                                    </tr>
-
-                                    <!-- ABONO CON DEUDA: Total a pagar + total abonado -->
-                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() > 0"
-                                        class="table-info">
+                                    <tr *ngIf="datosRecibo?.configuracion?.formaPago === 'abono'" class="table-info">
                                         <td class="fw-bold">Total a pagar:</td>
-                                        <td class="text-end fw-bold">{{ formatearMoneda(getMontoTotalSeguro()) }}</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(datosRecibo?.totales?.total, datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
-                                    <tr *ngIf="venta.formaPago === 'abono' && getDeudaPendienteAbono() > 0"
-                                        class="table-warning">
+                                    <tr *ngIf="datosRecibo?.configuracion?.formaPago === 'abono'" class="table-warning">
                                         <td class="fw-bold">Total abonado:</td>
-                                        <td class="text-end fw-bold">{{ formatearMoneda(getTotalPagadoSeguro()) }}</td>
+                                        <td class="text-end fw-bold">{{ formatearMoneda(datosRecibo?.totales?.totalPagado, datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
                                 </table>
                             </div>
