@@ -37,6 +37,17 @@
                     <span class="slider"></span>
                 </label>
             </div>
+
+            <!-- Mensaje informativo cuando el switch está activado -->
+            <div *ngIf="requierePaciente" class="info-message-toggle" @fadeInOut>
+                <div class="info-content">
+                    <i class="bi bi-info-circle"></i>
+                    <div class="info-text">
+                        <strong>Orden de trabajo automática:</strong>
+                        <span>Si la historia médica contiene fórmula óptica, se generará una orden de trabajo para el laboratorio.</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Paneles principales -->

@@ -132,6 +132,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     urlRecibo: string = '';
     errorGeneracion: string = '';
     mostrarDetalleDescuento: boolean = false;
+    generarOrdenTrabajo: boolean = false;
 
     // === PROPIEDADES PARA CLIENTE API ===
     validandoCliente: boolean = false;
@@ -2391,6 +2392,15 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
 
+        // SOLO cuando es paciente Y la historia tiene fórmula completa
+        const debeGenerarOrdenTrabajo = this.requierePaciente &&
+            this.pacienteSeleccionado &&
+            this.historiaMedicaSeleccionada &&
+            this.tieneFormulaCompleta(this.historiaMedicaSeleccionada);
+
+        // Actualizar la propiedad
+        this.generarOrdenTrabajo = debeGenerarOrdenTrabajo;
+
         let estadoVenta = 'completada';
         let estadoPago = 'completado';
 
@@ -2484,11 +2494,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }));
 
         // CALCULAR TOTALES CORRECTAMENTE
-        // 1. Calcular SUBTOTAL CORRECTO: suma de (precio SIN IVA * cantidad)
-        const subtotalSinIva = this.subtotalCorregido;  // ← Usar subtotal SIN IVA
+        // 1. Calcular SUBTOTAL 
+        const subtotalSinIva = this.subtotalCorregido;
 
         // 1. Base imponible SIN IVA
-        const baseImponible = this.subtotalCorregido; // ← Esto ya es SIN IVA
+        const baseImponible = this.subtotalCorregido;
         // 2. Descuento sobre base imponible (SIN IVA)
         const descuentoMonto = this.venta.descuento ? (baseImponible * (this.venta.descuento / 100)) : 0;
         const baseConDescuento = baseImponible - descuentoMonto;
@@ -2536,10 +2546,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 tasa_cambio: tasaUtilizada,
             },
             totales: {
-                subtotal: this.redondear(subtotalSinIva),     // Subtotal CON IVA
-                descuento: this.redondear(descuentoMonto),       // Descuento sobre subtotal con IVA
-                iva: this.redondear(ivaCorrecto),                // IVA total
-                total: this.redondear(totalCorrecto),            // Subtotal con IVA - descuento
+                subtotal: this.redondear(subtotalSinIva),
+                descuento: this.redondear(descuentoMonto),
+                iva: this.redondear(ivaCorrecto),
+                total: this.redondear(totalCorrecto),
                 totalPagado: this.redondear(totalPagado)
             },
             cliente: clienteData,
@@ -2548,6 +2558,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             },
             productos: productosData,
             metodosPago: metodosPagoData,
+            generarOrdenTrabajo: debeGenerarOrdenTrabajo,
             auditoria: {
                 usuarioCreacion: parseInt(this.currentUser?.id || '0'),
                 fechaCreacion: fechaActual.toISOString()
@@ -2559,7 +2570,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             datosParaAPI.formaPago = {
                 tipo: 'cashea',
                 nivel: this.nivelCashea,
-                montoTotal: this.redondear(totalCorrecto),  // Usar el total corregido
+                montoTotal: this.redondear(totalCorrecto),
                 montoInicial: this.venta.montoInicial,
                 cantidadCuotas: this.cantidadCuotasCashea.toString(),
                 montoPorCuota: this.montoPrimeraCuota,
@@ -2589,7 +2600,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         } else if (this.venta.formaPago === 'contado') {
             datosParaAPI.formaPagoDetalle = {
                 tipo: 'contado',
-                montoTotal: this.redondear(totalCorrecto),  // Usar el total corregido
+                montoTotal: this.redondear(totalCorrecto),
                 totalPagado: this.redondear(totalPagado)
             };
         }
@@ -2620,6 +2631,26 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 'Verifica que todos los campos estén completos y los montos sean correctos.'
             );
             return;
+        }
+
+        //Mostrar advertencia si es paciente pero no tiene fórmula
+        if (this.requierePaciente && this.pacienteSeleccionado && this.historiaMedicaSeleccionada) {
+            const tieneFormula = this.tieneFormulaCompleta(this.historiaMedicaSeleccionada);
+
+            if (!tieneFormula) {
+                const resultado = await this.swalService.showConfirm(
+                    'Sin fórmula óptica',
+                    `El paciente <strong>${this.pacienteSeleccionado.informacionPersonal?.nombreCompleto || 'seleccionado'}</strong> no tiene fórmula óptica registrada en la historia médica.<br><br>
+            <span class="text-warning">⚠️ No se generará orden de trabajo para el laboratorio.</span><br><br>
+            ¿Desea continuar con la venta?`,
+                    'Sí, continuar',
+                    'Revisar'
+                );
+
+                if (!resultado.isConfirmed) {
+                    return;
+                }
+            }
         }
 
         if (this.generandoVenta) {
@@ -3185,7 +3216,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             `;
         };
 
-       // GENERAR TABLA DE PRODUCTOS CORREGIDA
+        // GENERAR TABLA DE PRODUCTOS CORREGIDA
         const generarTablaProductos = () => {
             if (!datos.productos || datos.productos.length === 0) {
                 return '<div class="alert alert-warning">No hay productos</div>';
@@ -3206,12 +3237,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     </thead>
                     <tbody>
                         ${datos.productos.map((producto: any, index: number) => {
-                            // Asegurar que los valores son correctos
-                            const precioUnitario = producto.precioUnitario || 0;
-                            const cantidad = producto.cantidad || 1;
-                            const subtotalCalculado = precioUnitario * cantidad;
+                // Asegurar que los valores son correctos
+                const precioUnitario = producto.precioUnitario || 0;
+                const cantidad = producto.cantidad || 1;
+                const subtotalCalculado = precioUnitario * cantidad;
 
-                            return `
+                return `
                             <tr>
                                 <td style="text-align: center; padding: 4px; border-bottom: 1px solid #dee2e6;">${index + 1}</td>
                                 <td style="text-align: left; padding: 4px; border-bottom: 1px solid #dee2e6;">${producto.nombre || 'Producto'}</td>
@@ -3220,7 +3251,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                                 <td style="text-align: right; padding: 4px; border-bottom: 1px solid #dee2e6;">${formatearMonedaLocal(subtotalCalculado)}</td>
                             </tr>
                             `;
-                        }).join('')}
+            }).join('')}
                     </tbody>
                 </table>
             </div>
@@ -4256,8 +4287,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             currentY += 12;
 
             // ==== 3. INFORMACIÓN DEL CLIENTE ====
-            const colorPaciente = [13, 202, 240]; 
-            const colorCliente = [44, 90, 160]; 
+            const colorPaciente = [13, 202, 240];
+            const colorCliente = [44, 90, 160];
 
             pdf.setDrawColor(
                 esPaciente ? colorPaciente[0] : colorCliente[0],
