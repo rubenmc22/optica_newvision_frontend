@@ -112,6 +112,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     };
     mostrarSelectorAsesor: boolean = false;
 
+    // === PROPIEDADES ADICIONALES PARA ORDEN DE TRABAJO ===
+    generarOrdenTrabajo: boolean = false;
+    forzarOrdenTrabajo: boolean = false;
+    porcentajeMinimoOrdenTrabajo: number = 50; // 50% mínimo para generar orden
+
+    // === PROPIEDADES PARA EMPRESA REFERIDA ===
+    empresaReferidaInfo: any = null;
+
     // === PROPIEDADES PARA ASESOR ===
     historiaMedica: HistoriaMedica | null = null;
     productosConDetalle: ProductoVentaCalculado[] = [];
@@ -131,7 +139,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     urlRecibo: string = '';
     errorGeneracion: string = '';
     mostrarDetalleDescuento: boolean = false;
-    generarOrdenTrabajo: boolean = false;
 
     // === PROPIEDADES PARA CLIENTE API ===
     validandoCliente: boolean = false;
@@ -401,14 +408,35 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     onPacienteSeleccionado(pacienteSeleccionado: Paciente | null): void {
         this.registrarTarea();
 
+        // Limpiar selección anterior si es necesario
+        if (!pacienteSeleccionado) {
+            this.limpiarSeleccionPaciente();
+            this.completarTarea();
+            return;
+        }
+
+        // Establecer paciente seleccionado
+        this.pacienteSeleccionado = pacienteSeleccionado;
+
+        // Cargar información de empresa referida si aplica
+        if (pacienteSeleccionado) {
+            this.cargarInfoEmpresaReferida(pacienteSeleccionado);
+        } else {
+            this.empresaReferidaInfo = null;
+        }
+
         // Limpiar historias previas
         this.historiasMedicas = [];
         this.historiaSeleccionadaId = null;
         this.historiaMedica = null;
         this.historiaMedicaSeleccionada = null;
 
+        // Resetear orden de trabajo
+        this.generarOrdenTrabajo = false;
+        this.forzarOrdenTrabajo = false;
+
         if (!pacienteSeleccionado?.key) {
-            console.error('No se encontró la clave del paciente seleccionado.', pacienteSeleccionado?.key);
+            console.error('No se encontró la clave del paciente seleccionado.');
             this.completarTarea();
             return;
         }
@@ -431,7 +459,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     new Date(a.auditoria.fechaCreacion).getTime()
                 );
 
-                // En onPacienteSeleccionado, cuando creas las historias:
                 this.historiasMedicas = historiasOrdenadas.map((historia: any, index: number) => {
                     const fecha = new Date(historia.auditoria.fechaCreacion);
                     const tieneFormula = this.tieneFormulaCompleta(historia);
@@ -466,13 +493,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     };
                 });
 
-                // Asegurarse de que la historia seleccionada por defecto también tenga key como string
-                if (this.historiasMedicas.length > 0) {
-                    this.historiaSeleccionadaId = this.historiasMedicas[0].key;
-                    this.historiaMedica = this.historiasMedicas[0].data;
-                    this.historiaMedicaSeleccionada = this.historiasMedicas[0].data;
-                }
-                // Seleccionar automáticamente la historia más reciente 
+                // Seleccionar automáticamente la historia más reciente
                 if (this.historiasMedicas.length > 0) {
                     this.historiaSeleccionadaId = this.historiasMedicas[0].key;
                     this.historiaMedica = this.historiasMedicas[0].data;
@@ -485,6 +506,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                             'La historia más reciente no tiene fórmula registrada. Puedes seleccionar otra historia o continuar con venta libre.'
                         );
                     }
+
+                    // Actualizar estado de orden de trabajo después de cargar la historia
+                    setTimeout(() => {
+                        this.actualizarEstadoOrdenTrabajo();
+                    }, 100);
                 }
 
                 this.completarTarea();
@@ -512,21 +538,36 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return material || '--';
     }
 
-    private tieneFormulaCompleta(historia: any): boolean {
-        if (!historia?.examenOcular?.refraccionFinal) {
+    // Método público para usar en plantillas
+    tieneFormulaCompleta(historia: any): boolean {
+        try {
+            if (!historia || typeof historia !== 'object') {
+                return false;
+            }
+
+            // Verificar si existe la estructura de refracción
+            const ref = historia?.examenOcular?.refraccionFinal;
+            if (!ref || typeof ref !== 'object') {
+                return false;
+            }
+
+            // Verificar datos para ojo derecho (OD)
+            const odTieneEsf = ref.esf_od !== null && ref.esf_od !== undefined && ref.esf_od !== '';
+            const odTieneCil = ref.cil_od !== null && ref.cil_od !== undefined && ref.cil_od !== '';
+            const odTieneDatos = odTieneEsf || odTieneCil;
+
+            // Verificar datos para ojo izquierdo (OI)
+            const oiTieneEsf = ref.esf_oi !== null && ref.esf_oi !== undefined && ref.esf_oi !== '';
+            const oiTieneCil = ref.cil_oi !== null && ref.cil_oi !== undefined && ref.cil_oi !== '';
+            const oiTieneDatos = oiTieneEsf || oiTieneCil;
+
+            // Al menos un ojo debe tener datos
+            return odTieneDatos || oiTieneDatos;
+
+        } catch (error) {
+            console.error('Error al verificar fórmula completa:', error, historia);
             return false;
         }
-
-        const ref = historia.examenOcular.refraccionFinal;
-
-        const odTieneDatos = !!ref.esf_od || ref.esf_od === 0 || !!ref.cil_od || ref.cil_od === 0;
-        const oiTieneDatos = !!ref.esf_oi || ref.esf_oi === 0 || !!ref.cil_oi || ref.cil_oi === 0;
-
-        return odTieneDatos || oiTieneDatos;
-    }
-
-    tieneFormulaCompletaTemplate(historia: any): boolean {
-        return this.tieneFormulaCompleta(historia);
     }
 
     filtrarPorNombreOCedula(term: string, item: Paciente): boolean {
@@ -762,6 +803,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     eliminarMetodo(index: number): void {
         this.venta.metodosDePago.splice(index, 1);
+        this.actualizarEstadoOrdenTrabajo();
     }
 
     onMetodoPagoChange(index: number): void {
@@ -800,6 +842,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (!limpio) {
             metodo.monto = 0;
             metodo.valorTemporal = '';
+            //ACTUALIZAR ESTADO DE ORDEN AL LIMPIAR
+            this.actualizarEstadoOrdenTrabajo();
             return;
         }
 
@@ -810,6 +854,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (isNaN(monto)) {
             metodo.monto = 0;
             metodo.valorTemporal = '';
+            //ACTUALIZAR ESTADO DE ORDEN SI ES INVÁLIDO
+            this.actualizarEstadoOrdenTrabajo();
             return;
         }
 
@@ -831,6 +877,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         this.cdr.detectChanges();
+
+        //ACTUALIZAR ESTADO DE ORDEN DE TRABAJO CUANDO CAMBIA UN MÉTODO DE PAGO
+        this.actualizarEstadoOrdenTrabajo();
     }
 
     formatearInicialCashea(): void {
@@ -888,6 +937,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.valorTemporal = '';
             this.montoExcedido = false;
             this.cdr.detectChanges();
+            //ACTUALIZAR ESTADO DE ORDEN AL LIMPIAR
+            this.actualizarEstadoOrdenTrabajo();
             return;
         }
 
@@ -901,6 +952,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.valorTemporal = '';
             this.montoExcedido = false;
             this.cdr.detectChanges();
+            //ACTUALIZAR ESTADO DE ORDEN SI ES INVÁLIDO
+            this.actualizarEstadoOrdenTrabajo();
             return;
         }
 
@@ -910,12 +963,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.valorTemporal = this.formatearMoneda(adeudado, this.venta.moneda);
             this.venta.montoAbonado = adeudado;
             this.cdr.detectChanges();
+            //ACTUALIZAR ESTADO DE ORDEN SI EXCEDE
+            this.actualizarEstadoOrdenTrabajo();
             return;
         }
 
         this.venta.montoAbonado = monto;
         this.valorTemporal = this.formatearMoneda(monto, this.venta.moneda);
         this.cdr.detectChanges();
+
+        //ACTUALIZAR ESTADO DE ORDEN DE TRABAJO CUANDO CAMBIA EL MONTO ABONADO
+        this.actualizarEstadoOrdenTrabajo();
     }
 
     validarMontoMetodo(index: number): void {
@@ -1155,24 +1213,337 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return redondearResultado ? this.redondear(resultado) : resultado;
     }
 
-    // === MÉTODOS CASHEA ===
+    private limpiarCamposAbono(): void {
+        this.venta.montoAbonado = 0;
+        this.valorTemporal = '';
+        this.montoExcedido = false;
+
+        // Si hay métodos de pago, también limpiarlos
+        this.venta.metodosDePago = [];
+
+        // Actualizar cálculos
+        this.actualizarProductosConDetalle();
+    }
+
+    private limpiarCamposFormaPagoAnterior(): void {
+        const formaPagoActual = this.venta.formaPago;
+
+        switch (formaPagoActual) {
+            case 'abono':
+                this.venta.montoAbonado = 0;
+                this.valorTemporal = '';
+                this.montoExcedido = false;
+                break;
+
+            case 'cashea':
+                this.venta.montoInicial = 0;
+                this.valorInicialTemporal = '';
+                this.cuotasCashea = [];
+                this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
+                break;
+
+            case 'contado':
+            case 'pendiente':
+                // No hay campos específicos para limpiar
+                break;
+        }
+
+        // Siempre limpiar métodos de pago
+        this.venta.metodosDePago = [];
+    }
+
     onFormaPagoChange(valor: string): void {
+        const formaPagoAnterior = this.venta.formaPago;
+        this.limpiarCamposFormaPagoAnterior();
         this.venta.formaPago = valor;
+
+        // Si se sale de 'abono', limpiar sus campos
+        if (formaPagoAnterior === 'abono' && valor !== 'abono') {
+            this.limpiarCamposAbono();
+        }
+
+        // Si se entra a 'abono', asegurarse de empezar limpio
+        if (valor === 'abono' && formaPagoAnterior !== 'abono') {
+            this.limpiarCamposAbono();
+        }
 
         if (valor === 'cashea') {
             this.venta.moneda = 'dolar';
             this.controlarCuotasPorNivel();
             this.actualizarMontoInicialCashea();
             this.generarCuotasCashea();
-
-            const minimo = this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
-            this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
+            this.valorInicialTemporal = this.formatearMoneda(this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea), this.venta.moneda);
+        } else if (valor === 'pendiente') {
+            this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
+            this.resetearMetodosPago();
+            this.generarOrdenTrabajo = false;
+            this.forzarOrdenTrabajo = false;
         } else {
             this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
         }
 
-        this.venta.metodosDePago = [];
+        if (valor !== 'pendiente') {
+            this.venta.metodosDePago = [];
+        }
+
         this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
+
+        // Actualizar estado de orden de trabajo
+        this.actualizarEstadoOrdenTrabajo();
+    }
+
+    // Nuevo método para resetear métodos de pago
+    private resetearMetodosPago(): void {
+        this.venta.metodosDePago = [];
+    }
+
+    actualizarEstadoOrdenTrabajo(): void {
+        const tieneRequisitos = this.verificarRequisitosOrdenTrabajo();
+
+        if (!tieneRequisitos) {
+            this.generarOrdenTrabajo = false;
+            this.forzarOrdenTrabajo = false;
+            return;
+        }
+
+        const formaPago = this.venta.formaPago;
+        const montoAbonado = this.venta.montoAbonado || 0;
+        const porcentajeAbonado = this.montoTotal > 0 ? (montoAbonado / this.montoTotal) * 100 : 0;
+
+        // Si ya está forzado, mantenerlo así
+        if (this.forzarOrdenTrabajo) {
+            this.generarOrdenTrabajo = true;
+            return;
+        }
+
+        // Lógica normal solo si NO está forzado
+        let estadoPorDefecto = false;
+
+        switch (formaPago) {
+            case 'contado':
+            case 'cashea':
+                estadoPorDefecto = true;
+                break;
+            case 'abono':
+                estadoPorDefecto = porcentajeAbonado >= this.porcentajeMinimoOrdenTrabajo;
+                break;
+            case 'pendiente':
+            default:
+                estadoPorDefecto = false;
+        }
+
+        this.generarOrdenTrabajo = estadoPorDefecto;
+    }
+
+    async toggleSwitchOrdenTrabajo(): Promise<void> {
+        // 1. Verificar requisitos básicos
+        const tieneRequisitos = this.verificarRequisitosOrdenTrabajo();
+
+        if (!tieneRequisitos) {
+            this.mostrarErrorRequisitosOrdenTrabajo();
+            this.generarOrdenTrabajo = false;
+            this.forzarOrdenTrabajo = false;
+            return;
+        }
+
+        const formaPago = this.venta.formaPago;
+        const montoTotal = this.montoTotal;
+        const montoAbonado = this.venta.montoAbonado || 0;
+        const porcentajeAbonado = montoTotal > 0 ? (montoAbonado / montoTotal) * 100 : 0;
+
+        // 2. Determinar si cumple condiciones automáticas
+        let cumpleCondicionesAutomaticas = false;
+
+        switch (formaPago) {
+            case 'contado':
+            case 'cashea':
+                cumpleCondicionesAutomaticas = true;
+                break;
+            case 'abono':
+                cumpleCondicionesAutomaticas = porcentajeAbonado >= this.porcentajeMinimoOrdenTrabajo;
+                break;
+            case 'pendiente':
+                cumpleCondicionesAutomaticas = false;
+                break;
+            default:
+                cumpleCondicionesAutomaticas = false;
+        }
+
+        // 3. Si está DESACTIVADO y el usuario lo quiere ACTIVAR
+        if (!this.generarOrdenTrabajo) {
+            // 3.1 Si cumple condiciones automáticas → activar normalmente
+            if (cumpleCondicionesAutomaticas) {
+                this.generarOrdenTrabajo = true;
+                this.forzarOrdenTrabajo = false;
+                this.snackBar.open('✅ Orden activada', 'Cerrar', {
+                    duration: 2000,
+                    panelClass: ['snackbar-success']
+                });
+                return;
+            }
+
+            // 3.2 Si NO cumple condiciones → activar como forzado SIN MODAL
+            this.generarOrdenTrabajo = true;
+            this.forzarOrdenTrabajo = true;
+            this.registrarForzadoOrdenTrabajo();
+
+            // Mostrar snackbar informativo
+            let mensaje = '';
+            if (formaPago === 'abono') {
+                mensaje = `Orden activada (${porcentajeAbonado.toFixed(1)}% abonado)`;
+            } else if (formaPago === 'pendiente') {
+                mensaje = 'Orden activada con pago pendiente';
+            } else {
+                mensaje = 'Orden activada manualmente';
+            }
+
+            this.snackBar.open(`⚠️ ${mensaje}`, 'Cerrar', {
+                duration: 3000,
+                panelClass: ['snackbar-warning']
+            });
+        }
+        // 4. Si está ACTIVADO y el usuario lo quiere DESACTIVAR
+        else {
+            this.generarOrdenTrabajo = false;
+            this.forzarOrdenTrabajo = false;
+
+            this.snackBar.open('Orden desactivada', 'Cerrar', {
+                duration: 2000,
+                panelClass: ['snackbar-info']
+            });
+        }
+    }
+
+    // Método auxiliar para verificar requisitos
+    private verificarRequisitosOrdenTrabajo(): boolean {
+        // 1. Paciente seleccionado
+        const tienePaciente = !!this.pacienteSeleccionado;
+
+        // 2. Historia médica seleccionada
+        const tieneHistoria = !!this.historiaMedicaSeleccionada;
+
+        // 3. Formulación completa
+        const tieneFormula = tieneHistoria && this.tieneFormulaCompleta(this.historiaMedicaSeleccionada);
+
+        return tienePaciente && tieneHistoria && tieneFormula;
+    }
+
+    private registrarForzadoOrdenTrabajo(): void {
+        const formaPago = this.venta.formaPago;
+        const montoAbonado = this.venta.montoAbonado || 0;
+        const montoTotal = this.montoTotal;
+        const porcentajeAbonado = montoTotal > 0 ? (montoAbonado / montoTotal) * 100 : 0;
+
+        const datosForzado = {
+            fecha: new Date().toISOString(),
+            usuario: this.currentUser?.nombre || 'Desconocido',
+            paciente: this.pacienteSeleccionado?.informacionPersonal?.nombreCompleto,
+            cedula: this.pacienteSeleccionado?.informacionPersonal?.cedula,
+            historia: this.historiaMedicaSeleccionada?.nHistoria,
+            formaPago: formaPago,
+            montoTotal: montoTotal,
+            montoAbonado: montoAbonado,
+            porcentajeAbonado: porcentajeAbonado,
+            porcentajeMinimo: this.porcentajeMinimoOrdenTrabajo,
+            razon: 'Forzado manualmente por usuario'
+        };
+
+        // Aquí podrías enviar estos datos a un servicio de auditoría
+        console.log('Orden de trabajo forzada:', datosForzado);
+    }
+
+
+    // Método para forzar la orden de trabajo
+    onForzarOrdenTrabajoChange(): void {
+        // Primero verificar si cumple con los requisitos mínimos
+        const tieneRequisitos = this.verificarRequisitosOrdenTrabajo();
+
+        if (!tieneRequisitos && this.forzarOrdenTrabajo) {
+            // Si no tiene requisitos y se intenta forzar, mostrar error y revertir
+            this.forzarOrdenTrabajo = false;
+            this.generarOrdenTrabajo = false;
+            this.mostrarErrorRequisitosOrdenTrabajo();
+            return;
+        }
+
+        if (this.forzarOrdenTrabajo) {
+            // Mostrar confirmación para forzar
+            this.swalService.showConfirm(
+                'Forzar Orden de Trabajo',
+                this.crearMensajeConfirmacionForzarOrden(),
+                'Sí, forzar',
+                'Cancelar'
+            ).then((result) => {
+                if (result.isConfirmed) {
+                    this.generarOrdenTrabajo = true;
+                    this.registrarForzadoOrdenTrabajo();
+                } else {
+                    this.forzarOrdenTrabajo = false;
+                    this.generarOrdenTrabajo = false;
+                    this.actualizarEstadoOrdenTrabajo();
+                }
+            });
+        } else {
+            // Volver a la lógica normal
+            this.actualizarEstadoOrdenTrabajo();
+        }
+    }
+
+    // Método para mostrar error cuando faltan requisitos
+    private mostrarErrorRequisitosOrdenTrabajo(): void {
+        let mensajeError = 'No se puede forzar la orden de trabajo porque faltan requisitos:<br><br>';
+        let faltanRequisitos = [];
+
+        if (!this.pacienteSeleccionado) {
+            faltanRequisitos.push('• No hay paciente seleccionado');
+        }
+
+        if (!this.historiaMedicaSeleccionada) {
+            faltanRequisitos.push('• No hay historia médica seleccionada');
+        } else if (!this.tieneFormulaCompleta(this.historiaMedicaSeleccionada)) {
+            faltanRequisitos.push('• La historia seleccionada no tiene fórmula óptica completa');
+        }
+
+        mensajeError += faltanRequisitos.join('<br>');
+        mensajeError += '<br><br><strong>La orden de trabajo solo se puede generar con formulación óptica completa.</strong>';
+
+        this.swalService.showError('Faltan requisitos', mensajeError);
+    }
+
+    // Crear mensaje de confirmación dinámico
+    private crearMensajeConfirmacionForzarOrden(): string {
+        const formaPago = this.venta.formaPago;
+        const montoAbonado = this.venta.montoAbonado ?? 0;
+        const montoTotal = this.montoTotal;
+        const porcentajeAbonado = montoTotal > 0 ? (montoAbonado / montoTotal) * 100 : 0;
+
+        let mensaje = '<div class="text-start">';
+
+        if (formaPago === 'abono' && porcentajeAbonado < this.porcentajeMinimoOrdenTrabajo) {
+            mensaje += `
+            <p class="text-warning"><strong>⚠️ ATENCIÓN</strong></p>
+            <p>Está forzando la orden de trabajo con solo el <strong>${porcentajeAbonado.toFixed(1)}%</strong> abonado 
+            (mínimo requerido: ${this.porcentajeMinimoOrdenTrabajo}%).</p>
+        `;
+        } else if (formaPago === 'pendiente') {
+            mensaje += `
+            <p class="text-danger"><strong>🚫 PAGO PENDIENTE</strong></p>
+            <p>Está forzando la orden de trabajo sin pago previo.</p>
+        `;
+        }
+
+        mensaje += `
+        <p><strong>Esta acción se registra en el sistema y debe usarse solo para casos especiales:</strong></p>
+        <ul>
+            <li>Clientes fijos/recidivos</li>
+            <li>Familiares de empleados</li>
+            <li>Amigos del personal</li>
+            <li>Acuerdos especiales autorizados</li>
+        </ul>
+        <p class="mt-3"><strong>¿Desea continuar?</strong></p>
+    </div>`;
+
+        return mensaje;
     }
 
     validarInicialCashea(): void {
@@ -1938,6 +2309,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             bancoObject: null,
             moneda: ''
         });
+
+        this.actualizarEstadoOrdenTrabajo();
     }
 
     hayMetodoEfectivoSeleccionado(): boolean {
@@ -2160,20 +2533,26 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return false;
         }
 
-        // 4. Verificar que todos los métodos de pago estén completamente configurados
+        // 4. Para forma de pago "pendiente", no se requieren métodos de pago
+        if (this.venta.formaPago === 'pendiente') {
+            return true; // Permite generar venta sin métodos de pago
+        }
+
+        // 5. Para otras formas de pago, verificar métodos
+        if (this.venta.metodosDePago.length === 0) {
+            return false;
+        }
+
+        // 6. Verificar que todos los métodos de pago estén completamente configurados
         const metodosCompletos = this.venta.metodosDePago.every(metodo => {
             if (!metodo.tipo) return false;
-
             if (!metodo.monto || metodo.monto <= 0) return false;
-
             if (this.necesitaBanco(metodo.tipo)) {
                 if (!metodo.banco || !metodo.bancoObject) return false;
             }
-
             if (this.necesitaReferencia(metodo.tipo)) {
                 if (!metodo.referencia || metodo.referencia.trim() === '') return false;
             }
-
             return true;
         });
 
@@ -2181,10 +2560,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return false;
         }
 
-        // 5. Validaciones financieras
+        // 7. Validaciones financieras
         const montoCubierto = this.totalPagadoPorMetodos;
         const montoRequerido = this.montoCubiertoPorMetodos;
-
         const diferencia = Math.abs(montoCubierto - montoRequerido);
         const pagoCompleto = diferencia < 0.01;
 
@@ -2192,18 +2570,15 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         switch (this.venta.formaPago) {
             case 'contado':
                 return pagoCompleto;
-
             case 'abono':
-                // Para abono, debe cubrir exactamente el monto abonado
                 return pagoCompleto && (this.venta.montoAbonado ?? 0) > 0;
-
             case 'cashea':
-                // Para Cashea, debe cubrir inicial + cuotas seleccionadas
                 const inicialCubierto = pagoCompleto;
                 const tieneInicialValida = (this.venta.montoInicial ?? 0) >=
                     this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
                 return inicialCubierto && tieneInicialValida;
-
+            case 'pendiente':
+                return true; // Siempre permite generar
             default:
                 return false;
         }
@@ -2309,27 +2684,57 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
     }
 
+    // Método para limpiar cuando se deselecciona paciente
+    limpiarSeleccionPaciente(): void {
+        this.pacienteSeleccionado = null;
+        this.historiasMedicas = [];
+        this.historiaSeleccionadaId = null;
+        this.historiaMedica = null;
+        this.historiaMedicaSeleccionada = null;
+        this.empresaReferidaInfo = null;
+        this.generarOrdenTrabajo = false;
+        this.forzarOrdenTrabajo = false;
+    }
+
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
 
-        // SOLO cuando es paciente Y la historia tiene fórmula completa
-        const debeGenerarOrdenTrabajo = this.requierePaciente &&
-            this.pacienteSeleccionado &&
-            this.historiaMedicaSeleccionada &&
-            this.tieneFormulaCompleta(this.historiaMedicaSeleccionada);
+        // Verificar requisitos para orden de trabajo
+        const tieneRequisitos = this.verificarRequisitosOrdenTrabajo();
 
-        // Actualizar la propiedad
-        this.generarOrdenTrabajo = debeGenerarOrdenTrabajo;
+        if (!tieneRequisitos) {
+            // No hay requisitos, no se genera orden de trabajo
+            this.generarOrdenTrabajo = false;
+            this.forzarOrdenTrabajo = false;
+        } else {
+            // Actualizar estado según la lógica normal
+            this.actualizarEstadoOrdenTrabajo();
+        }
+
+        // La decisión final incluye el forzamiento
+        const debeGenerarOrdenTrabajo = tieneRequisitos &&
+            (this.generarOrdenTrabajo || this.forzarOrdenTrabajo);
+
+        // Si se intenta forzar sin requisitos, mostrar error
+        if (this.forzarOrdenTrabajo && !tieneRequisitos) {
+            this.mostrarErrorRequisitosOrdenTrabajo();
+            throw new Error('No se puede forzar orden de trabajo sin requisitos');
+        }
 
         let estadoVenta = 'completada';
         let estadoPago = 'completado';
 
         // Determinar estado del pago basado en la forma de pago y deuda
-        if (this.venta.formaPago === 'abono') {
+        if (this.venta.formaPago === 'pendiente') {
+            estadoVenta = 'pendiente';
+            estadoPago = 'pendiente';
+
+        } else if (this.venta.formaPago === 'abono') {
             const montoAbonado = this.venta.montoAbonado || 0;
             const montoTotal = this.montoTotal;
             const diferencia = Math.abs(montoAbonado - montoTotal);
             estadoPago = diferencia < 0.01 ? 'completado' : 'pendiente';
+
         } else if (this.venta.formaPago === 'cashea') {
             const totalPagadoCashea = this.totalPagadoCashea;
             const montoTotal = this.montoTotal;
@@ -2517,6 +2922,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             };
         }
 
+        console.log('DEBUG - Estado orden trabajo:', {
+            generarOrdenTrabajo: this.generarOrdenTrabajo,
+            forzarOrdenTrabajo: this.forzarOrdenTrabajo,
+            tieneRequisitos: this.verificarRequisitosOrdenTrabajo(),
+            debeGenerar: this.generarOrdenTrabajo || this.forzarOrdenTrabajo
+        });
+
         return datosParaAPI;
     }
 
@@ -2662,7 +3074,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             email: 'newvisionlens2020@gmail.com'
         };
     }
-  
+
     private mostrarReciboAutomatico(): void {
         if (!this.datosRecibo) {
             this.datosRecibo = this.crearDatosReciboReal();
@@ -5907,6 +6319,46 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
 
         return lineas;
+    }
+
+    // Método para cargar información de empresa referida si aplica
+    cargarInfoEmpresaReferida(paciente: Paciente): void {
+        if (paciente?.informacionEmpresa?.referidoEmpresa) {
+            this.empresaReferidaInfo = {
+                nombre: paciente.informacionEmpresa.empresaNombre,
+                rif: paciente.informacionEmpresa.empresaRif,
+                telefono: paciente.informacionEmpresa.empresaTelefono,
+                direccion: paciente.informacionEmpresa.empresaDireccion,
+                contacto: paciente.informacionEmpresa.empresaNombre // Puedes ajustar esto
+            };
+        } else {
+            this.empresaReferidaInfo = null;
+        }
+    }
+
+    /**
+     * Explicación simple de por qué no se puede activar
+     */
+    private async explicacionSimple(): Promise<void> {
+        const formaPago = this.venta.formaPago;
+
+        let mensaje = '';
+
+        if (formaPago === 'abono') {
+            const porcentaje = this.porcentajeAbonadoDelTotal;
+            const minimo = this.porcentajeMinimoOrdenTrabajo;
+
+            if (porcentaje < minimo) {
+                mensaje = `Abono insuficiente (${porcentaje.toFixed(1)}% de ${minimo}% mínimo).`;
+            }
+        }
+        else if (formaPago === 'pendiente') {
+            mensaje = 'Pago pendiente. Registre al menos un método de pago.';
+        }
+
+        if (mensaje) {
+            await this.swalService.showWarning('No se puede activar', mensaje);
+        }
     }
 
 }
