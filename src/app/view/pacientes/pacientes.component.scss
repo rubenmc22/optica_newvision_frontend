@@ -85,10 +85,176 @@
     }
 }
 
+/* 🏢 Estilos para sección de empresa en formulario */
+.empresa-campos {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    border-left: 4px solid #3498db;
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* 🏢 Indicador de empresa en tabla */
+.paciente-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.empresa-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    animation: pulse 2s infinite;
+
+    i {
+        font-size: 0.8rem;
+    }
+
+    .empresa-tooltip {
+        display: inline-block;
+    }
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+
+        &::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2c3e50;
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 100;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            animation: fadeInUp 0.3s ease-out forwards;
+            animation-delay: 0.1s;
+            pointer-events: none;
+        }
+    }
+}
+
+/* 🏢 Información de empresa en modal de visualización */
+.empresa-info-section {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    border: 1px solid #90caf9;
+
+    .section-header {
+        background: transparent;
+        border-bottom: 1px solid #90caf9;
+        margin-bottom: 1rem;
+    }
+
+    .empresa-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+
+        .empresa-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+
+            i {
+                color: #1976d2;
+                font-size: 1.1rem;
+                margin-top: 0.125rem;
+                flex-shrink: 0;
+            }
+
+            .empresa-content {
+                .empresa-label {
+                    font-weight: 600;
+                    color: #1565c0;
+                    font-size: 0.85rem;
+                    margin-bottom: 0.25rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .empresa-value {
+                    color: #2c3e50;
+                    font-size: 0.95rem;
+                    word-break: break-word;
+                }
+            }
+        }
+    }
+}
+
+/* 🏢 Animación para el indicador */
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+/* 🏢 Responsive para indicador */
+@media (max-width: 768px) {
+    .empresa-indicator {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.65rem;
+
+        i {
+            font-size: 0.7rem;
+        }
+
+        .empresa-tooltip {
+            display: none;
+        }
+
+        &:hover {
+            &::after {
+                display: block;
+            }
+        }
+    }
+}
+
 /* Cuerpo modernizado */
 .card-body-moderno {
     padding: 2rem;
-   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
 /* Filtros modernos */

@@ -135,6 +135,11 @@
                     </div>
                     <div class="paciente-details">
                       <span class="paciente-nombre">{{ paciente.informacionPersonal.nombreCompleto }}</span>
+                         <span *ngIf="paciente.informacionEmpresa?.referidoEmpresa" class="empresa-indicator" 
+                              title="Referido de empresa: {{ paciente.informacionEmpresa.empresaNombre }}">
+                          <i class="bi bi-building"></i>
+                          <span class="empresa-tooltip">Ref. Empresa</span>
+                        </span>
                       <small class="paciente-contacto">{{ paciente.informacionPersonal.telefono || 'Sin teléfono'
                         }}</small>
                     </div>
@@ -405,6 +410,94 @@
                     <div class="form-error" *ngIf="showError('direccion')">
                       <i class="bi bi-exclamation-circle"></i>
                       {{ getErrorMsg('direccion') }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección: Referido de Empresa -->
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-building"></i>
+              </div>
+              <h6 class="section-title">Información de Empresa</h6>
+            </div>
+
+            <div class="section-content">
+              <!-- Switch para indicar si es referido de empresa -->
+              <div class="modern-switch-container">
+                <label class="modern-switch">
+                  <input type="checkbox" formControlName="referidoEmpresa">
+                  <span class="switch-slider"></span>
+                </label>
+                <span class="switch-label">¿Referido de una empresa?</span>
+              </div>
+
+              <!-- Campos de empresa (solo visibles si el switch está activado) -->
+              <div *ngIf="formPaciente.get('referidoEmpresa')?.value" @fadeInOut class="empresa-campos">
+                <div class="row g-3">
+                  <!-- Fila 1: Nombre de empresa y RIF -->
+                  <div class="col-md-6">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-building me-2"></i>
+                        Nombre de la Empresa
+                      </label>
+                      <input type="text" class="form-control-moderno" formControlName="empresaNombre" 
+                            placeholder="Ej: Corporación OptiSalud C.A." maxlength="100">
+                      <div class="form-error" *ngIf="showError('empresaNombre')">
+                        <i class="bi bi-exclamation-circle"></i>
+                        {{ getErrorMsg('empresaNombre') }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-card-text me-2"></i>
+                        RIF de la Empresa
+                      </label>
+                      <input type="text" class="form-control-moderno" formControlName="empresaRif" 
+                            placeholder="Ej: J-123456789" maxlength="12">
+                      <div class="form-error" *ngIf="showError('empresaRif')">
+                        <i class="bi bi-exclamation-circle"></i>
+                        {{ getErrorMsg('empresaRif') }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Fila 2: Teléfono y Dirección -->
+                  <div class="col-md-6">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-telephone me-2"></i>
+                        Teléfono de la Empresa
+                      </label>
+                      <input type="text" class="form-control-moderno" formControlName="empresaTelefono" 
+                            placeholder="Ej: 0212-1234567" maxlength="15">
+                      <div class="form-error" *ngIf="showError('empresaTelefono')">
+                        <i class="bi bi-exclamation-circle"></i>
+                        {{ getErrorMsg('empresaTelefono') }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        Dirección de la Empresa
+                      </label>
+                      <input type="text" class="form-control-moderno" formControlName="empresaDireccion" 
+                            placeholder="Ej: Av. Principal, Centro Comercial XYZ" maxlength="150">
+                      <div class="form-error" *ngIf="showError('empresaDireccion')">
+                        <i class="bi bi-exclamation-circle"></i>
+                        {{ getErrorMsg('empresaDireccion') }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -803,6 +896,52 @@
                       Dirección
                     </div>
                     <div class="info-value">{{ pacienteSeleccionado?.direccion || '---' }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sección: Información de Empresa (solo si existe) -->
+          <div *ngIf="pacienteSeleccionado?.informacionEmpresa?.referidoEmpresa" class="info-section empresa-info-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="bi bi-building"></i>
+              </div>
+              <h6 class="section-title">Información de Empresa Referida</h6>
+            </div>
+            
+            <div class="section-content">
+              <div class="empresa-details">
+                <div class="empresa-item">
+                  <i class="bi bi-building"></i>
+                  <div class="empresa-content">
+                    <div class="empresa-label">Empresa</div>
+                    <div class="empresa-value">{{ pacienteSeleccionado.informacionEmpresa.empresaNombre }}</div>
+                  </div>
+                </div>
+                
+                <div class="empresa-item">
+                  <i class="bi bi-card-text"></i>
+                  <div class="empresa-content">
+                    <div class="empresa-label">RIF</div>
+                    <div class="empresa-value">{{ pacienteSeleccionado.informacionEmpresa.empresaRif }}</div>
+                  </div>
+                </div>
+                
+                <div class="empresa-item">
+                  <i class="bi bi-telephone"></i>
+                  <div class="empresa-content">
+                    <div class="empresa-label">Teléfono</div>
+                    <div class="empresa-value">{{ pacienteSeleccionado.informacionEmpresa.empresaTelefono }}</div>
+                  </div>
+                </div>
+                
+                <div class="empresa-item">
+                  <i class="bi bi-geo-alt"></i>
+                  <div class="empresa-content">
+                    <div class="empresa-label">Dirección</div>
+                    <div class="empresa-value">{{ pacienteSeleccionado.informacionEmpresa.empresaDireccion }}</div>
                   </div>
                 </div>
               </div>

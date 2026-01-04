@@ -15,6 +15,7 @@ export interface Paciente {
   id: string,
   key: string;
   fechaRegistro?: string;
+  fechaRegistroRaw?: string;
   informacionPersonal: {
     nombreCompleto: string;
     cedula: string;
@@ -32,6 +33,15 @@ export interface Paciente {
   sede: string;
 
   redesSociales?: { platform: string; username: string }[];
+
+  informacionEmpresa?: {
+    referidoEmpresa: boolean;
+    empresaNombre: string;
+    empresaRif: string;
+    empresaTelefono: string;
+    empresaDireccion: string;
+  } | null;
+
   historiaClinica?: {
     usuarioLentes?: string | null;
     tipoCristalActual?: string;

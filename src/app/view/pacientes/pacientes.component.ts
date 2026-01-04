@@ -19,13 +19,25 @@ import {
   ValidationErrors
 } from '@angular/forms';
 import { LoaderService } from './../../shared/loader/loader.service';
+import { trigger, transition, style, animate } from '@angular/animations';
 
 
 @Component({
   selector: 'app-pacientes',
   standalone: false,
   templateUrl: './pacientes.component.html',
-  styleUrls: ['./pacientes.component.scss']
+  styleUrls: ['./pacientes.component.scss'],
+  animations: [
+    trigger('fadeInOut', [
+      transition(':enter', [
+        style({ opacity: 0, height: 0, overflow: 'hidden' }),
+        animate('300ms ease-in-out', style({ opacity: 1, height: '*' }))
+      ]),
+      transition(':leave', [
+        animate('300ms ease-in-out', style({ opacity: 0, height: 0, overflow: 'hidden' }))
+      ])
+    ])
+  ]
 })
 
 export class VerPacientesComponent implements OnInit {
@@ -186,6 +198,13 @@ export class VerPacientesComponent implements OnInit {
       ],
       redesSociales: this.fb.array([]),
 
+      // 🏢 Información de empresa (NUEVO)
+      referidoEmpresa: [false],
+      empresaNombre: [''],
+      empresaRif: ['', [Validators.pattern(/^[JjVGgEe]-?\d{7,9}$/)]],
+      empresaTelefono: [''],
+      empresaDireccion: [''],
+
       // 🩺 Campos clínicos
       usuarioLentes: ['', Validators.required],
       fotofobia: ['', Validators.required],
@@ -216,7 +235,46 @@ export class VerPacientesComponent implements OnInit {
     this.aplicarValidacionCondicional('cirugiaOcular', 'cirugiaOcularDescripcion', this.formPaciente);
     this.configurarValidacionCondicional();
     this.calcularPaginacion();
+    this.configurarValidacionCondicionalEmpresa();
+
+    //Establecer orden por defecto por fecha de registro (más reciente primero)
+    this.ordenActual = 'fechaRegistro';
+    this.ordenAscendente = false;
   }
+
+  private configurarValidacionCondicionalEmpresa(): void {
+    const empresaControl = this.formPaciente.get('referidoEmpresa');
+
+    empresaControl?.valueChanges.subscribe(esReferido => {
+      const empresaNombre = this.formPaciente.get('empresaNombre');
+      const empresaRif = this.formPaciente.get('empresaRif');
+      const empresaTelefono = this.formPaciente.get('empresaTelefono');
+
+      if (esReferido) {
+        // Si es referido de empresa, hacer obligatorios los campos
+        empresaNombre?.setValidators([Validators.required, Validators.maxLength(100)]);
+        empresaRif?.setValidators([Validators.required, Validators.pattern(/^[JjVGgEe]-?\d{7,9}$/)]);
+        empresaTelefono?.setValidators([Validators.required]);
+      } else {
+        // Si no es referido, limpiar validadores y valores
+        empresaNombre?.clearValidators();
+        empresaRif?.clearValidators();
+        empresaTelefono?.clearValidators();
+
+        // Limpiar valores
+        empresaNombre?.setValue('');
+        empresaRif?.setValue('');
+        empresaTelefono?.setValue('');
+        this.formPaciente.get('empresaDireccion')?.setValue('');
+      }
+
+      // Actualizar validación
+      empresaNombre?.updateValueAndValidity();
+      empresaRif?.updateValueAndValidity();
+      empresaTelefono?.updateValueAndValidity();
+    });
+  }
+
 
   private configurarValidacionCondicional(): void {
     const usoDispositivoControl = this.formPaciente.get('usoDispositivo');
@@ -277,6 +335,18 @@ export class VerPacientesComponent implements OnInit {
       case 'traumatismoOcularDescripcion':
       case 'cirugiaOcularDescripcion':
         if (c.hasError('required')) return 'Por favor, describa este antecedente';
+        break;
+
+      case 'empresaNombre':
+        if (c.hasError('maxlength')) return 'Máximo 100 caracteres';
+        break;
+
+      case 'empresaRif':
+        if (c.hasError('pattern')) return 'Formato de RIF inválido. Use J- seguido de 7-9 números';
+        break;
+
+      case 'empresaTelefono':
+        if (c.hasError('pattern')) return 'Formato de teléfono inválido';
         break;
 
     }
@@ -394,60 +464,74 @@ export class VerPacientesComponent implements OnInit {
   // Métodos de carga de datos
   cargarPacientes(): void {
     this.dataIsReady = false;
-    this.loader.show(); // activa el loader
+    this.loader.show();
     this.pacientesService.getPacientes().subscribe({
       next: (data) => {
         this.pacientes = Array.isArray(data.pacientes)
-          ? data.pacientes.map((p: any) => {
-            const info = p.informacionPersonal;
-            const historia = p.historiaClinica;
+          ? data.pacientes
+            .map((p: any) => {
+              const info = p.informacionPersonal;
+              const historia = p.historiaClinica;
+              const empresa = p.informacionEmpresa;
 
-            return {
-              id: p.id,
-              key: p.key,
-              fechaRegistro: this.formatearFecha(p.created_at),
-              sede: p.sedeId?.toLowerCase() ?? 'sin-sede',
-              redesSociales: p.redesSociales || [],
+              return {
+                id: p.id,
+                key: p.key,
+                fechaRegistro: this.formatearFecha(p.created_at),
+                // Añadir esta propiedad para ordenar
+                fechaRegistroRaw: p.created_at, // 👈 IMPORTANTE: mantener formato ISO para ordenar
+                sede: p.sedeId?.toLowerCase() ?? 'sin-sede',
+                redesSociales: p.redesSociales || [],
 
-              informacionPersonal: {
-                esMenorSinCedula: info.esMenorSinCedula ?? false,
-                nombreCompleto: info.nombreCompleto,
-                cedula: info.cedula,
-                telefono: info.telefono,
-                email: info.email,
-                fechaNacimiento: info.fechaNacimiento,
-                edad: this.calcularEdad(info.fechaNacimiento),
-                ocupacion: info.ocupacion,
-                genero: info.genero === 'm' ? 'Masculino' : info.genero === 'f' ? 'Femenino' : 'Otro',
-                direccion: info.direccion
-              },
+                informacionEmpresa: empresa ? {
+                  referidoEmpresa: empresa.referidoEmpresa || false,
+                  empresaNombre: empresa.empresaNombre || '',
+                  empresaRif: empresa.empresaRif || '',
+                  empresaTelefono: empresa.empresaTelefono || '',
+                  empresaDireccion: empresa.empresaDireccion || ''
+                } : null,
 
-              historiaClinica: {
-                usuarioLentes: historia.usuarioLentes ?? null,
-                tipoCristalActual: historia.tipoCristalActual ?? '',
-                ultimaGraduacion: historia.ultimaGraduacion ?? '',
-                fotofobia: historia.fotofobia ?? null,
-                traumatismoOcular: historia.traumatismoOcular ?? null,
-                traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion ?? '',
-                usoDispositivo: historia.usoDispositivo,
-                tiempoUsoEstimado: historia.tiempoUsoEstimado ?? '',
-                cirugiaOcular: historia.cirugiaOcular ?? null,
-                cirugiaOcularDescripcion: historia.cirugiaOcularDescripcion ?? '',
-                alergicoA: historia.alergicoA ?? null,
-                antecedentesPersonales: historia.antecedentesPersonales ?? [],
-                antecedentesFamiliares: historia.antecedentesFamiliares ?? [],
-                patologias: historia.patologias ?? [],
-                patologiaOcular: historia.patologiaOcular ?? []
-              }
-            };
+                informacionPersonal: {
+                  esMenorSinCedula: info.esMenorSinCedula ?? false,
+                  nombreCompleto: info.nombreCompleto,
+                  cedula: info.cedula,
+                  telefono: info.telefono,
+                  email: info.email,
+                  fechaNacimiento: info.fechaNacimiento,
+                  edad: this.calcularEdad(info.fechaNacimiento),
+                  ocupacion: info.ocupacion,
+                  genero: info.genero === 'm' ? 'Masculino' : info.genero === 'f' ? 'Femenino' : 'Otro',
+                  direccion: info.direccion
+                },
 
-          })
+                historiaClinica: {
+                  usuarioLentes: historia.usuarioLentes ?? null,
+                  tipoCristalActual: historia.tipoCristalActual ?? '',
+                  ultimaGraduacion: historia.ultimaGraduacion ?? '',
+                  fotofobia: historia.fotofobia ?? null,
+                  traumatismoOcular: historia.traumatismoOcular ?? null,
+                  traumatismoOcularDescripcion: historia.traumatismoOcularDescripcion ?? '',
+                  usoDispositivo: historia.usoDispositivo,
+                  tiempoUsoEstimado: historia.tiempoUsoEstimado ?? '',
+                  cirugiaOcular: historia.cirugiaOcular ?? null,
+                  cirugiaOcularDescripcion: historia.cirugiaOcularDescripcion ?? '',
+                  alergicoA: historia.alergicoA ?? null,
+                  antecedentesPersonales: historia.antecedentesPersonales ?? [],
+                  antecedentesFamiliares: historia.antecedentesFamiliares ?? [],
+                  patologias: historia.patologias ?? [],
+                  patologiaOcular: historia.patologiaOcular ?? []
+                }
+              };
+            })
+            // 👇 ORDENAR por fecha de registro (más reciente primero)
+            .sort((a, b) => new Date(b.fechaRegistroRaw).getTime() - new Date(a.fechaRegistroRaw).getTime())
           : [];
+
         this.actualizarPacientesPorSede();
         setTimeout(() => {
           this.dataIsReady = true;
           this.loader.hide();
-        }, 100); // Delay visual para evitar parpadeo
+        }, 100);
       },
       error: (err: HttpErrorResponse) => {
         this.pacientes = [];
@@ -486,6 +570,17 @@ export class VerPacientesComponent implements OnInit {
       });
     }
 
+    //Mantener el orden por fecha (más reciente primero)
+    pacientesFiltrados.sort((a, b) => {
+      // Si hay orden personalizado aplicado por los títulos de la tabla
+      if (this.ordenActual !== 'fechaRegistro') {
+        // Dejar que el ordenamiento personalizado funcione
+        return 0;
+      }
+      // Orden por defecto: más reciente primero
+      return new Date(b.fechaRegistroRaw || '').getTime() - new Date(a.fechaRegistroRaw || '').getTime();
+    });
+
     this.pacientesFiltradosPorSede = pacientesFiltrados;
     this.paginaActual = 1;
     this.calcularPaginacion();
@@ -506,11 +601,20 @@ export class VerPacientesComponent implements OnInit {
       this.ordenAscendente = !this.ordenAscendente;
     } else {
       this.ordenActual = campo;
-      this.ordenAscendente = true;
+      this.ordenAscendente = true; // Cambia esto a true para que sea ascendente inicialmente
     }
 
-    // Ordenar el array correcto (pacientesFiltradosPorSede en lugar de pacientes)
+    // Ordenar el array correcto
     this.pacientesFiltradosPorSede.sort((a, b) => {
+      if (campo === 'fechaRegistro') {
+        // Ordenar por fecha usando fechaRegistroRaw (formato ISO)
+        const fechaA = a.fechaRegistroRaw ? new Date(a.fechaRegistroRaw).getTime() : 0;
+        const fechaB = b.fechaRegistroRaw ? new Date(b.fechaRegistroRaw).getTime() : 0;
+
+        // Por defecto: más reciente primero (orden descendente)
+        return this.ordenAscendente ? fechaA - fechaB : fechaB - fechaA;
+      }
+
       const valorA = this.getValorOrden(a, campo) ?? '';
       const valorB = this.getValorOrden(b, campo) ?? '';
 
@@ -526,6 +630,7 @@ export class VerPacientesComponent implements OnInit {
 
       return 0;
     });
+
     this.calcularPaginacion();
   }
 
@@ -626,10 +731,19 @@ export class VerPacientesComponent implements OnInit {
         direccion
       },
       redesSociales: this.redesSociales.value,
+      //Información de empresa 
+      informacionEmpresa: formValues.referidoEmpresa ? {
+        referidoEmpresa: true,
+        empresaNombre: formValues.empresaNombre,
+        empresaRif: formValues.empresaRif,
+        empresaTelefono: formValues.empresaTelefono,
+        empresaDireccion: formValues.empresaDireccion
+      } : null,
+
       historiaClinica: {
         usuarioLentes,
         fotofobia,
-        usoDispositivo: usoDispositivoValue, // Aquí enviamos el valor combinado
+        usoDispositivo: usoDispositivoValue,
         traumatismoOcular,
         traumatismoOcularDescripcion,
         cirugiaOcular,
@@ -713,8 +827,8 @@ export class VerPacientesComponent implements OnInit {
       direccion: paciente.informacionPersonal?.direccion,
       usuarioLentes: paciente.historiaClinica?.usuarioLentes ?? '',
       fotofobia: paciente.historiaClinica?.fotofobia ?? '',
-      usoDispositivo: usoDispositivoValue, // Valor separado
-      intervaloUso: intervaloUsoValue,     // Valor separado
+      usoDispositivo: usoDispositivoValue,
+      intervaloUso: intervaloUsoValue,
       traumatismoOcular: paciente.historiaClinica?.traumatismoOcular ?? '',
       traumatismoOcularDescripcion: paciente.historiaClinica?.traumatismoOcularDescripcion ?? '',
       cirugiaOcular: paciente.historiaClinica?.cirugiaOcular ?? '',
@@ -724,7 +838,12 @@ export class VerPacientesComponent implements OnInit {
       antecedentesFamiliares: paciente.historiaClinica?.antecedentesFamiliares ?? [],
       patologias: paciente.historiaClinica?.patologias ?? [],
       patologiaOcular: paciente.historiaClinica?.patologiaOcular ?? [],
-      redesSociales: paciente.redesSociales ?? []
+      redesSociales: paciente.redesSociales ?? [],
+      referidoEmpresa: paciente.informacionEmpresa?.referidoEmpresa || false,
+      empresaNombre: paciente.informacionEmpresa?.empresaNombre || '',
+      empresaRif: paciente.informacionEmpresa?.empresaRif || '',
+      empresaTelefono: paciente.informacionEmpresa?.empresaTelefono || '',
+      empresaDireccion: paciente.informacionEmpresa?.empresaDireccion || ''
     };
 
     this.formPaciente.patchValue(this.formOriginal);
@@ -778,6 +897,14 @@ export class VerPacientesComponent implements OnInit {
         platform: control.get('platform')?.value,
         username: control.get('username')?.value
       })),
+      informacionEmpresa: this.formPaciente.value.referidoEmpresa ? {
+        referidoEmpresa: true,
+        empresaNombre: this.formPaciente.value.empresaNombre,
+        empresaRif: this.formPaciente.value.empresaRif,
+        empresaTelefono: this.formPaciente.value.empresaTelefono,
+        empresaDireccion: this.formPaciente.value.empresaDireccion
+      } : null,
+
       historiaClinica: {
         usuarioLentes: pacienteFormValue.usuarioLentes || null,
         fotofobia: pacienteFormValue.fotofobia || null,
@@ -935,14 +1062,12 @@ export class VerPacientesComponent implements OnInit {
   abrirModalAgregarPaciente(): void {
     this.modoEdicion = false;
 
-    // 🔄 Reset completo del formulario
+    //Reset completo del formulario
     this.formPaciente.reset(this.crearPacienteVacio());
 
-    // ✅ Limpieza explícita del FormArray redesSociales
     const redesFormArray = this.formPaciente.get('redesSociales') as FormArray;
     this.limpiarFormArray(redesFormArray);
 
-    // 🔄 Limpieza de variables auxiliares
     this.nuevaRed = '';
     this.nuevoUsuario = '';
     this.usuarioInputHabilitado = false;
@@ -989,6 +1114,9 @@ export class VerPacientesComponent implements OnInit {
     const redes = paciente?.redesSociales ?? [];
     const historia = paciente?.historiaClinica ?? {};
 
+    // Manejar el caso cuando informacionEmpresa es null
+    const empresa = paciente?.informacionEmpresa;
+
     const noEspecificadoTexto = 'No';
     const noEspecificadoArray = [noEspecificadoTexto];
 
@@ -1014,6 +1142,15 @@ export class VerPacientesComponent implements OnInit {
         username: red.username ?? noEspecificadoTexto,
         editable: false
       })),
+
+      // Información de empresa - Verificar que empresa no sea null
+      informacionEmpresa: empresa && empresa.referidoEmpresa ? {
+        referidoEmpresa: true,
+        empresaNombre: empresa.empresaNombre || 'No especificado',
+        empresaRif: empresa.empresaRif || 'No especificado',
+        empresaTelefono: empresa.empresaTelefono || 'No especificado',
+        empresaDireccion: empresa.empresaDireccion || 'No especificado'
+      } : null,
 
       historiaClinica: {
         usuarioLentes: historia.usuarioLentes ?? noEspecificadoTexto,
@@ -1045,7 +1182,6 @@ export class VerPacientesComponent implements OnInit {
       const modal = new bootstrap.Modal(modalElement);
       modal.show();
     }
-
   }
 
   cerrarModal(id: string): void {
@@ -1093,6 +1229,8 @@ export class VerPacientesComponent implements OnInit {
       },
 
       redesSociales: [],
+
+      informacionEmpresa: null,
 
       historiaClinica: {
         usuarioLentes: null,
