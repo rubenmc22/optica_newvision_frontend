@@ -115,14 +115,13 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre">{{ truncarTexto(orden.clienteNombre,
-              18)
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span>{{ truncarTexto(orden.productoNombre, 22) }}</span>
+            <span>{{ truncarTexto(getProductoNombre(orden), 22) }}</span>
           </div>
 
           <div class="orden-meta">
@@ -195,21 +194,20 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre">{{ truncarTexto(orden.clienteNombre,
-              18)
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span>{{ truncarTexto(orden.productoNombre, 22) }}</span>
+            <span>{{ truncarTexto(getProductoNombre(orden), 22) }}</span>
           </div>
 
           <div class="orden-meta">
             <div class="meta-item">
               <i class="bi bi-person-badge"></i>
               <small>
-                {{ truncarTexto(orden.tecnicoAsignado || 'Sin asignar', 12) }}
+              <!--  {{ truncarTexto(orden.tecnicoAsignado || 'Sin asignar', 12) }}-->
               </small>
             </div>
           </div>
@@ -277,21 +275,20 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre">{{ truncarTexto(orden.clienteNombre,
-              18)
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span>{{ truncarTexto(orden.productoNombre, 22) }}</span>
+            <span>{{ truncarTexto(getProductoNombre(orden), 22) }}</span>
           </div>
 
           <div class="orden-meta">
             <div class="meta-item">
               <i class="bi bi-person-badge"></i>
               <small>
-                {{ truncarTexto(orden.tecnicoAsignado, 12) }}
+               <!-- {{ truncarTexto(orden.tecnicoAsignado, 12) }}-->
               </small>
             </div>
           </div>
@@ -354,14 +351,13 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre">{{ truncarTexto(orden.clienteNombre,
-              18)
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18)
               }}</span>
           </div>
 
           <div class="orden-producto">
             <i class="bi bi-eyeglasses"></i>
-            <span>{{ truncarTexto(orden.productoNombre, 22) }}</span>
+            <span>{{ truncarTexto(getProductoNombre(orden), 22) }}</span>
           </div>
 
           <div class="orden-alerta" *ngIf="orden.diasEnEspera > 7">
@@ -373,7 +369,7 @@
             <div class="meta-item">
               <i class="bi bi-telephone"></i>
               <small>
-                {{ truncarTexto(orden.clienteTelefono, 10) }}
+                {{ truncarTexto(getClienteTelefono(ordenSeleccionada), 10) }}
               </small>
             </div>
           </div>
@@ -455,9 +451,9 @@
               </div>
               <div class="minicard-body">
                 <div class="minicard-cliente">
-                  {{truncarTexto(orden.clienteNombre, 15)}}</div>
+                  {{truncarTexto(getClienteNombre(orden), 15)}}</div>
                 <div class="minicard-producto">
-                  {{truncarTexto(orden.productoNombre, 20)}}</div>
+                  {{truncarTexto(getProductoNombre(orden), 20)}}</div>
               </div>
               <div class="minicard-actions">
                 <button class="btn-icon" (click)="archivarOrden(orden, false); $event.stopPropagation()"

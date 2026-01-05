@@ -1727,7 +1727,7 @@
 }
 
 .orden-status-display.active {
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+    background: var(--degradado-pastel) !important;
     border-color: var(--primary-color, #3a7bd5) !important;
     box-shadow: 0 4px 12px rgba(58, 123, 213, 0.15);
 }
