@@ -48,7 +48,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-count">{{ estadisticas.enProceso }}</span>
-          <span class="stat-label">En Proceso</span>
+          <span class="stat-label">En Proceso (Laboratorio)</span>
         </div>
       </div>
 
@@ -58,7 +58,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-count">{{ estadisticas.listoLaboratorio }}</span>
-          <span class="stat-label">Listo en Lab</span>
+          <span class="stat-label">Listo (Laboratorio)</span>
         </div>
       </div>
 
@@ -68,7 +68,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-count">{{ estadisticas.pendienteRetiro }}</span>
-          <span class="stat-label">Pendiente Retiro</span>
+          <span class="stat-label">Pendiente Retiro (En Tienda)</span>
         </div>
       </div>
 
@@ -107,6 +107,15 @@
         [class.limited-view]="ordenesEnTienda.length > maxOrdenesPorColumna">
         <div class="orden-card" *ngFor="let orden of (ordenesEnTienda | slice:0:maxOrdenesPorColumna)" cdkDrag
           [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
+
+          <!-- Progreso para todas las órdenes -->
+          <div class="orden-progreso">
+            <div class="progreso-bar">
+              <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
+            </div>
+            <small>{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+          </div>
+
           <div class="orden-card-header">
             <span class="orden-fecha">
               {{ orden.fechaCreacion | date:'dd/MM' }}
@@ -115,8 +124,7 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18)
-              }}</span>
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18) }}</span>
           </div>
 
           <div class="orden-producto">
@@ -125,10 +133,17 @@
           </div>
 
           <div class="orden-meta">
+            <!-- Fecha de entrega estimada - Solo label en estado En Tienda -->
             <div class="meta-item">
               <i class="bi bi-calendar"></i>
-              <small>Entrega: {{ orden.fechaEntregaEstimada | date:'dd/MM' }}</small>
+              <small *ngIf="orden.fechaEntregaEstimada; else sinFechaTienda">
+                Entrega: {{ getFechaEntregaFormateada(orden) }}
+              </small>
+              <ng-template #sinFechaTienda>
+                <small class="text-warning">Sin fecha asignada</small>
+              </ng-template>
             </div>
+
             <div class="meta-item" *ngIf="orden.diasRestantes !== undefined">
               <i class="bi bi-clock"></i>
               <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
@@ -137,11 +152,28 @@
             </div>
           </div>
 
-          <div class="orden-actions">
-            <button class="btn-action" (click)="cambiarEstado(orden, 'proceso_laboratorio'); $event.stopPropagation()"
-              [attr.data-tooltip]="'Mover a Laboratorio'">
-              <i class="bi bi-arrow-right"></i>
-            </button>
+          <div class="orden-footer">
+            <!-- Número de orden a la izquierda -->
+            <div class="orden-id-container">
+              <span class="orden-id-badge">
+                <i class="bi bi-hash"></i>
+                <span class="orden-id-text">{{orden.codigo}}</span>
+              </span>
+            </div>
+
+            <!-- Acciones a la derecha -->
+            <div class="orden-actions">
+              <!-- Botón para configurar fecha de entrega - SOLO en estado En Tienda -->
+              <button class="btn-action btn-calendar" (click)="configurarFechaEntrega(orden); $event.stopPropagation()"
+                [attr.data-tooltip]="'Configurar fecha de entrega'">
+                <i class="bi bi-calendar-plus"></i>
+              </button>
+
+              <button class="btn-action" (click)="cambiarEstado(orden, 'proceso_laboratorio'); $event.stopPropagation()"
+                [attr.data-tooltip]="'Mover a Laboratorio'">
+                <i class="bi bi-arrow-right"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -163,7 +195,7 @@
       </ng-template>
     </div>
 
-    <!-- Columna: En Laboratorio -->
+    <!-- Columna: En Laboratorio - SIN botón de calendario -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesEnProceso"
       (cdkDropListDropped)="drop($event, 'proceso_laboratorio')">
       <div class="column-header" style="border-color: #f57c00;">
@@ -185,17 +217,18 @@
         [class.limited-view]="ordenesEnProceso.length > maxOrdenesPorColumna">
         <div class="orden-card" *ngFor="let orden of (ordenesEnProceso | slice:0:maxOrdenesPorColumna)" cdkDrag
           [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
-          <div class="orden-progreso" *ngIf="orden.progreso > 0">
+
+          <!-- Progreso -->
+          <div class="orden-progreso">
             <div class="progreso-bar">
-              <div class="progreso-fill" [style.width.%]="orden.progreso || 0"></div>
+              <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
             </div>
-            <small>{{ orden.progreso || 0 }}%</small>
+            <small>{{ getProgresoParaMostrar(orden) || 0 }}%</small>
           </div>
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18)
-              }}</span>
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18) }}</span>
           </div>
 
           <div class="orden-producto">
@@ -204,10 +237,21 @@
           </div>
 
           <div class="orden-meta">
+            <!-- Fecha de entrega - Solo label, sin botón -->
             <div class="meta-item">
-              <i class="bi bi-person-badge"></i>
-              <small>
-              <!--  {{ truncarTexto(orden.tecnicoAsignado || 'Sin asignar', 12) }}-->
+              <i class="bi bi-calendar"></i>
+              <small *ngIf="orden.fechaEntregaEstimada; else sinFechaProceso">
+                Entrega: {{ getFechaEntregaFormateada(orden) }}
+              </small>
+              <ng-template #sinFechaProceso>
+                <small class="text-warning">Sin fecha asignada</small>
+              </ng-template>
+            </div>
+
+            <div class="meta-item" *ngIf="orden.diasRestantes !== undefined">
+              <i class="bi bi-clock"></i>
+              <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
+                {{ orden.diasRestantes }}d
               </small>
             </div>
           </div>
@@ -242,13 +286,13 @@
       </ng-template>
     </div>
 
-    <!-- Para "Listo en Laboratorio" - más compacto -->
+    <!-- Para "Listo en Laboratorio" - SIN botón de calendario -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesListasLaboratorio"
       (cdkDropListDropped)="drop($event, 'listo_laboratorio')">
       <div class="column-header" style="border-color: #388e3c;">
         <div class="column-title">
           <span class="column-badge" style="background: #388e3c;">{{ ordenesListasLaboratorio.length }}</span>
-          <h3><i class="bi bi-check-circle"></i> Listo</h3>
+          <h3><i class="bi bi-check-circle"></i> Listo en Laboratorio</h3>
           <div class="column-actions" *ngIf="ordenesListasLaboratorio.length > 0">
             <button class="btn-move-all"
               (click)="moverTodos(ordenesListasLaboratorio, 'listo_laboratorio', 'pendiente_retiro')"
@@ -257,13 +301,22 @@
             </button>
           </div>
         </div>
-        <small>Terminadas</small>
+        <small>Proceso finalizado</small>
       </div>
 
       <div class="ordenes-list" *ngIf="ordenesListasLaboratorio.length > 0; else emptyListo"
         [class.limited-view]="ordenesListasLaboratorio.length > maxOrdenesPorColumna">
         <div class="orden-card" *ngFor="let orden of (ordenesListasLaboratorio | slice:0:maxOrdenesPorColumna)" cdkDrag
           [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
+
+          <!-- Progreso -->
+          <div class="orden-progreso">
+            <div class="progreso-bar">
+              <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
+            </div>
+            <small>{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+          </div>
+
           <div class="orden-card-header">
             <span class="badge-success">
               <i class="bi bi-check-lg"></i>
@@ -275,8 +328,7 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18)
-              }}</span>
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18) }}</span>
           </div>
 
           <div class="orden-producto">
@@ -285,10 +337,21 @@
           </div>
 
           <div class="orden-meta">
+            <!-- Fecha de entrega - Solo label, sin botón -->
             <div class="meta-item">
-              <i class="bi bi-person-badge"></i>
-              <small>
-               <!-- {{ truncarTexto(orden.tecnicoAsignado, 12) }}-->
+              <i class="bi bi-calendar"></i>
+              <small *ngIf="orden.fechaEntregaEstimada; else sinFechaListo">
+                Entrega: {{ getFechaEntregaFormateada(orden) }}
+              </small>
+              <ng-template #sinFechaListo>
+                <small class="text-warning">Sin fecha asignada</small>
+              </ng-template>
+            </div>
+
+            <div class="meta-item" *ngIf="orden.diasRestantes !== undefined">
+              <i class="bi bi-clock"></i>
+              <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
+                {{ orden.diasRestantes }}d
               </small>
             </div>
           </div>
@@ -319,7 +382,7 @@
       </ng-template>
     </div>
 
-    <!-- Para "Pendiente por Retirar" - más compacto -->
+    <!-- Para "Pendiente por Retirar" - SIN botón de calendario -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesPendienteRetiro"
       (cdkDropListDropped)="drop($event, 'pendiente_retiro')">
       <div class="column-header" style="border-color: #ffa000;">
@@ -333,13 +396,22 @@
             </button>
           </div>
         </div>
-        <small>Listas para entregar</small>
+        <small>Listas para entregar (En tienda)</small>
       </div>
 
       <div class="ordenes-list" *ngIf="ordenesPendienteRetiro.length > 0; else emptyPendiente"
         [class.limited-view]="ordenesPendienteRetiro.length > maxOrdenesPorColumna">
         <div class="orden-card alert-card" *ngFor="let orden of (ordenesPendienteRetiro | slice:0:maxOrdenesPorColumna)"
           cdkDrag [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
+
+          <!-- Progreso -->
+          <div class="orden-progreso">
+            <div class="progreso-bar">
+              <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
+            </div>
+            <small>{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+          </div>
+
           <div class="orden-card-header">
             <span class="badge-warning">
               <i class="bi bi-exclamation-triangle"></i>
@@ -351,8 +423,7 @@
 
           <div class="orden-cliente">
             <i class="bi bi-person"></i>
-            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18)
-              }}</span>
+            <span class="cliente-nombre">{{ truncarTexto(getClienteNombre(orden), 18) }}</span>
           </div>
 
           <div class="orden-producto">
@@ -362,14 +433,25 @@
 
           <div class="orden-alerta" *ngIf="orden.diasEnEspera > 7">
             <i class="bi bi-bell"></i>
-            <small class="text-danger">{{ orden.diasEnEspera }}d</small>
+            <small class="text-danger">{{ orden.diasEnEspera }}d en espera</small>
           </div>
 
           <div class="orden-meta">
+            <!-- Fecha de entrega - Solo label, sin botón -->
             <div class="meta-item">
-              <i class="bi bi-telephone"></i>
-              <small>
-                {{ truncarTexto(getClienteTelefono(ordenSeleccionada), 10) }}
+              <i class="bi bi-calendar"></i>
+              <small *ngIf="orden.fechaEntregaEstimada; else sinFechaPendiente">
+                Entrega: {{ getFechaEntregaFormateada(orden) }}
+              </small>
+              <ng-template #sinFechaPendiente>
+                <small class="text-warning">Sin fecha asignada</small>
+              </ng-template>
+            </div>
+
+            <div class="meta-item" *ngIf="orden.diasRestantes !== undefined">
+              <i class="bi bi-clock"></i>
+              <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
+                {{ orden.diasRestantes }}d
               </small>
             </div>
           </div>
@@ -485,7 +567,8 @@
     <div class="footer-info">
       <span class="text-muted">
         <i class="bi bi-info-circle"></i>
-        Arrastra las tarjetas para cambiar su estado • Haz clic para ver detalles
+        Arrastra las tarjetas para cambiar su estado • Haz clic para ver detalles • Haz clic en el ícono de calendario
+        para configurar fecha de entrega
       </span>
     </div>
     <div class="footer-actions">
@@ -548,13 +631,11 @@
                   <strong>{{ ordenSeleccionada?.cliente?.informacion?.nombreCompleto ||
                     ordenSeleccionada?.clienteNombre ||
                     'Nombre no especificado' }}</strong>
-                  <span *ngIf="ordenSeleccionada?.cliente?.informacion?.cedula || ordenSeleccionada?.clienteCedula"
-                    class="cliente-cedula">
-                    • C.I. {{ ordenSeleccionada?.cliente?.informacion?.cedula || ordenSeleccionada?.clienteCedula }}
+                  <span *ngIf="ordenSeleccionada?.cliente?.informacion?.cedula" class="cliente-cedula">
+                    • C.I. {{ ordenSeleccionada?.cliente?.informacion?.cedula }}
                   </span>
                 </div>
-                <div *ngIf="!(ordenSeleccionada?.cliente?.informacion?.cedula || ordenSeleccionada?.clienteCedula)"
-                  class="text-muted small-text">
+                <div *ngIf="!ordenSeleccionada?.cliente?.informacion?.cedula" class="text-muted small-text">
                   Sin cédula registrada
                 </div>
               </div>
@@ -620,197 +701,192 @@
             <div class="producto-item"
               *ngFor="let producto of ordenSeleccionada?.productos; trackBy: trackByProductoId">
               <div class="producto-header">
-                <strong>{{ producto?.datos?.nombre || 'Producto sin nombre' }}</strong>
-                <span class="badge"> {{ producto?.cantidad || 1 }}  unidad{{ (producto?.cantidad || 1) > 1 ? 'es' : ''
+                <strong>{{ producto?.nombre || 'Producto sin nombre' }}</strong>
+                <span class="badge"> {{ producto?.cantidad || 1 }} unidad{{ (producto?.cantidad || 1) > 1 ? 'es' : ''
                   }}</span>
               </div>
               <div class="producto-details">
                 <small>
-                  <span class="text-muted">Marca:</span> {{ producto?.datos?.marca || 'N/A' }}
+                  <span class="text-muted">Marca:</span> {{ producto?.marca || 'N/A' }}
                   <span class="separator">•</span>
-                  <span class="text-muted"> Código:</span> {{ producto?.datos?.codigo || 'N/A' }}
+                  <span class="text-muted"> Código:</span> {{ producto?.codigo || 'N/A' }}
+                  <span class="separator">•</span>
+                  <span class="text-muted"> Modelo:</span> {{ producto?.modelo || 'N/A' }}
+                  <span class="separator">•</span>
+                  <span class="text-muted"> Precio:</span> {{ producto?.precio | currency }}
                 </small>
               </div>
-            </div>
 
-            <!-- Si tiene la estructura antigua (solo un producto) -->
-            <div class="producto-item" *ngIf="!ordenSeleccionada?.productos && ordenSeleccionada?.productoNombre">
-              <div class="producto-header">
-                <strong>{{ ordenSeleccionada?.productoNombre }}</strong>
-                <span class="badge">1 unidad</span>
+              <!-- Si tiene la estructura antigua (solo un producto) -->
+              <div class="producto-item" *ngIf="!ordenSeleccionada?.productos && ordenSeleccionada?.productoNombre">
+                <div class="producto-header">
+                  <strong>{{ ordenSeleccionada?.productoNombre }}</strong>
+                  <span class="badge">1 unidad</span>
+                </div>
+                <div class="producto-details">
+                  <small>
+                    <span class="text-muted">Código:</span> {{ ordenSeleccionada?.codigo || 'N/A' }}
+                  </small>
+                </div>
               </div>
-              <div class="producto-details">
+
+              <!-- Si no hay productos -->
+              <div class="text-center" *ngIf="!ordenSeleccionada?.productos && !ordenSeleccionada?.productoNombre">
+                <i class="bi bi-box"></i>
+                <span class="text-muted">Sin productos registrados</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- FILA 2: Formulación (ancho completo) -->
+        <div class="detalle-fila detalle-fila-2" *ngIf="getFormulacion(ordenSeleccionada)">
+          <div class="info-card formulacion-full">
+            <div class="info-header">
+              <i class="bi bi-eyeglasses"></i>
+              <h4>Formulación</h4>
+            </div>
+            <div class="info-content compact formulacion-compact">
+              <!-- Campos de fórmula ocular -->
+              <div class="formulacion-row">
+                <div class="formulacion-col ojo-col">
+                  <div class="ojo-label">OD</div>
+                  <div class="formulacion-valor">{{ getFormulacion(ordenSeleccionada)?.esferaOD || '--' }}</div>
+                  <div class="formulacion-extra" *ngIf="getFormulacion(ordenSeleccionada)?.cilindroOD">
+                    <small>{{ getFormulacion(ordenSeleccionada)?.cilindroOD }} x {{
+                      getFormulacion(ordenSeleccionada)?.ejeOD }}°</small>
+                  </div>
+                </div>
+
+                <div class="formulacion-col ojo-col">
+                  <div class="ojo-label">OI</div>
+                  <div class="formulacion-valor">{{ getFormulacion(ordenSeleccionada)?.esferaOI || '--' }}</div>
+                  <div class="formulacion-extra" *ngIf="getFormulacion(ordenSeleccionada)?.cilindroOI">
+                    <small>{{ getFormulacion(ordenSeleccionada)?.cilindroOI }} x {{
+                      getFormulacion(ordenSeleccionada)?.ejeOI }}°</small>
+                  </div>
+                </div>
+
+                <div class="formulacion-col add-col" *ngIf="getFormulacion(ordenSeleccionada)?.adicion">
+                  <div class="ojo-label">Add</div>
+                  <div class="formulacion-valor">{{ getFormulacion(ordenSeleccionada)?.adicion }}</div>
+                </div>
+              </div>
+
+              <!-- Información adicional si existe -->
+              <div class="formulacion-extra-info" *ngIf="getFormulacion(ordenSeleccionada)?.observaciones">
                 <small>
-                  <span class="text-muted">Código:</span> {{ ordenSeleccionada?.codigo || 'N/A' }}
+                  <i class="bi bi-info-circle"></i>
+                  {{ getFormulacion(ordenSeleccionada)?.observaciones }}
                 </small>
               </div>
             </div>
+          </div>
+        </div>
 
-            <!-- Si no hay productos -->
-            <div class="text-center" *ngIf="!ordenSeleccionada?.productos && !ordenSeleccionada?.productoNombre">
-              <i class="bi bi-box"></i>
-              <span class="text-muted">Sin productos registrados</span>
+        <!-- FILA 3: Observaciones y Personal Asignado -->
+        <div class="detalle-fila detalle-fila-3">
+
+          <!-- Columna Observaciones -->
+          <div class="info-card">
+            <div class="info-header">
+              <i class="bi bi-chat-left-text"></i>
+              <h4>Observaciones</h4>
+            </div>
+            <div class="info-content compact">
+              <div *ngIf="ordenSeleccionada?.observaciones; else sinObservaciones" class="observaciones-content">
+                {{ ordenSeleccionada?.observaciones }}
+              </div>
+              <ng-template #sinObservaciones>
+                <div class="text-center">
+                  <i class="bi bi-chat-left"></i>
+                  <span class="text-muted">Sin observaciones</span>
+                </div>
+              </ng-template>
             </div>
           </div>
+
+          <!-- Columna Personal Asignado -->
+          <div class="info-card">
+            <div class="info-header">
+              <i class="bi bi-person-badge"></i>
+              <h4>Personal Asignado</h4>
+            </div>
+            <div class="info-content compact">
+              <div class="info-row" *ngIf="ordenSeleccionada?.especialista">
+                <span class="info-label">Especialista:</span>
+                <div class="info-value">
+                  <div>{{ ordenSeleccionada?.especialista?.nombre || 'No especificado' }}</div>
+                  <small class="text-muted">{{ getEspecialistaCargo(ordenSeleccionada?.especialista) }}</small>
+                </div>
+              </div>
+              <div class="info-row" *ngIf="ordenSeleccionada?.asesor">
+                <span class="info-label">Asesor:</span>
+                <div class="info-value">
+                  <div>{{ ordenSeleccionada?.asesor?.nombre || 'No especificado' }}</div>
+                  <small class="text-muted" *ngIf="ordenSeleccionada?.asesor?.cedula">C.I. {{
+                    ordenSeleccionada?.asesor?.cedula }}</small>
+                </div>
+              </div>
+
+              <!-- Si no hay personal asignado -->
+              <div class="text-center"
+                *ngIf="!ordenSeleccionada?.especialista && !ordenSeleccionada?.asesor && !ordenSeleccionada?.tecnicoAsignado">
+                <i class="bi bi-person-x"></i>
+                <span class="text-muted">Sin personal asignado</span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </div>
 
-      <!-- FILA 2: Formulación (ancho completo) -->
-      <div class="detalle-fila detalle-fila-2" *ngIf="ordenSeleccionada?.formulacion">
-        <div class="info-card formulacion-full">
-          <div class="info-header">
-            <i class="bi bi-eyeglasses"></i>
-            <h4>Formulación</h4>
+      <!-- Acciones según estado -->
+      <div class="modal-actions" *ngIf="ordenSeleccionada">
+        <div class="actions-left">
+          <div class="venta-id" *ngIf="ordenSeleccionada?.numero_venta"
+            title="ID de Venta Relacionada - Haga clic para ver detalles">
+            <i class="bi bi-receipt"></i>
+            <span>{{ ordenSeleccionada?.numero_venta }}</span>
           </div>
-          <div class="info-content compact formulacion-compact">
-
-            <!-- Campos de Material y Tipo de Visión -->
-            <div class="formulacion-metadata"
-              *ngIf="ordenSeleccionada?.formulacion?.material || ordenSeleccionada?.formulacion?.tipoVision">
-              <div class="metadata-row">
-                <div class="metadata-item" *ngIf="ordenSeleccionada?.formulacion?.material">
-                  <span class="metadata-label">Material:</span>
-                  <span class="metadata-value">{{ ordenSeleccionada?.formulacion?.material }}</span>
-                </div>
-                <div class="metadata-item" *ngIf="ordenSeleccionada?.formulacion?.tipoVision">
-                  <span class="metadata-label">Tipo de Visión:</span>
-                  <span class="metadata-value">{{ ordenSeleccionada?.formulacion?.tipoVision }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Campos de fórmula ocular -->
-            <div class="formulacion-row">
-              <div class="formulacion-col ojo-col">
-                <div class="ojo-label">OD</div>
-                <div class="formulacion-valor">{{ ordenSeleccionada?.formulacion?.esferaOD || '--' }}</div>
-                <div class="formulacion-extra" *ngIf="ordenSeleccionada?.formulacion?.cilindroOD">
-                  <small>{{ ordenSeleccionada?.formulacion?.cilindroOD }} x {{ ordenSeleccionada?.formulacion?.ejeOD
-                    }}°</small>
-                </div>
-              </div>
-
-              <div class="formulacion-col ojo-col">
-                <div class="ojo-label">OI</div>
-                <div class="formulacion-valor">{{ ordenSeleccionada?.formulacion?.esferaOI || '--' }}</div>
-                <div class="formulacion-extra" *ngIf="ordenSeleccionada?.formulacion?.cilindroOI">
-                  <small>{{ ordenSeleccionada?.formulacion?.cilindroOI }} x {{ ordenSeleccionada?.formulacion?.ejeOI
-                    }}°</small>
-                </div>
-              </div>
-
-              <div class="formulacion-col add-col" *ngIf="ordenSeleccionada?.formulacion?.adicion">
-                <div class="ojo-label">Add</div>
-                <div class="formulacion-valor">{{ ordenSeleccionada?.formulacion?.adicion }}</div>
-              </div>
-            </div>
-
-            <!-- Información adicional si existe -->
-            <div class="formulacion-extra-info" *ngIf="ordenSeleccionada?.formulacion?.observaciones">
-              <small>
-                <i class="bi bi-info-circle"></i>
-                {{ ordenSeleccionada?.formulacion?.observaciones }}
-              </small>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- FILA 3: Observaciones y Personal Asignado -->
-      <div class="detalle-fila detalle-fila-3">
-
-        <!-- Columna Observaciones -->
-        <div class="info-card">
-          <div class="info-header">
-            <i class="bi bi-chat-left-text"></i>
-            <h4>Observaciones</h4>
-          </div>
-          <div class="info-content compact">
-            <div *ngIf="ordenSeleccionada?.observaciones; else sinObservaciones" class="observaciones-content">
-              {{ ordenSeleccionada?.observaciones }}
-            </div>
-            <ng-template #sinObservaciones>
-              <div class="text-center">
-                <i class="bi bi-chat-left"></i>
-                <span class="text-muted">Sin observaciones</span>
-              </div>
+          <!-- Información de fecha de entrega en el modal -->
+          <div class="fecha-entrega-info" *ngIf="ordenSeleccionada">
+            <i class="bi bi-calendar"></i>
+            <span *ngIf="ordenSeleccionada.fechaEntregaEstimada; else sinFechaModal">
+              Entrega estimada: {{ getFechaEntregaFormateada(ordenSeleccionada) }}
+            </span>
+            <ng-template #sinFechaModal>
+              <span class="text-warning" style="margin-left: 5px;">Sin fecha de entrega configurada</span>
             </ng-template>
           </div>
         </div>
-
-        <!-- Columna Personal Asignado -->
-        <div class="info-card">
-          <div class="info-header">
-            <i class="bi bi-person-badge"></i>
-            <h4>Personal Asignado</h4>
-          </div>
-          <div class="info-content compact">
-            <div class="info-row" *ngIf="ordenSeleccionada?.especialista">
-              <span class="info-label">Especialista:</span>
-              <div class="info-value">
-                <div>{{ ordenSeleccionada?.especialista?.nombre || 'No especificado' }}</div>
-                <small class="text-muted">{{ ordenSeleccionada?.especialista?.cargo || 'Optometrista' }}</small>
-              </div>
-            </div>
-            <div class="info-row" *ngIf="ordenSeleccionada?.asesor">
-              <span class="info-label">Asesor:</span>
-              <div class="info-value">
-                <div>{{ ordenSeleccionada?.asesor?.nombre || 'No especificado' }}</div>
-                <small class="text-muted" *ngIf="ordenSeleccionada?.asesor?.cedula">C.I. {{
-                  ordenSeleccionada?.asesor?.cedula }}</small>
-              </div>
-            </div>
-
-            <!-- Si no hay personal asignado -->
-            <div class="text-center"
-              *ngIf="!ordenSeleccionada?.especialista && !ordenSeleccionada?.asesor && !ordenSeleccionada?.tecnicoAsignado">
-              <i class="bi bi-person-x"></i>
-              <span class="text-muted">Sin personal asignado</span>
-            </div>
-          </div>
+        <div class="actions-right">
+          <button *ngIf="ordenSeleccionada.estado === 'en_tienda'" class="btn btn-primary"
+            (click)="cambiarEstado(ordenSeleccionada, 'proceso_laboratorio'); cerrarModalDetalle()">
+            <i class="bi bi-arrow-right"></i> Mover a Laboratorio
+          </button>
+          <button *ngIf="ordenSeleccionada.estado === 'proceso_laboratorio'" class="btn btn-success"
+            (click)="cambiarEstado(ordenSeleccionada, 'listo_laboratorio'); cerrarModalDetalle()">
+            <i class="bi bi-check-circle"></i> Marcar como Listo
+          </button>
+          <button *ngIf="ordenSeleccionada.estado === 'listo_laboratorio'" class="btn btn-warning"
+            (click)="cambiarEstado(ordenSeleccionada, 'pendiente_retiro'); cerrarModalDetalle()">
+            <i class="bi bi-truck"></i> Enviar a Tienda
+          </button>
+          <button *ngIf="ordenSeleccionada.estado === 'pendiente_retiro'" class="btn btn-success"
+            (click)="cambiarEstado(ordenSeleccionada, 'entregado'); cerrarModalDetalle()">
+            <i class="bi bi-box-seam"></i> Marcar como Entregado
+          </button>
         </div>
-
-      </div>
-
-    </div>
-
-    <!-- Acciones según estado -->
-    <div class="modal-actions" *ngIf="ordenSeleccionada">
-      <div class="actions-left">
-        <div class="venta-id" *ngIf="ordenSeleccionada?.ventaId"
-          title="ID de Venta Relacionada - Haga clic para ver detalles">
-          <i class="bi bi-receipt"></i>
-          <span>{{ ordenSeleccionada?.ventaId }}</span>
-          <small *ngIf="ordenSeleccionada?.clienteNombre" class="venta-cliente">
-            • {{ ordenSeleccionada?.clienteNombre }}
-          </small>
-        </div>
-      </div>
-      <div class="actions-right">
-        <button *ngIf="ordenSeleccionada.estado === 'en_tienda'" class="btn btn-primary"
-          (click)="cambiarEstado(ordenSeleccionada, 'proceso_laboratorio'); cerrarModalDetalle()">
-          <i class="bi bi-arrow-right"></i> Mover a Laboratorio
-        </button>
-        <button *ngIf="ordenSeleccionada.estado === 'proceso_laboratorio'" class="btn btn-success"
-          (click)="cambiarEstado(ordenSeleccionada, 'listo_laboratorio'); cerrarModalDetalle()">
-          <i class="bi bi-check-circle"></i> Marcar como Listo
-        </button>
-        <button *ngIf="ordenSeleccionada.estado === 'listo_laboratorio'" class="btn btn-warning"
-          (click)="cambiarEstado(ordenSeleccionada, 'pendiente_retiro'); cerrarModalDetalle()">
-          <i class="bi bi-truck"></i> Enviar a Tienda
-        </button>
-        <button *ngIf="ordenSeleccionada.estado === 'pendiente_retiro'" class="btn btn-success"
-          (click)="cambiarEstado(ordenSeleccionada, 'entregado'); cerrarModalDetalle()">
-          <i class="bi bi-box-seam"></i> Marcar como Entregado
-        </button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Modal de Archivadas -->
-<div class="modal-backdrop" *ngIf="mostrarModalArchivo" (click)="mostrarModalArchivo = false"></div>
+<div class="modal-backdrop" *ngIf="mostrarModalArchivo" (click)="cerrarModalArchivo()"></div>
 <div class="modal-archivadas" *ngIf="mostrarModalArchivo">
   <div class="modal-header">
     <h2>
@@ -818,7 +894,7 @@
       Órdenes Archivadas
       <span class="badge bg-white text-purple ms-2">{{ordenesArchivadas.length}}</span>
     </h2>
-    <button class="btn-close-modal" (click)="mostrarModalArchivo = false">
+    <button class="btn-close-modal" (click)="cerrarModalArchivo()">
       <i class="bi bi-x-lg"></i>
     </button>
   </div>
@@ -965,12 +1041,18 @@
               <i class="bi bi-calendar"></i>
               <small>Creación: {{orden.fechaCreacion | date:'dd/MM/yy'}}</small>
             </div>
-            <div class="meta-item" *ngIf="orden.fechaEntregaEstimada">
+            <div class="meta-item">
               <i class="bi bi-clock"></i>
-              <small [ngClass]="{'text-danger': orden.diasRestantes < 3}">
-                Entrega: {{orden.fechaEntregaEstimada | date:'dd/MM/yy'}}
-                <span *ngIf="orden.diasRestantes !== undefined">({{orden.diasRestantes}}d)</span>
+              <small *ngIf="orden.fechaEntregaEstimada" [ngClass]="{'text-danger': orden.diasRestantes < 3}">
+                Entrega: {{ getFechaEntregaFormateada(orden) }}
               </small>
+              <small *ngIf="!orden.fechaEntregaEstimada" class="text-warning">
+                Sin fecha asignada
+              </small>
+            </div>
+            <div class="meta-item">
+              <i class="bi bi-percent"></i>
+              <small>Progreso: {{getProgresoParaMostrar(orden)}}%</small>
             </div>
           </div>
         </div>
@@ -988,6 +1070,10 @@
           <button class="btn-action btn-success" *ngIf="estadoModalActual === 'pendiente_retiro'"
             (click)="cambiarEstado(orden, 'entregado'); $event.stopPropagation()" title="Marcar como entregado">
             <i class="bi bi-check-lg"></i>
+          </button>
+          <button class="btn-action" (click)="configurarFechaEntrega(orden); $event.stopPropagation()"
+            title="Configurar fecha de entrega">
+            <i class="bi bi-calendar-plus"></i>
           </button>
         </div>
       </div>
@@ -1023,5 +1109,72 @@
         </button>
       </div>
     </div>
+  </div>
+</div>
+
+
+
+<!-- Modal para configurar fecha de entrega -->
+<div class="modal-backdrop" *ngIf="mostrarModalConfigurarFecha" (click)="cancelarConfigurarFecha()"></div>
+
+<div class="modal-configurar-fecha" *ngIf="mostrarModalConfigurarFecha">
+  <div class="modal-header">
+    <h2>
+      <i class="bi bi-calendar-plus"></i>
+      Configurar Fecha de Entrega
+    </h2>
+    <button class="btn-close-modal" (click)="cancelarConfigurarFecha()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <div class="info-orden">
+      <p><strong>Orden:</strong> {{ ordenParaConfigurarFecha?.ordenId }}</p>
+      <p><strong>Cliente:</strong> {{ getClienteNombre(ordenParaConfigurarFecha!) }}</p>
+      <p><strong>Producto:</strong> {{ getProductoNombre(ordenParaConfigurarFecha!) }}</p>
+    </div>
+
+    <div class="configuracion-dias">
+      <label for="diasEntrega">
+        <i class="bi bi-calendar-range"></i>
+        Días para entrega:
+      </label>
+      <div class="input-group">
+        <input type="number" id="diasEntrega" class="form-control" [(ngModel)]="diasParaFechaEntrega"
+          (input)="actualizarFechaCalculada()" min="1" max="30">
+        <span class="input-group-text">días</span>
+      </div>
+      <small class="text-muted">Desde la fecha actual</small>
+    </div>
+
+    <div class="fecha-resultado">
+      <h5>Fecha estimada de entrega:</h5>
+      <div class="fecha-display">
+        <i class="bi bi-calendar-check"></i>
+        <span *ngIf="fechaCalculada; else sinCalculo">
+          {{ fechaCalculada | date:'fullDate':'UTC' }}
+          <br>
+          <small class="text-muted">
+            ({{ diasParaFechaEntrega }} días |
+            {{ fechaCalculada | date:'dd/MM/yyyy' }})
+          </small>
+        </span>
+        <ng-template #sinCalculo>
+          <span class="text-muted">Ingrese la cantidad de días</span>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="cancelarConfigurarFecha()">
+      <i class="bi bi-x-circle"></i> Cancelar
+    </button>
+    <!-- Botón corregido: pasar ordenParaConfigurarFecha -->
+    <button class="btn btn-primary" (click)="confirmarFechaEntrega(ordenParaConfigurarFecha!)"
+      [disabled]="!diasParaFechaEntrega || diasParaFechaEntrega < 1 || !ordenParaConfigurarFecha">
+      <i class="bi bi-check-circle"></i> Confirmar Fecha
+    </button>
   </div>
 </div>

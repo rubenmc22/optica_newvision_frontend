@@ -79,4 +79,48 @@ export class OrdenesTrabajoService {
       ...datos // Datos adicionales como fechas si el API lo soporta
     });
   }
+
+  // En ordenes-trabajo.service.ts
+  /**
+   * Actualizar fecha de entrega estimada de una orden
+   */
+  actualizarFechaEntregaEstimada(ordenNumero: string, fechaEntregaEstimada: string): Observable<{ message: string }> {
+    // Validar que la fecha esté en formato YYYY-MM-DD
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaEntregaEstimada)) {
+      console.error('Formato de fecha inválido:', fechaEntregaEstimada);
+      throw new Error('Formato de fecha debe ser YYYY-MM-DD');
+    }
+
+    const requestBody = {
+      orden_numero: ordenNumero,
+      fecha_entrega_estimada: fechaEntregaEstimada
+    };
+
+    console.log('DEBUG - Service - Request al API:', requestBody);
+
+    return this.http.put<{ message: string }>(
+      `${this.baseUrl}/orden-trabajo-update-fecha-entrega-estimada`,
+      requestBody
+    );
+  }
+
+  /**
+   * Formatear fecha a YYYY-MM-DD - Método auxiliar si es necesario
+   */
+  private formatearFechaYYYYMMDD(fechaString: string): string {
+    // Si ya está en formato YYYY-MM-DD, retornar directamente
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
+      return fechaString;
+    }
+
+    // Parsear la fecha
+    const fecha = new Date(fechaString);
+
+    // Usar UTC para consistencia
+    const year = fecha.getUTCFullYear();
+    const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getUTCDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
 }

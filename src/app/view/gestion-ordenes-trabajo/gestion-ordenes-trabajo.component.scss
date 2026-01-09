@@ -363,7 +363,6 @@
 }
 
 // Tarjeta de orden
-// Tarjeta de orden COMPACTA
 .orden-card {
     background: white;
     border-radius: 12px;
@@ -520,6 +519,52 @@
                 line-height: 1.2;
             }
         }
+    }
+
+    /* Estilos para el footer de la orden */
+    .orden-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    /* Contenedor del ID de orden */
+    .orden-id-container {
+        display: flex;
+        align-items: center;
+    }
+
+    /* Badge del número de orden */
+    .orden-id-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+        font-size: 11px;
+        color: #495057;
+        transition: all 0.2s ease;
+    }
+
+    .orden-id-badge:hover {
+        background: #e9ecef;
+        border-color: #dee2e6;
+    }
+
+    .orden-id-badge i {
+        font-size: 10px;
+        opacity: 0.7;
+    }
+
+    .orden-id-text {
+        font-weight: 600;
+        font-family: 'Monaco', 'Consolas', monospace;
+        letter-spacing: 0.3px;
     }
 
     .orden-actions {
@@ -1355,7 +1400,8 @@
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
-    z-index: 999;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
 }
 
 .modal-detalle-orden {
@@ -1363,12 +1409,12 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 90%;
-    max-width: 900px;
+    width: 95%;
+    max-width: 1100px;
     max-height: 85vh;
     background: white;
     border-radius: 20px;
-    z-index: 1000;
+    z-index: 1001;
     box-shadow: 0 32px 64px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
@@ -1978,11 +2024,11 @@
     gap: 16px;
     padding: 24px;
     overflow-y: auto;
-    max-height: calc(85vh - 200px);
+    max-height: calc(85vh - 120px);
 
     @media (max-width: 768px) {
         padding: 16px;
-        max-height: calc(85vh - 180px);
+        max-height: calc(85vh - 140px);
         gap: 12px;
     }
 }
@@ -2012,6 +2058,30 @@
         }
     }
 }
+
+.btn-calendar {
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    color: white;
+    border: none;
+}
+
+.btn-calendar:hover {
+    background: linear-gradient(135deg, #f57c00, #e64a19);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
+}
+
+.btn-calendar i {
+    font-size: 0.9rem;
+}
+
+/* Asegurar que los botones tengan buen espaciado */
+.orden-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+}
+
 
 /* Estilos específicos para formulación completa */
 .formulacion-full {
@@ -2327,18 +2397,6 @@
     --color-entregado-rgb: 156, 39, 176;
 }
 
-// Estilo para backdrop del modal
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    z-index: 999;
-}
-
 // MEJORAS RESPONSIVE ESPECÍFICAS
 @media (max-width: 768px) {
     .modal-detalle-orden {
@@ -2477,18 +2535,6 @@
     --color-entregado-rgb: 156, 39, 176;
 }
 
-// Estilo para backdrop del modal
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    z-index: 999;
-}
-
 // Para pantallas muy pequeñas
 @media (max-width: 480px) {
     .modal-detalle-orden {
@@ -2530,18 +2576,6 @@
             }
         }
     }
-}
-
-// Estilo para backdrop del modal
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    z-index: 999;
 }
 
 // MEJORAS RESPONSIVE ESPECÍFICAS
@@ -2671,17 +2705,6 @@
     }
 }
 
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    z-index: 999;
-}
-
 // Responsive
 @media (max-width: 768px) {
     .modal-detalle-orden {
@@ -2809,17 +2832,6 @@
             }
         }
     }
-}
-
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    z-index: 999;
 }
 
 // Estilos responsivos específicos para formulación
@@ -3244,17 +3256,6 @@
     }
 }
 
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    z-index: 999;
-}
-
 // Responsive
 @media (max-width: 768px) {
     .modal-detalle-orden {
@@ -3294,58 +3295,195 @@
     }
 }
 
-// Tooltips
+/* TOOLTIPS GENERALES - PARA TODOS LOS ELEMENTOS CON [data-tooltip] */
 [data-tooltip] {
     position: relative;
     cursor: help;
 
-    &:hover::before {
+    /* Tooltip que aparece arriba */
+    &::before {
         content: attr(data-tooltip);
-        position: fixed;
-        top: calc(var(--mouse-y, 0px) - 50px);
-        left: calc(var(--mouse-x, 0px) - 50px);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
         background: #1e293b;
         color: white;
-        padding: 10px 14px;
-        border-radius: 8px;
-        font-size: 13px;
-        white-space: normal;
-        word-wrap: break-word;
-        max-width: 300px;
-        min-width: 150px;
-        z-index: 2147483647;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-        text-align: left;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        white-space: nowrap;
+        z-index: 1070;
+        /* Bootstrap modal z-index es 1050, así que mayor */
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
         pointer-events: none;
-        display: block;
+        margin-bottom: 10px;
+        min-width: 120px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
-        // Flecha
+        /* Flecha */
         &::after {
             content: '';
             position: absolute;
             top: 100%;
-            left: 30px;
-            border: 8px solid transparent;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
             border-top-color: #1e293b;
+        }
+    }
+
+    /* Mostrar al hacer hover */
+    &:hover::before {
+        opacity: 1;
+        visibility: visible;
+    }
+}
+
+/* TOOLTIPS ESPECÍFICOS PARA BOTONES DE BOOTSTRAP */
+.btn[data-tooltip] {
+    position: relative;
+
+    &::before {
+        bottom: calc(100% + 5px);
+        font-size: 11px;
+        padding: 6px 10px;
+        min-width: 100px;
+
+        /* Para botones pequeños */
+        &.btn-sm {
+            font-size: 10px;
+            padding: 4px 8px;
+            min-width: 80px;
         }
     }
 }
 
-// Deshabilitar tooltips nativos
-[data-tooltip] {
-    border-bottom: none; // Remover subrayado nativo
-    border: none;
-    visibility: none;
+
+/* TOOLTIPS PARA ARCHIVO-HEADER CON Z-INDEX MUY ALTO */
+.archivo-header {
+    .archivo-actions {
+        .btn[data-tooltip] {
+            position: relative;
+
+            &::before {
+                content: attr(data-tooltip);
+                position: fixed;
+                bottom: calc(20% + 30px);
+                /* Aparece arriba del botón */
+                left: 90%;
+                transform: translateX(-50%);
+                background: #7b1fa2;
+                color: white;
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 12px;
+                white-space: nowrap;
+                /* Cambia esto para permitir múltiples líneas */
+                z-index: 999999;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+                pointer-events: none;
+                min-width: max-content;
+                /* Se ajusta al contenido */
+                max-width: 300px;
+                /* Ancho máximo opcional */
+                text-align: center;
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+                width: auto;
+                /* Ancho automático */
+
+                &::after {
+                    content: '';
+                    position: absolute;
+                    top: 100%;
+                    /* Flecha en la parte inferior del tooltip */
+                    left: 50%;
+                    transform: translateX(-50%);
+                    border: 6px solid transparent;
+                    border-top-color: #7b1fa2;
+                }
+            }
+
+            /* Tooltip específico para botón de config */
+            &[data-tooltip*="Configurar"]::before {
+                background: #6c757d;
+                white-space: nowrap;
+                /* Mantener en una línea */
+                min-width: max-content;
+
+                &::after {
+                    border-top-color: #6c757d;
+                }
+            }
+
+            &:hover::before {
+                opacity: 1;
+                visibility: visible;
+            }
+        }
+    }
 }
 
-// Posicionamiento específico para botones
-.btn-action[data-tooltip]:hover::before {
-    left: calc(var(--mouse-x, 0px) - 50px) !important;
+/* Clase para calcular posición dinámica con JS */
+.tooltip-calculated {
+    position: fixed !important;
 }
 
-// Posicionamiento específico para elementos en tarjetas
-.orden-card [data-tooltip]:hover::before {
-    left: calc(var(--mouse-x, 0px) - 120px) !important;
+/* TOOLTIPS PARA BOTONES EN MINICARDS (si aún los necesitas) */
+.delivery-minicard {
+    .btn-icon[data-tooltip] {
+        position: relative;
+
+        &::before {
+            bottom: calc(100% + 5px);
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            font-size: 10px;
+            padding: 4px 8px;
+            min-width: 70px;
+
+            &::after {
+                border-top-color: #667eea;
+            }
+        }
+
+        /* Tooltip específico para archivar */
+        &[data-tooltip*="Archivar"]::before {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+
+            &::after {
+                border-top-color: #dc3545;
+            }
+        }
+
+        /* Tooltip específico para factura */
+        &[data-tooltip*="factura"]::before {
+            background: linear-gradient(135deg, #28a745, #218838);
+
+            &::after {
+                border-top-color: #28a745;
+            }
+        }
+    }
+}
+
+/* Asegurar que los tooltips no se corten por contenedores con overflow */
+.archivo-header,
+.delivery-minicard,
+.orden-card {
+    overflow: visible !important;
+}
+
+/* Tooltips en botones de acción */
+.btn-action[data-tooltip]::before {
+    background: #1e293b;
+    font-size: 11px;
+    padding: 5px 9px;
+    min-width: 90px;
 }
 
 // Asegurar que los contenedores no corten tooltips
@@ -4033,4 +4171,233 @@
             gap: 12px;
         }
     }
+}
+
+.modal-configurar-fecha {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    z-index: 1002;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -60%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.modal-configurar-fecha .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--degradado-color) !important;
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-configurar-fecha .modal-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-close-modal {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.btn-close-modal:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-configurar-fecha .modal-body {
+    padding: 24px;
+}
+
+.modal-configurar-fecha .info-orden {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.modal-configurar-fecha .info-orden p {
+    margin: 8px 0;
+    font-size: 0.95rem;
+}
+
+.modal-configurar-fecha .info-orden p strong {
+    color: #495057;
+}
+
+.modal-configurar-fecha .configuracion-dias {
+    margin-bottom: 24px;
+}
+
+.modal-configurar-fecha .configuracion-dias label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.modal-configurar-fecha .input-group {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.modal-configurar-fecha .input-group input {
+    border: 2px solid #dee2e6;
+    padding: 12px 16px;
+    font-size: 1.1rem;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.modal-configurar-fecha .input-group input:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    outline: none;
+}
+
+.modal-configurar-fecha .input-group-text {
+    background: var(--degradado-color) !important;
+    color: white;
+    border: none;
+    font-weight: 600;
+    padding: 0px 20px;
+}
+
+.modal-configurar-fecha small.text-muted {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.modal-configurar-fecha .fecha-resultado {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    border: 2px dashed #adb5bd;
+}
+
+.modal-configurar-fecha .fecha-resultado h5 {
+    margin: 0 0 12px 0;
+    color: #495057;
+    font-size: 1.1rem;
+}
+
+.modal-configurar-fecha .fecha-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-configurar-fecha .fecha-display i {
+    font-size: 2rem;
+    color: #28a745;
+}
+
+.modal-configurar-fecha .fecha-display span {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #212529;
+}
+
+.modal-configurar-fecha .fecha-display .text-muted {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+.modal-configurar-fecha .modal-footer {
+    padding: 20px 24px;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #f8f9fa;
+    border-radius: 0 0 12px 12px;
+}
+
+.modal-configurar-fecha .modal-footer .btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.modal-configurar-fecha .modal-footer .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.modal-configurar-fecha .modal-footer .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.modal-configurar-fecha .modal-footer .btn-primary {
+    background: var(--degradado-color) !important;
+    color: white;
+}
+
+.modal-configurar-fecha .modal-footer .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.modal-configurar-fecha .modal-footer .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    background: #adb5bd;
 }

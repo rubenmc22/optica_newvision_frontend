@@ -2,6 +2,7 @@ export interface OrdenTrabajo {
     id: number;
     ordenId: string;
     ventaId: string;
+    numero_venta: string;
     sede: string;
 
     // Propiedades del cliente
