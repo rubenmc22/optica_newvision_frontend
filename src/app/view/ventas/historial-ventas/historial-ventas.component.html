@@ -948,13 +948,32 @@
       </div>
       <div class="card-body-detalle">
         <div class="personal-grid">
+          <!-- Asesor -->
           <div class="info-item-detalle">
             <label>👨‍💼 Asesor</label>
-            <div class="value">{{selectedVenta?.asesor?.nombre || 'No asignado'}}</div>
+            <div class="value">
+              <div class="nombre-personal">{{selectedVenta?.asesor?.nombre || 'No asignado'}}</div>
+              <div class="cedula-personal" *ngIf="selectedVenta?.asesor?.cedula">
+                C.I. {{selectedVenta?.asesor?.cedula}}
+              </div>
+              <div class="cedula-personal" *ngIf="!selectedVenta?.asesor?.cedula">
+                <small class="text-muted">Cédula no disponible</small>
+              </div>
+            </div>
           </div>
+
+          <!-- Especialista -->
           <div class="info-item-detalle">
             <label>👨‍⚕️ Especialista</label>
-            <div class="value">{{selectedVenta?.especialista?.nombre}}</div>
+            <div class="value">
+              <div class="nombre-personal">{{selectedVenta?.especialista?.nombre || 'No asignado'}}</div>
+              <div class="cedula-personal" *ngIf="selectedVenta?.especialista?.cedula">
+                C.I. {{selectedVenta?.especialista?.cedula}}
+              </div>
+              <div class="cedula-personal" *ngIf="!selectedVenta?.especialista?.cedula">
+                <small class="text-muted">Cédula no disponible</small>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1061,34 +1080,66 @@
       </div>
     </div>
 
-    <!-- Tarjeta de Productos -->
+    <!-- Tarjeta de Productos - Diseño Compacto y Moderno -->
     <div class="info-card productos">
       <div class="card-header-detalle">
         <i class="bi bi-cart"></i>
         <span>Productos y Servicios</span>
       </div>
       <div class="card-body-detalle">
-        <div class="productos-list">
-          <div *ngFor="let producto of selectedVenta?.productos" class="producto-item">
-            <div class="producto-info">
-              <div class="producto-nombre">{{producto.nombre}}</div>
-              <div class="producto-codigo">Código: {{producto.codigo}}</div>
-              <div class="producto-detalles">
-                <span class="cantidad">{{producto.cantidad}} und</span>
-                <span class="precio">{{producto.precio | number:'1.2-2'}}
-                  {{getMonedaDisplay(selectedVenta?.moneda)}}</span>
-                <span *ngIf="producto.aplicaIva" class="iva-badge">+IVA</span>
+        <div class="productos-list-compacto">
+          <div *ngFor="let producto of getProductosSegurosDetalle()" class="producto-item-compacto">
+            
+            <!-- Header del producto -->
+            <div class="producto-header-compacto">
+              <div class="producto-titulo">
+                <span class="producto-nombre">{{producto.nombre}}</span>
+                <span class="producto-codigo">{{producto.codigo}}</span>
               </div>
             </div>
-            <div class="producto-totales">
-              <div class="subtotal">{{producto.subtotal | number:'1.2-2'}}</div>
-              <div class="total">{{producto.total | number:'1.2-2'}} {{getMonedaDisplay(selectedVenta?.moneda)}}</div>
+
+            <!-- Línea principal de cálculo -->
+            <div class="calculo-linea">
+              <!-- Cantidad × Precio base -->
+              <div class="calculo-parte">
+                <span class="cantidad">{{producto.cantidad}} und ×</span>
+                <span class="precio-base">{{formatearMoneda(producto.precioUnitarioSinIva)}}</span>
+                <span class="moneda">{{getMonedaDisplay(selectedVenta?.moneda)}}</span>
+                
+                <!-- Subtotal base en paréntesis -->
+                <span class="subtotal-base">
+                  ({{formatearMoneda(producto.precioUnitarioSinIva * producto.cantidad)}})
+                </span>
+              </div>
+
+              <!-- Separador solo si tiene IVA -->
+              <span *ngIf="producto.tieneIva" class="separador-calc">+</span>
+
+              <!-- IVA total -->
+              <div *ngIf="producto.tieneIva" class="calculo-parte">
+                <span class="iva-total">{{formatearMoneda(producto.ivaTotalProducto)}}</span>
+                <span class="iva-label">IVA</span>
+              </div>
+
+              <!-- Igual y total final -->
+              <span class="igual">=</span>
+              
+              <div class="calculo-parte total-final">
+                <span class="total-producto">{{formatearMoneda(producto.total)}}</span>
+              </div>
             </div>
+
+            <!-- Información de IVA por unidad (solo si aplica) -->
+            <div *ngIf="producto.tieneIva && producto.cantidad > 1" class="info-iva-unidad">
+              <span class="info-label">IVA por unidad:</span>
+              <span class="info-valor">{{formatearMoneda(producto.ivaPorUnidad)}}</span>
+            </div>
+
           </div>
         </div>
       </div>
     </div>
-
+        
     <!-- Tarjeta de Configuración de Pago -->
     <div class="info-card pago">
       <div class="card-header-detalle">
@@ -1175,90 +1226,90 @@
 
     <!-- Tarjeta de Métodos de Pago -->
     <div class="info-card metodos-pago-detalle" *ngIf="selectedVenta?.metodosPago?.length">
-        <div class="card-header-detalle">
-            <i class="bi bi-wallet2"></i>
-            <span>Métodos de Pago</span>
-        </div>
-        <div class="card-body-detalle">
-            <div class="metodos-grid">
-                <!-- Iterar sobre los grupos de pago -->
-                <div *ngFor="let pagoGroup of selectedVenta?.metodosPago" class="pago-group">
-                    <!-- Mostrar información del grupo si existe -->
-                    <div class="pago-group-header" *ngIf="selectedVenta?.metodosPago?.length > 1">
-                        <span class="badge bg-info">Abono #{{pagoGroup.numero_pago}}</span>
-                        <span class="ms-2">Total: {{pagoGroup.montoAbonado | number:'1.2-2'}} {{getMonedaVentaDisplay()}}</span>
-                    </div>
-                    
-                    <!-- Iterar sobre los métodos dentro de cada grupo -->
-                    <div *ngFor="let metodo of pagoGroup.metodosPago" class="metodo-item-detalle">
-                          <div class="metodo-icono">
-                              <i [class]="'bi ' + getIconoMetodoPago(metodo.tipo)"></i>
-                          </div>
-                          <div class="metodo-info-detalle">
-                            <div class="metodo-tipo">{{ getTipoPagoDisplay(metodo.tipo) }}</div>
-
-                            <!-- DISPLAY MONTOS -->
-                            <div class="montos-linea">
-                                <!-- Pago en BOLIVARES -->
-                                <div *ngIf="metodo.moneda_id === 'bolivar'" class="monto-simple text-success">
-                                    {{ metodo.monto | number:'1.2-2' }} Bs.
-                                </div>
-
-                                <!-- Pago en DÓLARES -->
-                                <div *ngIf="metodo.moneda_id === 'dolar'" class="monto-simple text-success">
-                                    {{ metodo.monto | number:'1.2-2' }} USD
-                                </div>
-
-                                <!-- Pago en EUROS -->
-                                <div *ngIf="metodo.moneda_id === 'euro'" class="monto-simple text-success">
-                                    {{ metodo.monto | number:'1.2-2' }} EUR
-                                </div>
-
-                                <!-- Mostrar conversión si aplica -->
-                                <div *ngIf="metodo.monto_moneda_base && metodo.moneda_id !== selectedVenta?.moneda" 
-                                    class="monto-convertido small text-muted ms-2">
-                                    ≈ {{ metodo.monto_moneda_base | number:'1.2-2' }} {{getMonedaVentaDisplay()}}
-                                </div>
-                            </div>
-
-                            <!-- INFORMACIÓN ADICIONAL -->
-                            <div class="metodo-detalles-adicionales">
-                                <!-- Referencia -->
-                                <div class="detalle-adicional" *ngIf="metodo.referencia">
-                                    <i class="bi bi-receipt"></i>
-                                    <span>Ref: {{metodo.referencia}}</span>
-                                </div>
-
-                                <!-- Banco -->
-                                <div class="detalle-adicional" *ngIf="metodo.bancoNombre">
-                                    <i class="bi bi-building"></i>
-                                    <span>Banco: {{metodo.bancoNombre}}</span>
-                                </div>
-
-                                <!-- Fecha -->
-                                <div class="detalle-adicional">
-                                    <i class="bi bi-calendar"></i>
-                                    <span>{{metodo.fechaRegistro | date:'dd/MM/yyyy HH:mm'}}</span>
-                                </div>
-
-                                <!-- Tasa de cambio si aplica -->
-                                <div *ngIf="metodo.moneda_id === 'bolivar' && metodo.tasa_moneda && metodo.tasa_moneda !== 1" 
-                                    class="detalle-adicional">
-                                    <i class="bi bi-arrow-left-right"></i>
-                                    <span>Tasa: 1 {{getMonedaVentaDisplay()}} = {{metodo.tasa_moneda | number:'1.2-2'}} Bs</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Observaciones del grupo -->
-                    <div class="pago-group-observaciones" *ngIf="pagoGroup.observaciones">
-                        <i class="bi bi-chat-left-text"></i>
-                        <span>{{pagoGroup.observaciones}}</span>
-                    </div>
-                </div>
+      <div class="card-header-detalle">
+        <i class="bi bi-wallet2"></i>
+        <span>Métodos de Pago</span>
+      </div>
+      <div class="card-body-detalle">
+        <div class="metodos-grid">
+          <!-- Iterar sobre los grupos de pago -->
+          <div *ngFor="let pagoGroup of selectedVenta?.metodosPago" class="pago-group">
+            <!-- Mostrar información del grupo si existe -->
+            <div class="pago-group-header" *ngIf="selectedVenta?.metodosPago?.length > 1">
+              <span class="badge bg-info">Abono #{{pagoGroup.numero_pago}}</span>
+              <span class="ms-2">Total: {{pagoGroup.montoAbonado | number:'1.2-2'}} {{getMonedaVentaDisplay()}}</span>
             </div>
+
+            <!-- Iterar sobre los métodos dentro de cada grupo -->
+            <div *ngFor="let metodo of pagoGroup.metodosPago" class="metodo-item-detalle">
+              <div class="metodo-icono">
+                <i [class]="'bi ' + getIconoMetodoPago(metodo.tipo)"></i>
+              </div>
+              <div class="metodo-info-detalle">
+                <div class="metodo-tipo">{{ getTipoPagoDisplay(metodo.tipo) }}</div>
+
+                <!-- DISPLAY MONTOS -->
+                <div class="montos-linea">
+                  <!-- Pago en BOLIVARES -->
+                  <div *ngIf="metodo.moneda_id === 'bolivar'" class="monto-simple text-success">
+                    {{ metodo.monto | number:'1.2-2' }} Bs.
+                  </div>
+
+                  <!-- Pago en DÓLARES -->
+                  <div *ngIf="metodo.moneda_id === 'dolar'" class="monto-simple text-success">
+                    {{ metodo.monto | number:'1.2-2' }} USD
+                  </div>
+
+                  <!-- Pago en EUROS -->
+                  <div *ngIf="metodo.moneda_id === 'euro'" class="monto-simple text-success">
+                    {{ metodo.monto | number:'1.2-2' }} EUR
+                  </div>
+
+                  <!-- Mostrar conversión si aplica -->
+                  <div *ngIf="metodo.monto_moneda_base && metodo.moneda_id !== selectedVenta?.moneda"
+                    class="monto-convertido small text-muted ms-2">
+                    ≈ {{ metodo.monto_moneda_base | number:'1.2-2' }} {{getMonedaVentaDisplay()}}
+                  </div>
+                </div>
+
+                <!-- INFORMACIÓN ADICIONAL -->
+                <div class="metodo-detalles-adicionales">
+                  <!-- Referencia -->
+                  <div class="detalle-adicional" *ngIf="metodo.referencia">
+                    <i class="bi bi-receipt"></i>
+                    <span>Ref: {{metodo.referencia}}</span>
+                  </div>
+
+                  <!-- Banco -->
+                  <div class="detalle-adicional" *ngIf="metodo.bancoNombre">
+                    <i class="bi bi-building"></i>
+                    <span>Banco: {{metodo.bancoNombre}}</span>
+                  </div>
+
+                  <!-- Fecha -->
+                  <div class="detalle-adicional">
+                    <i class="bi bi-calendar"></i>
+                    <span>{{metodo.fechaRegistro | date:'dd/MM/yyyy HH:mm'}}</span>
+                  </div>
+
+                  <!-- Tasa de cambio si aplica -->
+                  <div *ngIf="metodo.moneda_id === 'bolivar' && metodo.tasa_moneda && metodo.tasa_moneda !== 1"
+                    class="detalle-adicional">
+                    <i class="bi bi-arrow-left-right"></i>
+                    <span>Tasa: 1 {{getMonedaVentaDisplay()}} = {{metodo.tasa_moneda | number:'1.2-2'}} Bs</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Observaciones del grupo -->
+            <div class="pago-group-observaciones" *ngIf="pagoGroup.observaciones">
+              <i class="bi bi-chat-left-text"></i>
+              <span>{{pagoGroup.observaciones}}</span>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
 
     <!-- Tarjeta de Resumen Financiero -->
@@ -1357,7 +1408,7 @@
             <div class="mini-principal">
               <span class="mini-monto">{{ formatearMoneda(selectedVenta?.total, getMonedaVenta()) }}</span>
             </div>
- 
+
           </div>
         </div>
 
@@ -1379,7 +1430,7 @@
               <span class="progreso-text">{{ ((selectedVenta?.montoAbonado || 0) / (selectedVenta?.total || 1) * 100) |
                 number:'1.0-0' }}%</span>
             </div>
-         
+
           </div>
         </div>
 

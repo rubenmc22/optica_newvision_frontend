@@ -446,6 +446,7 @@ export class HistorialVentasComponent implements OnInit {
     const totales = ventaApi.totales;
     const cliente = ventaApi.cliente;
     const asesor = ventaApi.asesor;
+    const especialista = ventaApi.cliente.especialista;
     const productos = ventaApi.productos;
     const metodosPagoApi = ventaApi.metodosPago;
     const formaPago = ventaApi.formaPago;
@@ -559,11 +560,13 @@ export class HistorialVentasComponent implements OnInit {
       },
       asesor: {
         id: asesor.id,
-        nombre: asesor.nombre
+        nombre: asesor.nombre,
+        cedula: asesor.cedula
       },
       especialista: {
-        id: 0,
-        nombre: 'No asignado'
+        id: especialista.id,
+        nombre: especialista.nombre,
+        cedula: especialista.cedula
       },
 
       // Contenido de la venta
@@ -4406,8 +4409,81 @@ export class HistorialVentasComponent implements OnInit {
       case 'zelle':
         return 'bi-currency-dollar';
       default:
-        return 'bi-question-circle'; 
+        return 'bi-question-circle';
     }
+  }
+
+  // Método para obtener productos con información de precios base
+  getProductosSegurosDetalle(): any[] {
+    if (!this.selectedVenta) {
+      return [];
+    }
+
+    // Usar productos originales del API si están disponibles
+    if (this.selectedVenta.productosOriginales &&
+      this.selectedVenta.productosOriginales.length > 0) {
+
+      return this.selectedVenta.productosOriginales.map((prod: any) => {
+        const precioUnitarioSinIva = prod.precio_unitario_sin_iva || 0;
+        const cantidad = prod.cantidad || 1;
+        const tieneIva = prod.tiene_iva === 1;
+        const precioUnitarioConIva = prod.precio_unitario || 0;
+        const totalProducto = prod.total || 0;
+
+        // Calcular IVA aplicado POR UNIDAD
+        const ivaPorUnidad = tieneIva ? precioUnitarioConIva - precioUnitarioSinIva : 0;
+
+        // Calcular IVA TOTAL para el producto (ivaPorUnidad × cantidad)
+        const ivaTotalProducto = ivaPorUnidad * cantidad;
+
+        const porcentajeIva = this.selectedVenta?.impuesto || 16;
+
+        return {
+          id: prod.datos?.id,
+          nombre: prod.datos?.nombre || 'Producto sin nombre',
+          codigo: prod.datos?.codigo || 'N/A',
+          cantidad: cantidad,
+          precioUnitarioSinIva: precioUnitarioSinIva,
+          precioUnitarioConIva: precioUnitarioConIva,
+          tieneIva: tieneIva,
+          ivaPorUnidad: ivaPorUnidad,      // IVA por unidad
+          ivaTotalProducto: ivaTotalProducto,  // IVA total (cantidad × ivaPorUnidad)
+          porcentajeIva: porcentajeIva,
+          total: totalProducto,
+          // Para verificación
+          subtotalSinIva: precioUnitarioSinIva * cantidad,
+          subtotalConIva: precioUnitarioConIva * cantidad
+        };
+      });
+    }
+
+    // Fallback a productos procesados
+    return (this.selectedVenta.productos || []).map((prod: any, index: number) => {
+      const precioUnitario = prod.precio || 0;
+      const cantidad = prod.cantidad || 1;
+      const tieneIva = prod.aplicaIva || false;
+      const impuesto = this.selectedVenta.impuesto || 16;
+      const totalProducto = prod.total || precioUnitario * cantidad;
+
+      // Calcular precio sin IVA
+      const precioSinIva = precioUnitario / (1 + (impuesto / 100));
+      const ivaPorUnidad = precioUnitario - precioSinIva;
+      const ivaTotalProducto = ivaPorUnidad * cantidad;
+
+      return {
+        id: prod.id || `prod-${index}`,
+        nombre: prod.nombre || 'Producto sin nombre',
+        codigo: prod.codigo || 'N/A',
+        cantidad: cantidad,
+        precioUnitarioSinIva: precioSinIva,
+        precioUnitarioConIva: precioUnitario,
+        tieneIva: tieneIva,
+        ivaPorUnidad: ivaPorUnidad,
+        ivaTotalProducto: ivaTotalProducto,
+        porcentajeIva: impuesto,
+        total: totalProducto
+      };
+    });
   }
 
 
