@@ -94,6 +94,36 @@ export class HistorialVentasComponent implements OnInit {
     fechaHasta: ''
   };
 
+  bancosDisponibles: Array<{ codigo: string; nombre: string; displayText: string }> = [
+    { codigo: '0102', nombre: 'Banco de Venezuela', displayText: '0102 - Banco de Venezuela' },
+    { codigo: '0134', nombre: 'Banesco', displayText: '0134 - Banesco' },
+    { codigo: '0104', nombre: 'Venezolano de Crédito', displayText: '0104 - Venezolano de Crédito' },
+    { codigo: '0105', nombre: 'Mercantil', displayText: '0105 - Mercantil' },
+    { codigo: '0114', nombre: 'Bancaribe', displayText: '0114 - Bancaribe' },
+    { codigo: '0115', nombre: 'BOD', displayText: '0115 - BOD' },
+    { codigo: '0116', nombre: 'Banco Plaza', displayText: '0116 - Banco Plaza' },
+    { codigo: '0128', nombre: 'Banco Caribe', displayText: '0128 - Banco Caribe' },
+    { codigo: '0108', nombre: 'Banco Provincial', displayText: '0108 - Banco Provincial' },
+    { codigo: '0118', nombre: 'Banco del Sur', displayText: '0118 - Banco del Sur' },
+    { codigo: '0121', nombre: 'Bancamiga', displayText: '0121 - Bancamiga' },
+    { codigo: '0151', nombre: '100% Banco', displayText: '0151 - 100% Banco' },
+    { codigo: '0156', nombre: 'Banco del Tesoro', displayText: '0156 - Banco del Tesoro' },
+    { codigo: '0157', nombre: 'Banco Bicentenario', displayText: '0157 - Banco Bicentenario' },
+    { codigo: '0163', nombre: 'Banco Fondo Común', displayText: '0163 - Banco Fondo Común' },
+    { codigo: '0166', nombre: 'Banco Agrícola de Venezuela', displayText: '0166 - Banco Agrícola de Venezuela' },
+    { codigo: '0168', nombre: 'Bancrecer', displayText: '0168 - Bancrecer' },
+    { codigo: '0169', nombre: 'Mi Banco', displayText: '0169 - Mi Banco' },
+    { codigo: '0171', nombre: 'Banco Activo', displayText: '0171 - Banco Activo' },
+    { codigo: '0172', nombre: 'Bancamiga', displayText: '0172 - Bancamiga' },
+    { codigo: '0173', nombre: 'Banco Internacional de Desarrollo', displayText: '0173 - Banco Internacional de Desarrollo' },
+    { codigo: '0174', nombre: 'Banco Plaza', displayText: '0174 - Banco Plaza' },
+    { codigo: '0175', nombre: 'Banco de la Fuerza Armada Nacional Bolivariana', displayText: '0175 - Banco de la Fuerza Armada Nacional Bolivariana' },
+    { codigo: '0177', nombre: 'Banco del Tesoro', displayText: '0177 - Banco del Tesoro' },
+    { codigo: '0191', nombre: 'Banco Nacional de Crédito', displayText: '0191 - Banco Nacional de Crédito' },
+    { codigo: '0000', nombre: 'Otro', displayText: '0000 - Otro' }
+  ];
+
+
   // Paginación
   paginacion = {
     paginaActual: 1,
@@ -983,13 +1013,17 @@ export class HistorialVentasComponent implements OnInit {
       const metodo = control.value;
       const monedaMetodo = this.getMonedaParaMetodo(index);
 
+      // Validar campos requeridos según el tipo
+      if (this.necesitaReferencia(metodo.tipo) && (!metodo.referencia || metodo.referencia.trim() === '')) {
+        throw new Error(`El método ${metodo.tipo} requiere un número de referencia`);
+      }
+
+      if (this.necesitaBanco(metodo.tipo) && (!metodo.bancoCodigo || !metodo.bancoNombre)) {
+        throw new Error(`El método ${metodo.tipo} requiere seleccionar un banco`);
+      }
+
       // Convertir moneda al formato exacto que espera el backend
       const monedaFormatoBackend = this.convertirMonedaParaBackend(monedaMetodo);
-
-      // Limpiar valores - convertir cadenas vacías a null
-      const referencia = metodo.referencia?.trim() || null;
-      const bancoCodigo = metodo.bancoCodigo?.trim() || null;
-      const bancoNombre = metodo.bancoNombre?.trim() || null;
 
       // Calcular monto en moneda de venta para referencia
       const montoEnMonedaVenta = this.convertirMonto(
@@ -1002,25 +1036,18 @@ export class HistorialVentasComponent implements OnInit {
         tipo: metodo.tipo || 'efectivo',
         monto: Number(metodo.monto) || 0,
         moneda: monedaFormatoBackend,
-        referencia: referencia,
-        bancoCodigo: bancoCodigo,
-        bancoNombre: bancoNombre,
+        referencia: metodo.referencia?.trim() || null,
+        bancoCodigo: metodo.bancoCodigo?.trim() || null,
+        bancoNombre: metodo.bancoNombre?.trim() || null,
 
-        // Campos adicionales para debug y validación
+        // Campos adicionales
         montoEnMonedaVenta: montoEnMonedaVenta,
         tasaConversion: this.obtenerTasaConversion(monedaFormatoBackend, this.getMonedaVenta()),
         monedaOriginal: monedaFormatoBackend,
         monedaVenta: this.getMonedaVenta()
       };
 
-      console.log(`🔍 Método ${index} preparado:`, {
-        tipo: metodoFormateado.tipo,
-        montoOriginal: metodoFormateado.monto,
-        monedaOriginal: metodoFormateado.moneda,
-        montoEnMonedaVenta: metodoFormateado.montoEnMonedaVenta,
-        tasa: metodoFormateado.tasaConversion
-      });
-
+      console.log(`🔍 Método ${index} preparado:`, metodoFormateado);
       metodosPagoParaAPI.push(metodoFormateado);
     });
 
@@ -1076,18 +1103,48 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  guardarEdicionVenta(modal: any): void {
-    // Primero forzar validación de todos los métodos
+  private limpiarMetodosVacios(): void {
+    // Encontrar métodos completamente vacíos (sin tipo, monto, referencia ni banco)
+    const indicesAEliminar: number[] = [];
+
     this.metodosPagoArray.controls.forEach((control, index) => {
-      this.validarMontoMetodoPago(index);
+      const tipo = control.get('tipo')?.value;
+      const monto = control.get('monto')?.value;
+      const referencia = control.get('referencia')?.value;
+      const banco = control.get('bancoObject')?.value;
+
+      // Si no tiene ningún dato, está vacío
+      // PERO: no eliminar si es el único método disponible
+      const estaVacio = !tipo && (!monto || monto === 0) && !referencia && !banco;
+
+      if (estaVacio && this.metodosPagoArray.length > 1) {
+        indicesAEliminar.push(index);
+      }
     });
 
-    if (this.editarVentaForm.invalid) {
-      this.marcarControlesComoSucios(this.editarVentaForm);
-      this.swalService.showWarning('Advertencia', 'Por favor complete todos los campos requeridos correctamente.');
+    // Eliminar de atrás hacia adelante para mantener los índices correctos
+    indicesAEliminar.reverse().forEach(index => {
+      this.metodosPagoArray.removeAt(index);
+    });
+  }
+
+  guardarEdicionVenta(modal: any): void {
+
+    // Verificar que haya al menos un método válido
+    const metodosValidos = this.metodosPagoArray.controls.filter(control =>
+      this.metodoTieneDatos(control)
+    );
+
+    if (metodosValidos.length === 0) {
+      this.swalService.showWarning('Advertencia', 'Debe agregar al menos un método de pago válido.');
       return;
     }
 
+    // Ahora validar
+    if (!this.validarAntesDeGuardar()) {
+      return;
+    }
+    // Continuar con el proceso normal...
     const formValue = this.editarVentaForm.value;
     const metodosPago = this.prepararMetodosPagoParaAPI();
 
@@ -1184,6 +1241,29 @@ export class HistorialVentasComponent implements OnInit {
     this.enviarAbonoCompleto(modal, requestData);
   }
 
+  // Método para verificar si un método tiene datos completos
+  metodoTieneDatos(control: AbstractControl): boolean {
+    const tipo = control.get('tipo')?.value;
+    const monto = control.get('monto')?.value;
+    const referencia = control.get('referencia')?.value;
+    const banco = control.get('bancoObject')?.value;
+
+    // Si tiene algún valor, se considera que tiene datos
+    return !!(tipo || monto || referencia || banco);
+  }
+
+  // Método para verificar si un método está completamente vacío
+  metodoEstaVacio(control: AbstractControl): boolean {
+    const tipo = control.get('tipo')?.value;
+    const monto = control.get('monto')?.value;
+    const referencia = control.get('referencia')?.value;
+    const banco = control.get('bancoObject')?.value;
+
+    // Si no tiene ningún valor, está vacío
+    return !tipo && !monto && !referencia && !banco;
+  }
+
+
   private prepararRequestParaBackend(metodosPago: any[], montoAbonado: number): any {
     // Estructura base del request
     const request: any = {
@@ -1212,58 +1292,6 @@ export class HistorialVentasComponent implements OnInit {
     };
 
     return request;
-  }
-
-  private validarMetodosPagoAntesDeEnviar(metodosPago: any[]): boolean {
-    let errores: string[] = [];
-
-    // Verificar que todos los métodos tengan monto > 0
-    metodosPago.forEach((metodo, index) => {
-      if (!metodo.monto || metodo.monto <= 0) {
-        errores.push(`El método ${index + 1} (${metodo.tipo}) no tiene un monto válido`);
-      }
-
-      if (!metodo.moneda) {
-        errores.push(`El método ${index + 1} (${metodo.tipo}) no tiene moneda especificada`);
-      }
-    });
-
-    // Verificar conversiones
-    const monedaVenta = this.getMonedaVenta();
-    let totalCalculado = 0;
-
-    metodosPago.forEach((metodo, index) => {
-      try {
-        const montoConvertido = this.convertirMonto(
-          metodo.monto,
-          metodo.moneda,
-          monedaVenta
-        );
-        totalCalculado += montoConvertido;
-      } catch (error) {
-        errores.push(`Error al convertir monto del método ${index + 1}: ${error}`);
-      }
-    });
-
-    const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
-
-    if (Math.abs(totalCalculado - montoAbonado) > 0.01) {
-      errores.push(
-        `La suma de los métodos (${this.formatearMoneda(totalCalculado)}) ` +
-        `no coincide con el monto abonado (${this.formatearMoneda(montoAbonado)})`
-      );
-    }
-
-    if (errores.length > 0) {
-      this.swalService.showWarning(
-        'Errores de validación',
-        `<strong>Por favor corrija los siguientes errores:</strong><br><br>` +
-        errores.map(error => `• ${error}`).join('<br>')
-      );
-      return false;
-    }
-
-    return true;
   }
 
   private enviarAbonoCompleto(modal: any, requestData: any): void {
@@ -1584,24 +1612,138 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   agregarMetodoPago(): void {
+    // Crear el grupo del método sin disparar validaciones
     const metodoGroup = this.fb.group({
-      tipo: ['', Validators.required],
-      monto: [0, [Validators.required, Validators.min(0)]]
+      tipo: [''], // Sin validador required inicial
+      monto: [null], // Sin validadores iniciales
+      bancoCodigo: [''],
+      bancoNombre: [''],
+      referencia: [''],
+      bancoObject: [null]
     });
 
     this.metodosPagoArray.push(metodoGroup);
 
-    // Suscribirse a cambios del monto
     const index = this.metodosPagoArray.length - 1;
+
+    // Suscribirse a cambios del tipo para agregar validadores dinámicamente
+    metodoGroup.get('tipo')?.valueChanges.subscribe(tipo => {
+      this.onMetodoPagoChange(index);
+
+      if (tipo) {
+        // Solo cuando se selecciona un tipo, agregar validadores
+        metodoGroup.get('tipo')?.setValidators([Validators.required]);
+        metodoGroup.get('monto')?.setValidators([Validators.required, Validators.min(0.01)]);
+
+        if (this.necesitaBanco(tipo)) {
+          metodoGroup.get('bancoObject')?.setValidators([Validators.required]);
+          metodoGroup.get('bancoCodigo')?.setValidators([Validators.required]);
+          metodoGroup.get('bancoNombre')?.setValidators([Validators.required]);
+        } else {
+          metodoGroup.get('bancoObject')?.clearValidators();
+          metodoGroup.get('bancoCodigo')?.clearValidators();
+          metodoGroup.get('bancoNombre')?.clearValidators();
+        }
+
+        if (this.necesitaReferencia(tipo)) {
+          metodoGroup.get('referencia')?.setValidators([Validators.required]);
+        } else {
+          metodoGroup.get('referencia')?.clearValidators();
+        }
+      } else {
+        // Si no hay tipo, limpiar validadores
+        metodoGroup.get('monto')?.clearValidators();
+        metodoGroup.get('bancoObject')?.clearValidators();
+        metodoGroup.get('bancoCodigo')?.clearValidators();
+        metodoGroup.get('bancoNombre')?.clearValidators();
+        metodoGroup.get('referencia')?.clearValidators();
+      }
+
+      // Actualizar validadores sin marcar como tocado
+      metodoGroup.get('tipo')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+      metodoGroup.get('monto')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+      metodoGroup.get('bancoObject')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+      metodoGroup.get('bancoCodigo')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+      metodoGroup.get('bancoNombre')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+      metodoGroup.get('referencia')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+    });
+
+    // Suscribirse a cambios del monto
     metodoGroup.get('monto')?.valueChanges.subscribe(value => {
       if (value !== null && value !== undefined) {
         this.validarMontoMetodoPago(index);
       }
     });
+  }
 
-    metodoGroup.get('tipo')?.valueChanges.subscribe(tipo => {
-      this.onMetodoPagoChange(index);
+  private validarAntesDeGuardar(): boolean {
+    let errores: string[] = [];
+
+    // Verificar que haya al menos un método con datos
+    const metodosConDatos = this.metodosPagoArray.controls.filter(control =>
+      this.metodoTieneDatos(control)
+    );
+
+    if (metodosConDatos.length === 0) {
+      this.swalService.showWarning('Advertencia', 'Debe agregar al menos un método de pago.');
+      return false;
+    }
+
+    // Marcar como tocados para mostrar errores visuales
+    this.metodosPagoArray.controls.forEach(control => {
+      // Solo marcar si el método tiene tipo seleccionado
+      if (control.get('tipo')?.value) {
+        control.get('monto')?.markAsTouched();
+
+        const tipo = control.get('tipo')?.value;
+        if (this.necesitaBanco(tipo)) {
+          control.get('bancoObject')?.markAsTouched();
+        }
+
+        if (this.necesitaReferencia(tipo)) {
+          control.get('referencia')?.markAsTouched();
+        }
+      }
     });
+
+    // Validar cada método individualmente (solo los que tienen tipo)
+    this.metodosPagoArray.controls.forEach((control, index) => {
+      const tipo = control.get('tipo')?.value;
+
+      if (!tipo) {
+        // Si no tiene tipo, no es un método válido
+        return;
+      }
+
+      const numeroMetodo = index + 1;
+
+      // Validar monto
+      const monto = control.get('monto')?.value;
+      if (!monto || monto <= 0) {
+        errores.push(`Método ${numeroMetodo} (${tipo}): Ingresa un monto válido (mayor a 0)`);
+      }
+
+      // Validar banco si es requerido
+      if (this.necesitaBanco(tipo) && !control.get('bancoObject')?.value) {
+        errores.push(`Método ${numeroMetodo} (${tipo}): Selecciona un banco`);
+      }
+
+      // Validar referencia si es requerida
+      if (this.necesitaReferencia(tipo) && (!control.get('referencia')?.value || control.get('referencia')?.value.trim() === '')) {
+        errores.push(`Método ${numeroMetodo} (${tipo}): Ingresa el número de referencia`);
+      }
+    });
+
+    if (errores.length > 0) {
+      this.swalService.showWarning(
+        'Campos requeridos',
+        `<strong>Por favor completa los siguientes campos:</strong><br><br>` +
+        errores.map(error => `• ${error}`).join('<br>')
+      );
+      return false;
+    }
+
+    return true;
   }
 
   private agregarMetodoPagoExistente(metodo: any): void {
@@ -1945,17 +2087,6 @@ export class HistorialVentasComponent implements OnInit {
     const metodoControl = this.metodosPagoArray.at(index);
     const tipoPago = metodoControl?.get('tipo')?.value;
     return this.getSimboloMonedaMetodo(tipoPago);
-  }
-
-  // CORRECCIÓN: Verificar si hay efectivo para mostrar selector
-  hayMetodoEfectivoSeleccionado(): boolean {
-    if (!this.metodosPagoArray || this.metodosPagoArray.length === 0) {
-      return false;
-    }
-
-    return this.metodosPagoArray.controls.some(control =>
-      control.get('tipo')?.value === 'efectivo'
-    );
   }
 
   getMontoRestanteParaMetodo(index: number): number {
@@ -4484,6 +4615,125 @@ export class HistorialVentasComponent implements OnInit {
         total: totalProducto
       };
     });
+  }
+
+
+  // Métodos auxiliares
+  necesitaBanco(tipoPago: string): boolean {
+    return tipoPago === 'transferencia' || tipoPago === 'pagomovil';
+  }
+
+  necesitaReferencia(tipoPago: string): boolean {
+    return tipoPago === 'transferencia' || tipoPago === 'pagomovil' || tipoPago === 'zelle';
+  }
+
+  // Método para verificar si hay método efectivo seleccionado
+  hayMetodoEfectivoSeleccionado(): boolean {
+    if (!this.metodosPagoArray || this.metodosPagoArray.length === 0) {
+      return false;
+    }
+
+    return this.metodosPagoArray.controls.some(control =>
+      control.get('tipo')?.value === 'efectivo'
+    );
+  }
+
+  // Método para obtener placeholder de referencia
+  getPlaceholderReferencia(tipoPago: string): string {
+    switch (tipoPago) {
+      case 'transferencia':
+        return 'Ej: 1234567890 (N° de transferencia)';
+      case 'pagomovil':
+        return 'Ej: 12345678 (N° de pago móvil)';
+      case 'zelle':
+        return 'Ej: TRANS123456 (ID de transacción)';
+      default:
+        return 'N° de referencia';
+    }
+  }
+
+  // Método para comparar bancos
+  compararBanco(banco1: any, banco2: any): boolean {
+    return banco1 && banco2 ? banco1.codigo === banco2.codigo : banco1 === banco2;
+  }
+
+  // Método para manejar cambio de banco
+  onBancoChange(bancoObject: any, index: number): void {
+    const metodoControl = this.metodosPagoArray.at(index);
+    if (bancoObject) {
+      metodoControl.patchValue({
+        bancoCodigo: bancoObject.codigo,
+        bancoNombre: bancoObject.nombre
+      });
+    } else {
+      metodoControl.patchValue({
+        bancoCodigo: null,
+        bancoNombre: null
+      });
+    }
+  }
+
+  // Función para marcar todos los controles como tocados
+  marcarTodosLosControlesComoTocados(formArray: FormArray): void {
+    formArray.controls.forEach((control, index) => {
+      if (control instanceof FormGroup) {
+        Object.keys(control.controls).forEach(key => {
+          const formControl = control.get(key);
+          if (formControl) {
+            formControl.markAsTouched();
+          }
+        });
+      }
+    });
+  }
+
+  // Función para verificar si un campo es requerido
+  esCampoRequerido(controlName: string, tipoPago: string): boolean {
+    switch (controlName) {
+      case 'referencia':
+        return this.necesitaReferencia(tipoPago);
+      case 'bancoObject':
+      case 'bancoCodigo':
+      case 'bancoNombre':
+        return this.necesitaBanco(tipoPago);
+      case 'monto':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  // Modifica la función validarMetodosPagoAntesDeEnviar
+  private validarMetodosPagoAntesDeEnviar(metodosPago: any[]): boolean {
+    // Ya validamos todo en validarAntesDeGuardar(), así que aquí solo verificamos conversiones
+    let errores: string[] = [];
+
+    const monedaVenta = this.getMonedaVenta();
+    let totalCalculado = 0;
+
+    metodosPago.forEach((metodo, index) => {
+      try {
+        const montoConvertido = this.convertirMonto(
+          metodo.monto,
+          metodo.moneda,
+          monedaVenta
+        );
+        totalCalculado += montoConvertido;
+      } catch (error) {
+        errores.push(`Error al convertir monto del método ${index + 1}: ${error}`);
+      }
+    });
+
+    if (errores.length > 0) {
+      this.swalService.showWarning(
+        'Errores de conversión',
+        `<strong>Por favor corrija los siguientes errores:</strong><br><br>` +
+        errores.map(error => `• ${error}`).join('<br>')
+      );
+      return false;
+    }
+
+    return true;
   }
 
 

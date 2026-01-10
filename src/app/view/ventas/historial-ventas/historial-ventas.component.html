@@ -1089,7 +1089,7 @@
       <div class="card-body-detalle">
         <div class="productos-list-compacto">
           <div *ngFor="let producto of getProductosSegurosDetalle()" class="producto-item-compacto">
-            
+
             <!-- Header del producto -->
             <div class="producto-header-compacto">
               <div class="producto-titulo">
@@ -1105,7 +1105,7 @@
                 <span class="cantidad">{{producto.cantidad}} und ×</span>
                 <span class="precio-base">{{formatearMoneda(producto.precioUnitarioSinIva)}}</span>
                 <span class="moneda">{{getMonedaDisplay(selectedVenta?.moneda)}}</span>
-                
+
                 <!-- Subtotal base en paréntesis -->
                 <span class="subtotal-base">
                   ({{formatearMoneda(producto.precioUnitarioSinIva * producto.cantidad)}})
@@ -1123,7 +1123,7 @@
 
               <!-- Igual y total final -->
               <span class="igual">=</span>
-              
+
               <div class="calculo-parte total-final">
                 <span class="total-producto">{{formatearMoneda(producto.total)}}</span>
               </div>
@@ -1139,7 +1139,7 @@
         </div>
       </div>
     </div>
-        
+
     <!-- Tarjeta de Configuración de Pago -->
     <div class="info-card pago">
       <div class="card-header-detalle">
@@ -1527,159 +1527,256 @@
           </div>
         </div>
 
-        <!-- Métodos de pago -->
+        <!-- Sección de Métodos de Pago  -->
         <div class="seccion-compacta">
-          <div class="seccion-header with-action">
+          <!-- Header principal con botón -->
+          <div class="seccion-header">
             <div class="header-content">
-              <i class="bi bi-wallet2"></i>
-              <span class="seccion-titulo">Métodos de Pago</span>
+              <div class="header-icon-title">
+                <i class="bi bi-wallet2 text-primary header-icon"></i>
+                <div class="header-text">
+                  <h3 class="seccion-titulo">Métodos de Pago</h3>
+                  <p class="seccion-description">Agrega y configura los métodos de pago para este abono</p>
+                </div>
+              </div>
             </div>
-            <button type="button" class="btn btn-action-compact" (click)="agregarMetodoPago()"
-              [disabled]="metodosPagoArray.length >= 3">
-              <i class="bi bi-plus-lg"></i>
-              Agregar Método
-            </button>
-          </div>
-
-          <div formArrayName="metodosPago" class="metodos-grid-compact">
-            <div *ngFor="let metodo of metodosPagoArray.controls; let i = index" [formGroupName]="i"
-              class="metodo-item-compact">
-
-              <!-- Selector de moneda para efectivo -->
-              <div class="metodo-currency-indicator" *ngIf="metodo.get('tipo')?.value === 'efectivo'">
-                <div class="currency-selector-header">
-                  <i class="bi bi-currency-exchange"></i>
-                  <small>Selecciona la moneda:</small>
-                </div>
-
-                <div class="currency-buttons-container">
-                  <!-- Botón para Dólares -->
-                  <button type="button" class="currency-btn"
-                    [class.currency-active]="getMonedaParaMetodo(i) === 'dolar'"
-                    (click)="seleccionarMonedaEfectivo(i, 'usd')">
-                    <span class="currency-symbol">$</span>
-                    <span class="currency-info">
-                      <strong>USD</strong>
-                      <small>Dólar</small>
-                    </span>
-                  </button>
-
-                  <!-- Botón para Euros -->
-                  <button type="button" class="currency-btn" [class.currency-active]="getMonedaParaMetodo(i) === 'euro'"
-                    (click)="seleccionarMonedaEfectivo(i, 'eur')">
-                    <span class="currency-symbol">€</span>
-                    <span class="currency-info">
-                      <strong>EUR</strong>
-                      <small>Euro</small>
-                    </span>
-                  </button>
-
-                  <!-- Botón para Bolívares -->
-                  <button type="button" class="currency-btn"
-                    [class.currency-active]="getMonedaParaMetodo(i) === 'bolivar'"
-                    (click)="seleccionarMonedaEfectivo(i, 'bs')">
-                    <span class="currency-symbol">Bs.</span>
-                    <span class="currency-info">
-                      <strong>BS</strong>
-                      <small>Bolívar</small>
-                    </span>
-                  </button>
-                </div>
-              </div><br>
-
-              <div class="metodo-header-compact">
-                <div class="metodo-tipo-container">
-                  <label class="metodo-label">
-                    <i class="bi bi-credit-card"></i>
-                    Tipo de pago
-                  </label>
-                  <select class="form-select form-select-compact metodo-select" formControlName="tipo"
-                    (change)="onMetodoPagoChange(i)">
-                    <option value="" disabled selected>Seleccionar método...</option>
-                    <option value="efectivo">💵 Efectivo</option>
-                    <option value="debito">💳 Débito</option>
-                    <option value="credito">🔄 Crédito</option>
-                    <option value="transferencia">🏦 Transferencia</option>
-                    <option value="pagomovil">📱 Pago Móvil</option>
-                    <option value="zelle">🌐 Zelle</option>
-                  </select>
-                </div>
-
-                <div class="metodo-monto-container">
-                  <label class="metodo-label">
-                    <i class="bi bi-cash-coin"></i>
-                    Monto
-                  </label>
-                  <div class="metodo-monto-compact">
-                    <input type="number" class="form-control form-control-compact metodo-input" formControlName="monto"
-                      step="0.01" min="0" [max]="getMontoMaximoParaMetodo(i)" placeholder="0.00"
-                      (input)="validarMontoMetodoPago(i)">
-                    <span class="monto-suffix">{{ getSimboloParaMetodo(i) }}</span>
-                  </div>
-
-                  <!-- Mostrar información de conversión -->
-                  <div class="conversion-hint">
-                    <!-- Mostrar conversión a moneda de venta si es diferente -->
-                    <small *ngIf="mostrarConversionParaMetodo(i) && metodo.get('monto')?.value > 0" class="text-info">
-                      ≈ {{ getConversionParaMetodo(i) | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
-                    </small>
-
-                    <!-- Mostrar conversión a BS si la moneda de venta no es bolívar -->
-                    <small *ngIf="mostrarConversionBs() && metodo.get('monto')?.value > 0" class="text-warning">
-                      ⇄ {{ getConversionBs(metodo.get('monto')?.value) | number:'1.2-2' }} Bs
-                    </small>
-
-                    <!-- Mostrar monto máximo -->
-                    <small *ngIf="getMontoMaximoParaMetodo(i) > 0" class="text-muted d-block mt-1">
-                      Máx: {{ getMontoMaximoParaMetodo(i) | number:'1.2-2' }} {{ getSimboloParaMetodo(i) }}
-                    </small>
-                  </div>
-                </div>
-
-                <div class="metodo-actions">
-                  <button type="button" class="btn btn-icon-compact btn-remove" (click)="removerMetodoPago(i)"
-                    [disabled]="metodosPagoArray.length === 1" title="Eliminar método de pago">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              </div>
-
-
-              <!-- Indicador de moneda NO EFECTIVO (solo lectura) -->
-              <div class="metodo-currency-indicator"
-                *ngIf="metodo.get('tipo')?.value && metodo.get('tipo')?.value !== 'efectivo'">
-                <span class="currency-badge" [ngClass]="{
-                    'currency-usd': getSimboloParaMetodo(i) === '$',
-                    'currency-eur': getSimboloParaMetodo(i) === '€', 
-                    'currency-bs': getSimboloParaMetodo(i) === 'Bs.'
-                  }">
-                  <strong>{{ getSimboloParaMetodo(i) }}</strong> -
-                  <span *ngIf="getSimboloParaMetodo(i) === '$'">Dólares Americanos</span>
-                  <span *ngIf="getSimboloParaMetodo(i) === '€'">Euros</span>
-                  <span *ngIf="getSimboloParaMetodo(i) === 'Bs. '">Bolívares</span>
-                </span>
-              </div>
+            <div class="header-actions">
+              <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()" title="Agregar método">
+                <i class="bi bi-plus-circle"></i>
+                Agregar Método
+              </button>
             </div>
           </div>
 
-          <!-- Resumen de métodos EN MONEDA DE VENTA -->
-          <div *ngIf="metodosPagoArray.length > 0" class="resumen-metodos-compact">
-            <div class="resumen-header">
-              <i class="bi bi-calculator"></i>
-              <span>Resumen de Pagos </span>
+          <!-- Contenido de métodos de pago -->
+          <div class="metodos-pago-section">
+
+            <!-- Selector de moneda para efectivo - COMPACTO -->
+            <div *ngIf="hayMetodoEfectivoSeleccionado()" class="moneda-selector-compact">
+              <div class="moneda-header-compact">
+                <i class="bi bi-currency-exchange text-success"></i>
+                <span class="moneda-titulo">Moneda Efectivo:</span>
+                <div class="moneda-buttons-compact">
+                  <button type="button" class="moneda-btn-compact" [class.moneda-btn-active]="monedaEfectivo === 'USD'"
+                    (click)="seleccionarMonedaEfectivo(0, 'usd')" title="Dólar Americano">
+                    <span class="moneda-symbol-compact">$</span>
+                    <span class="moneda-text-compact">USD</span>
+                  </button>
+
+                  <button type="button" class="moneda-btn-compact" [class.moneda-btn-active]="monedaEfectivo === 'EUR'"
+                    (click)="seleccionarMonedaEfectivo(0, 'eur')" title="Euro">
+                    <span class="moneda-symbol-compact">€</span>
+                    <span class="moneda-text-compact">EUR</span>
+                  </button>
+
+                  <button type="button" class="moneda-btn-compact" [class.moneda-btn-active]="monedaEfectivo === 'Bs'"
+                    (click)="seleccionarMonedaEfectivo(0, 'bs')" title="Bolívar">
+                    <span class="moneda-symbol-compact">Bs</span>
+                    <span class="moneda-text-compact">VES</span>
+                  </button>
+                </div>
+                <div class="moneda-hint-compact" title="Esta selección aplica a todos los pagos en efectivo">
+                  <i class="bi bi-info-circle text-info"></i>
+                </div>
+              </div>
             </div>
-            <div class="resumen-linea">
-              <span class="resumen-label">Total métodos:</span>
-              <strong class="resumen-valor">
-                {{ calcularTotalMetodosPagoEnMonedaVenta() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
-              </strong>
+
+            <!-- Contador de métodos -->
+            <div class="metodos-counter" *ngIf="metodosPagoArray.length > 0">
+              <i class="bi bi-list-check text-primary"></i>
+              <span>{{ metodosPagoArray.length }} método{{ metodosPagoArray.length > 1 ? 's' : '' }} configurado{{
+                metodosPagoArray.length > 1 ? 's' : '' }}</span>
             </div>
-            <div class="resumen-linea" [class.resumen-warning]="!validarPagoCompleto()">
-              <span class="resumen-label">Diferencia:</span>
-              <strong class="resumen-valor">
-                {{ calcularDiferenciaMetodos() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
-                <i *ngIf="!validarPagoCompleto()" class="bi bi-exclamation-triangle warning-icon"></i>
-              </strong>
+
+            <div formArrayName="metodosPago" class="metodos-grid" *ngIf="metodosPagoArray.length > 0">
+              <div *ngFor="let metodoControl of metodosPagoArray.controls; let i = index" [formGroupName]="i"
+                class="metodo-card">
+
+                <!-- Header con número y acciones -->
+                <div class="metodo-card-header">
+                  <div class="metodo-number">
+                    <i class="bi bi-123 text-secondary"></i>
+                    <span>Método #{{ i + 1 }}</span>
+                    <span class="estado-metodo"
+                      [ngClass]="{'estado-completo': metodoControl.valid, 'estado-incompleto': metodoControl.invalid }">
+                      <i class="bi" [class.bi-check-circle-fill]="metodoControl.valid"
+                        [class.bi-exclamation-circle-fill]="metodoControl.invalid"></i>
+                      {{ metodoControl.valid ? 'Completo' : 'Incompleto' }}
+                    </span>
+                  </div>
+                  <button class="btn btn-remove" (click)="removerMetodoPago(i)" title="Eliminar método"
+                    [disabled]="metodosPagoArray.length === 1">
+                    <i class="bi bi-trash text-danger"></i>
+                  </button>
+                </div>
+
+                <div class="metodo-content">
+                  <!-- Selector de tipo de método-->
+                  <div class="campo-principal">
+                    <label class="form-label compact-label">
+                      <i class="bi bi-credit-card text-primary"></i>
+                      Tipo de Pago
+                    </label>
+                    <select class="form-select modern-select" formControlName="tipo" (change)="onMetodoPagoChange(i)"
+                      [ngClass]="{'campo-invalido': metodoControl.get('tipo')?.invalid && metodoControl.get('tipo')?.touched}">
+                      <option value="" disabled selected>Elige un método de pago</option>
+                      <option value="efectivo">💵 Efectivo</option>
+                      <option value="debito">💳 Tarjeta Débito</option>
+                      <option value="credito">🔄 Tarjeta Crédito</option>
+                      <option value="pagomovil">📱 Pago Móvil</option>
+                      <option value="transferencia">🏦 Transferencia</option>
+                      <option value="zelle">🌐 Zelle</option>
+                    </select>
+                    <small *ngIf="metodoControl.get('tipo')?.invalid && metodoControl.get('tipo')?.touched"
+                      class="text-danger">
+                      <i class="bi bi-exclamation-triangle"></i> Campo requerido
+                    </small>
+                  </div>
+
+                  <!-- Campos condicionales -->
+                  <div class="campos-condicionales" *ngIf="metodoControl.get('tipo')?.value">
+
+                    <!-- Campo Banco -->
+                    <div *ngIf="necesitaBanco(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                      <label class="form-label compact-label">
+                        <i class="bi bi-bank"></i>
+                        Banco
+                      </label>
+                      <ng-select [items]="bancosDisponibles" bindLabel="displayText" bindValue="codigo"
+                        formControlName="bancoObject" (change)="onBancoChange($event, i)" [compareWith]="compararBanco"
+                        [searchable]="true" [clearable]="true" placeholder="Buscar banco por código o nombre..."
+                        [class.ng-select-invalid]="metodoControl.get('bancoObject')?.invalid && metodoControl.get('bancoObject')?.touched">
+                      </ng-select>
+                      <small
+                        *ngIf="metodoControl.get('bancoObject')?.invalid && metodoControl.get('bancoObject')?.touched"
+                        class="text-danger">
+                        <i class="bi bi-exclamation-triangle"></i> Selecciona un banco
+                      </small>
+                    </div>
+
+                    <!-- Campo Referencia -->
+                    <div *ngIf="necesitaReferencia(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                      <label class="form-label compact-label">
+                        <i class="bi bi-hash"></i>
+                        N° de Referencia
+                      </label>
+                      <input type="text" class="form-control modern-input" formControlName="referencia"
+                        [placeholder]="getPlaceholderReferencia(metodoControl.get('tipo')?.value)" maxlength="20"
+                        [class.campo-invalido]="metodoControl.get('referencia')?.invalid && metodoControl.get('referencia')?.touched" />
+                      <small
+                        *ngIf="metodoControl.get('referencia')?.invalid && metodoControl.get('referencia')?.touched"
+                        class="text-danger">
+                        <i class="bi bi-exclamation-triangle"></i> Ingresa el número de referencia
+                      </small>
+                    </div>
+
+                    <!-- Campo Monto -->
+                    <div class="campo-monto">
+                      <label class="form-label compact-label">
+                        <i class="bi bi-cash-stack"></i>
+                        Monto a Pagar
+                      </label>
+                      <input type="number" class="form-control modern-input" formControlName="monto" step="0.01"
+                        min="0.01" [max]="getMontoMaximoParaMetodo(i)" placeholder="0.00"
+                        (input)="validarMontoMetodoPago(i)"
+                        [class.campo-invalido]="metodoControl.get('monto')?.invalid && metodoControl.get('monto')?.touched" />
+                      <small *ngIf="metodoControl.get('monto')?.invalid && metodoControl.get('monto')?.touched"
+                        class="text-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <span *ngIf="metodoControl.get('monto')?.errors?.['required']">Ingresa un monto válido</span>
+                        <span *ngIf="metodoControl.get('monto')?.errors?.['min']">El monto debe ser mayor a 0</span>
+                        <span *ngIf="metodoControl.get('monto')?.errors?.['max']">El monto excede el máximo
+                          permitido</span>
+                      </small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Footer con información -->
+                <div class="metodo-footer" *ngIf="metodoControl.get('tipo')?.value">
+                  <div class="footer-info">
+                    <span class="maximo-text">
+                      <i class="bi bi-graph-up text-info"></i>
+                      Máx. disponible: {{ getMontoMaximoParaMetodo(i) | number:'1.2-2' }} {{ getSimboloParaMetodo(i) }}
+                    </span>
+
+                    <!-- Mostrar conversión clara -->
+                    <span *ngIf="metodoControl.get('monto')?.value && metodoControl.get('monto')?.value > 0"
+                      class="conversion-text">
+                      <i class="bi bi-calculator text-primary"></i>
+                      {{ metodoControl.get('monto')?.value | number:'1.2-2' }} {{ getSimboloParaMetodo(i) }}
+                      <span *ngIf="mostrarConversionParaMetodo(i)" class="conversion-moneda-venta">
+                        = {{ getConversionParaMetodo(i) | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                      </span>
+                      <span *ngIf="mostrarConversionBs()" class="bs-conversion">
+                        ({{ getConversionBs(metodoControl.get('monto')?.value) | number:'1.2-2' }} Bs)
+                      </span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Estado vacío -->
+                <div class="metodo-empty" *ngIf="!metodoControl.get('tipo')?.value">
+                  <i class="bi bi-credit-card-2-front text-muted"></i>
+                  <span>Selecciona un tipo de pago para continuar</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Estado vacío general -->
+            <div class="empty-state" *ngIf="metodosPagoArray.length === 0">
+              <div class="empty-icon">
+                <i class="bi bi-wallet text-muted"></i>
+              </div>
+              <h5>No hay métodos de pago</h5>
+              <p>Agrega al menos un método de pago para continuar con el abono</p>
+              <!-- BOTÓN PARA PRIMER MÉTODO (solo se muestra cuando NO hay métodos) -->
+              <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()">
+                <i class="bi bi-plus-circle"></i>
+                Agregar Primer Método
+              </button>
+            </div>
+
+            <!-- Resumen de pagos (después de agregar métodos) -->
+            <div *ngIf="metodosPagoArray.length > 0" class="resumen-pagos-elegante">
+              <div class="resumen-header">
+                <div class="resumen-icon">
+                  <i class="bi bi-calculator"></i>
+                </div>
+                <div class="resumen-title">
+                  <h6>Resumen de Pagos</h6>
+                  <small>Total en {{getMonedaVentaDisplay()}}</small>
+                </div>
+              </div>
+
+              <div class="resumen-body">
+                <div class="resumen-item">
+                  <span class="resumen-label">Total métodos:</span>
+                  <span class="resumen-value total-methods">
+                    {{ calcularTotalMetodosPagoEnMonedaVenta() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                  </span>
+                </div>
+
+                <div class="resumen-item" [class.has-difference]="!validarPagoCompleto()">
+                  <span class="resumen-label">Diferencia:</span>
+                  <span class="resumen-value difference">
+                    {{ calcularDiferenciaMetodos() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                    <i *ngIf="!validarPagoCompleto()" class="bi bi-exclamation-triangle warning-icon"></i>
+                  </span>
+                </div>
+
+                <div class="resumen-item total">
+                  <span class="resumen-label">Monto a abonar:</span>
+                  <span class="resumen-value grand-total">
+                    {{ editarVentaForm.get('montoAbonado')?.value || 0 | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                  </span>
+                </div>
+              </div>
+
+              <div *ngIf="!validarPagoCompleto()" class="resumen-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>Los métodos de pago no coinciden con el monto a abonar</span>
+              </div>
             </div>
           </div>
         </div>
