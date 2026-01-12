@@ -1,4 +1,4 @@
-<div class="card contenedor-generar-venta" style="margin-bottom: 0rem;">
+<div class="card contenedor-historial-venta" style="margin-bottom: 0rem;">
   <!-- Header modernizado del módulo -->
   <div class="card-header-moderno">
     <div class="header-content">
@@ -19,7 +19,6 @@
   </div>
 
   <div class="card-body">
-
     <!-- Tarjetas de Resumen -->
     <div class="row mb-4">
       <!-- Total Ventas -->
@@ -492,6 +491,7 @@
                       <div class="fw-semibold">{{venta.productos?.length || 0}} items</div>
                     </div>
                   </div>
+
                   <div class="resumen-item">
                     <i class="bi bi-currency-dollar text-success"></i>
                     <div>
@@ -499,13 +499,30 @@
                       <div class="fw-semibold">{{ getMontoParaMostrar(venta, venta.subtotal) }}</div>
                     </div>
                   </div>
+
+                  <div class="resumen-item">
+                    <i class="bi bi-percent text-info"></i>
+                    <div>
+                      <small class="text-muted">IVA ({{venta.impuesto || 16}}%)</small>
+                      <div class="fw-semibold text-info">
+                        {{ getMontoParaMostrar(venta, venta.totalIva || 0) }}
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="resumen-item">
                     <i class="bi bi-percent text-warning"></i>
                     <div>
                       <small class="text-muted">Descuento</small>
-                      <div class="fw-semibold">{{venta.descuento || 0}}%</div>
+                      <div class="fw-semibold text-danger">
+                        -{{ getMontoParaMostrar(venta, getTotalDescuentoMoneda(venta)) }}
+                      </div>
+                      <small class="text-muted" *ngIf="getPorcentajeDescuentoCalculado(venta) > 0">
+                        ({{ getPorcentajeDescuentoCalculado(venta) | number:'1.1-1' }}% sobre subtotal)
+                      </small>
                     </div>
                   </div>
+
                   <div class="resumen-item">
                     <i class="bi bi-cash-coin text-info"></i>
                     <div>
@@ -1456,11 +1473,19 @@
       </div>
 
       <form [formGroup]="editarVentaForm" (ngSubmit)="guardarEdicionVenta(modal)">
-        <!-- Sección principal compacta - CON MONEDA DE VENTA -->
+        <!-- Sección inngrese monto -->
         <div class="seccion-compacta">
+          <!-- Header principal con botón -->
           <div class="seccion-header">
-            <i class="bi bi-cash-coin"></i>
-            <span class="seccion-titulo">Monto del Abono</span>
+            <div class="header-content">
+              <div class="header-icon-title">
+                <i class="bi bi-cash-coin text-primary header-icon"></i>
+                <div class="header-text">
+                  <h3 class="seccion-titulo">Monto del Abono</h3>
+                  <p class="seccion-description">Configura el monto para este abono</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="form-grid-compact">
@@ -1541,46 +1566,19 @@
               </div>
             </div>
             <div class="header-actions">
-              <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()" title="Agregar método">
+              <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()" title="Agregar método"
+                [disabled]="metodosPagoArray.length >= 10">
                 <i class="bi bi-plus-circle"></i>
                 Agregar Método
+                <span *ngIf="metodosPagoArray.length > 0" class="ms-1">
+                  ({{metodosPagoArray.length}}/5)
+                </span>
               </button>
             </div>
           </div>
 
           <!-- Contenido de métodos de pago -->
           <div class="metodos-pago-section">
-
-            <!-- Selector de moneda para efectivo - COMPACTO -->
-            <div *ngIf="hayMetodoEfectivoSeleccionado()" class="moneda-selector-compact">
-              <div class="moneda-header-compact">
-                <i class="bi bi-currency-exchange text-success"></i>
-                <span class="moneda-titulo">Moneda Efectivo:</span>
-                <div class="moneda-buttons-compact">
-                  <button type="button" class="moneda-btn-compact" [class.moneda-btn-active]="monedaEfectivo === 'USD'"
-                    (click)="seleccionarMonedaEfectivo(0, 'usd')" title="Dólar Americano">
-                    <span class="moneda-symbol-compact">$</span>
-                    <span class="moneda-text-compact">USD</span>
-                  </button>
-
-                  <button type="button" class="moneda-btn-compact" [class.moneda-btn-active]="monedaEfectivo === 'EUR'"
-                    (click)="seleccionarMonedaEfectivo(0, 'eur')" title="Euro">
-                    <span class="moneda-symbol-compact">€</span>
-                    <span class="moneda-text-compact">EUR</span>
-                  </button>
-
-                  <button type="button" class="moneda-btn-compact" [class.moneda-btn-active]="monedaEfectivo === 'Bs'"
-                    (click)="seleccionarMonedaEfectivo(0, 'bs')" title="Bolívar">
-                    <span class="moneda-symbol-compact">Bs</span>
-                    <span class="moneda-text-compact">VES</span>
-                  </button>
-                </div>
-                <div class="moneda-hint-compact" title="Esta selección aplica a todos los pagos en efectivo">
-                  <i class="bi bi-info-circle text-info"></i>
-                </div>
-              </div>
-            </div>
-
             <!-- Contador de métodos -->
             <div class="metodos-counter" *ngIf="metodosPagoArray.length > 0">
               <i class="bi bi-list-check text-primary"></i>
@@ -1597,11 +1595,19 @@
                   <div class="metodo-number">
                     <i class="bi bi-123 text-secondary"></i>
                     <span>Método #{{ i + 1 }}</span>
-                    <span class="estado-metodo"
-                      [ngClass]="{'estado-completo': metodoControl.valid, 'estado-incompleto': metodoControl.invalid }">
-                      <i class="bi" [class.bi-check-circle-fill]="metodoControl.valid"
-                        [class.bi-exclamation-circle-fill]="metodoControl.invalid"></i>
-                      {{ metodoControl.valid ? 'Completo' : 'Incompleto' }}
+                    <span class="estado-metodo" [ngClass]="{
+                            'estado-vacio': metodoEstaVacio(metodoControl),
+                            'estado-incompleto': metodoTieneDatosParciales(metodoControl),
+                            'estado-completo': metodoEstaCompleto(metodoControl)
+                          }">
+                      <i class="bi" [class.bi-dash-circle-fill]="metodoEstaVacio(metodoControl)"
+                        [class.bi-exclamation-circle-fill]="metodoTieneDatosParciales(metodoControl)"
+                        [class.bi-check-circle-fill]="metodoEstaCompleto(metodoControl)"></i>
+                      {{
+                      metodoEstaVacio(metodoControl) ? 'Vacío' :
+                      metodoTieneDatosParciales(metodoControl) ? 'Incompleto' :
+                      'Completo'
+                      }}
                     </span>
                   </div>
                   <button class="btn btn-remove" (click)="removerMetodoPago(i)" title="Eliminar método"
@@ -1635,6 +1641,40 @@
 
                   <!-- Campos condicionales -->
                   <div class="campos-condicionales" *ngIf="metodoControl.get('tipo')?.value">
+
+                    <!-- Selector de moneda para efectivo (SOLO para tipo efectivo) -->
+                    <div *ngIf="metodoControl.get('tipo')?.value === 'efectivo'"
+                      class="campo-adicional moneda-selector">
+                      <div class="moneda-header">
+                        <i class="bi bi-currency-exchange text-success"></i>
+                        <span class="moneda-label">Moneda del Efectivo</span>
+                      </div>
+                      <div class="moneda-buttons-compact">
+                        <button type="button" class="moneda-btn-compact"
+                          [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'USD'"
+                          (click)="seleccionarMonedaEfectivo(i, 'usd')" title="Dólar Americano">
+                          <span class="moneda-symbol-compact">$</span>
+                          <span class="moneda-text-compact">USD</span>
+                        </button>
+
+                        <button type="button" class="moneda-btn-compact"
+                          [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'EUR'"
+                          (click)="seleccionarMonedaEfectivo(i, 'eur')" title="Euro">
+                          <span class="moneda-symbol-compact">€</span>
+                          <span class="moneda-text-compact">EUR</span>
+                        </button>
+
+                        <button type="button" class="moneda-btn-compact"
+                          [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'Bs'"
+                          (click)="seleccionarMonedaEfectivo(i, 'bs')" title="Bolívar">
+                          <span class="moneda-symbol-compact">Bs</span>
+                          <span class="moneda-text-compact">VES</span>
+                        </button>
+                      </div>
+                      <small class="text-muted" style="font-size: 11px; display: block; margin-top: 3px;">
+                        <i class="bi bi-info-circle"></i> Selecciona la moneda del efectivo
+                      </small>
+                    </div>
 
                     <!-- Campo Banco -->
                     <div *ngIf="necesitaBanco(metodoControl.get('tipo')?.value)" class="campo-adicional">
@@ -1709,7 +1749,8 @@
                         = {{ getConversionParaMetodo(i) | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
                       </span>
                       <span *ngIf="mostrarConversionBs()" class="bs-conversion">
-                        ({{ getConversionBs(metodoControl.get('monto')?.value) | number:'1.2-2' }} Bs)
+                        ({{ getConversionBs(metodoControl.get('monto')?.value, getMonedaParaMetodo(i)) | number:'1.2-2'
+                        }} Bs)
                       </span>
                     </span>
                   </div>
@@ -1776,6 +1817,34 @@
               <div *ngIf="!validarPagoCompleto()" class="resumen-warning">
                 <i class="bi bi-exclamation-triangle"></i>
                 <span>Los métodos de pago no coinciden con el monto a abonar</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección de Observaciones (Nueva) -->
+        <div class="seccion-compacta"
+          *ngIf="selectedVenta?.observaciones || editarVentaForm.get('observaciones')?.value">
+          <div class="seccion-header">
+            <i class="bi bi-chat-left-text"></i>
+            <span class="seccion-titulo">Observaciones del Abono</span>
+          </div>
+
+          <div class="form-grid-compact">
+            <div class="form-group-compact" style="grid-column: 1 / -1;">
+              <label class="form-label-compact">
+                <i class="bi bi-pencil"></i>
+                Notas adicionales (opcional)
+              </label>
+              <textarea class="form-control form-control-compact" formControlName="observaciones" rows="3"
+                placeholder="Ej: Cliente pagará el resto la próxima semana, se le entregó recibo, etc."
+                maxlength="500"></textarea>
+              <div class="input-hint">
+                <i class="bi bi-info-circle"></i>
+                <span>Información adicional sobre este abono. Máx. 500 caracteres.</span>
+                <span class="float-end text-muted">
+                  {{ editarVentaForm.get('observaciones')?.value?.length || 0 }}/500
+                </span>
               </div>
             </div>
           </div>

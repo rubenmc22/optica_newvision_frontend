@@ -159,7 +159,7 @@
 }
 
 // Asegurar que el contenedor principal tenga bordes redondeados
-.contenedor-generar-venta {
+.contenedor-historial-venta {
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
@@ -2487,6 +2487,120 @@
         }
     }
 
+    /* Selector de moneda para efectivo dentro de método */
+.metodo-card .moneda-buttons-compact {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+
+  .moneda-btn-compact {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    min-width: 80px;
+    justify-content: center;
+    flex: 1;
+
+    &:hover {
+      border-color: #adb5bd;
+      background: #f8f9fa;
+      transform: translateY(-1px);
+    }
+
+    &.moneda-btn-active {
+      border-color: #2c5aa0;
+      background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 100%);
+      border-width: 2px;
+      font-weight: 600;
+
+      .moneda-symbol-compact {
+        transform: scale(1.1);
+      }
+    }
+
+    .moneda-symbol-compact {
+      font-size: 1.1rem;
+      font-weight: bold;
+      transition: transform 0.2s;
+    }
+
+    .moneda-text-compact {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #495057;
+    }
+
+    /* Colores específicos para cada moneda */
+    &:first-child {
+      .moneda-symbol-compact {
+        color: #28a745;
+      }
+
+      &.moneda-btn-active {
+        border-color: #28a745;
+        .moneda-text-compact {
+          color: #28a745;
+        }
+      }
+    }
+
+    &:nth-child(2) {
+      .moneda-symbol-compact {
+        color: #007bff;
+      }
+
+      &.moneda-btn-active {
+        border-color: #007bff;
+        .moneda-text-compact {
+          color: #007bff;
+        }
+      }
+    }
+
+    &:last-child {
+      .moneda-symbol-compact {
+        color: #fd7e14;
+      }
+
+      &.moneda-btn-active {
+        border-color: #fd7e14;
+        .moneda-text-compact {
+          color: #fd7e14;
+        }
+      }
+    }
+  }
+}
+
+/* También puedes añadir estilos específicos para el campo de moneda */
+.campo-adicional.moneda-selector {
+  margin-bottom: 1rem;
+  
+  .moneda-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    
+    .bi-currency-exchange {
+      font-size: 1rem;
+      color: #28a745;
+    }
+    
+    .moneda-label {
+      font-weight: 500;
+      color: #495057;
+      font-size: 0.9rem;
+    }
+  }
+}
+
     /* Responsive para el selector compacto */
     @media (max-width: 768px) {
         .moneda-selector-compact {
@@ -3103,6 +3217,42 @@
         margin-top: 15px;
         font-size: 0.9em;
     }
+}
+
+/* Estilos para el campo de observaciones */
+textarea.form-control-compact {
+  resize: vertical;
+  min-height: 80px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  
+  &:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    outline: none;
+  }
+  
+  &::placeholder {
+    color: #9ca3af;
+    font-size: 0.85rem;
+  }
+}
+
+/* Contador de caracteres */
+.input-hint .float-end {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  
+  &.text-danger {
+    color: #dc2626;
+  }
+}
+
+/* Indicador visual para campo opcional */
+.optional-field {
+  font-weight: normal;
+  color: #6c757d;
+  font-size: 0.8rem;
 }
 
 /* Responsive global */

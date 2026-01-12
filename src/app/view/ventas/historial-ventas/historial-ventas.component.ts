@@ -1013,12 +1013,25 @@ export class HistorialVentasComponent implements OnInit {
       const metodo = control.value;
       const monedaMetodo = this.getMonedaParaMetodo(index);
 
-      // Validar campos requeridos según el tipo
+      const bancoObject = metodo.bancoObject;
+      let bancoCodigo = '';
+      let bancoNombre = '';
+
+      // Si bancoObject es un objeto, extraer código y nombre
+      if (bancoObject && typeof bancoObject === 'object') {
+        bancoCodigo = bancoObject.codigo || '';
+        bancoNombre = bancoObject.nombre || '';
+      } else {
+        // Si ya vienen como strings separados
+        bancoCodigo = metodo.bancoCodigo || '';
+        bancoNombre = metodo.bancoNombre || '';
+      }
+
       if (this.necesitaReferencia(metodo.tipo) && (!metodo.referencia || metodo.referencia.trim() === '')) {
         throw new Error(`El método ${metodo.tipo} requiere un número de referencia`);
       }
 
-      if (this.necesitaBanco(metodo.tipo) && (!metodo.bancoCodigo || !metodo.bancoNombre)) {
+      if (this.necesitaBanco(metodo.tipo) && (!bancoCodigo || !bancoNombre)) {
         throw new Error(`El método ${metodo.tipo} requiere seleccionar un banco`);
       }
 
@@ -1037,8 +1050,8 @@ export class HistorialVentasComponent implements OnInit {
         monto: Number(metodo.monto) || 0,
         moneda: monedaFormatoBackend,
         referencia: metodo.referencia?.trim() || null,
-        bancoCodigo: metodo.bancoCodigo?.trim() || null,
-        bancoNombre: metodo.bancoNombre?.trim() || null,
+        bancoCodigo: bancoCodigo?.trim() || null,
+        bancoNombre: bancoNombre?.trim() || null,
 
         // Campos adicionales
         montoEnMonedaVenta: montoEnMonedaVenta,
@@ -1153,8 +1166,6 @@ export class HistorialVentasComponent implements OnInit {
       return;
     }
 
-    const totalMetodosEnMonedaVenta = this.calcularTotalMetodosPagoEnMonedaVenta();
-
     // Mostrar confirmación detallada
     const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
     const nuevoAbono = formValue.montoAbonado;
@@ -1168,33 +1179,14 @@ export class HistorialVentasComponent implements OnInit {
     
     <strong>Resumen de la venta:</strong><br>
     • Total venta: ${this.formatearMoneda(totalVenta)}<br>
-    • Abonado anterior: ${this.formatearMoneda(montoAbonadoAnterior)}<br>
-    • Nuevo abono: ${this.formatearMoneda(nuevoAbono)}<br>
     • Total abonado: ${this.formatearMoneda(totalAbonado)}<br>
     • Nueva deuda: ${this.formatearMoneda(nuevaDeudaPendiente)}<br><br>
-    
-    <strong>💳 Métodos de pago a registrar (${metodosPago.length}):</strong><br>
-  `;
-
-    metodosPago.forEach((metodo, index) => {
-      const montoEnMonedaVenta = this.convertirMonto(
-        metodo.monto,
-        metodo.moneda,
-        this.getMonedaVenta()
-      );
-
-      mensajeConfirmacion += `
-      ${index + 1}. ${metodo.tipo}: ${this.formatearMoneda(metodo.monto, metodo.moneda)}
-      ${metodo.moneda !== this.getMonedaVenta() ? `(≈ ${this.formatearMoneda(montoEnMonedaVenta)})` : ''}<br>
     `;
-    });
-
-    mensajeConfirmacion += `<br><strong>💰 Total en ${this.getMonedaVenta()}: ${this.formatearMoneda(totalMetodosEnMonedaVenta)}</strong>`;
 
     this.swalService.showConfirm(
       'Confirmar Abono Completo',
       mensajeConfirmacion,
-      '✅ Sí, Registrar Abono Completo',
+      '✅ Sí, Registrar Abono',
       '❌ Cancelar'
     ).then((result) => {
       if (result.isConfirmed) {
@@ -1236,8 +1228,6 @@ export class HistorialVentasComponent implements OnInit {
     // Preparar el request según lo que espera el backend
     const requestData = this.prepararRequestParaBackend(metodosPago, montoAbonado);
 
-    console.log('📊 Métodos de pago:', metodosPago);
-
     this.enviarAbonoCompleto(modal, requestData);
   }
 
@@ -1251,18 +1241,6 @@ export class HistorialVentasComponent implements OnInit {
     // Si tiene algún valor, se considera que tiene datos
     return !!(tipo || monto || referencia || banco);
   }
-
-  // Método para verificar si un método está completamente vacío
-  metodoEstaVacio(control: AbstractControl): boolean {
-    const tipo = control.get('tipo')?.value;
-    const monto = control.get('monto')?.value;
-    const referencia = control.get('referencia')?.value;
-    const banco = control.get('bancoObject')?.value;
-
-    // Si no tiene ningún valor, está vacío
-    return !tipo && !monto && !referencia && !banco;
-  }
-
 
   private prepararRequestParaBackend(metodosPago: any[], montoAbonado: number): any {
     // Estructura base del request
@@ -1363,7 +1341,7 @@ export class HistorialVentasComponent implements OnInit {
 
       this.swalService.showSuccess(
         '✅ Abono registrado',
-        'El abono se ha registrado correctamente con todos los métodos de pago.'
+        'El abono se ha registrado correctamente.'
       );
 
       // Actualizar la venta localmente con los datos del backend
@@ -1477,7 +1455,6 @@ export class HistorialVentasComponent implements OnInit {
     return display;
   }
 
-  // Método para seleccionar moneda para un método de pago específico
   seleccionarMonedaEfectivo(index: number, moneda: string): void {
     const metodoControl = this.metodosPagoArray.at(index);
 
@@ -1486,21 +1463,27 @@ export class HistorialVentasComponent implements OnInit {
       return;
     }
 
-    // Actualizar la moneda de efectivo global (para mantener compatibilidad)
+    // Determinar el código de moneda
+    let monedaCodigo = 'USD';
     switch (moneda.toLowerCase()) {
       case 'usd':
       case 'dolar':
-        this.monedaEfectivo = 'USD';
+        monedaCodigo = 'USD';
         break;
       case 'eur':
       case 'euro':
-        this.monedaEfectivo = 'EUR';
+        monedaCodigo = 'EUR';
         break;
       case 'bs':
       case 'bolivar':
-        this.monedaEfectivo = 'Bs';
+        monedaCodigo = 'Bs';
         break;
     }
+
+    //Actualizar la moneda específica de este método
+    metodoControl.patchValue({
+      monedaEfectivo: monedaCodigo
+    });
 
     // Forzar recálculo de montos y validaciones
     setTimeout(() => {
@@ -1509,16 +1492,17 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  // Modificar getMonedaParaMetodo para usar monedas específicas por método
+  // Reemplaza este método:
   getMonedaParaMetodo(index: number): string {
     const metodoControl = this.metodosPagoArray.at(index);
     const tipoPago = metodoControl?.get('tipo')?.value;
 
     switch (tipoPago) {
       case 'efectivo':
-        // Para efectivo, usar la moneda seleccionada globalmente
-        return this.monedaEfectivo.toLowerCase() === 'bs' ? 'bolivar' :
-          this.monedaEfectivo.toLowerCase() === 'eur' ? 'euro' : 'dolar';
+        // ✅ NUEVO: Usar la moneda específica de este método
+        const monedaEfectivoMetodo = metodoControl?.get('monedaEfectivo')?.value || 'USD';
+        return monedaEfectivoMetodo.toLowerCase() === 'bs' ? 'bolivar' :
+          monedaEfectivoMetodo.toLowerCase() === 'eur' ? 'euro' : 'dolar';
       case 'pagomovil':
       case 'transferencia':
       case 'debito':
@@ -1531,12 +1515,21 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  // Modificar getSimboloMonedaMetodo para ser consistente
-  getSimboloMonedaMetodo(tipoPago: string): string {
+  // Modifica este método:
+  getSimboloMonedaMetodo(index: number): string {
+    const metodoControl = this.metodosPagoArray.at(index);
+    const tipoPago = metodoControl?.get('tipo')?.value;
+
     switch (tipoPago) {
       case 'efectivo':
-        // Para efectivo, usar el símbolo de la moneda global
-        return this.getSimboloMonedaEfectivo();
+        // ✅ NUEVO: Usar símbolo de la moneda específica
+        const monedaEfectivoMetodo = metodoControl?.get('monedaEfectivo')?.value || 'USD';
+        switch (monedaEfectivoMetodo) {
+          case 'USD': return '$';
+          case 'EUR': return '€';
+          case 'Bs': return 'Bs. ';
+          default: return '$';
+        }
       case 'pagomovil':
       case 'transferencia':
       case 'debito':
@@ -1612,10 +1605,19 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   agregarMetodoPago(): void {
-    // Crear el grupo del método sin disparar validaciones
+    //LIMITAR A MÁXIMO 5 MÉTODOS DE PAGO
+    if (this.metodosPagoArray.length > 5) {
+      this.swalService.showWarning(
+        'Límite alcanzado',
+        'No puedes agregar más de 5 métodos de pago.'
+      );
+      return;
+    }
+
     const metodoGroup = this.fb.group({
-      tipo: [''], // Sin validador required inicial
-      monto: [null], // Sin validadores iniciales
+      tipo: [''],
+      monto: [null],
+      monedaEfectivo: ['USD'],
       bancoCodigo: [''],
       bancoNombre: [''],
       referencia: [''],
@@ -1685,13 +1687,24 @@ export class HistorialVentasComponent implements OnInit {
     );
 
     if (metodosConDatos.length === 0) {
-      this.swalService.showWarning('Advertencia', 'Debe agregar al menos un método de pago.');
-      return false;
+      errores.push('Debe agregar al menos un método de pago válido.');
+    }
+
+    // Validar monto abonado
+    const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value;
+    if (!montoAbonado || montoAbonado <= 0) {
+      errores.push('Ingresa un monto válido a abonar (mayor a 0).');
+    }
+
+    // Validar que no exceda la deuda
+    const montoDeuda = this.calcularMontoDeuda();
+    if (montoAbonado > montoDeuda) {
+      errores.push(`El monto a abonar excede la deuda pendiente (${this.formatearMoneda(montoDeuda)}).`);
     }
 
     // Marcar como tocados para mostrar errores visuales
-    this.metodosPagoArray.controls.forEach(control => {
-      // Solo marcar si el método tiene tipo seleccionado
+    this.metodosPagoArray.controls.forEach((control, index) => {
+      // Solo marcar si el método tiene tipo seleccionado (tiene datos)
       if (control.get('tipo')?.value) {
         control.get('monto')?.markAsTouched();
 
@@ -1711,7 +1724,14 @@ export class HistorialVentasComponent implements OnInit {
       const tipo = control.get('tipo')?.value;
 
       if (!tipo) {
-        // Si no tiene tipo, no es un método válido
+        // Si no tiene tipo pero tiene otros datos, marcar como error
+        const tieneOtrosDatos = control.get('monto')?.value ||
+          control.get('referencia')?.value ||
+          control.get('bancoObject')?.value;
+
+        if (tieneOtrosDatos) {
+          errores.push(`Método ${index + 1}: Selecciona un tipo de pago`);
+        }
         return;
       }
 
@@ -1744,33 +1764,6 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     return true;
-  }
-
-  private agregarMetodoPagoExistente(metodo: any): void {
-    const metodoGroup = this.fb.group({
-      tipo: [metodo.tipo || '', Validators.required],
-      monto: [metodo.monto || 0, [Validators.required, Validators.min(0)]]
-    });
-
-    const index = this.metodosPagoArray.length;
-    this.metodosPagoArray.push(metodoGroup);
-
-    // Si es efectivo y tiene moneda específica, actualizar la global
-    if (metodo.tipo === 'efectivo' && metodo.moneda_id) {
-      if (metodo.moneda_id === 'bolivar') {
-        this.monedaEfectivo = 'Bs';
-      } else if (metodo.moneda_id === 'euro') {
-        this.monedaEfectivo = 'EUR';
-      } else {
-        this.monedaEfectivo = 'USD';
-      }
-    }
-
-    metodoGroup.get('monto')?.valueChanges.subscribe(value => {
-      if (value !== null && value !== undefined) {
-        this.validarMontoMetodoPago(index);
-      }
-    });
   }
 
   getSimboloMonedaParaVenta(venta: any): string {
@@ -1824,16 +1817,18 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   // También asegúrate que getConversionBs redondee correctamente
-  getConversionBs(monto: number): number {
-    const monedaVenta = this.getMonedaVenta();
+  getConversionBs(monto: number, monedaOrigen?: string): number {
+    // Si no se especifica monedaOrigen, usar la moneda de la venta
+    const moneda = monedaOrigen || this.getMonedaVenta();
 
-    if (monedaVenta === 'bolivar') {
+    if (moneda === 'bolivar') {
       return this.redondear(monto, 2);
     }
 
-    const tasa = this.tasasPorId[monedaVenta] || 1;
+    const tasa = this.tasasPorId[moneda] || 1;
     return this.redondear(monto * tasa, 2);
   }
+
 
   // Obtener monto máximo permitido en moneda de venta
   getMontoMaximoPermitido(): number {
@@ -1841,23 +1836,21 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   reinicializarFormularioConDeuda() {
-    const montoDeuda = this.calcularMontoDeuda();
-
     if (this.editarVentaForm) {
-      // Inicializar con valor vacío (null) en lugar del monto de deuda
       this.editarVentaForm.patchValue({
-        montoAbonado: null, // Cambiado de montoDeuda a null
+        montoAbonado: null,
         observaciones: this.selectedVenta.observaciones || ''
       });
 
+      //Limpiar el array y agregar solo 1 método por defecto
       this.metodosPagoArray.clear();
 
+      //Agregar solo 1 método de pago vacío por defecto
+      this.agregarMetodoPago();
+
       if (this.selectedVenta.metodosPago && this.selectedVenta.metodosPago.length > 0) {
-        this.selectedVenta.metodosPago.forEach((metodo: any) => {
-          this.agregarMetodoPagoExistente(metodo);
-        });
-      } else {
-        this.agregarMetodoPago();
+        // Opcional: Si quieres mostrar el último método de pago usado
+
       }
     } else {
       this.inicializarFormulario();
@@ -1885,7 +1878,7 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  // CORRECCIÓN: Obtener montos de progreso en moneda de venta
+  //Obtener montos de progreso en moneda de venta
   getMontosProgreso(): string {
     if (!this.selectedVenta) return '$0.00 / $0.00';
 
@@ -2082,11 +2075,31 @@ export class HistorialVentasComponent implements OnInit {
     return Math.abs(totalMetodosEnMonedaVenta - montoAbonado) < 0.01;
   }
 
-  // CORRECCIÓN: Obtener símbolo para método específico
+  //Obtener símbolo para método específico
   getSimboloParaMetodo(index: number): string {
     const metodoControl = this.metodosPagoArray.at(index);
     const tipoPago = metodoControl?.get('tipo')?.value;
-    return this.getSimboloMonedaMetodo(tipoPago);
+
+    switch (tipoPago) {
+      case 'efectivo':
+        // Usar símbolo de la moneda específica de este método
+        const monedaEfectivoMetodo = metodoControl?.get('monedaEfectivo')?.value || 'USD';
+        switch (monedaEfectivoMetodo) {
+          case 'USD': return '$';
+          case 'EUR': return '€';
+          case 'Bs': return 'Bs. ';
+          default: return '$';
+        }
+      case 'pagomovil':
+      case 'transferencia':
+      case 'debito':
+      case 'credito':
+        return 'Bs. ';
+      case 'zelle':
+        return '$';
+      default:
+        return this.simboloMonedaSistema;
+    }
   }
 
   getMontoRestanteParaMetodo(index: number): number {
@@ -4736,6 +4749,97 @@ export class HistorialVentasComponent implements OnInit {
     return true;
   }
 
+  // Método para determinar si un método está completo
+  metodoEstaCompleto(metodoControl: AbstractControl): boolean {
+    const tipo = metodoControl.get('tipo')?.value;
+
+    // Si no hay tipo seleccionado, está incompleto
+    if (!tipo) return false;
+
+    const monto = metodoControl.get('monto')?.value;
+
+    // Validar monto básico
+    if (!monto || monto <= 0) return false;
+
+    // Validar campos específicos según el tipo
+    if (this.necesitaBanco(tipo)) {
+      const bancoObject = metodoControl.get('bancoObject')?.value;
+      if (!bancoObject) return false;
+    }
+
+    if (this.necesitaReferencia(tipo)) {
+      const referencia = metodoControl.get('referencia')?.value;
+      if (!referencia || referencia.trim() === '') return false;
+    }
+
+    return true;
+  }
+
+  // Método para determinar si un método está completamente vacío
+  metodoEstaVacio(metodoControl: AbstractControl): boolean {
+    const tipo = metodoControl.get('tipo')?.value;
+    const monto = metodoControl.get('monto')?.value;
+    const referencia = metodoControl.get('referencia')?.value;
+    const banco = metodoControl.get('bancoObject')?.value;
+
+    // Si no tiene ningún valor, está vacío
+    return !tipo && !monto && !referencia && !banco;
+  }
+
+  // Método para determinar si un método tiene datos parciales
+  metodoTieneDatosParciales(metodoControl: AbstractControl): boolean {
+    const tipo = metodoControl.get('tipo')?.value;
+    const monto = metodoControl.get('monto')?.value;
+    const referencia = metodoControl.get('referencia')?.value;
+    const banco = metodoControl.get('bancoObject')?.value;
+
+    // Si tiene al menos un dato pero no está completo
+    return (tipo || monto || referencia || banco) && !this.metodoEstaCompleto(metodoControl);
+  }
+
+
+  // Método para calcular el porcentaje real del descuento (con respecto al subtotal sin IVA)
+  getPorcentajeDescuentoCalculado(venta: any): number {
+    const subtotal = venta.subtotal || 0;
+    const descuentoMonetario = this.getTotalDescuentoMoneda(venta);
+
+    if (subtotal <= 0 || descuentoMonetario <= 0) {
+      return 0;
+    }
+
+    // Calcular qué porcentaje representa el descuento monetario sobre el subtotal
+    const porcentajeCalculado = (descuentoMonetario / subtotal) * 100;
+    return porcentajeCalculado;
+  }
+
+  // Método mejorado para obtener el total de descuento en moneda
+  getTotalDescuentoMoneda(venta: any): number {
+    // Prioridad 1: Usar totalDescuento del API si está disponible
+    if (venta.totalDescuento !== undefined && venta.totalDescuento !== null) {
+      return venta.totalDescuento;
+    }
+
+    // Prioridad 2: Usar descuentoBs si está disponible
+    if (venta.descuentoBs !== undefined && venta.descuentoBs !== null) {
+      return venta.descuentoBs;
+    }
+
+    // Prioridad 3: Calcular basado en porcentaje de descuento
+    if (venta.descuento && venta.descuento > 0) {
+      // Calcular el descuento sobre el subtotal (antes de IVA)
+      const subtotal = venta.subtotal || 0;
+      return (subtotal * venta.descuento) / 100;
+    }
+
+    return 0;
+  }
+
+  // Método para calcular subtotal después del descuento (para verificación)
+  getSubtotalDespuesDescuento(venta: any): number {
+    const subtotal = venta.subtotal || 0;
+    const descuento = this.getTotalDescuentoMoneda(venta);
+    return Math.max(0, subtotal - descuento);
+  }
 
 }
 
