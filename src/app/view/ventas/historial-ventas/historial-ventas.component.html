@@ -1958,14 +1958,11 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- VERSIÓN FINAL: Usar los datos de productosOriginales -->
                   <tr *ngFor="let producto of getProductosSeguros(); let i = index">
                     <td class="text-center">{{ i + 1 }}</td>
                     <td class="small">{{ producto.nombre }}</td>
                     <td class="text-center">{{ producto.cantidad }}</td>
-                    <!-- Mostrar precio sin IVA -->
                     <td class="text-end">{{ formatearMoneda(producto.precioUnitarioSinIva) }}</td>
-                    <!-- Mostrar subtotal calculado -->
                     <td class="text-end">{{ formatearMoneda(producto.subtotalCalculado) }}</td>
                   </tr>
                 </tbody>
@@ -1973,45 +1970,51 @@
             </div>
           </div>
 
-          <!-- Métodos de pago compactos -->
-          <div class="metodos-compactos mb-3" *ngIf="getMetodosPagoSeguros().length > 0">
-            <h6 class="fw-bold mb-2 text-primary border-bottom pb-1">PAGOS</h6>
-            <div class="row g-1">
-              <div class="col-12" *ngFor="let metodo of getMetodosPagoSeguros()">
-                <div class="d-flex justify-content-between align-items-center small py-1">
-                  <span>
-                    <span class="badge bg-primary me-1">{{ formatearTipoPago(metodo.tipo) }}</span>
-                    <!-- CORRECCIÓN: Pasar la moneda específica del método -->
-                    {{ formatearMoneda(metodo.monto, metodo.moneda) }}
-                    <span *ngIf="metodo.referencia" class="text-muted ms-1">(Ref: {{
-                      metodo.referencia }})</span>
-                    <span *ngIf="metodo.banco" class="text-muted ms-1">- {{ metodo.banco }}</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Sección de Resumen según Tipo de Pago REAL -->
+          <!-- Sección de Resumen según Tipo de Pago (INTEGRADO) -->
           <div class="resumen-venta mb-3">
             <h6 class="fw-bold mb-2 text-primary border-bottom pb-1">RESUMEN DE VENTA</h6>
 
-            <!-- Contado -->
+            <!-- Contado - CON MÉTODOS DE PAGO INTEGRADOS -->
             <div *ngIf="(datosRecibo?.configuracion?.formaPago || ventaParaRecibo?.formaPago) === 'contado'"
               class="resumen-contado">
-              <div class="row small">
-                <div class="col-6">
-                  <strong>Forma de pago:</strong><br>
-                  <span class="badge bg-success">CONTADO</span>
+              <!-- Forma de pago -->
+              <div class="row small mb-3">
+                <div class="col-12 text-center">
+                  <span class="badge bg-success fs-6">CONTADO</span>
                 </div>
-                <div class="col-6 text-end">
-                  <strong>Monto total:</strong><br>
-                  {{ formatearMoneda(getTotalPagadoSeguro()) }}
+              </div>
+
+              <!-- Métodos de pago para contado -->
+              <div class="metodos-pago-integrado mb-3" *ngIf="getMetodosPagoContado().length > 0">
+                <h6 class="text-center mb-2 fw-bold text-primary">MÉTODOS DE PAGO</h6>
+                <div class="row g-1">
+                  <div class="col-12" *ngFor="let metodo of getMetodosPagoContado(); let i = index">
+                    <div class="d-flex justify-content-between align-items-center small py-1">
+                      <span>
+                        <span class="badge bg-primary me-1">{{ formatearTipoPago(metodo.tipo) }}</span>
+                        {{ formatearMoneda(metodo.monto_en_moneda_de_venta || metodo.monto, metodo.moneda) }}
+                        <span *ngIf="metodo.referencia" class="text-muted ms-1">(Ref: {{ metodo.referencia }})</span>
+                        <span *ngIf="metodo.banco" class="text-muted ms-1">- {{ metodo.banco }}</span>
+                      </span>
+                      <small class="text-muted">#{{ i + 1 }}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Total pagado -->
+              <div class="row small text-center mt-3">
+                <div class="col-12">
+                  <strong class="d-block mb-1">TOTAL PAGADO</strong>
+                  <div class="fs-5 fw-bold text-success">
+                    {{ formatearMoneda(getTotalPagadoSeguro()) }}
+                  </div>
+                  <small class="text-muted">El pago ha sido realizado en su totalidad</small>
                 </div>
               </div>
             </div>
 
-            <!-- Cashea - Versión mejorada con fechas -->
+            <!-- Cashea - CON MÉTODOS DE PAGO INTEGRADOS -->
             <div *ngIf="(datosRecibo?.configuracion?.formaPago || ventaParaRecibo?.formaPago) === 'cashea'"
               class="resumen-cashea">
               <!-- Forma de pago -->
@@ -2032,6 +2035,23 @@
                         obtenerNombreNivelCashea(datosRecibo.cashea.nivel) :
                         obtenerNombreNivelCashea(nivelCashea) }}
                       </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Métodos de pago para Cashea -->
+              <div class="metodos-pago-integrado mb-3" *ngIf="getMetodosPagoCashea().length > 0">
+                <h6 class="text-center mb-2 fw-bold text-primary">MÉTODOS DE PAGO UTILIZADOS</h6>
+                <div class="row g-1">
+                  <div class="col-12" *ngFor="let metodo of getMetodosPagoCashea()">
+                    <div class="d-flex justify-content-between align-items-center small py-1">
+                      <span>
+                        <span class="badge bg-primary me-1">{{ formatearTipoPago(metodo.tipo) }}</span>
+                        {{ formatearMoneda(metodo.monto_en_moneda_de_venta || metodo.monto, metodo.moneda) }}
+                        <span *ngIf="metodo.referencia" class="text-muted ms-1">(Ref: {{ metodo.referencia }})</span>
+                        <span *ngIf="metodo.banco" class="text-muted ms-1">- {{ metodo.banco }}</span>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -2136,7 +2156,7 @@
               </div>
             </div>
 
-            <!-- Abono - Versión profesional  -->
+            <!-- Abono - Versión profesional (ya incluye tabla de abonos) -->
             <div *ngIf="(datosRecibo?.configuracion?.formaPago || ventaParaRecibo?.formaPago) === 'abono'"
               class="resumen-abono">
               <!-- Forma de pago -->
@@ -2146,38 +2166,49 @@
                 </div>
               </div>
 
-              <!-- Abonos realizados - Diseño profesional -->
-              <div class="row small mb-3">
-                <div class="col-12">
-                  <div class="abonos-section">
-                    <h6 class="text-center mb-3 fw-bold text-primary">ABONOS REALIZADOS</h6>
+              <!-- Historial de abonos - TABLA COMPLETA (ya incluye métodos de pago) -->
+              <div class="abonos-realizados mb-3">
+                <h6 class="text-center mb-3 fw-bold text-primary">HISTORIAL DE ABONOS</h6>
 
-                    <div class="abonos-list">
-                      <div class="abono-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                        <div class="abono-fecha text-center w-50">
-                          <i class="bi bi-calendar-check text-primary me-1"></i>
-                          <strong>{{ datosRecibo?.fecha }}</strong>
-                        </div>
-                        <div class="abono-monto text-center w-50">
-                          <i class="bi bi-cash-coin text-success me-1"></i>
-                          <strong>{{ formatearMoneda(datosRecibo?.abono?.montoAbonado ||
-                            getTotalPagadoSeguro()) }}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Total abonado -->
-                    <div class="total-abonado d-flex justify-content-between align-items-center py-2 mt-2 border-top">
-                      <div class="text-center w-50">
-                        <strong>TOTAL ABONADO:</strong>
-                      </div>
-                      <div class="text-center w-50">
-                        <strong class="text-success">
-                          {{ formatearMoneda(getTotalPagadoSeguro()) }}
-                        </strong>
-                      </div>
-                    </div>
-                  </div>
+                <div class="table-responsive">
+                  <table class="table table-sm table-bordered mb-3">
+                    <thead class="table-light">
+                      <tr>
+                        <th width="15%" class="text-center"># Abono</th>
+                        <th width="25%">Fecha</th>
+                        <th width="40%">Métodos de Pago</th>
+                        <th width="20%" class="text-end">Monto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let abono of getAbonosAgrupados(ventaParaRecibo)">
+                        <td class="text-center">
+                          <span class="badge bg-secondary">{{ abono.numeroPago }}</span>
+                        </td>
+                        <td class="small">{{ abono.fechaFormateada }}</td>
+                        <td class="small">
+                          <div *ngFor="let metodo of abono.metodosDetalle; let last = last" class="mb-1">
+                            <i class="bi {{ getIconoMetodoPago(metodo.tipo) }} me-1"></i>
+                            {{ formatearTipoPago(metodo.tipo) }}
+                            {{ formatearMoneda(metodo.monto, metodo.moneda) }}
+                            <span *ngIf="metodo.referencia" class="text-muted">(Ref: {{ metodo.referencia }})</span>
+                            <span *ngIf="metodo.banco" class="text-muted">- {{ metodo.banco }}</span>
+                          </div>
+                        </td>
+                        <td class="text-end fw-bold">
+                          {{ formatearMoneda(abono.montoAbonado, ventaParaRecibo.moneda) }}
+                        </td>
+                      </tr>
+                    </tbody>
+                    <tfoot *ngIf="getAbonosAgrupados(ventaParaRecibo).length > 0">
+                      <tr class="table-success">
+                        <td colspan="3" class="text-end fw-bold">TOTAL ABONADO:</td>
+                        <td class="text-end fw-bold">
+                          {{ formatearMoneda(getTotalAbonado(ventaParaRecibo), ventaParaRecibo.moneda) }}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               </div>
 
@@ -2208,18 +2239,16 @@
                         {{ calcularPorcentajeParaRecibo() | number:'1.0-0' }}%
                       </div>
                       <div class="progress mx-auto" style="width: 80%; height: 8px;">
-                        <div class="progress-bar bg-success" [style.width.%]="calcularPorcentajeParaRecibo()">
-                        </div>
+                        <div class="progress-bar bg-success" [style.width.%]="calcularPorcentajeParaRecibo()"></div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </div> <!-- Cierre de resumen-venta -->
 
-          <!-- Totales compactos -->
-
+          <!-- Totales compactos (COMÚN PARA TODOS) -->
           <div class="totales-compactos mb-3">
             <div class="row justify-content-end">
               <div class="col-md-6">
@@ -2237,7 +2266,7 @@
                     <td class="text-end">{{ formatearMoneda(getIvaSeguro()) }}</td>
                   </tr>
 
-                  <!-- TOTAL A PAGAR (para todos) -->
+                  <!-- TOTAL A PAGAR -->
                   <tr class="table-info">
                     <td class="fw-bold">Total a pagar:</td>
                     <td class="text-end fw-bold">{{ formatearMoneda(getMontoTotalSeguro()) }}</td>
@@ -2282,8 +2311,8 @@
               {{ getMensajeFinal() }}
             </p>
           </div>
-        </div>
-      </div>
+        </div> <!-- Cierre de recibo-container -->
+      </div> <!-- Cierre de modal-body -->
 
       <!-- Footer del Modal Recibo -->
       <div class="modal-footer-recibo">
@@ -2306,10 +2335,6 @@
                   <i class="bi bi-whatsapp text-success me-2"></i>
                   WhatsApp
                 </button>
-                <!-- <button ngbDropdownItem (click)="compartirEmail()">
-                                    <i class="bi bi-envelope text-primary me-2"></i>
-                                    Email
-                                </button>-->
                 <button ngbDropdownItem (click)="copiarEnlace()">
                   <i class="bi bi-link text-info me-2"></i>
                   Copiar Enlace
@@ -2333,9 +2358,9 @@
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
+    </div> <!-- Cierre de modal-content -->
+  </div> <!-- Cierre de modal-dialog -->
+</div> <!-- Cierre de modal -->
 
 <!-- Backdrop del modal -->
 <div class="modal-backdrop fade show" *ngIf="mostrarModalRecibo"></div>

@@ -344,8 +344,6 @@ export class HistorialVentasComponent implements OnInit {
         estatus: usuario.estatus
       }));
 
-    console.log('Especialistas cargados:', this.especialistas);
-
     // Si no hay especialistas, mostrar advertencia
     if (this.especialistas.length === 0) {
       console.warn('No se encontraron especialistas (optometristas/oftalmólogos) activos');
@@ -440,9 +438,6 @@ export class HistorialVentasComponent implements OnInit {
 
     this.historialVentaService.obtenerHistorialVentas().subscribe({
       next: (response: any) => {
-        console.log('📦 RESPUESTA DEL API:', response.ventas);
-        console.log('- Total ventas recibidas:', response.ventas?.length);
-
         if (response.message === 'ok' && response.ventas) {
           // Procesar TODAS las ventas
           const todasLasVentas = response.ventas.map((ventaApi: any) =>
@@ -481,8 +476,6 @@ export class HistorialVentasComponent implements OnInit {
     const metodosPagoApi = ventaApi.metodosPago;
     const formaPago = ventaApi.formaPago;
 
-    console.log('📊 Métodos de pago del API:', metodosPagoApi);
-
     // Determinar el estado para filtros
     const estadoVenta = this.determinarEstadoVenta(venta.estatus_venta);
 
@@ -496,14 +489,12 @@ export class HistorialVentasComponent implements OnInit {
 
     // Preparar métodos de pago manteniendo la estructura de grupos
     const metodosPagoAdaptados = metodosPagoApi.map((grupo: any) => {
-      console.log('📊 Procesando grupo de pago:', grupo);
 
       return {
         numero_pago: grupo.numero_pago || 1,
         montoAbonado: grupo.montoAbonado || 0,
         observaciones: grupo.observaciones,
         metodosPago: (grupo.metodosPago || []).map((metodo: any) => {
-          console.log('📊 Procesando método dentro del grupo:', metodo);
 
           return {
             tipo: metodo.tipo || 'efectivo',
@@ -519,8 +510,6 @@ export class HistorialVentasComponent implements OnInit {
         })
       };
     });
-
-    console.log('📊 Métodos de pago adaptados:', metodosPagoAdaptados);
 
     // Preparar productos limpios
     const productosLimpios = productos.map((prod: any) => {
@@ -643,12 +632,6 @@ export class HistorialVentasComponent implements OnInit {
     } else {
       ventaAdaptada.financiado = false;
     }
-
-    console.log('✅ Venta adaptada final:', {
-      key: ventaAdaptada.key,
-      numeroControl: ventaAdaptada.numeroControl,
-      metodosPago: ventaAdaptada.metodosPago
-    });
 
     return ventaAdaptada;
   }
@@ -905,13 +888,7 @@ export class HistorialVentasComponent implements OnInit {
     });
   }*/
   verDetalleCompleto(venta: any) {
-    console.log('🔍 Ver detalle completo:', venta);
-    console.log('📊 Métodos de pago completos:', venta.metodosPago);
-    console.log('📊 Métodos de pago string:', JSON.stringify(venta.metodosPago, null, 2));
-
     if (venta.metodosPago?.length) {
-      console.log('📊 Primer grupo:', venta.metodosPago[0]);
-      console.log('📊 Métodos dentro del grupo:', venta.metodosPago[0]?.metodosPago);
     }
 
     this.selectedVenta = venta;
@@ -954,7 +931,6 @@ export class HistorialVentasComponent implements OnInit {
         totalCalculado += montoPagado;
       });
 
-      console.log('💰 Calculando sumando métodos de pago:', totalCalculado);
       return totalCalculado;
     }
 
@@ -1060,7 +1036,6 @@ export class HistorialVentasComponent implements OnInit {
         monedaVenta: this.getMonedaVenta()
       };
 
-      console.log(`🔍 Método ${index} preparado:`, metodoFormateado);
       metodosPagoParaAPI.push(metodoFormateado);
     });
 
@@ -2579,13 +2554,6 @@ export class HistorialVentasComponent implements OnInit {
       this.filtros
     ).subscribe({
       next: (response: any) => {
-        console.log('📦 RESPUESTA PAGINADA DEL API:');
-        console.log('- Página:', pagina);
-        console.log('- Ventas recibidas:', response.ventas?.length);
-        console.log('- Total items:', response.totalItems);
-        console.log('- Total páginas:', response.totalPaginas);
-        console.log('- Filtros aplicados:', this.filtros);
-
         if (response.message === 'ok' && response.ventas) {
           // Procesar las ventas de la página actual
           const ventasPagina = response.ventas.map((ventaApi: any) =>
@@ -3020,15 +2988,9 @@ export class HistorialVentasComponent implements OnInit {
   // ========== MÉTODOS PARA EL RECIBO ==========
 
   /**
-  * Método para ver el recibo de una venta - VERSIÓN MEJORADA
+  * Método para ver el recibo de una venta 
   */
   verRecibo(venta: any): void {
-    console.log('📄 Preparando recibo para venta:', venta);
-    console.log('Datos de formaPago:', venta.formaPago);
-    console.log('Deuda pendiente del API:', venta.formaPago?.deudaPendiente);
-    console.log('Total venta:', venta.total);
-    console.log('Total pagado:', this.getTotalPagadoVenta(venta));
-
     // VALIDACIÓN 1: Verificar que la venta no sea null/undefined
     if (!venta) {
       console.error('❌ Error crítico: venta es null o undefined');
@@ -3049,6 +3011,8 @@ export class HistorialVentasComponent implements OnInit {
     setTimeout(() => this.iniciarReciboNuevo(venta), 50);
   }
 
+
+
   /**
    * Método auxiliar para iniciar un nuevo recibo
    */
@@ -3067,8 +3031,6 @@ export class HistorialVentasComponent implements OnInit {
         totalIva: venta.totalIva || 0,
         descuento: venta.descuento || 0
       };
-
-      console.log('venta', venta)
 
       // Preparar datos para el recibo
       this.prepararDatosRecibo(this.ventaParaRecibo);
@@ -3335,23 +3297,6 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   /**
-   * Obtener métodos de pago seguros
-   */
-  getMetodosPagoSeguros(): any[] {
-    if (!this.ventaParaRecibo || !this.ventaParaRecibo.metodosPago) {
-      return [];
-    }
-
-    return this.ventaParaRecibo.metodosPago.map((metodo: any) => ({
-      tipo: metodo.tipo || 'efectivo',
-      monto: metodo.monto || 0,
-      moneda: metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
-      referencia: metodo.referencia,
-      banco: metodo.banco || metodo.bancoNombre
-    }));
-  }
-
-  /**
    * Formatear tipo de pago
    */
   formatearTipoPago(tipo: string): string {
@@ -3437,7 +3382,32 @@ export class HistorialVentasComponent implements OnInit {
 
   // Método para obtener total pagado
   getTotalPagadoSeguro(): number {
-    return this.getTotalPagadoVenta(this.ventaParaRecibo);
+    if (!this.ventaParaRecibo) return 0;
+
+    // Para ventas de contado, usar montoAbonado o sumar métodos
+    if (this.ventaParaRecibo.formaPago === 'contado') {
+      // Usar montoAbonado si está disponible (como en tu ejemplo: 2685.51)
+      if (this.ventaParaRecibo.montoAbonado) {
+        return this.ventaParaRecibo.montoAbonado;
+      }
+
+      // Fallback: sumar métodos de pago
+      const metodos = this.getMetodosPagoContado();
+      if (metodos.length > 0) {
+        return metodos.reduce((total, metodo) => {
+          return total + (metodo.monto_en_moneda_de_venta || metodo.monto || 0);
+        }, 0);
+      }
+    }
+
+    // Para abonos, usar montoAbonado o sumar todos los abonos
+    if (this.ventaParaRecibo.formaPago === 'abono') {
+      return this.getTotalAbonado(this.ventaParaRecibo);
+    }
+
+    // Fallback general
+    return this.ventaParaRecibo?.montoAbonado ||
+      this.ventaParaRecibo?.formaPagoCompleto?.totalPagadoAhora || 0;
   }
 
   getDeudaPendienteCashea(): number {
@@ -3474,6 +3444,64 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     return '¡Gracias por su compra!';
+  }
+
+  // Método para obtener los abonos agrupados (también funciona para contado)
+  getAbonosAgrupados(venta: any): any[] {
+    if (!venta?.metodosPago || !Array.isArray(venta.metodosPago)) {
+      return [];
+    }
+
+    return venta.metodosPago.map((grupo: any) => {
+      const primerMetodo = grupo.metodosPago?.[0];
+      const fechaAbono = primerMetodo?.fechaRegistro || venta.fecha;
+
+      return {
+        numeroPago: grupo.numero_pago || 1,
+        fecha: fechaAbono,
+        fechaFormateada: this.formatFechaAbono(fechaAbono),
+        montoAbonado: grupo.montoAbonado || 0,
+        observaciones: grupo.observaciones || '',
+        metodosPago: grupo.metodosPago || [],
+        cantidadMetodos: grupo.metodosPago?.length || 0,
+        metodosDetalle: this.obtenerDetalleMetodosPago(grupo.metodosPago || [])
+      };
+    });
+  }
+
+  // Método para obtener detalles de métodos de pago
+  obtenerDetalleMetodosPago(metodosPago: any[]): any[] {
+    return metodosPago.map((metodo: any) => ({
+      tipo: metodo.tipo || 'efectivo',
+      monto: metodo.monto || 0,
+      montoEnMonedaVenta: metodo.monto_en_moneda_de_venta || metodo.monto || 0,
+      moneda: metodo.moneda_id || 'dolar',
+      referencia: metodo.referencia,
+      banco: metodo.bancoNombre || metodo.banco,
+      fecha: metodo.fechaRegistro
+    }));
+  }
+
+  // Método para formatear fecha de abono con hora
+  formatFechaAbono(fechaString: string | Date): string {
+    if (!fechaString) return 'Fecha no disponible';
+
+    const fecha = new Date(fechaString);
+    return fecha.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  getTotalAbonado(venta: any): number {
+    if (!venta?.metodosPago) return 0;
+
+    return venta.metodosPago.reduce((total: number, abono: any) => {
+      return total + (abono.montoAbonado || 0);
+    }, 0);
   }
 
   /**
@@ -3745,6 +3773,37 @@ export class HistorialVentasComponent implements OnInit {
     this.cuotasCashea = cuotas;
   }
 
+  // Método específico para ventas de Cashea
+  getMetodosPagoCashea(): any[] {
+    if (!this.ventaParaRecibo || this.ventaParaRecibo.formaPago !== 'cashea') {
+      return [];
+    }
+
+    const metodos: any[] = [];
+
+    if (this.ventaParaRecibo.metodosPago && Array.isArray(this.ventaParaRecibo.metodosPago)) {
+      this.ventaParaRecibo.metodosPago.forEach((grupo: any) => {
+        if (grupo.metodosPago && Array.isArray(grupo.metodosPago)) {
+          grupo.metodosPago.forEach((metodo: any) => {
+            if (metodo && metodo.tipo) {
+              metodos.push({
+                tipo: metodo.tipo || 'efectivo',
+                monto: metodo.monto || 0,
+                monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.monto,
+                moneda: metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+                referencia: metodo.referencia,
+                banco: metodo.bancoNombre || metodo.banco,
+                fechaRegistro: metodo.fechaRegistro
+              });
+            }
+          });
+        }
+      });
+    }
+
+    return metodos;
+  }
+
   generarReciboHTML(datos: any): string {
     if (!datos) {
       datos = this.crearDatosReciboReal();
@@ -3754,455 +3813,526 @@ export class HistorialVentasComponent implements OnInit {
     const tituloRecibo = this.getTituloReciboParaHTML(formaPago);
     const mensajeFinal = this.getMensajeFinalParaHTML(formaPago);
 
+    // Obtener métodos de pago según tipo
+    const metodosPago = this.getMetodosPagoParaTipo(formaPago);
+
     // Determinar si mostrar "Total a pagar" según la forma de pago
     const mostrarTotalAPagar = this.debeMostrarTotalAPagar(formaPago, datos);
     const textoTotalAPagar = this.getTextoTotalAPagarParaHTML(formaPago);
 
-    // CREAR UNA FUNCIÓN LOCAL PARA FORMATEAR MONEDA
+    // CREAR FUNCIONES LOCALES
     const formatearMonedaLocal = (monto: number | null | undefined, moneda?: string) => {
-      if (monto === null || monto === undefined || isNaN(monto)) {
-        return this.obtenerSimboloMoneda(moneda || datos.configuracion?.moneda || 'dolar') + '0.00';
-      }
-
-      // Asegurarse de que es un número
-      const montoNumerico = Number(monto);
-
-      if (isNaN(montoNumerico)) {
-        return this.obtenerSimboloMoneda(moneda || datos.configuracion?.moneda || 'dolar') + '0.00';
-      }
-
-      const monedaFinal = moneda || datos.configuracion?.moneda || 'dolar';
-      const simbolo = this.obtenerSimboloMoneda(monedaFinal);
-
-      return `${simbolo}${montoNumerico.toFixed(2)}`;
+      return this.formatearMoneda(monto, moneda);
     };
 
+    const formatearTipoPagoLocal = (tipo: string) => {
+      return this.formatearTipoPago(tipo);
+    };
+
+    // GENERAR SECCIÓN DE MÉTODOS DE PAGO
+    const generarMetodosPagoHTML = () => {
+      if (!metodosPago || metodosPago.length === 0) return '';
+      return `
+      <div style="margin-bottom: 12px;">
+        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">MÉTODOS DE PAGO</h6>
+        ${metodosPago.map((metodo: any, index: number) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; padding: 2px 0; border-bottom: 1px dashed #dee2e6; font-size: 12px;">
+            <span>
+              <span style="background: #2c5aa0; color: white; padding: 1px 3px; border-radius: 2px; font-size: 7px; margin-right: 3px;">
+                ${formatearTipoPagoLocal(metodo.tipo)}
+              </span>
+              ${formatearMonedaLocal(metodo.monto_en_moneda_de_venta || metodo.monto, metodo.moneda)}
+              ${metodo.referencia ? `<span style="color: #666; margin-left: 3px;">(Ref: ${metodo.referencia})</span>` : ''}
+              ${metodo.banco ? `<span style="color: #666; margin-left: 3px;">- ${metodo.banco}</span>` : ''}
+            </span>
+            <small style="color: #666;">#${index + 1}</small>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    };
+
+    // GENERAR SECCIÓN DE CONTADO
+    const generarContadoHTML = () => {
+      if (formaPago !== 'contado') return '';
+
+      return `
+      <div class="resumen-venta page-break-avoid">
+        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
+        
+        <div style="background: #f8f9fa; padding: 8px; border-radius: 3px; margin: 6px 0; border-left: 2px solid #198754;">
+          <!-- Forma de pago -->
+          <div style="text-align: center; margin-bottom: 8px;">
+            <span style="background: #198754; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">CONTADO</span>
+          </div>
+
+          <!-- Métodos de pago -->
+          ${generarMetodosPagoHTML()}
+
+          <!-- Total pagado -->
+          <div style="text-align: center; margin-top: 8px;">
+            <strong style="display: block; margin-bottom: 2px; font-size: 9px;">TOTAL PAGADO</strong>
+            <div style="font-size: 12px; font-weight: bold; color: #198754;">
+              ${formatearMonedaLocal(datos.totales.totalPagado)}
+            </div>
+            <small style="color: #666; font-size: 7px;">El pago ha sido realizado en su totalidad</small>
+          </div>
+        </div>
+      </div>
+    `;
+    };
+
+    // GENERAR SECCIÓN DE CASHEA
+    const generarCasheaHTML = () => {
+      if (formaPago !== 'cashea' || !datos.cashea) return '';
+
+      return `
+      <div class="resumen-venta page-break-avoid">
+        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
+        
+        <div style="background: #f8f9fa; padding: 8px; border-radius: 3px; margin: 6px 0; border-left: 2px solid #0dcaf0;">
+          <!-- Forma de pago -->
+          <div style="text-align: center; margin-bottom: 8px;">
+            <span style="background: #0dcaf0; color: black; padding: 2px 6px; border-radius: 3px; font-size: 10px;">PLAN CASHEA</span>
+          </div>
+
+          <!-- Información del plan Cashea -->
+          <div style="text-align: center; margin-bottom: 8px;">
+            <div>
+              <div style="margin-bottom: 4px;">
+                <small style="color: #666; font-size: 7px;">NIVEL</small>
+                <div style="font-weight: bold; color: #2c5aa0; font-size: 10px;">
+                  ${this.obtenerNombreNivelCashea(datos.cashea.nivel)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Métodos de pago -->
+          ${generarMetodosPagoHTML()}
+
+          <!-- Desglose de pagos -->
+          <div>
+            <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 9px;">DESGLOSE DE PAGOS</h6>
+
+            <!-- Pago inicial -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding: 4px 0; border-bottom: 1px dashed #dee2e6;">
+              <div style="text-align: center; width: 50%;">
+                <strong style="font-size: 12px;">Pago Inicial</strong>
+              </div>
+              <div style="text-align: center; width: 50%;">
+                <strong style="font-size: 12px;">${formatearMonedaLocal(datos.cashea.inicial)}</strong>
+              </div>
+            </div>
+
+            <!-- Cuotas adelantadas -->
+            ${datos.cashea.cuotasAdelantadas > 0 ? `
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding: 4px 0; border-bottom: 1px dashed #dee2e6;">
+                <div style="text-align: center; width: 50%;">
+                  <strong style="font-size: 12px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong>
+                </div>
+                <div style="text-align: center; width: 50%;">
+                  <strong style="font-size: 12px;">${formatearMonedaLocal(datos.cashea.montoAdelantado)}</strong>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Total pagado ahora -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid #ccc;">
+              <div style="text-align: center; width: 50%;">
+                <strong style="font-size: 9px;">TOTAL PAGADO AHORA:</strong>
+              </div>
+              <div style="text-align: center; width: 50%;">
+                <strong style="font-size: 9px; color: #198754;">
+                  ${formatearMonedaLocal(datos.totales.totalPagado)}
+                </strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resumen de cuotas -->
+          <div style="display: flex; justify-content: center; gap: 15px; margin-top: 8px; text-align: center;">
+            <div>
+              <small style="color: #666; font-size: 7px;">CUOTAS PENDIENTES</small>
+              <div style="font-weight: bold; color: #ffc107; font-size: 10px;">
+                ${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}
+              </div>
+              <div style="font-size: 7px; color: #666; margin-top: 1px;">
+                ${formatearMonedaLocal(datos.cashea.montoPorCuota)} c/u
+              </div>
+            </div>
+            <div>
+              <small style="color: #666; font-size: 7px;">DEUDA PENDIENTE</small>
+              <div style="font-weight: bold; color: #dc3545; font-size: 10px;">
+                ${formatearMonedaLocal(datos.cashea.deudaPendiente)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    };
+
+    // GENERAR SECCIÓN DE ABONO
+    const generarAbonoHTML = () => {
+      if (formaPago !== 'abono' || !datos.abono) return '';
+
+      // Obtener abonos agrupados
+      const abonosAgrupados = this.getAbonosAgrupadosPublico(this.ventaParaRecibo);
+
+      return `
+      <div class="resumen-venta page-break-avoid">
+        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">HISTORIAL DE ABONOS</h6>
+        
+        <div style="background: #f8f9fa; padding: 8px; border-radius: 3px; margin: 6px 0; border-left: 2px solid #ffc107;">
+          <!-- Forma de pago -->
+          <div style="text-align: center; margin-bottom: 8px;">
+            <span style="background: #ffc107; color: black; padding: 2px 6px; border-radius: 3px; font-size: 10px;">ABONO PARCIAL</span>
+          </div>
+
+          <!-- Tabla de abonos -->
+          ${abonosAgrupados.length > 0 ? `
+            <div style="margin-bottom: 12px;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                  <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                    <th style="padding: 4px; text-align: center; width: 15%;"># Abono</th>
+                    <th style="padding: 4px; text-align: left; width: 25%;">Fecha</th>
+                    <th style="padding: 4px; text-align: left; width: 40%;">Métodos de Pago</th>
+                    <th style="padding: 4px; text-align: right; width: 20%;">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${abonosAgrupados.map((abono: any, index: number) => `
+                    <tr style="border-bottom: 1px solid #dee2e6;">
+                      <td style="padding: 4px; text-align: center;">
+                        <span style="background: #6c757d; color: white; padding: 1px 4px; border-radius: 2px; font-size: 7px;">
+                          ${abono.numeroPago}
+                        </span>
+                      </td>
+                      <td style="padding: 4px;">${abono.fechaFormateada}</td>
+                      <td style="padding: 4px;">
+                        ${abono.metodosDetalle.map((metodo: any, idx: number) => `
+                          <div style="margin-bottom: 1px;">
+                            ${formatearTipoPagoLocal(metodo.tipo)}: 
+                            ${formatearMonedaLocal(metodo.montoEnMonedaVenta || metodo.monto, metodo.moneda)}
+                            ${metodo.referencia ? `(Ref: ${metodo.referencia})` : ''}
+                            ${metodo.banco ? `- ${metodo.banco}` : ''}
+                          </div>
+                        `).join('')}
+                      </td>
+                      <td style="padding: 4px; text-align: right; font-weight: bold;">
+                        ${formatearMonedaLocal(abono.montoAbonado, this.ventaParaRecibo.moneda)}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+                <tfoot>
+                  <tr style="background: #d4edda; font-weight: bold;">
+                    <td colspan="3" style="padding: 4px; text-align: right;">TOTAL ABONADO:</td>
+                    <td style="padding: 4px; text-align: right;">
+                      ${formatearMonedaLocal(this.getTotalAbonadoPublico(this.ventaParaRecibo), this.ventaParaRecibo.moneda)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ` : ''}
+
+          <!-- Resumen financiero -->
+          <div style="background: white; padding: 8px; border-radius: 3px; border: 1px solid #e9ecef; margin: 6px 0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;">
+              <div style="text-align: center;">
+                <div style="font-size: 7px; color: #666; margin-bottom: 2px;">TOTAL A PAGAR</div>
+                <div style="font-size: 12px; font-weight: bold; color: #2c5aa0;">
+                  ${formatearMonedaLocal(datos.totales.total)}
+                </div>
+              </div>
+              <div style="text-align: center;">
+                <div style="font-size: 7px; color: #666; margin-bottom: 2px;">DEUDA PENDIENTE</div>
+                <div style="font-size: 12px; font-weight: bold; color: #dc3545;">
+                  ${formatearMonedaLocal(datos.abono.deudaPendiente)}
+                </div>
+              </div>
+            </div>
+            
+            <div style="text-align: center;">
+              <div style="font-size: 7px; color: #666; margin-bottom: 2px;">PORCENTAJE PAGADO</div>
+              <div style="font-size: 12px; font-weight: bold; color: #198754; margin-bottom: 4px;">
+                ${Math.round(datos.abono.porcentajePagado)}%
+              </div>
+              <div style="background: #e9ecef; border-radius: 4px; overflow: hidden; height: 4px; margin: 0 auto; width: 60%;">
+                <div style="background: #198754; height: 100%; width: ${datos.abono.porcentajePagado}%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    };
+
+    // DETERMINAR QUÉ SECCIÓN MOSTRAR
+    const seccionResumenHTML = formaPago === 'contado' ? generarContadoHTML() :
+      formaPago === 'cashea' ? generarCasheaHTML() :
+        formaPago === 'abono' ? generarAbonoHTML() : '';
+
     return `
-  <!DOCTYPE html>
-      <html lang="es">
-      <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Recibo - ${datos.numeroVenta}</title>
-          <style>
-              /* Tus estilos CSS existentes se mantienen igual */
-              @page {
-                  margin: 0;
-                  size: A4;
-              }
-              
-              * {
-                  margin: 0;
-                  padding: 0;
-                  box-sizing: border-box;
-              }
-              
-              body {
-                  font-family: 'Arial', sans-serif;
-                  font-size: 10px;
-                  line-height: 1.15;
-                  color: #333;
-                  background: white;
-                  padding: 20mm 10mm 10mm 10mm;
-                  width: 210mm;
-                  height: 297mm;
-                  margin: 0 auto;
-              }
-              
-              .recibo-container {
-                  width: 100%;
-                  max-width: 190mm;
-                  margin: 0 auto;
-                  background: white;
-                  padding: 0;
-                  height: auto;
-                  max-height: 257mm;
-                  overflow: hidden;
-              }
-              
-              .recibo-header {
-                  text-align: center;
-                  border-bottom: 2px solid #2c5aa0;
-                  padding-bottom: 6px;
-                  margin-bottom: 8px;
-              }
-              
-              .empresa-nombre {
-                  font-size: 16px;
-                  font-weight: bold;
-                  color: #2c5aa0;
-                  margin-bottom: 2px;
-              }
-              
-              .empresa-info {
-                  font-size: 8px;
-                  color: #666;
-                  margin-bottom: 1px;
-                  line-height: 1.1;
-              }
-              
-              .titulo-venta {
-                  font-size: 12px;
-                  font-weight: 600;
-                  color: #2c5aa0;
-                  margin: 6px 0 2px 0;
-              }
-              
-              .info-rapida {
-                  background: #f8f9fa;
-                  padding: 4px;
-                  border-radius: 2px;
-                  border: 1px solid #dee2e6;
-                  margin-bottom: 8px;
-                  font-size: 8px;
-              }
-              
-              .cliente-compacto {
-                  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                  border-left: 2px solid #2c5aa0;
-                  padding: 6px;
-                  font-size: 8px;
-                  margin-bottom: 8px;
-                  border-radius: 2px;
-              }
-              
-              .tabla-productos {
-                  width: 100%;
-                  border-collapse: collapse;
-                  margin-bottom: 8px;
-                  font-size: 8px;
-              }
-              
-              .tabla-productos th {
-                  background: #2c5aa0;
-                  color: white;
-                  font-weight: 600;
-                  padding: 3px 4px;
-                  text-align: left;
-                  border: 1px solid #dee2e6;
-                  font-size: 8px;
-              }
-              
-              .tabla-productos td {
-                  border: 1px solid #dee2e6;
-                  padding: 2px 3px;
-                  vertical-align: middle;
-                  font-size: 8px;
-              }
-              
-              .text-center { text-align: center; }
-              .text-end { text-align: right; }
-              
-              .metodos-compactos {
-                  margin-bottom: 8px;
-              }
-              
-              .metodo-item {
-                  display: flex;
-                  justify-content: space-between;
-                  margin-bottom: 3px;
-                  padding: 2px 0;
-                  border-bottom: 1px dashed #dee2e6;
-                  font-size: 8px;
-              }
-              
-              .resumen-cashea {
-                  background: #f8f9fa;
-                  padding: 6px;
-                  border-radius: 3px;
-                  margin: 6px 0;
-                  border-left: 2px solid #0dcaf0;
-              }
-              
-              .pagos-section {
-                  margin-bottom: 6px;
-              }
-              
-              .pago-item {
-                  display: flex;
-                  justify-content: space-between;
-                  margin-bottom: 3px;
-                  padding: 3px 0;
-                  border-bottom: 1px dashed #dee2e6;
-                  font-size: 8px;
-              }
-              
-              .pago-total {
-                  display: flex;
-                  justify-content: space-between;
-                  margin-top: 4px;
-                  padding-top: 4px;
-                  border-top: 1px solid #ccc;
-                  font-size: 8px;
-              }
-              
-              .resumen-cuotas-compacto {
-                  display: flex;
-                  justify-content: center;
-                  gap: 15px;
-                  margin-top: 6px;
-                  text-align: center;
-              }
-              
-              .cuota-info {
-                  text-align: center;
-              }
-              
-              .monto-cuota {
-                  font-size: 7px;
-                  color: #666;
-                  margin-top: 1px;
-              }
-              
-              .resumen-abono {
-                  background: #f8f9fa;
-                  padding: 6px;
-                  border-radius: 3px;
-                  margin: 6px 0;
-                  border-left: 2px solid #ffc107;
-              }
-              
-              .abonos-section {
-                  margin-bottom: 6px;
-              }
-              
-              .abono-item {
-                  display: flex;
-                  justify-content: space-between;
-                  margin-bottom: 3px;
-                  padding: 3px 0;
-                  border-bottom: 1px dashed #dee2e6;
-                  font-size: 8px;
-              }
-              
-              .total-abonado {
-                  border-top: 1px solid #ccc;
-                  padding-top: 3px;
-                  margin-top: 3px;
-              }
-              
-              .resumen-financiero {
-                  background: white;
-                  padding: 6px;
-                  border-radius: 3px;
-                  border: 1px solid #e9ecef;
-                  margin: 6px 0;
-              }
-              
-              .deuda-section, .progreso-section {
-                  text-align: center;
-                  margin-bottom: 6px;
-              }
-              
-              .deuda-label, .progreso-label {
-                  font-size: 7px;
-                  color: #666;
-                  margin-bottom: 1px;
-              }
-              
-              .deuda-monto, .progreso-porcentaje {
-                  font-size: 10px;
-                  font-weight: bold;
-              }
-              
-              .resumen-contado {
-                  background: #f8f9fa;
-                  padding: 6px;
-                  border-radius: 3px;
-                  margin: 6px 0;
-                  border-left: 2px solid #198754;
-                  text-align: center;
-              }
-              
-              .totales-compactos {
-                  margin-bottom: 8px;
-              }
-              
-              .totales-compactos table {
-                  width: 100%;
-                  border-collapse: collapse;
-                  font-size: 9px;
-              }
-              
-              .totales-compactos td {
-                  padding: 3px 4px;
-                  border: 1px solid #dee2e6;
-              }
-              
-              .table-success {
-                  background: linear-gradient(135deg, #d4edda, #c3e6cb);
-              }
-              
-              .table-info {
-                  background: linear-gradient(135deg, #d1ecf1, #c3e6ff);
-              }
-              
-              .observaciones-compactas {
-                  margin-bottom: 8px;
-              }
-              
-              .alert-warning {
-                  background: #fff3cd;
-                  border: 1px solid #ffeaa7;
-                  color: #856404;
-                  padding: 4px;
-                  border-radius: 2px;
-                  font-size: 8px;
-              }
-              
-              .terminos-compactos {
-                  border-top: 1px solid #ddd;
-                  padding-top: 6px;
-                  margin-top: 8px;
-                  font-size: 7px;
-                  color: #666;
-              }
-              
-              .mensaje-final {
-                  text-align: center;
-                  border-top: 1px solid #ddd;
-                  padding-top: 6px;
-                  margin-top: 6px;
-                  font-size: 9px;
-                  color: #2c5aa0;
-                  font-weight: bold;
-              }
-              
-              .text-danger { color: #dc3545; }
-              .text-success { color: #198754; }
-              .text-warning { color: #ffc107; }
-              .text-primary { color: #2c5aa0; }
-              .text-muted { color: #666; }
-              
-              .badge {
-                  display: inline-block;
-                  padding: 1px 3px;
-                  font-size: 7px;
-                  font-weight: 600;
-                  line-height: 1;
-                  text-align: center;
-                  white-space: nowrap;
-                  vertical-align: baseline;
-                  border-radius: 1px;
-              }
-              
-              .bg-primary { background-color: #2c5aa0; color: white; }
-              .bg-success { background-color: #198754; color: white; }
-              .bg-info { background-color: #0dcaf0; color: black; }
-              .bg-warning { background-color: #ffc107; color: black; }
-              
-              .progress {
-                  background-color: #e9ecef;
-                  border-radius: 4px;
-                  overflow: hidden;
-                  height: 3px;
-                  margin: 2px auto;
-                  width: 50%;
-              }
-              
-              .progress-bar {
-                  background-color: #198754;
-                  height: 100%;
-                  transition: width 0.6s ease;
-              }
-              
-              .fw-bold { font-weight: bold; }
-              .small { font-size: 7px; }
-              .fs-6 { font-size: 10px; }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recibo - ${datos.numeroVenta}</title>
+    <style>
+        /* Estilos CSS existentes se mantienen igual */
+        @page {
+            margin: 0;
+            size: A4;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 10px;
+            line-height: 1.15;
+            color: #333;
+            background: white;
+            padding: 20mm 10mm 10mm 10mm;
+            width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+        }
+        
+        .recibo-container {
+            width: 100%;
+            max-width: 190mm;
+            margin: 0 auto;
+            background: white;
+            padding: 0;
+            height: auto;
+            max-height: 257mm;
+            overflow: hidden;
+        }
+        
+        .recibo-header {
+            text-align: center;
+            border-bottom: 2px solid #2c5aa0;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .empresa-nombre {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 2px;
+        }
+        
+        .empresa-info {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 1px;
+            line-height: 1.1;
+        }
+        
+        .titulo-venta {
+            font-size: 12px;
+            font-weight: 600;
+            color: #2c5aa0;
+            margin: 6px 0 2px 0;
+        }
+        
+        .info-rapida {
+            background: #f8f9fa;
+            padding: 4px;
+            border-radius: 2px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .cliente-compacto {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 2px solid #2c5aa0;
+            padding: 6px;
+            font-size: 12px;
+            margin-bottom: 8px;
+            border-radius: 2px;
+        }
+        
+        .tabla-productos {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        
+        .tabla-productos th {
+            background: #2c5aa0;
+            color: white;
+            font-weight: 600;
+            padding: 3px 4px;
+            text-align: left;
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+        }
+        
+        .tabla-productos td {
+            border: 1px solid #dee2e6;
+            padding: 2px 3px;
+            vertical-align: middle;
+            font-size: 12px;
+        }
+        
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+        
+        .resumen-cashea {
+            background: #f8f9fa;
+            padding: 6px;
+            border-radius: 3px;
+            margin: 6px 0;
+            border-left: 2px solid #0dcaf0;
+        }
+        
+        .resumen-abono {
+            background: #f8f9fa;
+            padding: 6px;
+            border-radius: 3px;
+            margin: 6px 0;
+            border-left: 2px solid #ffc107;
+        }
+        
+        .resumen-contado {
+            background: #f8f9fa;
+            padding: 6px;
+            border-radius: 3px;
+            margin: 6px 0;
+            border-left: 2px solid #198754;
+        }
+        
+        .text-danger { color: #dc3545; }
+        .text-success { color: #198754; }
+        .text-warning { color: #ffc107; }
+        .text-primary { color: #2c5aa0; }
+        .text-muted { color: #666; }
+        
+        .badge {
+            display: inline-block;
+            padding: 1px 3px;
+            font-size: 7px;
+            font-weight: 600;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 1px;
+        }
+        
+        .bg-primary { background-color: #2c5aa0; color: white; }
+        .bg-success { background-color: #198754; color: white; }
+        .bg-info { background-color: #0dcaf0; color: black; }
+        .bg-warning { background-color: #ffc107; color: black; }
+        
+        .fw-bold { font-weight: bold; }
+        .small { font-size: 7px; }
+        .fs-6 { font-size: 10px; }
 
-              .page-break-avoid {
-                  page-break-inside: avoid;
-                  break-inside: avoid;
-              }
+        .page-break-avoid {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
 
-              @media print {
-                  body {
-                      padding: 20mm 10mm 10mm 10mm;
-                      margin: 0;
-                      width: 210mm;
-                      height: 297mm;
-                      font-size: 9px;
-                  }
-                  
-                  .recibo-container {
-                      border: none;
-                      padding: 0;
-                      box-shadow: none;
-                      max-height: 257mm;
-                      overflow: hidden;
-                  }
+        @media print {
+            body {
+                padding: 20mm 10mm 10mm 10mm;
+                margin: 0;
+                width: 210mm;
+                height: 297mm;
+                font-size: 9px;
+            }
+            
+            .recibo-container {
+                border: none;
+                padding: 0;
+                box-shadow: none;
+                max-height: 257mm;
+                overflow: hidden;
+            }
 
-                  @page {
-                      margin: 0;
-                      size: A4;
-                  }
-                  
-                  body {
-                      margin: 0;
-                      -webkit-print-color-adjust: exact;
-                  }
-              }
-          </style>
-      </head>
-      <body>
-          <div class="recibo-container page-break-avoid">
-              <!-- Encabezado -->
-              <div class="recibo-header page-break-avoid">
-                  <div class="empresa-nombre">NEW VISION LENS</div>
-                  <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
-                  <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
-                  <div class="titulo-venta">${tituloRecibo}</div>
-              </div>
+            @page {
+                margin: 0;
+                size: A4;
+            }
+            
+            body {
+                margin: 0;
+                -webkit-print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="recibo-container page-break-avoid">
+        <!-- Encabezado -->
+        <div class="recibo-header page-break-avoid">
+            <div class="empresa-nombre">NEW VISION LENS</div>
+            <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
+            <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
+            <div class="titulo-venta">${tituloRecibo}</div>
+        </div>
 
-              <!-- Información rápida -->
-              <div class="info-rapida page-break-avoid">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px;">
-                      <div><strong>Recibo:</strong> ${datos.numeroVenta}</div>
-                      <div><strong>Fecha:</strong> ${datos.fecha}</div>
-                      <div><strong>Hora:</strong> ${datos.hora}</div>
-                      <div><strong>Vendedor:</strong> ${datos.vendedor}</div>
-                  </div>
-              </div>
+        <!-- Información rápida -->
+        <div class="info-rapida page-break-avoid">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px;">
+                <div><strong>Recibo:</strong> ${datos.numeroVenta}</div>
+                <div><strong>Fecha:</strong> ${datos.fecha}</div>
+                <div><strong>Hora:</strong> ${datos.hora}</div>
+                <div><strong>Vendedor:</strong> ${datos.vendedor}</div>
+            </div>
+        </div>
 
-              <!-- Cliente -->
-              <div class="cliente-compacto page-break-avoid">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
-                      <div><strong>Cliente:</strong> ${datos.cliente.nombre}</div>
-                      <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
-                      <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
-                  </div>
-              </div>
+        <!-- Cliente -->
+        <div class="cliente-compacto page-break-avoid">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                <div><strong>Cliente:</strong> ${datos.cliente.nombre}</div>
+                <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
+                <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
+            </div>
+        </div>
 
-              <!-- Productos -->
-              <div class="productos-compactos page-break-avoid">
-                  <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">PRODUCTOS</h6>
-                  <table class="tabla-productos">
-                      <thead>
-                          <tr>
-                              <th width="5%" class="text-center">#</th>
-                              <th width="55%">Descripción</th>
-                              <th width="10%" class="text-center">Cant</th>
-                              <th width="15%" class="text-end">P. Unitario</th>
-                              <th width="15%" class="text-end">Subtotal</th>
-                          </tr>
-                      </thead>
-                    <tbody>
-                      ${datos.productos && datos.productos.length > 0
+        <!-- Productos -->
+        <div class="productos-compactos page-break-avoid">
+            <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">PRODUCTOS</h6>
+            <table class="tabla-productos">
+                <thead>
+                    <tr>
+                        <th width="5%" class="text-center">#</th>
+                        <th width="55%">Descripción</th>
+                        <th width="10%" class="text-center">Cant</th>
+                        <th width="15%" class="text-end">P. Unitario</th>
+                        <th width="15%" class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${datos.productos && datos.productos.length > 0
         ? datos.productos.map((producto: any, index: number) => {
-          // Usar precioUnitario que viene de prepararProductosParaRecibo
           const precioUnitario = producto.precio_unitario_sin_iva || 0;
-          // Usar subtotal que viene de prepararProductosParaRecibo
           const subtotal = producto.subtotal || 0;
-
           return `
-                          <tr>
-                              <td class="text-center">${index + 1}</td>
-                              <td>${producto.nombre}</td>
-                              <td class="text-center">${producto.cantidad || 1}</td>
-                              <td class="text-end">${this.formatearMoneda(precioUnitario)}</td>
-                              <td class="text-end">${this.formatearMoneda(subtotal)}</td>
-                          </tr>
-                        `;
+                                <tr>
+                                    <td class="text-center">${index + 1}</td>
+                                    <td>${producto.nombre}</td>
+                                    <td class="text-center">${producto.cantidad || 1}</td>
+                                    <td class="text-end">${formatearMonedaLocal(precioUnitario)}</td>
+                                    <td class="text-end">${formatearMonedaLocal(subtotal)}</td>
+                                </tr>
+                            `;
         }).join('')
         : `
                             <tr>
@@ -4210,246 +4340,78 @@ export class HistorialVentasComponent implements OnInit {
                             </tr>
                         `
       }
-                  </tbody>
-                  </table>
-              </div>
+                </tbody>
+            </table>
+        </div>
 
-              <!-- Métodos de pago -->
-              ${datos.metodosPago && datos.metodosPago.length > 0 ? `
-                  <div class="metodos-compactos page-break-avoid">
-                      <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">MÉTODOS DE PAGO</h6>
-                      ${datos.metodosPago.map((metodo: any) => `
-                          <div class="metodo-item">
-                              <span>
-                                  <span class="badge bg-primary"> ${this.formatearTipoPago(metodo.tipo)} </span>
-                                  ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}
-                                  ${metodo.banco ? '- ' + metodo.banco : ''}
-                              </span>
-                              <span> ${this.formatearMoneda(metodo.monto, metodo.moneda)}</span>
-                          </div>
-                      `).join('')}
-                  </div>
-              ` : ''}
+        <!-- SECCIÓN DE RESUMEN (CONTADO/CASHEA/ABONO) -->
+        ${seccionResumenHTML}
 
-              <!-- SECCIÓN CASHEA COMPLETA - CORREGIDA -->
-              ${datos.cashea ? `
-                  <div class="resumen-venta page-break-avoid">
-                      <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
-                      
-                      <div class="resumen-cashea">
-                          <!-- Forma de pago -->
-                          <div style="text-align: center; margin-bottom: 8px;">
-                              <span class="badge bg-info fs-6">PLAN CASHEA</span>
-                          </div>
+        <!-- Totales -->
+        <div class="totales-compactos page-break-avoid">
+            <div style="display: flex; justify-content: flex-end;">
+                <div style="width: 50%;">
+                    <table style="width: 100%;">
+                        <tr>
+                            <td class="fw-bold" style="font-size: 10px;">Subtotal:</td>
+                            <td class="text-end" style="font-size: 10px;">${formatearMonedaLocal(datos.totales.subtotal)}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold" style="font-size: 10px;">Descuento:</td>
+                            <td class="text-end text-danger" style="font-size: 10px;">- ${formatearMonedaLocal(datos.totales.descuento)}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold" style="font-size: 10px;">IVA:</td>
+                            <td class="text-end" style="font-size: 10px;">${formatearMonedaLocal(datos.totales.iva)}</td>
+                        </tr>
+                        ${mostrarTotalAPagar ? `
+                            <tr class="table-info">
+                                <td class="fw-bold" style="font-size: 11px;">${textoTotalAPagar}:</td>
+                                <td class="text-end fw-bold" style="font-size: 11px;">${formatearMonedaLocal(datos.totales.total)}</td>
+                            </tr>
+                        ` : ''}
+                        <tr class="table-success">
+                            <td class="fw-bold" style="font-size: 11px;">${this.getTextoTotalPagadoParaHTML(formaPago)}:</td>
+                            <td class="text-end fw-bold" style="font-size: 11px;">${formatearMonedaLocal(datos.totales.totalPagado)}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
 
-                          <!-- Información del plan Cashea -->
-                          <div style="text-align: center; margin-bottom: 8px;">
-                              <div class="cashea-info">
-                                  <div class="nivel-cashea" style="margin-bottom: 4px;">
-                                      <small class="text-muted">NIVEL</small>
-                                      <div class="fw-bold text-primary" style="font-size: 10px;">${this.obtenerNombreNivelCashea(datos.cashea.nivel)}</div>
-                                  </div>
-                              </div>
-                          </div>
+        <!-- Observaciones -->
+        ${datos.configuracion?.observaciones ? `
+            <div class="observaciones-compactas page-break-avoid">
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 4px; border-radius: 2px; font-size: 12px;">
+                    <strong>Observación:</strong> ${datos.configuracion.observaciones}
+                </div>
+            </div>
+        ` : ''}
+       </br></br>
+        <!-- Términos y condiciones -->
+        <div class="terminos-compactos page-break-avoid">
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 6px;">
+                <div>
+                    <p style="margin-bottom: 2px;">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Pasados 30 días no nos hacemos responsables de trabajos no retirados
+                    </p>
+                </div>
+                <div style="text-align: right;">
+                    <small>${new Date().getFullYear()} © New Vision Lens</small>
+                </div>
+            </div>
+        </div>
 
-                          <!-- Desglose de pagos - CORREGIDO -->
-                          <div class="pagos-section">
-                              <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 10px;">DESGLOSE DE PAGOS</h6>
-
-                              <!-- Pago inicial -->
-                              <div class="pago-item">
-                                  <div style="text-align: center; width: 50%;">
-                                      <strong style="font-size: 9px;">Pago Inicial</strong>
-                                  </div>
-                                  <div style="text-align: center; width: 50%;">
-                                      <strong style="font-size: 9px;">${this.formatearMoneda(datos.cashea.inicial)}</strong>
-                                  </div>
-                              </div>
-
-                              <!-- Cuotas adelantadas -->
-                              ${datos.cashea.cuotasAdelantadas > 0 ? `
-                                  <div class="pago-item">
-                                      <div style="text-align: center; width: 50%;">
-                                          <strong style="font-size: 9px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong>
-                                      </div>
-                                      <div style="text-align: center; width: 50%;">
-                                          <strong style="font-size: 9px;">${this.formatearMoneda(datos.cashea.montoAdelantado)}</strong>
-                                      </div>
-                                  </div>
-                              ` : ''}
-
-                              <!-- Total pagado ahora - CORREGIDO: MISMA FILA QUE LOS TÍTULOS -->
-                              <div class="pago-total">
-                                  <div style="text-align: center; width: 50%;">
-                                      <strong style="font-size: 9px;">TOTAL PAGADO AHORA:</strong>
-                                  </div>
-                                  <div style="text-align: center; width: 50%;">
-                                      <strong class="text-success" style="font-size: 9px;">${this.formatearMoneda(datos.totales.totalPagado)}</strong>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <!-- Resumen de cuotas -->
-                          <div class="resumen-cuotas-compacto">
-                              <div class="cuota-info">
-                                  <small class="text-muted" style="font-size: 8px;">CUOTAS PENDIENTES</small>
-                                  <div class="fw-bold text-warning" style="font-size: 10px;">${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}</div>
-                                  <div class="monto-cuota">${this.formatearMoneda(datos.cashea.montoPorCuota)} c/u</div>
-                              </div>
-                              <div class="cuota-info">
-                                  <small class="text-muted" style="font-size: 8px;">DEUDA PENDIENTE</small>
-                                  <div class="fw-bold text-danger" style="font-size: 10px;">${this.formatearMoneda(datos.cashea.deudaPendiente)}</div>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-              ` : ''}
-
-              <!-- SECCIÓN ABONO -->
-              ${datos.abono ? `
-                  <div class="resumen-venta page-break-avoid">
-                      <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
-                      
-                      <div class="resumen-abono">
-                          <!-- Forma de pago -->
-                          <div style="text-align: center; margin-bottom: 8px;">
-                              <span class="badge bg-warning text-dark fs-6">ABONO PARCIAL</span>
-                          </div>
-
-                          <!-- Abonos realizados -->
-                          <div class="abonos-section">
-                              <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 10px;">ABONOS REALIZADOS</h6>
-
-                              <div class="abonos-list">
-                                  <div class="abono-item">
-                                      <div style="text-align: center; width: 50%;">
-                                          <strong style="font-size: 9px;">${datos.fecha}</strong>
-                                      </div>
-                                      <div style="text-align: center; width: 50%;">
-                                          <strong style="font-size: 9px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong>
-                                      </div>
-                                  </div>
-                                  
-                                  <!-- Total abonado EN LA MISMA SECCIÓN -->
-                                  <div class="abono-item total-abonado" style="border-top: 1px solid #ccc; padding-top: 4px; margin-top: 4px;">
-                                      <div style="text-align: center; width: 50%;">
-                                          <strong style="font-size: 9px;">TOTAL ABONADO:</strong>
-                                      </div>
-                                      <div style="text-align: center; width: 50%;">
-                                          <strong class="text-success" style="font-size: 9px;">${this.formatearMoneda(datos.abono.montoAbonado)}</strong>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <!-- Resumen financiero -->
-                          <div class="resumen-financiero">
-                              <div class="deuda-section">
-                                  <div class="deuda-label">DEUDA PENDIENTE</div>
-                                  <div class="deuda-monto text-danger">${this.formatearMoneda(datos.abono.deudaPendiente)}</div>
-                              </div>
-
-                              <div class="progreso-section">
-                                  <div class="progreso-label">PORCENTAJE PAGADO</div>
-                                  <div class="progreso-porcentaje text-success">${Math.round(datos.abono.porcentajePagado)}%</div>
-                                  <div class="progress">
-                                      <div class="progress-bar" style="width: ${datos.abono.porcentajePagado}%"></div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-              ` : ''}
-
-              ${!datos.cashea && !datos.abono ? `
-                  <div class="resumen-venta page-break-avoid">
-                      <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
-                      
-                      <div class="resumen-contado">
-                          <div style="margin-bottom: 6px;">
-                              <strong style="font-size: 10px;">Forma de pago:</strong><br>
-                              <span class="badge bg-success">CONTADO</span>
-                          </div>
-                          <div>
-                              <strong style="font-size: 10px;">Monto total:</strong><br>
-                              ${this.formatearMoneda(datos.totales.totalPagado)}
-                          </div>
-                          <div style="margin-top: 6px; font-size: 9px; color: #666;">
-                              El pago ha sido realizado en su totalidad
-                          </div>
-                      </div>
-                  </div>
-              ` : ''}
-
-              <!-- Totales - MODIFICADO PARA INCLUIR "TOTAL A PAGAR" -->
-              <div class="totales-compactos page-break-avoid">
-                  <div style="display: flex; justify-content: flex-end;">
-                      <div style="width: 50%;">
-                          <table style="width: 100%;">
-                              <tr>
-                                  <td class="fw-bold" style="font-size: 10px;">Subtotal:</td>
-                                  <td class="text-end" style="font-size: 10px;">${this.formatearMoneda(datos.totales.subtotal)}</td>
-                              </tr>
-                              <tr>
-                                  <td class="fw-bold" style="font-size: 10px;">Descuento:</td>
-                                  <td class="text-end text-danger" style="font-size: 10px;">- ${this.formatearMoneda(datos.totales.descuento)}</td>
-                              </tr>
-                              <tr>
-                                  <td class="fw-bold" style="font-size: 10px;">IVA:</td>
-                                  <td class="text-end" style="font-size: 10px;">${this.formatearMoneda(datos.totales.iva)}</td>
-                              </tr>
-                              ${mostrarTotalAPagar ? `
-                                  <tr class="table-info">
-                                      <td class="fw-bold" style="font-size: 11px;">${textoTotalAPagar}:</td>
-                                      <td class="text-end fw-bold" style="font-size: 11px;">${this.formatearMoneda(datos.totales.total)}</td>
-                                  </tr>
-                              ` : ''}
-                              <tr class="table-success">
-                                  <td class="fw-bold" style="font-size: 11px;">${this.getTextoTotalPagadoParaHTML(formaPago)}:</td>
-                                  <td class="text-end fw-bold" style="font-size: 11px;">${this.formatearMoneda(datos.totales.totalPagado)}</td>
-                              </tr>
-                          </table>
-                      </div>
-                  </div>
-              </div>
-
-              <!-- Observaciones -->
-              ${datos.configuracion?.observaciones ? `
-                  <div class="observaciones-compactas page-break-avoid">
-                      <div class="alert-warning">
-                          <strong>Observación:</strong> ${datos.configuracion.observaciones}
-                      </div>
-                  </div>
-              ` : ''}
-
-              <!-- Términos y condiciones -->
-              <div class="terminos-compactos page-break-avoid">
-                  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 6px;">
-                      <div>
-                          <p style="margin-bottom: 2px;">
-                              <i class="bi bi-exclamation-triangle"></i>
-                              Pasados 30 días no nos hacemos responsables de trabajos no retirados
-                          </p>
-                          <p style="margin-bottom: 0;">
-                              <i class="bi bi-info-circle"></i>
-                              Estado de orden: tracking.optolapp.com
-                          </p>
-                      </div>
-                      <div style="text-align: right;">
-                          <small>${new Date().getFullYear()} © New Vision Lens</small>
-                      </div>
-                  </div>
-              </div>
-
-              <!-- Mensaje final -->
-              <div class="mensaje-final page-break-avoid">
-                  <i class="bi bi-check-circle"></i>
-                  ${mensajeFinal}
-              </div>
-          </div>
-      </body>
-      </html>
-      `;
+        <!-- Mensaje final -->
+        <div class="mensaje-final page-break-avoid">
+            <i class="bi bi-check-circle"></i>
+            ${mensajeFinal}
+        </div>
+    </div>
+</body>
+</html>
+  `;
   }
 
   imprimirRecibo(): void {
@@ -4839,6 +4801,106 @@ export class HistorialVentasComponent implements OnInit {
     const subtotal = venta.subtotal || 0;
     const descuento = this.getTotalDescuentoMoneda(venta);
     return Math.max(0, subtotal - descuento);
+  }
+
+  // Método específico para ventas de contado
+  getMetodosPagoContado(): any[] {
+    if (!this.ventaParaRecibo || this.ventaParaRecibo.formaPago !== 'contado') {
+      return [];
+    }
+
+    const metodos: any[] = [];
+
+    // Verificar si hay métodos de pago
+    if (this.ventaParaRecibo.metodosPago && Array.isArray(this.ventaParaRecibo.metodosPago)) {
+      // Recorrer todos los grupos de métodos de pago (puede haber uno o más)
+      this.ventaParaRecibo.metodosPago.forEach((grupo: any) => {
+        // Para contado, generalmente hay solo un grupo con numero_pago: 1
+        if (grupo.metodosPago && Array.isArray(grupo.metodosPago)) {
+          // Extraer todos los métodos de pago del grupo
+          grupo.metodosPago.forEach((metodo: any) => {
+            if (metodo && metodo.tipo) {
+              metodos.push({
+                tipo: metodo.tipo || 'efectivo',
+                monto: metodo.monto || 0,
+                monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.monto,
+                moneda: metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+                referencia: metodo.referencia,
+                banco: metodo.bancoNombre || metodo.banco,
+                fechaRegistro: metodo.fechaRegistro
+              });
+            }
+          });
+        }
+      });
+    }
+
+    return metodos;
+  }
+
+  // Método mejorado getMetodosPagoSeguros() para compatibilidad
+  getMetodosPagoSeguros(): any[] {
+    if (!this.ventaParaRecibo) {
+      return [];
+    }
+
+    // Para contado, usar el método específico
+    if (this.ventaParaRecibo.formaPago === 'contado') {
+      return this.getMetodosPagoContado();
+    }
+
+    // Para abonos, extraer todos los métodos de todos los grupos
+    if (this.ventaParaRecibo.formaPago === 'abono') {
+      const todosLosMetodos: any[] = [];
+
+      if (this.ventaParaRecibo.metodosPago && Array.isArray(this.ventaParaRecibo.metodosPago)) {
+        this.ventaParaRecibo.metodosPago.forEach((grupo: any) => {
+          if (grupo.metodosPago && Array.isArray(grupo.metodosPago)) {
+            grupo.metodosPago.forEach((metodo: any) => {
+              if (metodo && metodo.tipo) {
+                todosLosMetodos.push({
+                  tipo: metodo.tipo || 'efectivo',
+                  monto: metodo.monto || 0,
+                  monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.monto,
+                  moneda: metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+                  referencia: metodo.referencia,
+                  banco: metodo.bancoNombre || metodo.banco,
+                  fechaRegistro: metodo.fechaRegistro
+                });
+              }
+            });
+          }
+        });
+      }
+
+      return todosLosMetodos;
+    }
+
+    return [];
+  }
+
+  // Método para obtener métodos de pago según tipo
+  getMetodosPagoParaTipo(tipo: string): any[] {
+    switch (tipo) {
+      case 'contado':
+        return this.getMetodosPagoContado();
+      case 'cashea':
+        return this.getMetodosPagoCashea();
+      case 'abono':
+        return this.getMetodosPagoSeguros(); // Ya incluye lógica para abono
+      default:
+        return [];
+    }
+  }
+
+  // Método para obtener abonos agrupados (público)
+  getAbonosAgrupadosPublico(venta: any): any[] {
+    return this.getAbonosAgrupados(venta);
+  }
+
+  // Método para obtener total abonado (público)
+  getTotalAbonadoPublico(venta: any): number {
+    return this.getTotalAbonado(venta);
   }
 
 }
