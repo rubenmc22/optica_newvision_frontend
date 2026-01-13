@@ -269,7 +269,8 @@
             </div>
 
             <div class="orden-actions">
-              <button class="btn-action" (click)="actualizarProgreso(orden); $event.stopPropagation()"
+              <!-- En las tarjetas de En Laboratorio, cambia el botón: -->
+              <button class="btn-action" (click)="abrirModalProgreso(orden); $event.stopPropagation()"
                 [attr.data-tooltip]="'Actualizar progreso'">
                 <i class="bi bi-percent"></i>
               </button>
@@ -1215,6 +1216,112 @@
     <button class="btn btn-primary" (click)="confirmarFechaEntrega(ordenParaConfigurarFecha!)"
       [disabled]="!diasParaFechaEntrega || diasParaFechaEntrega < 1 || !ordenParaConfigurarFecha">
       <i class="bi bi-check-circle"></i> Confirmar Fecha
+    </button>
+  </div>
+</div>
+
+
+<!-- Modal para Actualizar Progreso -->
+<div class="modal-progreso-backdrop" *ngIf="mostrarModalProgreso" (click)="cerrarModalProgreso()"></div>
+
+<div class="modal-progreso" *ngIf="mostrarModalProgreso">
+  <div class="modal-header">
+    <h3>
+      <i class="bi bi-percent"></i>
+      Actualizar Progreso
+    </h3>
+    <button class="btn-close-modal" (click)="cerrarModalProgreso()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <!-- Información de la orden -->
+    <div class="orden-info-progreso">
+      <div class="info-row">
+        <span class="info-label">Orden:</span>
+        <span class="info-value">{{ordenSeleccionada?.codigo}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Cliente:</span>
+        <span class="info-value">{{getClienteNombre(ordenSeleccionada)}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Producto:</span>
+        <span class="info-value">{{getProductoNombre(ordenSeleccionada)}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Estado Actual:</span>
+        <span class="info-value estado-badge" [ngClass]="'estado-' + ordenSeleccionada?.estado">
+          {{ getEstadoTexto(ordenSeleccionada?.estado) }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Rango de progreso permitido -->
+    <div class="rango-progreso" *ngIf="ordenSeleccionada?.estado === 'proceso_laboratorio'">
+      <div class="rango-info">
+        <i class="bi bi-info-circle"></i>
+        <small>Rango permitido para estado "En Laboratorio": 30% - 80%</small>
+      </div>
+    </div>
+
+    <!-- Selector de progreso -->
+    <div class="selector-progreso">
+      <label for="progresoInput">Progreso Actual: {{progresoActual}}%</label>
+
+      <!-- Slider de rango -->
+      <div class="progreso-slider">
+        <input type="range" id="progresoInput" [min]="minProgreso" [max]="maxProgreso" step="5"
+          [(ngModel)]="progresoActual" (input)="actualizarValorProgreso($event)">
+
+        <!-- Marcas del slider -->
+        <div class="slider-ticks">
+          <span *ngFor="let tick of getTicks()" [style.left.%]="tick" class="tick">
+            <span class="tick-value">{{tick}}</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Input numérico -->
+      <div class="input-progreso">
+        <div class="input-group">
+          <input type="number" class="form-control" [min]="minProgreso" [max]="maxProgreso" [(ngModel)]="progresoActual"
+            (change)="validarProgreso()">
+          <span class="input-group-text">%</span>
+        </div>
+        <small class="text-muted">Ingrese un valor entre {{minProgreso}} y {{maxProgreso}}%</small>
+      </div>
+
+      <!-- Barra de progreso visual -->
+      <div class="progreso-visual">
+        <div class="progreso-bar-modal">
+          <div class="progreso-fill-modal" [style.width.%]="progresoActual"></div>
+        </div>
+        <div class="progreso-labels">
+          <span>{{minProgreso}}%</span>
+          <span>{{progresoActual}}%</span>
+          <span>{{maxProgreso}}%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje de validación -->
+    <div class="alert alert-warning" *ngIf="mensajeError">
+      <i class="bi bi-exclamation-triangle"></i>
+      {{mensajeError}}
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="cerrarModalProgreso()">
+      <i class="bi bi-x-circle"></i> Cancelar
+    </button>
+    <button class="btn btn-primary" [disabled]="!progresoValido" (click)="guardarProgreso()"
+      [class.btn-success]="progresoActual === maxProgreso">
+      <i class="bi bi-check-circle"></i>
+      {{progresoActual === maxProgreso ? 'Marcar como listo (' + progresoActual + '%)' : 'Actualizar a ' +
+      progresoActual + '%'}}
     </button>
   </div>
 </div>

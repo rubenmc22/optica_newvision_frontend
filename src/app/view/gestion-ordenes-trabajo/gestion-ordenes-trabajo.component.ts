@@ -56,7 +56,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
   // Modal
   mostrarModalDetalle: boolean = false;
-  ordenSeleccionada: OrdenTrabajo | null = null;
 
   // Modal para configurar fecha de entrega
   mostrarModalConfigurarFecha: boolean = false;
@@ -71,6 +70,15 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   ordenesModalFiltradas: any[] = [];
   paginaActual: number = 0;
   tamanoPagina: number = 20; // Órdenes por página
+
+  // Variables para el modal de progreso
+  mostrarModalProgreso: boolean = false;
+  ordenSeleccionada: OrdenTrabajo | null = null;
+  progresoActual: number = 0;
+  minProgreso: number = 0;
+  maxProgreso: number = 100;
+  progresoValido: boolean = false;
+  mensajeError: string = '';
 
   constructor(
     private ordenesTrabajoService: OrdenesTrabajoService,
@@ -1432,7 +1440,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
       // Obtener día, mes y año en UTC
       const diaUTC = fechaUTC.getUTCDate();
-      const mesUTC = fechaUTC.getUTCMonth() + 1; 
+      const mesUTC = fechaUTC.getUTCMonth() + 1;
       const añoUTC = fechaUTC.getUTCFullYear();
 
       // Calcular días restantes usando el método existente
@@ -1749,5 +1757,127 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
       tooltip.style.left = `${rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2)}px`;
     }
   }
+
+  // Método para abrir el modal de progreso
+  abrirModalProgreso(orden: OrdenTrabajo) {
+    this.ordenSeleccionada = orden;
+    this.progresoActual = orden.progreso || 0;
+
+    // Definir rangos según el estado
+    switch (orden.estado) {
+      case 'en_tienda':
+        this.minProgreso = 0;
+        this.maxProgreso = 0;
+        break;
+      case 'proceso_laboratorio':
+        this.minProgreso = 30;
+        this.maxProgreso = 80;
+        break;
+      case 'listo_laboratorio':
+        this.minProgreso = 90;
+        this.maxProgreso = 90;
+        break;
+      case 'pendiente_retiro':
+      case 'entregado':
+        this.minProgreso = 100;
+        this.maxProgreso = 100;
+        break;
+      default:
+        this.minProgreso = 0;
+        this.maxProgreso = 100;
+    }
+
+    this.validarProgreso();
+    this.mostrarModalProgreso = true;
+  }
+
+  // Método para cerrar el modal
+  cerrarModalProgreso() {
+    this.mostrarModalProgreso = false;
+    this.ordenSeleccionada = null;
+    this.progresoActual = 0;
+    this.mensajeError = '';
+  }
+
+  // Método para validar el progreso
+  validarProgreso() {
+    if (this.progresoActual < this.minProgreso || this.progresoActual > this.maxProgreso) {
+      this.mensajeError = `El progreso debe estar entre ${this.minProgreso}% y ${this.maxProgreso}% para este estado`;
+      this.progresoValido = false;
+    } else if (isNaN(this.progresoActual)) {
+      this.mensajeError = 'Por favor ingrese un número válido';
+      this.progresoValido = false;
+    } else {
+      this.mensajeError = '';
+      this.progresoValido = true;
+    }
+  }
+
+  // Método para actualizar valor del slider
+  actualizarValorProgreso(event: any) {
+    this.progresoActual = parseInt(event.target.value);
+    this.validarProgreso();
+  }
+
+  // Método para obtener ticks del slider
+  getTicks(): number[] {
+    const ticks = [];
+    const step = (this.maxProgreso - this.minProgreso) / 4;
+    for (let i = this.minProgreso; i <= this.maxProgreso; i += step) {
+      ticks.push(i);
+    }
+    return ticks;
+  }
+
+  // Método para guardar el progreso
+  guardarProgreso() {
+    if (!this.ordenSeleccionada || !this.progresoValido) return;
+
+    // Actualizar progreso en el API
+    this.ordenesTrabajoService.actualizarProgresoOrden(
+      this.ordenSeleccionada.codigo,
+      this.progresoActual
+    ).subscribe({
+      next: (response) => {
+        // Actualizar localmente
+        this.ordenSeleccionada!.progreso = this.progresoActual;
+
+        // Si el progreso es el máximo permitido y está en laboratorio, sugerir cambio de estado
+        if (this.progresoActual === this.maxProgreso &&
+          this.ordenSeleccionada!.estado === 'proceso_laboratorio') {
+          this.sugerirCambioEstado();
+        } else {
+          this.cerrarModalProgreso();
+          this.mostrarNotificacion('Progreso actualizado correctamente', 'success');
+        }
+      },
+      error: (error) => {
+        console.error('Error al actualizar progreso:', error);
+        this.mensajeError = 'Error al actualizar el progreso. Intente nuevamente.';
+        this.mostrarNotificacion('Error al actualizar el progreso', 'error');
+      }
+    });
+  }
+
+  // Método para sugerir cambio de estado cuando se llega al 80%
+  sugerirCambioEstado() {
+    const confirmar = confirm(`¿Desea cambiar el estado de la orden a "Listo en Laboratorio"?`);
+
+    if (confirmar && this.ordenSeleccionada) {
+      this.cambiarEstado(this.ordenSeleccionada, 'listo_laboratorio');
+      this.cerrarModalProgreso();
+      this.mostrarNotificacion('Estado cambiado a Listo en Laboratorio', 'success');
+    } else {
+      this.cerrarModalProgreso();
+      this.mostrarNotificacion('Progreso actualizado a 80%', 'success');
+    }
+  }
+
+  // Método auxiliar para mostrar notificaciones
+  mostrarNotificacion(mensaje: string, tipo: 'success' | 'error' | 'info') {
+    // Implementa tu sistema de notificaciones aquí
+    console.log(`${tipo.toUpperCase()}: ${mensaje}`);
+  }
+
 
 }

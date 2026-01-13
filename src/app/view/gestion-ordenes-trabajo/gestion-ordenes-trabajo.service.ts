@@ -104,23 +104,5 @@ export class OrdenesTrabajoService {
     );
   }
 
-  /**
-   * Formatear fecha a YYYY-MM-DD - Método auxiliar si es necesario
-   */
-  private formatearFechaYYYYMMDD(fechaString: string): string {
-    // Si ya está en formato YYYY-MM-DD, retornar directamente
-    if (/^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
-      return fechaString;
-    }
 
-    // Parsear la fecha
-    const fecha = new Date(fechaString);
-
-    // Usar UTC para consistencia
-    const year = fecha.getUTCFullYear();
-    const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(fecha.getUTCDate()).padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
-  }
 }
