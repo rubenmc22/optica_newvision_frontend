@@ -2633,26 +2633,36 @@ export class HistorialVentasComponent implements OnInit {
 
     // Solo mostrar loader si no estamos ya cargando ventas
     if (!this.ventasCargando) {
-      this.loader.showWithMessage('📊 Calculando estadísticas...');
+      this.loader.showWithMessage('📊 Cargando estadísticas...');
     }
 
-    // Usar el servicio con el método correcto
-    this.historialVentaService.obtenerTodasLasVentasParaEstadisticas(this.filtros).subscribe({
+    this.historialVentaService.obtenerEstadisticasVentas(this.filtros).subscribe({
       next: (response: any) => {
         this.estadisticasCargando = false;
 
-        if (response.message === 'ok' && response.ventas) {
-          // Adaptar todas las ventas para cálculo
-          const todasLasVentas = response.ventas.map((ventaApi: any) =>
-            this.adaptarVentaDelApi(ventaApi)
-          );
+        console.log('📊 Respuesta de estadísticas:', response);
 
-          // Calcular estadísticas con todas las ventas
-          this.calcularEstadisticasConVentas(todasLasVentas);
+        if (response.message === 'ok') {
+          // Usar los datos directamente del API
+          this.estadisticas = {
+            totalVentas: response.ventas || 0,
+            ventasCompletadas: response.completadas || 0,
+            ventasPendientes: response.pendientes || 0,
+            ventasCanceladas: response.canceladas || 0,
+            montoCompletadas: response.monto_completadas || 0,
+            montoPendientes: response.monto_pendientes || 0,
+            montoCanceladas: response.monto_canceladas || 0,
+            montoTotalGeneral: response.monto_total || 0
+          };
+
+          console.log('📊 Estadísticas actualizadas:', this.estadisticas);
         } else {
-          console.warn('Formato de respuesta inesperado para estadísticas:', response);
+          console.warn('Formato de respuesta inesperado:', response);
           this.estadisticas = this.crearEstadisticasVacias();
         }
+
+        // Forzar actualización de la vista
+        this.cdRef.detectChanges();
 
         // Ocultar loader solo si no estamos cargando ventas
         if (!this.ventasCargando) {
@@ -2809,26 +2819,125 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   // ========== MÉTODOS PARA TARJETAS DE RESUMEN ==========
+  /* getTotalVentas(): number {
+     return this.paginacion.totalItems || 0;
+   }
+ 
+   getVentasCompletadas(): number {
+     return this.ventasFiltradas.filter(venta =>
+       venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0
+     ).length;
+   }
+ 
+   getVentasPendientes(): number {
+     return this.ventasFiltradas.filter(venta =>
+       this.ventaTienePendiente(venta)
+     ).length;
+   }
+ 
+   getVentasCanceladas(): number {
+     return this.ventasFiltradas.filter(venta =>
+       venta.estado === 'cancelada'
+     ).length;
+ 
+       getMontoCompletadas(): string {
+     const ventasCompletadas = this.ventasFiltradas.filter(venta =>
+       venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0
+     );
+ 
+     let total = 0;
+ 
+     // Sumar convirtiendo cada monto a la moneda del sistema
+     ventasCompletadas.forEach(venta => {
+       const monedaVenta = venta.moneda || 'dolar';
+       const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
+ 
+       if (monedaVenta === monedaSistemaNormalizada) {
+         total += venta.montoTotal;
+       } else {
+         total += this.convertirMonto(venta.montoTotal, monedaVenta, monedaSistemaNormalizada);
+       }
+     });
+ 
+     return this.formatearMoneda(total, this.monedaSistema);
+   }
+ 
+   getMontoPendientes(): string {
+     const ventasPendientes = this.ventasFiltradas.filter(venta =>
+       this.ventaTienePendiente(venta)
+     );
+ 
+     let total = 0;
+ 
+     ventasPendientes.forEach(venta => {
+       const deuda = this.getDeudaPendiente(venta);
+       const monedaVenta = venta.moneda || 'dolar';
+       const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
+ 
+       if (monedaVenta === monedaSistemaNormalizada) {
+         total += deuda;
+       } else {
+         total += this.convertirMonto(deuda, monedaVenta, monedaSistemaNormalizada);
+       }
+     });
+ 
+     return this.formatearMoneda(total, this.monedaSistema);
+   }
+ 
+   getMontoCanceladas(): string {
+     const ventasCanceladas = this.ventasFiltradas.filter(venta =>
+       venta.estado === 'cancelada'
+     );
+ 
+     let total = 0;
+ 
+     ventasCanceladas.forEach(venta => {
+       const monedaVenta = venta.moneda || 'dolar';
+       const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
+ 
+       if (monedaVenta === monedaSistemaNormalizada) {
+         total += venta.montoTotal;
+       } else {
+         total += this.convertirMonto(venta.montoTotal, monedaVenta, monedaSistemaNormalizada);
+       }
+     });
+ 
+     return this.formatearMoneda(total, this.monedaSistema);
+   }
+   }*/
+
+  // ========== MÉTODOS PARA TARJETAS DE RESUMEN ==========
   getTotalVentas(): number {
-    return this.paginacion.totalItems || 0;
+    return this.estadisticas.totalVentas || 0;
   }
 
   getVentasCompletadas(): number {
-    return this.ventasFiltradas.filter(venta =>
-      venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0
-    ).length;
+    return this.estadisticas.ventasCompletadas || 0;
   }
 
   getVentasPendientes(): number {
-    return this.ventasFiltradas.filter(venta =>
-      this.ventaTienePendiente(venta)
-    ).length;
+    return this.estadisticas.ventasPendientes || 0;
   }
 
   getVentasCanceladas(): number {
-    return this.ventasFiltradas.filter(venta =>
-      venta.estado === 'cancelada'
-    ).length;
+    return this.estadisticas.ventasCanceladas || 0;
+  }
+
+  // Métodos para montos
+  getMontoCompletadas(): string {
+    return this.formatearMontoSistema(this.estadisticas.montoCompletadas || 0);
+  }
+
+  getMontoPendientes(): string {
+    return this.formatearMontoSistema(this.estadisticas.montoPendientes || 0);
+  }
+
+  getMontoCanceladas(): string {
+    return this.formatearMontoSistema(this.estadisticas.montoCanceladas || 0);
+  }
+
+  getMontoTotalGeneral(): string {
+    return this.formatearMontoSistema(this.estadisticas.montoTotalGeneral || 0);
   }
 
   /**
@@ -2975,70 +3084,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   // Método para estadísticas (mantén la conversión)
-  getMontoCompletadas(): string {
-    const ventasCompletadas = this.ventasFiltradas.filter(venta =>
-      venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0
-    );
 
-    let total = 0;
-
-    // Sumar convirtiendo cada monto a la moneda del sistema
-    ventasCompletadas.forEach(venta => {
-      const monedaVenta = venta.moneda || 'dolar';
-      const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
-
-      if (monedaVenta === monedaSistemaNormalizada) {
-        total += venta.montoTotal;
-      } else {
-        total += this.convertirMonto(venta.montoTotal, monedaVenta, monedaSistemaNormalizada);
-      }
-    });
-
-    return this.formatearMoneda(total, this.monedaSistema);
-  }
-
-  getMontoPendientes(): string {
-    const ventasPendientes = this.ventasFiltradas.filter(venta =>
-      this.ventaTienePendiente(venta)
-    );
-
-    let total = 0;
-
-    ventasPendientes.forEach(venta => {
-      const deuda = this.getDeudaPendiente(venta);
-      const monedaVenta = venta.moneda || 'dolar';
-      const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
-
-      if (monedaVenta === monedaSistemaNormalizada) {
-        total += deuda;
-      } else {
-        total += this.convertirMonto(deuda, monedaVenta, monedaSistemaNormalizada);
-      }
-    });
-
-    return this.formatearMoneda(total, this.monedaSistema);
-  }
-
-  getMontoCanceladas(): string {
-    const ventasCanceladas = this.ventasFiltradas.filter(venta =>
-      venta.estado === 'cancelada'
-    );
-
-    let total = 0;
-
-    ventasCanceladas.forEach(venta => {
-      const monedaVenta = venta.moneda || 'dolar';
-      const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
-
-      if (monedaVenta === monedaSistemaNormalizada) {
-        total += venta.montoTotal;
-      } else {
-        total += this.convertirMonto(venta.montoTotal, monedaVenta, monedaSistemaNormalizada);
-      }
-    });
-
-    return this.formatearMoneda(total, this.monedaSistema);
-  }
 
 
 

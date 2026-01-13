@@ -20,14 +20,24 @@ export class HistorialVentaService {
   obtenerEstadisticasVentas(filtros: any = {}): Observable<any> {
     let params = new HttpParams();
 
-    // Agregar los mismos filtros para estadísticas
+    // Agregar filtros solo si tienen valor
     Object.keys(filtros).forEach(key => {
-      if (filtros[key] !== null && filtros[key] !== undefined && filtros[key] !== '') {
-        params = params.set(key, filtros[key].toString());
+      const valor = filtros[key];
+
+      if (valor !== null && valor !== undefined && valor !== '') {
+        // Para fechas, asegurar formato correcto
+        if (key === 'fechaDesde' || key === 'fechaHasta') {
+          const fecha = new Date(valor);
+          if (!isNaN(fecha.getTime())) {
+            params = params.set(key, fecha.toISOString().split('T')[0]);
+          }
+        } else {
+          params = params.set(key, valor.toString());
+        }
       }
     });
 
-    return this.http.get(`${this.apiUrl}/ventas-estadisticas`, { params });
+    return this.http.get(`${this.apiUrl}/ventas-get-total`, { params });
   }
 
   // Modifica temporalmente el método anularVenta para más detalle
@@ -111,19 +121,67 @@ export class HistorialVentaService {
     return this.obtenerVentasPaginadas(pagina, itemsPorPagina, filtros);
   }
 
-  // Método para obtener todas las ventas (para estadísticas)
-  obtenerTodasLasVentasParaEstadisticas(filtros: any = {}): Observable<any> {
+  // En HistorialVentaService
+  obtenerEstadisticasConteo(filtros: any = {}): Observable<any> {
     let params = new HttpParams();
 
+    // Solo enviar parámetros que realmente tiene valor
     Object.keys(filtros).forEach(key => {
-      if (filtros[key] !== null && filtros[key] !== undefined && filtros[key] !== '') {
-        params = params.set(key, filtros[key].toString());
+      const valor = filtros[key];
+
+      // Validar que no sea null, undefined, o string vacío
+      if (valor !== null && valor !== undefined && valor !== '') {
+        // Para fechas, convertir a formato YYYY-MM-DD
+        if (key === 'fechaDesde' || key === 'fechaHasta') {
+          try {
+            const fecha = new Date(valor);
+            if (!isNaN(fecha.getTime())) {
+              params = params.set(key, fecha.toISOString().split('T')[0]);
+            }
+          } catch (e) {
+            console.warn(`Error al procesar fecha ${key}:`, valor);
+          }
+        } else {
+          params = params.set(key, valor.toString());
+        }
       }
     });
 
-    // Solicitar un número muy grande de items
-    params = params.set('itemsPorPagina', '10000');
+    console.log('📊 Parámetros para conteo:', params.toString());
+    return this.http.get(`${this.apiUrl}/ventas-get-total`, { params });
+  }
 
+  obtenerVentasParaCalculoMontos(filtros: any = {}): Observable<any> {
+    let params = new HttpParams();
+
+    // Enviar SOLO los parámetros esenciales para montos
+    Object.keys(filtros).forEach(key => {
+      const valor = filtros[key];
+
+      // Para cálculo de montos, solo necesitamos algunos filtros
+      if (valor !== null && valor !== undefined && valor !== '') {
+        // Solo enviar filtros que afecten montos significativamente
+        if (key === 'fechaDesde' || key === 'fechaHasta' || key === 'estado') {
+          if (key === 'fechaDesde' || key === 'fechaHasta') {
+            try {
+              const fecha = new Date(valor);
+              if (!isNaN(fecha.getTime())) {
+                params = params.set(key, fecha.toISOString().split('T')[0]);
+              }
+            } catch (e) {
+              console.warn(`Error al procesar fecha ${key}:`, valor);
+            }
+          } else {
+            params = params.set(key, valor.toString());
+          }
+        }
+      }
+    });
+
+    // Limitar a una cantidad razonable para cálculo
+    params = params.set('itemsPorPagina', '100');
+
+    console.log('💰 Parámetros para cálculo de montos:', params.toString());
     return this.http.get(`${this.apiUrl}/ventas-get`, { params });
   }
 }
