@@ -104,5 +104,10 @@ export class OrdenesTrabajoService {
     );
   }
 
+  actualizarDiasArchivo(dias: number): Observable<any> {
+    const body = { dias };
+    return this.http.put<any>(`${this.baseUrl}/orden-trabajo-update-days-to-archive`, body);
+  }
+
 
 }

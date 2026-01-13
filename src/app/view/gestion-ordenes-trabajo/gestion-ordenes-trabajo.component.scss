@@ -4902,3 +4902,325 @@
         transform: translate(-50%, -50%);
     }
 }
+
+
+/* Modal simplificado */
+.modal-archivo-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 1099;
+}
+
+.modal-archivo {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 500px;
+    background: white;
+    border-radius: 12px;
+    z-index: 1100;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-archivo .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--degradado-color) !important;
+    border-radius: 12px 12px 0 0;
+    color: white;
+}
+
+.modal-archivo .modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #495057;
+}
+
+.btn-close-modal {
+    background: none;
+    border: none;
+    color: #6c757d;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.btn-close-modal:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.modal-archivo .modal-body {
+    padding: 20px;
+}
+
+/* Mensaje explicativo */
+.archivo-mensaje {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.mensaje-icono {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    background: rgba(108, 117, 125, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.mensaje-icono i {
+    font-size: 24px;
+    color: #6c757d;
+}
+
+.mensaje-contenido h4 {
+    margin: 0 0 8px 0;
+    font-size: 15px;
+    color: #212529;
+}
+
+.mensaje-contenido p {
+    margin: 0;
+    font-size: 14px;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+/* Contador de días */
+.contador-dias {
+    margin-bottom: 24px;
+}
+
+.contador-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.contador-header label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 15px;
+}
+
+.dias-actual {
+    font-size: 13px;
+    color: var(--primary-color) !important;;
+    background: rgba(40, 167, 69, 0.1);
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.contador-input {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.btn-contador {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    border: 2px solid #dee2e6;
+    background: var(--degradado-color) !important;
+    color: white;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-contador:hover:not(:disabled) {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+}
+
+.btn-contador:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.dias-display {
+    position: relative;
+    width: 120px;
+}
+
+.dias-display input {
+    width: 100%;
+    padding: 12px 40px 12px 15px;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    color: #212529;
+}
+
+.dias-display input:focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+.dias-label {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.contador-info {
+    text-align: center;
+}
+
+.contador-info small {
+    font-size: 12px;
+}
+
+/* Previsualización */
+.previsualizacion {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.preview-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    color: #495057;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.preview-content p {
+    margin: 0 0 8px 0;
+    color: #212529;
+    font-size: 14px;
+}
+
+.preview-desc {
+    font-size: 13px;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+/* Alertas */
+.alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    color: #856404;
+}
+
+.alert i {
+    margin-right: 8px;
+}
+
+/* Footer del modal */
+.modal-archivo .modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #f8f9fa;
+    border-radius: 0 0 12px 12px;
+}
+
+.modal-archivo .modal-footer .btn {
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-archivo .modal-footer .btn-secondary {
+    background: #495057;
+    color: white;
+}
+
+.modal-archivo .modal-footer .btn-secondary:hover {
+    background: #495057;
+}
+
+.modal-archivo .modal-footer .btn-primary {
+    background: var(--degradado-color) !important;
+    color: white;
+}
+
+.modal-archivo .modal-footer .btn-primary:hover:not(:disabled) {
+    background: var(--degradado-color) !important;
+}
+
+.modal-archivo .modal-footer .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .modal-archivo {
+        width: 95%;
+    }
+
+    .archivo-mensaje {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .mensaje-icono {
+        margin: 0 auto;
+    }
+
+    .modal-archivo .modal-footer {
+        flex-direction: column;
+    }
+
+    .modal-archivo .modal-footer .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

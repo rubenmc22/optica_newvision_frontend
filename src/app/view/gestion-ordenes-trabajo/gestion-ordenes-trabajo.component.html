@@ -543,8 +543,10 @@
           [attr.data-tooltip]="'Ver todas las órdenes archivadas'">
           <i class="bi bi-box-archive"></i> Ver Archivadas ({{ordenesArchivadas.length}})
         </button>
-        <button class="btn btn-sm btn-outline-secondary" (click)="configurarDiasAutoArchivo(); $event.stopPropagation()"
-          [attr.data-tooltip]="'Configurar días para auto-archivado'">
+       <!-- En el encabezado del archivo, cambia el botón: -->
+        <button class="btn btn-sm btn-outline-secondary" 
+                (click)="abrirModalArchivo(); $event.stopPropagation()"
+                [attr.data-tooltip]="'Configurar días para auto-archivado'">
           <i class="bi bi-gear"></i> Config. Auto-Archivo
         </button>
       </div>
@@ -1322,6 +1324,106 @@
       <i class="bi bi-check-circle"></i>
       {{progresoActual === maxProgreso ? 'Marcar como listo (' + progresoActual + '%)' : 'Actualizar a ' +
       progresoActual + '%'}}
+    </button>
+  </div>
+</div>
+
+
+<!-- Modal para Configurar Auto-Archivado -->
+<div class="modal-archivo-backdrop" *ngIf="mostrarModalAutoArchivado" (click)="cerrarModalArchivo()"></div>
+
+<div class="modal-archivo" *ngIf="mostrarModalAutoArchivado">
+  <div class="modal-header">
+    <h3 style="color: white;">
+      <i class="bi bi-gear"></i>
+      Configurar Auto-Archivado
+    </h3>
+    <button class="btn-close-modal" (click)="cerrarModalArchivo()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <!-- Mensaje explicativo -->
+    <div class="archivo-mensaje">
+      <div class="mensaje-icono">
+        <i class="bi bi-calendar2-week"></i>
+      </div>
+      <div class="mensaje-contenido">
+        <h4>Días para auto-archivar órdenes entregadas</h4>
+        <p>Las órdenes en estado "Entregado" se archivarán automáticamente después de este número de días.</p>
+      </div>
+    </div>
+
+    <!-- Contador de días -->
+    <div class="contador-dias">
+      <div class="contador-header">
+        <label>Días para auto-archivado</label>
+        <span class="dias-actual" *ngIf="diasArchivoActual > 0">
+          Actual: {{diasArchivoActual}} días
+        </span>
+      </div>
+      
+      <div class="contador-input">
+        <button class="btn-contador btn-restar" (click)="decrementarDias()" [disabled]="diasArchivoSeleccionados <= 1">
+          <i class="bi bi-dash-lg"></i>
+        </button>
+        
+        <div class="dias-display">
+          <input type="number" 
+                 class="form-control" 
+                 min="1" 
+                 max="365" 
+                 [(ngModel)]="diasArchivoSeleccionados"
+                 (change)="validarDias()">
+          <span class="dias-label">días</span>
+        </div>
+        
+        <button class="btn-contador btn-sumar" (click)="incrementarDias()" [disabled]="diasArchivoSeleccionados >= 365">
+          <i class="bi bi-plus-lg"></i>
+        </button>
+      </div>
+      
+      <div class="contador-info">
+        <small class="text-muted">
+          <i class="bi bi-info-circle"></i>
+          Mínimo: 1 día • Máximo: 365 días
+        </small>
+      </div>
+    </div>
+
+    <!-- Previsualización -->
+    <div class="previsualizacion" *ngIf="diasArchivoSeleccionados !== diasArchivoActual">
+      <div class="preview-header">
+        <i class="bi bi-eye"></i>
+        <span>Efecto del cambio:</span>
+      </div>
+      <div class="preview-content">
+        <p>
+          Cambiar de <strong>{{diasArchivoActual}} días</strong> a <strong>{{diasArchivoSeleccionados}} días</strong>
+        </p>
+        <div class="preview-desc">
+          Las órdenes entregadas se mantendrán visibles durante {{diasArchivoSeleccionados}} días antes de archivarse automáticamente.
+        </div>
+      </div>
+    </div>
+
+    <!-- Mensaje de error -->
+    <div class="alert alert-warning" *ngIf="mensajeError">
+      <i class="bi bi-exclamation-triangle"></i>
+      {{mensajeError}}
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="cerrarModalArchivo()">
+      <i class="bi bi-x-circle"></i> Cancelar
+    </button>
+    <button class="btn btn-primary" 
+            [disabled]="!configValida || diasArchivoSeleccionados === diasArchivoActual"
+            (click)="guardarConfiguracion()">
+      <i class="bi bi-save"></i>
+      Guardar Configuración
     </button>
   </div>
 </div>

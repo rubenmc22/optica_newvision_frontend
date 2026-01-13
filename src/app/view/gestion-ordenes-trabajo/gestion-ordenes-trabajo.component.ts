@@ -21,7 +21,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   maxOrdenesPorColumna: number = 2;
   mostrarArchivo: boolean = false;
   tabActiva: string = 'entregados';
-  mostrarModalArchivo: boolean = false;
+  mostrarModalAutoArchivado: boolean = false;
   filtroArchivo: string = '';
   ordenesFiltradasArchivadas: any[] = [];
   diasParaAutoArchivo: number = 30;
@@ -62,6 +62,13 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   ordenParaConfigurarFecha: OrdenTrabajo | null = null;
   diasParaFechaEntrega: number = 7; // Valor por defecto
   fechaCalculada: Date | null = null;
+
+  // Variables para el modal de auto-archivado
+  mostrarModalArchivo: boolean = false;
+  diasArchivoSeleccionados: number = 30;
+  diasArchivoActual: number = 30;
+  configValida: boolean = true;
+  mensajeErrorArchivo: string = '';
 
   // Agrega estas propiedades al componente
   filtroModal: string = '';
@@ -863,133 +870,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
     if (ordenesParaArchivar.length > 0) {
     }
-  }
-
-  /**
-   * Configurar días para auto-archivar
-   */
-  /**
- * Configurar días para auto-archivar órdenes entregadas
- */
-  configurarDiasAutoArchivo() {
-    // Obtener el contenido HTML usando función auxiliar
-    const htmlContent = this.getMensajeConfiguracionArchivo();
-
-    // Usar el servicio Swal para mostrar la configuración
-    this.swalService.showConfirm(
-      'Configurar Auto-Archivo',
-      htmlContent,
-      'Guardar configuración',
-      'Cancelar'
-    ).then((result) => {
-      if (result.isConfirmed) {
-        this.procesarConfiguracionArchivo();
-      }
-    });
-  }
-
-  /**
-   * Obtener mensaje de configuración de auto-archivo
-   */
-  private getMensajeConfiguracionArchivo(): string {
-    return `
-    <div class="archivo-config-content">
-      <div class="config-icon">
-        <i class="bi bi-calendar2-week" style="color: #7b1fa2; font-size: 2rem;"></i>
-      </div>
-      <div class="config-message">
-        <p>Configurar días para auto-archivar órdenes entregadas</p>
-        <p class="config-detail">
-          Las órdenes entregadas se archivarán automáticamente después de este número de días.
-        </p>
-      </div>
-      <div class="config-input-container">
-        <label for="diasArchivo" class="config-label">Días para auto-archivado:</label>
-        <input 
-          type="number" 
-          id="diasArchivo" 
-          class="form-control config-input" 
-          min="1" 
-          max="365" 
-          value="${this.diasParaAutoArchivo}"
-          placeholder="Ejemplo: 30"
-        />
-        <small class="input-hint">Mínimo: 1 día | Máximo: 365 días</small>
-      </div>
-    </div>
-  `;
-  }
-
-  /**
-   * Procesar la configuración de auto-archivo
-   */
-  private procesarConfiguracionArchivo() {
-    // Obtener el valor del input
-    const input = document.getElementById('diasArchivo') as HTMLInputElement;
-    const valor = input?.value;
-
-    if (!valor || valor.trim() === '') {
-      this.mostrarErrorValidacion('Por favor, ingrese un número de días');
-      return;
-    }
-
-    const numDias = parseInt(valor);
-
-    if (isNaN(numDias)) {
-      this.mostrarErrorValidacion('Debe ingresar un número válido');
-      return;
-    }
-
-    if (numDias < 1) {
-      this.mostrarErrorValidacion('El número debe ser mayor a 0');
-      return;
-    }
-
-    if (numDias > 365) {
-      this.mostrarErrorValidacion('El número no puede ser mayor a 365 días');
-      return;
-    }
-
-    // Guardar la configuración
-    this.guardarConfiguracionArchivo(numDias);
-  }
-
-  /**
-   * Mostrar error de validación
-   */
-  private mostrarErrorValidacion(mensaje: string) {
-    this.swalService.showError(
-      'Error de validación',
-      mensaje
-    );
-  }
-
-  /**
-   * Guardar configuración y mostrar éxito
-   */
-  private guardarConfiguracionArchivo(numDias: number) {
-    this.diasParaAutoArchivo = numDias;
-
-    // Mostrar confirmación de éxito
-    const esSingular = numDias === 1;
-
-    // Aplicar inmediatamente
-    this.verificarAutoArchivo();
-  }
-
-  /**
-   * Abrir modal de archivo
-   */
-  abrirModalArchivo() {
-    this.mostrarModalArchivo = true;
-    this.filtrarArchivadas();
-    this.bloquearScroll();
-  }
-
-  cerrarModalArchivo() {
-    this.mostrarModalArchivo = false;
-    this.desbloquearScroll();
-
   }
 
   /**
@@ -1877,6 +1757,113 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   mostrarNotificacion(mensaje: string, tipo: 'success' | 'error' | 'info') {
     // Implementa tu sistema de notificaciones aquí
     console.log(`${tipo.toUpperCase()}: ${mensaje}`);
+  }
+
+  // Método para abrir el modal
+  abrirModalArchivo() {
+    // Usar el valor actual de diasParaAutoArchivo
+    this.diasArchivoActual = this.diasParaAutoArchivo || 30;
+    this.diasArchivoSeleccionados = this.diasArchivoActual;
+    this.mostrarModalAutoArchivado = true;
+  }
+
+  // Método para cerrar el modal
+  cerrarModalArchivo() {
+    if (this.diasArchivoSeleccionados !== this.diasArchivoActual) {
+      const confirmar = confirm('¿Desea descartar los cambios?');
+      if (!confirmar) return;
+    }
+    this.mostrarModalAutoArchivado = false;
+    this.mensajeError = '';
+  }
+
+  // Método para validar días
+  validarDias() {
+    const dias = this.diasArchivoSeleccionados;
+
+    if (dias < 1 || dias > 365) {
+      this.mensajeError = 'Los días deben estar entre 1 y 365';
+      this.configValida = false;
+    } else if (isNaN(dias)) {
+      this.mensajeError = 'Por favor ingrese un número válido';
+      this.configValida = false;
+    } else {
+      this.mensajeError = '';
+      this.configValida = true;
+    }
+  }
+
+  // Métodos para ajustar días
+  incrementarDias() {
+    if (this.diasArchivoSeleccionados < 365) {
+      this.diasArchivoSeleccionados++;
+      this.validarDias();
+    }
+  }
+
+  decrementarDias() {
+    if (this.diasArchivoSeleccionados > 1) {
+      this.diasArchivoSeleccionados--;
+      this.validarDias();
+    }
+  }
+
+  // Variable para controlar el estado de guardado
+//  guardandoConfiguracion: boolean = false;
+
+  // Método para guardar configuración con loader
+  guardarConfiguracion() {
+    if (!this.configValida) return;
+
+    const dias = this.diasArchivoSeleccionados;
+
+    // Mostrar loader con mensaje inicial
+    this.loader.showWithMessage('⚙️ Actualizando configuración...');
+  //  this.guardandoConfiguracion = true;
+
+    // Llamar al API
+    this.ordenesTrabajoService.actualizarDiasArchivo(dias).subscribe({
+      next: (response) => {
+        // Actualizar mensaje del loader
+        this.loader.updateMessage('✅ Configuración guardada');
+
+        // Pequeña pausa para mostrar el mensaje de éxito
+        setTimeout(() => {
+          // Ocultar loader
+          this.loader.hide();
+
+          // Actualizar localmente
+          this.diasArchivoActual = dias;
+          this.diasParaAutoArchivo = dias;
+
+          // Cerrar modal
+          this.mostrarModalAutoArchivado = false;
+         // this.guardandoConfiguracion = false;
+
+          // Mostrar notificación de éxito (opcional)
+          this.mostrarNotificacion(`Configuración guardada: ${dias} días para auto-archivado`, 'success');
+        }, 1000);
+      },
+      error: (error) => {
+        // Ocultar loader
+        this.loader.hide();
+      //  this.guardandoConfiguracion = false;
+
+        console.error('Error al guardar configuración:', error);
+
+        // Mostrar error específico si está disponible
+        if (error.error && error.error.message) {
+          this.mensajeError = `Error: ${error.error.message}`;
+        } else if (error.status === 0) {
+          this.mensajeError = 'Error de conexión. Verifique su internet.';
+        } else {
+          this.mensajeError = 'Error al guardar la configuración. Intente nuevamente.';
+        }
+
+        // Mostrar notificación de error (opcional)
+        this.mostrarNotificacion('Error al guardar configuración', 'error');
+      }
+    });
   }
 
 
