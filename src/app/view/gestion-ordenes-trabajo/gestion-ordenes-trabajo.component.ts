@@ -11,6 +11,7 @@ import { SwalService } from '../../core/services/swal/swal.service';
   templateUrl: './gestion-ordenes-trabajo.component.html',
   styleUrls: ['./gestion-ordenes-trabajo.component.scss']
 })
+
 export class GestionOrdenesTrabajoComponent implements OnInit {
   // Filtros
   filtroBusqueda: string = '';

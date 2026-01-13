@@ -108,18 +108,17 @@
         <div class="orden-card" *ngFor="let orden of (ordenesEnTienda | slice:0:maxOrdenesPorColumna)" cdkDrag
           [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
 
-          <!-- Progreso para todas las órdenes -->
+          <!-- Progreso y fecha de creación en la misma línea -->
           <div class="orden-progreso">
             <div class="progreso-bar">
               <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
             </div>
-            <small>{{ getProgresoParaMostrar(orden) || 0 }}%</small>
-          </div>
-
-          <div class="orden-card-header">
-            <span class="orden-fecha">
-              {{ orden.fechaCreacion | date:'dd/MM' }}
-            </span>
+            <div class="progreso-info">
+              <small class="progreso-porcentaje">{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+              <small class="progreso-fecha">
+                <i class="bi bi-calendar3"></i> {{ orden.fechaCreacion | date:'dd/MM' }}
+              </small>
+            </div>
           </div>
 
           <div class="orden-cliente">
@@ -152,8 +151,8 @@
             </div>
           </div>
 
+          <!-- FOOTER CON NÚMERO DE ORDEN DE TRABAJO -->
           <div class="orden-footer">
-            <!-- Número de orden a la izquierda -->
             <div class="orden-id-container">
               <span class="orden-id-badge">
                 <i class="bi bi-hash"></i>
@@ -161,7 +160,6 @@
               </span>
             </div>
 
-            <!-- Acciones a la derecha -->
             <div class="orden-actions">
               <!-- Botón para configurar fecha de entrega - SOLO en estado En Tienda -->
               <button class="btn-action btn-calendar" (click)="configurarFechaEntrega(orden); $event.stopPropagation()"
@@ -195,7 +193,7 @@
       </ng-template>
     </div>
 
-    <!-- Columna: En Laboratorio - SIN botón de calendario -->
+    <!-- Columna: En Laboratorio -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesEnProceso"
       (cdkDropListDropped)="drop($event, 'proceso_laboratorio')">
       <div class="column-header" style="border-color: #f57c00;">
@@ -218,12 +216,17 @@
         <div class="orden-card" *ngFor="let orden of (ordenesEnProceso | slice:0:maxOrdenesPorColumna)" cdkDrag
           [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
 
-          <!-- Progreso -->
+          <!-- Progreso y fecha de creación en la misma línea -->
           <div class="orden-progreso">
             <div class="progreso-bar">
               <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
             </div>
-            <small>{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+            <div class="progreso-info">
+              <small class="progreso-porcentaje">{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+              <small class="progreso-fecha">
+                <i class="bi bi-calendar3"></i> {{ orden.fechaCreacion | date:'dd/MM' }}
+              </small>
+            </div>
           </div>
 
           <div class="orden-cliente">
@@ -256,15 +259,25 @@
             </div>
           </div>
 
-          <div class="orden-actions">
-            <button class="btn-action" (click)="actualizarProgreso(orden); $event.stopPropagation()"
-              [attr.data-tooltip]="'Actualizar progreso'">
-              <i class="bi bi-percent"></i>
-            </button>
-            <button class="btn-action" (click)="cambiarEstado(orden, 'listo_laboratorio'); $event.stopPropagation()"
-              [attr.data-tooltip]="'Marcar como listo'">
-              <i class="bi bi-check-circle"></i>
-            </button>
+          <!-- FOOTER CON NÚMERO DE ORDEN DE TRABAJO -->
+          <div class="orden-footer">
+            <div class="orden-id-container">
+              <span class="orden-id-badge">
+                <i class="bi bi-hash"></i>
+                <span class="orden-id-text">{{orden.codigo}}</span>
+              </span>
+            </div>
+
+            <div class="orden-actions">
+              <button class="btn-action" (click)="actualizarProgreso(orden); $event.stopPropagation()"
+                [attr.data-tooltip]="'Actualizar progreso'">
+                <i class="bi bi-percent"></i>
+              </button>
+              <button class="btn-action" (click)="cambiarEstado(orden, 'listo_laboratorio'); $event.stopPropagation()"
+                [attr.data-tooltip]="'Marcar como listo'">
+                <i class="bi bi-check-circle"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -286,7 +299,7 @@
       </ng-template>
     </div>
 
-    <!-- Para "Listo en Laboratorio" - SIN botón de calendario -->
+    <!-- Columna: Listo en Laboratorio -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesListasLaboratorio"
       (cdkDropListDropped)="drop($event, 'listo_laboratorio')">
       <div class="column-header" style="border-color: #388e3c;">
@@ -309,20 +322,23 @@
         <div class="orden-card" *ngFor="let orden of (ordenesListasLaboratorio | slice:0:maxOrdenesPorColumna)" cdkDrag
           [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
 
-          <!-- Progreso -->
+          <!-- Progreso y fecha de creación en la misma línea -->
           <div class="orden-progreso">
             <div class="progreso-bar">
               <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
             </div>
-            <small>{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+            <div class="progreso-info">
+              <small class="progreso-porcentaje">{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+              <small class="progreso-fecha">
+                <i class="bi bi-calendar3"></i> {{ orden.fechaCreacion | date:'dd/MM' }}
+              </small>
+            </div>
           </div>
 
-          <div class="orden-card-header">
+          <!-- Estado de terminado (opcional) -->
+          <div class="orden-estado-terminado">
             <span class="badge-success">
-              <i class="bi bi-check-lg"></i>
-            </span>
-            <span class="orden-fecha">
-              {{ orden.fechaTerminacion | date:'dd/MM' }}
+              <i class="bi bi-check-lg"></i> Terminado: {{ orden.fechaTerminacion | date:'dd/MM' }}
             </span>
           </div>
 
@@ -356,11 +372,21 @@
             </div>
           </div>
 
-          <div class="orden-actions">
-            <button class="btn-action" (click)="cambiarEstado(orden, 'pendiente_retiro'); $event.stopPropagation()"
-              [attr.data-tooltip]="'Enviar a tienda'">
-              <i class="bi bi-truck"></i>
-            </button>
+          <!-- FOOTER CON NÚMERO DE ORDEN DE TRABAJO -->
+          <div class="orden-footer">
+            <div class="orden-id-container">
+              <span class="orden-id-badge">
+                <i class="bi bi-hash"></i>
+                <span class="orden-id-text">{{orden.codigo}}</span>
+              </span>
+            </div>
+
+            <div class="orden-actions">
+              <button class="btn-action" (click)="cambiarEstado(orden, 'pendiente_retiro'); $event.stopPropagation()"
+                [attr.data-tooltip]="'Enviar a tienda'">
+                <i class="bi bi-truck"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -382,7 +408,7 @@
       </ng-template>
     </div>
 
-    <!-- Para "Pendiente por Retirar" - SIN botón de calendario -->
+    <!-- Columna: Pendiente por Retirar -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesPendienteRetiro"
       (cdkDropListDropped)="drop($event, 'pendiente_retiro')">
       <div class="column-header" style="border-color: #ffa000;">
@@ -404,20 +430,23 @@
         <div class="orden-card alert-card" *ngFor="let orden of (ordenesPendienteRetiro | slice:0:maxOrdenesPorColumna)"
           cdkDrag [cdkDragData]="orden" (click)="verDetalleOrden(orden)">
 
-          <!-- Progreso -->
+          <!-- Progreso y fecha de creación en la misma línea -->
           <div class="orden-progreso">
             <div class="progreso-bar">
               <div class="progreso-fill" [style.width.%]="getProgresoParaMostrar(orden) || 0"></div>
             </div>
-            <small>{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+            <div class="progreso-info">
+              <small class="progreso-porcentaje">{{ getProgresoParaMostrar(orden) || 0 }}%</small>
+              <small class="progreso-fecha">
+                <i class="bi bi-calendar3"></i> {{ orden.fechaCreacion | date:'dd/MM' }}
+              </small>
+            </div>
           </div>
 
-          <div class="orden-card-header">
+          <!-- Fecha de recepción en tienda -->
+          <div class="orden-estado-pendiente">
             <span class="badge-warning">
-              <i class="bi bi-exclamation-triangle"></i>
-            </span>
-            <span class="orden-fecha">
-              {{ orden.fechaRecepcionTienda | date:'dd/MM' }}
+              <i class="bi bi-shop"></i> En tienda: {{ orden.fechaRecepcionTienda | date:'dd/MM' }}
             </span>
           </div>
 
@@ -456,15 +485,26 @@
             </div>
           </div>
 
-          <div class="orden-actions">
-            <button class="btn-action btn-success" (click)="cambiarEstado(orden, 'entregado'); $event.stopPropagation()"
-              [attr.data-tooltip]="'Marcar como entregado'">
-              <i class="bi bi-box-seam"></i>
-            </button>
-            <button class="btn-action" (click)="notificarCliente(orden); $event.stopPropagation()"
-              [attr.data-tooltip]="'Notificar al cliente'">
-              <i class="bi bi-chat-dots"></i>
-            </button>
+          <!-- FOOTER CON NÚMERO DE ORDEN DE TRABAJO -->
+          <div class="orden-footer">
+            <div class="orden-id-container">
+              <span class="orden-id-badge">
+                <i class="bi bi-hash"></i>
+                <span class="orden-id-text">{{orden.codigo}}</span>
+              </span>
+            </div>
+
+            <div class="orden-actions">
+              <button class="btn-action btn-success"
+                (click)="cambiarEstado(orden, 'entregado'); $event.stopPropagation()"
+                [attr.data-tooltip]="'Marcar como entregado'">
+                <i class="bi bi-box-seam"></i>
+              </button>
+              <button class="btn-action" (click)="notificarCliente(orden); $event.stopPropagation()"
+                [attr.data-tooltip]="'Notificar al cliente'">
+                <i class="bi bi-chat-dots"></i>
+              </button>
+            </div>
           </div>
         </div>
 
