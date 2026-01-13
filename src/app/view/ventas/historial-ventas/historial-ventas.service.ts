@@ -13,30 +13,6 @@ export class HistorialVentaService {
 
   constructor(private http: HttpClient) { }
 
-  /**
-   * Obtiene el historial de ventas con paginación y filtros desde el backend
-   */
-  obtenerHistorialVentas(
-    pagina: number = 1,
-    itemsPorPagina: number = 25,
-    filtros: any = {}
-  ): Observable<any> {
-    let params = new HttpParams()
-      .set('pagina', pagina.toString())
-      .set('itemsPorPagina', itemsPorPagina.toString());
-
-    // Agregar TODOS los filtros al backend
-    Object.keys(filtros).forEach(key => {
-      if (filtros[key] !== null && filtros[key] !== undefined && filtros[key] !== '') {
-        params = params.set(key, filtros[key].toString());
-      }
-    });
-
-    console.log('🔍 Enviando filtros al backend:', filtros);
-    console.log('📦 Parámetros HTTP:', params.toString());
-
-    return this.http.get(`${this.apiUrl}/ventas-get`, { params });
-  }
 
   /**
    * Obtiene estadísticas con los mismos filtros aplicados
@@ -106,5 +82,48 @@ export class HistorialVentaService {
 
   obtenerDetalleVenta(ventaKey: string): Observable<any> {
     return this.http.get(`${this.apiUrl}/ventas-get/${ventaKey}`);
+  }
+
+  obtenerVentasPaginadas(
+    pagina: number = 1,
+    itemsPorPagina: number = 25,
+    filtros: any = {}
+  ): Observable<any> {
+    let params = new HttpParams()
+      .set('pagina', pagina.toString())
+      .set('itemsPorPagina', itemsPorPagina.toString());
+
+    Object.keys(filtros).forEach(key => {
+      if (filtros[key] !== null && filtros[key] !== undefined && filtros[key] !== '') {
+        params = params.set(key, filtros[key].toString());
+      }
+    });
+
+    return this.http.get(`${this.apiUrl}/ventas-get`, { params });
+  }
+
+  obtenerHistorialVentas(
+    pagina: number = 1,
+    itemsPorPagina: number = 25,
+    filtros: any = {}
+  ): Observable<any> {
+    // Puedes mantener este método como alias para compatibilidad
+    return this.obtenerVentasPaginadas(pagina, itemsPorPagina, filtros);
+  }
+
+  // Método para obtener todas las ventas (para estadísticas)
+  obtenerTodasLasVentasParaEstadisticas(filtros: any = {}): Observable<any> {
+    let params = new HttpParams();
+
+    Object.keys(filtros).forEach(key => {
+      if (filtros[key] !== null && filtros[key] !== undefined && filtros[key] !== '') {
+        params = params.set(key, filtros[key].toString());
+      }
+    });
+
+    // Solicitar un número muy grande de items
+    params = params.set('itemsPorPagina', '10000');
+
+    return this.http.get(`${this.apiUrl}/ventas-get`, { params });
   }
 }

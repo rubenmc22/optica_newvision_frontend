@@ -6,7 +6,7 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { GenerarVentaService } from './../generar-venta/generar-venta.service';
 import { take } from 'rxjs/operators';
 import { SystemConfigService } from '../../system-config/system-config.service';
-import { Subscription, Subject } from 'rxjs';
+import { Subscription, Subject, debounceTime } from 'rxjs';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { UserStateService, SedeInfo } from '../../../core/services/userState/user-state-service';
@@ -46,6 +46,22 @@ export class HistorialVentasComponent implements OnInit {
     campo: 'fecha',
     ascendente: false
   };
+
+  // Propiedades para estadísticas
+  estadisticas: any = {
+    totalVentas: 0,
+    ventasCompletadas: 0,
+    ventasPendientes: 0,
+    ventasCanceladas: 0,
+    montoCompletadas: 0,
+    montoPendientes: 0,
+    montoCanceladas: 0,
+    montoTotalGeneral: 0
+  };
+
+  estadisticasCargando = false;
+  ventasCargando = false;
+  private filtrosChanged$ = new Subject<void>();
 
   // Propiedades para el modal confirmacion cancelar venta
   selectedVenta: any = null;
@@ -124,7 +140,6 @@ export class HistorialVentasComponent implements OnInit {
     { codigo: '0000', nombre: 'Otro', displayText: '0000 - Otro' }
   ];
 
-
   // Paginación
   paginacion = {
     paginaActual: 1,
@@ -133,16 +148,6 @@ export class HistorialVentasComponent implements OnInit {
     totalPaginas: 0,
     itemsPorPaginaOpciones: [10, 25, 50, 100, 250],
     rangoPaginas: [] as number[]
-  };
-
-  // Mapeos de monedas
-  private readonly idMap: Record<string, string> = {
-    usd: 'dolar',
-    ves: 'bolivar',
-    bs: 'bolivar',
-    eur: 'euro',
-    $: 'dolar',
-    '€': 'euro'
   };
 
   constructor(
@@ -158,6 +163,13 @@ export class HistorialVentasComponent implements OnInit {
     private cdRef: ChangeDetectorRef
   ) {
     this.inicializarFormularioEdicion();
+
+    // Agrega este código para el debounce de estadísticas
+    this.filtrosChanged$.pipe(
+      debounceTime(500)
+    ).subscribe(() => {
+      this.cargarEstadisticas();
+    });
   }
 
   ngOnInit() {
@@ -239,6 +251,10 @@ export class HistorialVentasComponent implements OnInit {
 
   private cargarDatosIniciales(): void {
     this.loader.showWithMessage('🔄 Cargando historial de ventas...');
+
+    // Inicializar estadísticas
+    this.estadisticas = this.crearEstadisticasVacias();
+
     this.cargarEmpleados();
     this.cargarTasasCambio();
   }
@@ -256,7 +272,8 @@ export class HistorialVentasComponent implements OnInit {
           'bolivar': 1
         };
 
-        // Cargar primera página de ventas
+        // Cargar estadísticas y primera página en paralelo
+        this.cargarEstadisticas();
         this.cargarVentasPagina(1, false);
       },
       error: (error) => {
@@ -266,6 +283,9 @@ export class HistorialVentasComponent implements OnInit {
           'euro': 39.2,
           'bolivar': 1
         };
+
+        // Cargar igual aunque falle tasas
+        this.cargarEstadisticas();
         this.cargarVentasPagina(1, false);
       }
     });
@@ -779,7 +799,8 @@ export class HistorialVentasComponent implements OnInit {
   private recargarListaVentas(): void {
     this.loader.showWithMessage('🔄 Actualizando historial de ventas...');
 
-    this.historialVentaService.obtenerHistorialVentas(
+    // Usa el método correcto del servicio
+    this.historialVentaService.obtenerVentasPaginadas(
       this.paginacion.paginaActual,
       this.paginacion.itemsPorPagina,
       this.filtros
@@ -791,9 +812,12 @@ export class HistorialVentasComponent implements OnInit {
           );
 
           this.ventasFiltradas = ventasPagina;
-          this.paginacion.totalItems = response.totalItems || 0;
-          this.paginacion.totalPaginas = response.totalPaginas || 1;
+          this.paginacion.totalItems = response.pagination?.total || 0;
+          this.paginacion.totalPaginas = response.pagination?.pages || 1;
           this.generarRangoPaginas();
+
+          // También recargar estadísticas después de actualizar ventas
+          this.cargarEstadisticas();
         }
 
         setTimeout(() => {
@@ -2541,7 +2565,12 @@ export class HistorialVentasComponent implements OnInit {
     );
   }
 
+  // Modifica cargarVentasPagina para solo cargar la página actual
   private cargarVentasPagina(pagina: number, esBusquedaConFiltros: boolean = false): void {
+    if (this.ventasCargando) return;
+
+    this.ventasCargando = true;
+
     if (esBusquedaConFiltros) {
       this.loader.showWithMessage('🔍 Aplicando filtros...');
     } else if (pagina === 1 && !this.hayFiltrosActivos()) {
@@ -2550,31 +2579,31 @@ export class HistorialVentasComponent implements OnInit {
       this.loader.showWithMessage('📋 Cargando ventas...');
     }
 
-    this.historialVentaService.obtenerHistorialVentas(
+    // Cargar solo la página actual
+    this.historialVentaService.obtenerVentasPaginadas(
       pagina,
       this.paginacion.itemsPorPagina,
       this.filtros
     ).subscribe({
       next: (response: any) => {
+        this.ventasCargando = false;
+
         if (response.message === 'ok' && response.ventas) {
-          // Procesar las ventas de la página actual
+          // Procesar solo las ventas de la página actual
           const ventasPagina = response.ventas.map((ventaApi: any) =>
             this.adaptarVentaDelApi(ventaApi)
           );
 
-          // Actualizar propiedades de paginación con datos del backend
+          // Actualizar propiedades de paginación
           this.paginacion.paginaActual = pagina;
-          this.paginacion.totalItems = response.totalItems || 0;
-          this.paginacion.totalPaginas = response.totalPaginas || 1;
+          this.paginacion.totalItems = response.pagination?.total || 0;
+          this.paginacion.totalPaginas = response.pagination?.pages || 1;
 
           // Asignar ventas filtradas (solo las de la página actual)
           this.ventasFiltradas = ventasPagina;
 
           // Generar rango de páginas
           this.generarRangoPaginas();
-
-          // Cargar estadísticas con los mismos filtros
-          this.cargarEstadisticas();
 
         } else {
           console.error('Respuesta inesperada del API de ventas:', response);
@@ -2588,6 +2617,7 @@ export class HistorialVentasComponent implements OnInit {
         }, 500);
       },
       error: (error) => {
+        this.ventasCargando = false;
         console.error('❌ ERROR al cargar ventas paginadas:', error);
         this.loader.hide();
         this.swalService.showError('Error', 'No se pudieron cargar las ventas. Verifique su conexión.');
@@ -2595,33 +2625,52 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  /**
-   * Carga estadísticas con los filtros actuales
-   */
+  // Método para cargar estadísticas
   private cargarEstadisticas(): void {
-    /* this.historialVentaService.obtenerEstadisticasVentas(this.filtros).subscribe({
-       next: (estadisticas: any) => {
-         console.log('📊 Estadísticas recibidas:', estadisticas);
-         // Aquí puedes actualizar las tarjetas de resumen con los datos del backend
-         // Por ejemplo:
-         // this.actualizarTarjetasResumen(estadisticas);
-       },
-       error: (error) => {
-         console.error('Error al cargar estadísticas:', error);
-         // En caso de error, calcular estadísticas localmente con las ventas cargadas
-         this.calcularEstadisticasLocales();
-       }
-     });*/
-  }
+    if (this.estadisticasCargando) return;
 
-  /**
-   * Calcula estadísticas localmente (fallback)
-   */
-  private calcularEstadisticasLocales(): void {
-    // Esta función se usaría si el endpoint de estadísticas falla
-    // Calcula basándose únicamente en las ventas de la página actual
-    // NOTA: Esto no será preciso ya que no tenemos todas las ventas
-    console.warn('Usando cálculo local de estadísticas (puede ser impreciso)');
+    this.estadisticasCargando = true;
+
+    // Solo mostrar loader si no estamos ya cargando ventas
+    if (!this.ventasCargando) {
+      this.loader.showWithMessage('📊 Calculando estadísticas...');
+    }
+
+    // Usar el servicio con el método correcto
+    this.historialVentaService.obtenerTodasLasVentasParaEstadisticas(this.filtros).subscribe({
+      next: (response: any) => {
+        this.estadisticasCargando = false;
+
+        if (response.message === 'ok' && response.ventas) {
+          // Adaptar todas las ventas para cálculo
+          const todasLasVentas = response.ventas.map((ventaApi: any) =>
+            this.adaptarVentaDelApi(ventaApi)
+          );
+
+          // Calcular estadísticas con todas las ventas
+          this.calcularEstadisticasConVentas(todasLasVentas);
+        } else {
+          console.warn('Formato de respuesta inesperado para estadísticas:', response);
+          this.estadisticas = this.crearEstadisticasVacias();
+        }
+
+        // Ocultar loader solo si no estamos cargando ventas
+        if (!this.ventasCargando) {
+          setTimeout(() => {
+            this.loader.hide();
+          }, 500);
+        }
+      },
+      error: (error) => {
+        this.estadisticasCargando = false;
+        console.error('Error al cargar estadísticas:', error);
+        this.estadisticas = this.crearEstadisticasVacias();
+
+        if (!this.ventasCargando) {
+          this.loader.hide();
+        }
+      }
+    });
   }
 
   /**
@@ -2647,7 +2696,12 @@ export class HistorialVentasComponent implements OnInit {
     };
     this.paginacion.paginaActual = 1;
     this.fechaUnica = '';
+
+    // Cargar página inmediatamente
     this.cargarVentasPagina(1, false);
+
+    // Usar debounce para estadísticas
+    this.filtrosChanged$.next();
   }
 
   // ========== MÉTODOS DE PAGINACIÓN ==========
@@ -2656,12 +2710,14 @@ export class HistorialVentasComponent implements OnInit {
 
     if (paginaNum >= 1 && paginaNum <= this.paginacion.totalPaginas) {
       this.cargarVentasPagina(paginaNum, this.hayFiltrosActivos());
+      // No recargar estadísticas al cambiar de página
     }
   }
 
   cambiarItemsPorPagina(): void {
     this.paginacion.paginaActual = 1;
     this.cargarVentasPagina(1, this.hayFiltrosActivos());
+    // No recargar estadísticas
   }
 
   primeraPagina(): void {
@@ -4915,6 +4971,85 @@ export class HistorialVentasComponent implements OnInit {
   // Método para obtener total abonado (público)
   getTotalAbonadoPublico(venta: any): number {
     return this.getTotalAbonado(venta);
+  }
+
+  // Método para crear estadísticas vacías
+  private crearEstadisticasVacias(): any {
+    return {
+      totalVentas: 0,
+      ventasCompletadas: 0,
+      ventasPendientes: 0,
+      ventasCanceladas: 0,
+      montoCompletadas: 0,
+      montoPendientes: 0,
+      montoCanceladas: 0,
+      montoTotalGeneral: 0
+    };
+  }
+
+  // Método para calcular estadísticas con ventas
+  private calcularEstadisticasConVentas(ventas: any[]): void {
+    let totalVentas = 0;
+    let ventasCompletadas = 0;
+    let ventasPendientes = 0;
+    let ventasCanceladas = 0;
+    let montoCompletadas = 0;
+    let montoPendientes = 0;
+    let montoCanceladas = 0;
+    let montoTotalGeneral = 0;
+
+    ventas.forEach(venta => {
+      totalVentas++;
+
+      // Convertir todos los montos a la moneda del sistema para sumar consistentemente
+      const monedaVenta = venta.moneda || 'dolar';
+      const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
+
+      // Función para convertir cualquier monto
+      const convertirMonto = (monto: number, monedaOrigen: string): number => {
+        if (monedaOrigen === monedaSistemaNormalizada) return monto;
+        return this.convertirMonto(monto, monedaOrigen, monedaSistemaNormalizada);
+      };
+
+      const totalVentaConvertido = convertirMonto(venta.total || 0, monedaVenta);
+      montoTotalGeneral += totalVentaConvertido;
+
+      if (venta.estado === 'cancelada') {
+        ventasCanceladas++;
+        montoCanceladas += totalVentaConvertido;
+      } else {
+        const deuda = this.getDeudaPendiente(venta);
+        const deudaConvertida = convertirMonto(deuda, monedaVenta);
+
+        if (deuda > 0) {
+          ventasPendientes++;
+          montoPendientes += deudaConvertida;
+        } else {
+          ventasCompletadas++;
+          montoCompletadas += totalVentaConvertido;
+        }
+      }
+    });
+
+    this.estadisticas = {
+      totalVentas,
+      ventasCompletadas,
+      ventasPendientes,
+      ventasCanceladas,
+      montoCompletadas,
+      montoPendientes,
+      montoCanceladas,
+      montoTotalGeneral
+    };
+
+    console.log('📊 Estadísticas calculadas:', this.estadisticas);
+
+    // Forzar actualización de la vista
+    this.cdRef.detectChanges();
+  }
+
+  recargarEstadisticas(): void {
+    this.cargarEstadisticas();
   }
 
 }
