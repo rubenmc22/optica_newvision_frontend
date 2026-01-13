@@ -1,11 +1,10 @@
-import { Component, OnInit, HostListener, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, HostListener, ViewChild, TemplateRef, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, FormArray, Validators, AbstractControl } from '@angular/forms';
 import { SwalService } from '../../../core/services/swal/swal.service';
 import { HistorialVentaService } from './../historial-ventas/historial-ventas.service';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { Tasa } from '../../../Interfaces/models-interface';
 import { GenerarVentaService } from './../generar-venta/generar-venta.service';
-import { take, debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { take } from 'rxjs/operators';
 import { SystemConfigService } from '../../system-config/system-config.service';
 import { Subscription, Subject } from 'rxjs';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
@@ -25,6 +24,8 @@ export class HistorialVentasComponent implements OnInit {
   @ViewChild('cancelarVentaModal') cancelarVentaModal!: TemplateRef<any>;
   @ViewChild('detalleVentaModal') detalleVentaModal!: TemplateRef<any>;
   @ViewChild('editarVentaModal') editarVentaModal!: TemplateRef<any>;
+  @ViewChild('contenidoRecibo', { static: false }) contenidoRecibo!: ElementRef;
+  private scrollResetTimeout: any;
 
   // Propiedades para los filtros
   asesores: any[] = [];
@@ -153,7 +154,8 @@ export class HistorialVentasComponent implements OnInit {
     private systemConfigService: SystemConfigService,
     private empleadosService: EmpleadosService,
     private loader: LoaderService,
-    private userStateService: UserStateService
+    private userStateService: UserStateService,
+    private cdRef: ChangeDetectorRef
   ) {
     this.inicializarFormularioEdicion();
   }
@@ -2991,24 +2993,36 @@ export class HistorialVentasComponent implements OnInit {
   * Método para ver el recibo de una venta 
   */
   verRecibo(venta: any): void {
-    // VALIDACIÓN 1: Verificar que la venta no sea null/undefined
-    if (!venta) {
-      console.error('❌ Error crítico: venta es null o undefined');
-      this.swalService.showError('Error', 'No se puede mostrar el recibo: información de venta no disponible');
-      return;
-    }
+    console.log('📄 Abriendo recibo para venta:', venta);
 
-    // VALIDACIÓN 2: Verificar propiedades mínimas requeridas
-    if (!venta.key || !venta.numeroControl) {
-      console.warn('⚠️ Advertencia: venta no tiene propiedades clave:', venta);
-      this.swalService.showWarning('Advertencia', 'La venta no tiene información completa');
-    }
-
-    // Cerrar modal anterior si está abierto
+    // 1. Cerrar modal anterior
     this.cerrarModalRecibo();
 
-    // Pequeño delay para asegurar limpieza
-    setTimeout(() => this.iniciarReciboNuevo(venta), 50);
+    // 2. Preparar datos
+    setTimeout(() => {
+      this.iniciarReciboNuevo(venta);
+
+      // 3. Mostrar el modal
+      this.mostrarModalRecibo = true;
+
+      // 4. Resetear scroll DEL MODAL después de que se renderice
+      setTimeout(() => this.resetScrollModal(), 50);
+    }, 10);
+  }
+
+  private resetScrollModal(): void {
+    // Solo resetear elementos DENTRO del modal
+    const modalBody = document.querySelector('#reciboModal .modal-body');
+    const reciboContainer = document.getElementById('contenidoRecibo');
+    const modalContent = document.querySelector('#reciboModal .modal-content');
+
+    // Resetear cada contenedor del modal
+    [modalBody, reciboContainer, modalContent].forEach(element => {
+      if (element) {
+        (element as HTMLElement).scrollTop = 0;
+        console.log(`✅ Scroll reseteado para: ${element.className || element.id}`);
+      }
+    });
   }
 
 
