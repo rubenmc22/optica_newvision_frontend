@@ -184,4 +184,8 @@ export class HistorialVentaService {
     console.log('💰 Parámetros para cálculo de montos:', params.toString());
     return this.http.get(`${this.apiUrl}/ventas-get`, { params });
   }
+
+  obtenerEstadisticasFinancieras(filtros: any): Observable<any> {
+  return this.http.post<any>(`${this.apiUrl}/estadisticas-financieras`, filtros);
+}
 }

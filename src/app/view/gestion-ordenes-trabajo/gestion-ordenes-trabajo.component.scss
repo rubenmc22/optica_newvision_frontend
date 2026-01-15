@@ -2,7 +2,7 @@
 
 // Variables
 :host {
-    --color-en-tienda: #1976d2;
+    --color-en-tienda: var(--degradado-color);;
     --color-en-proceso: #f57c00;
     --color-listo-lab: #388e3c;
     --color-pendiente: #ffa000;
@@ -288,9 +288,9 @@
                         transition: all 0.3s ease;
 
                         &:hover {
-                            background: #3b82f6;
+                            background: var(--degradado-color);
                             color: white;
-                            border-color: #3b82f6;
+                            border-color: var(--degradado-color);
                             transform: translateY(-2px);
                         }
 
@@ -360,6 +360,17 @@
             }
         }
     }
+}
+
+.btn-action.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.btn-action.disabled:hover {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
 }
 
 // Tarjeta de orden
@@ -4362,7 +4373,7 @@
 }
 
 .modal-configurar-fecha .modal-body {
-    padding: 24px;
+    padding: 0px 24px;
 }
 
 .modal-configurar-fecha .info-orden {
@@ -5026,7 +5037,8 @@
 
 .dias-actual {
     font-size: 13px;
-    color: var(--primary-color) !important;;
+    color: var(--primary-color) !important;
+    ;
     background: rgba(40, 167, 69, 0.1);
     padding: 4px 10px;
     border-radius: 20px;

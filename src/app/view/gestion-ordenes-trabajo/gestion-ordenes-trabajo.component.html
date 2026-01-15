@@ -89,9 +89,9 @@
     <!-- Columna: En Tienda -->
     <div class="kanban-column" cdkDropList [cdkDropListData]="ordenesEnTienda"
       (cdkDropListDropped)="drop($event, 'en_tienda')">
-      <div class="column-header" style="border-color: #1976d2;">
+      <div class="column-header" style="border-color: var(--degradado-color);">
         <div class="column-title">
-          <span class="column-badge" style="background: #1976d2;">{{ ordenesEnTienda.length }}</span>
+          <span class="column-badge" style="background: var(--degradado-color);">{{ ordenesEnTienda.length }}</span>
           <h3><i class="bi bi-shop"></i> En Tienda</h3>
           <div class="column-actions" *ngIf="ordenesEnTienda.length > 0">
             <button class="btn-move-all" (click)="moverTodos(ordenesEnTienda, 'en_tienda', 'proceso_laboratorio')"
@@ -167,8 +167,10 @@
                 <i class="bi bi-calendar-plus"></i>
               </button>
 
+              <!-- En la columna "En Tienda", modificar el botón de mover a laboratorio -->
               <button class="btn-action" (click)="cambiarEstado(orden, 'proceso_laboratorio'); $event.stopPropagation()"
-                [attr.data-tooltip]="'Mover a Laboratorio'">
+                [attr.data-tooltip]="orden.fechaEntregaEstimada ? 'Mover a Laboratorio' : 'Configurar fecha primero'"
+                [class.disabled]="!orden.fechaEntregaEstimada" [disabled]="!orden.fechaEntregaEstimada">
                 <i class="bi bi-arrow-right"></i>
               </button>
             </div>
@@ -543,10 +545,9 @@
           [attr.data-tooltip]="'Ver todas las órdenes archivadas'">
           <i class="bi bi-box-archive"></i> Ver Archivadas ({{ordenesArchivadas.length}})
         </button>
-       <!-- En el encabezado del archivo, cambia el botón: -->
-        <button class="btn btn-sm btn-outline-secondary" 
-                (click)="abrirModalArchivo(); $event.stopPropagation()"
-                [attr.data-tooltip]="'Configurar días para auto-archivado'">
+        <!-- En el encabezado del archivo, cambia el botón: -->
+        <button class="btn btn-sm btn-outline-secondary" (click)="abrirModalArchivo(); $event.stopPropagation()"
+          [attr.data-tooltip]="'Configurar días para auto-archivado'">
           <i class="bi bi-gear"></i> Config. Auto-Archivo
         </button>
       </div>
@@ -638,7 +639,7 @@
         <span class="badge" [ngClass]="getEstadoClass(ordenSeleccionada?.estado)">
           {{ getEstadoTexto(ordenSeleccionada?.estado) }}
         </span>
-        <span class="text-muted">
+        <span class="text-muted" style="color: white !important;">
           <i class="bi bi-calendar"></i>
           {{ ordenSeleccionada?.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}
         </span>
@@ -1363,27 +1364,23 @@
           Actual: {{diasArchivoActual}} días
         </span>
       </div>
-      
+
       <div class="contador-input">
         <button class="btn-contador btn-restar" (click)="decrementarDias()" [disabled]="diasArchivoSeleccionados <= 1">
           <i class="bi bi-dash-lg"></i>
         </button>
-        
+
         <div class="dias-display">
-          <input type="number" 
-                 class="form-control" 
-                 min="1" 
-                 max="365" 
-                 [(ngModel)]="diasArchivoSeleccionados"
-                 (change)="validarDias()">
+          <input type="number" class="form-control" min="1" max="365" [(ngModel)]="diasArchivoSeleccionados"
+            (change)="validarDias()">
           <span class="dias-label">días</span>
         </div>
-        
+
         <button class="btn-contador btn-sumar" (click)="incrementarDias()" [disabled]="diasArchivoSeleccionados >= 365">
           <i class="bi bi-plus-lg"></i>
         </button>
       </div>
-      
+
       <div class="contador-info">
         <small class="text-muted">
           <i class="bi bi-info-circle"></i>
@@ -1403,7 +1400,8 @@
           Cambiar de <strong>{{diasArchivoActual}} días</strong> a <strong>{{diasArchivoSeleccionados}} días</strong>
         </p>
         <div class="preview-desc">
-          Las órdenes entregadas se mantendrán visibles durante {{diasArchivoSeleccionados}} días antes de archivarse automáticamente.
+          Las órdenes entregadas se mantendrán visibles durante {{diasArchivoSeleccionados}} días antes de archivarse
+          automáticamente.
         </div>
       </div>
     </div>
@@ -1419,9 +1417,8 @@
     <button class="btn btn-secondary" (click)="cerrarModalArchivo()">
       <i class="bi bi-x-circle"></i> Cancelar
     </button>
-    <button class="btn btn-primary" 
-            [disabled]="!configValida || diasArchivoSeleccionados === diasArchivoActual"
-            (click)="guardarConfiguracion()">
+    <button class="btn btn-primary" [disabled]="!configValida || diasArchivoSeleccionados === diasArchivoActual"
+      (click)="guardarConfiguracion()">
       <i class="bi bi-save"></i>
       Guardar Configuración
     </button>

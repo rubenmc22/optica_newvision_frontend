@@ -302,13 +302,29 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   /**
    * Drag & Drop
    */
+  /**
+ * Drag & Drop con validación de fecha estimada
+ */
+  /**
+  * Drag & Drop con validación de fecha estimada
+  */
   drop(event: CdkDragDrop<OrdenTrabajo[]>, nuevoEstado: string) {
     if (event.previousContainer === event.container) {
       moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
     } else {
       const ordenMovida = event.previousContainer.data[event.previousIndex];
 
-      // Actualizar en el API usando el nuevo servicio
+      // VALIDACIÓN: Verificar si se está moviendo de en_tienda a laboratorio sin fecha
+      const estadoOrigen = this.obtenerEstadoPorColumna(event.previousContainer);
+      const estadoDestino = this.obtenerEstadoPorColumna(event.container);
+
+      if (estadoOrigen === 'en_tienda' && estadoDestino === 'proceso_laboratorio' &&
+        !ordenMovida.fechaEntregaEstimada) {
+        this.mostrarAdvertenciaFechaEntrega(ordenMovida);
+        return; // Cancelar el movimiento
+      }
+
+      // Si pasa la validación, continuar con el movimiento normal
       this.actualizarEstadoOrdenAPI(ordenMovida, nuevoEstado);
 
       // Mover entre arrays localmente
@@ -324,9 +340,16 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   }
 
   /**
-   * Cambiar estado de una orden
+   * Cambiar estado de una orden con validación
    */
   cambiarEstado(orden: OrdenTrabajo, nuevoEstado: string) {
+    // VALIDACIÓN: Verificar si se está moviendo de en_tienda a laboratorio sin fecha
+    if (orden.estado === 'en_tienda' && nuevoEstado === 'proceso_laboratorio' &&
+      !orden.fechaEntregaEstimada) {
+      this.mostrarAdvertenciaFechaEntrega(orden);
+      return; // Cancelar el cambio
+    }
+
     if (nuevoEstado === 'entregado') {
       if (!confirm(`¿Confirmar entrega de la orden ${orden.ordenId} a ${this.getClienteNombre(orden)}?`)) {
         return;
@@ -334,6 +357,133 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     }
 
     this.actualizarEstadoOrdenAPI(orden, nuevoEstado);
+  }
+
+  /**
+   * Mover todos los pedidos de una columna con validación
+   */
+  moverTodos(ordenes: OrdenTrabajo[], estadoActual: string, nuevoEstado: string) {
+    if (ordenes.length === 0) return;
+
+    // VALIDACIÓN: Verificar si hay órdenes sin fecha al mover de en_tienda a laboratorio
+    if (estadoActual === 'en_tienda' && nuevoEstado === 'proceso_laboratorio') {
+      const ordenesSinFecha = ordenes.filter(orden => !orden.fechaEntregaEstimada);
+
+      if (ordenesSinFecha.length > 0) {
+        this.mostrarAdvertenciaFechaEntregaMultiples(ordenesSinFecha);
+        return; // Cancelar el movimiento
+      }
+    }
+
+    // Convertir los strings a EstadoOrden con verificación
+    const estadoActualValido = this.asegurarEstadoOrden(estadoActual);
+    const nuevoEstadoValido = this.asegurarEstadoOrden(nuevoEstado);
+
+    // Obtener títulos y mensajes usando funciones auxiliares
+    const titulo = this.getMensajeTitulo(ordenes.length, estadoActualValido);
+    const textoBoton = this.getTextoAccion(ordenes.length);
+    const htmlContent = this.getMensajeConfirmacion(ordenes.length, estadoActualValido, nuevoEstadoValido);
+
+    // Usar el servicio Swal para mostrar confirmación
+    this.swalService.showConfirm(titulo, htmlContent, textoBoton, 'Cancelar')
+      .then((result) => {
+        if (result.isConfirmed) {
+          this.procesarMovimientoTodasOrdenes(ordenes, estadoActualValido, nuevoEstadoValido);
+        }
+      });
+  }
+
+  /**
+   * Obtener estado según el contenedor
+   */
+  private obtenerEstadoPorColumna(container: any): string {
+    if (container.data === this.ordenesEnTienda) return 'en_tienda';
+    if (container.data === this.ordenesEnProceso) return 'proceso_laboratorio';
+    if (container.data === this.ordenesListasLaboratorio) return 'listo_laboratorio';
+    if (container.data === this.ordenesPendienteRetiro) return 'pendiente_retiro';
+    if (container.data === this.ordenesEntregadas) return 'entregado';
+    return '';
+  }
+
+  /**
+   * Mostrar advertencia cuando falta fecha de entrega
+   */
+  private mostrarAdvertenciaFechaEntrega(orden: OrdenTrabajo): void {
+    const contenidoHTML = `
+    <div style="text-align: center; padding: 0.5rem 0;">
+      <p style="margin-bottom: 0.75rem;">La orden <code>${orden.ordenId}</code> no tiene fecha estimada de entrega.</p>
+      
+      <div class="alert" style="margin: 0.75rem 0;">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Requisito:</strong> Para mover de "En Tienda" a "Laboratorio", debe configurar primero una fecha estimada.
+      </div>
+      
+      <p class="question">¿Desea configurar la fecha ahora?</p>
+    </div>
+  `;
+
+    this.swalService.showConfirm(
+      '📅 Fecha requerida',
+      contenidoHTML,
+      'Configurar fecha',
+      'Cancelar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.configurarFechaEntrega(orden);
+      }
+    });
+  }
+
+  /**
+   * Mostrar advertencia para múltiples órdenes sin fecha
+   */
+  private mostrarAdvertenciaFechaEntregaMultiples(ordenesSinFecha: OrdenTrabajo[]): void {
+    const cantidad = ordenesSinFecha.length;
+   const codigos = ordenesSinFecha.map(o =>
+  `<div style="
+    display: flex;
+    justify-content: center;
+    margin: 4px 0;
+  ">
+    <code style="
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 8px 16px;
+      color: #e74c3c;
+      font-family: monospace;
+      font-size: 14px;
+      min-width: 200px;
+      text-align: center;
+    ">${o.ordenId}</code>
+  </div>`
+).join('');
+
+    const contenidoHTML = `
+    <div style="text-align: center; padding: 0.5rem 0;">
+      <p style="margin-bottom: 0.75rem;"><strong>${cantidad} ${cantidad === 1 ? 'orden' : 'órdenes'}</strong> sin fecha estimada:</p>
+      
+      ${codigos}
+      
+      <div class="alert" style="margin: 0.75rem 0;">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Requisito:</strong> Para mover de "En Tienda" a "Laboratorio", debe configurar fechas estimadas primero.
+      </div>
+      
+      <p class="question">¿Desea configurar las fechas ahora?</p>
+    </div>
+  `;
+
+    this.swalService.showConfirm(
+      '📅 Fechas requeridas',
+      contenidoHTML,
+      'Configurar fechas',
+      'Cancelar'
+    ).then((result) => {
+      if (result.isConfirmed && ordenesSinFecha.length > 0) {
+        this.configurarFechaEntrega(ordenesSinFecha[0]);
+      }
+    });
   }
 
   /**
@@ -484,29 +634,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     return 'baja';
   }
 
-  /**
-   * Mover todos los pedidos de una columna
-   */
-  moverTodos(ordenes: OrdenTrabajo[], estadoActual: string, nuevoEstado: string) {
-    if (ordenes.length === 0) return;
-
-    // Convertir los strings a EstadoOrden con verificación
-    const estadoActualValido = this.asegurarEstadoOrden(estadoActual);
-    const nuevoEstadoValido = this.asegurarEstadoOrden(nuevoEstado);
-
-    // Obtener títulos y mensajes usando funciones auxiliares
-    const titulo = this.getMensajeTitulo(ordenes.length, estadoActualValido);
-    const textoBoton = this.getTextoAccion(ordenes.length);
-    const htmlContent = this.getMensajeConfirmacion(ordenes.length, estadoActualValido, nuevoEstadoValido);
-
-    // Usar el servicio Swal para mostrar confirmación
-    this.swalService.showConfirm(titulo, htmlContent, textoBoton, 'Cancelar')
-      .then((result) => {
-        if (result.isConfirmed) {
-          this.procesarMovimientoTodasOrdenes(ordenes, estadoActualValido, nuevoEstadoValido);
-        }
-      });
-  }
 
   private getMensajeTitulo(cantidad: number, estado: EstadoOrden): string {
     const esSingular = cantidad === 1;
@@ -1809,7 +1936,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   }
 
   // Variable para controlar el estado de guardado
-//  guardandoConfiguracion: boolean = false;
+  //  guardandoConfiguracion: boolean = false;
 
   // Método para guardar configuración con loader
   guardarConfiguracion() {
@@ -1819,7 +1946,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
     // Mostrar loader con mensaje inicial
     this.loader.showWithMessage('⚙️ Actualizando configuración...');
-  //  this.guardandoConfiguracion = true;
+    //  this.guardandoConfiguracion = true;
 
     // Llamar al API
     this.ordenesTrabajoService.actualizarDiasArchivo(dias).subscribe({
@@ -1838,7 +1965,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
           // Cerrar modal
           this.mostrarModalAutoArchivado = false;
-         // this.guardandoConfiguracion = false;
+          // this.guardandoConfiguracion = false;
 
           // Mostrar notificación de éxito (opcional)
           this.mostrarNotificacion(`Configuración guardada: ${dias} días para auto-archivado`, 'success');
@@ -1847,7 +1974,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
       error: (error) => {
         // Ocultar loader
         this.loader.hide();
-      //  this.guardandoConfiguracion = false;
+        //  this.guardandoConfiguracion = false;
 
         console.error('Error al guardar configuración:', error);
 

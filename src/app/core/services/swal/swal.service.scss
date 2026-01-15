@@ -1,236 +1,453 @@
+@use '../../../../custom-theme.scss' as theme;
+
 /* ==================== */
-/* VARIABLES CON TU TEMA */
+/* VARIABLES DE COLORES MODERNOS */
 /* ==================== */
 :root {
-  --swal-primary: #3a7bd5;
-  --swal-primary-dark: #005a9e;
-  --swal-primary-light: #5d9cff;
-  --swal-success: #38a169;
+  // Colores primarios
+  --swal-primary: var(--primary-color);
+  --swal-primary-dark: var(--primary-color-dark);
+  --swal-primary-light: #e3f2fd;
+
+  // Colores de estado
+  --swal-success: #28a745;
   --swal-warning: #f39c12;
   --swal-error: #e74c3c;
   --swal-info: #17a2b8;
-  --swal-background: var(--degradado-color);
-  --swal-text: white;
-  --swal-text-light: rgba(255, 255, 255, 0.9);
-  --swal-border: var(--primary-color);
-  --swal-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-  --swal-card-bg: rgba(255, 255, 255, 0.1);
+
+  // Colores neutrales
+  --swal-bg-white: #ffffff;
+  --swal-bg-light: #f8f9fa;
+  --swal-text-dark: #1a1a1a;
+  --swal-text-gray: #495057;
+  --swal-text-light: #ffffff;
+  --swal-border: #dee2e6;
+
+  // Sombras
+  --swal-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
 }
 
 /* ==================== */
-/* POPUP BASE MODERNO */
+/* RESET DE SWEETALERT2 - CON BORDE DEFINIDO */
+/* ==================== */
+.swal2-container {
+  &.swal2-backdrop-show {
+    background: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(3px);
+  }
+
+  .swal2-popup {
+    // background: transparent !important;
+    background: #dee2e6;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    box-shadow: var(--primary-color) !important;
+    border-radius: 12px !important;
+  }
+}
+
+/* ==================== */
+/* POPUP BASE MODERNO - CON MÁS CONTRASTE */
 /* ==================== */
 .swal-modern-popup {
   position: relative;
-  border-radius: 16px !important;
-  padding: 2.5rem 2rem 2rem !important;
+  border-radius: 12px !important;
+  padding: 2rem 2rem 1.5rem !important;
   overflow: hidden !important;
-  max-width: 480px !important;
+  max-width: 450px !important;
   width: 90vw !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: var(--swal-shadow) !important;
-  background: var(--swal-background) !important;
-  backdrop-filter: blur(20px);
+
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
   
-  /* Overlay para mejorar legibilidad del contenido */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.3);
-    z-index: -1;
-    border-radius: 16px;
-  }
+  // Sombra sutil
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1) !important;
+  // Fondo blanco sólido
+  background: #ffffff !important;
+
+  // Efecto de elevación con múltiples sombras
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.05),
+    0 2px 2px rgba(0, 0, 0, 0.05),
+    0 4px 4px rgba(0, 0, 0, 0.05),
+    0 8px 8px rgba(0, 0, 0, 0.05),
+    0 16px 16px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Borde interno para efecto de "doble borde" */
+.swal-modern-popup::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Efecto de "inset" para dar profundidad */
+.swal-modern-popup::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* ==================== */
-/* COMPONENTES SWAL */
+/* ENCABEZADO - MÁS CONTRASTE */
 /* ==================== */
 .swal-modern-title {
-  color: var(--swal-text) !important;
-  font-size: 1.75rem !important;
+  color: #1a1a1a !important;
+  font-size: 1.5rem !important;
   font-weight: 700 !important;
-  margin: 0 auto 1.5rem auto !important;
+  margin: 0 auto 1rem auto !important;
   text-align: center !important;
-  letter-spacing: -0.5px;
-  position: relative !important;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  
+  letter-spacing: -0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 2;
+
+  // Línea decorativa más definida
   &:after {
     content: '';
     position: absolute;
-    bottom: -0.75rem;
+    bottom: -0.5rem;
     left: 50%;
     transform: translateX(-50%);
-    width: 60px;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.8);
+    width: 50px;
+    height: 4px;
     border-radius: 2px;
+    background: rgba(0, 0, 0, 0.2) !important;
   }
 }
 
+/* ==================== */
+/* CONTENIDO - MEJOR CONTRASTE */
+/* ==================== */
 .swal-modern-content {
-  color: var(--swal-text-light) !important;
+  color: var(--swal-text-gra) !important;
   font-size: 1rem !important;
   line-height: 1.6 !important;
   text-align: center !important;
-  margin-bottom: 2rem !important;
+  margin-bottom: 1.5rem !important;
   font-weight: 400;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+  position: relative;
+  z-index: 2;
+
+  p {
+    margin-bottom: 0.75rem;
+    color: var(--swal-text-gra) !important;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  strong {
+    color: #1a1a1a !important;
+    font-weight: 600;
+  }
+
+  code {
+    background: #f8f9fa !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+    color: #e74c3c;
+    font-size: 0.9em;
+    font-weight: 500;
+  }
+
+  /* Para múltiples códigos en columna */
+  .block {
+    display: block !important;
+    background: #f8f9fa !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 4px !important;
+    padding: 8px 12px !important;
+    margin: 5px 0 !important;
+    color: #e74c3c !important;
+    font-family: monospace !important;
+    font-size: 14px !important;
+    text-align: center !important;
+  }
+
+  /* Para contenedores con scroll */
+  .scroll-container {
+    max-height: 150px;
+    overflow-y: auto;
+    margin: 15px 0;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+  }
+
+  /* Estilos para alertas personalizadas */
+  .alert-box {
+    background: #fff8e1 !important;
+    border: 1px solid #ffd166 !important;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 1rem 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+
+    .alert-icon {
+      color: #f39c12;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    strong {
+      color: #c0392b !important;
+    }
+  }
+
+  .alert {
+    background: #fff8e1 !important;
+    border: 1px solid #ffd166 !important;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    text-align: left;
+
+    i {
+      color: #f39c12;
+      margin-right: 0.5rem;
+    }
+
+    strong {
+      color: #c0392b !important;
+    }
+  }
+
+  .question {
+    color: #1a1a1a !important;
+    font-weight: 600 !important;
+    margin-top: 1rem;
+    font-size: 1.05rem;
+  }
 }
 
 /* ==================== */
-/* BOTONES MODERNOS */
+/* BOTONES PRINCIPALES - BORDES DEFINIDOS */
 /* ==================== */
 .swal-modern-confirm {
-  background: rgba(255, 255, 255, 0.2) !important;
-  color: white !important;
+  background: var(--degradado-color) !important;
+  color: #ffffff !important;
   font-weight: 600 !important;
-  padding: 0.875rem 2rem !important;
-  border-radius: 10px !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  border: none !important;
+
+  //border: 2px solid var(--swal-primary) !important;
   font-size: 0.95rem !important;
   margin: 0.5rem !important;
-  transition: all 0.3s ease !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s ease !important;
+  // box-shadow: 0 3px 6px var(--swal-primary) !important;
   min-width: 120px;
-  backdrop-filter: blur(10px);
-  
-  &:hover {
-    background: rgba(255, 255, 255, 0.3) !important;
+  position: relative;
+  z-index: 2;
+
+  &:hover:not(:disabled) {
+    background: var(--degradado-color) !important;
+    //  border-color: #0056b3 !important;
     transform: translateY(-2px) !important;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3) !important;
+    //box-shadow: 0 5px 12px rgba(0, 123, 255, 0.35) !important;
   }
-  
-  &:active {
+
+  &:active:not(:disabled) {
     transform: translateY(0) !important;
   }
 }
 
+/* ==================== */
+/* BOTONES SECUNDARIOS - GRIS CON BORDES DEFINIDOS */
+/* ==================== */
 .swal-modern-cancel {
-  background: rgba(255, 255, 255, 0.1) !important;
-  color: var(--swal-text-light) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  padding: 0.875rem 2rem !important;
-  border-radius: 10px !important;
+  background: #6c757d !important;
+  color: #ffffff !important;
+  border: 2px solid #6c757d !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 6px !important;
   font-weight: 600 !important;
   font-size: 0.95rem !important;
   margin: 0.5rem !important;
-  transition: all 0.3s ease !important;
+  transition: all 0.2s ease !important;
   min-width: 120px;
-  backdrop-filter: blur(10px);
-  
-  &:hover {
-    background: rgba(255, 255, 255, 0.2) !important;
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    transform: translateY(-2px) !important;
-    color: white !important;
-  }
-}
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  position: relative;
+  z-index: 2;
 
-.swal-modern-close {
-  color: var(--swal-text-light) !important;
-  font-size: 1.5rem !important;
-  transition: all 0.3s ease !important;
-  
   &:hover {
-    color: white !important;
-    transform: rotate(90deg);
+    //   background: #f8f9fa !important;
+    //   border-color: #adb5bd !important;
+    // color: #495057 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow:
+      0 0 0 3px rgba(108, 117, 125, 0.15),
+      0 2px 4px rgba(0, 0, 0, 0.05) !important;
   }
 }
 
 /* ==================== */
-/* VARIANTES DE BOTONES */
+/* BOTÓN CERRAR - MÁS DEFINIDO */
+/* ==================== */
+.swal-modern-close {
+  color: #6c757d !important;
+  font-size: 1.5rem !important;
+  transition: all 0.2s ease !important;
+  opacity: 0.8;
+  font-weight: bold;
+
+  &:hover {
+    color: #1a1a1a !important;
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* ==================== */
+/* VARIANTES DE BOTONES POR TIPO */
 /* ==================== */
 .success-btn {
-  background: linear-gradient(135deg, var(--swal-success) 0%, #48bb78 100%) !important;
-  border: 1px solid rgba(72, 187, 120, 0.3) !important;
-  
-  &:hover {
-    background: linear-gradient(135deg, #48bb78 0%, #68d391 100%) !important;
+  background: var(--degradado-color) !important;
+  //border-color: #28a745 !important;
+
+  &:hover:not(:disabled) {
+    background: var(--degradado-color) !important;
+   // border-color: #218838 !important;
   }
 }
 
 .warning-btn {
-  background: linear-gradient(135deg, var(--swal-warning) 0%, #f6ad55 100%) !important;
-  border: 1px solid rgba(246, 173, 85, 0.3) !important;
-  
-  &:hover {
-    background: linear-gradient(135deg, #f6ad55 0%, #fbd38d 100%) !important;
+  background: #f39c12 !important;
+  border-color: #f39c12 !important;
+
+  &:hover:not(:disabled) {
+    background: #e0a800 !important;
+    border-color: #e0a800 !important;
   }
 }
 
 .error-btn {
-  background: linear-gradient(135deg, var(--swal-error) 0%, #fc8181 100%) !important;
-  border: 1px solid rgba(252, 129, 129, 0.3) !important;
-  
-  &:hover {
-    background: linear-gradient(135deg, #fc8181 0%, #feb2b2 100%) !important;
+  background: #e74c3c !important;
+  border-color: #e74c3c !important;
+
+  &:hover:not(:disabled) {
+    background: #c82333 !important;
+    border-color: #c82333 !important;
   }
 }
 
 .info-btn {
-  background: linear-gradient(135deg, var(--swal-info) 0%, #20c997 100%) !important;
-  border: 1px solid rgba(32, 201, 151, 0.3) !important;
-  
-  &:hover {
-    background: linear-gradient(135deg, #20c997 0%, #38d9a9 100%) !important;
+  background: #17a2b8 !important;
+  border-color: #17a2b8 !important;
+
+  &:hover:not(:disabled) {
+    background: #138496 !important;
+    border-color: #138496 !important;
   }
 }
 
 .primary-btn {
-  background: linear-gradient(135deg, var(--swal-primary) 0%, var(--swal-primary-light) 100%) !important;
-  border: 1px solid rgba(93, 156, 255, 0.3) !important;
-  
-  &:hover {
-    background: linear-gradient(135deg, var(--swal-primary-light) 0%, #7ab1ff 100%) !important;
+  background: var(--degradado-color) !important;
+  // border-color: #007bff !important;
+  box-shadow: none !important;
+  border: none !important;
+
+  &:hover:not(:disabled) {
+    background: var(--degradado-color) !important;
+    // border-color: #0056b3 !important;
   }
 }
 
 /* ==================== */
-/* VARIANTES DE POPUP */
+/* VARIANTES DE POPUP CON BORDES COLORIDOS */
 /* ==================== */
 .success-popup {
+  border-color: var(--swal-primary) !important;
+
   .swal-modern-title:after {
-    background: var(--swal-success) !important;
+    background: var(--degradado-color) !important;
   }
 }
 
 .error-popup {
+  border-color: rgba(231, 76, 60, 0.25) !important;
+  box-shadow:
+    0 0 0 1px rgba(231, 76, 60, 0.1),
+    0 10px 40px rgba(0, 0, 0, 0.15) !important;
+
   .swal-modern-title:after {
-    background: var(--swal-error) !important;
+    background: #e74c3c !important;
   }
 }
 
 .warning-popup {
+  border-color: rgba(243, 156, 18, 0.25) !important;
+  box-shadow:
+    0 0 0 1px rgba(243, 156, 18, 0.1),
+    0 10px 40px rgba(0, 0, 0, 0.15) !important;
+
   .swal-modern-title:after {
-    background: var(--swal-warning) !important;
+    background: #f39c12 !important;
   }
 }
 
 .info-popup {
+  border-color: rgba(23, 162, 184, 0.25) !important;
+  box-shadow:
+    0 0 0 1px rgba(23, 162, 184, 0.1),
+    0 10px 40px rgba(0, 0, 0, 0.15) !important;
+
   .swal-modern-title:after {
-    background: var(--swal-info) !important;
+    background: #17a2b8 !important;
   }
 }
 
 .confirm-popup {
+  border-color: rgba(0, 123, 255, 0.25) !important;
+  box-shadow:
+    0 0 0 1px rgba(0, 123, 255, 0.1),
+    0 10px 40px rgba(0, 0, 0, 0.15) !important;
+
   .swal-modern-title:after {
-    background: var(--swal-primary) !important;
+    background: #007bff !important;
   }
 }
 
 .inactivity-popup {
+  border-color: rgba(243, 156, 18, 0.25) !important;
+  box-shadow:
+    0 0 0 1px rgba(243, 156, 18, 0.1),
+    0 10px 40px rgba(0, 0, 0, 0.15) !important;
+
   .swal-modern-title:after {
-    background: var(--swal-warning) !important;
+    background: #f39c12 !important;
   }
 }
 
 /* ==================== */
-/* ALERTA DE INACTIVIDAD */
+/* CONTENIDO DE INACTIVIDAD */
 /* ==================== */
 .inactivity-content {
   text-align: center;
@@ -238,100 +455,86 @@
 }
 
 .inactivity-icon {
-  font-size: 3rem;
-  color: var(--swal-warning);
+  font-size: 2.5rem;
+  color: #f39c12;
   margin-bottom: 1rem;
-  text-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
-  
+
   i {
     animation: pulse 2s infinite;
   }
 }
 
 .inactivity-text {
-  color: var(--swal-text-light);
+  color: #495057;
   margin-bottom: 1.5rem;
   line-height: 1.6;
 }
 
 .countdown-container {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
   padding: 1rem;
   margin: 1rem 0;
-  backdrop-filter: blur(10px);
 }
 
 .countdown-number {
-  color: var(--swal-warning);
+  color: #f39c12;
   font-size: 2rem;
   font-weight: 700;
   display: block;
-  text-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
 }
 
 .countdown-label {
-  color: var(--swal-text-light);
+  color: #6c757d;
   font-size: 0.9rem;
 }
 
 .session-closed-content {
   text-align: center;
-  color: var(--swal-text-light);
-  font-size: 1.1rem;
+  color: #495057;
+  font-size: 1rem;
 }
 
 /* ==================== */
-/* LOADING APOLLO MEJORADO */
+/* LOADING APOLLO */
 /* ==================== */
 .apollo-loading-popup {
   background: transparent !important;
   box-shadow: none !important;
-  max-width: 100% !important;
-  margin: 0 !important;
-  border: none !important;
 }
 
 .apollo-loading-container {
   text-align: center;
-  padding: 0 !important;
-  margin: 0 !important;
-  background: transparent !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 300px;
 }
 
 .apollo-loading-card {
-  background: var(--swal-card-bg);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  padding: 3rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .apollo-loading-logo {
-  width: 120px;
+  width: 80px;
   height: auto;
-  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.8));
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   animation: pulse 2s infinite alternate;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
 }
 
 .apollo-loading-text {
   color: white;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
   font-weight: 500;
-  margin-bottom: 1.5rem;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .apollo-loading-bar-container {
-  width: 200px;
-  height: 4px;
+  width: 150px;
+  height: 3px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 2px;
   overflow: hidden;
@@ -341,22 +544,42 @@
 .apollo-loading-bar {
   height: 100%;
   width: 50%;
-  background: linear-gradient(90deg, var(--swal-primary), white);
+  background: #007bff;
   animation: loading 1.5s ease-in-out infinite;
-  border-radius: 2px;
 }
 
 /* ==================== */
 /* BARRA DE PROGRESO */
 /* ==================== */
 .swal-modern-progress-bar {
-  height: 4px !important;
+  height: 3px !important;
   border-radius: 2px !important;
-  background: rgba(255, 255, 255, 0.2) !important;
-  
+  background: #f8f9fa !important;
+
   .swal2-timer-progress-bar {
-    background: linear-gradient(90deg, var(--swal-primary), var(--swal-primary-light)) !important;
-    border-radius: 2px !important;
+    background: #007bff !important;
+  }
+}
+
+/* ==================== */
+/* LOADING BÁSICO */
+/* ==================== */
+.loading-popup {
+  .swal-modern-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+
+    &::before {
+      content: '';
+      width: 20px;
+      height: 20px;
+      border: 2px solid #dee2e6;
+      border-top-color: #007bff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
   }
 }
 
@@ -364,42 +587,62 @@
 /* ANIMACIONES */
 /* ==================== */
 @keyframes loading {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(200%);
+  }
 }
 
 @keyframes pulse {
-  0% { 
-    transform: scale(0.95); 
-    opacity: 0.8; 
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
   }
-  100% { 
-    transform: scale(1.05); 
-    opacity: 1; 
+
+  100% {
+    transform: scale(1.05);
+    opacity: 1;
   }
 }
 
-@keyframes fadeIn {
-  from { 
-    opacity: 0; 
-    transform: translateY(-20px) scale(0.95); 
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0) scale(1); 
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes modalAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    box-shadow:
+      0 1px 1px rgba(0, 0, 0, 0.05),
+      0 2px 2px rgba(0, 0, 0, 0.05),
+      0 4px 4px rgba(0, 0, 0, 0.05),
+      0 8px 8px rgba(0, 0, 0, 0.05),
+      0 16px 16px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(0, 0, 0, 0.1) !important;
   }
 }
 
 /* ==================== */
-/* CLASES GLOBALES SWAL2 */
+/* ANIMACIÓN DE ENTRADA */
 /* ==================== */
-.swal2-show {
-  animation: fadeIn 0.3s ease-out !important;
-}
-
-.swal2-backdrop {
-  background: rgba(0, 0, 0, 0.7) !important;
-  backdrop-filter: blur(8px);
+.swal2-show .swal-modern-popup {
+  animation: modalAppear 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
 }
 
 /* ==================== */
@@ -407,30 +650,46 @@
 /* ==================== */
 @media (max-width: 768px) {
   .swal-modern-popup {
-    padding: 2rem 1.5rem 1.5rem !important;
-    margin: 1rem !important;
+    padding: 1.5rem 1.25rem 1.25rem !important;
+    margin: 0.5rem !important;
+    border-radius: 10px !important;
+    border-width: 2px !important;
+
+    &::before {
+      top: 1px;
+      left: 1px;
+      right: 1px;
+      bottom: 1px;
+      border-radius: 8px;
+    }
   }
-  
+
   .swal-modern-title {
-    font-size: 1.5rem !important;
+    font-size: 1.25rem !important;
+    margin-bottom: 0.75rem !important;
   }
-  
+
   .swal-modern-content {
     font-size: 0.95rem !important;
+    margin-bottom: 1.25rem !important;
   }
-  
+
   .swal-modern-confirm,
   .swal-modern-cancel {
-    padding: 0.75rem 1.5rem !important;
+    padding: 0.625rem 1.25rem !important;
     font-size: 0.9rem !important;
     min-width: 100px;
   }
-  
-  .apollo-loading-card {
-    padding: 2rem;
-  }
-  
-  .apollo-loading-logo {
-    width: 80px;
+
+  // Para móviles, los botones se apilan verticalmente
+  .swal2-actions {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+
+    .swal-modern-confirm,
+    .swal-modern-cancel {
+      width: 100% !important;
+      margin: 0.25rem 0 !important;
+    }
   }
 }

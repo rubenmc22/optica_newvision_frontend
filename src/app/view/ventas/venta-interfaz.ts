@@ -139,3 +139,56 @@ export interface CuotaCashea {
     seleccionada: boolean;
     habilitada: boolean;
 }
+
+// Crea una interfaz para las estadísticas
+export interface EstadisticasVentas {
+    message: string;
+
+    // Cantidades básicas
+    totalVentas: number;
+    ventasCompletadas: number;
+    ventasPendientes: number;
+    ventasCanceladas: number;
+
+    // Montos principales
+    montoTotalGeneral: number;
+    totalAbonosRecibidos: number;
+    deudaPendienteTotal: number;
+
+    // Desglose de deuda
+    deudaPorCashea: number;
+    deudaPorAbonos: number;
+    deudaPorContadoPendiente: number;
+
+    // Cantidad de ventas por tipo pendiente
+    cantidadCasheaPendiente: number;
+    cantidadAbonosPendiente: number;
+    cantidadContadoPendiente: number;
+
+    // Montos por forma de pago (total de ventas por tipo)
+    montoContado: number;
+    montoAbonos: number;
+    montoCashea: number;
+    montoCredito: number;
+
+    // Cantidad de ventas por forma de pago
+    cantidadContado: number;
+    cantidadAbonos: number;
+    cantidadCashea: number;
+    cantidadCredito: number;
+
+    // Información adicional útil
+    fechaDesde?: string;
+    fechaHasta?: string;
+    monedaBase: string;
+}
+
+export interface ResumenFiltros {
+  periodo: string;
+  fechaDesde: string;
+  fechaHasta: string;
+  anio: number;
+  mes: number;
+  asesor: string;
+  formaPago: string;
+}

@@ -11,10 +11,13 @@
       </div>
     </div>
     <div class="header-actions">
-      <button class="btn btn-excel-moderno" (click)="generarInforme()">
-        <i class="bi bi-file-earmark-excel"></i>
-        <span>Generar Informe</span>
+      <!-- Botón para abrir resumen financiero -->
+      <button class="btn btn-resumen-financiero" (click)="abrirModalResumenFinanciero()">
+        <i class="bi bi-graph-up me-2"></i>
+        <span>Resumen Financiero</span>
       </button>
+
+      <!-- El botón de generar informe se moverá al modal -->
 
       <button class="btn-icon-refresh" (click)="recargarEstadisticas()" [disabled]="estadisticasCargando"
         [class.loading]="estadisticasCargando" title="Actualizar estadísticas">
@@ -62,7 +65,6 @@
               <div class="summary-content">
                 <div class="summary-number text-success">{{ getVentasCompletadas() }}</div>
                 <div class="summary-label">Completadas</div>
-                <div class="summary-subtext">{{ getMontoCompletadas() }}</div>
               </div>
             </div>
           </div>
@@ -80,7 +82,6 @@
               <div class="summary-content">
                 <div class="summary-number text-warning">{{ getVentasPendientes() }}</div>
                 <div class="summary-label">Pendientes</div>
-                <div class="summary-subtext">{{ getMontoPendientes() }}</div>
               </div>
             </div>
           </div>
@@ -98,7 +99,7 @@
               <div class="summary-content">
                 <div class="summary-number text-danger">{{ getVentasCanceladas() }}</div>
                 <div class="summary-label">Canceladas</div>
-                <div class="summary-subtext">{{ getMontoCanceladas() }}</div>
+                <div class="summary-subtext">Ventas anuladas</div>
               </div>
             </div>
           </div>
@@ -2370,9 +2371,574 @@
           </div>
         </div>
       </div>
-    </div> <!-- Cierre de modal-content -->
-  </div> <!-- Cierre de modal-dialog -->
-</div> <!-- Cierre de modal -->
+    </div>
+  </div>
+</div>
 
 <!-- Backdrop del modal -->
 <div class="modal-backdrop fade show" *ngIf="mostrarModalRecibo"></div>
+
+
+<!-- Modal de Resumen Financiero -->
+<div class="modal fade" id="modalResumenFinanciero" tabindex="-1" aria-hidden="true" #modalResumenFinanciero>
+  <div class="modal-dialog modal-lg-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0">
+      <!-- Header del Modal -->
+      <div class="modal-header-moderno">
+        <div class="modal-header-content">
+          <div class="modal-header-icon">
+            <i class="bi bi-graph-up"></i>
+          </div>
+          <div class="modal-header-text">
+            <h4 class="modal-header-title">Resumen Financiero</h4>
+            <div class="modal-header-subtitle">
+              Análisis completo de ventas, abonos y deudas pendientes
+            </div>
+          </div>
+        </div>
+        <div class="modal-header-actions">
+          <!-- Botón X para cerrar -->
+          <button type="button" class="btn-close-modal" (click)="cerrarModal()" aria-label="Close">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Body del Modal -->
+      <div class="modal-body">
+        <!-- Panel de Filtros Compacto (No flotante) -->
+        <div class="panel-filtros-compacto mb-4">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body p-3">
+              <div class="d-flex align-items-center justify-content-between">
+                <!-- Icono y título -->
+                <div class="d-flex align-items-center">
+                  <div class="icono-filtro-panel bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                    <i class="bi bi-sliders"></i>
+                  </div>
+                  <div>
+                    <span class="fw-semibold text-primary">Filtros del Resumen</span>
+                    <small class="text-muted d-block small">Personaliza el análisis financiero</small>
+                  </div>
+                </div>
+
+                <!-- Filtros rápidos y contador -->
+                <div class="d-flex align-items-center">
+                  <!-- Contador de filtros activos -->
+                  <span class="badge bg-primary rounded-pill me-3" *ngIf="contarFiltrosActivos() > 0">
+                    {{ contarFiltrosActivos() }} activo{{ contarFiltrosActivos() > 1 ? 's' : '' }}
+                  </span>
+
+                  <!-- Filtros rápidos -->
+                  <div class="d-flex flex-wrap gap-1 me-3">
+                    <button type="button" class="btn btn-sm btn-periodo-rapido" 
+                            [class.active]="resumenFiltros.periodo === 'hoy'" 
+                            (click)="aplicarPeriodoResumen('hoy')"
+                            title="Hoy">
+                      <i class="bi bi-calendar-day"></i>
+                      <span class="d-none d-sm-inline ms-1">Hoy</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-periodo-rapido" 
+                            [class.active]="resumenFiltros.periodo === 'semana'" 
+                            (click)="aplicarPeriodoResumen('semana')"
+                            title="Esta semana">
+                      <i class="bi bi-calendar-week"></i>
+                      <span class="d-none d-sm-inline ms-1">Semana</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-periodo-rapido" 
+                            [class.active]="resumenFiltros.periodo === 'mes'" 
+                            (click)="aplicarPeriodoResumen('mes')"
+                            title="Este mes">
+                      <i class="bi bi-calendar-month"></i>
+                      <span class="d-none d-sm-inline ms-1">Mes</span>
+                    </button>
+                  </div>
+
+                  <!-- Botón para mostrar/ocultar filtros avanzados -->
+                  <button class="btn btn-sm btn-toggle-avanzado" 
+                          type="button" 
+                          (click)="toggleFiltrosAvanzados()"
+                          [attr.aria-expanded]="mostrarFiltrosAvanzados" 
+                          [class.active]="mostrarFiltrosAvanzados">
+                    <i class="bi bi-gear me-1"></i>
+                    <span>{{ mostrarFiltrosAvanzados ? 'Ocultar' : 'Avanzado' }}</span>
+                    <i class="bi bi-chevron-down ms-1 toggle-icon" [class.rotated]="mostrarFiltrosAvanzados"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filtros avanzados (Mostrar/Ocultar) -->
+              <div class="filtros-avanzados-container mt-3" *ngIf="mostrarFiltrosAvanzados">
+                <div class="border-top pt-3">
+                  <div class="row g-3">
+                    <!-- Rango de fechas personalizado -->
+                    <div class="col-lg-6">
+                      <div class="filtro-item">
+                        <label class="form-label small fw-semibold text-primary mb-2">
+                          <i class="bi bi-calendar-range me-1"></i>Rango de Fechas
+                        </label>
+                        <div class="input-group input-group-sm">
+                          <span class="input-group-text bg-light">
+                            <i class="bi bi-calendar"></i>
+                          </span>
+                          <input type="date" class="form-control" 
+                                 [(ngModel)]="resumenFiltros.fechaDesde"
+                                 (change)="actualizarResumen()"
+                                 placeholder="Desde">
+                          <span class="input-group-text bg-light">a</span>
+                          <input type="date" class="form-control" 
+                                 [(ngModel)]="resumenFiltros.fechaHasta"
+                                 (change)="actualizarResumen()"
+                                 placeholder="Hasta">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Año y Mes -->
+                    <div class="col-lg-3">
+                      <div class="filtro-item">
+                        <label class="form-label small fw-semibold text-primary mb-2">
+                          <i class="bi bi-calendar me-1"></i>Año
+                        </label>
+                        <select class="form-select form-select-sm" 
+                                [(ngModel)]="resumenFiltros.anio" 
+                                (change)="actualizarResumen()">
+                          <option value="">Seleccionar año</option>
+                          <option *ngFor="let anio of anosDisponibles" [value]="anio">{{ anio }}</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="col-lg-3">
+                      <div class="filtro-item">
+                        <label class="form-label small fw-semibold text-primary mb-2">
+                          <i class="bi bi-calendar3 me-1"></i>Mes
+                        </label>
+                        <select class="form-select form-select-sm" 
+                                [(ngModel)]="resumenFiltros.mes" 
+                                (change)="actualizarResumen()">
+                          <option value="">Todos los meses</option>
+                          <option *ngFor="let mes of mesesDisponibles; let i = index" [value]="i+1">
+                            {{ mes }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Asesor -->
+                    <div class="col-lg-6">
+                      <div class="filtro-item">
+                        <label class="form-label small fw-semibold text-primary mb-2">
+                          <i class="bi bi-person-badge me-1"></i>Asesor
+                        </label>
+                        <select class="form-select form-select-sm" 
+                                [(ngModel)]="resumenFiltros.asesor"
+                                (change)="actualizarResumen()">
+                          <option value="">Todos los asesores</option>
+                          <option *ngFor="let asesor of asesores" [value]="asesor.id">
+                            {{ asesor.nombre }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Forma de Pago -->
+                    <div class="col-lg-6">
+                      <div class="filtro-item">
+                        <label class="form-label small fw-semibold text-primary mb-2">
+                          <i class="bi bi-credit-card me-1"></i>Forma de Pago
+                        </label>
+                        <select class="form-select form-select-sm" 
+                                [(ngModel)]="resumenFiltros.formaPago"
+                                (change)="actualizarResumen()">
+                          <option value="">Todas las formas</option>
+                          <option value="contado">Contado</option>
+                          <option value="contado-pendiente">Contado - Pendiente por Pago</option>
+                          <option value="abono">Abono</option>
+                          <option value="cashea">Cashea</option>
+                          <option value="credito">Crédito</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Botón para limpiar todos los filtros -->
+                  <div class="d-flex justify-content-end mt-3">
+                    <button class="btn btn-sm btn-limpiar-filtros" 
+                            (click)="limpiarTodosLosFiltros()"
+                            *ngIf="contarFiltrosActivos() > 0">
+                      <i class="bi bi-x-circle me-1"></i>
+                      Limpiar todos los filtros
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Filtros Activos (chips) -->
+              <div class="filtros-activos-chips mt-3" *ngIf="contarFiltrosActivos() > 0">
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                  <small class="text-muted">
+                    <i class="bi bi-funnel me-1"></i>Filtros aplicados:
+                  </small>
+
+                  <!-- Filtro de período -->
+                  <span class="filtro-chip" *ngIf="resumenFiltros.periodo">
+                    <i class="bi bi-calendar-range me-1"></i>
+                    {{ getPeriodoDisplay() }}
+                    <i class="bi bi-x ms-1" (click)="limpiarFiltroPeriodo()"></i>
+                  </span>
+
+                  <!-- Filtro de año -->
+                  <span class="filtro-chip" *ngIf="resumenFiltros.anio">
+                    <i class="bi bi-calendar-year me-1"></i>Año {{ resumenFiltros.anio }}
+                    <i class="bi bi-x ms-1" (click)="limpiarFiltroAnio()"></i>
+                  </span>
+
+                  <!-- Filtro de mes -->
+                  <span class="filtro-chip" *ngIf="resumenFiltros.mes">
+                    <i class="bi bi-calendar-month me-1"></i>{{ getMesDisplay() }}
+                    <i class="bi bi-x ms-1" (click)="limpiarFiltroMes()"></i>
+                  </span>
+
+                  <!-- Filtro de asesor -->
+                  <span class="filtro-chip" *ngIf="resumenFiltros.asesor">
+                    <i class="bi bi-person-badge me-1"></i>{{ getAsesorNombre(resumenFiltros.asesor) }}
+                    <i class="bi bi-x ms-1" (click)="limpiarFiltroAsesor()"></i>
+                  </span>
+
+                  <!-- Filtro de forma de pago -->
+                  <span class="filtro-chip" *ngIf="resumenFiltros.formaPago">
+                    <i class="bi bi-credit-card me-1"></i>{{ getFormaPagoDisplay(resumenFiltros.formaPago) }}
+                    <i class="bi bi-x ms-1" (click)="limpiarFiltroFormaPago()"></i>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección de Montos Detallados -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-primary text-white py-3">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-currency-dollar me-2"></i>
+                  <h5 class="mb-0">Resumen Financiero</h5>
+                  <span class="ms-auto badge bg-light text-dark">
+                    {{ getFechaRango() }}
+                  </span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <!-- Monto Total General -->
+                  <div class="col-md-4 mb-3">
+                    <div class="card h-100 border-primary">
+                      <div class="card-body">
+                        <div class="d-flex align-items-center">
+                          <div class="monto-icon bg-primary text-white me-3">
+                            <i class="bi bi-cash-stack"></i>
+                          </div>
+                          <div class="monto-content">
+                            <div class="monto-label text-muted">Monto Total General</div>
+                            <div class="monto-valor text-primary fw-bold fs-4">
+                              {{ getMontoTotalGeneral() }}
+                            </div>
+                            <div class="monto-subtext small">
+                              Valor total de ventas
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Total Abonos Recibidos -->
+                  <div class="col-md-4 mb-3">
+                    <div class="card h-100 border-success">
+                      <div class="card-body">
+                        <div class="d-flex align-items-center">
+                          <div class="monto-icon bg-success text-white me-3">
+                            <i class="bi bi-cash-coin"></i>
+                          </div>
+                          <div class="monto-content">
+                            <div class="monto-label text-muted">Total Abonos Recibidos</div>
+                            <div class="monto-valor text-success fw-bold fs-4">
+                              {{ getTotalAbonosRecibidos() }}
+                            </div>
+                            <div class="monto-subtext small">
+                              Pagos recibidos a la fecha
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Deuda Pendiente por Cobrar -->
+                  <div class="col-md-4 mb-3">
+                    <div class="card h-100 border-warning">
+                      <div class="card-body">
+                        <div class="d-flex align-items-center">
+                          <div class="monto-icon bg-warning text-white me-3">
+                            <i class="bi bi-clock-history"></i>
+                          </div>
+                          <div class="monto-content">
+                            <div class="monto-label text-muted">Deuda Pendiente por Cobrar</div>
+                            <div class="monto-valor text-warning fw-bold fs-4">
+                              {{ getDeudaPendienteTotal() }}
+                            </div>
+                            <div class="monto-subtext small">
+                              Monto por recibir
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Desglose de Deuda Pendiente -->
+                <div class="row mt-3" *ngIf="getDeudaPendienteTotal() !== '0'">
+                  <div class="col-12">
+                    <div class="card border-0 bg-light">
+                      <div class="card-body">
+                        <h6 class="mb-3 text-muted">
+                          <i class="bi bi-pie-chart me-2"></i>
+                          Desglose de Deuda Pendiente
+                        </h6>
+                        <div class="row">
+                          <!-- Deuda por Cashea -->
+                          <div class="col-md-4">
+                            <div class="deuda-item">
+                              <div class="deuda-header">
+                                <span class="deuda-label">
+                                  <i class="bi bi-calendar-check text-info me-2"></i>
+                                  Por Cashea
+                                </span>
+                                <span class="deuda-monto text-info">
+                                  {{ getDeudaPorCashea() }}
+                                </span>
+                              </div>
+                              <div class="progress mt-2" style="height: 5px;">
+                                <div class="progress-bar bg-info" [style.width.%]="getPorcentajeDeuda('cashea')">
+                                </div>
+                              </div>
+                              <small class="text-muted">
+                                {{ getCantidadVentasPorTipo('cashea') }} ventas pendientes
+                              </small>
+                            </div>
+                          </div>
+
+                          <!-- Deuda por Abonos -->
+                          <div class="col-md-4">
+                            <div class="deuda-item">
+                              <div class="deuda-header">
+                                <span class="deuda-label">
+                                  <i class="bi bi-piggy-bank text-warning me-2"></i>
+                                  Por Abonos
+                                </span>
+                                <span class="deuda-monto text-warning">
+                                  {{ getDeudaPorAbonos() }}
+                                </span>
+                              </div>
+                              <div class="progress mt-2" style="height: 5px;">
+                                <div class="progress-bar bg-warning" [style.width.%]="getPorcentajeDeuda('abono')">
+                                </div>
+                              </div>
+                              <small class="text-muted">
+                                {{ getCantidadVentasPorTipo('abono') }} ventas pendientes
+                              </small>
+                            </div>
+                          </div>
+
+                          <!-- Deuda por Contado Pendiente -->
+                          <div class="col-md-4">
+                            <div class="deuda-item">
+                              <div class="deuda-header">
+                                <span class="deuda-label">
+                                  <i class="bi bi-credit-card text-danger me-2"></i>
+                                  Por Contado Pendiente
+                                </span>
+                                <span class="deuda-monto text-danger">
+                                  {{ getDeudaPorContadoPendiente() }}
+                                </span>
+                              </div>
+                              <div class="progress mt-2" style="height: 5px;">
+                                <div class="progress-bar bg-danger" [style.width.%]="getPorcentajeDeuda('contado')">
+                                </div>
+                              </div>
+                              <small class="text-muted">
+                                {{ getCantidadVentasPorTipo('contado') }} ventas pendientes
+                              </small>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Resumen por Forma de Pago -->
+                <div class="row mt-3">
+                  <div class="col-12">
+                    <div class="card border-0">
+                      <div class="card-body">
+                        <h6 class="mb-3 text-muted">
+                          <i class="bi bi-credit-card-2-front me-2"></i>
+                          Resumen por Forma de Pago
+                        </h6>
+                        <div class="row">
+                          <!-- Contado -->
+                          <div class="col-md-3 col-6 mb-3">
+                            <div class="forma-pago-item text-center">
+                              <div class="forma-pago-icon bg-primary text-white">
+                                <i class="bi bi-cash"></i>
+                              </div>
+                              <div class="forma-pago-info mt-2">
+                                <div class="forma-pago-label">Contado</div>
+                                <div class="forma-pago-monto fw-bold">
+                                  {{ getMontoContado() }}
+                                </div>
+                                <small class="text-muted">
+                                  {{ getCantidadVentasPorFormaPago('contado') }} ventas
+                                </small>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Abono -->
+                          <div class="col-md-3 col-6 mb-3">
+                            <div class="forma-pago-item text-center">
+                              <div class="forma-pago-icon bg-success text-white">
+                                <i class="bi bi-piggy-bank"></i>
+                              </div>
+                              <div class="forma-pago-info mt-2">
+                                <div class="forma-pago-label">Abonos</div>
+                                <div class="forma-pago-monto fw-bold">
+                                  {{ getMontoAbonos() }}
+                                </div>
+                                <small class="text-muted">
+                                  {{ getCantidadVentasPorFormaPago('abono') }} ventas
+                                </small>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Cashea -->
+                          <div class="col-md-3 col-6 mb-3">
+                            <div class="forma-pago-item text-center">
+                              <div class="forma-pago-icon bg-info text-white">
+                                <i class="bi bi-calendar-check"></i>
+                              </div>
+                              <div class="forma-pago-info mt-2">
+                                <div class="forma-pago-label">Cashea</div>
+                                <div class="forma-pago-monto fw-bold">
+                                  {{ getMontoCashea() }}
+                                </div>
+                                <small class="text-muted">
+                                  {{ getCantidadVentasPorFormaPago('cashea') }} ventas
+                                </small>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Crédito -->
+                          <div class="col-md-3 col-6 mb-3">
+                            <div class="forma-pago-item text-center">
+                              <div class="forma-pago-icon bg-secondary text-white">
+                                <i class="bi bi-credit-card"></i>
+                              </div>
+                              <div class="forma-pago-info mt-2">
+                                <div class="forma-pago-label">Crédito</div>
+                                <div class="forma-pago-monto fw-bold">
+                                  {{ getMontoCredito() }}
+                                </div>
+                                <small class="text-muted">
+                                  {{ getCantidadVentasPorFormaPago('credito') }} ventas
+                                </small>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección de gráficos o análisis adicionales -->
+        <div class="row mt-4">
+          <div class="col-12">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-light py-3">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-bar-chart me-2 text-primary"></i>
+                  <h6 class="mb-0 fw-semibold">Análisis Detallado</h6>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="card h-100">
+                      <div class="card-body">
+                        <h6 class="card-title">Ventas por Día</h6>
+                        <p class="text-muted small">Distribución de ventas en el período seleccionado</p>
+                        <!-- Aquí podrías agregar un gráfico simple -->
+                        <div class="text-center py-4">
+                          <i class="bi bi-pie-chart display-1 text-muted"></i>
+                          <p class="text-muted mt-2">Gráfico disponible próximamente</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="card h-100">
+                      <div class="card-body">
+                        <h6 class="card-title">Comparativa Mensual</h6>
+                        <p class="text-muted small">Comparación con el mes anterior</p>
+                        <div class="text-center py-4">
+                          <i class="bi bi-graph-up display-1 text-muted"></i>
+                          <p class="text-muted mt-2">Análisis comparativo disponible próximamente</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer del Modal con ambos botones -->
+      <div class="modal-footer d-flex justify-content-between">
+        <div>
+          <!-- Botón Generar Informe Excel -->
+          <button class="btn btn-excel-moderno" (click)="generarInformeDesdeModal()">
+            <i class="bi bi-file-earmark-excel me-2"></i>
+            <span>Generar Informe Excel</span>
+          </button>
+          
+          <!-- Botón Descargar Resumen PDF -->
+          <button type="button" class="btn btn-pdf-moderno ms-2" (click)="descargarResumenPDF()">
+            <i class="bi bi-file-earmark-pdf me-2"></i>
+            <span>Descargar Resumen PDF</span>
+          </button>
+        </div>
+        
+        <div>
+          <!-- Botón Cerrar -->
+          <button type="button" class="btn btn-secondary" (click)="cerrarModal()">
+            <i class="bi bi-x-circle me-2"></i>
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

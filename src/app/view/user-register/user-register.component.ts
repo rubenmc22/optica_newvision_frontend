@@ -230,7 +230,7 @@ export class UserRegisterComponent implements OnInit {
 
   private registerUser() {
     // Mostrar loading
-    this.swalService.showApolloLoading();
+    //this.swalService.showApolloLoading();
 
     const formData = {
       ...this.registerForm.value,

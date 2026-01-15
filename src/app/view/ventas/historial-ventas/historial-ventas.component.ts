@@ -10,6 +10,8 @@ import { Subscription, Subject, debounceTime } from 'rxjs';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { UserStateService, SedeInfo } from '../../../core/services/userState/user-state-service';
+import { EstadisticasVentas, ResumenFiltros } from '../venta-interfaz';
+
 
 
 @Component({
@@ -25,13 +27,15 @@ export class HistorialVentasComponent implements OnInit {
   @ViewChild('detalleVentaModal') detalleVentaModal!: TemplateRef<any>;
   @ViewChild('editarVentaModal') editarVentaModal!: TemplateRef<any>;
   @ViewChild('contenidoRecibo', { static: false }) contenidoRecibo!: ElementRef;
-  private scrollResetTimeout: any;
+  @ViewChild('modalResumenFinanciero') modalResumenFinanciero!: any;
 
   // Propiedades para los filtros
   asesores: any[] = [];
   especialistas: any[] = [];
   ventasFiltradas: any[] = [];
   presetActivo: string = '';
+
+  private modalInstance: any;
 
   // Nuevas propiedades para el datepicker
   showDatepicker: boolean = false;
@@ -62,6 +66,39 @@ export class HistorialVentasComponent implements OnInit {
   estadisticasCargando = false;
   ventasCargando = false;
   private filtrosChanged$ = new Subject<void>();
+
+  // Filtros específicos para el resumen financiero
+  resumenFiltros: ResumenFiltros = {
+    periodo: 'mes',
+    fechaDesde: '',
+    fechaHasta: '',
+    anio: new Date().getFullYear(),
+    mes: new Date().getMonth() + 1,
+    asesor: '',
+    formaPago: ''
+  };
+
+  resumenData = {
+    montoTotal: 12500,
+    totalAbonos: 8500,
+    deudaPendiente: 4000,
+    deudaCashea: 2500,
+    deudaAbonos: 1200,
+    deudaContado: 300,
+    ventasContado: { cantidad: 15, montoTotal: 7500 },
+    ventasAbono: { cantidad: 8, montoTotal: 3000 },
+    ventasCashea: { cantidad: 5, montoTotal: 1500 },
+    ventasCredito: { cantidad: 2, montoTotal: 500 }
+  };
+
+  mostrarFiltrosAvanzados: boolean = false;
+
+  // Arrays para selectores
+  anosDisponibles: number[] = [];
+  mesesDisponibles = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
 
   // Propiedades para el modal confirmacion cancelar venta
   selectedVenta: any = null;
@@ -2523,11 +2560,6 @@ export class HistorialVentasComponent implements OnInit {
     return deuda > 0;
   }
 
-  getAsesorNombre(asesorId: string): string {
-    const asesor = this.asesores.find(a => a.id.toString() === asesorId);
-    return asesor?.nombre || 'Asesor';
-  }
-
   getEspecialistaNombre(especialistaId: string): string {
     const especialista = this.especialistas.find(e => e.id.toString() === especialistaId);
     return especialista?.nombre || 'Especialista';
@@ -2541,16 +2573,6 @@ export class HistorialVentasComponent implements OnInit {
       'anulada': 'Cancelada'
     };
     return estados[estado] || estado;
-  }
-
-  getFormaPagoDisplay(formaPago: string): string {
-    const formas: { [key: string]: string } = {
-      'contado': 'Contado',
-      'abono': 'Abono',
-      'cashea': 'Cashea',
-      'credito': 'Crédito'
-    };
-    return formas[formaPago] || formaPago;
   }
 
   hayFiltrosActivos(): boolean {
@@ -2649,11 +2671,12 @@ export class HistorialVentasComponent implements OnInit {
             ventasCompletadas: response.completadas || 0,
             ventasPendientes: response.pendientes || 0,
             ventasCanceladas: response.canceladas || 0,
-            montoCompletadas: response.monto_completadas || 0,
-            montoPendientes: response.monto_pendientes || 0,
-            montoCanceladas: response.monto_canceladas || 0,
-            montoTotalGeneral: response.monto_total || 0
+            montoCompletadas: response.montoCompletadas || 0,
+            montoPendientes: response.montoPendientes || 0,
+            montoCanceladas: response.montoCanceladas || 0,
+            montoTotalGeneral: response.montoTotalGeneral || 0
           };
+
 
           console.log('📊 Estadísticas actualizadas:', this.estadisticas);
         } else {
@@ -2689,6 +2712,8 @@ export class HistorialVentasComponent implements OnInit {
   onFiltroChange(): void {
     this.paginacion.paginaActual = 1;
     this.cargarVentasPagina(1, true);
+    // Disparar el subject para estadísticas con debounce
+    this.filtrosChanged$.next();
   }
 
   /**
@@ -2707,10 +2732,7 @@ export class HistorialVentasComponent implements OnInit {
     this.paginacion.paginaActual = 1;
     this.fechaUnica = '';
 
-    // Cargar página inmediatamente
     this.cargarVentasPagina(1, false);
-
-    // Usar debounce para estadísticas
     this.filtrosChanged$.next();
   }
 
@@ -2819,94 +2841,6 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   // ========== MÉTODOS PARA TARJETAS DE RESUMEN ==========
-  /* getTotalVentas(): number {
-     return this.paginacion.totalItems || 0;
-   }
- 
-   getVentasCompletadas(): number {
-     return this.ventasFiltradas.filter(venta =>
-       venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0
-     ).length;
-   }
- 
-   getVentasPendientes(): number {
-     return this.ventasFiltradas.filter(venta =>
-       this.ventaTienePendiente(venta)
-     ).length;
-   }
- 
-   getVentasCanceladas(): number {
-     return this.ventasFiltradas.filter(venta =>
-       venta.estado === 'cancelada'
-     ).length;
- 
-       getMontoCompletadas(): string {
-     const ventasCompletadas = this.ventasFiltradas.filter(venta =>
-       venta.estado === 'completada' && this.getDeudaPendiente(venta) === 0
-     );
- 
-     let total = 0;
- 
-     // Sumar convirtiendo cada monto a la moneda del sistema
-     ventasCompletadas.forEach(venta => {
-       const monedaVenta = venta.moneda || 'dolar';
-       const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
- 
-       if (monedaVenta === monedaSistemaNormalizada) {
-         total += venta.montoTotal;
-       } else {
-         total += this.convertirMonto(venta.montoTotal, monedaVenta, monedaSistemaNormalizada);
-       }
-     });
- 
-     return this.formatearMoneda(total, this.monedaSistema);
-   }
- 
-   getMontoPendientes(): string {
-     const ventasPendientes = this.ventasFiltradas.filter(venta =>
-       this.ventaTienePendiente(venta)
-     );
- 
-     let total = 0;
- 
-     ventasPendientes.forEach(venta => {
-       const deuda = this.getDeudaPendiente(venta);
-       const monedaVenta = venta.moneda || 'dolar';
-       const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
- 
-       if (monedaVenta === monedaSistemaNormalizada) {
-         total += deuda;
-       } else {
-         total += this.convertirMonto(deuda, monedaVenta, monedaSistemaNormalizada);
-       }
-     });
- 
-     return this.formatearMoneda(total, this.monedaSistema);
-   }
- 
-   getMontoCanceladas(): string {
-     const ventasCanceladas = this.ventasFiltradas.filter(venta =>
-       venta.estado === 'cancelada'
-     );
- 
-     let total = 0;
- 
-     ventasCanceladas.forEach(venta => {
-       const monedaVenta = venta.moneda || 'dolar';
-       const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
- 
-       if (monedaVenta === monedaSistemaNormalizada) {
-         total += venta.montoTotal;
-       } else {
-         total += this.convertirMonto(venta.montoTotal, monedaVenta, monedaSistemaNormalizada);
-       }
-     });
- 
-     return this.formatearMoneda(total, this.monedaSistema);
-   }
-   }*/
-
-  // ========== MÉTODOS PARA TARJETAS DE RESUMEN ==========
   getTotalVentas(): number {
     return this.estadisticas.totalVentas || 0;
   }
@@ -2921,23 +2855,6 @@ export class HistorialVentasComponent implements OnInit {
 
   getVentasCanceladas(): number {
     return this.estadisticas.ventasCanceladas || 0;
-  }
-
-  // Métodos para montos
-  getMontoCompletadas(): string {
-    return this.formatearMontoSistema(this.estadisticas.montoCompletadas || 0);
-  }
-
-  getMontoPendientes(): string {
-    return this.formatearMontoSistema(this.estadisticas.montoPendientes || 0);
-  }
-
-  getMontoCanceladas(): string {
-    return this.formatearMontoSistema(this.estadisticas.montoCanceladas || 0);
-  }
-
-  getMontoTotalGeneral(): string {
-    return this.formatearMontoSistema(this.estadisticas.montoTotalGeneral || 0);
   }
 
   /**
@@ -3083,12 +3000,6 @@ export class HistorialVentasComponent implements OnInit {
     return this.formatearMoneda(montoNumerico, this.monedaSistema);
   }
 
-  // Método para estadísticas (mantén la conversión)
-
-
-
-
-
   // ========== MÉTODOS PARA EL RECIBO ==========
 
   /**
@@ -3127,8 +3038,6 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-
-
   /**
    * Método auxiliar para iniciar un nuevo recibo
    */
@@ -3137,7 +3046,6 @@ export class HistorialVentasComponent implements OnInit {
       // Crear una copia para evitar mutaciones
       this.ventaParaRecibo = {
         ...venta,
-        // Asegurar propiedades críticas con valores por defecto
         formaPago: venta.formaPago || 'contado',
         montoAbonado: venta.montoAbonado || 0,
         montoInicial: venta.montoInicial || 0,
@@ -3162,7 +3070,7 @@ export class HistorialVentasComponent implements OnInit {
       }, 50);
 
     } catch (error) {
-      console.error('💥 Error crítico al preparar recibo:', error);
+      console.error('Error crítico al preparar recibo:', error);
       this.swalService.showError('Error',
         'Ocurrió un error inesperado al preparar el recibo. Por favor, intente nuevamente.');
 
@@ -5096,6 +5004,359 @@ export class HistorialVentasComponent implements OnInit {
 
   recargarEstadisticas(): void {
     this.cargarEstadisticas();
+  }
+
+  getCantidadVentasPorTipo(tipo: string): number {
+    // Contar ventas por tipo con deuda pendiente
+    return this.ventasFiltradas.filter(venta => {
+      if (venta.estado === 'cancelada') return false;
+      if (venta.formaPago !== tipo) return false;
+      return this.getDeudaPendiente(venta) > 0;
+    }).length;
+  }
+
+  private formatDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private inicializarAnosDisponibles(): void {
+    const currentYear = new Date().getFullYear();
+    this.anosDisponibles = [];
+    for (let i = currentYear; i >= currentYear - 5; i--) {
+      this.anosDisponibles.push(i);
+    }
+  }
+
+
+  // Método para aplicar período
+  aplicarPeriodoResumen(periodo: string): void {
+    this.resumenFiltros.periodo = periodo;
+
+    const hoy = new Date();
+
+    switch (periodo) {
+      case 'hoy':
+        this.resumenFiltros.fechaDesde = this.formatDate(hoy);
+        this.resumenFiltros.fechaHasta = this.formatDate(hoy);
+        break;
+      case 'ayer':
+        const ayer = new Date(hoy);
+        ayer.setDate(hoy.getDate() - 1);
+        this.resumenFiltros.fechaDesde = this.formatDate(ayer);
+        this.resumenFiltros.fechaHasta = this.formatDate(ayer);
+        break;
+      case 'semana':
+        const inicioSemana = new Date(hoy);
+        inicioSemana.setDate(hoy.getDate() - hoy.getDay());
+        this.resumenFiltros.fechaDesde = this.formatDate(inicioSemana);
+        this.resumenFiltros.fechaHasta = this.formatDate(hoy);
+        break;
+      case 'mes':
+        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        this.resumenFiltros.fechaDesde = this.formatDate(inicioMes);
+        this.resumenFiltros.fechaHasta = this.formatDate(hoy);
+        break;
+    }
+
+    this.actualizarResumen();
+  }
+
+  activarPeriodoPersonalizado(): void {
+    this.resumenFiltros.periodo = 'personalizado';
+    // Si no hay fechas, establecer por defecto mes actual
+    if (!this.resumenFiltros.fechaDesde) {
+      const hoy = new Date();
+      const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      this.resumenFiltros.fechaDesde = this.formatDate(inicioMes);
+      this.resumenFiltros.fechaHasta = this.formatDate(hoy);
+    }
+  }
+
+  // Método para actualizar el resumen
+  actualizarResumen(): void {
+    this.cargarDatosResumen();
+  }
+
+  // Método principal para cargar datos del resumen
+  private cargarDatosResumen(): void {
+    this.loader.showWithMessage('📊 Calculando resumen financiero...');
+
+    // Crear objeto de filtros para el servicio
+    const filtrosResumen = {
+      fechaDesde: this.resumenFiltros.fechaDesde,
+      fechaHasta: this.resumenFiltros.fechaHasta,
+      anio: this.resumenFiltros.anio,
+      mes: this.resumenFiltros.mes,
+      asesor: this.resumenFiltros.asesor,
+      formaPago: this.resumenFiltros.formaPago
+    };
+
+    // Aquí deberías llamar a tu servicio para obtener estadísticas financieras
+    this.historialVentaService.obtenerEstadisticasFinancieras(filtrosResumen).subscribe({
+      next: (response: any) => {
+        if (response.message === 'ok') {
+          this.resumenData = response.data;
+        }
+        this.loader.hide();
+      },
+      error: (error) => {
+        console.error('Error al cargar resumen financiero:', error);
+        this.loader.hide();
+        this.swalService.showError('Error', 'No se pudo cargar el resumen financiero');
+      }
+    });
+  }
+
+  getPeriodoResumenTexto(): string {
+    if (this.resumenFiltros.periodo === 'personalizado' && this.resumenFiltros.fechaDesde && this.resumenFiltros.fechaHasta) {
+      return `${this.formatFechaLocal(this.resumenFiltros.fechaDesde)} - ${this.formatFechaLocal(this.resumenFiltros.fechaHasta)}`;
+    }
+
+    const periodos: { [key: string]: string } = {
+      'hoy': 'Hoy',
+      'ayer': 'Ayer',
+      'semana': 'Esta semana',
+      'mes': 'Este mes'
+    };
+
+    return periodos[this.resumenFiltros.periodo] || 'Período actual';
+  }
+
+  // Métodos para mostrar datos en el modal
+  getMontoTotalGeneral(): string {
+    return this.formatearMoneda(this.resumenData?.montoTotal || 0, this.monedaSistema);
+  }
+
+  getTotalAbonosRecibidos(): string {
+    return this.formatearMoneda(this.resumenData?.totalAbonos || 0, this.monedaSistema);
+  }
+
+  getDeudaPendienteTotal(): string {
+    return this.formatearMoneda(this.resumenData?.deudaPendiente || 0, this.monedaSistema);
+  }
+
+  getDeudaPorCashea(): string {
+    return this.formatearMoneda(this.resumenData?.deudaCashea || 0, this.monedaSistema);
+  }
+
+  getDeudaPorAbonos(): string {
+    return this.formatearMoneda(this.resumenData?.deudaAbonos || 0, this.monedaSistema);
+  }
+
+  getDeudaPorContadoPendiente(): string {
+    return this.formatearMoneda(this.resumenData?.deudaContado || 0, this.monedaSistema);
+  }
+
+  getMontoContado(): string {
+    return this.formatearMoneda(this.resumenData?.ventasContado?.montoTotal || 0, this.monedaSistema);
+  }
+
+  getMontoAbonos(): string {
+    return this.formatearMoneda(this.resumenData?.ventasAbono?.montoTotal || 0, this.monedaSistema);
+  }
+
+  getMontoCashea(): string {
+    return this.formatearMoneda(this.resumenData?.ventasCashea?.montoTotal || 0, this.monedaSistema);
+  }
+
+  getMontoCredito(): string {
+    return this.formatearMoneda(this.resumenData?.ventasCredito?.montoTotal || 0, this.monedaSistema);
+  }
+
+  getCantidadVentasPorFormaPago(formaPago: string): number {
+    switch (formaPago) {
+      case 'contado': return this.resumenData?.ventasContado?.cantidad || 0;
+      case 'abono': return this.resumenData?.ventasAbono?.cantidad || 0;
+      case 'cashea': return this.resumenData?.ventasCashea?.cantidad || 0;
+      case 'credito': return this.resumenData?.ventasCredito?.cantidad || 0;
+      default: return 0;
+    }
+  }
+
+  getPorcentajeDeuda(tipo: string): number {
+    const deudaTotal = this.resumenData?.deudaPendiente || 0;
+    if (deudaTotal === 0) return 0;
+
+    let deudaTipo = 0;
+    switch (tipo) {
+      case 'cashea': deudaTipo = this.resumenData?.deudaCashea || 0; break;
+      case 'abono': deudaTipo = this.resumenData?.deudaAbonos || 0; break;
+      case 'contado': deudaTipo = this.resumenData?.deudaContado || 0; break;
+    }
+
+    return (deudaTipo / deudaTotal) * 100;
+  }
+
+  // Métodos para acciones
+  generarInformeDesdeModal(): void {
+    this.swalService.showInfo('Información', 'La generación de informe Excel estará disponible próximamente');
+  }
+
+  descargarResumenPDF(): void {
+    this.swalService.showInfo('Información', 'La descarga del resumen PDF estará disponible próximamente');
+  }
+
+  getFechaRango(): string {
+    if (this.resumenFiltros.fechaDesde && this.resumenFiltros.fechaHasta) {
+      return `${this.formatFechaLocal(this.resumenFiltros.fechaDesde)} - ${this.formatFechaLocal(this.resumenFiltros.fechaHasta)}`;
+    }
+    return 'Período actual';
+  }
+
+  // Ajusta también el método hayFiltrosResumenActivos para considerar 0 como "sin filtro"
+  hayFiltrosResumenActivos(): boolean {
+    return !!(
+      this.resumenFiltros.periodo ||
+      (this.resumenFiltros.anio && this.resumenFiltros.anio !== 0) ||
+      (this.resumenFiltros.mes && this.resumenFiltros.mes !== 0) ||
+      this.resumenFiltros.asesor ||
+      this.resumenFiltros.formaPago
+    );
+  }
+
+  // Método para alternar filtros avanzados
+  toggleFiltrosAvanzados(): void {
+    this.mostrarFiltrosAvanzados = !this.mostrarFiltrosAvanzados;
+  }
+
+  // Método para contar filtros activos
+  contarFiltrosActivos(): number {
+    let count = 0;
+
+    if (this.resumenFiltros.periodo && this.resumenFiltros.periodo !== '') count++;
+    if (this.resumenFiltros.anio && this.resumenFiltros.anio !== 0) count++;
+    if (this.resumenFiltros.mes && this.resumenFiltros.mes !== 0) count++;
+    if (this.resumenFiltros.asesor && this.resumenFiltros.asesor !== '') count++;
+    if (this.resumenFiltros.formaPago && this.resumenFiltros.formaPago !== '') count++;
+
+    return count;
+  }
+
+  // Método para limpiar todos los filtros
+  limpiarTodosLosFiltros(): void {
+    this.resumenFiltros = {
+      periodo: '',
+      fechaDesde: '',
+      fechaHasta: '',
+      anio: 0,
+      mes: 0,
+      asesor: '',
+      formaPago: ''
+    };
+    this.actualizarResumen();
+  }
+
+  // Métodos para limpiar filtros individuales (ya los tienes, asegúrate que funcionen)
+  limpiarFiltroPeriodo(): void {
+    this.resumenFiltros.periodo = '';
+    this.resumenFiltros.fechaDesde = '';
+    this.resumenFiltros.fechaHasta = '';
+    this.actualizarResumen();
+  }
+
+  limpiarFiltroAnio(): void {
+    this.resumenFiltros.anio = 0;
+    this.actualizarResumen();
+  }
+
+  limpiarFiltroMes(): void {
+    this.resumenFiltros.mes = 0;
+    this.actualizarResumen();
+  }
+
+  limpiarFiltroAsesor(): void {
+    this.resumenFiltros.asesor = '';
+    this.actualizarResumen();
+  }
+
+  limpiarFiltroFormaPago(): void {
+    this.resumenFiltros.formaPago = '';
+    this.actualizarResumen();
+  }
+
+  // Métodos para display
+  getPeriodoDisplay(): string {
+    const periodos: { [key: string]: string } = {
+      'hoy': 'Hoy',
+      'ayer': 'Ayer',
+      'semana': 'Esta semana',
+      'mes': 'Este mes',
+      'personalizado': 'Personalizado'
+    };
+    return periodos[this.resumenFiltros.periodo] || '';
+  }
+
+  getMesDisplay(): string {
+    if (!this.resumenFiltros.mes || this.resumenFiltros.mes === 0) return '';
+    const mesNum = Number(this.resumenFiltros.mes);
+    return this.mesesDisponibles[mesNum - 1];
+  }
+
+  getFormaPagoDisplay(formaPago: string): string {
+    const formas: { [key: string]: string } = {
+      'contado': 'Contado',
+      'contado-pendiente': 'Contado - Pendiente por Pago',
+      'abono': 'Abono',
+      'cashea': 'Cashea',
+      'credito': 'Crédito'
+    };
+    return formas[formaPago] || formaPago;
+  }
+
+  getAsesorNombre(asesorId: string): string {
+    const asesor = this.asesores.find(a => a.id.toString() === asesorId.toString());
+    return asesor?.nombre || 'Asesor no encontrado';
+  }
+
+  // Método para cerrar el modal
+  cerrarModal(): void {
+    if (this.modalInstance) {
+      this.modalInstance.hide();
+    }
+  }
+
+  // Método para abrir el modal (actualizado)
+  abrirModalResumenFinanciero(): void {
+    // Inicializar años disponibles
+    this.inicializarAnosDisponibles();
+
+    // Establecer valores por defecto
+    const hoy = new Date();
+    this.resumenFiltros = {
+      periodo: 'mes',
+      fechaDesde: this.formatDate(new Date(hoy.getFullYear(), hoy.getMonth(), 1)),
+      fechaHasta: this.formatDate(hoy),
+      anio: hoy.getFullYear(),
+      mes: hoy.getMonth() + 1,
+      asesor: '',
+      formaPago: ''
+    };
+
+    // Ocultar filtros avanzados por defecto
+    this.mostrarFiltrosAvanzados = false;
+
+    // Cargar asesores si no están cargados
+    if (this.asesores.length === 0) {
+      this.cargarEmpleados();
+    }
+
+    console.log('📊 Abriendo modal de resumen financiero');
+
+    // Usar Bootstrap vanilla para abrir el modal
+    const modalElement = document.getElementById('modalResumenFinanciero');
+    if (modalElement) {
+      this.modalInstance = new (window as any).bootstrap.Modal(modalElement);
+      this.modalInstance.show();
+    }
+  }
+
+  // Método para limpiar al cerrar (opcional)
+  limpiarModal(): void {
+    this.mostrarFiltrosAvanzados = false;
+    // Agrega aquí cualquier limpieza adicional
   }
 
 }
