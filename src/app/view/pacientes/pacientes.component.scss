@@ -86,6 +86,7 @@
 }
 
 /* 🏢 Estilos para sección de empresa en formulario */
+/* 🏢 Estilos para campos de empresa en 2 columnas */
 .empresa-campos {
     margin-top: 1.5rem;
     padding: 1.5rem;
@@ -95,159 +96,222 @@
     animation: fadeIn 0.3s ease-out;
 }
 
-/* 🏢 Indicador de empresa en tabla */
-.paciente-header {
+/* Contenedor principal para campos de empresa */
+.cliente-fields {
+    width: 100%;
+}
+
+/* Grid de 2 columnas para campos de empresa */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Estilos para cada grupo de formulario */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Label estilizado */
+.form-label {
+    font-weight: 600;
+    color: #495057;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.empresa-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-    animation: pulse 2s infinite;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
 
     i {
-        font-size: 0.8rem;
-    }
-
-    .empresa-tooltip {
-        display: inline-block;
-    }
-
-    &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
-
-        &::after {
-            content: attr(title);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2c3e50;
-            color: white;
-            padding: 0.5rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            white-space: nowrap;
-            z-index: 100;
-            margin-bottom: 0.5rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            opacity: 0;
-            animation: fadeInUp 0.3s ease-out forwards;
-            animation-delay: 0.1s;
-            pointer-events: none;
-        }
+        font-size: 1rem;
+        color: #3498db;
     }
 }
 
-/* 🏢 Información de empresa en modal de visualización */
-.empresa-info-section {
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-top: 1.5rem;
-    border: 1px solid #90caf9;
+/* Input moderno */
+.form-control.modern-input {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    height: 38px !important;
+    width: 100%;
 
-    .section-header {
-        background: transparent;
-        border-bottom: 1px solid #90caf9;
-        margin-bottom: 1rem;
+    &:focus {
+        border-color: #3498db !important;
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.1);
+        outline: none;
     }
 
-    .empresa-details {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    &::placeholder {
+        color: #9ca3af;
+        font-size: 0.9rem;
+    }
+}
+
+/* Input con acción (para RIF con botón) */
+.input-with-action {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .form-control.modern-input {
+        flex: 1;
+    }
+}
+
+/* Botón de validación compacto */
+.btn-validar-compact {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 8px;
+    background: #f8f9fa;
+    color: #6c757d;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 42px;
+    /* Alineado con la altura del input */
+
+    &:hover:not(:disabled) {
+        background: #e9ecef;
+        transform: translateY(-1px);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Estados del botón */
+    &.btn-validando {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        color: #1976d2;
+    }
+
+    &.btn-encontrado {
+        background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+        color: #388e3c;
+    }
+
+    &.btn-no-encontrado {
+        background: linear-gradient(135deg, #fff3e0, #ffcc80);
+        color: #f57c00;
+    }
+
+    i {
+        font-size: 1rem;
+    }
+}
+
+/* Campos autocompletados */
+.campo-autocompletado {
+    background-color: #f8fff8 !important;
+    border-color: #c8e6c9 !important;
+}
+
+/* Mensajes de error */
+.error-message {
+    color: #e74c3c;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+
+    i {
+        font-size: 0.9rem;
+    }
+}
+
+/* Alertas de validación */
+.info-validacion {
+    margin-top: 1rem;
+
+    .alert {
+        border-radius: 8px;
+        border: none;
+        padding: 1rem;
+
+        &.alert-success {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            color: #388e3c;
+            border-left: 4px solid #388e3c;
+        }
+
+        &.alert-warning {
+            background: linear-gradient(135deg, #fff3e0, #ffcc80);
+            color: #f57c00;
+            border-left: 4px solid #f57c00;
+        }
+
+        &.alert-info {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+    }
+
+    .d-flex {
+        align-items: flex-start;
+    }
+
+    i {
+        font-size: 1.25rem;
+        margin-top: 0.125rem;
+    }
+}
+
+/* Responsive para dispositivos móviles */
+@media (max-width: 768px) {
+    .empresa-campos {
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
         gap: 1rem;
+    }
 
-        .empresa-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
+    .input-with-action {
+        flex-direction: column;
+        align-items: stretch;
 
-            i {
-                color: #1976d2;
-                font-size: 1.1rem;
-                margin-top: 0.125rem;
-                flex-shrink: 0;
-            }
-
-            .empresa-content {
-                .empresa-label {
-                    font-weight: 600;
-                    color: #1565c0;
-                    font-size: 0.85rem;
-                    margin-bottom: 0.25rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                }
-
-                .empresa-value {
-                    color: #2c3e50;
-                    font-size: 0.95rem;
-                    word-break: break-word;
-                }
-            }
+        .btn-validar-compact {
+            width: 100%;
+            margin-left: 0;
+            margin-top: 0.5rem;
         }
     }
 }
 
-/* 🏢 Animación para el indicador */
-@keyframes pulse {
-
-    0%,
-    100% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.05);
+/* Para tablets */
+@media (min-width: 769px) and (max-width: 992px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
 }
 
-@keyframes fadeInUp {
+/* Animación para mostrar/ocultar campos */
+@keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translate(-50%, 10px);
+        transform: translateY(-10px);
     }
 
     to {
         opacity: 1;
-        transform: translate(-50%, 0);
-    }
-}
-
-/* 🏢 Responsive para indicador */
-@media (max-width: 768px) {
-    .empresa-indicator {
-        padding: 0.2rem 0.5rem;
-        font-size: 0.65rem;
-
-        i {
-            font-size: 0.7rem;
-        }
-
-        .empresa-tooltip {
-            display: none;
-        }
-
-        &:hover {
-            &::after {
-                display: block;
-            }
-        }
+        transform: translateY(0);
     }
 }
 

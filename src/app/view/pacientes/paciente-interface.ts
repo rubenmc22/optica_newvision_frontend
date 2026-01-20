@@ -67,3 +67,13 @@ export interface PacienteGrafico {
   sede: string;
   created_at: string;
 }
+
+export interface Empresa {
+  id?: number;
+  rif: string;
+  razon_social?: string;
+  nombre_comercial?: string;
+  telefono?: string;
+  direccion?: string;
+  email?: string;
+}

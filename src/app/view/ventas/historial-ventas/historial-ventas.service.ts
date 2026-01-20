@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { catchError, map, Observable, tap, throwError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
+
 @Injectable({
   providedIn: 'root'
 })
@@ -186,6 +187,6 @@ export class HistorialVentaService {
   }
 
   obtenerEstadisticasFinancieras(filtros: any): Observable<any> {
-  return this.http.post<any>(`${this.apiUrl}/estadisticas-financieras`, filtros);
-}
+    return this.http.post<any>(`${this.apiUrl}/estadisticas-financieras`, filtros);
+  }
 }

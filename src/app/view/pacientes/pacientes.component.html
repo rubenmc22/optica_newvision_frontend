@@ -135,11 +135,11 @@
                     </div>
                     <div class="paciente-details">
                       <span class="paciente-nombre">{{ paciente.informacionPersonal.nombreCompleto }}</span>
-                         <span *ngIf="paciente.informacionEmpresa?.referidoEmpresa" class="empresa-indicator" 
-                              title="Referido de empresa: {{ paciente.informacionEmpresa.empresaNombre }}">
-                          <i class="bi bi-building"></i>
-                          <span class="empresa-tooltip">Ref. Empresa</span>
-                        </span>
+                      <span *ngIf="paciente.informacionEmpresa?.referidoEmpresa" class="empresa-indicator"
+                        title="Referido de empresa: {{ paciente.informacionEmpresa.empresaNombre }}">
+                        <i class="bi bi-building"></i>
+                        <span class="empresa-tooltip">Ref. Empresa</span>
+                      </span>
                       <small class="paciente-contacto">{{ paciente.informacionPersonal.telefono || 'Sin teléfono'
                         }}</small>
                     </div>
@@ -430,7 +430,7 @@
               <!-- Switch para indicar si es referido de empresa -->
               <div class="modern-switch-container">
                 <label class="modern-switch">
-                  <input type="checkbox" formControlName="referidoEmpresa">
+                  <input type="checkbox" formControlName="referidoEmpresa" (change)="onReferidoEmpresaChange($event)">
                   <span class="switch-slider"></span>
                 </label>
                 <span class="switch-label">¿Referido de una empresa?</span>
@@ -438,65 +438,115 @@
 
               <!-- Campos de empresa (solo visibles si el switch está activado) -->
               <div *ngIf="formPaciente.get('referidoEmpresa')?.value" @fadeInOut class="empresa-campos">
-                <div class="row g-3">
-                  <!-- Fila 1: Nombre de empresa y RIF -->
-                  <div class="col-md-6">
-                    <div class="form-group-moderno">
-                      <label class="form-label-moderno">
-                        <i class="bi bi-building me-2"></i>
-                        Nombre de la Empresa
-                      </label>
-                      <input type="text" class="form-control-moderno" formControlName="empresaNombre" 
-                            placeholder="Ej: Corporación OptiSalud C.A." maxlength="100">
-                      <div class="form-error" *ngIf="showError('empresaNombre')">
-                        <i class="bi bi-exclamation-circle"></i>
-                        {{ getErrorMsg('empresaNombre') }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="col-md-6">
-                    <div class="form-group-moderno">
-                      <label class="form-label-moderno">
-                        <i class="bi bi-card-text me-2"></i>
+                <div class="cliente-fields">
+                  <div class="form-grid">
+                    <!-- RIF con validación -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <i class="bi bi-card-text"></i>
                         RIF de la Empresa
                       </label>
-                      <input type="text" class="form-control-moderno" formControlName="empresaRif" 
-                            placeholder="Ej: J-123456789" maxlength="12">
-                      <div class="form-error" *ngIf="showError('empresaRif')">
+                      <div class="input-with-action">
+                        <input type="text" class="form-control modern-input" formControlName="empresaRif"
+                          placeholder="Ej: J-123456789 o G-87654321" (blur)="onRifBlur()" (input)="onRifChange()"
+                          (keypress)="onKeyPressRif($event)" [disabled]="validandoEmpresa" data-rif-input
+                          [attr.maxlength]="getMaxLengthRif(formPaciente.get('empresaRif')?.value)">
+
+                        <!-- Botón de validación -->
+                        <button class="{{ getClaseBotonValidarEmpresa() }}" (click)="forzarValidacionEmpresa()"
+                          [disabled]="validandoEmpresa || !formPaciente.get('empresaRif')?.value || !validarRif(formPaciente.get('empresaRif')?.value)"
+                          [title]="getTooltipBotonValidarEmpresa()" type="button">
+                          <i class="bi"
+                            [class.bi-search]="!validandoEmpresa && !empresaEncontrada && !validacionEmpresaIntentada"
+                            [class.bi-check-lg]="empresaEncontrada && !validandoEmpresa"
+                            [class.bi-hourglass]="validandoEmpresa"
+                            [class.bi-exclamation-circle]="validacionEmpresaIntentada && !empresaEncontrada && !validandoEmpresa">
+                          </i>
+                        </button>
+                      </div>
+
+                      <!-- Mensaje de error en tiempo real -->
+                      <div class="error-message" *ngIf="formPaciente.get('empresaRif')?.value && 
+              !validarRifEnTiempoReal(formPaciente.get('empresaRif')?.value).valido">
                         <i class="bi bi-exclamation-circle"></i>
-                        {{ getErrorMsg('empresaRif') }}
+                        {{ validarRifEnTiempoReal(formPaciente.get('empresaRif')?.value).mensaje }}
+                      </div>
+
+                      <!-- Mensaje de ayuda -->
+                      <div class="form-text text-muted small mt-1">
+                        <i class="bi bi-info-circle"></i>
+                        Formato: J- seguido de 8-9 dígitos o G- seguido de 8 dígitos
                       </div>
                     </div>
-                  </div>
 
-                  <!-- Fila 2: Teléfono y Dirección -->
-                  <div class="col-md-6">
-                    <div class="form-group-moderno">
-                      <label class="form-label-moderno">
-                        <i class="bi bi-telephone me-2"></i>
+                    <!-- Otros campos sin eventos complicados -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <i class="bi bi-building"></i>
+                        Nombre de la Empresa
+                      </label>
+                      <input type="text" class="form-control modern-input" formControlName="empresaNombre"
+                        placeholder="Ej: Corporación OptiSalud C.A." [class.campo-autocompletado]="empresaEncontrada"
+                        data-nombre-input maxlength="100">
+                      <div class="error-message"
+                        *ngIf="!getEstadoCampoNombreEmpresa().valido && formPaciente.get('empresaNombre')?.value">
+                        <i class="bi bi-exclamation-circle"></i>
+                        {{ getEstadoCampoNombreEmpresa().mensaje }}
+                      </div>
+                    </div>
+
+                    <!-- Fila 2: Teléfono y Dirección en 2 columnas -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <i class="bi bi-telephone"></i>
                         Teléfono de la Empresa
                       </label>
-                      <input type="text" class="form-control-moderno" formControlName="empresaTelefono" 
-                            placeholder="Ej: 0212-1234567" maxlength="15">
-                      <div class="form-error" *ngIf="showError('empresaTelefono')">
+                      <input type="text" class="form-control modern-input" formControlName="empresaTelefono"
+                        placeholder="Ej: 0212-1234567" [class.campo-autocompletado]="empresaEncontrada"
+                        data-telefono-input maxlength="15">
+                      <div class="error-message"
+                        *ngIf="!getEstadoCampoTelefonoEmpresa().valido && formPaciente.get('empresaTelefono')?.value">
                         <i class="bi bi-exclamation-circle"></i>
-                        {{ getErrorMsg('empresaTelefono') }}
+                        {{ getEstadoCampoTelefonoEmpresa().mensaje }}
                       </div>
                     </div>
-                  </div>
 
-                  <div class="col-md-6">
-                    <div class="form-group-moderno">
-                      <label class="form-label-moderno">
-                        <i class="bi bi-geo-alt me-2"></i>
+                    <div class="form-group">
+                      <label class="form-label">
+                        <i class="bi bi-geo-alt"></i>
                         Dirección de la Empresa
                       </label>
-                      <input type="text" class="form-control-moderno" formControlName="empresaDireccion" 
-                            placeholder="Ej: Av. Principal, Centro Comercial XYZ" maxlength="150">
-                      <div class="form-error" *ngIf="showError('empresaDireccion')">
-                        <i class="bi bi-exclamation-circle"></i>
-                        {{ getErrorMsg('empresaDireccion') }}
+                      <input type="text" class="form-control modern-input" formControlName="empresaDireccion"
+                        placeholder="Ej: Av. Principal, Centro Comercial XYZ"
+                        [class.campo-autocompletado]="empresaEncontrada" data-direccion-input maxlength="150">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Información de validación simplificada -->
+                <div class="info-validacion"
+                  *ngIf="formPaciente.get('empresaRif')?.value && validacionEmpresaIntentada">
+                  <div class="alert alert-info" [ngClass]="{
+                'alert-success': empresaEncontrada,
+                'alert-warning': !empresaEncontrada && !validandoEmpresa,
+                'alert-info': validandoEmpresa
+              }">
+                    <div class="d-flex align-items-center">
+                      <i class="bi" [class.bi-check-circle-fill]="empresaEncontrada"
+                        [class.bi-exclamation-circle-fill]="!empresaEncontrada && !validandoEmpresa"
+                        [class.bi-hourglass-split]="validandoEmpresa" class="me-2"></i>
+                      <div>
+                        <strong>
+                          {{ empresaEncontrada ? 'Empresa encontrada' :
+                          validandoEmpresa ? 'Validando...' : 'Empresa no encontrada' }}
+                        </strong>
+                        <div class="small">
+                          {{ empresaEncontrada ?
+                          'Datos autocompletados' :
+                          validandoEmpresa ?
+                          'Buscando información...' :
+                          'Complete los datos manualmente' }}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -903,14 +953,15 @@
           </div>
 
           <!-- Sección: Información de Empresa (solo si existe) -->
-          <div *ngIf="pacienteSeleccionado?.informacionEmpresa?.referidoEmpresa" class="info-section empresa-info-section">
+          <div *ngIf="pacienteSeleccionado?.informacionEmpresa?.referidoEmpresa"
+            class="info-section empresa-info-section">
             <div class="section-header">
               <div class="section-icon">
                 <i class="bi bi-building"></i>
               </div>
               <h6 class="section-title">Información de Empresa Referida</h6>
             </div>
-            
+
             <div class="section-content">
               <div class="empresa-details">
                 <div class="empresa-item">
@@ -920,7 +971,7 @@
                     <div class="empresa-value">{{ pacienteSeleccionado.informacionEmpresa.empresaNombre }}</div>
                   </div>
                 </div>
-                
+
                 <div class="empresa-item">
                   <i class="bi bi-card-text"></i>
                   <div class="empresa-content">
@@ -928,7 +979,7 @@
                     <div class="empresa-value">{{ pacienteSeleccionado.informacionEmpresa.empresaRif }}</div>
                   </div>
                 </div>
-                
+
                 <div class="empresa-item">
                   <i class="bi bi-telephone"></i>
                   <div class="empresa-content">
@@ -936,7 +987,7 @@
                     <div class="empresa-value">{{ pacienteSeleccionado.informacionEmpresa.empresaTelefono }}</div>
                   </div>
                 </div>
-                
+
                 <div class="empresa-item">
                   <i class="bi bi-geo-alt"></i>
                   <div class="empresa-content">

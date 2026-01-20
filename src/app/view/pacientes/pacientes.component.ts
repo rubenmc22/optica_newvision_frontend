@@ -7,7 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import * as bootstrap from 'bootstrap';
 import { ModalService } from '../../core/services/modal/modal.service';
 import { Paciente } from './paciente-interface';
-import { Observable, of, forkJoin } from 'rxjs';
+import { Observable, of, forkJoin, lastValueFrom } from 'rxjs';
 import { take, catchError } from 'rxjs/operators';
 import { Sede } from '../../view/login/login-interface';
 import { AuthService } from '../../core/services/auth/auth.service';
@@ -50,6 +50,14 @@ export class VerPacientesComponent implements OnInit {
   formOriginal: any = {};
   sedesDisponibles: Sede[] = [];
   pacientesFiltradosPorSede: Paciente[] = [];
+
+  //Seccion empresas
+  empresaEncontrada: boolean = false;
+  validandoEmpresa: boolean = false;
+  validacionEmpresaIntentada: boolean = false;
+  datosEmpresa: any = null;
+  rifAnterior: string = '';
+
 
   // Estado y configuración
   modoEdicion: boolean = false;
@@ -140,7 +148,7 @@ export class VerPacientesComponent implements OnInit {
     private userStateService: UserStateService,
     private snackBar: MatSnackBar,
     private authService: AuthService,
-    private loader: LoaderService
+    private loader: LoaderService,
   ) {
     this.formPaciente = this.fb.group({
       // 👤 Datos personales
@@ -342,7 +350,9 @@ export class VerPacientesComponent implements OnInit {
         break;
 
       case 'empresaRif':
-        if (c.hasError('pattern')) return 'Formato de RIF inválido. Use J- seguido de 7-9 números';
+        if (c.hasError('pattern')) {
+          return 'Formato de RIF inválido. Para empresas use J- seguido de 8-9 números o G- seguido de 8 números';
+        }
         break;
 
       case 'empresaTelefono':
@@ -859,6 +869,12 @@ export class VerPacientesComponent implements OnInit {
       });
     }
 
+    this.empresaEncontrada = false;
+    this.validandoEmpresa = false;
+    this.validacionEmpresaIntentada = false;
+    this.datosEmpresa = null;
+    this.rifAnterior = paciente.informacionEmpresa?.empresaRif || '';
+
     this.abrirModalEditarPaciente(paciente);
   }
 
@@ -1067,6 +1083,13 @@ export class VerPacientesComponent implements OnInit {
 
     const redesFormArray = this.formPaciente.get('redesSociales') as FormArray;
     this.limpiarFormArray(redesFormArray);
+
+    // Resetear estado de empresa
+    this.empresaEncontrada = false;
+    this.validandoEmpresa = false;
+    this.validacionEmpresaIntentada = false;
+    this.datosEmpresa = null;
+    this.rifAnterior = '';
 
     this.nuevaRed = '';
     this.nuevoUsuario = '';
@@ -1423,5 +1446,705 @@ export class VerPacientesComponent implements OnInit {
       (this.paginaActual - 1) * this.registrosPorPagina,
       this.paginaActual * this.registrosPorPagina
     );
+  }
+
+  // Métodos en el componente
+  onReferidoEmpresaChange(event: any): void {
+    const isChecked = event.target.checked;
+    if (!isChecked) {
+      // Limpiar campos cuando se desactiva
+      this.limpiarCamposEmpresa();
+    }
+  }
+
+  onRifBlur(): void {
+    const rifControl = this.formPaciente.get('empresaRif');
+    const rif = rifControl?.value?.trim();
+
+    if (!rif) {
+      return;
+    }
+
+    // Formatear el RIF (convertir a mayúsculas y asegurar guión)
+    const rifFormateado = this.formatearRif(rif);
+    rifControl?.setValue(rifFormateado, { emitEvent: false });
+
+    // Validar formato básico del RIF (solo empresas)
+    if (!this.validarRif(rifFormateado)) {
+      this.mostrarErrorRif();
+      return;
+    }
+
+    this.validarEmpresaPorRif();
+  }
+
+  mostrarErrorRif(): void {
+    const rifControl = this.formPaciente.get('empresaRif');
+    if (rifControl && rifControl.value) {
+      const estado = this.getEstadoCampoRif();
+      if (!estado.valido) {
+        this.snackBar.open(estado.mensaje, 'Cerrar', {
+          duration: 4000,
+          panelClass: ['snackbar-warning']
+        });
+      }
+    }
+  }
+
+  onKeyPressRif(event: KeyboardEvent): void {
+    const input = event.target as HTMLInputElement;
+    const valorActual = input.value;
+    const tecla = event.key;
+
+    // Permitir teclas de control
+    if (['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(tecla)) {
+      return;
+    }
+
+    // Si está vacío, solo permitir J, G, j, g
+    if (valorActual.length === 0) {
+      if (!/[JGjg]/.test(tecla)) {
+        event.preventDefault();
+        this.snackBar.open('Primer carácter debe ser J (jurídica) o G (gobierno)', 'Cerrar', {
+          duration: 2000,
+          panelClass: ['snackbar-warning']
+        });
+      }
+      return;
+    }
+
+    const rifNormalizado = valorActual.toUpperCase();
+    const letra = rifNormalizado.charAt(0);
+
+    // Después de la letra, permitir guión
+    if (valorActual.length === 1 && tecla === '-') {
+      return; // Permitir guión después de la letra
+    }
+
+    // Contar dígitos actuales
+    const numerosActuales = rifNormalizado.replace(/[^0-9]/g, '');
+    const cantidadDigitos = numerosActuales.length;
+
+    // Si la tecla es un dígito, verificar límites
+    if (/\d/.test(tecla)) {
+      if (letra === 'J') {
+        // J- máximo 9 dígitos
+        if (cantidadDigitos >= 9) {
+          event.preventDefault();
+          this.snackBar.open('RIF J- no puede tener más de 9 dígitos', 'Cerrar', {
+            duration: 2000,
+            panelClass: ['snackbar-warning']
+          });
+          return;
+        }
+      } else if (letra === 'G') {
+        // G- máximo 8 dígitos
+        if (cantidadDigitos >= 8) {
+          event.preventDefault();
+          this.snackBar.open('RIF G- no puede tener más de 8 dígitos', 'Cerrar', {
+            duration: 2000,
+            panelClass: ['snackbar-warning']
+          });
+          return;
+        }
+      }
+    }
+
+    // Después de J o G, solo permitir números o guión
+    if (['J', 'G'].includes(letra)) {
+      // Si ya tiene guión, solo números
+      if (rifNormalizado.includes('-')) {
+        if (!/\d/.test(tecla)) {
+          event.preventDefault();
+        }
+      } else {
+        // Si no tiene guión, permitir números o guión
+        if (!/\d|-/.test(tecla)) {
+          event.preventDefault();
+        }
+      }
+    }
+  }
+
+  onRifChange(): void {
+    const rifControl = this.formPaciente.get('empresaRif');
+    const rif = rifControl?.value;
+
+    if (!rif) {
+      this.empresaEncontrada = false;
+      this.validacionEmpresaIntentada = false;
+      this.datosEmpresa = null;
+      return;
+    }
+
+    // Formatear mientras se escribe (solo para visualización)
+    if (rif.length > 0) {
+      const rifFormateado = this.formatearRifMientrasEscribe(rif);
+      if (rifFormateado !== rif) {
+        rifControl?.setValue(rifFormateado, { emitEvent: false });
+      }
+    }
+
+    // Validar en tiempo real mientras se escribe
+    const validacion = this.validarRifEnTiempoReal(rif);
+
+    // Mostrar conteo de dígitos
+    const numeros = rif.replace(/[^0-9]/g, '');
+    const letra = rif.charAt(0).toUpperCase();
+
+    if (letra === 'J' && numeros.length > 9) {
+      console.warn(`⚠️ RIF J- tiene ${numeros.length} dígitos (máximo 9)`);
+    } else if (letra === 'G' && numeros.length > 8) {
+      console.warn(`⚠️ RIF G- tiene ${numeros.length} dígitos (máximo 8)`);
+    }
+
+    // Solo resetear los estados cuando el usuario cambia el RIF
+    this.empresaEncontrada = false;
+    this.validacionEmpresaIntentada = false;
+    this.datosEmpresa = null;
+
+    // Quitar estilo de autocompletado si existía
+    this.limpiarEstiloAutocompletado();
+  }
+
+  /**
+   * Formatea el RIF mientras se escribe (solo para visualización)
+   */
+  formatearRifMientrasEscribe(rif: string): string {
+    if (!rif) return '';
+
+    let rifFormateado = rif.toUpperCase();
+
+    // Si empieza con J o G y tiene al menos 2 caracteres
+    if (/^[JG]/i.test(rifFormateado) && rifFormateado.length >= 2) {
+      // Si el segundo carácter no es guión y no es un número, agregar guión
+      if (rifFormateado.charAt(1) !== '-' && !/\d/.test(rifFormateado.charAt(1))) {
+        rifFormateado = rifFormateado.charAt(0) + '-' + rifFormateado.slice(1);
+      }
+    }
+
+    return rifFormateado;
+  }
+
+  private limpiarEstiloAutocompletado(): void {
+    // Remover la clase de autocompletado de los campos
+    const nombreInput = document.querySelector('[data-nombre-input]');
+    const telefonoInput = document.querySelector('[data-telefono-input]');
+    const direccionInput = document.querySelector('[data-direccion-input]');
+
+    nombreInput?.classList.remove('campo-autocompletado');
+    telefonoInput?.classList.remove('campo-autocompletado');
+    direccionInput?.classList.remove('campo-autocompletado');
+  }
+
+  forzarValidacionEmpresa(): void {
+    const rifControl = this.formPaciente.get('empresaRif');
+    const rif = rifControl?.value?.trim();
+
+    if (!rif) {
+      this.snackBar.open('Ingrese un RIF para validar', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    // Formatear el RIF primero
+    const rifFormateado = this.formatearRif(rif);
+    rifControl?.setValue(rifFormateado, { emitEvent: false });
+
+    // Validar que sea RIF de empresa (solo J o G)
+    if (!this.validarRif(rifFormateado)) {
+      this.snackBar.open('Formato de RIF inválido. Para empresas: J- seguido de 8-9 números o G- seguido de 8 números', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    this.validarEmpresaPorRif();
+  }
+
+  validarRif(rif: string): boolean {
+    if (!rif) return false;
+
+    // Normalizar el RIF (convertir a mayúsculas y limpiar espacios)
+    const rifNormalizado = rif.trim().toUpperCase();
+
+    // Patrones aceptados:
+    // J-12345678 (10 caracteres total: J + - + 8 dígitos)
+    // J-123456789 (11 caracteres total: J + - + 9 dígitos)
+    // G-12345678 (10 caracteres total: G + - + 8 dígitos)
+    const rifRegex = /^[JG]{1}-?\d{8,9}$/i;
+
+    // Validar formato básico
+    if (!rifRegex.test(rifNormalizado)) {
+      return false;
+    }
+
+    // Extraer letra y números
+    const letra = rifNormalizado.charAt(0).toUpperCase();
+    const numeros = rifNormalizado.replace(/[^0-9]/g, '');
+
+    // Validar longitud exacta según tipo
+    if (letra === 'J') {
+      // Persona jurídica: J- + 8 o 9 dígitos
+      // NO 10 dígitos - eso sería inválido
+      const esValido = numeros.length === 8 || numeros.length === 9;
+      if (!esValido) {
+      }
+      return esValido;
+    } else if (letra === 'G') {
+      // Gobierno: G- + 8 dígitos exactamente
+      const esValido = numeros.length === 8;
+      if (!esValido) {
+      }
+      return esValido;
+    }
+
+    return false;
+  }
+
+  /**
+   * Obtiene la longitud máxima permitida para un RIF según su tipo
+   */
+  getMaxLengthRif(rif: string): number {
+    if (!rif) return 11; // Longitud máxima por defecto (J-123456789)
+
+    const rifNormalizado = rif.trim().toUpperCase();
+    const letra = rifNormalizado.charAt(0).toUpperCase();
+
+    if (letra === 'G') {
+      return 10; // G-12345678 = 1 (G) + 1 (-) + 8 (dígitos) = 10 caracteres
+    } else if (letra === 'J') {
+      return 11; // J-123456789 = 1 (J) + 1 (-) + 9 (dígitos) = 11 caracteres (máximo)
+    } else {
+      return 11; // Por defecto
+    }
+  }
+
+  /**
+   * Valida el RIF mientras se escribe (para mostrar errores en tiempo real)
+   */
+  validarRifEnTiempoReal(rif: string): { valido: boolean, mensaje: string } {
+    if (!rif || rif.length < 2) {
+      return { valido: true, mensaje: '' };
+    }
+
+    const rifNormalizado = rif.trim().toUpperCase();
+    const letra = rifNormalizado.charAt(0).toUpperCase();
+
+    // Validar letra inicial
+    if (!['J', 'G'].includes(letra)) {
+      return {
+        valido: false,
+        mensaje: 'Primer carácter debe ser J (jurídica) o G (gobierno)'
+      };
+    }
+
+    const tieneGuion = rifNormalizado.includes('-');
+    const numeros = rifNormalizado.replace(/[^0-9]/g, '');
+    const longitudNumeros = numeros.length;
+
+    // Validar límite de dígitos según tipo
+    if (letra === 'J') {
+      // J- máximo 9 dígitos
+      if (longitudNumeros > 9) {
+        return {
+          valido: false,
+          mensaje: 'RIF J- no puede tener más de 9 dígitos'
+        };
+      }
+    } else if (letra === 'G') {
+      // G- exactamente 8 dígitos (pero mientras escribe, máximo 8)
+      if (longitudNumeros > 8) {
+        return {
+          valido: false,
+          mensaje: 'RIF G- no puede tener más de 8 dígitos'
+        };
+      }
+    }
+
+    // Validar formato mientras se escribe
+    if (tieneGuion) {
+      // Con guión: verificar que el guión esté en posición 1
+      if (rifNormalizado.charAt(1) !== '-') {
+        return {
+          valido: false,
+          mensaje: 'El guión debe ir inmediatamente después de la letra'
+        };
+      }
+    }
+
+    // Validar que solo haya números después de la letra (y guión si existe)
+    const parteNumerica = rifNormalizado.slice(tieneGuion ? 2 : 1);
+    if (!/^\d*$/.test(parteNumerica)) {
+      return {
+        valido: false,
+        mensaje: 'Solo se permiten números después de la letra'
+      };
+    }
+
+    return { valido: true, mensaje: '' };
+  }
+
+  /**
+ * Formatea un RIF para que tenga el formato estándar: J-123456789
+ */
+  formatearRif(rif: string): string {
+    if (!rif) return '';
+
+    // Convertir a mayúsculas y quitar espacios
+    let rifFormateado = rif.trim().toUpperCase();
+
+    // Quitar caracteres no válidos
+    rifFormateado = rifFormateado.replace(/[^JG0-9-]/g, '');
+
+    // Si no tiene guión y tiene más de un carácter, agregarlo
+    if (!rifFormateado.includes('-') && rifFormateado.length > 1) {
+      const letra = rifFormateado.charAt(0);
+      const numeros = rifFormateado.slice(1);
+      rifFormateado = `${letra}-${numeros}`;
+    }
+
+    return rifFormateado;
+  }
+
+  getClaseBotonValidarEmpresa(): string {
+    let clase = 'btn-validar-compact';
+
+    if (this.validandoEmpresa) {
+      clase += ' btn-validando';
+    } else if (this.empresaEncontrada) {
+      clase += ' btn-encontrado';
+    } else if (this.validacionEmpresaIntentada && !this.empresaEncontrada && this.formPaciente.get('empresaRif')?.value) {
+      clase += ' btn-no-encontrado';
+    }
+
+    return clase;
+  }
+
+  getTooltipBotonValidarEmpresa(): string {
+    if (this.validandoEmpresa) {
+      return 'Buscando empresa...';
+    } else if (this.empresaEncontrada) {
+      return 'Empresa encontrada - Click para re-validar';
+    } else if (this.validacionEmpresaIntentada && !this.empresaEncontrada) {
+      return 'Empresa no encontrada - Complete los datos manualmente';
+    } else if (!this.formPaciente.get('empresaRif')?.value) {
+      return 'Ingrese un RIF para buscar';
+    } else if (!this.validarRif(this.formPaciente.get('empresaRif')?.value)) {
+      return 'RIF inválido - Corrija el formato';
+    } else {
+      return 'Buscar empresa en base de datos';
+    }
+  }
+
+  async validarEmpresaPorRif(): Promise<void> {
+    const rifControl = this.formPaciente.get('empresaRif');
+    const rif = rifControl?.value?.trim();
+
+    // Formatear el RIF antes de enviar
+    const rifFormateado = this.formatearRif(rif);
+    rifControl?.setValue(rifFormateado, { emitEvent: false });
+
+    // Obtener la sede activa del paciente
+    let sede = '';
+
+    if (this.modoEdicion && this.pacienteEditando) {
+      sede = this.pacienteEditando.sede || this.sedeActiva;
+    } else {
+      sede = this.sedeActiva;
+    }
+
+    // Validaciones básicas
+    if (!rifFormateado) {
+      this.snackBar.open('Ingrese un RIF para validar', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    // Validar que sea RIF de empresa (solo J o G)
+    if (!this.validarRif(rifFormateado)) {
+      const estado = this.getEstadoCampoRif();
+      this.snackBar.open(estado.mensaje || 'RIF inválido', 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    // Validar que haya una sede
+    if (!sede) {
+      this.snackBar.open('No se ha definido una sede para la búsqueda', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-warning']
+      });
+      return;
+    }
+
+    // Guardar el RIF actual
+    const rifActual = rifFormateado;
+
+    // Iniciar validación
+    this.validandoEmpresa = true;
+    this.empresaEncontrada = false;
+    this.validacionEmpresaIntentada = false;
+
+    try {
+      // Llamar al servicio para buscar empresa por RIF
+      const respuesta = await this.pacientesService.buscarEmpresaPorRif(rifFormateado, sede)
+        .pipe(
+          catchError(error => {
+            console.error('Error buscando empresa:', error);
+            return of({
+              empresa: null,
+              encontrada: false,
+              error: error.message || 'Error en la búsqueda'
+            });
+          })
+        )
+        .toPromise();
+
+      this.validacionEmpresaIntentada = true;
+
+      // Verificar si se encontró una empresa VÁLIDA
+      if (respuesta?.encontrada && respuesta.empresa && this.empresaTieneDatosValidos(respuesta.empresa)) {
+        this.empresaEncontrada = true;
+        this.datosEmpresa = respuesta.empresa;
+        this.autocompletarDatosEmpresa(respuesta.empresa);
+
+        this.snackBar.open('✅ Empresa encontrada - Datos autocompletados', 'Cerrar', {
+          duration: 3000,
+          panelClass: ['snackbar-success']
+        });
+      } else {
+        this.empresaEncontrada = false;
+        this.datosEmpresa = null;
+
+        // Limpiar campos solo si no se encontró la empresa
+        this.limpiarCamposEmpresa();
+        rifControl?.setValue(rifActual);
+
+        const mensaje = respuesta?.error
+          ? `⚠️ ${respuesta.error}`
+          : '⚠️ Empresa no encontrada. Complete los datos manualmente.';
+
+        this.snackBar.open(mensaje, 'Cerrar', {
+          duration: 4000,
+          panelClass: ['snackbar-info']
+        });
+      }
+
+    } catch (error: any) {
+      console.error('Error en validación de empresa:', error);
+
+      this.validacionEmpresaIntentada = true;
+      this.empresaEncontrada = false;
+      this.datosEmpresa = null;
+
+      this.limpiarCamposEmpresa();
+      rifControl?.setValue(rifActual);
+
+      let mensajeError = 'Error al validar empresa. Verifique su conexión.';
+
+      if (error.message) {
+        mensajeError = error.message;
+      }
+
+      this.snackBar.open(`❌ ${mensajeError}`, 'Cerrar', {
+        duration: 4000,
+        panelClass: ['snackbar-warning']
+      });
+
+    } finally {
+      this.validandoEmpresa = false;
+      this.cdRef.detectChanges();
+    }
+  }
+
+  /**
+   * Verifica si la empresa tiene datos válidos para autocompletar
+   */
+  private empresaTieneDatosValidos(empresa: any): boolean {
+    if (!empresa) return false;
+
+    // Debe tener al menos un nombre para autocompletar
+    const tieneNombre = empresa.razon_social ||
+      empresa.nombre_comercial ||
+      empresa.nombre ||
+      empresa.empresaNombre;
+
+    return !!tieneNombre;
+  }
+
+  private autocompletarDatosEmpresa(empresa: any): void {
+    if (!this.empresaTieneDatosValidos(empresa)) {
+      console.warn('La empresa no tiene datos válidos para autocompletar:', empresa);
+      return;
+    }
+
+    // Mapeo de campos según la estructura de tu API
+    const datosParaAutocompletar: any = {
+      empresaNombre: empresa.razon_social ||
+        empresa.nombre_comercial ||
+        empresa.nombre ||
+        empresa.empresaNombre,
+      empresaTelefono: empresa.telefono ||
+        empresa.empresaTelefono,
+      empresaDireccion: empresa.direccion ||
+        empresa.empresaDireccion
+    };
+
+    // Solo autocompletar campos que realmente tienen datos
+    Object.keys(datosParaAutocompletar).forEach(key => {
+      if (!datosParaAutocompletar[key]) {
+        delete datosParaAutocompletar[key];
+      }
+    });
+
+    // Verificar que haya al menos un campo para autocompletar
+    if (Object.keys(datosParaAutocompletar).length > 0) {
+      this.formPaciente.patchValue(datosParaAutocompletar, { emitEvent: false });
+
+    } else {
+      console.warn('No hay datos válidos para autocompletar');
+      this.snackBar.open('⚠️ Empresa encontrada pero sin datos completos', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-warning']
+      });
+    }
+  }
+
+  private limpiarCamposEmpresa(): void {
+    this.formPaciente.patchValue({
+      empresaNombre: '',
+      empresaTelefono: '',
+      empresaDireccion: ''
+    }, { emitEvent: false });
+
+  }
+
+  // Métodos para estados de validación
+  getEstadoCampoRif(): { valido: boolean, mensaje: string } {
+    const rif = this.formPaciente.get('empresaRif')?.value;
+
+    if (!rif) {
+      return { valido: true, mensaje: '' };
+    }
+
+    const rifFormateado = this.formatearRif(rif);
+
+    if (!this.validarRif(rifFormateado)) {
+      // Dar mensajes más específicos según el error
+      const rifNormalizado = rifFormateado.toUpperCase();
+      const letra = rifNormalizado.charAt(0);
+      const numeros = rifNormalizado.replace(/[^0-9]/g, '');
+
+      if (!['J', 'G'].includes(letra)) {
+        return {
+          valido: false,
+          mensaje: 'Letra inválida. Para empresas use J (jurídica) o G (gobierno)'
+        };
+      }
+
+      if (numeros.length === 0) {
+        return {
+          valido: false,
+          mensaje: 'Ingrese los números del RIF'
+        };
+      }
+
+      if (letra === 'J' && (numeros.length < 8 || numeros.length > 9)) {
+        return {
+          valido: false,
+          mensaje: 'RIF J- debe tener 8 o 9 dígitos'
+        };
+      }
+
+      if (letra === 'G' && numeros.length !== 8) {
+        return {
+          valido: false,
+          mensaje: 'RIF G- debe tener exactamente 8 dígitos'
+        };
+      }
+
+      return {
+        valido: false,
+        mensaje: 'Formato de RIF inválido. Ejemplos: J-12345678, G-87654321'
+      };
+    }
+
+    return { valido: true, mensaje: '' };
+  }
+
+  getEstadoCampoNombreEmpresa(): { valido: boolean, mensaje: string } {
+    const nombre = this.formPaciente.get('empresaNombre')?.value;
+
+    if (!nombre) {
+      return { valido: true, mensaje: '' };
+    }
+
+    if (nombre.length < 2) {
+      return { valido: false, mensaje: 'El nombre debe tener al menos 2 caracteres' };
+    }
+
+    return { valido: true, mensaje: '' };
+  }
+
+  getEstadoCampoTelefonoEmpresa(): { valido: boolean, mensaje: string } {
+    const telefono = this.formPaciente.get('empresaTelefono')?.value;
+
+    if (!telefono) {
+      return { valido: true, mensaje: '' };
+    }
+
+    // Validación básica de teléfono
+    const telefonoRegex = /^[\d\s\+\-\(\)]{7,15}$/;
+    if (!telefonoRegex.test(telefono)) {
+      return { valido: false, mensaje: 'Formato de teléfono inválido' };
+    }
+
+    return { valido: true, mensaje: '' };
+  }
+
+  // Métodos de cambio para validación en tiempo real
+  onNombreEmpresaChange(): void {
+    // Puedes agregar lógica adicional si es necesario
+  }
+
+  onTelefonoEmpresaBlur(): void {
+    // Validar teléfono al perder foco
+    const telefono = this.formPaciente.get('empresaTelefono')?.value;
+    if (telefono && !this.getEstadoCampoTelefonoEmpresa().valido) {
+      this.snackBar.open('Formato de teléfono inválido', 'Cerrar', {
+        duration: 3000,
+        panelClass: ['snackbar-warning']
+      });
+    }
+  }
+
+  // En el HTML, actualiza la sección de info-validacion para mostrar detalles:
+  getDetallesEmpresa(): string {
+    if (!this.datosEmpresa) return '';
+
+    const detalles = [];
+
+    if (this.datosEmpresa.razon_social || this.datosEmpresa.nombre_comercial) {
+      detalles.push(`<strong>Razón Social:</strong> ${this.datosEmpresa.razon_social || this.datosEmpresa.nombre_comercial}`);
+    }
+    if (this.datosEmpresa.telefono) {
+      detalles.push(`<strong>Teléfono:</strong> ${this.datosEmpresa.telefono}`);
+    }
+    if (this.datosEmpresa.direccion) {
+      detalles.push(`<strong>Dirección:</strong> ${this.datosEmpresa.direccion}`);
+    }
+    if (this.datosEmpresa.email) {
+      detalles.push(`<strong>Email:</strong> ${this.datosEmpresa.email}`);
+    }
+
+    return detalles.join('<br>');
   }
 }

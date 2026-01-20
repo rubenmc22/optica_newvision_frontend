@@ -11,7 +11,8 @@ import { EmpleadosService } from './../../../core/services/empleados/empleados.s
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { UserStateService, SedeInfo } from '../../../core/services/userState/user-state-service';
 import { EstadisticasVentas, ResumenFiltros } from '../venta-interfaz';
-
+import { ChartService } from '../../../core/services/chart-service/chart.service';
+import { Chart, ChartData, ChartOptions } from 'chart.js';
 
 
 @Component({
@@ -28,6 +29,8 @@ export class HistorialVentasComponent implements OnInit {
   @ViewChild('editarVentaModal') editarVentaModal!: TemplateRef<any>;
   @ViewChild('contenidoRecibo', { static: false }) contenidoRecibo!: ElementRef;
   @ViewChild('modalResumenFinanciero') modalResumenFinanciero!: any;
+
+  private chartInstances: Chart[] = [];
 
   // Propiedades para los filtros
   asesores: any[] = [];
@@ -197,7 +200,8 @@ export class HistorialVentasComponent implements OnInit {
     private empleadosService: EmpleadosService,
     private loader: LoaderService,
     private userStateService: UserStateService,
-    private cdRef: ChangeDetectorRef
+    private cdRef: ChangeDetectorRef,
+    private chartService: ChartService
   ) {
     this.inicializarFormularioEdicion();
 
@@ -241,6 +245,9 @@ export class HistorialVentasComponent implements OnInit {
     if (this.configSubscription) {
       this.configSubscription.unsubscribe();
     }
+
+    // Destruir gráficos al cerrar
+    this.destruirGraficos();
   }
 
   onBusquedaBlur(): void {
@@ -5316,6 +5323,9 @@ export class HistorialVentasComponent implements OnInit {
     if (this.modalInstance) {
       this.modalInstance.hide();
     }
+
+    // Destruir gráficos al cerrar
+    this.destruirGraficos();
   }
 
   // Método para abrir el modal (actualizado)
@@ -5351,6 +5361,11 @@ export class HistorialVentasComponent implements OnInit {
       this.modalInstance = new (window as any).bootstrap.Modal(modalElement);
       this.modalInstance.show();
     }
+
+    // Inicializar gráficos después de abrir el modal
+    setTimeout(() => {
+      this.inicializarGraficosEnModal();
+    }, 500);
   }
 
   // Método para limpiar al cerrar (opcional)
@@ -5358,6 +5373,294 @@ export class HistorialVentasComponent implements OnInit {
     this.mostrarFiltrosAvanzados = false;
     // Agrega aquí cualquier limpieza adicional
   }
+
+
+
+  inicializarGraficosEnModal(): void {
+    // Esperar un poco para que el DOM se renderice
+    setTimeout(() => {
+      this.crearTodosLosGraficos();
+    }, 300);
+  }
+
+  private crearTodosLosGraficos(): void {
+    // Limpiar gráficos anteriores
+    this.destruirGraficos();
+
+    // Crear nuevos gráficos
+    const simboloMoneda = this.simboloMonedaSistema;
+
+    // 1. Gráfico de Ventas por Día
+    const chart1 = this.chartService.crearGraficoVentasPorDia('ventasPorDiaChart', simboloMoneda);
+    if (chart1) this.chartInstances.push(chart1);
+
+    // 2. Gráfico de Comparativa Mensual
+    const chart2 = this.chartService.crearGraficoComparativaMensual('comparativaMensualChart', simboloMoneda);
+    if (chart2) this.chartInstances.push(chart2);
+
+    // 3. Gráfico de Distribución de Forma de Pago
+    const chart3 = this.chartService.crearGraficoDistribucionPago('distribucionPagoChart');
+    if (chart3) this.chartInstances.push(chart3);
+
+    // 4. Gráfico de Tendencia de Deuda
+    const chart4 = this.chartService.crearGraficoTendenciaDeuda('tendenciaDeudaChart', simboloMoneda);
+    if (chart4) this.chartInstances.push(chart4);
+
+    // 5. Gráfico de Ventas por Asesor
+    const chart5 = this.chartService.crearGraficoVentasPorAsesor('ventasPorAsesorChart', simboloMoneda);
+    if (chart5) this.chartInstances.push(chart5);
+  }
+
+  // En HistorialVentasComponent - Método corregido
+  private destruirGraficos(): void {
+    // Opción 1: Usar el método que destruye todos los gráficos
+    this.chartService.destruirTodosLosGraficos();
+
+    // Opción 2: Si necesitas destruir gráficos individualmente
+    this.chartInstances.forEach(chart => {
+      // Necesitas obtener el canvasId del gráfico
+      // Esto depende de cómo almacenes la relación entre gráficos y canvasIds
+    });
+
+    this.chartInstances = [];
+  }
+
+  // Métodos para mostrar información de fechas
+  getRangoFechasVentas(): string {
+    const hoy = new Date();
+    const hace7Dias = new Date();
+    hace7Dias.setDate(hoy.getDate() - 6);
+
+    return `${this.formatFecha(hace7Dias.toISOString())} - ${this.formatFecha(hoy.toISOString())}`;
+  }
+
+  getTotalVentasPeriodo(): number {
+    return this.datosDePrueba?.ventasPorDia?.datos?.reduce((a: number, b: number) => a + b, 0) || 0;
+  }
+
+  getMaxVentaDia(): number {
+    return Math.max(...(this.datosDePrueba?.ventasPorDia?.datos || [0]));
+  }
+
+  getPromedioVentas(): number {
+    const total = this.getTotalVentasPeriodo();
+    const dias = this.datosDePrueba?.ventasPorDia?.datos?.length || 1;
+    return total / dias;
+  }
+
+  getTotalDias(): number {
+    return this.datosDePrueba?.ventasPorDia?.datos?.length || 0;
+  }
+
+  // Métodos para comparativa mensual
+  getMesActual(): string {
+    return new Date().toLocaleDateString('es-ES', { month: 'long' });
+  }
+
+  getMesAnterior(): string {
+    const fecha = new Date();
+    fecha.setMonth(fecha.getMonth() - 1);
+    return fecha.toLocaleDateString('es-ES', { month: 'long' });
+  }
+
+  getVentasMesActual(): number {
+    return this.datosDePrueba?.comparativaMensual?.datosActual?.reduce((a: number, b: number) => a + b, 0) || 0;
+  }
+
+  getVentasMesAnterior(): number {
+    return this.datosDePrueba?.comparativaMensual?.datosAnterior?.reduce((a: number, b: number) => a + b, 0) || 0;
+  }
+
+  getVariacion(): number {
+    const actual = this.getVentasMesActual();
+    const anterior = this.getVentasMesAnterior();
+    if (anterior === 0) return 100;
+    return ((actual - anterior) / anterior) * 100;
+  }
+
+  getVariacionClase(): string {
+    return this.getVariacion() > 0 ? 'text-success' : 'text-danger';
+  }
+
+  getPorcentajeMeta(): number {
+    const meta = 20000; // Meta mensual
+    const actual = this.getVentasMesActual();
+    return Math.min((actual / meta) * 100, 100);
+  }
+
+  // Métodos para distribución de pagos
+  getDistribucionPago(): any[] {
+    const datos = this.datosDePrueba?.distribucionFormaPago || { labels: [], datos: [] };
+    const total = datos.datos.reduce((a: number, b: number) => a + b, 0);
+
+    return datos.labels.map((label: string, index: number) => ({
+      tipo: label,
+      monto: datos.datos[index],
+      porcentaje: Math.round((datos.datos[index] / total) * 100),
+      color: datos.colores?.[index] || '#4361ee'
+    }));
+  }
+
+  getTotalTransacciones(): number {
+    return this.datosDePrueba?.distribucionFormaPago?.datos?.length || 0;
+  }
+
+  // Métodos para tendencia de deuda
+  getDeudaTotalActual(): number {
+    const deudas = this.datosDePrueba?.tendenciaDeuda;
+    if (!deudas) return 0;
+
+    const ultimaSemana = deudas.deudaCashea[deudas.deudaCashea.length - 1] || 0;
+    return ultimaSemana;
+  }
+
+  getVariacionDeuda(): number {
+    const deudas = this.datosDePrueba?.tendenciaDeuda;
+    if (!deudas || deudas.deudaCashea.length < 2) return 0;
+
+    const actual = deudas.deudaCashea[deudas.deudaCashea.length - 1];
+    const anterior = deudas.deudaCashea[deudas.deudaCashea.length - 2];
+
+    if (anterior === 0) return 100;
+    return ((actual - anterior) / anterior) * 100;
+  }
+
+  getVariacionDeudaClase(): string {
+    return this.getVariacionDeuda() > 0 ? 'text-danger' : 'text-success';
+  }
+
+  getTiposDeuda(): any[] {
+    return [
+      { nombre: 'Cashea', monto: 2500, cantidad: 5 },
+      { nombre: 'Abonos', monto: 1200, cantidad: 8 },
+      { nombre: 'Contado', monto: 300, cantidad: 2 }
+    ];
+  }
+
+  // Métodos para asesores
+  getMejorAsesor(): any {
+    const datos = this.datosDePrueba?.ventasPorAsesor;
+    if (!datos || !datos.datos.length) return null;
+
+    const maxVentas = Math.max(...datos.datos);
+    const index = datos.datos.indexOf(maxVentas);
+
+    return {
+      nombre: datos.labels[index],
+      ventas: maxVentas
+    };
+  }
+
+  getTopAsesores(limit: number = 3): any[] {
+    const datos = this.datosDePrueba?.ventasPorAsesor;
+    if (!datos) return [];
+
+    const asesores = datos.labels.map((label: string, index: number) => ({
+      nombre: label,
+      ventas: datos.datos[index],
+      porcentaje: (datos.datos[index] / Math.max(...datos.datos)) * 100
+    }));
+
+    return asesores
+      .sort((a, b) => b.ventas - a.ventas)
+      .slice(0, limit);
+  }
+
+  getTotalAsesores(): number {
+    return this.datosDePrueba?.ventasPorAsesor?.labels?.length || 0;
+  }
+
+  getRankingBadgeClass(index: number): string {
+    switch (index) {
+      case 0: return 'bg-gold';
+      case 1: return 'bg-silver';
+      case 2: return 'bg-bronze';
+      default: return 'bg-secondary';
+    }
+  }
+
+  // Métodos auxiliares
+  private get datosDePrueba() {
+    return this.chartService.obtenerDatosDePrueba();
+  }
+
+
+  // Métodos para manejar cambios de período en gráficos
+
+  cambiarTendenciaPeriodo(periodo: string): void {
+    console.log(`Cambiando período de tendencia a: ${periodo}`);
+
+    // Actualizar el texto del período
+    const elemento = document.getElementById('tendenciaPeriodo');
+    if (elemento) {
+      switch (periodo) {
+        case 'semanas':
+          elemento.textContent = 'Últimas 4 semanas';
+          break;
+        case 'meses':
+          elemento.textContent = 'Últimos 6 meses';
+          break;
+        case 'trimestres':
+          elemento.textContent = 'Últimos 4 trimestres';
+          break;
+      }
+    }
+
+    // Aquí puedes actualizar los datos del gráfico según el período
+    // Por ahora solo mostramos un mensaje
+    this.swalService.showInfo('Cambio de período',
+      `La tendencia se mostrará por ${periodo}. Esta funcionalidad se implementará próximamente.`);
+  }
+
+  cambiarPeriodoComparativa(periodo: string): void {
+    console.log(`Cambiando período de comparativa a: ${periodo}`);
+
+    // Actualizar los datos de prueba según el período
+    switch (periodo) {
+      case 'mes':
+        this.chartService.actualizarDatosDePrueba({
+          comparativaMensual: {
+            labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+            datosActual: [12500, 14200, 13800, 16500, 15800, 17200],
+            datosAnterior: [11800, 13000, 12500, 15200, 14500, 16000]
+          }
+        });
+        break;
+      case 'trimestre':
+        this.chartService.actualizarDatosDePrueba({
+          comparativaMensual: {
+            labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+            datosActual: [40500, 49500, 52000, 58000],
+            datosAnterior: [38000, 46500, 49000, 55000]
+          }
+        });
+        break;
+      case 'anio':
+        this.chartService.actualizarDatosDePrueba({
+          comparativaMensual: {
+            labels: ['2021', '2022', '2023', '2024'],
+            datosActual: [185000, 210000, 240000, 200000],
+            datosAnterior: [165000, 190000, 220000, 180000]
+          }
+        });
+        break;
+    }
+
+    // Recrear los gráficos con los nuevos datos
+    this.recargarGraficos();
+
+    this.swalService.showSuccess('Período cambiado',
+      `La comparativa ahora se muestra por ${periodo}.`);
+  }
+
+  // Método para recargar gráficos
+  private recargarGraficos(): void {
+    this.destruirGraficos();
+    setTimeout(() => {
+      this.inicializarGraficosEnModal();
+    }, 300);
+  }
+
 
 }
 

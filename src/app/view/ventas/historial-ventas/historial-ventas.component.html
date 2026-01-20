@@ -2413,7 +2413,8 @@
               <div class="d-flex align-items-center justify-content-between">
                 <!-- Icono y título -->
                 <div class="d-flex align-items-center">
-                  <div class="icono-filtro-panel bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                  <div
+                    class="icono-filtro-panel bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
                     <i class="bi bi-sliders"></i>
                   </div>
                   <div>
@@ -2431,35 +2432,29 @@
 
                   <!-- Filtros rápidos -->
                   <div class="d-flex flex-wrap gap-1 me-3">
-                    <button type="button" class="btn btn-sm btn-periodo-rapido" 
-                            [class.active]="resumenFiltros.periodo === 'hoy'" 
-                            (click)="aplicarPeriodoResumen('hoy')"
-                            title="Hoy">
+                    <button type="button" class="btn btn-sm btn-periodo-rapido"
+                      [class.active]="resumenFiltros.periodo === 'hoy'" (click)="aplicarPeriodoResumen('hoy')"
+                      title="Hoy">
                       <i class="bi bi-calendar-day"></i>
                       <span class="d-none d-sm-inline ms-1">Hoy</span>
                     </button>
-                    <button type="button" class="btn btn-sm btn-periodo-rapido" 
-                            [class.active]="resumenFiltros.periodo === 'semana'" 
-                            (click)="aplicarPeriodoResumen('semana')"
-                            title="Esta semana">
+                    <button type="button" class="btn btn-sm btn-periodo-rapido"
+                      [class.active]="resumenFiltros.periodo === 'semana'" (click)="aplicarPeriodoResumen('semana')"
+                      title="Esta semana">
                       <i class="bi bi-calendar-week"></i>
                       <span class="d-none d-sm-inline ms-1">Semana</span>
                     </button>
-                    <button type="button" class="btn btn-sm btn-periodo-rapido" 
-                            [class.active]="resumenFiltros.periodo === 'mes'" 
-                            (click)="aplicarPeriodoResumen('mes')"
-                            title="Este mes">
+                    <button type="button" class="btn btn-sm btn-periodo-rapido"
+                      [class.active]="resumenFiltros.periodo === 'mes'" (click)="aplicarPeriodoResumen('mes')"
+                      title="Este mes">
                       <i class="bi bi-calendar-month"></i>
                       <span class="d-none d-sm-inline ms-1">Mes</span>
                     </button>
                   </div>
 
                   <!-- Botón para mostrar/ocultar filtros avanzados -->
-                  <button class="btn btn-sm btn-toggle-avanzado" 
-                          type="button" 
-                          (click)="toggleFiltrosAvanzados()"
-                          [attr.aria-expanded]="mostrarFiltrosAvanzados" 
-                          [class.active]="mostrarFiltrosAvanzados">
+                  <button class="btn btn-sm btn-toggle-avanzado" type="button" (click)="toggleFiltrosAvanzados()"
+                    [attr.aria-expanded]="mostrarFiltrosAvanzados" [class.active]="mostrarFiltrosAvanzados">
                     <i class="bi bi-gear me-1"></i>
                     <span>{{ mostrarFiltrosAvanzados ? 'Ocultar' : 'Avanzado' }}</span>
                     <i class="bi bi-chevron-down ms-1 toggle-icon" [class.rotated]="mostrarFiltrosAvanzados"></i>
@@ -2481,15 +2476,11 @@
                           <span class="input-group-text bg-light">
                             <i class="bi bi-calendar"></i>
                           </span>
-                          <input type="date" class="form-control" 
-                                 [(ngModel)]="resumenFiltros.fechaDesde"
-                                 (change)="actualizarResumen()"
-                                 placeholder="Desde">
+                          <input type="date" class="form-control" [(ngModel)]="resumenFiltros.fechaDesde"
+                            (change)="actualizarResumen()" placeholder="Desde">
                           <span class="input-group-text bg-light">a</span>
-                          <input type="date" class="form-control" 
-                                 [(ngModel)]="resumenFiltros.fechaHasta"
-                                 (change)="actualizarResumen()"
-                                 placeholder="Hasta">
+                          <input type="date" class="form-control" [(ngModel)]="resumenFiltros.fechaHasta"
+                            (change)="actualizarResumen()" placeholder="Hasta">
                         </div>
                       </div>
                     </div>
@@ -2500,9 +2491,8 @@
                         <label class="form-label small fw-semibold text-primary mb-2">
                           <i class="bi bi-calendar me-1"></i>Año
                         </label>
-                        <select class="form-select form-select-sm" 
-                                [(ngModel)]="resumenFiltros.anio" 
-                                (change)="actualizarResumen()">
+                        <select class="form-select form-select-sm" [(ngModel)]="resumenFiltros.anio"
+                          (change)="actualizarResumen()">
                           <option value="">Seleccionar año</option>
                           <option *ngFor="let anio of anosDisponibles" [value]="anio">{{ anio }}</option>
                         </select>
@@ -2514,9 +2504,8 @@
                         <label class="form-label small fw-semibold text-primary mb-2">
                           <i class="bi bi-calendar3 me-1"></i>Mes
                         </label>
-                        <select class="form-select form-select-sm" 
-                                [(ngModel)]="resumenFiltros.mes" 
-                                (change)="actualizarResumen()">
+                        <select class="form-select form-select-sm" [(ngModel)]="resumenFiltros.mes"
+                          (change)="actualizarResumen()">
                           <option value="">Todos los meses</option>
                           <option *ngFor="let mes of mesesDisponibles; let i = index" [value]="i+1">
                             {{ mes }}
@@ -2531,9 +2520,8 @@
                         <label class="form-label small fw-semibold text-primary mb-2">
                           <i class="bi bi-person-badge me-1"></i>Asesor
                         </label>
-                        <select class="form-select form-select-sm" 
-                                [(ngModel)]="resumenFiltros.asesor"
-                                (change)="actualizarResumen()">
+                        <select class="form-select form-select-sm" [(ngModel)]="resumenFiltros.asesor"
+                          (change)="actualizarResumen()">
                           <option value="">Todos los asesores</option>
                           <option *ngFor="let asesor of asesores" [value]="asesor.id">
                             {{ asesor.nombre }}
@@ -2548,9 +2536,8 @@
                         <label class="form-label small fw-semibold text-primary mb-2">
                           <i class="bi bi-credit-card me-1"></i>Forma de Pago
                         </label>
-                        <select class="form-select form-select-sm" 
-                                [(ngModel)]="resumenFiltros.formaPago"
-                                (change)="actualizarResumen()">
+                        <select class="form-select form-select-sm" [(ngModel)]="resumenFiltros.formaPago"
+                          (change)="actualizarResumen()">
                           <option value="">Todas las formas</option>
                           <option value="contado">Contado</option>
                           <option value="contado-pendiente">Contado - Pendiente por Pago</option>
@@ -2564,9 +2551,8 @@
 
                   <!-- Botón para limpiar todos los filtros -->
                   <div class="d-flex justify-content-end mt-3">
-                    <button class="btn btn-sm btn-limpiar-filtros" 
-                            (click)="limpiarTodosLosFiltros()"
-                            *ngIf="contarFiltrosActivos() > 0">
+                    <button class="btn btn-sm btn-limpiar-filtros" (click)="limpiarTodosLosFiltros()"
+                      *ngIf="contarFiltrosActivos() > 0">
                       <i class="bi bi-x-circle me-1"></i>
                       Limpiar todos los filtros
                     </button>
@@ -2882,33 +2868,329 @@
                 </div>
               </div>
               <div class="card-body">
-                <div class="row">
-                  <div class="col-md-6">
-                    <div class="card h-100">
-                      <div class="card-body">
-                        <h6 class="card-title">Ventas por Día</h6>
-                        <p class="text-muted small">Distribución de ventas en el período seleccionado</p>
-                        <!-- Aquí podrías agregar un gráfico simple -->
-                        <div class="text-center py-4">
-                          <i class="bi bi-pie-chart display-1 text-muted"></i>
-                          <p class="text-muted mt-2">Gráfico disponible próximamente</p>
+
+                <!-- Fila 1: Gráficos principales - Diseño Moderno -->
+                <div class="row mb-4">
+                  <!-- Ventas por Día - Moderno -->
+                  <div class="col-md-6 mb-4">
+                    <div class="card card-chart-moderno border-0 shadow-sm h-100">
+                      <div class="card-header-chart d-flex align-items-center justify-content-between py-3 px-4">
+                        <div>
+                          <h6 class="mb-0 fw-semibold text-primary">
+                            <i class="bi bi-bar-chart-line-fill me-2"></i>
+                            Ventas por Día
+                          </h6>
+                          <small class="text-muted" id="ventasDiasRango">
+                            {{ getRangoFechasVentas() }}
+                          </small>
+                        </div>
+                        <div class="dropdown">
+                          <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#">Ver detalles</a></li>
+                            <li><a class="dropdown-item" href="#">Exportar datos</a></li>
+                          </ul>
+                        </div>
+                      </div>
+                      <div class="card-body p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                          <div>
+                            <h3 class="mb-0 fw-bold" id="ventasTotalDias">
+                              {{ getTotalVentasPeriodo() | currency:simboloMonedaSistema }}
+                            </h3>
+                            <small class="text-success">
+                              <i class="bi bi-arrow-up-right me-1"></i>
+                              <span id="variacionVentas">+12.5%</span> vs. período anterior
+                            </small>
+                          </div>
+                          <div class="icono-grafico-grande bg-primary bg-opacity-10 text-primary rounded-circle p-3">
+                            <i class="bi bi-calendar-week fs-4"></i>
+                          </div>
+                        </div>
+                        <div class="chart-container-moderno" style="height: 220px;">
+                          <canvas id="ventasPorDiaChart"></canvas>
+                        </div>
+                        <div class="mt-3 d-flex justify-content-between align-items-center">
+                          <div class="estadistica-rapida">
+                            <small class="text-muted">Día más alto:</small>
+                            <div class="fw-semibold" id="diaMasAlto">Vie: {{ getMaxVentaDia() |
+                              currency:simboloMonedaSistema }}</div>
+                          </div>
+                          <div class="estadistica-rapida">
+                            <small class="text-muted">Promedio diario:</small>
+                            <div class="fw-semibold" id="promedioDiario">{{ getPromedioVentas() |
+                              currency:simboloMonedaSistema }}</div>
+                          </div>
+                          <div class="estadistica-rapida">
+                            <small class="text-muted">Total días:</small>
+                            <div class="fw-semibold" id="totalDias">{{ getTotalDias() }} días</div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div class="col-md-6">
-                    <div class="card h-100">
-                      <div class="card-body">
-                        <h6 class="card-title">Comparativa Mensual</h6>
-                        <p class="text-muted small">Comparación con el mes anterior</p>
-                        <div class="text-center py-4">
-                          <i class="bi bi-graph-up display-1 text-muted"></i>
-                          <p class="text-muted mt-2">Análisis comparativo disponible próximamente</p>
+
+                  <!-- Comparativa Mensual - Moderno -->
+                  <div class="col-md-6 mb-4">
+                    <div class="card card-chart-moderno border-0 shadow-sm h-100">
+                      <div class="card-header-chart d-flex align-items-center justify-content-between py-3 px-4">
+                        <div>
+                          <h6 class="mb-0 fw-semibold text-success">
+                            <i class="bi bi-graph-up-arrow me-2"></i>
+                            Comparativa Mensual
+                          </h6>
+                          <small class="text-muted" id="comparativaRango">
+                            {{ getMesActual() }} vs {{ getMesAnterior() }}
+                          </small>
+                        </div>
+                        <div class="dropdown">
+                          <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown">
+                            <i class="bi bi-filter"></i> Filtros
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" (click)="cambiarPeriodoComparativa('mes')">Por mes</a>
+                            </li>
+                            <li><a class="dropdown-item" href="#" (click)="cambiarPeriodoComparativa('trimestre')">Por
+                                trimestre</a></li>
+                            <li><a class="dropdown-item" href="#" (click)="cambiarPeriodoComparativa('anio')">Por
+                                año</a></li>
+                          </ul>
+                        </div>
+                      </div>
+                      <div class="card-body p-4">
+                        <div class="row mb-3">
+                          <div class="col-6">
+                            <div class="indicador-comparativa actual">
+                              <small class="text-muted d-block">Mes Actual</small>
+                              <h3 class="mb-0 fw-bold text-success">
+                                {{ getVentasMesActual() | currency:simboloMonedaSistema }}
+                              </h3>
+                            </div>
+                          </div>
+                          <div class="col-6">
+                            <div class="indicador-comparativa anterior text-end">
+                              <small class="text-muted d-block">Mes Anterior</small>
+                              <h3 class="mb-0 fw-bold text-secondary">
+                                {{ getVentasMesAnterior() | currency:simboloMonedaSistema }}
+                              </h3>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="chart-container-moderno" style="height: 220px;">
+                          <canvas id="comparativaMensualChart"></canvas>
+                        </div>
+                        <div class="mt-3 d-flex justify-content-between align-items-center">
+                          <div class="variacion-indicador">
+                            <div class="d-flex align-items-center">
+                              <div class="variacion-icono me-2" [ngClass]="getVariacionClase()">
+                                <i class="bi" [class.bi-arrow-up-right]="getVariacion() > 0"
+                                  [class.bi-arrow-down-right]="getVariacion() <= 0"></i>
+                              </div>
+                              <div>
+                                <div class="fw-semibold" [ngClass]="getVariacionClase()">
+                                  {{ getVariacion() | number:'1.1-1' }}%
+                                </div>
+                                <small class="text-muted">Variación mensual</small>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="meta-progreso">
+                            <small class="text-muted d-block">Meta mensual</small>
+                            <div class="progress" style="height: 6px; width: 120px;">
+                              <div class="progress-bar bg-success" [style.width.%]="getPorcentajeMeta()"></div>
+                            </div>
+                            <small class="text-muted">{{ getPorcentajeMeta() | number:'1.0-0' }}%</small>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                <!-- Fila 2: Gráficos secundarios - Moderno -->
+                <div class="row">
+                  <!-- Distribución por Forma de Pago - Moderno -->
+                  <div class="col-md-4 mb-4">
+                    <div class="card card-chart-moderno border-0 shadow-sm h-100">
+                      <div class="card-header-chart d-flex align-items-center justify-content-between py-3 px-4">
+                        <div>
+                          <h6 class="mb-0 fw-semibold text-info">
+                            <i class="bi bi-pie-chart-fill me-2"></i>
+                            Distribución de Pagos
+                          </h6>
+                          <small class="text-muted">Porcentaje por tipo de pago</small>
+                        </div>
+                        <div class="dropdown">
+                          <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#">Ver detalle</a></li>
+                            <li><a class="dropdown-item" href="#">Comparar con período anterior</a></li>
+                          </ul>
+                        </div>
+                      </div>
+                      <div class="card-body p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                          <div>
+                            <h3 class="mb-0 fw-bold">{{ getTotalTransacciones() }}</h3>
+                            <small class="text-muted">Total transacciones</small>
+                          </div>
+                          <div class="icono-grafico-pequeno bg-info bg-opacity-10 text-info rounded-circle p-2">
+                            <i class="bi bi-credit-card fs-5"></i>
+                          </div>
+                        </div>
+                        <div class="chart-container-moderno-dona" style="height: 180px;">
+                          <canvas id="distribucionPagoChart"></canvas>
+                        </div>
+                        <div class="leyenda-distribucion mt-3">
+                          <div class="row g-2">
+                            <div class="col-6" *ngFor="let item of getDistribucionPago()">
+                              <div class="d-flex align-items-center">
+                                <div class="color-leyenda me-2" [style.background-color]="item.color"></div>
+                                <div class="flex-grow-1">
+                                  <div class="d-flex justify-content-between">
+                                    <small class="fw-semibold">{{ item.tipo }}</small>
+                                    <small class="text-muted">{{ item.porcentaje }}%</small>
+                                  </div>
+                                  <div class="fw-bold">{{ item.monto | currency:simboloMonedaSistema }}</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Tendencia de Deuda - Moderno -->
+                  <div class="col-md-4 mb-4">
+                    <div class="card card-chart-moderno border-0 shadow-sm h-100">
+                      <div class="card-header-chart d-flex align-items-center justify-content-between py-3 px-4">
+                        <div>
+                          <h6 class="mb-0 fw-semibold text-warning">
+                            <i class="bi bi-clock-history me-2"></i>
+                            Tendencia de Deuda
+                          </h6>
+                          <small class="text-muted" id="tendenciaPeriodo">
+                            Últimas 4 semanas
+                          </small>
+                        </div>
+                        <div class="dropdown">
+                          <button class="btn btn-sm btn-outline-warning dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown">
+                            <i class="bi bi-calendar"></i> Período
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" (click)="cambiarTendenciaPeriodo('semanas')">Por
+                                semanas</a></li>
+                            <li><a class="dropdown-item" href="#" (click)="cambiarTendenciaPeriodo('meses')">Por
+                                meses</a></li>
+                            <li><a class="dropdown-item" href="#" (click)="cambiarTendenciaPeriodo('trimestres')">Por
+                                trimestres</a></li>
+                          </ul>
+                        </div>
+                      </div>
+                      <div class="card-body p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                          <div>
+                            <h3 class="mb-0 fw-bold text-warning">
+                              {{ getDeudaTotalActual() | currency:simboloMonedaSistema }}
+                            </h3>
+                            <small class="text-muted">Deuda total actual</small>
+                          </div>
+                          <div class="variacion-deuda" [ngClass]="getVariacionDeudaClase()">
+                            <i class="bi me-1" [class.bi-arrow-up-right]="getVariacionDeuda() > 0"
+                              [class.bi-arrow-down-right]="getVariacionDeuda() <= 0"></i>
+                            {{ getVariacionDeuda() | number:'1.1-1' }}%
+                          </div>
+                        </div>
+                        <div class="chart-container-moderno" style="height: 180px;">
+                          <canvas id="tendenciaDeudaChart"></canvas>
+                        </div>
+                        <div class="mt-3">
+                          <div class="row g-2">
+                            <div class="col-4" *ngFor="let tipo of getTiposDeuda()">
+                              <div class="tipo-deuda-item text-center">
+                                <div class="fw-semibold small">{{ tipo.nombre }}</div>
+                                <div class="fw-bold">{{ tipo.monto | currency:simboloMonedaSistema }}</div>
+                                <div class="small text-muted">{{ tipo.cantidad }} ventas</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Ventas por Asesor - Moderno -->
+                  <div class="col-md-4 mb-4">
+                    <div class="card card-chart-moderno border-0 shadow-sm h-100">
+                      <div class="card-header-chart d-flex align-items-center justify-content-between py-3 px-4">
+                        <div>
+                          <h6 class="mb-0 fw-semibold text-purple">
+                            <i class="bi bi-person-badge me-2"></i>
+                            Desempeño por Asesor
+                          </h6>
+                          <small class="text-muted" id="periodoAsesores">
+                            {{ getMesActual() }}
+                          </small>
+                        </div>
+                        <div class="dropdown">
+                          <button class="btn btn-sm btn-outline-purple dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown">
+                            <i class="bi bi-people"></i> {{ getTotalAsesores() }}
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#">Ver ranking completo</a></li>
+                            <li><a class="dropdown-item" href="#">Comparar períodos</a></li>
+                            <li><a class="dropdown-item" href="#">Exportar reporte</a></li>
+                          </ul>
+                        </div>
+                      </div>
+                      <div class="card-body p-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                          <div>
+                            <h3 class="mb-0 fw-bold">{{ getMejorAsesor()?.nombre || 'N/A' }}</h3>
+                            <small class="text-muted">Asesor líder</small>
+                          </div>
+                          <div class="rendimiento-lider bg-purple bg-opacity-10 text-purple rounded p-2">
+                            <div class="fw-bold">{{ getMejorAsesor()?.ventas | currency:simboloMonedaSistema }}</div>
+                          </div>
+                        </div>
+                        <div class="chart-container-moderno" style="height: 180px;">
+                          <canvas id="ventasPorAsesorChart"></canvas>
+                        </div>
+                        <div class="ranking-asesores mt-3">
+                          <div class="row g-2">
+                            <div class="col-12" *ngFor="let asesor of getTopAsesores(3); let i = index">
+                              <div class="d-flex align-items-center ranking-item">
+                                <div class="ranking-posicion me-2">
+                                  <span class="badge" [ngClass]="getRankingBadgeClass(i)">{{ i + 1 }}</span>
+                                </div>
+                                <div class="flex-grow-1">
+                                  <div class="d-flex justify-content-between align-items-center">
+                                    <div class="fw-semibold small">{{ asesor.nombre }}</div>
+                                    <div class="fw-bold">{{ asesor.ventas | currency:simboloMonedaSistema }}</div>
+                                  </div>
+                                  <div class="progress mt-1" style="height: 4px;">
+                                    <div class="progress-bar bg-purple" [style.width.%]="asesor.porcentaje"></div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -2923,14 +3205,14 @@
             <i class="bi bi-file-earmark-excel me-2"></i>
             <span>Generar Informe Excel</span>
           </button>
-          
+
           <!-- Botón Descargar Resumen PDF -->
           <button type="button" class="btn btn-pdf-moderno ms-2" (click)="descargarResumenPDF()">
             <i class="bi bi-file-earmark-pdf me-2"></i>
             <span>Descargar Resumen PDF</span>
           </button>
         </div>
-        
+
         <div>
           <!-- Botón Cerrar -->
           <button type="button" class="btn btn-secondary" (click)="cerrarModal()">

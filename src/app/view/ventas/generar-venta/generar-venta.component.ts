@@ -5796,9 +5796,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
     }
 
-    /**
-     * Obtener clase CSS para el botón de validación
-     */
     getClaseBotonValidar(): string {
         let clase = 'btn-validar-compact';
 
