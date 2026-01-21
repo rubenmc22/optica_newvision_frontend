@@ -62,6 +62,19 @@
               <option value="50">50 registros</option>
             </select>
           </div>
+          
+          <!-- Filtro por referido -->
+          <div class="filtro-item">
+            <label class="form-label-moderno">
+              <i class="bi bi-building"></i>
+              Referido por empresa
+            </label>
+            <select class="form-select modern-select" [(ngModel)]="filtroReferido" (change)="aplicarFiltroTexto()">
+              <option value="todos">Todos los pacientes</option>
+              <option value="con-empresa">Con empresa referida</option>
+              <option value="sin-empresa">Sin empresa referida</option>
+            </select>
+          </div>
         </div>
 
         <!-- Alerta de sede diferente -->
@@ -128,24 +141,33 @@
 
               <tbody>
                 <tr *ngFor="let paciente of pacientesPaginados" class="paciente-row">
-                  <!-- Columna Paciente - Centrada verticalmente pero alineada a la izquierda -->
+                  <!-- Columna Paciente con indicador compacto de empresa -->
                   <td class="paciente-info text-left">
                     <div class="paciente-avatar">
                       <i class="bi bi-person-circle"></i>
+                      <!-- Indicador mini de empresa en el avatar -->
+                      <span *ngIf="paciente.informacionEmpresa?.referidoEmpresa" 
+                            class="avatar-empresa-indicator"
+                            [title]="'Referido de: ' + paciente.informacionEmpresa.empresaNombre">
+                        <i class="bi bi-building-fill"></i>
+                      </span>
                     </div>
                     <div class="paciente-details">
-                      <span class="paciente-nombre">{{ paciente.informacionPersonal.nombreCompleto }}</span>
-                      <span *ngIf="paciente.informacionEmpresa?.referidoEmpresa" class="empresa-indicator"
-                        title="Referido de empresa: {{ paciente.informacionEmpresa.empresaNombre }}">
-                        <i class="bi bi-building"></i>
-                        <span class="empresa-tooltip">Ref. Empresa</span>
-                      </span>
-                      <small class="paciente-contacto">{{ paciente.informacionPersonal.telefono || 'Sin teléfono'
-                        }}</small>
+                      <div class="paciente-nombre-container">
+                        <span class="paciente-nombre">{{ paciente.informacionPersonal.nombreCompleto }}</span>
+                        <!-- Badge compacto al lado del nombre -->
+                        <span *ngIf="paciente.informacionEmpresa?.referidoEmpresa" 
+                              class="empresa-badge-compact"
+                              [title]="'Referido de: ' + paciente.informacionEmpresa.empresaNombre">
+                          <i class="bi bi-building"></i>
+                          <span class="empresa-nombre-truncated">{{ getEmpresaNombreCorto(paciente.informacionEmpresa.empresaNombre) }}</span>
+                        </span>
+                      </div>
+                      <small class="paciente-contacto">{{ paciente.informacionPersonal.telefono || 'Sin teléfono' }}</small>
                     </div>
                   </td>
 
-                  <!-- Demás columnas - Totalmente centradas -->
+                  <!-- Demás columnas -->
                   <td class="text-center">
                     <span class="cedula-badge">{{ paciente.informacionPersonal.cedula }}</span>
                   </td>
@@ -219,6 +241,10 @@
           <div class="paginacion-moderna" *ngIf="pacientesFiltradosPorSede.length > 0">
             <div class="paginacion-info">
               <span>Mostrando {{ inicioPagina }} - {{ finPagina }} de {{ totalRegistros }} pacientes</span>
+              <span *ngIf="contadorReferidos > 0" class="referidos-count">
+                <i class="bi bi-building"></i>
+                {{ contadorReferidos }} referidos por empresa
+              </span>
             </div>
 
             <div class="paginacion-controles">
@@ -817,7 +843,7 @@
 
 <!-- Modal modernizado para visualizar paciente -->
 <div class="modal fade" id="verPacienteModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content modal-moderna">
       <!-- Header moderno -->
       <div class="modal-header-moderno">
@@ -952,9 +978,8 @@
             </div>
           </div>
 
-          <!-- Sección: Información de Empresa (solo si existe) -->
-          <div *ngIf="pacienteSeleccionado?.informacionEmpresa?.referidoEmpresa"
-            class="info-section empresa-info-section">
+          <!-- Sección: Información de Empresa (solo si existe) - MEJORADA -->
+          <div *ngIf="pacienteSeleccionado?.informacionEmpresa?.referidoEmpresa" class="info-section">
             <div class="section-header">
               <div class="section-icon">
                 <i class="bi bi-building"></i>
@@ -963,36 +988,62 @@
             </div>
 
             <div class="section-content">
-              <div class="empresa-details">
-                <div class="empresa-item">
-                  <i class="bi bi-building"></i>
-                  <div class="empresa-content">
-                    <div class="empresa-label">Empresa</div>
-                    <div class="empresa-value">{{ pacienteSeleccionado.informacionEmpresa.empresaNombre }}</div>
+              <div class="info-grid">
+                <!-- Columna 1 -->
+                <div class="info-column">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-building"></i>
+                      Empresa
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado.informacionEmpresa.empresaNombre }}</div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-card-text"></i>
+                      RIF
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado.informacionEmpresa.empresaRif }}</div>
                   </div>
                 </div>
 
-                <div class="empresa-item">
-                  <i class="bi bi-card-text"></i>
-                  <div class="empresa-content">
-                    <div class="empresa-label">RIF</div>
-                    <div class="empresa-value">{{ pacienteSeleccionado.informacionEmpresa.empresaRif }}</div>
+                <!-- Columna 2 -->
+                <div class="info-column">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-telephone"></i>
+                      Teléfono
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado.informacionEmpresa.empresaTelefono }}</div>
+                  </div>
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-geo-alt"></i>
+                      Dirección
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado.informacionEmpresa.empresaDireccion }}</div>
                   </div>
                 </div>
 
-                <div class="empresa-item">
-                  <i class="bi bi-telephone"></i>
-                  <div class="empresa-content">
-                    <div class="empresa-label">Teléfono</div>
-                    <div class="empresa-value">{{ pacienteSeleccionado.informacionEmpresa.empresaTelefono }}</div>
+                <!-- Columna 3 para información adicional si existe -->
+                <div class="info-column"
+                  *ngIf="pacienteSeleccionado.informacionEmpresa.contactoEmpresa || pacienteSeleccionado.informacionEmpresa.emailEmpresa">
+                  <div class="info-item" *ngIf="pacienteSeleccionado.informacionEmpresa.contactoEmpresa">
+                    <div class="info-label">
+                      <i class="bi bi-person-badge"></i>
+                      Contacto
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado.informacionEmpresa.contactoEmpresa }}</div>
                   </div>
-                </div>
 
-                <div class="empresa-item">
-                  <i class="bi bi-geo-alt"></i>
-                  <div class="empresa-content">
-                    <div class="empresa-label">Dirección</div>
-                    <div class="empresa-value">{{ pacienteSeleccionado.informacionEmpresa.empresaDireccion }}</div>
+                  <div class="info-item" *ngIf="pacienteSeleccionado.informacionEmpresa.emailEmpresa">
+                    <div class="info-label">
+                      <i class="bi bi-envelope"></i>
+                      Email Empresa
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado.informacionEmpresa.emailEmpresa }}</div>
                   </div>
                 </div>
               </div>

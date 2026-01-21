@@ -57,6 +57,7 @@ export class VerPacientesComponent implements OnInit {
   validacionEmpresaIntentada: boolean = false;
   datosEmpresa: any = null;
   rifAnterior: string = '';
+  filtroReferido: string = 'todos'; // 'todos', 'con-empresa', 'sin-empresa'
 
 
   // Estado y configuración
@@ -561,7 +562,7 @@ export class VerPacientesComponent implements OnInit {
     this.calcularPaginacion();
   }
 
-  actualizarPacientesPorSede(): void {
+/*  actualizarPacientesPorSede(): void {
     const sedeId = this.sedeFiltro?.trim().toLowerCase();
 
     // Primero filtrar por sede
@@ -594,15 +595,15 @@ export class VerPacientesComponent implements OnInit {
     this.pacientesFiltradosPorSede = pacientesFiltrados;
     this.paginaActual = 1;
     this.calcularPaginacion();
-  }
+  }*/
 
 
-  aplicarFiltroTexto(): void {
+ /* aplicarFiltroTexto(): void {
     this.actualizarPacientesPorSede();
 
     this.paginaActual = 1;
     this.calcularPaginacion();
-  }
+  }*/
 
 
   // Corrección del método de ordenamiento
@@ -611,7 +612,7 @@ export class VerPacientesComponent implements OnInit {
       this.ordenAscendente = !this.ordenAscendente;
     } else {
       this.ordenActual = campo;
-      this.ordenAscendente = true; // Cambia esto a true para que sea ascendente inicialmente
+      this.ordenAscendente = true; 
     }
 
     // Ordenar el array correcto
@@ -2147,4 +2148,114 @@ export class VerPacientesComponent implements OnInit {
 
     return detalles.join('<br>');
   }
+
+
+  // Agrega este método para acortar nombres de empresa
+  getEmpresaNombreCorto(nombreCompleto: string): string {
+    if (!nombreCompleto) return 'Empresa';
+
+    // Si el nombre es muy corto, devolverlo completo
+    if (nombreCompleto.length <= 12) return nombreCompleto;
+
+    // Tomar las primeras palabras o crear un acrónimo
+    const palabras = nombreCompleto.split(' ');
+
+    if (palabras.length === 1) {
+      // Si es una sola palabra, truncar
+      return nombreCompleto.substring(0, 10) + '...';
+    }
+
+    // Para 2 palabras, mostrar ambas truncadas si son largas
+    if (palabras.length === 2) {
+      const primera = palabras[0].substring(0, 6);
+      const segunda = palabras[1].substring(0, 4);
+      return `${primera} ${segunda}...`;
+    }
+
+    // Para 3 o más palabras, mostrar iniciales
+    if (palabras.length >= 3) {
+      const iniciales = palabras
+        .slice(0, 3)
+        .map(p => p.charAt(0).toUpperCase())
+        .join('');
+      return iniciales;
+    }
+
+    // Por defecto, truncar
+    return nombreCompleto.substring(0, 10) + '...';
+  }
+
+  // Método para contar pacientes referidos por empresa
+  get contadorReferidos(): number {
+    return this.pacientesFiltradosPorSede.filter(
+      p => p.informacionEmpresa?.referidoEmpresa
+    ).length;
+  }
+
+  // Actualiza el método aplicarFiltroTexto() para incluir el filtro por empresa referida
+  aplicarFiltroTexto(): void {
+    let pacientesFiltrados = [...this.pacientes];
+
+    // Primero aplicar filtro de texto
+    if (this.filtro.trim()) {
+      const texto = this.filtro.toLowerCase().trim();
+      pacientesFiltrados = pacientesFiltrados.filter(paciente =>
+        paciente.informacionPersonal.nombreCompleto.toLowerCase().includes(texto) ||
+        paciente.informacionPersonal.cedula.toLowerCase().includes(texto) ||
+        paciente.informacionPersonal.telefono.toLowerCase().includes(texto) ||
+        (paciente.informacionEmpresa?.empresaNombre?.toLowerCase().includes(texto) || false)
+      );
+    }
+
+    // Luego aplicar filtro por empresa referida
+    if (this.filtroReferido === 'con-empresa') {
+      pacientesFiltrados = pacientesFiltrados.filter(p => p.informacionEmpresa?.referidoEmpresa);
+    } else if (this.filtroReferido === 'sin-empresa') {
+      pacientesFiltrados = pacientesFiltrados.filter(p => !p.informacionEmpresa?.referidoEmpresa);
+    }
+
+    // Aplicar filtro por sede
+    const sedeId = this.sedeFiltro?.trim().toLowerCase();
+    if (sedeId && sedeId !== 'todas') {
+      pacientesFiltrados = pacientesFiltrados.filter(p => p.sede === sedeId);
+    }
+
+    // Aplicar ordenamiento
+    if (this.ordenActual) {
+      pacientesFiltrados.sort((a, b) => {
+        if (this.ordenActual === 'fechaRegistro') {
+          const fechaA = a.fechaRegistroRaw ? new Date(a.fechaRegistroRaw).getTime() : 0;
+          const fechaB = b.fechaRegistroRaw ? new Date(b.fechaRegistroRaw).getTime() : 0;
+          return this.ordenAscendente ? fechaA - fechaB : fechaB - fechaA;
+        }
+
+        const valorA = this.getValorOrden(a, this.ordenActual) ?? '';
+        const valorB = this.getValorOrden(b, this.ordenActual) ?? '';
+
+        if (typeof valorA === 'string' && typeof valorB === 'string') {
+          return this.ordenAscendente
+            ? valorA.localeCompare(valorB)
+            : valorB.localeCompare(valorA);
+        }
+
+        if (typeof valorA === 'number' && typeof valorB === 'number') {
+          return this.ordenAscendente ? valorA - valorB : valorB - valorA;
+        }
+
+        return 0;
+      });
+    }
+
+    this.pacientesFiltradosPorSede = pacientesFiltrados;
+    this.paginaActual = 1;
+    this.calcularPaginacion();
+  }
+
+  // También actualiza el método actualizarPacientesPorSede() si lo sigues usando
+  actualizarPacientesPorSede(): void {
+    // Llama al método unificado de filtrado
+    this.aplicarFiltroTexto();
+  }
+
+
 }

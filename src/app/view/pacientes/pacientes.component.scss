@@ -1,4 +1,5 @@
 @use '../../../custom-theme.scss' as theme;
+
 /* =============================================
    MÓDULO DE PACIENTES MODERNO CON PAGINACIÓN
    ============================================= */
@@ -1993,5 +1994,329 @@ textarea.form-control-moderno {
 
     .redes-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* =============================================
+   MEJORAS ESPECÍFICAS PARA SECCIÓN DE EMPRESA
+   ============================================= */
+
+/* Asegurar que la sección de empresa tenga el mismo estilo que las demás */
+.empresa-info-section {
+    /* Hereda todos los estilos de .info-section */
+
+    .empresa-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+
+        @media (max-width: 768px) {
+            grid-template-columns: 1fr;
+        }
+
+        .empresa-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.25rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+
+            &:hover {
+                background: #f1f3f4;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            }
+
+            i {
+                font-size: 1.5rem;
+                color: #3498db;
+                margin-top: 0.25rem;
+                min-width: 24px;
+                text-align: center;
+            }
+
+            .empresa-content {
+                flex: 1;
+
+                .empresa-label {
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    color: #6c757d;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin-bottom: 0.5rem;
+                }
+
+                .empresa-value {
+                    font-size: 1rem;
+                    color: #2c3e50;
+                    font-weight: 500;
+                    line-height: 1.4;
+                }
+            }
+        }
+    }
+}
+
+/* Para mantener compatibilidad con el diseño existente */
+.section-content .empresa-details {
+    /* Sobrescribir el estilo anterior si existe */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Estado vacío para empresa */
+.empresa-empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+
+    i {
+        font-size: 3rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+    }
+
+    h5 {
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+
+    p {
+        margin-bottom: 1.5rem;
+    }
+}
+
+/* Badge especial para empresa */
+.badge-empresa {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    color: #1976d2;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    border: 1px solid #90caf9;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+
+/* =============================================
+   ESTILOS COMPACTOS PARA INDICADOR DE EMPRESA
+   ============================================= */
+
+/* Contenedor para nombre con badge */
+.paciente-nombre-container {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Badge compacto al lado del nombre */
+.empresa-badge-compact {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem;
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    color: #2e7d32;
+    border-radius: 12px;
+    border: 1px solid #a5d6a7;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1;
+    cursor: help;
+    transition: all 0.2s ease;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    i {
+        font-size: 0.65rem;
+        color: #2e7d32;
+        flex-shrink: 0;
+    }
+
+    .empresa-nombre-truncated {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.65rem;
+        letter-spacing: 0.3px;
+    }
+
+    &:hover {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border-color: #93ca9c;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(46, 125, 50, 0.1);
+        max-width: 200px;
+
+        .empresa-nombre-truncated {
+            white-space: normal;
+            overflow: visible;
+        }
+    }
+}
+
+/* Indicador mini en el avatar */
+.avatar-empresa-indicator {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    background: #2e7d32;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 2;
+    cursor: help;
+
+    i {
+        font-size: 0.6rem;
+        color: white;
+    }
+}
+
+/* Avatar con posición relativa */
+.paciente-avatar {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+/* Contador de referidos en la paginación */
+.referidos-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    background: #f8f9fa;
+    border-radius: 20px;
+    border: 1px solid #e9ecef;
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-left: 1rem;
+
+    i {
+        color: #2e7d32;
+        font-size: 0.75rem;
+    }
+}
+
+/* Para dispositivos móviles - Badge más compacto */
+@media (max-width: 768px) {
+    .table-moderna.pacientes {
+        min-width: 700px;
+
+        .paciente-info {
+            min-width: 180px;
+        }
+
+        .empresa-badge-compact {
+            max-width: 80px;
+            padding: 0.15rem 0.35rem;
+            font-size: 0.6rem;
+
+            i {
+                font-size: 0.6rem;
+            }
+
+            .empresa-nombre-truncated {
+                font-size: 0.6rem;
+            }
+        }
+
+        .paciente-nombre {
+            font-size: 0.9rem;
+        }
+    }
+
+    .paginacion-info {
+        flex-direction: column;
+        gap: 0.5rem;
+
+        .referidos-count {
+            margin-left: 0;
+            align-self: flex-start;
+        }
+    }
+}
+
+/* Para tablets */
+@media (min-width: 769px) and (max-width: 992px) {
+    .empresa-badge-compact {
+        max-width: 100px;
+        font-size: 0.65rem;
+
+        .empresa-nombre-truncated {
+            font-size: 0.65rem;
+        }
+    }
+}
+
+/* Tooltip emergente para el badge */
+.empresa-badge-compact::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: #2c3e50;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.empresa-badge-compact:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Filtro por empresa en filtros */
+.filtros-modernos {
+    .filtro-item:last-child {
+        .form-label-moderno i {
+            color: #2e7d32;
+        }
+
+        .modern-select {
+            border-color: #e9ecef;
+
+            &:focus {
+                border-color: #2e7d32 !important;
+                box-shadow: 0 0 0 0.2rem rgba(46, 125, 50, 0.1);
+            }
+        }
     }
 }
