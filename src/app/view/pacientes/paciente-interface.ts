@@ -40,6 +40,7 @@ export interface Paciente {
     empresaRif: string;
     empresaTelefono: string;
     empresaDireccion: string;
+    empresaCorreo?: string;
   } | null;
 
   historiaClinica?: {

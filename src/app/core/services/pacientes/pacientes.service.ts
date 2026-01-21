@@ -92,16 +92,20 @@ export class PacientesService {
   buscarEmpresaPorRif(rif: string, sede: string): Observable<any> {
     // Validar parámetros
     if (!rif || !sede) {
-      return of({ empresa: null, encontrada: false, error: 'RIF y sede son requeridos' });
+      return of({
+        message: 'error',
+        empresas: null,
+        error: 'RIF y sede son requeridos'
+      });
     }
 
     // Formatear el RIF antes de enviar
     const rifNormalizado = this.formatearRifParaAPI(rif);
     const sedeNormalizada = sede.trim().toLowerCase();
 
-    console.log(`Buscando empresa - RIF: ${rifNormalizado}, Sede: ${sedeNormalizada}`);
+    console.log(`🔍 Buscando empresa - RIF: ${rifNormalizado}, Sede: ${sedeNormalizada}`);
 
-    // Parámetros según la documentación de Postman
+    // Parámetros para GET según la documentación de Postman
     const params = {
       rif: rifNormalizado,
       sede: sedeNormalizada
@@ -110,31 +114,44 @@ export class PacientesService {
     return this.http.get<any>(`${environment.apiUrl}/empresas-get`, { params }).pipe(
       timeout(this.REQUEST_TIMEOUT),
       map(response => {
-        console.log('Respuesta completa de API empresas:', response);
+        console.log('✅ Respuesta completa de API empresas:', response);
 
-        // Verificar si la respuesta es válida
-        const empresaValida = this.validarRespuestaEmpresa(response);
+        // Verificar si la respuesta es válida según tu API
+        // Tu API retorna: { "message": "ok", "empresas": [...] }
+        if (response && response.message === 'ok' &&
+          response.empresas && Array.isArray(response.empresas)) {
 
-        if (empresaValida) {
-          return {
-            empresa: this.normalizarDatosEmpresa(response),
-            encontrada: true
-          };
+          if (response.empresas.length > 0) {
+            console.log('✅ Empresa encontrada:', response.empresas[0]);
+            return response; // ← Retornar exactamente como la API responde
+          } else {
+            console.log('⚠️ Array de empresas está vacío');
+            return {
+              message: 'not_found',
+              empresas: [],
+              encontrada: false,
+              error: 'No se encontraron empresas con ese RIF'
+            };
+          }
+
         } else {
+          console.warn('⚠️ Respuesta de API no tiene el formato esperado:', response);
           return {
-            empresa: null,
+            message: 'error',
+            empresas: [],
             encontrada: false,
-            error: 'La empresa no existe en el sistema'
+            error: 'Formato de respuesta inválido de la API'
           };
         }
       }),
       catchError(error => {
-        console.error('Error buscando empresa por RIF:', error);
+        console.error('❌ Error buscando empresa por RIF:', error);
 
         // Si es error 404, retornar empresa no encontrada
         if (error.status === 404) {
           return of({
-            empresa: null,
+            message: 'not_found',
+            empresas: [],
             encontrada: false,
             error: 'Empresa no encontrada en el sistema'
           });
@@ -149,7 +166,8 @@ export class PacientesService {
         }
 
         return of({
-          empresa: null,
+          message: 'error',
+          empresas: [],
           encontrada: false,
           error: errorMessage
         });
@@ -157,9 +175,7 @@ export class PacientesService {
     );
   }
 
-  /**
-   * Formatea el RIF para la API (asegura formato correcto)
-   */
+  // Mantener los métodos auxiliares sin cambios:
   private formatearRifParaAPI(rif: string): string {
     if (!rif) return '';
 
@@ -177,77 +193,4 @@ export class PacientesService {
     return rifFormateado;
   }
 
-  /**
-   * Valida si la respuesta de la API contiene datos reales de empresa
-   */
-  private validarRespuestaEmpresa(respuesta: any): boolean {
-    // Si la respuesta es null o undefined
-    if (!respuesta) {
-      return false;
-    }
-
-    // Si es un array vacío
-    if (Array.isArray(respuesta) && respuesta.length === 0) {
-      return false;
-    }
-
-    // Si es un objeto vacío
-    if (typeof respuesta === 'object' && Object.keys(respuesta).length === 0) {
-      return false;
-    }
-
-    // Verificar campos mínimos que debe tener una empresa
-    const empresa = Array.isArray(respuesta) ? respuesta[0] : respuesta;
-
-    // Debe tener al menos un identificador o nombre
-    const tieneIdentificador = empresa.id || empresa.rif || empresa.codigo;
-    const tieneNombre = empresa.razon_social || empresa.nombre_comercial || empresa.nombre;
-
-    return !!(tieneIdentificador && tieneNombre);
-  }
-
-  /**
-   * Normaliza los datos de la empresa para consistencia
-   */
-  private normalizarDatosEmpresa(empresa: any): any {
-    const empresaData = Array.isArray(empresa) ? empresa[0] : empresa;
-
-    return {
-      // Información básica
-      id: empresaData.id,
-      rif: empresaData.rif,
-      codigo: empresaData.codigo,
-
-      // Nombres (todas las posibles variaciones)
-      razon_social: empresaData.razon_social,
-      nombre_comercial: empresaData.nombre_comercial,
-      nombre: empresaData.nombre,
-
-      // Contacto
-      telefono: empresaData.telefono,
-      email: empresaData.email,
-      direccion: empresaData.direccion,
-
-      // Otros datos que puedan existir
-      ...empresaData
-    };
-  }
-
-  // Método para normalizar RIF
-  private normalizarRif(rif: string): string {
-    if (!rif) return '';
-
-    // Remover espacios, convertir a mayúsculas
-    let rifNormalizado = rif.trim().toUpperCase();
-
-    // Asegurar que tenga el guión si no lo tiene
-    if (!rifNormalizado.includes('-') && rifNormalizado.length > 1) {
-      rifNormalizado = rifNormalizado.charAt(0) + '-' + rifNormalizado.slice(1);
-    }
-
-    // Remover caracteres especiales adicionales
-    rifNormalizado = rifNormalizado.replace(/[^JGVE0-9-]/g, '');
-
-    return rifNormalizado;
-  }
 }

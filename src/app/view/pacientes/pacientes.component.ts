@@ -562,48 +562,48 @@ export class VerPacientesComponent implements OnInit {
     this.calcularPaginacion();
   }
 
-/*  actualizarPacientesPorSede(): void {
-    const sedeId = this.sedeFiltro?.trim().toLowerCase();
-
-    // Primero filtrar por sede
-    let pacientesFiltrados = sedeId && sedeId !== 'todas'
-      ? this.pacientes.filter(p => p.sede === sedeId)
-      : [...this.pacientes];
-
-    // Luego aplicar filtro de texto si existe
-    const filtroText = this.filtro?.trim().toLowerCase();
-    if (filtroText) {
-      pacientesFiltrados = pacientesFiltrados.filter(p => {
-        const nombre = p.informacionPersonal?.nombreCompleto?.toLowerCase() || '';
-        const cedula = p.informacionPersonal?.cedula?.toLowerCase() || '';
-
-        return nombre.includes(filtroText) || cedula.includes(filtroText);
-      });
-    }
-
-    //Mantener el orden por fecha (más reciente primero)
-    pacientesFiltrados.sort((a, b) => {
-      // Si hay orden personalizado aplicado por los títulos de la tabla
-      if (this.ordenActual !== 'fechaRegistro') {
-        // Dejar que el ordenamiento personalizado funcione
-        return 0;
+  /*  actualizarPacientesPorSede(): void {
+      const sedeId = this.sedeFiltro?.trim().toLowerCase();
+  
+      // Primero filtrar por sede
+      let pacientesFiltrados = sedeId && sedeId !== 'todas'
+        ? this.pacientes.filter(p => p.sede === sedeId)
+        : [...this.pacientes];
+  
+      // Luego aplicar filtro de texto si existe
+      const filtroText = this.filtro?.trim().toLowerCase();
+      if (filtroText) {
+        pacientesFiltrados = pacientesFiltrados.filter(p => {
+          const nombre = p.informacionPersonal?.nombreCompleto?.toLowerCase() || '';
+          const cedula = p.informacionPersonal?.cedula?.toLowerCase() || '';
+  
+          return nombre.includes(filtroText) || cedula.includes(filtroText);
+        });
       }
-      // Orden por defecto: más reciente primero
-      return new Date(b.fechaRegistroRaw || '').getTime() - new Date(a.fechaRegistroRaw || '').getTime();
-    });
+  
+      //Mantener el orden por fecha (más reciente primero)
+      pacientesFiltrados.sort((a, b) => {
+        // Si hay orden personalizado aplicado por los títulos de la tabla
+        if (this.ordenActual !== 'fechaRegistro') {
+          // Dejar que el ordenamiento personalizado funcione
+          return 0;
+        }
+        // Orden por defecto: más reciente primero
+        return new Date(b.fechaRegistroRaw || '').getTime() - new Date(a.fechaRegistroRaw || '').getTime();
+      });
+  
+      this.pacientesFiltradosPorSede = pacientesFiltrados;
+      this.paginaActual = 1;
+      this.calcularPaginacion();
+    }*/
 
-    this.pacientesFiltradosPorSede = pacientesFiltrados;
-    this.paginaActual = 1;
-    this.calcularPaginacion();
-  }*/
 
-
- /* aplicarFiltroTexto(): void {
-    this.actualizarPacientesPorSede();
-
-    this.paginaActual = 1;
-    this.calcularPaginacion();
-  }*/
+  /* aplicarFiltroTexto(): void {
+     this.actualizarPacientesPorSede();
+ 
+     this.paginaActual = 1;
+     this.calcularPaginacion();
+   }*/
 
 
   // Corrección del método de ordenamiento
@@ -612,7 +612,7 @@ export class VerPacientesComponent implements OnInit {
       this.ordenAscendente = !this.ordenAscendente;
     } else {
       this.ordenActual = campo;
-      this.ordenAscendente = true; 
+      this.ordenAscendente = true;
     }
 
     // Ordenar el array correcto
@@ -1895,37 +1895,50 @@ export class VerPacientesComponent implements OnInit {
     this.validacionEmpresaIntentada = false;
 
     try {
-      // Llamar al servicio para buscar empresa por RIF
-      const respuesta = await this.pacientesService.buscarEmpresaPorRif(rifFormateado, sede)
-        .pipe(
-          catchError(error => {
-            console.error('Error buscando empresa:', error);
-            return of({
-              empresa: null,
-              encontrada: false,
-              error: error.message || 'Error en la búsqueda'
-            });
-          })
-        )
-        .toPromise();
+      // Llamar al servicio para buscar empresa por RIF usando lastValueFrom
+      const respuesta = await lastValueFrom(
+        this.pacientesService.buscarEmpresaPorRif(rifFormateado, sede)
+          .pipe(
+            catchError(error => {
+              console.error('Error buscando empresa:', error);
+              return of({
+                empresas: null,
+                encontrada: false,
+                error: error.message || 'Error en la búsqueda'
+              });
+            })
+          )
+      );
 
       this.validacionEmpresaIntentada = true;
 
-      // Verificar si se encontró una empresa VÁLIDA
-      if (respuesta?.encontrada && respuesta.empresa && this.empresaTieneDatosValidos(respuesta.empresa)) {
-        this.empresaEncontrada = true;
-        this.datosEmpresa = respuesta.empresa;
-        this.autocompletarDatosEmpresa(respuesta.empresa);
+      // Verificar si se encontró al menos una empresa en el array
+      if (respuesta?.empresas && Array.isArray(respuesta.empresas) && respuesta.empresas.length > 0) {
+        const empresaEncontrada = respuesta.empresas[0];
 
-        this.snackBar.open('✅ Empresa encontrada - Datos autocompletados', 'Cerrar', {
-          duration: 3000,
-          panelClass: ['snackbar-success']
-        });
+        if (this.empresaTieneDatosValidos(empresaEncontrada)) {
+          this.empresaEncontrada = true;
+          this.datosEmpresa = empresaEncontrada;
+          this.autocompletarDatosEmpresa(empresaEncontrada);
+
+          this.snackBar.open('✅ Empresa encontrada - Datos autocompletados', 'Cerrar', {
+            duration: 3000,
+            panelClass: ['snackbar-success']
+          });
+        } else {
+          this.empresaEncontrada = false;
+          this.datosEmpresa = null;
+          this.limpiarCamposEmpresa();
+          rifControl?.setValue(rifActual);
+
+          this.snackBar.open('⚠️ Empresa encontrada pero sin datos completos', 'Cerrar', {
+            duration: 4000,
+            panelClass: ['snackbar-info']
+          });
+        }
       } else {
         this.empresaEncontrada = false;
         this.datosEmpresa = null;
-
-        // Limpiar campos solo si no se encontró la empresa
         this.limpiarCamposEmpresa();
         rifControl?.setValue(rifActual);
 
@@ -1972,10 +1985,9 @@ export class VerPacientesComponent implements OnInit {
   private empresaTieneDatosValidos(empresa: any): boolean {
     if (!empresa) return false;
 
-    // Debe tener al menos un nombre para autocompletar
-    const tieneNombre = empresa.razon_social ||
+    const tieneNombre = empresa.nombre ||
+      empresa.razon_social ||
       empresa.nombre_comercial ||
-      empresa.nombre ||
       empresa.empresaNombre;
 
     return !!tieneNombre;
@@ -1987,11 +1999,11 @@ export class VerPacientesComponent implements OnInit {
       return;
     }
 
-    // Mapeo de campos según la estructura de tu API
+    // Mapeo según la estructura real de tu API
     const datosParaAutocompletar: any = {
-      empresaNombre: empresa.razon_social ||
+      empresaNombre: empresa.nombre || // ← Esta es la propiedad en tu JSON
+        empresa.razon_social ||
         empresa.nombre_comercial ||
-        empresa.nombre ||
         empresa.empresaNombre,
       empresaTelefono: empresa.telefono ||
         empresa.empresaTelefono,
@@ -2009,6 +2021,9 @@ export class VerPacientesComponent implements OnInit {
     // Verificar que haya al menos un campo para autocompletar
     if (Object.keys(datosParaAutocompletar).length > 0) {
       this.formPaciente.patchValue(datosParaAutocompletar, { emitEvent: false });
+
+      // Forzar detección de cambios
+      this.cdRef.detectChanges();
 
     } else {
       console.warn('No hay datos válidos para autocompletar');

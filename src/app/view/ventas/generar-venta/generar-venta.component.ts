@@ -119,6 +119,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // === PROPIEDADES PARA EMPRESA REFERIDA ===
     empresaReferidaInfo: any = null;
+    mostrarInfoEmpresa: boolean = false;
 
     // === PROPIEDADES PARA ASESOR ===
     historiaMedica: HistoriaMedica | null = null;
@@ -6326,7 +6327,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 rif: paciente.informacionEmpresa.empresaRif,
                 telefono: paciente.informacionEmpresa.empresaTelefono,
                 direccion: paciente.informacionEmpresa.empresaDireccion,
-                contacto: paciente.informacionEmpresa.empresaNombre // Puedes ajustar esto
+                email: paciente.informacionEmpresa.empresaCorreo
             };
         } else {
             this.empresaReferidaInfo = null;
@@ -6355,6 +6356,75 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         if (mensaje) {
             await this.swalService.showWarning('No se puede activar', mensaje);
+        }
+    }
+
+    // Método para mostrar/ocultar info de empresa
+    toggleEmpresaInfo(): void {
+        this.mostrarInfoEmpresa = !this.mostrarInfoEmpresa;
+    }
+
+    // Método para verificar si tiene empresa referida
+    tieneEmpresaReferida(): boolean {
+        if (!this.pacienteSeleccionado) return false;
+
+        return this.pacienteSeleccionado.informacionEmpresa?.referidoEmpresa === true &&
+            !!this.pacienteSeleccionado.informacionEmpresa?.empresaNombre;
+    }
+
+    // Métodos para obtener información de empresa referida
+    obtenerNombreEmpresa(): string {
+        return this.pacienteSeleccionado?.informacionEmpresa?.empresaNombre || '';
+    }
+
+    obtenerRifEmpresa(): string {
+        return this.pacienteSeleccionado?.informacionEmpresa?.empresaRif || '';
+    }
+
+    obtenerDireccionEmpresa(): string {
+        return this.pacienteSeleccionado?.informacionEmpresa?.empresaDireccion || '';
+    }
+
+    obtenerTelefonoEmpresa(): string {
+        return this.pacienteSeleccionado?.informacionEmpresa?.empresaTelefono || '';
+    }
+
+    obtenerEmailEmpresa(): string {
+        return this.pacienteSeleccionado?.informacionEmpresa?.empresaCorreo || '';
+    }
+
+    // Método para copiar datos al portapapeles
+    copiarDato(texto: string, tipo: string): void {
+        if (!texto) return;
+
+        navigator.clipboard.writeText(texto).then(() => {
+            this.snackBar.open(`${tipo} copiado al portapapeles`, 'Cerrar', {
+                duration: 2000,
+                panelClass: ['snackbar-success']
+            });
+        });
+    }
+
+    calcularEdad(fechaNacimiento: string): number {
+        if (!fechaNacimiento) return 0;
+
+        try {
+            const hoy = new Date();
+            const nacimiento = new Date(fechaNacimiento);
+
+            if (isNaN(nacimiento.getTime())) return 0;
+
+            let edad = hoy.getFullYear() - nacimiento.getFullYear();
+            const mes = hoy.getMonth() - nacimiento.getMonth();
+
+            if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+                edad--;
+            }
+
+            return edad;
+        } catch (error) {
+            console.error('Error calculando edad:', error);
+            return 0;
         }
     }
 
