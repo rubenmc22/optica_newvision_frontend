@@ -110,16 +110,28 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         telefono: '',
         email: ''
     };
+
+    // Objeto para almacenar datos de empresa referida
+    clienteEmpresaReferida = {
+        nombre: '',
+        rif: '',
+        telefono: '',
+        email: '',
+        direccion: ''
+    };
     mostrarSelectorAsesor: boolean = false;
 
     // === PROPIEDADES ADICIONALES PARA ORDEN DE TRABAJO ===
     generarOrdenTrabajo: boolean = false;
     forzarOrdenTrabajo: boolean = false;
-    porcentajeMinimoOrdenTrabajo: number = 50; // 50% mínimo para generar orden
+    porcentajeMinimoOrdenTrabajo: number = 50;
 
     // === PROPIEDADES PARA EMPRESA REFERIDA ===
     empresaReferidaInfo: any = null;
+    clienteEsReferido: boolean = false;
+    usarEmpresaEnVenta: boolean = false;
     mostrarInfoEmpresa: boolean = false;
+    editandoManual: boolean = false;
 
     // === PROPIEDADES PARA ASESOR ===
     historiaMedica: HistoriaMedica | null = null;
@@ -2197,6 +2209,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.clienteEncontrado = false;
         this.mensajeValidacionCliente = '';
 
+        // Limpiar estado de cliente referido
+        this.clienteEsReferido = false;
+        this.mostrarInfoEmpresa = false;
+        this.usarEmpresaEnVenta = false;
+        this.empresaReferidaInfo = null;
+        this.limpiarEmpresaReferidaCliente();
+
         // 10. Actualizar productos con la moneda correcta
         this.actualizarProductosConDetalle();
     }
@@ -2784,7 +2803,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 // HISTORIA MÉDICA DENTRO DEL OBJETO CLIENTE
                 historiaMedica: historiaMedicaData,
                 // ESPECIALISTA/MÉDICO TAMBIÉN DENTRO DEL CLIENTE
-                especialista: especialistaData
+                especialista: especialistaData,
+
+                informacionEmpresa: this.obtenerInfoEmpresaParaAPI()
             };
         } else if (!this.requierePaciente) {
             clienteData = {
@@ -2797,6 +2818,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     email: this.clienteSinPaciente.email
                 },
                 // Para cliente general, no hay historia médica ni especialista
+                informacionEmpresa: this.obtenerInfoEmpresaParaAPI(),
                 historiaMedica: null,
                 especialista: null
             };
@@ -5238,14 +5260,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     onTipoPersonaChange(): void {
         // Resetear campos según el tipo de persona
         if (this.clienteSinPaciente.tipoPersona === 'juridica') {
-            // Para persona jurídica, limpiar nombre y apellido si existen
-            this.clienteSinPaciente.nombre = '';
-            this.clienteSinPaciente.apellido = '';
-            // Puedes agregar lógica adicional aquí si es necesario
-        } else {
-            // Para persona natural, limpiar razón social si existe
-            this.clienteSinPaciente.razonSocial = '';
+            // Para persona jurídica, formatear RIF si es necesario
+            if (this.clienteSinPaciente.cedula && !this.clienteSinPaciente.cedula.toUpperCase().startsWith('J')) {
+                this.clienteSinPaciente.cedula = 'J-' + this.clienteSinPaciente.cedula.replace(/[^0-9]/g, '');
+            }
         }
+
+        // Limpiar empresa referida cuando cambia el tipo de persona
+        this.limpiarInformacionEmpresa();
 
         // Forzar actualización de la vista
         this.cdr.detectChanges();
@@ -5685,22 +5707,148 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         };
     }
 
-    /**
-     * Autocompleta los datos del cliente cuando es encontrado
-    */
-    private autocompletarDatosCliente(datosCliente: any): void {
-        // Actualizar tipo de persona si es diferente (puedes inferirlo del RIF)
-        if (datosCliente.cedula && datosCliente.cedula.toUpperCase().startsWith('J')) {
-            this.clienteSinPaciente.tipoPersona = 'juridica';
+    limpiarInformacionEmpresa(): void {
+        this.usarEmpresaEnVenta = false;
+        this.mostrarInfoEmpresa = false;
+
+        if (this.empresaReferidaInfo) {
+            // Solo limpiar el toggle, no la información de la empresa
+            console.log('Información de empresa mantiene sus datos:', this.empresaReferidaInfo);
+        }
+    }
+
+    onToggleUsoEmpresa(event: any): void {
+        const isChecked = event.target.checked;
+        this.usarEmpresaEnVenta = isChecked;
+
+        // Mostrar feedback al usuario
+        const mensaje = isChecked
+            ? 'Empresa referida activada para esta venta'
+            : 'Empresa referida desactivada';
+
+        this.snackBar.open(mensaje, 'Cerrar', {
+            duration: 2000,
+            panelClass: ['snackbar-info']
+        });
+
+        console.log('Uso de empresa en venta:', this.usarEmpresaEnVenta);
+    }
+
+    obtenerInfoEmpresaParaAPI(): any {
+        // Verificar primero si hay información de empresa referida activa
+        if (!this.usarEmpresaEnVenta || !this.empresaReferidaInfo) {
+            return null;
         }
 
-        this.clienteSinPaciente.nombreCompleto = datosCliente.nombre || datosCliente.nombreCompleto || '';
-        this.clienteSinPaciente.telefono = datosCliente.telefono || '';
-        this.clienteSinPaciente.email = datosCliente.email || '';
-        this.clienteSinPaciente.cedula = datosCliente.cedula || this.clienteSinPaciente.cedula;
+        // Verificar si la empresa tiene datos válidos
+        if (!this.empresaReferidaInfo.nombre || !this.empresaReferidaInfo.rif) {
+            return null;
+        }
 
-        // Limpiar errores de validación
+        // Construir objeto de empresa para el API
+        return {
+            referidoEmpresa: true,
+            empresaNombre: this.empresaReferidaInfo.nombre,
+            empresaRif: this.empresaReferidaInfo.rif,
+            empresaTelefono: this.empresaReferidaInfo.telefono || '',
+            empresaDireccion: this.empresaReferidaInfo.direccion || '',
+            empresaCorreo: this.empresaReferidaInfo.email || ''
+        };
+    }
+
+    private autocompletarDatosCliente(datosCliente: any): void {
+        console.log('🔍 Datos recibidos del API:', datosCliente);
+
+        // Verificar primero si realmente hay datos del cliente
+        const clienteInfo = datosCliente.cliente || datosCliente;
+
+        // Si la cédula es null, no hay cliente - SALIR INMEDIATAMENTE
+        if (!clienteInfo || clienteInfo.cedula === null) {
+            console.log('⚠️ Cliente no existe en la base de datos');
+            this.clienteEncontrado = false;
+            this.validacionIntentada = true;
+            this.mensajeValidacionCliente = 'Cliente no encontrado';
+
+            // Limpiar campos y ocultar sección de empresa
+            this.limpiarCamposCliente();
+            this.empresaReferidaInfo = null;
+            this.usarEmpresaEnVenta = false;
+
+            this.cdr.detectChanges();
+            return;
+        }
+
+        // 1. Limpiar información anterior primero
+        this.limpiarInformacionEmpresa();
+
+        // 2. Determinar tipo de persona basado en la cédula
+        if (clienteInfo.cedula && clienteInfo.cedula.toUpperCase().startsWith('J')) {
+            this.clienteSinPaciente.tipoPersona = 'juridica';
+        } else {
+            this.clienteSinPaciente.tipoPersona = 'natural';
+        }
+
+        console.log('🔍 Información extraída del cliente:', clienteInfo);
+
+        // 3. Autocompletar datos básicos del cliente (solo si no son null)
+        this.clienteSinPaciente.nombreCompleto = clienteInfo.nombre || clienteInfo.nombreCompleto || '';
+        this.clienteSinPaciente.telefono = clienteInfo.telefono || '';
+        this.clienteSinPaciente.email = clienteInfo.email || '';
+        this.clienteSinPaciente.cedula = clienteInfo.cedula || datosCliente.cedula || this.clienteSinPaciente.cedula;
+
+        // 4. IMPORTANTE: Manejar información de empresa si existe y no es null
+        const empresaInfo = clienteInfo.informacionEmpresa;
+
+        console.log('🔍 DEBUG - Datos de empresa del API:', empresaInfo);
+
+        if (empresaInfo?.referidoEmpresa === true &&
+            empresaInfo.empresaNombre !== null &&
+            empresaInfo.empresaRif !== null &&
+            empresaInfo.empresaNombre.trim() !== '' &&
+            empresaInfo.empresaRif.trim() !== '') {
+
+            console.log('📋 Cliente tiene empresa referida:', empresaInfo);
+
+            // Usar los nombres de propiedades correctos del API
+            this.empresaReferidaInfo = {
+                referidoEmpresa: empresaInfo.referidoEmpresa,
+                nombre: empresaInfo.empresaNombre || '',
+                rif: empresaInfo.empresaRif || '',
+                telefono: empresaInfo.empresaTelefono || '',
+                direccion: empresaInfo.empresaDireccion || '',
+                email: empresaInfo.empresaCorreo || ''
+            };
+
+            console.log('✅ empresaReferidaInfo creado:', this.empresaReferidaInfo);
+
+            // Activar por defecto si tiene empresa referida
+            this.usarEmpresaEnVenta = true;
+
+            // Mostrar mensaje informativo
+            const nombreEmpresa = this.empresaReferidaInfo.nombre;
+            if (nombreEmpresa) {
+                this.snackBar.open(`✅ Empresa referida encontrada: ${nombreEmpresa}`, 'Cerrar', {
+                    duration: 3000,
+                    panelClass: ['snackbar-success']
+                });
+            }
+
+        } else {
+            console.log('📋 Cliente NO tiene empresa referida o la empresa no tiene datos válidos');
+            this.empresaReferidaInfo = null;
+            this.usarEmpresaEnVenta = false;
+        }
+
+        // 5. Limpiar errores de validación
         this.limpiarErroresValidacion();
+
+        // 6. Actualizar estado - CLIENTE ENCONTRADO
+        this.clienteEncontrado = true;
+        this.validacionIntentada = true;
+        this.mensajeValidacionCliente = '✅ Cliente encontrado - Datos autocompletados';
+
+        // Forzar detección de cambios
+        this.cdr.detectChanges();
     }
 
     private limpiarErroresValidacion(): void {
@@ -5711,7 +5859,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     onCampoEditadoManualmente(): void {
-        if (this.clienteEncontrado || this.validacionIntentada) {
+        // marcar como edición manual
+        if (this.clienteEncontrado) {
+            this.editandoManual = true;
             this.clienteEncontrado = false;
             this.validacionIntentada = false;
             this.mensajeValidacionCliente = '✏️ Editando datos manualmente';
@@ -5730,21 +5880,40 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const cedula = this.clienteSinPaciente.cedula;
         const tipoPersona = this.clienteSinPaciente.tipoPersona;
 
-        // Resetear estado de validación anterior solo si cambia la cédula
-        if (cedula !== this.cedulaAnterior) {
+        // Si ya había un cliente encontrado y el usuario está cambiando la cédula,
+        // marcar que el cliente encontrado ya no es válido
+        if (this.clienteEncontrado && cedula !== this.cedulaAnterior) {
             this.clienteEncontrado = false;
-            this.mensajeValidacionCliente = '';
-            this.cedulaAnterior = cedula;
+            this.validacionIntentada = false;
+            this.mensajeValidacionCliente = 'Cédula modificada';
+
+            // Limpiar campos autocompletados
+            this.limpiarCamposCliente();
         }
 
         if (!this.validarCedula(cedula, tipoPersona)) {
             this.mostrarErrorCedula();
             this.mensajeValidacionCliente = this.getMensajeErrorCedula();
+            this.clienteEncontrado = false;
+            this.validacionIntentada = false;
         } else {
             this.limpiarErrorCedula();
+            this.mensajeValidacionCliente = '';
         }
 
         this.actualizarEstadoValidacion();
+    }
+
+    /**
+ * Se ejecuta cuando el usuario hace focus en el campo de cédula
+ */
+    onCedulaFocus(): void {
+        // Si ya había un cliente encontrado y el usuario vuelve a hacer focus,
+        // asumimos que quiere editar
+        if (this.clienteEncontrado) {
+            this.editandoManual = true;
+            this.mensajeValidacionCliente = '✏️ Editando manualmente - haga blur para buscar';
+        }
     }
 
     actualizarEstadoValidacion(): void {
@@ -5757,6 +5926,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const tipoPersona = this.clienteSinPaciente.tipoPersona;
 
         if (!cedula) {
+            this.limpiarEstadoValidacion();
             return;
         }
 
@@ -5764,13 +5934,56 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (!this.validarCedula(cedula, tipoPersona)) {
             this.mostrarErrorCedula();
             this.mensajeValidacionCliente = this.getMensajeErrorCedula();
+            this.clienteEncontrado = false;
+            this.validacionIntentada = false;
             return;
         }
 
-        // Solo validar si la cédula es válida y tiene al menos 4 caracteres
+        // Solo buscar si la cédula es válida y tiene al menos 4 caracteres
         if (cedula.length >= 4) {
-            this.validarClientePorCedula();
+            // Solo buscar si es una cédula diferente a la anterior
+            if (!this.clienteEncontrado || cedula !== this.cedulaAnterior) {
+                this.validarClientePorCedula();
+            }
+        } else {
+            this.mensajeValidacionCliente = 'Ingrese al menos 4 dígitos para buscar';
+            this.clienteEncontrado = false;
+            this.validacionIntentada = false;
         }
+    }
+
+    /**
+     * Limpia completamente el estado de validación
+     */
+    private limpiarEstadoValidacion(): void {
+        this.clienteEncontrado = false;
+        this.validacionIntentada = false;
+        this.editandoManual = false;
+        this.mensajeValidacionCliente = '';
+        this.cedulaAnterior = '';
+
+        // Limpiar campos autocompletados
+        if (this.clienteSinPaciente.cedula) {
+            // Solo limpiar otros campos si la cédula tiene valor
+            // pero mantiene la cédula actual
+            const cedulaActual = this.clienteSinPaciente.cedula;
+            const tipoPersonaActual = this.clienteSinPaciente.tipoPersona;
+
+            this.clienteSinPaciente.nombreCompleto = '';
+            this.clienteSinPaciente.telefono = '';
+            this.clienteSinPaciente.email = '';
+
+            // Mantener cédula y tipo de persona
+            this.clienteSinPaciente.cedula = cedulaActual;
+            this.clienteSinPaciente.tipoPersona = tipoPersonaActual;
+        }
+
+        // Limpiar empresa referida
+        this.empresaReferidaInfo = null;
+        this.usarEmpresaEnVenta = false;
+
+        // Limpiar errores visuales
+        this.limpiarErroresValidacion();
     }
 
     forzarValidacionCliente(): void {
@@ -5820,17 +6033,19 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (!cedula) {
             this.mensajeValidacionCliente = 'Ingrese una cédula o RIF para validar';
             this.validacionIntentada = false;
+            this.clienteEncontrado = false;
             return;
         }
 
         if (!this.validarCedula(cedula, this.clienteSinPaciente.tipoPersona)) {
             this.mensajeValidacionCliente = this.getMensajeErrorCedula();
             this.validacionIntentada = false;
+            this.clienteEncontrado = false;
             return;
         }
 
-        // Guardar la cédula actual por si necesitamos restaurarla
-        const cedulaActual = this.clienteSinPaciente.cedula;
+        // Guardar la cédula actual antes de la validación
+        this.cedulaAnterior = cedula;
 
         // Iniciar validación
         this.validandoCliente = true;
@@ -5841,13 +6056,26 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         try {
             const respuesta = await lastValueFrom(this.clienteService.buscarPorCedula(cedula));
 
+            // Verificar si la cédula actual es la misma que se envió a buscar
+            if (this.clienteSinPaciente.cedula?.trim() !== cedula) {
+                // El usuario cambió la cédula durante la búsqueda, ignorar resultado
+                console.log('Cédula cambiada durante la búsqueda, ignorando resultado');
+                this.validandoCliente = false;
+                return;
+            }
+
             // MARCAR QUE LA VALIDACIÓN SE INTENTÓ
             this.validacionIntentada = true;
 
-            if (respuesta.cliente) {
+            // VERIFICACIÓN SIMPLE: Si la cédula en la respuesta es null, el cliente no existe
+            const clienteExiste = respuesta.cliente && respuesta.cliente.cedula !== null;
+
+            if (clienteExiste) {
                 this.clienteEncontrado = true;
-                this.mensajeValidacionCliente = '✅ Cliente encontrado - Datos autocompletados';
-                this.autocompletarDatosCliente(respuesta.cliente);
+                this.mensajeValidacionCliente = '✅ Cliente encontrado';
+
+                // Autocompletar con la nueva estructura
+                this.autocompletarDatosCliente(respuesta);
 
                 this.snackBar.open('Cliente encontrado - Datos autocompletados', 'Cerrar', {
                     duration: 3000,
@@ -5857,8 +6085,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 this.clienteEncontrado = false;
                 this.mensajeValidacionCliente = 'Cliente no encontrado - Complete los datos manualmente';
 
+                // IMPORTANTE: Limpiar campos y ocultar sección de empresa
                 this.limpiarCamposCliente();
-                this.clienteSinPaciente.cedula = cedulaActual;
+                this.empresaReferidaInfo = null;
+                this.usarEmpresaEnVenta = false;
+                this.clienteSinPaciente.cedula = cedula;
 
                 this.snackBar.open('Cliente no encontrado. Complete los datos manualmente.', 'Cerrar', {
                     duration: 4000,
@@ -5872,7 +6103,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.mensajeValidacionCliente = '⚠️ Error al conectar con el servidor';
 
             this.limpiarCamposCliente();
-            this.clienteSinPaciente.cedula = cedulaActual;
+            this.empresaReferidaInfo = null;
+            this.usarEmpresaEnVenta = false;
+            this.clienteSinPaciente.cedula = cedula;
 
             let mensajeError = 'Error al validar cliente. Verifique su conexión.';
             if (error.error?.message) {
@@ -5893,17 +6126,23 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private limpiarCamposCliente(): void {
+        // Guardar cédula actual y tipo de persona
         const cedulaActual = this.clienteSinPaciente.cedula;
         const tipoPersonaActual = this.clienteSinPaciente.tipoPersona;
 
-        // Limpiar todos los campos
+        // Limpiar todos los campos excepto la cédula
         this.clienteSinPaciente = {
             tipoPersona: tipoPersonaActual,
             nombreCompleto: '',
-            cedula: cedulaActual,
+            cedula: cedulaActual, // Mantener la cédula actual
             telefono: '',
             email: ''
         };
+
+        // Limpiar empresa referida
+        this.empresaReferidaInfo = null;
+        this.usarEmpresaEnVenta = false;
+        this.mostrarInfoEmpresa = false;
 
         // Limpiar errores de validación
         this.limpiarErroresValidacion();
@@ -5912,7 +6151,32 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.actualizarEstadoValidacion();
     }
 
+    /**
+     * Determina si debe mostrarse la sección de empresa referida
+     */
+    get mostrarSeccionEmpresa(): boolean {
+        if (!this.clienteEncontrado) {
+            return false;
+        }
+
+        if (!this.empresaReferidaInfo) {
+            return false;
+        }
+
+        const tieneEmpresaValida = this.empresaReferidaInfo.referidoEmpresa === true &&
+            this.empresaReferidaInfo.nombre &&
+            this.empresaReferidaInfo.nombre.trim() !== '' &&
+            this.empresaReferidaInfo.rif &&
+            this.empresaReferidaInfo.rif.trim() !== '';
+
+        return tieneEmpresaValida;
+    }
+
     getTooltipBotonValidar(): string {
+        if (this.editandoManual) {
+            return 'Editando manualmente - haga blur para buscar nuevamente';
+        }
+
         if (this.validandoCliente) {
             return 'Buscando cliente...';
         } else if (this.clienteEncontrado) {
@@ -5927,6 +6191,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return 'Ingrese al menos 4 caracteres para buscar';
         } else {
             return 'Buscar cliente en base de datos';
+        }
+    }
+
+    /**
+     * Se ejecuta cuando se borran dígitos de la cédula
+     */
+    onCedulaBorrado(): void {
+        const cedulaActual = this.clienteSinPaciente.cedula?.trim() || '';
+
+        if (this.clienteEncontrado &&
+            (cedulaActual.length < this.cedulaAnterior.length ||
+                cedulaActual !== this.cedulaAnterior)) {
+
+            this.limpiarEstadoValidacion();
+            this.mensajeValidacionCliente = 'Cédula modificada - Ingrese una cédula válida';
         }
     }
 
@@ -6323,41 +6602,25 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     cargarInfoEmpresaReferida(paciente: Paciente): void {
         if (paciente?.informacionEmpresa?.referidoEmpresa) {
             this.empresaReferidaInfo = {
+                referidoEmpresa: paciente.informacionEmpresa.referidoEmpresa,
                 nombre: paciente.informacionEmpresa.empresaNombre,
                 rif: paciente.informacionEmpresa.empresaRif,
                 telefono: paciente.informacionEmpresa.empresaTelefono,
                 direccion: paciente.informacionEmpresa.empresaDireccion,
                 email: paciente.informacionEmpresa.empresaCorreo
             };
+
+            // Activar el uso de empresa por defecto si tiene empresa referida
+            this.usarEmpresaEnVenta = true;
+
+            console.log('📋 Empresa referida cargada para paciente:', this.empresaReferidaInfo);
         } else {
             this.empresaReferidaInfo = null;
+            this.usarEmpresaEnVenta = false;
         }
     }
 
-    /**
-     * Explicación simple de por qué no se puede activar
-     */
-    private async explicacionSimple(): Promise<void> {
-        const formaPago = this.venta.formaPago;
 
-        let mensaje = '';
-
-        if (formaPago === 'abono') {
-            const porcentaje = this.porcentajeAbonadoDelTotal;
-            const minimo = this.porcentajeMinimoOrdenTrabajo;
-
-            if (porcentaje < minimo) {
-                mensaje = `Abono insuficiente (${porcentaje.toFixed(1)}% de ${minimo}% mínimo).`;
-            }
-        }
-        else if (formaPago === 'pendiente') {
-            mensaje = 'Pago pendiente. Registre al menos un método de pago.';
-        }
-
-        if (mensaje) {
-            await this.swalService.showWarning('No se puede activar', mensaje);
-        }
-    }
 
     // Método para mostrar/ocultar info de empresa
     toggleEmpresaInfo(): void {
@@ -6427,5 +6690,45 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return 0;
         }
     }
+
+    // Métodos para verificar y obtener info de empresa (iguales que para paciente)
+    tieneEmpresaReferidaCliente(): boolean {
+        return this.clienteEsReferido &&
+            (!!this.clienteEmpresaReferida.nombre.trim() ||
+                !!this.clienteEmpresaReferida.rif.trim());
+    }
+
+    obtenerNombreEmpresaReferidaCliente(): string {
+        return this.clienteEmpresaReferida.nombre || '';
+    }
+
+    obtenerRifEmpresaReferidaCliente(): string {
+        return this.clienteEmpresaReferida.rif || '';
+    }
+
+    obtenerDireccionEmpresaReferidaCliente(): string {
+        return this.clienteEmpresaReferida.direccion || '';
+    }
+
+    obtenerTelefonoEmpresaReferidaCliente(): string {
+        return this.clienteEmpresaReferida.telefono || '';
+    }
+
+    obtenerEmailEmpresaReferidaCliente(): string {
+        return this.clienteEmpresaReferida.email || '';
+    }
+
+    // Limpiar datos de empresa
+    limpiarEmpresaReferidaCliente(): void {
+        this.clienteEmpresaReferida = {
+            nombre: '',
+            rif: '',
+            telefono: '',
+            email: '',
+            direccion: ''
+        };
+        this.mostrarInfoEmpresa = false;
+    }
+
 
 }

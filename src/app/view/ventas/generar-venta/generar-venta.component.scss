@@ -1571,6 +1571,23 @@
         }
     }
 
+    &.cliente-general {
+        border-left: 4px solid var(--primary-color) !important;
+
+        .card-header-detalle i {
+            color: var(--primary-color) !important;
+        }
+    }
+
+    &.paciente-detalle {
+        border-left: 4px solid var(--primary-color) !important;
+
+        .card-header-detalle i {
+            color: var(--primary-color) !important;
+        }
+    }
+
+
     &.productos {
         border-left: 4px solid var(--primary-color) !important;
 
@@ -5627,12 +5644,12 @@ input:checked+.slider:before {
 // En tu archivo generar-venta.component.scss
 
 // Variables de colores
-$primary-color: #4361ee;
+$primary-color: var(--primary-color);
 $secondary-color: #3a0ca3;
 $success-color: #4cc9f0;
 $warning-color: #f72585;
 $light-bg: #f8f9fa;
-$border-color: #dee2e6;
+$border-color: var(--primary-color);
 $text-primary: #2d3748;
 $text-secondary: #718096;
 
@@ -5734,7 +5751,7 @@ $text-secondary: #718096;
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem 1.5rem;
-    background: linear-gradient(135deg, $primary-color 0%, $secondary-color 100%);
+    background: var(--degradado-color) !important;
     border-radius: 16px 16px 0 0;
     color: white;
 
@@ -5824,7 +5841,7 @@ $text-secondary: #718096;
 
 .dato-paciente {
     background: white;
-    border: 1px solid $border-color;
+  //  border: 1px solid $border-color;
     border-radius: 10px;
     padding: 1rem;
     transition: all 0.3s ease;
@@ -5970,7 +5987,7 @@ $text-secondary: #718096;
 // Estilos específicos para CLIENTE GENERAL
 .cliente-general {
     .card-header-detalle {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        // background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
     }
 }
 

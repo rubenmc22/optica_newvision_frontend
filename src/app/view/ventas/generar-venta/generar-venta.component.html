@@ -723,23 +723,35 @@
                         <span class="badge-seccion">Tipo: Cliente General</span>
                     </div>
 
-                    <div class="card-body-detalle">
-                        <!-- 1. Información de la Empresa -->
-                        <div class="empresa-summary" (click)="toggleEmpresaInfo()">
+                      <div class="card-body-detalle">
+                        <!-- 1. Información de la Empresa - SOLO SI REFERIDO EMPRESA ES TRUE -->
+                        <div *ngIf="empresaReferidaInfo && empresaReferidaInfo.referidoEmpresa === true" 
+                            class="empresa-summary" (click)="toggleEmpresaInfo()">
                             <div class="empresa-header-mini">
                                 <i class="bi bi-building"></i>
                                 <div class="empresa-info-mini">
-                                    <span class="empresa-nombre-mini">{{ obtenerNombreEmpresa() }}</span>
+                                    <span class="empresa-nombre-mini">{{ empresaReferidaInfo?.nombre }}</span>
                                     <span class="empresa-ver-info">
                                         <i class="bi bi-info-circle"></i>
-                                        Ver información completa
+                                        Ver información de empresa referida
                                     </span>
+                                </div>
+                                <!-- TOGGLE SWITCH para activar/desactivar uso de empresa -->
+                                <div class="empresa-toggle" style="margin-left: auto;">
+                                    <label class="switch" style="margin-right: 10px;">
+                                        <input type="checkbox" 
+                                            [checked]="usarEmpresaEnVenta"
+                                            (change)="onToggleUsoEmpresa($event)">
+                                        <span class="slider round"></span>
+                                    </label>
+                                    <span class="toggle-label">Usar empresa</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Floating card para información de empresa -->
-                        <div class="empresa-floating-card" [class.show]="mostrarInfoEmpresa">
+                        <!-- Floating card para información de empresa - SOLO SI REFERIDO EMPRESA ES TRUE -->
+                        <div *ngIf="empresaReferidaInfo && empresaReferidaInfo.referidoEmpresa === true" 
+                            class="empresa-floating-card" [class.show]="mostrarInfoEmpresa">
                             <div class="floating-card-content">
                                 <div class="floating-card-header">
                                     <h5><i class="bi bi-building"></i> Información de la Empresa</h5>
@@ -753,28 +765,28 @@
                                             <i class="bi bi-card-text"></i>
                                             <div>
                                                 <span class="detail-label">RIF:</span>
-                                                <span class="detail-value">{{ obtenerRifEmpresa() }}</span>
+                                                <span class="detail-value">{{ empresaReferidaInfo?.rif }}</span>
                                             </div>
                                         </div>
                                         <div class="detail-item">
                                             <i class="bi bi-geo-alt"></i>
                                             <div>
                                                 <span class="detail-label">Dirección:</span>
-                                                <span class="detail-value">{{ obtenerDireccionEmpresa() }}</span>
+                                                <span class="detail-value">{{ empresaReferidaInfo?.direccion }}</span>
                                             </div>
                                         </div>
                                         <div class="detail-item">
                                             <i class="bi bi-telephone"></i>
                                             <div>
                                                 <span class="detail-label">Teléfono:</span>
-                                                <span class="detail-value">{{ obtenerTelefonoEmpresa() }}</span>
+                                                <span class="detail-value">{{ empresaReferidaInfo?.telefono }}</span>
                                             </div>
                                         </div>
                                         <div class="detail-item">
                                             <i class="bi bi-envelope"></i>
                                             <div>
                                                 <span class="detail-label">Email:</span>
-                                                <span class="detail-value">{{ obtenerEmailEmpresa() }}</span>
+                                                <span class="detail-value">{{ empresaReferidaInfo?.email || 'No disponible' }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -782,7 +794,7 @@
                             </div>
                         </div>
 
-                        <!-- 2. Formulario de cliente general (tu formulario existente) -->
+                        <!-- 2. Formulario de cliente general-->
                         <div class="cliente-form">
                             <!-- Switch Tipo de Persona - Moderno -->
                             <div class="tipo-persona-section">
@@ -819,8 +831,8 @@
                                                 style="margin-bottom: -10px !important;"
                                                 [(ngModel)]="clienteSinPaciente.cedula"
                                                 [placeholder]="clienteSinPaciente.tipoPersona === 'natural' ? 'Ingrese la cédula' : 'Ingrese el RIF'"
-                                                (blur)="onCedulaBlur()" (input)="onCedulaChange()"
-                                                (focus)="onCampoEditadoManualmente()" [disabled]="validandoCliente"
+                                                (blur)="onCedulaBlur()" (input)="onCedulaChange(); "
+                                                (focus)="onCedulaFocus(); onCampoEditadoManualmente()" [disabled]="validandoCliente"
                                                 data-cedula-input>
 
                                             <!-- Botón de validación compacto y con estados -->
