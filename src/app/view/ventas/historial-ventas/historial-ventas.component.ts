@@ -5331,6 +5331,8 @@ export class HistorialVentasComponent implements OnInit {
   // Método para abrir el modal (actualizado)
   abrirModalResumenFinanciero(): void {
     // Inicializar años disponibles
+    alert('Funcionalidad en construccion..');
+    return;
     this.inicializarAnosDisponibles();
 
     // Establecer valores por defecto

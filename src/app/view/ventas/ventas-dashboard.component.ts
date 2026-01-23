@@ -177,6 +177,11 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
     }
 
     cambiarVista(v: typeof this.vista): void {
+        // Corregir la condición - comparar v con cada valor por separado
+        if (v === 'cierre-de-caja' || v === 'presupuestos') {
+            alert('Funcionalidad en construccion..');
+            return;
+        }
         this.vista = v;
         this.actualizarEstadoVista(v);
         this.cdr.detectChanges();
