@@ -62,7 +62,7 @@
               <option value="50">50 registros</option>
             </select>
           </div>
-          
+
           <!-- Filtro por referido -->
           <div class="filtro-item">
             <label class="form-label-moderno">
@@ -146,9 +146,8 @@
                     <div class="paciente-avatar">
                       <i class="bi bi-person-circle"></i>
                       <!-- Indicador mini de empresa en el avatar -->
-                      <span *ngIf="paciente.informacionEmpresa?.referidoEmpresa" 
-                            class="avatar-empresa-indicator"
-                            [title]="'Referido de: ' + paciente.informacionEmpresa.empresaNombre">
+                      <span *ngIf="paciente.informacionEmpresa?.referidoEmpresa" class="avatar-empresa-indicator"
+                        [title]="'Referido de: ' + paciente.informacionEmpresa.empresaNombre">
                         <i class="bi bi-building-fill"></i>
                       </span>
                     </div>
@@ -156,14 +155,15 @@
                       <div class="paciente-nombre-container">
                         <span class="paciente-nombre">{{ paciente.informacionPersonal.nombreCompleto }}</span>
                         <!-- Badge compacto al lado del nombre -->
-                        <span *ngIf="paciente.informacionEmpresa?.referidoEmpresa" 
-                              class="empresa-badge-compact"
-                              [title]="'Referido de: ' + paciente.informacionEmpresa.empresaNombre">
+                        <span *ngIf="paciente.informacionEmpresa?.referidoEmpresa" class="empresa-badge-compact"
+                          [title]="'Referido de: ' + paciente.informacionEmpresa.empresaNombre">
                           <i class="bi bi-building"></i>
-                          <span class="empresa-nombre-truncated">{{ getEmpresaNombreCorto(paciente.informacionEmpresa.empresaNombre) }}</span>
+                          <span class="empresa-nombre-truncated">{{
+                            getEmpresaNombreCorto(paciente.informacionEmpresa.empresaNombre) }}</span>
                         </span>
                       </div>
-                      <small class="paciente-contacto">{{ paciente.informacionPersonal.telefono || 'Sin teléfono' }}</small>
+                      <small class="paciente-contacto">{{ paciente.informacionPersonal.telefono || 'Sin teléfono'
+                        }}</small>
                     </div>
                   </td>
 
@@ -1242,12 +1242,24 @@
         </div>
       </div>
 
-      <!-- Footer moderno -->
+      <!-- Footer moderno actualizado -->
       <div class="modal-footer-moderno">
-        <button type="button" class="btn btn-secondary-moderno" data-bs-dismiss="modal">
-          <i class="bi bi-x-circle me-2"></i>
-          Cerrar
-        </button>
+        <div class="footer-content-wrapper">
+          <!-- Información de última modificación alineada a la izquierda -->
+          <div class="footer-info-left">
+            <span *ngIf="pacienteSeleccionado?.fechaActualizacion" class="last-update-info">
+              <i class="bi bi-clock-history me-1"></i>
+              <span class="update-text">Última modificación:</span>
+              <span class="update-date">{{ pacienteSeleccionado?.fechaActualizacion || '---' }}</span>
+            </span>
+          </div>
+
+          <!-- Botón cerrar alineado a la derecha -->
+          <button type="button" class="btn btn-secondary-moderno" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle me-2"></i>
+            Cerrar
+          </button>
+        </div>
       </div>
     </div>
   </div>

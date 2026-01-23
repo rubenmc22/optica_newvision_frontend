@@ -1440,7 +1440,8 @@ textarea.form-control-moderno {
     }
 }
 
-/* Footer moderno */
+
+// Estilos para el footer del modal con información de última modificación
 .modal-footer-moderno {
     background: white;
     padding: 1.5rem 2rem;
@@ -1448,6 +1449,67 @@ textarea.form-control-moderno {
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
+
+    .footer-content-wrapper {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding: 0 1rem;
+    }
+
+    .footer-info-left {
+        display: flex;
+        align-items: center;
+
+        .last-update-info {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #6c757d;
+
+            .update-text {
+                margin-right: 0.5rem;
+                font-weight: 500;
+            }
+
+            .update-date {
+                font-weight: 600;
+                color: #495057;
+            }
+
+            i {
+                color: #6c757d;
+                margin-right: 0.25rem;
+            }
+        }
+    }
+
+    .btn-secondary-moderno {
+        margin-left: auto;
+    }
+}
+
+// Estilos responsivos
+@media (max-width: 768px) {
+    .modal-footer-moderno {
+        .footer-content-wrapper {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .footer-info-left {
+            width: 100%;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .btn-secondary-moderno {
+            width: 100%;
+            margin-left: 0;
+        }
+    }
 }
 
 .btn-secondary-moderno {

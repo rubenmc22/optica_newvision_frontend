@@ -489,8 +489,9 @@ export class VerPacientesComponent implements OnInit {
                 id: p.id,
                 key: p.key,
                 fechaRegistro: this.formatearFecha(p.created_at),
-                // Añadir esta propiedad para ordenar
-                fechaRegistroRaw: p.created_at, // 👈 IMPORTANTE: mantener formato ISO para ordenar
+                fechaRegistroRaw: p.created_at,
+                fechaActualizacion: this.formatearFecha(p.updated_at),
+                fechaActualizacionRaw: p.updated_at,
                 sede: p.sedeId?.toLowerCase() ?? 'sin-sede',
                 redesSociales: p.redesSociales || [],
 
@@ -534,7 +535,6 @@ export class VerPacientesComponent implements OnInit {
                 }
               };
             })
-            // 👇 ORDENAR por fecha de registro (más reciente primero)
             .sort((a, b) => new Date(b.fechaRegistroRaw).getTime() - new Date(a.fechaRegistroRaw).getTime())
           : [];
 
@@ -561,50 +561,6 @@ export class VerPacientesComponent implements OnInit {
     this.paginaActual = 1;
     this.calcularPaginacion();
   }
-
-  /*  actualizarPacientesPorSede(): void {
-      const sedeId = this.sedeFiltro?.trim().toLowerCase();
-  
-      // Primero filtrar por sede
-      let pacientesFiltrados = sedeId && sedeId !== 'todas'
-        ? this.pacientes.filter(p => p.sede === sedeId)
-        : [...this.pacientes];
-  
-      // Luego aplicar filtro de texto si existe
-      const filtroText = this.filtro?.trim().toLowerCase();
-      if (filtroText) {
-        pacientesFiltrados = pacientesFiltrados.filter(p => {
-          const nombre = p.informacionPersonal?.nombreCompleto?.toLowerCase() || '';
-          const cedula = p.informacionPersonal?.cedula?.toLowerCase() || '';
-  
-          return nombre.includes(filtroText) || cedula.includes(filtroText);
-        });
-      }
-  
-      //Mantener el orden por fecha (más reciente primero)
-      pacientesFiltrados.sort((a, b) => {
-        // Si hay orden personalizado aplicado por los títulos de la tabla
-        if (this.ordenActual !== 'fechaRegistro') {
-          // Dejar que el ordenamiento personalizado funcione
-          return 0;
-        }
-        // Orden por defecto: más reciente primero
-        return new Date(b.fechaRegistroRaw || '').getTime() - new Date(a.fechaRegistroRaw || '').getTime();
-      });
-  
-      this.pacientesFiltradosPorSede = pacientesFiltrados;
-      this.paginaActual = 1;
-      this.calcularPaginacion();
-    }*/
-
-
-  /* aplicarFiltroTexto(): void {
-     this.actualizarPacientesPorSede();
- 
-     this.paginaActual = 1;
-     this.calcularPaginacion();
-   }*/
-
 
   // Corrección del método de ordenamiento
   ordenarPor(campo: string): void {
@@ -770,10 +726,47 @@ export class VerPacientesComponent implements OnInit {
     this.pacientesService.createPaciente(nuevoPaciente).subscribe({
       next: (response) => {
         this.cargando = false;
-        this.pacientes.push(response);
+
+        // Transformar la respuesta del paciente
+        const pacienteTransformado = {
+          ...response,
+          key: response.key || response.id,
+          fechaRegistro: this.formatearFecha(response.created_at),
+          fechaRegistroRaw: response.created_at,
+          fechaActualizacion: this.formatearFecha(response.updated_at),
+          fechaActualizacionRaw: response.updated_at,
+          sede: response.sede || this.sedeActiva,
+          informacionPersonal: {
+            ...response.informacionPersonal,
+            edad: this.calcularEdad(response.informacionPersonal.fechaNacimiento),
+            genero: response.informacionPersonal.genero === 'm' ? 'Masculino' :
+              response.informacionPersonal.genero === 'f' ? 'Femenino' : 'Otro'
+          }
+        };
+
+        // ✅ Encontrar la posición correcta para insertar (orden descendente por fecha de creación)
+        const fechaCreacion = new Date(pacienteTransformado.fechaRegistroRaw).getTime();
+        let posicionInsercion = 0;
+
+        for (let i = 0; i < this.pacientes.length; i++) {
+          const fechaExistente = new Date(this.pacientes[i].fechaRegistroRaw).getTime();
+          if (fechaCreacion > fechaExistente) {
+            posicionInsercion = i;
+            break;
+          } else {
+            posicionInsercion = i + 1;
+          }
+        }
+
+        // Insertar en la posición correcta
+        this.pacientes.splice(posicionInsercion, 0, pacienteTransformado);
+
         this.cerrarModal('modalAgregarPaciente');
         this.swalService.showSuccess('¡Registro exitoso!', 'Paciente registrado correctamente.');
-        this.cargarPacientes();
+
+        // Actualizar la vista
+        this.actualizarPacientesPorSede();
+        this.cdRef.detectChanges();
       },
       error: (error) => {
         this.cargando = false;
@@ -787,20 +780,20 @@ export class VerPacientesComponent implements OnInit {
           const sede = sedeRaw.replace(/^Sede\s+/i, '').trim();
 
           const mensajeHTML = `
-          <br>
-          <div class="swal-custom-content ">
-            <h5 class="text-danger mb-2">
-              <i class="fas fa-id-card me-2"></i> Cédula ya registrada
-            </h5>
-            <ul class="list-unstyled mb-3">
-              <li><strong>Cédula:</strong> ${cedula}</li>
-              <li><strong>Sede:</strong> ${sede}</li>
-            </ul><br>
-            <div class="text-muted small">
-              <i class="fas fa-info-circle me-1"></i> Cada cédula debe ser única por sede. Revisa los datos ingresados.
-            </div>
+        <br>
+        <div class="swal-custom-content ">
+          <h5 class="text-danger mb-2">
+            <i class="fas fa-id-card me-2"></i> Cédula ya registrada
+          </h5>
+          <ul class="list-unstyled mb-3">
+            <li><strong>Cédula:</strong> ${cedula}</li>
+            <li><strong>Sede:</strong> ${sede}</li>
+          </ul><br>
+          <div class="text-muted small">
+            <i class="fas fa-info-circle me-1"></i> Cada cédula debe ser única por sede. Revisa los datos ingresados.
           </div>
-          `;
+        </div>
+        `;
           this.swalService.showWarning('', mensajeHTML, true);
           return;
         }
@@ -952,16 +945,24 @@ export class VerPacientesComponent implements OnInit {
           usoDispositivoDisplay = usoDispositivoCompleto;
         }
 
+        // Encontrar el paciente original para mantener sus fechas
+        const pacienteOriginal = this.pacientes.find(p => p.key === keyPaciente);
+
         const transformado = {
           ...paciente,
           key: keyPaciente,
+          // ✅ MANTENER la fecha de registro ORIGINAL del paciente (NO usar updated_at)
+          fechaRegistro: pacienteOriginal ? pacienteOriginal.fechaRegistro : this.formatearFecha(paciente.created_at),
+          fechaRegistroRaw: pacienteOriginal ? pacienteOriginal.fechaRegistroRaw : paciente.created_at,
+          // ✅ Guardar fecha de actualización por separado para mostrarla en el modal
+          fechaActualizacion: this.formatearFecha(paciente.updated_at),
+          fechaActualizacionRaw: paciente.updated_at,
           informacionPersonal: {
             ...paciente.informacionPersonal,
             genero: paciente.informacionPersonal.genero === 'm' ? 'Masculino' :
               paciente.informacionPersonal.genero === 'f' ? 'Femenino' : 'Otro',
             edad: this.calcularEdad(paciente.informacionPersonal.fechaNacimiento)
           },
-          fechaRegistro: this.formatearFecha(paciente.updated_at),
           redesSociales: paciente.redesSociales || [],
           sede: paciente.sede || this.sedeActiva,
           historiaClinica: {
@@ -970,12 +971,14 @@ export class VerPacientesComponent implements OnInit {
           }
         };
 
-        const index = this.pacientes.findIndex(p => p.key === paciente.key);
+        // ✅ Actualizar el paciente en la misma posición (NO reordenar)
+        const index = this.pacientes.findIndex(p => p.key === keyPaciente);
         if (index !== -1) {
           this.pacientes[index] = transformado;
-        } else {
-          this.pacientes.push(transformado);
         }
+
+        // ✅ NO reordenar la lista después de actualizar
+        // El paciente mantiene su posición basada en la fecha de creación original
 
         this.pacientes = [...this.pacientes];
         this.actualizarPacientesPorSede();
@@ -1160,6 +1163,10 @@ export class VerPacientesComponent implements OnInit {
       fechaRegistro: paciente.fechaRegistro
         ? this.formatearFecha(paciente.fechaRegistro)
         : '',
+      // ✅ AGREGAR fecha de actualización
+      fechaActualizacion: paciente.fechaActualizacion
+        ? this.formatearFecha(paciente.fechaActualizacion)
+        : this.formatearFecha(paciente.fechaRegistro), // Si no hay fechaActualizacion, usa fechaRegistro
 
       redesSociales: redes.map((red: any) => ({
         platform: red.platform ?? 'Plataforma desconocida',
@@ -1201,6 +1208,8 @@ export class VerPacientesComponent implements OnInit {
     };
 
     this.pacienteSeleccionado = pacienteTransformado;
+    console.log('Paciente seleccionado:', pacienteTransformado); // Para debug
+
     const modalElement = document.getElementById('verPacienteModal');
     if (modalElement) {
       const modal = new bootstrap.Modal(modalElement);
@@ -2207,7 +2216,6 @@ export class VerPacientesComponent implements OnInit {
     ).length;
   }
 
-  // Actualiza el método aplicarFiltroTexto() para incluir el filtro por empresa referida
   aplicarFiltroTexto(): void {
     let pacientesFiltrados = [...this.pacientes];
 
@@ -2235,15 +2243,18 @@ export class VerPacientesComponent implements OnInit {
       pacientesFiltrados = pacientesFiltrados.filter(p => p.sede === sedeId);
     }
 
-    // Aplicar ordenamiento
-    if (this.ordenActual) {
+    // Aplicar ordenamiento por defecto (fecha más reciente primero) cuando no hay otro orden
+    // Solo si el usuario no ha hecho clic en otro encabezado de ordenamiento
+    if (this.ordenActual === 'fechaRegistro') {
+      // Ordenar por fecha descendente (más reciente primero)
       pacientesFiltrados.sort((a, b) => {
-        if (this.ordenActual === 'fechaRegistro') {
-          const fechaA = a.fechaRegistroRaw ? new Date(a.fechaRegistroRaw).getTime() : 0;
-          const fechaB = b.fechaRegistroRaw ? new Date(b.fechaRegistroRaw).getTime() : 0;
-          return this.ordenAscendente ? fechaA - fechaB : fechaB - fechaA;
-        }
-
+        const fechaA = a.fechaRegistroRaw ? new Date(a.fechaRegistroRaw).getTime() : 0;
+        const fechaB = b.fechaRegistroRaw ? new Date(b.fechaRegistroRaw).getTime() : 0;
+        return fechaB - fechaA; // Orden descendente
+      });
+    } else if (this.ordenActual) {
+      // Si hay otro ordenamiento activo, aplicar ese
+      pacientesFiltrados.sort((a, b) => {
         const valorA = this.getValorOrden(a, this.ordenActual) ?? '';
         const valorB = this.getValorOrden(b, this.ordenActual) ?? '';
 
@@ -2258,6 +2269,13 @@ export class VerPacientesComponent implements OnInit {
         }
 
         return 0;
+      });
+    } else {
+      // Si no hay ordenamiento específico, usar el predeterminado (fecha más reciente primero)
+      pacientesFiltrados.sort((a, b) => {
+        const fechaA = a.fechaRegistroRaw ? new Date(a.fechaRegistroRaw).getTime() : 0;
+        const fechaB = b.fechaRegistroRaw ? new Date(b.fechaRegistroRaw).getTime() : 0;
+        return fechaB - fechaA;
       });
     }
 

@@ -16,6 +16,8 @@ export interface Paciente {
   key: string;
   fechaRegistro?: string;
   fechaRegistroRaw?: string;
+  fechaActualizacion?: string;  // Nueva propiedad
+  fechaActualizacionRaw?: string; // Nueva propiedad
   informacionPersonal: {
     nombreCompleto: string;
     cedula: string;
