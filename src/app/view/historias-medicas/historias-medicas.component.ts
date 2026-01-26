@@ -68,7 +68,8 @@ export class HistoriasMedicasComponent implements OnInit {
   medicoTratante: any[] = [];
   filteredEmployees: any[] = [];
 
-  historialesAbierto: boolean = true;
+  panelSuperiorColapsado = false;
+  panelInferiorColapsado = false;
 
   // Datos
   pacientes: Paciente[] = [];
@@ -1256,14 +1257,18 @@ export class HistoriasMedicasComponent implements OnInit {
     };
   }
 
-  toggleHistoriales() {
-    this.historialesAbierto = !this.historialesAbierto;
+  // Métodos para alternar el estado
+  togglePanelSuperior() {
+    this.panelSuperiorColapsado = !this.panelSuperiorColapsado;
+  }
+
+  togglePanelInferior() {
+    this.panelInferiorColapsado = !this.panelInferiorColapsado;
   }
 
   // ***************************
   // * Métodos de sedes
   // ***************************
-
   actualizarPacientesPorSede(): void {
     this.limpiarDatos();
 

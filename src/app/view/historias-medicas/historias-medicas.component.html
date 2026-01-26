@@ -73,233 +73,366 @@
         </div>
 
         <!-- Panel principal - ESTRUCTURA VERTICAL -->
-        <div class="panel-vertical" *ngIf="mostrarElementos">
-          
-          <!-- SECCIÓN SUPERIOR: LISTADO DE HISTORIAS -->
-          <div class="panel-superior">
-            <div class="card card-secundaria">
-              <div class="card-header-secundario">
-                <i class="bi bi-clock-history"></i>
-                <span>Historiales del Paciente</span>
-                <span class="historial-count">{{historial?.length || 0}} registros</span>
-              </div>
-              <div class="card-body-secundario">
-                <div class="lista-historias-vertical">
-                  <div *ngFor="let historia of historial" class="item-historia-vertical"
-                    [class.active]="historiaSeleccionada?.id === historia.id" (click)="verDetalle(historia)">
+      <div class="panel-vertical" *ngIf="mostrarElementos">
+        
+        <!-- SECCIÓN SUPERIOR: LISTADO DE HISTORIAS -->
+        <div class="panel-superior">
+          <div class="card card-secundaria" [class.collapsed]="panelSuperiorColapsado">
+         <div class="card-header-secundario" (click)="togglePanelSuperior()">
+          <div class="header-left">
+            <div class="header-icon">
+              <i class="bi bi-clock-history"></i>
+            </div>
+            <div class="header-text">
+              <div class="header-title">Historiales del Paciente</div>
+            </div>
+          </div>
+          <div class="header-right">
+            <span class="historial-count">{{historial?.length || 0}}</span>
+            <button class="collapse-toggle" [class.collapsed]="panelSuperiorColapsado">
+              <i class="bi bi-chevron-down"></i>
+            </button>
+          </div>
+        </div>
+            <div class="card-body-secundario">
+              <div class="lista-historias-vertical">
+                <div *ngFor="let historia of historial" class="item-historia-vertical"
+                  [class.active]="historiaSeleccionada?.id === historia.id" (click)="verDetalle(historia)">
 
-                    <div class="historia-header-vertical">
-                      <div class="historia-info-principal">
-                        <div class="historia-motivo-vertical">
-                          {{
-                          historia.datosConsulta.motivo.includes('Otro')
-                          ? historia.datosConsulta.otroMotivo || '— Sin motivo especificado —'
-                          : historia.datosConsulta.motivo.join(', ')
-                          }}
-                        </div>
-                        <div class="historia-meta-vertical">
-                          <span class="historia-numero-vertical">#{{ historia.nHistoria || '' }}</span>
-                          <span class="historia-fecha-vertical">{{ formatearFecha(historia.auditoria.fechaCreacion) }}</span>
-                        </div>
+                  <div class="historia-header-vertical">
+                    <div class="historia-info-principal">
+                      <div class="historia-motivo-vertical">
+                        {{
+                        historia.datosConsulta.motivo.includes('Otro')
+                        ? historia.datosConsulta.otroMotivo || '— Sin motivo especificado —'
+                        : historia.datosConsulta.motivo.join(', ')
+                        }}
                       </div>
-                      <div class="historia-medico-vertical">
-                        <i class="bi bi-person-badge"></i>
-                        {{ getNombreMedico(historia.datosConsulta.medico) }}
+                      <div class="historia-meta-vertical">
+                        <span class="historia-numero-vertical">#{{ historia.nHistoria || '' }}</span>
+                        <span class="historia-fecha-vertical">{{ formatearFecha(historia.auditoria.fechaCreacion) }}</span>
                       </div>
+                    </div>
+                    <div class="historia-medico-vertical">
+                      <i class="bi bi-person-badge"></i>
+                      {{ getNombreMedico(historia.datosConsulta.medico) }}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- SECCIÓN INFERIOR: DETALLE DE HISTORIA -->
-          <div class="panel-inferior" *ngIf="historiaSeleccionada">
-            <div class="card card-secundaria">
-              <div class="card-header-detalle">
-                <div class="detalle-titulo">
-                  <i class="bi bi-eye-fill"></i>
-                  <span>Detalle del Examen</span>
+        <!-- SECCIÓN INFERIOR: DETALLE DE HISTORIA -->
+        <div class="panel-inferior" *ngIf="historiaSeleccionada">
+          <div class="card card-secundaria" [class.collapsed]="panelInferiorColapsado">
+            <div class="card-header-detalle" (click)="togglePanelInferior()">
+  <div class="header-left">
+    <div class="header-icon">
+      <i class="bi bi-eye-fill"></i>
+    </div>
+    <div class="header-text">
+      <div class="header-title">Detalle del Examen</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="detalle-numero">
+      <span class="numero-label">N° historia:</span>
+      <span class="numero-valor">{{ historiaSeleccionada?.nHistoria || '' }}</span>
+    </div>
+    <button class="collapse-toggle" [class.collapsed]="panelInferiorColapsado">
+      <i class="bi bi-chevron-down"></i>
+    </button>
+  </div>
+            </div>
+
+            <div class="card-body-detalle">
+              <!-- Datos del paciente -->
+              <div class="seccion-datos">
+                <div class="seccion-header">
+                  <i class="bi bi-person-vcard"></i>
+                  <h6>Datos del Paciente</h6>
                 </div>
-                <div class="detalle-numero">
-                  <span class="numero-label">N° historia:</span>
-                  <span class="numero-valor">{{ historiaSeleccionada?.nHistoria || '' }}</span>
+                <div class="datos-grid">
+                  <div class="dato-item">
+                    <label>Nombre</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.nombreCompleto }}</div>
+                  </div>
+                  <div class="dato-item">
+                    <label>Cédula</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.cedula }}</div>
+                  </div>
+                  <div class="dato-item">
+                    <label>Teléfono</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.telefono }}</div>
+                  </div>
+                  <div class="dato-item">
+                    <label>Edad</label>
+                    <div class="dato-valor">
+                      {{ calcularEdad(pacienteSeleccionado?.informacionPersonal?.fechaNacimiento) }} años
+                    </div>
+                  </div>
+                  <div class="dato-item">
+                    <label>Ocupación</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.ocupacion }}</div>
+                  </div>
+                  <div class="dato-item full-width">
+                    <label>Motivo</label>
+                    <div class="dato-valor">{{ getMotivoVisual() }}</div>
+                  </div>
+                  <div class="dato-item full-width">
+                    <label>Dirección</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.direccion }}</div>
+                  </div>
                 </div>
               </div>
 
-              <div class="card-body-detalle">
-                <!-- Datos del paciente -->
-                <div class="seccion-datos">
-                  <div class="seccion-header">
-                    <i class="bi bi-person-vcard"></i>
-                    <h6>Datos del Paciente</h6>
+              <!-- Historia Clínica -->
+              <div class="seccion-datos">
+                <div class="seccion-header">
+                  <i class="bi bi-heart-pulse"></i>
+                  <h6>Historia Clínica</h6>
+                </div>
+
+                <div class="datos-grid">
+                  <div class="dato-item">
+                    <label>Usa Lentes</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.usuarioLentes || 'No especificado' }}</div>
                   </div>
-                  <div class="datos-grid">
-                    <div class="dato-item">
-                      <label>Nombre</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.nombreCompleto }}</div>
+                  <div class="dato-item">
+                    <label>Cristal Actual</label>
+                    <div class="dato-valor">{{ historiaSeleccionada?.datosConsulta?.tipoCristalActual || 'No specificado' }}</div>
+                  </div>
+                  <div class="dato-item">
+                    <label>Última Graduación</label>
+                    <div class="dato-valor">
+                      {{ historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion ?
+                      (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No eecificado' }}
                     </div>
-                    <div class="dato-item">
-                      <label>Cédula</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.cedula }}</div>
+                  </div>
+                  <div class="dato-item">
+                    <label>Fotofobia</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.fotofobia || 'No especificado'}}
                     </div>
-                    <div class="dato-item">
-                      <label>Teléfono</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.telefono }}</div>
-                    </div>
-                    <div class="dato-item">
-                      <label>Edad</label>
-                      <div class="dato-valor">
-                        {{ calcularEdad(pacienteSeleccionado?.informacionPersonal?.fechaNacimiento) }} años
-                      </div>
-                    </div>
-                    <div class="dato-item">
-                      <label>Ocupación</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.ocupacion }}</div>
-                    </div>
-                    <div class="dato-item full-width">
-                      <label>Motivo</label>
-                      <div class="dato-valor">{{ getMotivoVisual() }}</div>
-                    </div>
-                    <div class="dato-item full-width">
-                      <label>Dirección</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.direccion }}</div>
-                    </div>
+                  </div>
+                  <div class="dato-item">
+                    <label>Alergias</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.alergicoA || 'No especificado'
+                      }}</div>
+                  </div>
+                  <div class="dato-item">
+                    <label>Cirugía Ocular</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcular || 'No especificado'}}</div>
+                  </div>
+                  <div class="dato-item">
+                    <label>Tipo de Cirugía</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcularDescripcion || 'No especificada' }}</div>
+                  </div>
+                  <div class="dato-item">
+                    <label>Traumatismo Ocular</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcular || 'No especificado'}}</div>
+                  </div>
+                  <div class="dato-item">
+                    <label>Uso de Dispositivos</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.usoDispositivo || 'No especificado' }}</div>
                   </div>
                 </div>
 
-                <!-- Historia Clínica -->
-                <div class="seccion-datos">
-                  <div class="seccion-header">
-                    <i class="bi bi-heart-pulse"></i>
-                    <h6>Historia Clínica</h6>
-                  </div>
-
-                  <div class="datos-grid">
-                    <div class="dato-item">
-                      <label>Usa Lentes</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.usuarioLentes || 'No especificado' }}</div>
-                    </div>
-                    <div class="dato-item">
-                      <label>Cristal Actual</label>
-                      <div class="dato-valor">{{ historiaSeleccionada?.datosConsulta?.tipoCristalActual || 'No specificado' }}</div>
-                    </div>
-                    <div class="dato-item">
-                      <label>Última Graduación</label>
-                      <div class="dato-valor">
-                        {{ historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion ?
-                        (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No eecificado' }}
-                      </div>
-                    </div>
-                    <div class="dato-item">
-                      <label>Fotofobia</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.fotofobia || 'No especificado'}}
-                      </div>
-                    </div>
-                    <div class="dato-item">
-                      <label>Alergias</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.alergicoA || 'No especificado'
-                        }}</div>
-                    </div>
-                    <div class="dato-item">
-                      <label>Cirugía Ocular</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcular || 'No especificado'}}</div>
-                    </div>
-                    <div class="dato-item">
-                      <label>Tipo de Cirugía</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcularDescripcion || 'No especificada' }}</div>
-                    </div>
-                    <div class="dato-item">
-                      <label>Traumatismo Ocular</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcular || 'No especificado'}}</div>
-                    </div>
-                    <div class="dato-item">
-                      <label>Uso de Dispositivos</label>
-                      <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.usoDispositivo || 'No especificado' }}</div>
+                <!-- Antecedentes y Patologías -->
+                <div class="datos-tags">
+                  <div class="tags-group">
+                    <label>Antecedentes Personales</label>
+                    <div class="tags-container">
+                      <ng-container
+                        *ngIf="(pacienteSeleccionado?.historiaClinica?.antecedentesPersonales ?? []).length > 0; else sinAntecedentes">
+                        <span
+                          *ngFor="let antecedente of pacienteSeleccionado?.historiaClinica?.antecedentesPersonales ?? []"
+                          class="tag tag-success">
+                          {{ antecedente }}
+                        </span>
+                      </ng-container>
+                      <ng-template #sinAntecedentes>
+                        <span class="tag tag-secondary">No reportados</span>
+                      </ng-template>
                     </div>
                   </div>
 
-                  <!-- Antecedentes y Patologías -->
-                  <div class="datos-tags">
-                    <div class="tags-group">
-                      <label>Antecedentes Personales</label>
-                      <div class="tags-container">
-                        <ng-container
-                          *ngIf="(pacienteSeleccionado?.historiaClinica?.antecedentesPersonales ?? []).length > 0; else sinAntecedentes">
-                          <span
-                            *ngFor="let antecedente of pacienteSeleccionado?.historiaClinica?.antecedentesPersonales ?? []"
-                            class="tag tag-success">
-                            {{ antecedente }}
-                          </span>
-                        </ng-container>
-                        <ng-template #sinAntecedentes>
-                          <span class="tag tag-secondary">No reportados</span>
-                        </ng-template>
-                      </div>
+                  <div class="tags-group">
+                    <label>Antecedentes Familiares</label>
+                    <div class="tags-container">
+                      <ng-container
+                        *ngIf="(pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares ?? []).length > 0; else sinFamiliares">
+                        <span
+                          *ngFor="let antecedente of pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares ?? []"
+                          class="tag tag-info">
+                          {{ antecedente }}
+                        </span>
+                      </ng-container>
+                      <ng-template #sinFamiliares>
+                        <span class="tag tag-secondary">No reportados</span>
+                      </ng-template>
                     </div>
+                  </div>
 
-                    <div class="tags-group">
-                      <label>Antecedentes Familiares</label>
-                      <div class="tags-container">
-                        <ng-container
-                          *ngIf="(pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares ?? []).length > 0; else sinFamiliares">
-                          <span
-                            *ngFor="let antecedente of pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares ?? []"
-                            class="tag tag-info">
-                            {{ antecedente }}
-                          </span>
-                        </ng-container>
-                        <ng-template #sinFamiliares>
-                          <span class="tag tag-secondary">No reportados</span>
-                        </ng-template>
-                      </div>
+                  <div class="tags-group">
+                    <label>Patologías Generales</label>
+                    <div class="tags-container">
+                      <ng-container
+                        *ngIf="(pacienteSeleccionado?.historiaClinica?.patologias ?? []).length > 0; else sinPatologias">
+                        <span *ngFor="let patologia of pacienteSeleccionado?.historiaClinica?.patologias ?? []"
+                          class="tag tag-secondary">
+                          {{ patologia }}
+                        </span>
+                      </ng-container>
+                      <ng-template #sinPatologias>
+                        <span class="tag tag-secondary">No reportados</span>
+                      </ng-template>
                     </div>
+                  </div>
 
-                    <div class="tags-group">
-                      <label>Patologías Generales</label>
-                      <div class="tags-container">
-                        <ng-container
-                          *ngIf="(pacienteSeleccionado?.historiaClinica?.patologias ?? []).length > 0; else sinPatologias">
-                          <span *ngFor="let patologia of pacienteSeleccionado?.historiaClinica?.patologias ?? []"
-                            class="tag tag-secondary">
-                            {{ patologia }}
-                          </span>
-                        </ng-container>
-                        <ng-template #sinPatologias>
-                          <span class="tag tag-secondary">No reportados</span>
-                        </ng-template>
-                      </div>
-                    </div>
-
-                    <div class="tags-group">
-                      <label>Patologías Oculares</label>
-                      <div class="tags-container">
-                        <ng-container
-                          *ngIf="(pacienteSeleccionado?.historiaClinica?.patologiaOcular ?? []).length > 0; else sinPatologiaOcular">
-                          <span *ngFor="let pat of pacienteSeleccionado?.historiaClinica?.patologiaOcular ?? []"
-                            class="tag tag-warning">
-                            {{ pat }}
-                          </span>
-                        </ng-container>
-                        <ng-template #sinPatologiaOcular>
-                          <span class="tag tag-secondary">No reportados</span>
-                        </ng-template>
-                      </div>
+                  <div class="tags-group">
+                    <label>Patologías Oculares</label>
+                    <div class="tags-container">
+                      <ng-container
+                        *ngIf="(pacienteSeleccionado?.historiaClinica?.patologiaOcular ?? []).length > 0; else sinPatologiaOcular">
+                        <span *ngFor="let pat of pacienteSeleccionado?.historiaClinica?.patologiaOcular ?? []"
+                          class="tag tag-warning">
+                          {{ pat }}
+                        </span>
+                      </ng-container>
+                      <ng-template #sinPatologiaOcular>
+                        <span class="tag tag-secondary">No reportados</span>
+                      </ng-template>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- Exámenes Oculares -->
-                <div class="seccion-examenes">
-                  <!-- Lensometría Mejorada -->
+              <!-- Exámenes Oculares -->
+              <div class="seccion-examenes">
+                <!-- Lensometría Mejorada -->
+                <div class="examen-card">
+                  <div class="examen-header">
+                    <i class="bi bi-eyeglasses"></i>
+                    <h6 class="examen-header-title">Lensometría</h6>
+                  </div>
+
+                  <div class="table-responsive-moderna">
+                    <table class="tabla-examen tabla-lensometria">
+                      <thead>
+                        <tr>
+                          <th>Ojo</th>
+                          <th>ESF</th>
+                          <th>CIL</th>
+                          <th>EJE</th>
+                          <th>ADD</th>
+                          <th>AV Lejos</th>
+                          <th class="merged-cell">AV Lejos BI</th>
+                          <th>AV Cerca</th>
+                          <th class="merged-cell">AV Cerca BI</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><strong>OD</strong></td>
+                          <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.esf_od)">
+                            {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.esf_od) }}
+                          </td>
+                          <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.cil_od)">
+                            {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.cil_od) }}
+                          </td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.eje_od || '—' }}</td>
+                          <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.add_od)">
+                            {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.add_od) }}
+                          </td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_od || '—' }}</td>
+                          <td rowspan="2" class="merged-cell">
+                            {{ historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_bi || '—' }}
+                          </td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_od || '—' }}</td>
+                          <td rowspan="2" class="merged-cell">
+                            {{ historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_bi || '—' }}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><strong>OI</strong></td>
+                          <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.esf_oi)">
+                            {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.esf_oi) }}
+                          </td>
+                          <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.cil_oi)">
+                            {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.cil_oi) }}
+                          </td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.eje_oi || '—' }}</td>
+                          <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.add_oi)">
+                            {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.add_oi) }}
+                          </td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_oi || '—' }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_oi || '—' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- AVSC - AVAE - OTROS Mejorado -->
+                <div class="examen-card">
+                  <div class="examen-header">
+                    <i class="bi bi-eye"></i>
+                    <h6 class="examen-header-title">AVSC - AVAE - OTROS</h6>
+                  </div>
+
+                  <div class="table-responsive-moderna">
+                    <table class="tabla-examen tabla-avsc">
+                      <thead>
+                        <tr>
+                          <th>Ojo</th>
+                          <th>AVSC</th>
+                          <th class="merged-cell">AVSC BI</th>
+                          <th>AVAE</th>
+                          <th colspan="2">OTROS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><strong>OD</strong></td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_od || '—' }}</td>
+                          <td rowspan="2" class="merged-cell">
+                            {{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_bi || '—' }}
+                          </td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avae_od || '—' }}</td>
+                          <td colspan="2">{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_od || '—' }}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td><strong>OI</strong></td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_oi || '—' }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avae_oi || '—' }}</td>
+                          <td colspan="2">{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_oi || '—' }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Hora de evaluación -->
+                <div class="hora-evaluacion">
+                  <i class="bi bi-clock"></i>
+                  <span>Hora de evaluación: {{ horaEvaluacion || 'No registrada' }}</span>
+                </div>
+
+                <!-- Refracción y Refracción Final Mejoradas -->
+                <div class="examenes-grid">
+                  <!-- Refracción Mejorada -->
                   <div class="examen-card">
                     <div class="examen-header">
-                      <i class="bi bi-eyeglasses"></i>
-                      <h6 class="examen-header-title">Lensometría</h6>
+                      <i class="bi bi-prescription2"></i>
+                      <h6 class="examen-header-title">Refracción</h6>
                     </div>
 
                     <div class="table-responsive-moderna">
-                      <table class="tabla-examen tabla-lensometria">
+                      <table class="tabla-examen tabla-refraccion">
                         <thead>
                           <tr>
                             <th>Ojo</th>
@@ -307,351 +440,238 @@
                             <th>CIL</th>
                             <th>EJE</th>
                             <th>ADD</th>
-                            <th>AV Lejos</th>
-                            <th class="merged-cell">AV Lejos BI</th>
-                            <th>AV Cerca</th>
-                            <th class="merged-cell">AV Cerca BI</th>
+                            <th>AVCCL</th>
+                            <th class="merged-cell">AVCCL BI</th>
+                            <th>AVCCC</th>
+                            <th class="merged-cell">AVCCC BI</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr>
                             <td><strong>OD</strong></td>
-                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.esf_od)">
-                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.esf_od) }}
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.esf_od)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.esf_od) }}
                             </td>
-                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.cil_od)">
-                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.cil_od) }}
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.cil_od)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.cil_od) }}
                             </td>
-                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.eje_od || '—' }}</td>
-                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.add_od)">
-                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.add_od) }}
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.eje_od || '—' }}</td>
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.add_od)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.add_od) }}
                             </td>
-                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_od || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccl_od || '—' }}</td>
                             <td rowspan="2" class="merged-cell">
-                              {{ historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_bi || '—' }}
+                              {{ historiaSeleccionada?.examenOcular?.refraccion?.avccl_bi || '—' }}
                             </td>
-                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_od || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccc_od || '—' }}</td>
                             <td rowspan="2" class="merged-cell">
-                              {{ historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_bi || '—' }}
+                              {{ historiaSeleccionada?.examenOcular?.refraccion?.avccc_bi || '—' }}
                             </td>
                           </tr>
                           <tr>
                             <td><strong>OI</strong></td>
-                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.esf_oi)">
-                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.esf_oi) }}
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.esf_oi)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.esf_oi) }}
                             </td>
-                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.cil_oi)">
-                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.cil_oi) }}
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.cil_oi)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.cil_oi) }}
                             </td>
-                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.eje_oi || '—' }}</td>
-                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.lensometria?.add_oi)">
-                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.lensometria?.add_oi) }}
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.eje_oi || '—' }}</td>
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.add_oi)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.add_oi) }}
                             </td>
-                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_lejos_oi || '—' }}</td>
-                            <td>{{ historiaSeleccionada?.examenOcular?.lensometria?.av_cerca_oi || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccl_oi || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccc_oi || '—' }}</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
                   </div>
 
-                  <!-- AVSC - AVAE - OTROS Mejorado -->
+                  <!-- Refracción Final Mejorada -->
                   <div class="examen-card">
                     <div class="examen-header">
-                      <i class="bi bi-eye"></i>
-                      <h6 class="examen-header-title">AVSC - AVAE - OTROS</h6>
+                      <i class="bi bi-prescription"></i>
+                      <h6 class="examen-header-title">Refracción Final</h6>
                     </div>
 
                     <div class="table-responsive-moderna">
-                      <table class="tabla-examen tabla-avsc">
+                      <table class="tabla-examen tabla-refraccion-final">
                         <thead>
                           <tr>
                             <th>Ojo</th>
-                            <th>AVSC</th>
-                            <th class="merged-cell">AVSC BI</th>
-                            <th>AVAE</th>
-                            <th colspan="2">OTROS</th>
+                            <th>ESF</th>
+                            <th>CIL</th>
+                            <th>EJE</th>
+                            <th>ADD</th>
+                            <th>ALT</th>
+                            <th>DP</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr>
                             <td><strong>OD</strong></td>
-                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_od || '—' }}</td>
-                            <td rowspan="2" class="merged-cell">
-                              {{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_bi || '—' }}
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_od)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_od) }}
                             </td>
-                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avae_od || '—' }}</td>
-                            <td colspan="2">{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_od || '—' }}
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_od)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_od) }}
                             </td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.eje_od || '—' }}</td>
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_od)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_od) }}
+                            </td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.alt_od || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.dp_od || '—' }}</td>
                           </tr>
                           <tr>
                             <td><strong>OI</strong></td>
-                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_oi || '—' }}</td>
-                            <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avae_oi || '—' }}</td>
-                            <td colspan="2">{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_oi || '—' }}
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_oi)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_oi) }}
                             </td>
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_oi)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_oi) }}
+                            </td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.eje_oi || '—' }}</td>
+                            <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_oi)">
+                              {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_oi) }}
+                            </td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.alt_oi || '—' }}</td>
+                            <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.dp_oi || '—' }}</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
                   </div>
+                </div>
+              </div>
 
-                  <!-- Hora de evaluación -->
-                  <div class="hora-evaluacion">
-                    <i class="bi bi-clock"></i>
-                    <span>Hora de evaluación: {{ horaEvaluacion || 'No registrada' }}</span>
-                  </div>
-
-                  <!-- Refracción y Refracción Final Mejoradas -->
-                  <div class="examenes-grid">
-                    <!-- Refracción Mejorada -->
-                    <div class="examen-card">
-                      <div class="examen-header">
-                        <i class="bi bi-prescription2"></i>
-                        <h6 class="examen-header-title">Refracción</h6>
-                      </div>
-
-                      <div class="table-responsive-moderna">
-                        <table class="tabla-examen tabla-refraccion">
-                          <thead>
-                            <tr>
-                              <th>Ojo</th>
-                              <th>ESF</th>
-                              <th>CIL</th>
-                              <th>EJE</th>
-                              <th>ADD</th>
-                              <th>AVCCL</th>
-                              <th class="merged-cell">AVCCL BI</th>
-                              <th>AVCCC</th>
-                              <th class="merged-cell">AVCCC BI</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td><strong>OD</strong></td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.esf_od)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.esf_od) }}
-                              </td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.cil_od)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.cil_od) }}
-                              </td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.eje_od || '—' }}</td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.add_od)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.add_od) }}
-                              </td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccl_od || '—' }}</td>
-                              <td rowspan="2" class="merged-cell">
-                                {{ historiaSeleccionada?.examenOcular?.refraccion?.avccl_bi || '—' }}
-                              </td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccc_od || '—' }}</td>
-                              <td rowspan="2" class="merged-cell">
-                                {{ historiaSeleccionada?.examenOcular?.refraccion?.avccc_bi || '—' }}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td><strong>OI</strong></td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.esf_oi)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.esf_oi) }}
-                              </td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.cil_oi)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.cil_oi) }}
-                              </td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.eje_oi || '—' }}</td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccion?.add_oi)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccion?.add_oi) }}
-                              </td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccl_oi || '—' }}</td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccion?.avccc_oi || '—' }}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
+              <!-- Diagnóstico y Tratamiento -->
+              <div class="seccion-datos">
+                <div class="diagnostico-grid">
+                  <div class="diagnostico-item">
+                    <div class="seccion-header">
+                      <i class="bi bi-clipboard-check"></i>
+                      <h6>Diagnóstico</h6>
                     </div>
-
-                    <!-- Refracción Final Mejorada -->
-                    <div class="examen-card">
-                      <div class="examen-header">
-                        <i class="bi bi-prescription"></i>
-                        <h6 class="examen-header-title">Refracción Final</h6>
-                      </div>
-
-                      <div class="table-responsive-moderna">
-                        <table class="tabla-examen tabla-refraccion-final">
-                          <thead>
-                            <tr>
-                              <th>Ojo</th>
-                              <th>ESF</th>
-                              <th>CIL</th>
-                              <th>EJE</th>
-                              <th>ADD</th>
-                              <th>ALT</th>
-                              <th>DP</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td><strong>OD</strong></td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_od)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_od) }}
-                              </td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_od)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_od) }}
-                              </td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.eje_od || '—' }}</td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_od)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_od) }}
-                              </td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.alt_od || '—' }}</td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.dp_od || '—' }}</td>
-                            </tr>
-                            <tr>
-                              <td><strong>OI</strong></td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_oi)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.esf_oi) }}
-                              </td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_oi)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.cil_oi) }}
-                              </td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.eje_oi || '—' }}</td>
-                              <td [class]="getValorClass(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_oi)">
-                                {{ getValorFormateado(historiaSeleccionada?.examenOcular?.refraccionFinal?.add_oi) }}
-                              </td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.alt_oi || '—' }}</td>
-                              <td>{{ historiaSeleccionada?.examenOcular?.refraccionFinal?.dp_oi || '—' }}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
+                    <div class="dato-valor-large">
+                      {{ historiaSeleccionada?.diagnosticoTratamiento?.diagnostico || 'No especificado' }}
+                    </div>
+                  </div>
+                  <div class="diagnostico-item">
+                    <div class="seccion-header">
+                      <i class="bi bi-capsule"></i>
+                      <h6>Tratamiento</h6>
+                    </div>
+                    <div class="dato-valor-large">
+                      {{ historiaSeleccionada?.diagnosticoTratamiento?.tratamiento || 'No especificado' }}
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- Diagnóstico y Tratamiento -->
-                <div class="seccion-datos">
-                  <div class="diagnostico-grid">
-                    <div class="diagnostico-item">
-                      <div class="seccion-header">
-                        <i class="bi bi-clipboard-check"></i>
-                        <h6>Diagnóstico</h6>
-                      </div>
-                      <div class="dato-valor-large">
-                        {{ historiaSeleccionada?.diagnosticoTratamiento?.diagnostico || 'No especificado' }}
-                      </div>
-                    </div>
-                    <div class="diagnostico-item">
-                      <div class="seccion-header">
-                        <i class="bi bi-capsule"></i>
-                        <h6>Tratamiento</h6>
-                      </div>
-                      <div class="dato-valor-large">
-                        {{ historiaSeleccionada?.diagnosticoTratamiento?.tratamiento || 'No especificado' }}
-                      </div>
-                    </div>
-                  </div>
+              <!-- Recomendaciones -->
+              <div class="seccion-datos">
+                <div class="seccion-header">
+                  <i class="bi bi-chat-square-text"></i>
+                  <h6>Recomendaciones</h6>
                 </div>
 
-                <!-- Recomendaciones -->
-                <div class="seccion-datos">
-                  <div class="seccion-header">
-                    <i class="bi bi-chat-square-text"></i>
-                    <h6>Recomendaciones</h6>
-                  </div>
-
-                  <ng-container
-                    *ngIf="historiaSeleccionada?.recomendaciones as recomendaciones; else sinRecomendaciones">
-                    <div class="recomendaciones-grid">
-                      <div *ngFor="let rec of recomendaciones; let i = index" class="recomendacion-card">
-                        <div class="recomendacion-header">
-                          <i class="bi bi-eyeglasses"></i>
-                          <span>Lente #{{ i + 1 }}</span>
+                <ng-container
+                  *ngIf="historiaSeleccionada?.recomendaciones as recomendaciones; else sinRecomendaciones">
+                  <div class="recomendaciones-grid">
+                    <div *ngFor="let rec of recomendaciones; let i = index" class="recomendacion-card">
+                      <div class="recomendacion-header">
+                        <i class="bi bi-eyeglasses"></i>
+                        <span>Lente #{{ i + 1 }}</span>
+                      </div>
+                      <div class="recomendacion-body">
+                        <div class="recomendacion-item">
+                          <label>Tipo de cristal</label>
+                          <div class="dato-valor">{{ rec.cristal.label || 'No especificado' }}</div>
                         </div>
-                        <div class="recomendacion-body">
-                          <div class="recomendacion-item">
-                            <label>Tipo de cristal</label>
-                            <div class="dato-valor">{{ rec.cristal.label || 'No especificado' }}</div>
-                          </div>
-                          <div class="recomendacion-item">
-                            <label>Material</label>
-                            <div class="dato-valor">{{ getMaterialLabel(rec.material) }}</div>
-                          </div>
-                          <div class="recomendacion-item">
-                            <label>Montura sugerida</label>
-                            <div class="dato-valor">{{ rec.montura || 'No especificada' }}</div>
-                          </div>
-                          <div class="recomendacion-item full-width">
-                            <label>Observaciones</label>
-                            <div class="dato-valor">{{ rec.observaciones || 'Sin observaciones' }}</div>
-                          </div>
+                        <div class="recomendacion-item">
+                          <label>Material</label>
+                          <div class="dato-valor">{{ getMaterialLabel(rec.material) }}</div>
+                        </div>
+                        <div class="recomendacion-item">
+                          <label>Montura sugerida</label>
+                          <div class="dato-valor">{{ rec.montura || 'No especificada' }}</div>
+                        </div>
+                        <div class="recomendacion-item full-width">
+                          <label>Observaciones</label>
+                          <div class="dato-valor">{{ rec.observaciones || 'Sin observaciones' }}</div>
                         </div>
                       </div>
                     </div>
-                  </ng-container>
-                  <ng-template #sinRecomendaciones>
-                    <div class="empty-state">
-                      <i class="bi bi-info-circle"></i>
-                      <span>No se registraron recomendaciones de lentes</span>
-                    </div>
-                  </ng-template>
+                  </div>
+                </ng-container>
+                <ng-template #sinRecomendaciones>
+                  <div class="empty-state">
+                    <i class="bi bi-info-circle"></i>
+                    <span>No se registraron recomendaciones de lentes</span>
+                  </div>
+                </ng-template>
+              </div>
+
+              <!-- Declaración de Conformidad -->
+              <div class="seccion-conformidad">
+                <div class="conformidad-header">
+                  <i class="bi bi-pen"></i>
+                  <h6>Declaración de Conformidad</h6>
                 </div>
-
-                <!-- Declaración de Conformidad -->
-                <div class="seccion-conformidad">
-                  <div class="conformidad-header">
-                    <i class="bi bi-pen"></i>
-                    <h6>Declaración de Conformidad</h6>
-                  </div>
-                  <div class="conformidad-content">
-                    {{ notaConformidad }}
-                  </div>
+                <div class="conformidad-content">
+                  {{ notaConformidad }}
                 </div>
+              </div>
 
-                <!-- Firmas -->
-                <div class="seccion-firmas">
-                  <div class="firmas-grid">
-                    <div class="firma-item">
-                      <div class="firma-label">Firma del Paciente</div>
-                      <div class="firma-space"></div>
-                      <div class="firma-info">
-                        <div>Nombre: {{ pacienteSeleccionado?.informacionPersonal?.nombreCompleto }}</div>
-                        <div>C.I: {{ pacienteSeleccionado?.informacionPersonal?.cedula }}</div>
-                      </div>
-                    </div>
-
-                    <div class="firma-item">
-                      <div class="firma-label">Firma del Especialista</div>
-                      <div class="firma-space"></div>
-                      <div class="firma-info">
-                        <div>{{ historiaSeleccionada?.datosConsulta?.medico?.nombre }}</div>
-                        <div>C.I: {{ historiaSeleccionada?.datosConsulta?.medico?.cedula || 'No disponible' }}</div>
-                        <div>{{ historiaSeleccionada?.datosConsulta?.medico?.cargo || 'No disponible' }}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="asesor-responsable">
-                    <div class="firma-label">Asesor Responsable</div>
+              <!-- Firmas -->
+              <div class="seccion-firmas">
+                <div class="firmas-grid">
+                  <div class="firma-item">
+                    <div class="firma-label">Firma del Paciente</div>
+                    <div class="firma-space"></div>
                     <div class="firma-info">
-                      <div>{{ historiaSeleccionada?.auditoria?.creadoPor?.nombre || 'Nombre del asesor' }}</div>
-                      <div>C.I: {{ historiaSeleccionada?.auditoria?.creadoPor?.cedula || 'Cedula' }}</div>
-                      <div>{{ historiaSeleccionada?.auditoria?.creadoPor?.cargo || 'No disponible' }}</div>
+                      <div>Nombre: {{ pacienteSeleccionado?.informacionPersonal?.nombreCompleto }}</div>
+                      <div>C.I: {{ pacienteSeleccionado?.informacionPersonal?.cedula }}</div>
+                    </div>
+                  </div>
+
+                  <div class="firma-item">
+                    <div class="firma-label">Firma del Especialista</div>
+                    <div class="firma-space"></div>
+                    <div class="firma-info">
+                      <div>{{ historiaSeleccionada?.datosConsulta?.medico?.nombre }}</div>
+                      <div>C.I: {{ historiaSeleccionada?.datosConsulta?.medico?.cedula || 'No disponible' }}</div>
+                      <div>{{ historiaSeleccionada?.datosConsulta?.medico?.cargo || 'No disponible' }}</div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div class="card-footer-moderno">
-                <button class="btn btn-secondary-moderno" (click)="imprimirHistoriaMedica()">
-                  <i class="bi bi-printer"></i> Imprimir
-                </button>
-
-                <button class="btn btn-primary-moderno" *ngIf="sedePacienteSeleccionado === sedeActiva"
-                  (click)="editarHistoria(historiaSeleccionada)">
-                  <i class="bi bi-pencil-square"></i> Editar
-                </button>
+                <div class="asesor-responsable">
+                  <div class="firma-label">Asesor Responsable</div>
+                  <div class="firma-info">
+                    <div>{{ historiaSeleccionada?.auditoria?.creadoPor?.nombre || 'Nombre del asesor' }}</div>
+                    <div>C.I: {{ historiaSeleccionada?.auditoria?.creadoPor?.cedula || 'Cedula' }}</div>
+                    <div>{{ historiaSeleccionada?.auditoria?.creadoPor?.cargo || 'No disponible' }}</div>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            <div class="card-footer-moderno">
+              <button class="btn btn-secondary-moderno" (click)="imprimirHistoriaMedica()">
+                <i class="bi bi-printer"></i> Imprimir
+              </button>
+
+              <button class="btn btn-primary-moderno" *ngIf="sedePacienteSeleccionado === sedeActiva"
+                (click)="editarHistoria(historiaSeleccionada)">
+                <i class="bi bi-pencil-square"></i> Editar
+              </button>
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   </div>
