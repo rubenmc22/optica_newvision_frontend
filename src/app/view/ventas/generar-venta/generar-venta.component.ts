@@ -1256,7 +1256,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 break;
 
             case 'contado':
-            case 'pendiente':
+            case 'de_contado-pendiente':
                 // No hay campos específicos para limpiar
                 break;
         }
@@ -1286,7 +1286,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.actualizarMontoInicialCashea();
             this.generarCuotasCashea();
             this.valorInicialTemporal = this.formatearMoneda(this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea), this.venta.moneda);
-        } else if (valor === 'pendiente') {
+        } else if (valor === 'de_contado-pendiente') {
             this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
             this.resetearMetodosPago();
             this.generarOrdenTrabajo = false;
@@ -1295,7 +1295,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
         }
 
-        if (valor !== 'pendiente') {
+        if (valor !== 'de_contado-pendiente') {
             this.venta.metodosDePago = [];
         }
 
@@ -1340,7 +1340,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             case 'abono':
                 estadoPorDefecto = porcentajeAbonado >= this.porcentajeMinimoOrdenTrabajo;
                 break;
-            case 'pendiente':
+            case 'de_contado-pendiente':
             default:
                 estadoPorDefecto = false;
         }
@@ -1375,7 +1375,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             case 'abono':
                 cumpleCondicionesAutomaticas = porcentajeAbonado >= this.porcentajeMinimoOrdenTrabajo;
                 break;
-            case 'pendiente':
+            case 'de_contado-pendiente':
                 cumpleCondicionesAutomaticas = false;
                 break;
             default:
@@ -1404,7 +1404,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             let mensaje = '';
             if (formaPago === 'abono') {
                 mensaje = `Orden activada (${porcentajeAbonado.toFixed(1)}% abonado)`;
-            } else if (formaPago === 'pendiente') {
+            } else if (formaPago === 'de_contado-pendiente') {
                 mensaje = 'Orden activada con pago pendiente';
             } else {
                 mensaje = 'Orden activada manualmente';
@@ -1538,7 +1538,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             <p>Está forzando la orden de trabajo con solo el <strong>${porcentajeAbonado.toFixed(1)}%</strong> abonado 
             (mínimo requerido: ${this.porcentajeMinimoOrdenTrabajo}%).</p>
         `;
-        } else if (formaPago === 'pendiente') {
+        } else if (formaPago === 'de_contado-pendiente') {
             mensaje += `
             <p class="text-danger"><strong>🚫 PAGO PENDIENTE</strong></p>
             <p>Está forzando la orden de trabajo sin pago previo.</p>
@@ -2554,7 +2554,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         // 4. Para forma de pago "pendiente", no se requieren métodos de pago
-        if (this.venta.formaPago === 'pendiente') {
+        if (this.venta.formaPago === 'de_contado-pendiente') {
             return true; // Permite generar venta sin métodos de pago
         }
 
@@ -2597,7 +2597,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 const tieneInicialValida = (this.venta.montoInicial ?? 0) >=
                     this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
                 return inicialCubierto && tieneInicialValida;
-            case 'pendiente':
+            case 'de_contado-pendiente':
                 return true; // Siempre permite generar
             default:
                 return false;
@@ -2745,7 +2745,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         let estadoPago = 'completado';
 
         // Determinar estado del pago basado en la forma de pago y deuda
-        if (this.venta.formaPago === 'pendiente') {
+        if (this.venta.formaPago === 'de_contado-pendiente') {
             estadoVenta = 'pendiente';
             estadoPago = 'pendiente';
 

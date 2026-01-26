@@ -68,6 +68,8 @@ export class HistoriasMedicasComponent implements OnInit {
   medicoTratante: any[] = [];
   filteredEmployees: any[] = [];
 
+  historialesAbierto: boolean = true;
+
   // Datos
   pacientes: Paciente[] = [];
   pacientesFiltrados: Paciente[] = [];
@@ -1252,6 +1254,10 @@ export class HistoriasMedicasComponent implements OnInit {
       patologias: f.patologias ?? [],
       patologiaOcular: f.patologiaOcular ?? []
     };
+  }
+
+  toggleHistoriales() {
+    this.historialesAbierto = !this.historialesAbierto;
   }
 
   // ***************************

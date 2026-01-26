@@ -1,11 +1,12 @@
 @use '../../../custom-theme.scss' as theme;
+
 /* =============================================
    MÓDULO MODERNO DE HISTORIAS MÉDICAS
    ============================================= */
 
 .historias-modernas {
   background: #f8fafc;
-  min-height: 100vh;
+  min-height: 60vh;
 }
 
 /* Card principal moderna */
@@ -93,8 +94,16 @@
 
 /* Cuerpo modernizado */
 .card-body-moderno {
+  min-height: 65vh;
   padding: 2rem;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  display: flex;
+  flex-direction: column;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    min-height: 70vh;
+  }
 }
 
 /* Filtros modernos */
@@ -160,6 +169,10 @@
 
     .ng-arrow-wrapper {
       color: #495057;
+    }
+
+    .ng-select.ng-select-opened .ng-dropdown-panel {
+      transform: translateY(5px) !important;
     }
   }
 
@@ -238,22 +251,36 @@
   }
 }
 
-/* Panel principal */
-.panel-principal {
-  display: grid;
-  grid-template-columns: 320px 1fr;
+/* =============================================
+   ESTRUCTURA VERTICAL - PANELES COLAPSABLES
+   ============================================= */
+
+.panel-vertical {
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
   margin-top: 1rem;
 }
 
-/* Panel lateral */
-.panel-lateral {
+/* Panel superior - Listado de historias (colapsable) */
+.panel-superior {
   .card-secundaria {
     background: white;
     border-radius: 12px;
     border: 1px solid #e9ecef;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     height: 100%;
+    transition: all 0.3s ease;
+
+    &.collapsed {
+      .card-body-secundario {
+        display: none;
+      }
+
+      .card-header-secundario {
+        border-bottom: none;
+      }
+    }
   }
 
   .card-header-secundario {
@@ -262,100 +289,189 @@
     border-bottom: 1px solid #e9ecef;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
     font-weight: 600;
     color: white;
+    cursor: pointer;
+    user-select: none;
 
     i {
-      color: #3498db;
+      color: white;
       font-size: 1.1rem;
+    }
+
+    .historial-count {
+      font-size: 0.85rem;
+      opacity: 0.9;
+      font-weight: 500;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .collapse-toggle {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+      }
+
+      i {
+        transition: transform 0.3s ease;
+        color: white;
+        font-size: 1rem;
+      }
+
+      &.collapsed i {
+        transform: rotate(180deg);
+      }
+    }
+
+    @media (max-width: 768px) {
+      flex-wrap: wrap;
+      padding: 1rem;
     }
   }
 
   .card-body-secundario {
-    padding: 0;
-    max-height: 500px;
+    padding: 1rem;
+    max-height: 300px;
     overflow-y: auto;
+    transition: all 0.3s ease;
+
+    @media (max-width: 768px) {
+      max-height: 250px;
+    }
   }
 }
 
-/* Lista de historias */
-.lista-historias {
-  padding: 0.5rem;
+/* Lista de historias vertical */
+.lista-historias-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.item-historia {
-  padding: 1rem;
+.item-historia-vertical {
+  background: white;
   border: 1px solid #e9ecef;
   border-radius: 8px;
-  margin-bottom: 0.5rem;
+  padding: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: white;
 
   &:hover {
     border-color: #3498db;
-    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
+    transform: translateY(-1px);
   }
 
   &.active {
     background: #e3f2fd;
     border-color: #3498db;
-    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+    border-left: 4px solid #3498db;
   }
 
-  .historia-header {
+  .historia-header-vertical {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.75rem;
-  }
+    flex-direction: column;
+    gap: 0.75rem;
 
-  .historia-motivo {
-    font-weight: 600;
-    color: #2c3e50;
-    font-size: 0.9rem;
-    line-height: 1.3;
-    flex: 1;
-    margin-right: 0.5rem;
-  }
-
-  .historia-fecha {
-    font-size: 0.8rem;
-    color: #6c757d;
-    white-space: nowrap;
-  }
-
-  .historia-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .historia-medico {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    color: #6c757d;
-
-    i {
-      font-size: 0.9rem;
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
     }
   }
 
-  .historia-numero {
+  .historia-info-principal {
+    flex: 1;
+  }
+
+  .historia-motivo-vertical {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.95rem;
+    line-height: 1.3;
+    margin-bottom: 0.5rem;
+    word-break: break-word;
+  }
+
+  .historia-meta-vertical {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .historia-numero-vertical {
     background: #3498db;
     color: white;
-    padding: 0.25rem 0.5rem;
+    padding: 0.25rem 0.75rem;
     border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 600;
   }
+
+  .historia-fecha-vertical {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+
+  .historia-medico-vertical {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #6c757d;
+    white-space: nowrap;
+
+    i {
+      color: #3498db;
+      font-size: 0.9rem;
+    }
+  }
 }
 
-/* Panel de detalle */
-.panel-detalle {
+/* Panel inferior - Detalle de historia (colapsable) */
+.panel-inferior {
+  .card-secundaria {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    height: 100%;
+    transition: all 0.3s ease;
+
+    &.collapsed {
+      .card-body-detalle {
+        display: none;
+      }
+
+      .card-footer-moderno {
+        display: none;
+      }
+
+      .card-header-detalle {
+        border-bottom: none;
+      }
+    }
+  }
+
   .card-header-detalle {
     background: var(--degradado-color) !important;
     color: white;
@@ -363,6 +479,23 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    cursor: pointer;
+    user-select: none;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 1rem;
+    }
+  }
+
+  .detalle-header-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
   }
 
   .detalle-titulo {
@@ -374,6 +507,7 @@
 
     i {
       font-size: 1.25rem;
+      color: white;
     }
   }
 
@@ -396,21 +530,423 @@
     }
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .collapse-toggle {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+
+    i {
+      transition: transform 0.3s ease;
+      color: white;
+      font-size: 1rem;
+    }
+
+    &.collapsed i {
+      transform: rotate(180deg);
+    }
+  }
+
   .card-body-detalle {
     padding: 1.5rem;
     max-height: 70vh;
     overflow-y: auto;
     background: white;
+    transition: all 0.3s ease;
+
+    @media (max-width: 768px) {
+      padding: 1rem;
+      max-height: 60vh;
+    }
   }
 }
 
-/* Secciones de datos */
+/* =============================================
+   PANEL PRINCIPAL - CON ALTURAS IGUALES (Mantener compatibilidad)
+   ============================================= */
+
+.panel-principal {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  height: 65vh;
+  min-height: 500px;
+
+  &>div {
+    height: 100%;
+    min-height: 0;
+  }
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 280px 1fr;
+    gap: 1rem;
+    height: 60vh;
+    min-height: 450px;
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 1rem;
+    height: 80vh;
+    min-height: 600px;
+
+    .panel-lateral {
+      order: 1;
+      height: auto;
+      max-height: 40vh;
+    }
+
+    .panel-detalle {
+      order: 2;
+      height: 50vh;
+      min-height: 300px;
+    }
+  }
+}
+
+/* =============================================
+   PANEL LATERAL - ALTURA IGUAL AL DETALLE (Mantener compatibilidad)
+   ============================================= */
+
+.panel-lateral {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  .card-secundaria {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .card-header-secundario {
+    background: var(--degradado-color) !important;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+    color: white;
+    flex-shrink: 0;
+
+    i {
+      color: #3498db;
+      font-size: 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+      padding: 1rem;
+      font-size: 0.9rem;
+    }
+  }
+
+  .card-body-secundario {
+    padding: 0;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+  }
+}
+
+/* Lista de historias (compatibilidad) */
+.lista-historias {
+  padding: 0.5rem;
+
+  @media (max-width: 768px) {
+    padding: 0.25rem;
+  }
+}
+
+.item-historia {
+  padding: 1rem;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+
+  @media (max-width: 768px) {
+    padding: 0.75rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .historia-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
+
+  .historia-motivo {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+    line-height: 1.3;
+    flex: 1;
+    margin-right: 0.5rem;
+    word-break: break-word;
+
+    @media (max-width: 768px) {
+      font-size: 0.85rem;
+      margin-right: 0;
+    }
+  }
+
+  .historia-fecha {
+    font-size: 0.8rem;
+    color: #6c757d;
+    white-space: nowrap;
+
+    @media (max-width: 768px) {
+      font-size: 0.75rem;
+      align-self: flex-end;
+    }
+  }
+
+  .historia-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+
+    @media (max-width: 768px) {
+      gap: 0.5rem;
+    }
+  }
+
+  .historia-medico {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: #6c757d;
+
+    i {
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      font-size: 0.75rem;
+    }
+  }
+
+  .historia-numero {
+    background: #3498db;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+
+    @media (max-width: 768px) {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.4rem;
+    }
+  }
+}
+
+/* =============================================
+   PANEL DE DETALLE - CON SCROLL VERTICAL CORREGIDO (Mantener compatibilidad)
+   ============================================= */
+
+.panel-detalle {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  .card-secundaria {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .card-header-detalle {
+    background: var(--degradado-color) !important;
+    color: white;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    @media (max-width: 768px) {
+      padding: 1rem;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 0.5rem;
+    }
+  }
+
+  .detalle-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+
+    i {
+      font-size: 1.25rem;
+    }
+
+    @media (max-width: 768px) {
+      font-size: 1rem;
+      gap: 0.5rem;
+    }
+  }
+
+  .detalle-numero {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .numero-label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+
+      @media (max-width: 768px) {
+        font-size: 0.85rem;
+      }
+    }
+
+    .numero-valor {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+
+      @media (max-width: 768px) {
+        padding: 0.2rem 0.6rem;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  /* CONTENEDOR PRINCIPAL CON SCROLL VERTICAL CORREGIDO */
+  .card-body-detalle {
+    padding: 1.5rem;
+    flex: 1 1 auto;
+    background: white;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+
+    &::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 5px;
+      margin: 4px 0;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 5px;
+      border: 2px solid #f1f1f1;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+
+    @media (max-width: 768px) {
+      padding: 1rem;
+      overflow-y: auto;
+    }
+  }
+}
+
+/* =============================================
+   CONTENEDOR INTERNO CON SCROLL HORIZONTAL
+   ============================================= */
+
+.detalle-contenido-interno {
+  width: 100%;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+}
+
+/* Secciones de datos con posibilidad de expansión horizontal */
 .seccion-datos {
   background: white;
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
   border: 1px solid #e9ecef;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
 }
 
 .seccion-header {
@@ -420,10 +956,15 @@
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
   border-bottom: 2px solid #e9ecef;
+  width: 100%;
 
   i {
     color: #3498db;
     font-size: 1.25rem;
+
+    @media (max-width: 768px) {
+      font-size: 1rem;
+    }
   }
 
   h6 {
@@ -431,19 +972,43 @@
     font-weight: 600;
     color: #2c3e50;
     font-size: 1rem;
+
+    @media (max-width: 768px) {
+      font-size: 0.95rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 1;
   }
 }
 
-/* Grid de datos */
+/* Grid de datos - Responsive mejorado */
 .datos-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    min-width: 100%;
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .dato-item {
   &.full-width {
-    grid-column: 1 / -3;
+    grid-column: 1 / -1 !important;
   }
 
   label {
@@ -454,6 +1019,11 @@
     margin-bottom: 0.5rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+
+    @media (max-width: 768px) {
+      font-size: 0.8rem;
+      margin-bottom: 0.375rem;
+    }
   }
 
   .dato-valor {
@@ -466,6 +1036,13 @@
     min-height: 44px;
     display: flex;
     align-items: center;
+    word-break: break-word;
+
+    @media (max-width: 768px) {
+      padding: 0.5rem;
+      font-size: 0.85rem;
+      min-height: 38px;
+    }
   }
 
   .dato-valor-large {
@@ -476,15 +1053,27 @@
     font-size: 0.9rem;
     color: #495057;
     min-height: 80px;
+
+    @media (max-width: 768px) {
+      padding: 0.75rem;
+      min-height: 60px;
+      font-size: 0.85rem;
+    }
   }
 }
 
-/* Tags */
+/* Tags responsive */
 .datos-tags {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1rem;
   margin-top: 1rem;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
 }
 
 .tags-group {
@@ -494,6 +1083,11 @@
     color: #2c3e50;
     font-size: 0.85rem;
     margin-bottom: 0.5rem;
+
+    @media (max-width: 768px) {
+      font-size: 0.8rem;
+      margin-bottom: 0.375rem;
+    }
   }
 }
 
@@ -501,6 +1095,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  min-height: 40px;
 }
 
 .tag {
@@ -532,40 +1127,114 @@
     color: #856404;
     border: 1px solid #ffeaa7;
   }
+
+  @media (max-width: 768px) {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
 }
 
-/* Exámenes */
+/* =============================================
+   TABLAS DE EXÁMENES - CONTAINER CON SCROLL HORIZONTAL
+   ============================================= */
+
 .seccion-examenes {
+  width: 100%;
+
   .examenes-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 1.5rem;
     margin-bottom: 1.5rem;
+    width: 100%;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
   }
 }
 
+/* Contenedor de examen individual con scroll horizontal */
 .examen-card {
   background: white;
   border: 1px solid #e9ecef;
   border-radius: 12px;
   padding: 1.5rem;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
 
   .examen-header {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     margin-bottom: 1rem;
+    position: sticky;
+    left: 0;
+    background: white;
 
     i {
       color: #3498db;
       font-size: 1.25rem;
+
+      @media (max-width: 768px) {
+        font-size: 1.1rem;
+      }
     }
 
     h6 {
       margin: 0;
       font-weight: 600;
       color: #2c3e50;
+
+      @media (max-width: 768px) {
+        font-size: 0.95rem;
+      }
     }
+  }
+}
+
+/* =============================================
+   TABLA RESPONSIVE CON SCROLL HORIZONTAL
+   ============================================= */
+
+.table-responsive-moderna {
+  overflow-x: auto;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: white;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 100%;
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+    margin: 0 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+
+  @media (max-width: 768px) {
+    border-radius: 6px;
   }
 }
 
@@ -573,6 +1242,11 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
+  min-width: 800px;
+
+  @media (max-width: 768px) {
+    min-width: 700px;
+  }
 
   th,
   td {
@@ -585,6 +1259,9 @@
     background: #f8f9fa;
     font-weight: 600;
     color: #2c3e50;
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
   td {
@@ -596,6 +1273,16 @@
     background: #e9ecef;
     font-weight: 600;
   }
+
+  @media (max-width: 768px) {
+    font-size: 0.75rem;
+
+    th,
+    td {
+      padding: 0.5rem;
+      min-width: 60px;
+    }
+  }
 }
 
 .hora-evaluacion {
@@ -606,29 +1293,64 @@
   background: #e3f2fd;
   border-radius: 8px;
   margin-bottom: 1.5rem;
+  width: 100%;
 
   i {
     color: #3498db;
     font-size: 1.1rem;
+
+    @media (max-width: 768px) {
+      font-size: 1rem;
+    }
   }
 
   span {
     font-weight: 600;
     color: #2c3e50;
+
+    @media (max-width: 768px) {
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
   }
 }
 
-/* Diagnóstico y tratamiento */
+/* Diagnóstico y tratamiento responsive */
 .diagnostico-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
 }
 
-/* Recomendaciones */
+.diagnostico-item {
+  .dato-valor-large {
+    min-height: 100px;
+
+    @media (max-width: 768px) {
+      min-height: 80px;
+    }
+  }
+}
+
+/* Recomendaciones responsive */
 .recomendaciones-grid {
   display: grid;
   gap: 1rem;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    gap: 0.75rem;
+  }
 }
 
 .recomendacion-card {
@@ -636,6 +1358,12 @@
   border: 1px solid #e9ecef;
   border-radius: 12px;
   padding: 1.5rem;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    border-radius: 8px;
+  }
 
   .recomendacion-header {
     display: flex;
@@ -648,11 +1376,24 @@
     i {
       color: #3498db;
       font-size: 1.25rem;
+
+      @media (max-width: 768px) {
+        font-size: 1.1rem;
+      }
     }
 
     span {
       font-weight: 600;
       color: #2c3e50;
+
+      @media (max-width: 768px) {
+        font-size: 0.95rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
     }
   }
 
@@ -660,6 +1401,11 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
   }
 
   .recomendacion-item {
@@ -673,17 +1419,29 @@
       color: #2c3e50;
       font-size: 0.85rem;
       margin-bottom: 0.5rem;
+
+      @media (max-width: 768px) {
+        font-size: 0.8rem;
+        margin-bottom: 0.375rem;
+      }
     }
   }
 }
 
-/* Conformidad */
+/* Conformidad responsive */
 .seccion-conformidad {
   background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
   border: 1px solid #ffd351;
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+  }
 
   .conformidad-header {
     display: flex;
@@ -694,28 +1452,49 @@
     i {
       color: #f39c12;
       font-size: 1.25rem;
+
+      @media (max-width: 768px) {
+        font-size: 1.1rem;
+      }
     }
 
     h6 {
       margin: 0;
       font-weight: 600;
       color: #856404;
+
+      @media (max-width: 768px) {
+        font-size: 0.95rem;
+      }
     }
   }
 
   .conformidad-content {
     color: #856404;
     line-height: 1.5;
+    font-size: 0.95rem;
+
+    @media (max-width: 768px) {
+      font-size: 0.85rem;
+      line-height: 1.4;
+    }
   }
 }
 
-/* Firmas */
+/* Firmas responsive */
 .seccion-firmas {
   background: white;
   border: 1px solid #e9ecef;
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+  }
 }
 
 .firmas-grid {
@@ -723,6 +1502,13 @@
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   margin-bottom: 2rem;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
 }
 
 .firma-item {
@@ -732,6 +1518,11 @@
     font-weight: 600;
     color: #2c3e50;
     margin-bottom: 1rem;
+
+    @media (max-width: 768px) {
+      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
+    }
   }
 
   .firma-space {
@@ -740,6 +1531,11 @@
     border-radius: 8px;
     margin-bottom: 1rem;
     background: #f8f9fa;
+
+    @media (max-width: 768px) {
+      height: 80px;
+      margin-bottom: 0.75rem;
+    }
   }
 
   .firma-info {
@@ -749,6 +1545,10 @@
     div {
       margin-bottom: 0.25rem;
     }
+
+    @media (max-width: 768px) {
+      font-size: 0.8rem;
+    }
   }
 }
 
@@ -756,11 +1556,21 @@
   text-align: center;
   padding-top: 1.5rem;
   border-top: 1px solid #e9ecef;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    padding-top: 1rem;
+  }
 
   .firma-label {
     font-weight: 600;
     color: #2c3e50;
     margin-bottom: 1rem;
+
+    @media (max-width: 768px) {
+      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
+    }
   }
 
   .firma-info {
@@ -769,6 +1579,10 @@
 
     div {
       margin-bottom: 0.25rem;
+    }
+
+    @media (max-width: 768px) {
+      font-size: 0.85rem;
     }
   }
 }
@@ -781,6 +1595,14 @@
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
+  flex-shrink: 0;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
 }
 
 .btn-secondary-moderno {
@@ -798,6 +1620,12 @@
   &:hover {
     background: #5a6268;
     transform: translateY(-1px);
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.75rem;
+    justify-content: center;
+    width: 100%;
   }
 }
 
@@ -823,6 +1651,12 @@
     cursor: not-allowed;
     transform: none;
   }
+
+  @media (max-width: 768px) {
+    padding: 0.75rem;
+    justify-content: center;
+    width: 100%;
+  }
 }
 
 /* Estados vacíos */
@@ -834,14 +1668,119 @@
   padding: 2rem;
   color: #6c757d;
   text-align: center;
+  width: 100%;
 
   i {
     font-size: 1.5rem;
+
+    @media (max-width: 768px) {
+      font-size: 1.25rem;
+    }
+  }
+
+  span {
+    @media (max-width: 768px) {
+      font-size: 0.9rem;
+    }
   }
 }
 
 /* =============================================
-   MODAL MODERNO DE HISTORIA MÉDICA - MEJORADO
+   AJUSTES GENERALES RESPONSIVE
+   ============================================= */
+
+@media screen and (max-width: 1024px) {
+  .filtros-modernos {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .card-body-moderno {
+    padding: 1rem;
+  }
+
+  .card-header-moderno {
+    padding: 1.25rem 1rem;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+
+    .header-content {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .btn-agregar-historia {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
+/* Prevenir problemas de zoom en navegadores */
+html {
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+/* Estilos específicos para tablas de refracción */
+.tabla-refraccion,
+.tabla-refraccion-final {
+
+  th,
+  td {
+    min-width: 70px;
+  }
+
+  td:nth-child(2),
+  td:nth-child(3),
+  td:nth-child(4),
+  td:nth-child(5) {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    font-size: 0.9rem;
+
+    @media (max-width: 768px) {
+      font-size: 0.8rem;
+    }
+  }
+
+  td:nth-child(6),
+  td:nth-child(8) {
+    font-weight: 500;
+    color: #2c3e50;
+  }
+}
+
+.tabla-refraccion-final {
+
+  td:nth-child(6),
+  td:nth-child(7) {
+    background: #f8f9fa;
+    font-weight: 500;
+    color: #495057;
+  }
+}
+
+.examen-header-title {
+  color: white !important;
+}
+
+.examen-card:nth-child(1) .examen-header {
+  background: var(--degradado-color) !important;
+
+}
+
+.examen-card:nth-child(2) .examen-header {
+  background: var(--degradado-color) !important;
+}
+
+/* =============================================
+   MODAL MODERNO DE HISTORIA MÉDICA (sin cambios)
    ============================================= */
 
 /* Modal moderno principal */
@@ -951,10 +1890,9 @@
 
   @media (max-width: 768px) {
     padding: 1.5rem;
-    max-height: 60vh;
+    max-height: 65vh;
   }
 
-  /* Scrollbar personalizado */
   &::-webkit-scrollbar {
     width: 8px;
   }
@@ -1133,7 +2071,6 @@
     }
   }
 
-  /* Selects pequeños para tablas */
   .ng-select-small {
     .ng-select-container {
       min-height: 38px !important;
@@ -1170,54 +2107,6 @@
   }
 }
 
-.table-responsive-moderna {
-  overflow-x: auto;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  background: white;
-  margin-bottom: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.tabla-examen {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-  min-width: 800px;
-
-  th,
-  td {
-    padding: 0.75rem;
-    text-align: center;
-    border: 1px solid #dee2e6;
-    vertical-align: middle;
-  }
-
-  th {
-    background: #f8f9fa;
-    font-weight: 600;
-    color: #2c3e50;
-    white-space: nowrap;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-
-  td {
-    background: white;
-    color: #495057;
-    min-width: 120px;
-
-    &.align-middle {
-      vertical-align: middle;
-    }
-  }
-
-  tr:hover td {
-    background: #f8f9fa;
-  }
-}
-
 /* Recomendaciones mejoradas */
 .btn-agregar-recomendacion {
   background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
@@ -1235,40 +2124,6 @@
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
-  }
-}
-
-.recomendacion-card {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
-  transition: all 0.3s ease;
-
-  &:hover {
-    border-color: #3498db;
-    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
-  }
-
-  .recomendacion-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #dee2e6;
-
-    i {
-      color: #3498db;
-      font-size: 1.25rem;
-    }
-
-    span {
-      font-weight: 600;
-      color: #2c3e50;
-      flex: 1;
-    }
   }
 }
 
@@ -1333,7 +2188,6 @@
 
     &.btn-primary-moderno {
       background: var(--degradado-color) !important;
-      ;
       color: white;
 
       &:hover:not(:disabled) {
@@ -1356,58 +2210,6 @@
   height: 1rem;
 }
 
-/* Estilos específicos para tablas de refracción */
-.tabla-refraccion,
-.tabla-refraccion-final {
-
-  th,
-  td {
-    min-width: 70px;
-  }
-
-  /* Columnas ESF, CIL, EJE, ADD con estilo monospace */
-  td:nth-child(2),
-  td:nth-child(3),
-  td:nth-child(4),
-  td:nth-child(5) {
-    font-family: 'Courier New', monospace;
-    font-weight: 600;
-    font-size: 0.9rem;
-  }
-
-  /* Columnas de agudeza visual */
-  td:nth-child(6),
-  td:nth-child(8) {
-    font-weight: 500;
-    color: #2c3e50;
-  }
-}
-
-/* Colores específicos para refracción final */
-.tabla-refraccion-final {
-
-  td:nth-child(6),
-  td:nth-child(7) {
-    background: #f8f9fa;
-    font-weight: 500;
-    color: #495057;
-  }
-}
-
-.examen-header-title {
-  color: white !important;
-}
-
-.examen-card:nth-child(1) .examen-header {
-  background: var(--degradado-color) !important;
-
-}
-
-.examen-card:nth-child(2) .examen-header {
-  background: var(--degradado-color) !important;
-}
-
-/* Responsive improvements */
 @media (max-width: 1200px) {
   .modal-dialog.modal-xl {
     max-width: 95vw;
@@ -1429,60 +2231,6 @@
       position: absolute;
       top: 1rem;
       right: 1rem;
-    }
-  }
-
-  /* Responsive para móviles */
-  @media (max-width: 768px) {
-    .tabla-examen {
-      font-size: 0.75rem;
-      min-width: 600px;
-
-      th,
-      td {
-        padding: 0.5rem;
-        min-width: 60px;
-      }
-    }
-
-    .examen-header {
-      padding: 0.75rem 1rem;
-
-      h6 {
-        font-size: 0.9rem;
-      }
-    }
-  }
-
-  /* Scroll horizontal suave */
-  .table-responsive-moderna {
-    scroll-behavior: smooth;
-
-    &::-webkit-scrollbar {
-      height: 8px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 4px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: #c1c1c1;
-      border-radius: 4px;
-    }
-
-    &::-webkit-scrollbar-thumb:hover {
-      background: #a8a8a8;
-    }
-  }
-
-  .form-section .section-content .row.g-3 {
-    margin: 0;
-
-    >[class*="col-"] {
-      padding: 0;
-      margin-bottom: 1rem;
     }
   }
 }
@@ -1526,6 +2274,121 @@
   }
 }
 
-.form-control-moderno.ng-valid.ng-touched {
-  //border-color: #3498db;
+/* =============================================
+   ESTILOS PARA OBSERVACIONES CON SUBTÍTULO EXPLÍCITO (Opción 3)
+   ============================================= */
+
+.form-group-moderno.has-observaciones-subtitle {
+  .form-label-moderno {
+    margin-bottom: 0.25rem;
+  }
+
+  .observaciones-subtitle {
+    display: block;
+    font-size: 0.85rem;
+    color: #3498db;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+    padding: 0.25rem 0;
+    border-left: 3px solid #3498db;
+    padding-left: 0.75rem;
+    background: linear-gradient(to right, rgba(52, 152, 219, 0.05), transparent);
+
+    i {
+      font-size: 0.8rem;
+      margin-right: 0.5rem;
+      color: #3498db;
+      vertical-align: middle;
+    }
+
+    /* Versión destacada */
+    &.destacado {
+      color: #856404;
+      background: linear-gradient(to right, rgba(255, 193, 7, 0.1), transparent);
+      border-left-color: #f39c12;
+      border-radius: 0 4px 4px 0;
+
+      i {
+        color: #f39c12;
+      }
+    }
+
+    /* Versión crítica */
+    &.critico {
+      color: #c0392b;
+      background: linear-gradient(to right, rgba(231, 76, 60, 0.05), transparent);
+      border-left-color: #e74c3c;
+      font-weight: 600;
+
+      i {
+        color: #e74c3c;
+      }
+    }
+  }
+
+  /* Estilo específico para el textarea de observaciones */
+  textarea.form-control-moderno[formControlName="observaciones"] {
+    background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
+    border-left: 4px solid #3498db;
+    min-height: 90px;
+    resize: vertical;
+
+    &:focus {
+      background: white;
+      border-left-color: #2ecc71;
+      box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.1);
+    }
+
+    &::placeholder {
+      color: #6c757d;
+      font-style: italic;
+      opacity: 0.8;
+    }
+  }
+}
+
+/* =============================================
+   RESPONSIVE PARA SUBTÍTULO DE OBSERVACIONES
+   ============================================= */
+
+@media (max-width: 768px) {
+  .form-group-moderno.has-observaciones-subtitle {
+    .observaciones-subtitle {
+      font-size: 0.8rem;
+      padding-left: 0.5rem;
+      margin-bottom: 0.4rem;
+
+      i {
+        margin-right: 0.25rem;
+        font-size: 0.75rem;
+      }
+    }
+
+    textarea.form-control-moderno[formControlName="observaciones"] {
+      min-height: 80px;
+      font-size: 0.9rem;
+      padding: 0.65rem 0.85rem;
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .form-group-moderno.has-observaciones-subtitle {
+    .observaciones-subtitle {
+      font-size: 0.75rem;
+      padding: 0.2rem 0 0.2rem 0.4rem;
+
+      i {
+        margin-right: 0.2rem;
+        font-size: 0.7rem;
+      }
+    }
+
+    textarea.form-control-moderno[formControlName="observaciones"] {
+      min-height: 70px;
+      font-size: 0.85rem;
+      padding: 0.5rem 0.75rem;
+    }
+  }
 }
