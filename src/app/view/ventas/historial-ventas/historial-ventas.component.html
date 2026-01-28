@@ -159,6 +159,7 @@
               <select class="form-select-moderno" [(ngModel)]="filtros.formaPago" (change)="onFiltroChange()">
                 <option value="">Todas las formas</option>
                 <option value="contado">Contado</option>
+                <option value="contado-pendiente">Contado - Pendiente</option>
                 <option value="abono">Abono</option>
                 <option value="cashea">Cashea</option>
                 <option value="credito">Crédito</option>
@@ -722,6 +723,12 @@
                     </span>
                   </div>
                   <div class="acciones-right">
+                    <button *ngIf="mostrarBotonRealizarPago(venta)" class="btn btn-outline-primary btn-sm accion-btn"
+                      (click)="abrirModalPagoCompleto(venta)">
+                      <i class="bi bi-cash-stack"></i>
+                      <span>Realizar Pago</span>
+                    </button>
+
                     <button *ngIf="mostrarBotonEditar(venta)" class="btn btn-outline-primary btn-sm accion-btn"
                       (click)="editarVenta(venta)">
                       <i class="bi-cash-coin"></i>
@@ -1877,6 +1884,309 @@
           </div>
         </div>
       </form>
+    </div>
+  </div>
+</ng-template>
+
+<!-- Modal de Realizar Pago para contado-pendiente -->
+<ng-template #realizarPagoModal let-modal>
+  <div class="modal-content">
+    <!-- Header simple y claro -->
+    <div class="modal-header-compact">
+      <div class="header-content">
+        <div class="header-icon">
+          <i class="bi bi-cash-stack text-success"></i>
+        </div>
+        <div class="header-text">
+          <h5 class="modal-title fw-bold">Realizar Pago</h5>
+          <div class="header-subtitle">
+            <span class="badge bg-primary">#{{selectedVenta?.numeroControl}}</span>
+            <span class="separator">•</span>
+            <span class="fw-semibold">{{selectedVenta?.paciente?.nombre}}</span>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-close" (click)="modal.dismiss()" aria-label="Cerrar"></button>
+    </div>
+
+    <div class="modal-body-compact modal-body-scrollable">
+      <!-- Resumen MUY simple: Solo lo que se debe pagar -->
+      <div class="resumen-simple">
+        <div class="deuda-card">
+          <div class="deuda-header">
+            <i class="bi bi-currency-dollar text-warning"></i>
+            <span class="deuda-label">Monto a pagar</span>
+          </div>
+          <div class="deuda-content">
+            <div class="deuda-monto">
+              <span class="monto-principal">{{ formatearMoneda(calcularMontoDeuda(), getMonedaVenta()) }}</span>
+              <span *ngIf="mostrarConversionBs() && getMonedaVenta() !== 'bolivar'" class="monto-conversion">
+                ≈ {{ getConversionBs(calcularMontoDeuda()) | number:'1.2-2' }} Bs
+              </span>
+            </div>
+            <div class="deuda-info">
+              <small class="text-muted">
+                <i class="bi bi-info-circle"></i> Pago único - Total de la deuda pendiente
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Formulario simple -->
+      <form [formGroup]="editarVentaForm" (ngSubmit)="guardarPagoCompleto(modal)">
+     
+        <!-- Sección de Métodos de Pago (MANTENIDO pero más simple) -->
+        <div class="seccion-compacta">
+          <!-- Header principal de la sección -->
+          <div class="seccion-header">
+            <div class="header-content">
+              <div class="header-icon-title">
+                <i class="bi bi-wallet2 text-primary header-icon"></i>
+                <div class="header-text">
+                  <h3 class="seccion-titulo">Métodos de Pago</h3>
+                  <p class="seccion-description">Seleccione cómo el cliente realizará el pago</p>
+                </div>
+              </div>
+            </div>
+            <div class="header-actions">
+              <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()" title="Agregar método"
+                [disabled]="metodosPagoArray.length >= 3">
+                <i class="bi bi-plus-circle"></i>
+                Agregar Método
+              </button>
+            </div>
+          </div>
+
+          <!-- Sección de Métodos de Pago Mejorada y Compacta -->
+          <div class="metodos-pago-compact">
+            
+            <!-- Contador de métodos y estado -->
+            <div class="metodos-info-bar" *ngIf="metodosPagoArray.length > 0">
+              <div class="metodos-count">
+                <span class="badge bg-primary">{{ metodosPagoArray.length }}</span>
+                <span class="metodos-count-text">{{ metodosPagoArray.length === 1 ? 'Método' : 'Métodos' }} configurado{{ metodosPagoArray.length > 1 ? 's' : '' }}</span>
+              </div>
+              <div class="metodos-status" [class.status-valid]="validarPagoCompleto()"
+                                        [class.status-invalid]="!validarPagoCompleto()">
+                <i class="bi" [class.bi-check-circle]="validarPagoCompleto()"
+                            [class.bi-exclamation-circle]="!validarPagoCompleto()"></i>
+                <span>{{ validarPagoCompleto() ? 'Montos coinciden' : 'Ajustar montos' }}</span>
+              </div>
+            </div>
+
+            <!-- Grid de métodos de pago -->
+            <div formArrayName="metodosPago" class="metodos-grid-compact" *ngIf="metodosPagoArray.length > 0">
+              <div *ngFor="let metodoControl of metodosPagoArray.controls; let i = index" [formGroupName]="i"
+                  class="metodo-card-compact">
+                
+                <!-- Cabecera compacta -->
+                <div class="metodo-card-header-compact">
+                  <div class="metodo-header-left">
+                    <span class="metodo-indice">#{{ i + 1 }}</span>
+                    <div class="metodo-completitud" 
+                        [class.completo]="metodoEstaCompleto(metodoControl)"
+                        [class.incompleto]="!metodoEstaCompleto(metodoControl)"
+                        title="{{ metodoEstaCompleto(metodoControl) ? 'Completo' : 'Incompleto' }}">
+                      <i class="bi" [class.bi-check]="metodoEstaCompleto(metodoControl)"
+                                [class.bi-dash]="!metodoEstaCompleto(metodoControl)"></i>
+                    </div>
+                  </div>
+                  
+                  <div class="metodo-header-right">
+                    <button type="button" class="btn btn-sm btn-icon-compact" 
+                            (click)="removerMetodoPago(i)"
+                            *ngIf="metodosPagoArray.length > 1"
+                            title="Eliminar método">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Cuerpo compacto -->
+                <div class="metodo-card-body-compact">
+                  
+                  <!-- Selector de tipo -->
+                  <div class="metodo-tipo-wrapper">
+                    <select class="form-select-compact" formControlName="tipo" (change)="onMetodoPagoChange(i)">
+                      <option value="" disabled selected>Tipo de pago</option>
+                      <option value="efectivo">💵 Efectivo</option>
+                      <option value="debito">💳 Débito</option>
+                      <option value="credito">🔄 Crédito</option>
+                      <option value="pagomovil">📱 Pago Móvil</option>
+                      <option value="transferencia">🏦 Transferencia</option>
+                      <option value="zelle">🌐 Zelle</option>
+                    </select>
+                  </div>
+
+                  <!-- Campos dinámicos (se muestran solo si hay tipo seleccionado) -->
+                  <div *ngIf="metodoControl.get('tipo')?.value" class="metodo-campos-wrapper">
+                    
+                    <!-- Moneda para efectivo -->
+                    <div *ngIf="metodoControl.get('tipo')?.value === 'efectivo'" class="moneda-selector-compact">
+                      <div class="moneda-buttons-compact">
+                        <button type="button" class="moneda-btn-compact" 
+                                [class.active]="metodoControl.get('monedaEfectivo')?.value === 'USD'"
+                                (click)="seleccionarMonedaEfectivo(i, 'usd')">
+                          <span class="moneda-simbolo">$</span>
+                          <span class="moneda-nombre">USD</span>
+                        </button>
+                        <button type="button" class="moneda-btn-compact"
+                                [class.active]="metodoControl.get('monedaEfectivo')?.value === 'EUR'"
+                                (click)="seleccionarMonedaEfectivo(i, 'eur')">
+                          <span class="moneda-simbolo">€</span>
+                          <span class="moneda-nombre">EUR</span>
+                        </button>
+                        <button type="button" class="moneda-btn-compact"
+                                [class.active]="metodoControl.get('monedaEfectivo')?.value === 'Bs'"
+                                (click)="seleccionarMonedaEfectivo(i, 'bs')">
+                          <span class="moneda-simbolo">Bs</span>
+                          <span class="moneda-nombre">VES</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Banco (si aplica) -->
+                    <div *ngIf="necesitaBanco(metodoControl.get('tipo')?.value)" class="campo-compact">
+                      <input type="text" class="form-control-compact" formControlName="bancoCodigo"
+                            placeholder="Banco" list="bancos-list">
+                      <datalist id="bancos-list">
+                        <option *ngFor="let banco of bancosDisponibles" [value]="banco.nombre">
+                      </datalist>
+                    </div>
+
+                    <!-- Referencia (si aplica) -->
+                    <div *ngIf="necesitaReferencia(metodoControl.get('tipo')?.value)" class="campo-compact">
+                      <input type="text" class="form-control-compact" formControlName="referencia"
+                            [placeholder]="getPlaceholderReferencia(metodoControl.get('tipo')?.value)">
+                    </div>
+
+                    <!-- Monto (siempre visible) -->
+                    <div class="campo-compact monto-wrapper">
+                      <div class="monto-input-compact">
+                        <input type="number" class="form-control-compact" formControlName="monto" step="0.01"
+                              min="0.01" [max]="getMontoMaximoParaMetodo(i)" placeholder="0.00"
+                              (input)="validarMontoMetodoPago(i)">
+                        <span class="monto-currency">{{ getSimboloParaMetodo(i) }}</span>
+                      </div>
+                      <small class="monto-conversion" *ngIf="metodoControl.get('monto')?.value">
+                        {{ metodoControl.get('monto')?.value | number:'1.2-2' }} {{ getSimboloParaMetodo(i) }}
+                        <span *ngIf="mostrarConversionParaMetodo(i)" class="conversion-venta">
+                          ≈ {{ getConversionParaMetodo(i) | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                        </span>
+                      </small>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Estado vacío compacto -->
+            <div class="empty-compact" *ngIf="metodosPagoArray.length === 0">
+              <div class="empty-icon-compact">
+                <i class="bi bi-credit-card"></i>
+              </div>
+              <div class="empty-text-compact">
+                <p class="mb-1">No hay métodos de pago</p>
+                <small class="text-muted">Haz clic en "Agregar Método" para comenzar</small>
+              </div>
+            </div>
+
+            <!-- Resumen ultra compacto -->
+            <div *ngIf="metodosPagoArray.length > 0" class="resumen-compact">
+              <div class="resumen-row">
+                <span class="resumen-label">Total métodos:</span>
+                <span class="resumen-value">{{ calcularTotalMetodosPagoEnMonedaVenta() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}</span>
+              </div>
+              <div class="resumen-row">
+                <span class="resumen-label">Deuda total:</span>
+                <span class="resumen-value destacado">{{ calcularMontoDeuda() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}</span>
+              </div>
+              <div class="resumen-row" *ngIf="!validarPagoCompleto()">
+                <span class="resumen-label text-warning">Diferencia:</span>
+                <span class="resumen-value text-warning">
+                  {{ calcularDiferenciaMetodos() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                </span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Observaciones Compactas -->
+        <div class="observaciones-compact">
+          <div class="observaciones-header-compact">
+            <div class="observaciones-titulo-compact">
+              <i class="bi bi-chat-right-text text-primary me-2"></i>
+              <span class="fw-medium">Notas adicionales</span>
+              <small class="text-muted ms-2">(opcional)</small>
+            </div>
+            <div class="observaciones-contador-compact">
+              <small class="text-muted">{{ editarVentaForm.get('observaciones')?.value?.length || 0 }}/500</small>
+            </div>
+          </div>
+          
+          <div class="observaciones-input-compact">
+            <textarea class="form-control form-control-sm observaciones-textarea-compact" 
+                      formControlName="observaciones" 
+                      rows="1"
+                      placeholder="Ej: Recibo entregado, pago en efectivo, contacto adicional..."
+                      maxlength="500"
+                      (focus)="expandirTextarea($event)"
+                      (blur)="contraerTextarea($event)"></textarea>
+            
+            <div class="observaciones-hints">
+              <div class="hints-items">
+                <span class="hint-item" (click)="agregarObservacionRapida('Recibo entregado')">
+                  <i class="bi bi-receipt"></i> Recibo
+                </span>
+                <span class="hint-item" (click)="agregarObservacionRapida('Pago en efectivo')">
+                  <i class="bi bi-cash"></i> Efectivo
+                </span>
+                <span class="hint-item" (click)="agregarObservacionRapida('Pago transferencia')">
+                  <i class="bi bi-bank"></i> Transferencia
+                </span>
+                <span class="hint-item" (click)="agregarObservacionRapida('Cliente puntual')">
+                  <i class="bi bi-clock"></i> Puntual
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Footer simple -->
+   <div class="modal-footer-fixed">
+      <div class="footer-content">
+        <div class="footer-info" *ngIf="metodosPagoArray.length > 0">
+          <div class="footer-summary">
+            <span class="summary-label">Total a pagar:</span>
+            <span class="summary-value">{{ calcularMontoDeuda() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}</span>
+          </div>
+          <div class="footer-status" [class.status-valid]="validarPagoCompleto()" 
+                                     [class.status-invalid]="!validarPagoCompleto()">
+            <i class="bi" [class.bi-check-circle]="validarPagoCompleto()"
+                       [class.bi-exclamation-circle]="!validarPagoCompleto()"></i>
+            <span>{{ validarPagoCompleto() ? 'Listo para registrar' : 'Ajustar montos' }}</span>
+          </div>
+        </div>
+        
+        <div class="footer-actions">
+          <button type="button" class="btn btn-outline-secondary btn-footer" (click)="modal.dismiss()">
+            <i class="bi bi-x-circle me-1"></i>
+            Cancelar
+          </button>
+          <button type="button" class="btn btn-success btn-footer" 
+                  [disabled]="editarVentaForm.invalid || !validarPagoCompleto()" 
+                  (click)="guardarPagoCompleto(modal)">
+            <i class="bi bi-check-circle me-1"></i>
+            Registrar Pago
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </ng-template>

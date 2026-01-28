@@ -29,6 +29,7 @@ export class HistorialVentasComponent implements OnInit {
   @ViewChild('editarVentaModal') editarVentaModal!: TemplateRef<any>;
   @ViewChild('contenidoRecibo', { static: false }) contenidoRecibo!: ElementRef;
   @ViewChild('modalResumenFinanciero') modalResumenFinanciero!: any;
+  @ViewChild('realizarPagoModal') realizarPagoModal!: TemplateRef<any>;
 
   private chartInstances: Chart[] = [];
 
@@ -39,6 +40,8 @@ export class HistorialVentasComponent implements OnInit {
   presetActivo: string = '';
 
   private modalInstance: any;
+  tipoOperacionPago: string = 'abono'; // 'abono' o 'pago'
+  realizarPagoForm!: FormGroup;
 
   // Nuevas propiedades para el datepicker
   showDatepicker: boolean = false;
@@ -204,6 +207,7 @@ export class HistorialVentasComponent implements OnInit {
     private chartService: ChartService
   ) {
     this.inicializarFormularioEdicion();
+    //  this.inicializarFormularioPago();
 
     // Agrega este código para el debounce de estadísticas
     this.filtrosChanged$.pipe(
@@ -1882,15 +1886,14 @@ export class HistorialVentasComponent implements OnInit {
 
   reinicializarFormularioConDeuda() {
     if (this.editarVentaForm) {
+      // NO establecer montoAbonado aquí si vas a hacerlo después
       this.editarVentaForm.patchValue({
-        montoAbonado: null,
+        // montoAbonado: null, // <- Comenta esta línea si existe
         observaciones: this.selectedVenta.observaciones || ''
       });
 
-      //Limpiar el array y agregar solo 1 método por defecto
+      // Limpiar métodos de pago
       this.metodosPagoArray.clear();
-
-      //Agregar solo 1 método de pago vacío por defecto
       this.agregarMetodoPago();
 
       if (this.selectedVenta.metodosPago && this.selectedVenta.metodosPago.length > 0) {
@@ -5376,8 +5379,6 @@ export class HistorialVentasComponent implements OnInit {
     // Agrega aquí cualquier limpieza adicional
   }
 
-
-
   inicializarGraficosEnModal(): void {
     // Esperar un poco para que el DOM se renderice
     setTimeout(() => {
@@ -5664,7 +5665,161 @@ export class HistorialVentasComponent implements OnInit {
   }
 
 
+  /**
+   *  REALIZAR PAGO = FORMA DE PAGO DE CONTADO - PENDIENTE
+   */
+  // Método para mostrar botón de pago
+  mostrarBotonRealizarPago(venta: any): boolean {
+    if (!venta || venta.estado === 'cancelada') {
+      return false;
+    }
+
+    // Solo para contado-pendiente con deuda
+    // const esContadoPendiente = venta.formaPago === 'contado-pendiente' &&
+    //  this.getDeudaPendiente(venta) > 0;
+
+    const esContadoPendiente = venta.formaPago === 'contado';
+
+    // return esContadoPendiente;
+    return esContadoPendiente;
+  }
+
+  // Método para abrir modal de pago
+  abrirModalPagoCompleto(venta: any): void {
+    this.selectedVenta = venta;
+
+    // Reinicializar formulario
+    this.reinicializarFormularioConDeuda();
+
+    // Establecer el valor de montoAbonado a la deuda total
+    const deudaTotal = this.calcularMontoDeuda();
+    this.editarVentaForm.patchValue({
+      montoAbonado: deudaTotal
+    });
+
+    // Deshabilitar el control
+    const montoControl = this.editarVentaForm.get('montoAbonado');
+    if (montoControl) {
+      montoControl.disable();
+    }
+
+    // Limpiar y agregar método de pago
+    this.metodosPagoArray.clear();
+    this.agregarMetodoPago();
+
+    // Abrir modal
+    this.modalService.open(this.realizarPagoModal, {
+      centered: true,
+      size: 'lg',
+      backdrop: 'static'
+    });
+  }
+
+  // Método para guardar pago completo (similar a guardarEdicionVenta pero con validación extra)
+  guardarPagoCompleto(modal: any): void {
+    // Validar que sea pago completo
+    const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value;
+    const deudaTotal = this.calcularMontoDeuda();
+
+    if (Math.abs(montoAbonado - deudaTotal) > 0.01) {
+      this.swalService.showWarning('Advertencia',
+        'El pago debe ser por la totalidad de la deuda pendiente.');
+      return;
+    }
+
+    // Usar el mismo método de guardar pero con mensaje diferente
+    const mensajeConfirmacion = `
+    <strong>💰 Confirmar pago completo de ${this.formatearMoneda(montoAbonado)}</strong><br><br>
+    
+    <strong>Resumen:</strong><br>
+    • Total venta: ${this.formatearMoneda(this.selectedVenta.total)}<br>
+    • Deuda pendiente: ${this.formatearMoneda(deudaTotal)}<br>
+    • Nuevo pago: ${this.formatearMoneda(montoAbonado)}<br><br>
+    
+    <strong>⚠️ IMPORTANTE:</strong> Este es un pago único. La venta quedará totalmente saldada.
+  `;
+
+    this.swalService.showConfirm(
+      'Confirmar Pago Completo',
+      mensajeConfirmacion,
+      '✅ Sí, Registrar Pago',
+      '❌ Cancelar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        // Re-habilitar el control antes de guardar
+        const montoControl = this.editarVentaForm.get('montoAbonado');
+        if (montoControl) {
+          montoControl.enable();
+        }
+
+        // Usar el mismo método de guardar abono
+        this.guardarEdicionVenta(modal);
+      }
+    });
+  }
+
+  // Método para mostrar botón de abono (ajustado)
+  mostrarBotonAbonar(venta: any): boolean {
+    if (!venta || venta.estado === 'cancelada') {
+      return false;
+    }
+
+    // Solo para abonos con deuda
+    const esAbonoConDeuda = venta.formaPago === 'abono' &&
+      this.getDeudaPendiente(venta) > 0;
+
+    return esAbonoConDeuda;
+  }
+
+  // Método para expandir textarea al hacer focus
+  expandirTextarea(event: any): void {
+    const textarea = event.target;
+    textarea.classList.add('expanded');
+    textarea.rows = 3;
+
+    // Auto-focus y colocar cursor al final
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }, 10);
+  }
+
+  // Método para contraer textarea al perder focus (si está vacío)
+  contraerTextarea(event: any): void {
+    const textarea = event.target;
+    const valor = textarea.value.trim();
+
+    if (!valor) {
+      textarea.classList.remove('expanded');
+      textarea.rows = 1;
+    }
+  }
+
+  // Método para agregar observaciones rápidas
+  agregarObservacionRapida(texto: string): void {
+    const control = this.editarVentaForm.get('observaciones');
+    const valorActual = control?.value || '';
+
+    // Si ya hay texto, agregar en nueva línea
+    const separador = valorActual ? '\n' : '';
+    const nuevoValor = valorActual + separador + texto;
+
+    control?.setValue(nuevoValor);
+    control?.markAsTouched();
+
+    // Expandir automáticamente
+    setTimeout(() => {
+      const textarea = document.querySelector('.observaciones-textarea-compact') as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.classList.add('expanded');
+        textarea.rows = 3;
+        textarea.focus();
+      }
+    }, 50);
+  }
+
+
+
+
+
 }
-
-
-
