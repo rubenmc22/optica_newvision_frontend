@@ -5678,7 +5678,7 @@ export class HistorialVentasComponent implements OnInit {
     // const esContadoPendiente = venta.formaPago === 'contado-pendiente' &&
     //  this.getDeudaPendiente(venta) > 0;
 
-    const esContadoPendiente = venta.formaPago === 'contado';
+    const esContadoPendiente = venta.formaPago === 'contado'; //cambiar esto
 
     // return esContadoPendiente;
     return esContadoPendiente;
@@ -5696,12 +5696,6 @@ export class HistorialVentasComponent implements OnInit {
     this.editarVentaForm.patchValue({
       montoAbonado: deudaTotal
     });
-
-    // Deshabilitar el control
-    const montoControl = this.editarVentaForm.get('montoAbonado');
-    if (montoControl) {
-      montoControl.disable();
-    }
 
     // Limpiar y agregar método de pago
     this.metodosPagoArray.clear();
