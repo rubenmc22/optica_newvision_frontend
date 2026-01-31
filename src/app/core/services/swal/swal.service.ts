@@ -6,17 +6,44 @@ import { SweetAlertResult, SweetAlertOptions } from 'sweetalert2';
   providedIn: 'root'
 })
 export class SwalService {
-  
+
   constructor() { }
 
   /**
    * Muestra una alerta de éxito moderna
    */
+  showSuccessHTML(title: string, html: string, timer: number = 3000): Promise<any> {
+    return Swal.fire({
+      icon: 'success',
+      title: title,
+      html: html,  // Usa html para contenido con formato
+      confirmButtonText: 'Aceptar',
+      timer: timer,
+      timerProgressBar: true,
+      customClass: {
+        popup: 'swal-modern-popup success-popup',
+        title: 'swal-modern-title',
+        htmlContainer: 'swal-modern-content',
+        confirmButton: 'swal-modern-confirm success-btn',
+        closeButton: 'swal-modern-close',
+        timerProgressBar: 'swal-modern-progress-bar'
+      },
+      buttonsStyling: false,
+      showClass: {
+        popup: 'animate__animated animate__fadeInDown animate__faster'
+      },
+      hideClass: {
+        popup: 'animate__animated animate__fadeOutUp animate__faster'
+      }
+    });
+  }
+
+  // Método existente para texto plano
   showSuccess(title: string, text: string, timer: number = 3000): Promise<any> {
     return Swal.fire({
       icon: 'success',
       title: title,
-      text: text,
+      text: text,  // Para texto plano
       confirmButtonText: 'Aceptar',
       timer: timer,
       timerProgressBar: true,
@@ -133,9 +160,9 @@ export class SwalService {
    * Muestra una alerta de confirmación moderna
    */
   showConfirm(
-    title: string, 
-    htmlContent: string, 
-    confirmButtonText: string = 'Confirmar', 
+    title: string,
+    htmlContent: string,
+    confirmButtonText: string = 'Confirmar',
     cancelButtonText: string = 'Cancelar'
   ): Promise<SweetAlertResult> {
     return Swal.fire({
@@ -169,7 +196,7 @@ export class SwalService {
   showInactivityWarning(
     title: string,
     text: string,
-    timerDuration: number = 60000 
+    timerDuration: number = 60000
   ): Promise<boolean> {
     return new Promise((resolve) => {
       let timerInterval: number;

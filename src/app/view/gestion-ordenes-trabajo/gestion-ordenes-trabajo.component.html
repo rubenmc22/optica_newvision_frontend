@@ -541,12 +541,12 @@
         <i class="bi bi-chevron-down toggle-icon" [class.rotated]="mostrarArchivo"></i>
       </h3>
       <div class="archivo-actions">
-        <button class="btn btn-sm btn-outline-purple" (click)="abrirModalArchivo(); $event.stopPropagation()"
+        <button class="btn btn-sm btn-outline-purple" (click)="abrirModalArchivadas(); $event.stopPropagation()"
           [attr.data-tooltip]="'Ver todas las órdenes archivadas'">
           <i class="bi bi-box-archive"></i> Ver Archivadas ({{ordenesArchivadas.length}})
         </button>
         <!-- En el encabezado del archivo, cambia el botón: -->
-        <button class="btn btn-sm btn-outline-secondary" (click)="abrirModalArchivo(); $event.stopPropagation()"
+        <button class="btn btn-sm btn-outline-secondary" (click)="abrirModalConfigArchivo(); $event.stopPropagation()"
           [attr.data-tooltip]="'Configurar días para auto-archivado'">
           <i class="bi bi-gear"></i> Config. Auto-Archivo
         </button>
@@ -654,152 +654,126 @@
   </div>
 
   <div class="modal-body">
-    <!-- Grid de 3 filas -->
+    <!-- Grid de 2 columnas x 2 filas -->
     <div class="detalle-grid-rows">
+      
+      <!-- COLUMNA IZQUIERDA -->
+      <div class="detalle-columna detalle-columna-izquierda">
+        
+        <!-- FILA 1: Cliente -->
+        <div class="detalle-fila detalle-fila-1">
+          <div class="info-card">
+            <div class="info-header">
+              <i class="bi bi-person-circle"></i>
+              <h4>Información del Cliente</h4>
+            </div>
+            <div class="info-content compact">
+              <!-- Línea 1: Nombre y Cédula -->
+              <div class="info-row">
+                <span class="info-label">Paciente:</span>
+                <div class="info-value">
+                  <div class="cliente-principal">
+                    <strong>{{ getClienteNombre(ordenSeleccionada) }}</strong>
+                    <span *ngIf="ordenSeleccionada?.cliente?.informacion?.cedula" class="cliente-cedula">
+                      • C.I. {{ ordenSeleccionada?.cliente?.informacion?.cedula }}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-      <!-- FILA 1: Cliente y Productos -->
-      <div class="detalle-fila detalle-fila-1">
-
-        <!-- Columna Cliente -->
-        <div class="info-card">
-          <div class="info-header">
-            <i class="bi bi-person-circle"></i>
-            <h4>Información del Cliente</h4>
-          </div>
-          <div class="info-content compact">
-            <!-- Línea 1: Nombre y Cédula combinados -->
-            <div class="info-row">
-              <span class="info-label">Paciente:</span>
-              <div class="info-value">
-                <div class="cliente-principal">
-                  <strong>{{ ordenSeleccionada?.cliente?.informacion?.nombreCompleto ||
-                    ordenSeleccionada?.clienteNombre ||
-                    'Nombre no especificado' }}</strong>
-                  <span *ngIf="ordenSeleccionada?.cliente?.informacion?.cedula" class="cliente-cedula">
-                    • C.I. {{ ordenSeleccionada?.cliente?.informacion?.cedula }}
+              <!-- Línea 2: Contacto -->
+              <div class="info-row">
+                <span class="info-label">Contacto:</span>
+                <div class="info-value contacto-unificado">
+                  <!-- Teléfono -->
+                  <a *ngIf="getClienteTelefono(ordenSeleccionada)"
+                    href="tel:{{ getClienteTelefono(ordenSeleccionada) }}"
+                    class="contacto-link">
+                    <i class="bi bi-telephone"></i>
+                    {{ getClienteTelefono(ordenSeleccionada) }}
+                  </a>
+                  <span *ngIf="!getClienteTelefono(ordenSeleccionada)" class="text-muted">
+                    <i class="bi bi-telephone"></i> Sin teléfono
                   </span>
-                </div>
-                <div *ngIf="!ordenSeleccionada?.cliente?.informacion?.cedula" class="text-muted small-text">
-                  Sin cédula registrada
+
+                  <!-- Separador si hay ambos -->
+                  <span *ngIf="getClienteTelefono(ordenSeleccionada) && 
+                       ordenSeleccionada?.cliente?.informacion?.email" class="separador-contacto">|</span>
+
+                  <!-- Email -->
+                  <a *ngIf="ordenSeleccionada?.cliente?.informacion?.email"
+                    href="mailto:{{ ordenSeleccionada?.cliente?.informacion?.email }}" class="contacto-link">
+                    <i class="bi bi-envelope"></i>
+                    {{ ordenSeleccionada?.cliente?.informacion?.email }}
+                  </a>
                 </div>
               </div>
-            </div>
 
-            <!-- Línea 2: Contacto unificado -->
-            <div class="info-row">
-              <span class="info-label">Contacto:</span>
-              <div class="info-value contacto-unificado">
-                <!-- Teléfono -->
-                <a *ngIf="ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono"
-                  href="tel:{{ ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono }}"
-                  class="contacto-link">
-                  <i class="bi bi-telephone"></i>
-                  {{ ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono }}
-                </a>
-                <span *ngIf="!(ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono)"
-                  class="text-muted">
-                  <i class="bi bi-telephone"></i> Sin teléfono
-                </span>
-
-                <!-- Separador si hay ambos -->
-                <span *ngIf="(ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono) && 
-                     ordenSeleccionada?.cliente?.informacion?.email" class="separador-contacto">|</span>
-
-                <!-- Email -->
-                <a *ngIf="ordenSeleccionada?.cliente?.informacion?.email"
-                  href="mailto:{{ ordenSeleccionada?.cliente?.informacion?.email }}" class="contacto-link">
-                  <i class="bi bi-envelope"></i>
-                  {{ ordenSeleccionada?.cliente?.informacion?.email }}
-                </a>
-                <span *ngIf="!ordenSeleccionada?.cliente?.informacion?.email && 
-                     (ordenSeleccionada?.cliente?.informacion?.telefono || ordenSeleccionada?.clienteTelefono)"
-                  class="text-muted">
-                  <i class="bi bi-envelope"></i> Sin email
+              <!-- Línea 3: Tipo de persona -->
+              <div class="info-row" *ngIf="ordenSeleccionada?.cliente?.informacion?.tipoPersona">
+                <span class="info-label">Tipo:</span>
+                <span class="info-value">
+                  <span class="badge-tipo" [ngClass]="{'tipo-natural': ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'natural',
+                            'tipo-juridico': ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'juridico'}">
+                    {{ ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'natural' ? 'Persona Natural' :
+                    ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'juridico' ? 'Persona Jurídica' :
+                    ordenSeleccionada?.cliente?.informacion?.tipoPersona }}
+                  </span>
                 </span>
               </div>
-            </div>
-
-            <!-- Línea 3: Información adicional si existe -->
-            <div class="info-row" *ngIf="ordenSeleccionada?.cliente?.informacion?.tipoPersona">
-              <span class="info-label">Tipo:</span>
-              <span class="info-value">
-                <span class="badge-tipo" [ngClass]="{'tipo-natural': ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'natural',
-                          'tipo-juridico': ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'juridico'}">
-                  {{ ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'natural' ? 'Persona Natural' :
-                  ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'juridico' ? 'Persona Jurídica' :
-                  ordenSeleccionada?.cliente?.informacion?.tipoPersona }}
-                </span>
-              </span>
             </div>
           </div>
         </div>
-
-        <!-- Columna Productos -->
-        <div class="info-card">
-          <div class="info-header">
-            <i class="bi bi-box-seam"></i>
-            <h4>Productos ({{ ordenSeleccionada?.productos?.length || 1 }})</h4>
-          </div>
-          <div class="info-content compact productos-list">
-            <!-- Si tiene estructura de productos del API -->
-            <div class="producto-item"
-              *ngFor="let producto of ordenSeleccionada?.productos; trackBy: trackByProductoId">
-              <div class="producto-header">
-                <strong>{{ producto?.nombre || 'Producto sin nombre' }}</strong>
-                <span class="badge"> {{ producto?.cantidad || 1 }} unidad{{ (producto?.cantidad || 1) > 1 ? 'es' : ''
-                  }}</span>
-              </div>
-              <div class="producto-details">
-                <small>
-                  <span class="text-muted">Marca:</span> {{ producto?.marca || 'N/A' }}
-                  <span class="separator">•</span>
-                  <span class="text-muted"> Código:</span> {{ producto?.codigo || 'N/A' }}
-                  <span class="separator">•</span>
-                  <span class="text-muted"> Modelo:</span> {{ producto?.modelo || 'N/A' }}
-                  <span class="separator">•</span>
-                  <span class="text-muted"> Precio:</span> {{ producto?.precio | currency }}
-                </small>
-              </div>
-
-              <!-- Si tiene la estructura antigua (solo un producto) -->
-              <div class="producto-item" *ngIf="!ordenSeleccionada?.productos && ordenSeleccionada?.productoNombre">
+        
+        <!-- FILA 2: Productos -->
+        <div class="detalle-fila detalle-fila-2">
+          <div class="info-card">
+            <div class="info-header">
+              <i class="bi bi-box-seam"></i>
+              <h4>Productos ({{ ordenSeleccionada?.productos?.length || 1 }})</h4>
+            </div>
+            <div class="info-content compact productos-list">
+              <div class="producto-item"
+                *ngFor="let producto of ordenSeleccionada?.productos; trackBy: trackByProductoId">
                 <div class="producto-header">
-                  <strong>{{ ordenSeleccionada?.productoNombre }}</strong>
-                  <span class="badge">1 unidad</span>
+                  <strong>{{ producto?.nombre || 'Producto sin nombre' }}</strong>
+                  <span class="badge"> {{ producto?.cantidad || 1 }} unidad{{ (producto?.cantidad || 1) > 1 ? 'es' : '' }}</span>
                 </div>
                 <div class="producto-details">
                   <small>
-                    <span class="text-muted">Código:</span> {{ ordenSeleccionada?.codigo || 'N/A' }}
+                    <span class="text-muted">Marca:</span> {{ producto?.marca || 'N/A' }}
+                    <span class="separator">•</span>
+                    <span class="text-muted"> Código:</span> {{ producto?.codigo || 'N/A' }}
+                    <span class="separator">•</span>
+                    <span class="text-muted"> Modelo:</span> {{ producto?.modelo || 'N/A' }}
+                    <span class="separator">•</span>
+                    <span class="text-muted"> Precio:</span> {{ producto?.precio | currency }}
                   </small>
                 </div>
               </div>
-
-              <!-- Si no hay productos -->
-              <div class="text-center" *ngIf="!ordenSeleccionada?.productos && !ordenSeleccionada?.productoNombre">
-                <i class="bi bi-box"></i>
-                <span class="text-muted">Sin productos registrados</span>
-              </div>
             </div>
           </div>
-
         </div>
-
-        <!-- FILA 2: Formulación (ancho completo) -->
-        <div class="detalle-fila detalle-fila-2" *ngIf="getFormulacion(ordenSeleccionada)">
+        
+      </div>
+      
+      <!-- COLUMNA DERECHA -->
+      <div class="detalle-columna detalle-columna-derecha">
+        
+        <!-- FILA 1: Formulación (si existe) -->
+        <div class="detalle-fila detalle-fila-3" *ngIf="getFormulacion(ordenSeleccionada)">
           <div class="info-card formulacion-full">
             <div class="info-header">
               <i class="bi bi-eyeglasses"></i>
               <h4>Formulación</h4>
             </div>
             <div class="info-content compact formulacion-compact">
-              <!-- Campos de fórmula ocular -->
               <div class="formulacion-row">
                 <div class="formulacion-col ojo-col">
                   <div class="ojo-label">OD</div>
                   <div class="formulacion-valor">{{ getFormulacion(ordenSeleccionada)?.esferaOD || '--' }}</div>
                   <div class="formulacion-extra" *ngIf="getFormulacion(ordenSeleccionada)?.cilindroOD">
-                    <small>{{ getFormulacion(ordenSeleccionada)?.cilindroOD }} x {{
-                      getFormulacion(ordenSeleccionada)?.ejeOD }}°</small>
+                    <small>{{ getFormulacion(ordenSeleccionada)?.cilindroOD }} x {{ getFormulacion(ordenSeleccionada)?.ejeOD }}°</small>
                   </div>
                 </div>
 
@@ -807,8 +781,7 @@
                   <div class="ojo-label">OI</div>
                   <div class="formulacion-valor">{{ getFormulacion(ordenSeleccionada)?.esferaOI || '--' }}</div>
                   <div class="formulacion-extra" *ngIf="getFormulacion(ordenSeleccionada)?.cilindroOI">
-                    <small>{{ getFormulacion(ordenSeleccionada)?.cilindroOI }} x {{
-                      getFormulacion(ordenSeleccionada)?.ejeOI }}°</small>
+                    <small>{{ getFormulacion(ordenSeleccionada)?.cilindroOI }} x {{ getFormulacion(ordenSeleccionada)?.ejeOI }}°</small>
                   </div>
                 </div>
 
@@ -818,7 +791,6 @@
                 </div>
               </div>
 
-              <!-- Información adicional si existe -->
               <div class="formulacion-extra-info" *ngIf="getFormulacion(ordenSeleccionada)?.observaciones">
                 <small>
                   <i class="bi bi-info-circle"></i>
@@ -828,11 +800,9 @@
             </div>
           </div>
         </div>
-
-        <!-- FILA 3: Observaciones y Personal Asignado -->
-        <div class="detalle-fila detalle-fila-3">
-
-          <!-- Columna Observaciones -->
+        
+        <!-- FILA 2: Observaciones y Personal -->
+        <div class="detalle-fila detalle-fila-4">
           <div class="info-card">
             <div class="info-header">
               <i class="bi bi-chat-left-text"></i>
@@ -850,8 +820,10 @@
               </ng-template>
             </div>
           </div>
-
-          <!-- Columna Personal Asignado -->
+        </div>
+        
+        <!-- FILA 3: Personal Asignado -->
+        <div class="detalle-fila detalle-fila-5">
           <div class="info-card">
             <div class="info-header">
               <i class="bi bi-person-badge"></i>
@@ -869,62 +841,61 @@
                 <span class="info-label">Asesor:</span>
                 <div class="info-value">
                   <div>{{ ordenSeleccionada?.asesor?.nombre || 'No especificado' }}</div>
-                  <small class="text-muted" *ngIf="ordenSeleccionada?.asesor?.cedula">C.I. {{
-                    ordenSeleccionada?.asesor?.cedula }}</small>
+                  <small class="text-muted" *ngIf="ordenSeleccionada?.asesor?.cedula">C.I. {{ ordenSeleccionada?.asesor?.cedula }}</small>
                 </div>
               </div>
 
-              <!-- Si no hay personal asignado -->
-              <div class="text-center"
-                *ngIf="!ordenSeleccionada?.especialista && !ordenSeleccionada?.asesor && !ordenSeleccionada?.tecnicoAsignado">
+              <div class="text-center" *ngIf="!ordenSeleccionada?.especialista && !ordenSeleccionada?.asesor">
                 <i class="bi bi-person-x"></i>
                 <span class="text-muted">Sin personal asignado</span>
               </div>
             </div>
           </div>
-
         </div>
-
+        
       </div>
+      
+    </div>
+  </div>
 
-      <!-- Acciones según estado -->
-      <div class="modal-actions" *ngIf="ordenSeleccionada">
-        <div class="actions-left">
-          <div class="venta-id" *ngIf="ordenSeleccionada?.numero_venta"
-            title="ID de Venta Relacionada - Haga clic para ver detalles">
-            <i class="bi bi-receipt"></i>
-            <span>{{ ordenSeleccionada?.numero_venta }}</span>
-          </div>
-          <!-- Información de fecha de entrega en el modal -->
-          <div class="fecha-entrega-info" *ngIf="ordenSeleccionada">
-            <i class="bi bi-calendar"></i>
-            <span *ngIf="ordenSeleccionada.fechaEntregaEstimada; else sinFechaModal">
-              Entrega estimada: {{ getFechaEntregaFormateada(ordenSeleccionada) }}
-            </span>
-            <ng-template #sinFechaModal>
-              <span class="text-warning" style="margin-left: 5px;">Sin fecha de entrega configurada</span>
-            </ng-template>
-          </div>
-        </div>
-        <div class="actions-right">
-          <button *ngIf="ordenSeleccionada.estado === 'en_tienda'" class="btn btn-primary"
-            (click)="cambiarEstado(ordenSeleccionada, 'proceso_laboratorio'); cerrarModalDetalle()">
-            <i class="bi bi-arrow-right"></i> Mover a Laboratorio
-          </button>
-          <button *ngIf="ordenSeleccionada.estado === 'proceso_laboratorio'" class="btn btn-success"
-            (click)="cambiarEstado(ordenSeleccionada, 'listo_laboratorio'); cerrarModalDetalle()">
-            <i class="bi bi-check-circle"></i> Marcar como Listo
-          </button>
-          <button *ngIf="ordenSeleccionada.estado === 'listo_laboratorio'" class="btn btn-warning"
-            (click)="cambiarEstado(ordenSeleccionada, 'pendiente_retiro'); cerrarModalDetalle()">
-            <i class="bi bi-truck"></i> Enviar a Tienda
-          </button>
-          <button *ngIf="ordenSeleccionada.estado === 'pendiente_retiro'" class="btn btn-success"
-            (click)="cambiarEstado(ordenSeleccionada, 'entregado'); cerrarModalDetalle()">
-            <i class="bi bi-box-seam"></i> Marcar como Entregado
-          </button>
-        </div>
+  <!-- Footer más compacto con fecha movida -->
+  <div class="modal-actions" *ngIf="ordenSeleccionada">
+    <div class="actions-left">
+      <!-- ID de Venta -->
+      <div class="venta-id" *ngIf="ordenSeleccionada?.numero_venta">
+        <i class="bi bi-receipt"></i>
+        <span>{{ ordenSeleccionada?.numero_venta }}</span>
       </div>
+      
+      <!-- Fecha de entrega movida aquí -->
+      <div class="fecha-entrega-info">
+        <i class="bi bi-calendar"></i>
+        <span *ngIf="ordenSeleccionada.fechaEntregaEstimada; else sinFechaModal">
+          Entrega: {{ getFechaEntregaFormateada(ordenSeleccionada) }}
+        </span>
+        <ng-template #sinFechaModal>
+          <span class="text-warning" style="margin-left: 5px;">Sin fecha de entrega</span>
+        </ng-template>
+      </div>
+    </div>
+    
+    <div class="actions-right">
+      <button *ngIf="ordenSeleccionada.estado === 'en_tienda'" class="btn btn-primary"
+        (click)="cambiarEstado(ordenSeleccionada, 'proceso_laboratorio'); cerrarModalDetalle()">
+        <i class="bi bi-arrow-right"></i> Mover a Laboratorio
+      </button>
+      <button *ngIf="ordenSeleccionada.estado === 'proceso_laboratorio'" class="btn btn-success"
+        (click)="cambiarEstado(ordenSeleccionada, 'listo_laboratorio'); cerrarModalDetalle()">
+        <i class="bi bi-check-circle"></i> Marcar como Listo
+      </button>
+      <button *ngIf="ordenSeleccionada.estado === 'listo_laboratorio'" class="btn btn-warning"
+        (click)="cambiarEstado(ordenSeleccionada, 'pendiente_retiro'); cerrarModalDetalle()">
+        <i class="bi bi-truck"></i> Enviar a Tienda
+      </button>
+      <button *ngIf="ordenSeleccionada.estado === 'pendiente_retiro'" class="btn btn-success"
+        (click)="cambiarEstado(ordenSeleccionada, 'entregado'); cerrarModalDetalle()">
+        <i class="bi bi-box-seam"></i> Marcar como Entregado
+      </button>
     </div>
   </div>
 </div>
@@ -1159,7 +1130,7 @@
 
 
 <!-- Modal para configurar fecha de entrega -->
-<div class="modal-backdrop" *ngIf="mostrarModalConfigurarFecha" (click)="cancelarConfigurarFecha()"></div>
+<div class="modal-backdrop" *ngIf="mostrarModalConfigurarFecha" (click)="cerrarModalFechaEntrega()"></div>
 
 <div class="modal-configurar-fecha" *ngIf="mostrarModalConfigurarFecha">
   <div class="modal-header">
@@ -1167,7 +1138,7 @@
       <i class="bi bi-calendar-plus"></i>
       Configurar Fecha de Entrega
     </h2>
-    <button class="btn-close-modal" (click)="cancelarConfigurarFecha()">
+    <button class="btn-close-modal" (click)="cerrarModalFechaEntrega()">
       <i class="bi bi-x-lg"></i>
     </button>
   </div>
@@ -1212,7 +1183,7 @@
   </div>
 
   <div class="modal-footer">
-    <button class="btn btn-secondary" (click)="cancelarConfigurarFecha()">
+    <button class="btn btn-secondary" (click)="cerrarModalFechaEntrega()">
       <i class="bi bi-x-circle"></i> Cancelar
     </button>
     <!-- Botón corregido: pasar ordenParaConfigurarFecha -->

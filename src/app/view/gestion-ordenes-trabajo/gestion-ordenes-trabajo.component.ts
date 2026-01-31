@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { OrdenesTrabajoService } from './gestion-ordenes-trabajo.service';
 import { OrdenTrabajo, OrdenesTrabajoResponse, EstadoOrden } from './gestion-ordenes-trabajo.model';
@@ -243,15 +243,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
         orden.prioridad = 'baja';
       }
 
-      console.log('DEBUG - Recalcular días:', {
-        fechaOriginal: orden.fechaEntregaEstimada,
-        fechaEntregaUTC: fechaEntregaUTC.toISOString(),
-        fechaEntregaLocal: fechaEntregaUTC.toLocaleDateString('es-VE'),
-        hoyMediodiaUTC: hoyMediodiaUTC.toISOString(),
-        diasRestantes: orden.diasRestantes,
-        prioridad: orden.prioridad
-      });
-
     } catch (error) {
       console.error('Error al recalcular días:', error);
       orden.diasRestantes = undefined;
@@ -439,8 +430,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
    */
   private mostrarAdvertenciaFechaEntregaMultiples(ordenesSinFecha: OrdenTrabajo[]): void {
     const cantidad = ordenesSinFecha.length;
-   const codigos = ordenesSinFecha.map(o =>
-  `<div style="
+    const codigos = ordenesSinFecha.map(o =>
+      `<div style="
     display: flex;
     justify-content: center;
     margin: 4px 0;
@@ -457,7 +448,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
       text-align: center;
     ">${o.ordenId}</code>
   </div>`
-).join('');
+    ).join('');
 
     const contenidoHTML = `
     <div style="text-align: center; padding: 0.5rem 0;">
@@ -1026,12 +1017,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     this.bloquearScroll();
   }
 
-  cerrarModalDetalle() {
-    this.mostrarModalDetalle = false;
-    this.ordenSeleccionada = null;
-    this.desbloquearScroll();
-  }
-
   onEstadoCambiado(ordenActualizada: any) {
     const index = this.todasLasOrdenes.findIndex(o => o.id === ordenActualizada.id);
     if (index !== -1) {
@@ -1212,9 +1197,17 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
    * Método actualizado para abrir el modal
    */
   verOrdenesEnModal(ordenes: any[], titulo: string, estado: string) {
+    console.log('Abriendo modal con:', {
+      titulo: titulo,
+      estado: estado,
+      cantidadOrdenes: ordenes.length
+    });
+
     this.ordenesModal = [...ordenes];
     this.tituloModalOrdenes = titulo;
     this.estadoModalActual = estado;
+
+    console.log('tituloModalOrdenes después de asignar:', this.tituloModalOrdenes);
 
     // Reiniciar filtros
     this.filtroModal = '';
@@ -1490,31 +1483,16 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
     const fechaAPI = `${año}-${mes}-${dia}`;
 
-    console.log('DEBUG - Confirmar fecha:', {
-      hoyLocal: hoy.toLocaleDateString('es-VE'),
-      hoyUTC: hoy.toISOString(),
-      diasAgregados: this.diasParaFechaEntrega,
-      fechaCalculadaUTC: fechaEntregaUTC.toISOString(),
-      fechaCalculadaLocal: new Date(fechaEntregaUTC).toLocaleDateString('es-VE'),
-      fechaAPI: fechaAPI
-    });
-
     // 4. Preparar request como requiere el API
     const requestBody = {
       orden_numero: orden.ordenId,
       fecha_entrega_estimada: fechaAPI  // "2026-01-18"
     };
 
-    console.log('DEBUG - Request al API:', requestBody);
-
     // 5. Llamar al servicio API
     this.ordenesTrabajoService.actualizarFechaEntregaEstimada(orden.ordenId, fechaAPI)
       .subscribe({
         next: (response) => {
-          console.log('DEBUG - Respuesta del API:', response);
-
-          // 6. Almacenar la fecha en formato ISO para uso interno
-          // Crear fecha con hora específica (mediodía UTC) para consistencia
           const fechaGuardar = new Date(Date.UTC(
             año,
             parseInt(mes) - 1, // Mes es 0-indexed
@@ -1523,13 +1501,12 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
           ));
 
           orden.fechaEntregaEstimada = fechaGuardar.toISOString();
-          console.log('DEBUG - Fecha guardada:', orden.fechaEntregaEstimada);
 
           // 7. Recalcular días restantes
           this.recalcularDiasRestantes(orden);
 
           // 8. Mostrar éxito
-          this.swalService.showSuccess(
+          this.swalService.showSuccessHTML(
             '✅ Fecha configurada',
             `Orden: <strong>${orden.ordenId}</strong><br>
           Fecha estimada: <strong>${new Date(fechaEntregaUTC).toLocaleDateString('es-VE', {
@@ -1584,15 +1561,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
           // Calcular diferencia en días
           const diferenciaMs = fechaEntregaMediodiaUTC.getTime() - hoyMediodiaUTC.getTime();
           const diferenciaDias = Math.ceil(diferenciaMs / (1000 * 60 * 60 * 24));
-
           this.diasParaFechaEntrega = Math.max(1, diferenciaDias);
 
-          console.log('DEBUG - Cargar fecha existente:', {
-            fechaBackend: orden.fechaEntregaEstimada,
-            fechaEntregaUTC: fechaEntregaUTC.toISOString(),
-            fechaLocal: fechaEntregaUTC.toLocaleDateString('es-VE'),
-            diferenciaDias: this.diasParaFechaEntrega
-          });
         } else {
           this.diasParaFechaEntrega = 7;
         }
@@ -1621,30 +1591,9 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   }
 
   /**
-   * Método mejorado para cancelar configuración de fecha
-   */
-  cancelarConfigurarFecha() {
-    // Preguntar confirmación solo si hay cambios
-    if (this.diasParaFechaEntrega !== 7 || this.ordenParaConfigurarFecha?.fechaEntregaEstimada) {
-      this.swalService.showConfirm(
-        'Cancelar cambios',
-        '¿Está seguro de cancelar la configuración de fecha? Los cambios no guardados se perderán.',
-        'Sí, cancelar',
-        'Continuar editando'
-      ).then((result) => {
-        if (result.isConfirmed) {
-          this.cerrarModalFechaEntrega();
-        }
-      });
-    } else {
-      this.cerrarModalFechaEntrega();
-    }
-  }
-
-  /**
    * Cerrar modal de fecha de entrega
    */
-  private cerrarModalFechaEntrega() {
+  public cerrarModalFechaEntrega() {
     this.mostrarModalConfigurarFecha = false;
     this.ordenParaConfigurarFecha = null;
     this.fechaCalculada = null;
@@ -1670,11 +1619,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
       // Convertir a fecha local para mostrar
       this.fechaCalculada = new Date(fechaCalculadaUTC);
 
-      console.log('DEBUG - Fecha calculada:', {
-        dias: this.diasParaFechaEntrega,
-        fechaCalculadaUTC: fechaCalculadaUTC.toISOString(),
-        fechaCalculadaLocal: this.fechaCalculada.toLocaleDateString('es-VE')
-      });
     } else {
       this.fechaCalculada = null;
     }
@@ -1895,13 +1839,36 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   }
 
   // Método para cerrar el modal
+  /* cerrarModalArchivo() {
+     if (this.diasArchivoSeleccionados !== this.diasArchivoActual) {
+       const confirmar = confirm('¿Desea descartar los cambios?');
+       if (!confirmar) return;
+     }
+     this.mostrarModalAutoArchivado = false;
+     this.mensajeError = '';
+   }*/
+
+  // Método para abrir modal de configuración de auto-archivado
+  abrirModalConfigArchivo() {
+    // Usar el valor actual de diasParaAutoArchivo
+    this.diasArchivoActual = this.diasParaAutoArchivo || 30;
+    this.diasArchivoSeleccionados = this.diasArchivoActual;
+    this.mostrarModalAutoArchivado = true;
+    this.bloquearScroll();
+  }
+
+  // Método para abrir modal de ver órdenes archivadas
+  abrirModalArchivadas() {
+    this.filtrarArchivadas(); // Asegurarse de que el filtro esté aplicado
+    this.mostrarModalArchivo = true;
+    this.bloquearScroll();
+  }
+
+  // Método para cerrar modal de ver órdenes archivadas
   cerrarModalArchivo() {
-    if (this.diasArchivoSeleccionados !== this.diasArchivoActual) {
-      const confirmar = confirm('¿Desea descartar los cambios?');
-      if (!confirmar) return;
-    }
+    this.mostrarModalArchivo = false;
     this.mostrarModalAutoArchivado = false;
-    this.mensajeError = '';
+    this.desbloquearScroll();
   }
 
   // Método para validar días
@@ -1991,6 +1958,44 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
         this.mostrarNotificacion('Error al guardar configuración', 'error');
       }
     });
+  }
+
+  // Agrega este método al componente para manejar mejor el responsive
+  @HostListener('window:resize', ['$event'])
+  onResize(event: any) {
+    this.ajustarModalResponsive();
+  }
+
+  private ajustarModalResponsive() {
+    if (this.mostrarModalDetalle) {
+      // Ajustar tamaño del modal según viewport
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      if (viewportWidth < 768) {
+        // En móviles, asegurar que el modal ocupe casi toda la pantalla
+        document.querySelector('.modal-detalle-orden')?.classList.add('modal-mobile-full');
+      } else {
+        document.querySelector('.modal-detalle-orden')?.classList.remove('modal-mobile-full');
+      }
+
+      // Para zoom extremo
+      if (viewportWidth < 600 || viewportHeight < 500) {
+        document.querySelector('.modal-detalle-orden')?.classList.add('modal-zoom-extremo');
+      } else {
+        document.querySelector('.modal-detalle-orden')?.classList.remove('modal-zoom-extremo');
+      }
+    }
+  }
+
+  // También ajusta el método cerrarModalDetalle
+  cerrarModalDetalle() {
+    this.mostrarModalDetalle = false;
+    this.ordenSeleccionada = null;
+    this.desbloquearScroll();
+
+    // Limpiar clases responsive
+    document.querySelector('.modal-detalle-orden')?.classList.remove('modal-mobile-full', 'modal-zoom-extremo');
   }
 
 
