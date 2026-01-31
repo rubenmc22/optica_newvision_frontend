@@ -5660,9 +5660,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-   getMensajeErrorEmail(): string {
-    return 'Formato de email inválido. Use: ejemplo@correo.com (opcional)';
-}
+    getMensajeErrorEmail(): string {
+        return 'Formato de email inválido. Use: ejemplo@correo.com (opcional)';
+    }
 
     // Obtener estado individual de cada campo para mostrar en la UI
     getEstadoCampoNombre(): { valido: boolean, mensaje: string } {

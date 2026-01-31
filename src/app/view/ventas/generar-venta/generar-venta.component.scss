@@ -2519,7 +2519,7 @@ input:checked+.slider:before {
             }
 
             &.required::after {
-                content: "*";
+                 content: "*";
                 color: #dc3545;
                 margin-left: 4px;
             }
