@@ -5330,7 +5330,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
     // Validar email (ahora obligatorio)
     validarEmail(email: string): boolean {
-        if (!email || email.trim() === '') return false;
+        // Si está vacío, es válido (opcional)
+        if (!email || email.trim() === '') return true;
 
         const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         return emailRegex.test(email.trim());
@@ -5552,7 +5553,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const nombreValido = this.validarNombre(cliente.nombreCompleto);
         const cedulaValida = this.validarCedula(cliente.cedula, cliente.tipoPersona);
         const telefonoValido = this.validarTelefono(cliente.telefono);
-        const emailValido = this.validarEmail(cliente.email);
+        // Email es opcional: solo valida si hay contenido, sino pasa como válido
+        const emailValido = cliente.email ? this.validarEmail(cliente.email) : true;
 
         return nombreValido && cedulaValida && telefonoValido && emailValido;
     }
@@ -5571,10 +5573,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     onEmailChange(): void {
         const email = this.clienteSinPaciente.email;
 
-        if (!this.validarEmail(email)) {
-            this.mostrarErrorEmail();
-        } else {
+        // Si está vacío o tiene formato válido, limpiar error
+        if (!email || email.trim() === '' || this.validarEmail(email)) {
             this.limpiarErrorEmail();
+        } else {
+            this.mostrarErrorEmail();
         }
         this.actualizarEstadoValidacion();
     }
@@ -5657,9 +5660,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    getMensajeErrorEmail(): string {
-        return 'Formato de email inválido. Use: ejemplo@correo.com';
-    }
+   getMensajeErrorEmail(): string {
+    return 'Formato de email inválido. Use: ejemplo@correo.com (opcional)';
+}
 
     // Obtener estado individual de cada campo para mostrar en la UI
     getEstadoCampoNombre(): { valido: boolean, mensaje: string } {
@@ -5698,9 +5701,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     getEstadoCampoEmail(): { valido: boolean, mensaje: string } {
         const email = this.clienteSinPaciente.email;
+
+        // Si está vacío, es válido (campo opcional)
         if (!email || email.trim() === '') {
-            return { valido: false, mensaje: 'El email es obligatorio' };
+            return { valido: true, mensaje: '' };
         }
+
+        // Si tiene contenido, validar formato
         return {
             valido: this.validarEmail(email),
             mensaje: this.getMensajeErrorEmail()

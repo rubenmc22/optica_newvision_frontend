@@ -2402,10 +2402,10 @@ input:checked+.slider:before {
     }
 }
 
-.required {
+/*.required {
     color: #dc3545;
     font-weight: bold;
-}
+}*/
 
 // Loader para validación
 @keyframes spin {
@@ -2516,6 +2516,12 @@ input:checked+.slider:before {
             i {
                 font-size: 1.2rem;
                 color: var(--primary-color);
+            }
+
+            &.required::after {
+                content: "*";
+                color: #dc3545;
+                margin-left: 4px;
             }
         }
 
@@ -4231,10 +4237,15 @@ input:checked+.slider:before {
 .form-label {
     position: relative;
 
-    &::after {
+    /* &::after {
         content: "*";
         color: #dc3545;
-        // margin-left: -0.3rem;
+    }*/
+
+    &.required::after {
+        content: "*";
+        color: #dc3545;
+        margin-left: 4px;
     }
 }
 
@@ -5841,7 +5852,7 @@ $text-secondary: #718096;
 
 .dato-paciente {
     background: white;
-  //  border: 1px solid $border-color;
+    //  border: 1px solid $border-color;
     border-radius: 10px;
     padding: 1rem;
     transition: all 0.3s ease;

@@ -822,7 +822,7 @@
                                 <div class="form-grid">
                                     <!-- Fila 1: Cédula/RIF con validación -->
                                     <div class="form-group">
-                                        <label class="form-label">
+                                        <label class="form-label required">
                                             <i class="bi bi-card-text"></i>
                                             {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Cédula' : 'RIF' }}
                                         </label>
@@ -857,7 +857,7 @@
 
                                     <!-- Fila 1: Nombre/Razón Social -->
                                     <div class="form-group">
-                                        <label class="form-label">
+                                        <label class="form-label required">
                                             <i class="bi bi-person"></i>
                                             {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón Social' }}
                                         </label>
@@ -877,7 +877,7 @@
 
                                     <!-- Fila 2: Teléfono -->
                                     <div class="form-group">
-                                        <label class="form-label">
+                                        <label class="form-label required">
                                             <i class="bi bi-telephone"></i>
                                             Teléfono
                                         </label>
@@ -903,14 +903,19 @@
                                     <div class="form-group">
                                         <label class="form-label">
                                             <i class="bi bi-envelope"></i>
-                                            Email
+                                            Email <span class="text-muted" style="font-size: 0.85em;">(opcional)</span>
                                         </label>
                                         <input type="email" class="form-control modern-input"
                                             style="margin-bottom: -10px !important;"
-                                            [(ngModel)]="clienteSinPaciente.email" placeholder="ejemplo@correo.com"
+                                            [(ngModel)]="clienteSinPaciente.email" 
+                                            placeholder="ejemplo@correo.com (opcional)"
                                             (blur)="onEmailChange()"
                                             (input)="onEmailChange(); onCampoEditadoManualmente()"
-                                            [class.campo-autocompletado]="clienteEncontrado" data-email-input>
+                                            [class.campo-autocompletado]="clienteEncontrado" 
+                                            data-email-input>
+                                        <small class="form-text text-muted">
+                                            Si no tiene email, puede dejarlo vacío.
+                                        </small>
                                         <div class="error-message"
                                             *ngIf="!getEstadoCampoEmail().valido && clienteSinPaciente.email">
                                             <i class="bi bi-exclamation-circle"></i>
@@ -962,7 +967,7 @@
                         <div class="config-grid">
                             <!-- En el modal resumen, actualiza el select: -->
                             <div class="config-item">
-                                <label class="form-label">Forma de pago</label>
+                                <label class="form-label required">Forma de pago</label>
                                 <select class="form-select modern-select" [(ngModel)]="venta.formaPago"
                                     (ngModelChange)="onFormaPagoChange($event)">
                                     <option value="contado">De contado</option>
@@ -989,7 +994,7 @@
                         <div *ngIf="venta.formaPago === 'cashea'" class="cashea-section">
                             <div class="cashea-config">
                                 <div class="config-item">
-                                    <label class="form-label">Nivel Cashea</label>
+                                    <label class="form-label required">Nivel Cashea</label>
                                     <select class="form-select modern-select" [(ngModel)]="nivelCashea"
                                         (change)="asignarInicialPorNivel()">
                                         <option value="nivel1">Nivel 1 (60%)</option>
@@ -1002,7 +1007,7 @@
                                 </div>
 
                                 <div class="config-item">
-                                    <label class="form-label">Cuotas</label>
+                                    <label class="form-label required">Cuotas</label>
                                     <select class="form-select modern-select" [(ngModel)]="cantidadCuotasCashea"
                                         (change)="generarCuotasCashea()"
                                         [disabled]="!nivelPermiteCuotasExtendidas(nivelCashea)">
@@ -1013,7 +1018,7 @@
                                 </div>
 
                                 <div class="config-item">
-                                    <label class="form-label">Inicial</label>
+                                    <label class="form-label required">Inicial</label>
                                     <div class="input-with-validation">
                                         <input type="text" class="form-control modern-input"
                                             [placeholder]="formatearMoneda(calcularInicialCasheaPorNivel(montoTotal, nivelCashea), venta.moneda)"
@@ -1095,7 +1100,7 @@
                         <div *ngIf="venta.formaPago === 'abono'" class="abono-section">
                             <div class="abono-config">
                                 <div class="config-item">
-                                    <label class="form-label">Monto abonado</label>
+                                    <label class="form-label required">Monto abonado</label>
                                     <div class="abono-input-group">
                                         <input type="text" class="form-control modern-input"
                                             [placeholder]="'Monto en ' + obtenerSimboloMoneda(venta.moneda)"
@@ -1138,7 +1143,7 @@
                         <div class="metodos-pago-section">
                             <div class="section-header">
                                 <div class="section-label-container">
-                                    <label class="section-label">
+                                    <label class="section-label required">
                                         <i class="bi bi-wallet2"></i>
                                         Métodos de pago
                                     </label>
