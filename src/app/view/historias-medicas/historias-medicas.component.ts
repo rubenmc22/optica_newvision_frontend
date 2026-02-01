@@ -87,6 +87,11 @@ export class HistoriasMedicasComponent implements OnInit {
   horaEvaluacion: string = '';
   mostrarBotonVolver = false;
 
+  private navigationMap: { [key: string]: string } = {};
+  private isNavigating = false;
+  private currentRowMap: { [key: string]: string[] } = {};
+  private columnMap: { [key: string]: string[] } = {};
+
   // Formulario
   historiaForm: FormGroup;
 
@@ -138,6 +143,9 @@ export class HistoriasMedicasComponent implements OnInit {
     this.maxDate = new Date().toISOString().split('T')[0];
     this.historiaForm = this.fb.group({});
     this.inicializarFormulario();
+
+    // Inicializar mapas de navegación
+    this.initializeNavigationMaps();
   }
 
   // ***************************
@@ -179,6 +187,9 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.configurarSubscripciones();
     this.inicializarDatosIniciales();
+
+    // Inicializar navegación
+    this.initializeNavigationMaps();
 
     setTimeout(() => {
       this.pacienteIdSeleccionado = null;
@@ -398,7 +409,9 @@ export class HistoriasMedicasComponent implements OnInit {
       this.prepararNuevaHistoria();
     }
 
-    $('#historiaModal').modal('show');
+    // Usar el método mejorado para abrir modal
+    this.abrirModalConFocus();
+
   }
 
   private generarHistoria(modo: 'crear' | 'editar', historiaExistente?: HistoriaMedica): HistoriaMedica {
@@ -2620,4 +2633,541 @@ export class HistoriasMedicasComponent implements OnInit {
     }
   `;
   }
+
+
+
+  // Métodos para navegación por teclado
+  private initializeNavigationMaps(): void {
+    // Mapa principal para navegación horizontal (Enter/→)
+    this.navigationMap = {
+      // Lensometría - Fila OD
+      'len_esf_od': 'len_cil_od',
+      'len_cil_od': 'len_eje_od',
+      'len_eje_od': 'len_add_od',
+      'len_add_od': 'len_av_lejos_od',
+      'len_av_lejos_od': 'len_av_cerca_od',
+      'len_av_cerca_od': 'len_av_lejos_bi',
+      'len_av_lejos_bi': 'len_av_bi',
+
+      // Lensometría - Fila OI (después de binocular OD)
+      'len_av_bi': 'len_esf_oi',
+      'len_esf_oi': 'len_cil_oi',
+      'len_cil_oi': 'len_eje_oi',
+      'len_eje_oi': 'len_add_oi',
+      'len_add_oi': 'len_av_lejos_oi',
+      'len_av_lejos_oi': 'len_av_cerca_oi',
+      'len_av_cerca_oi': 'len_av_cerca_bi',
+
+      // Refracción - Fila OD (después de binocular OI)
+      'len_av_cerca_bi': 'ref_esf_od',
+      'ref_esf_od': 'ref_cil_od',
+      'ref_cil_od': 'ref_eje_od',
+      'ref_eje_od': 'ref_add_od',
+      'ref_add_od': 'ref_avccl_od',
+      'ref_avccl_od': 'ref_avccc_od',
+      'ref_avccc_od': 'ref_avccl_bi',
+      'ref_avccl_bi': 'ref_avccc_bi',
+
+      // Refracción - Fila OI (después de binocular)
+      'ref_avccc_bi': 'ref_esf_oi',
+      'ref_esf_oi': 'ref_cil_oi',
+      'ref_cil_oi': 'ref_eje_oi',
+      'ref_eje_oi': 'ref_add_oi',
+      'ref_add_oi': 'ref_avccl_oi',
+      'ref_avccl_oi': 'ref_avccc_oi',
+
+      // Refracción Final - Fila OD
+      'ref_avccc_oi': 'ref_final_esf_od',
+      'ref_final_esf_od': 'ref_final_cil_od',
+      'ref_final_cil_od': 'ref_final_eje_od',
+      'ref_final_eje_od': 'ref_final_add_od',
+      'ref_final_add_od': 'ref_final_alt_od',
+      'ref_final_alt_od': 'ref_final_dp_od',
+
+      // Refracción Final - Fila OI
+      'ref_final_dp_od': 'ref_final_esf_oi',
+      'ref_final_esf_oi': 'ref_final_cil_oi',
+      'ref_final_cil_oi': 'ref_final_eje_oi',
+      'ref_final_eje_oi': 'ref_final_add_oi',
+      'ref_final_add_oi': 'ref_final_alt_oi',
+      'ref_final_alt_oi': 'ref_final_dp_oi',
+
+      // AVSC/AVAE/OTROS - Fila OD
+      'ref_final_dp_oi': 'avsc_od',
+      'avsc_od': 'avae_od',
+      'avae_od': 'otros_od',
+
+      // AVSC/AVAE/OTROS - Fila OI
+      'otros_od': 'avsc_oi',
+      'avsc_oi': 'avae_oi',
+      'avae_oi': 'otros_oi',
+    };
+
+    // Mapa de filas para navegación vertical (↑/↓)
+    this.currentRowMap = {
+      'len_esf_od': ['len_esf_od', 'len_cil_od', 'len_eje_od', 'len_add_od', 'len_av_lejos_od', 'len_av_cerca_od'],
+      'len_esf_oi': ['len_esf_oi', 'len_cil_oi', 'len_eje_oi', 'len_add_oi', 'len_av_lejos_oi', 'len_av_cerca_oi'],
+
+      'ref_esf_od': ['ref_esf_od', 'ref_cil_od', 'ref_eje_od', 'ref_add_od', 'ref_avccl_od', 'ref_avccc_od'],
+      'ref_esf_oi': ['ref_esf_oi', 'ref_cil_oi', 'ref_eje_oi', 'ref_add_oi', 'ref_avccl_oi', 'ref_avccc_oi'],
+
+      'ref_final_esf_od': ['ref_final_esf_od', 'ref_final_cil_od', 'ref_final_eje_od', 'ref_final_add_od', 'ref_final_alt_od', 'ref_final_dp_od'],
+      'ref_final_esf_oi': ['ref_final_esf_oi', 'ref_final_cil_oi', 'ref_final_eje_oi', 'ref_final_add_oi', 'ref_final_alt_oi', 'ref_final_dp_oi'],
+
+      'avsc_od': ['avsc_od', 'avae_od', 'otros_od'],
+      'avsc_oi': ['avsc_oi', 'avae_oi', 'otros_oi'],
+    };
+
+    // Mapa de columnas para navegación entre tablas similares
+    this.columnMap = {
+      'esfera': ['len_esf_od', 'len_esf_oi', 'ref_esf_od', 'ref_esf_oi', 'ref_final_esf_od', 'ref_final_esf_oi'],
+      'cilindro': ['len_cil_od', 'len_cil_oi', 'ref_cil_od', 'ref_cil_oi', 'ref_final_cil_od', 'ref_final_cil_oi'],
+      'eje': ['len_eje_od', 'len_eje_oi', 'ref_eje_od', 'ref_eje_oi', 'ref_final_eje_od', 'ref_final_eje_oi'],
+      'add': ['len_add_od', 'len_add_oi', 'ref_add_od', 'ref_add_oi', 'ref_final_add_od', 'ref_final_add_oi'],
+      'av_lejos': ['len_av_lejos_od', 'len_av_lejos_oi', 'ref_avccl_od', 'ref_avccl_oi'],
+      'av_cerca': ['len_av_cerca_od', 'len_av_cerca_oi', 'ref_avccc_od', 'ref_avccc_oi'],
+      'avsc': ['avsc_od', 'avsc_oi'],
+      'avae': ['avae_od', 'avae_oi'],
+      'alt': ['ref_final_alt_od', 'ref_final_alt_oi'],
+      'dp': ['ref_final_dp_od', 'ref_final_dp_oi'],
+      'otros': ['otros_od', 'otros_oi']
+    };
+  }
+
+  // Método principal para manejar eventos de teclado
+  handleKeydown(event: KeyboardEvent): void {
+    // Evitar múltiples navegaciones simultáneas
+    if (this.isNavigating) return;
+
+    const activeElement = document.activeElement as HTMLElement;
+
+    // Verificar si estamos en una tabla de examen
+    const isExamenInput = activeElement.closest('.tabla-examen input, .tabla-examen .ng-select-container');
+
+    if (!isExamenInput) return;
+
+    // Obtener el nombre del control actual
+    const currentControlName = this.getControlNameFromElement(activeElement);
+
+    if (!currentControlName) return;
+
+    // Manejar diferentes teclas
+    switch (event.key) {
+      case 'Enter':
+        event.preventDefault();
+        this.navigateToNextField(currentControlName);
+        break;
+
+      case 'ArrowRight':
+        event.preventDefault();
+        this.navigateToNextField(currentControlName);
+        break;
+
+      case 'ArrowLeft':
+        event.preventDefault();
+        this.navigateToPreviousField(currentControlName);
+        break;
+
+      case 'ArrowDown':
+        event.preventDefault();
+        this.navigateDown(currentControlName);
+        break;
+
+      case 'ArrowUp':
+        event.preventDefault();
+        this.navigateUp(currentControlName);
+        break;
+
+      case 'Tab':
+        // Mantener el Tab dentro de las tablas
+        if (this.isInExamenTable(activeElement)) {
+          event.preventDefault();
+          if (event.shiftKey) {
+            this.navigateToPreviousField(currentControlName);
+          } else {
+            this.navigateToNextField(currentControlName);
+          }
+        }
+        break;
+
+      case 'Escape':
+        // Cerrar dropdowns abiertos
+        this.closeOpenDropdowns();
+        break;
+    }
+  }
+
+  // Obtener el nombre del control desde el elemento
+  private getControlNameFromElement(element: HTMLElement): string | null {
+    // Buscar formControlName en el elemento o sus padres
+    let currentElement: HTMLElement | null = element;
+
+    while (currentElement) {
+      const controlName = currentElement.getAttribute('formControlName');
+      if (controlName) return controlName;
+
+      // Si es un ng-select, buscar el input dentro
+      if (currentElement.classList.contains('ng-select-container')) {
+        const selectWrapper = currentElement.closest('.ng-select');
+        if (selectWrapper) {
+          const input = selectWrapper.querySelector('input[formControlName], .ng-select-container') as HTMLElement;
+          if (input && input.getAttribute('formControlName')) {
+            return input.getAttribute('formControlName');
+          }
+        }
+      }
+
+      currentElement = currentElement.parentElement;
+    }
+
+    return null;
+  }
+
+  // Verificar si está en una tabla de examen
+  private isInExamenTable(element: HTMLElement): boolean {
+    return !!element.closest('.tabla-examen');
+  }
+
+  // Navegar al siguiente campo (Enter/→)
+  private navigateToNextField(currentField: string): void {
+    this.isNavigating = true;
+
+    const nextField = this.navigationMap[currentField];
+    if (nextField) {
+      setTimeout(() => {
+        this.focusOnField(nextField);
+        this.isNavigating = false;
+      }, 50);
+    } else {
+      this.isNavigating = false;
+    }
+  }
+
+  // Navegar al campo anterior (←)
+  private navigateToPreviousField(currentField: string): void {
+    this.isNavigating = true;
+
+    // Buscar inversamente en el mapa de navegación
+    for (const [fromField, toField] of Object.entries(this.navigationMap)) {
+      if (toField === currentField) {
+        setTimeout(() => {
+          this.focusOnField(fromField);
+          this.isNavigating = false;
+        }, 50);
+        return;
+      }
+    }
+
+    // Si no se encontró, intentar buscar en la misma fila
+    const currentFieldPosition = this.findFieldPosition(currentField);
+    if (currentFieldPosition.row && currentFieldPosition.index > 0) {
+      const prevInRow = this.currentRowMap[currentFieldPosition.row][currentFieldPosition.index - 1];
+      setTimeout(() => {
+        this.focusOnField(prevInRow);
+        this.isNavigating = false;
+      }, 50);
+    } else {
+      this.isNavigating = false;
+    }
+  }
+
+  // Navegar hacia abajo (↓)
+  private navigateDown(currentField: string): void {
+    this.isNavigating = true;
+
+    // Primero intentar navegar verticalmente dentro de la misma tabla
+    const currentPosition = this.findFieldPosition(currentField);
+
+    if (currentPosition.row && currentPosition.columnType) {
+      // Encontrar el siguiente campo en la misma columna
+      const columnFields = this.columnMap[currentPosition.columnType] || [];
+      const currentIndex = columnFields.indexOf(currentField);
+
+      if (currentIndex !== -1 && currentIndex < columnFields.length - 1) {
+        const nextField = columnFields[currentIndex + 1];
+        setTimeout(() => {
+          this.focusOnField(nextField);
+          this.isNavigating = false;
+        }, 50);
+        return;
+      }
+    }
+
+    // Si no hay campo abajo, ir al siguiente en la fila
+    this.navigateToNextField(currentField);
+  }
+
+  // Navegar hacia arriba (↑)
+  private navigateUp(currentField: string): void {
+    this.isNavigating = true;
+
+    // Buscar campo arriba en la misma columna
+    const currentPosition = this.findFieldPosition(currentField);
+
+    if (currentPosition.columnType) {
+      const columnFields = this.columnMap[currentPosition.columnType] || [];
+      const currentIndex = columnFields.indexOf(currentField);
+
+      if (currentIndex > 0) {
+        const prevField = columnFields[currentIndex - 1];
+        setTimeout(() => {
+          this.focusOnField(prevField);
+          this.isNavigating = false;
+        }, 50);
+        return;
+      }
+    }
+
+    // Si no hay campo arriba, ir al anterior en la fila
+    this.navigateToPreviousField(currentField);
+  }
+
+  // Encontrar la posición del campo en los mapas
+  private findFieldPosition(fieldName: string): { row: string | null, columnType: string | null, index: number } {
+    // Buscar en qué fila está
+    for (const [row, fields] of Object.entries(this.currentRowMap)) {
+      const index = fields.indexOf(fieldName);
+      if (index !== -1) {
+        // Determinar el tipo de columna
+        let columnType = null;
+        for (const [type, columns] of Object.entries(this.columnMap)) {
+          if (columns.includes(fieldName)) {
+            columnType = type;
+            break;
+          }
+        }
+        return { row, columnType, index };
+      }
+    }
+
+    return { row: null, columnType: null, index: -1 };
+  }
+
+  // Poner focus en un campo específico
+  private focusOnField(fieldName: string): void {
+    setTimeout(() => {
+      // Buscar todos los elementos con ese formControlName
+      const elements = document.querySelectorAll(`[formControlName="${fieldName}"]`);
+
+      if (elements.length > 0) {
+        const element = elements[0] as HTMLElement;
+
+        // Determinar el tipo de elemento y actuar en consecuencia
+        if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+          // Es un input normal
+          element.focus();
+          if (element.tagName === 'INPUT') {
+            (element as HTMLInputElement).select();
+          }
+
+          // Resaltar visualmente
+          this.highlightActiveField(element);
+        }
+        else if (element.classList.contains('ng-select')) {
+          // Es un ng-select
+          const container = element.querySelector('.ng-select-container') as HTMLElement;
+          if (container) {
+            container.focus();
+
+            // Abrir el dropdown automáticamente
+            setTimeout(() => {
+              if (!element.classList.contains('ng-select-opened')) {
+                container.click();
+              }
+            }, 100);
+
+            this.highlightActiveField(container);
+          }
+        }
+        else {
+          // Otro tipo de elemento
+          element.focus();
+          this.highlightActiveField(element);
+        }
+      }
+    }, 10);
+  }
+
+  // Resaltar visualmente el campo activo
+  private highlightActiveField(element: HTMLElement): void {
+    // Remover resaltado anterior
+    const previousActive = document.querySelector('.campo-activo');
+    if (previousActive) {
+      previousActive.classList.remove('campo-activo');
+    }
+
+    // Añadir resaltado al campo actual
+    if (element.classList.contains('ng-select-container')) {
+      element.classList.add('campo-activo');
+    } else if (element.closest('.ng-select')) {
+      const container = element.closest('.ng-select')?.querySelector('.ng-select-container');
+      if (container) {
+        (container as HTMLElement).classList.add('campo-activo');
+      }
+    } else {
+      element.classList.add('campo-activo');
+    }
+  }
+
+  // Cerrar dropdowns abiertos
+  private closeOpenDropdowns(): void {
+    const openDropdowns = document.querySelectorAll('.ng-select.ng-select-opened');
+    openDropdowns.forEach((dropdown: Element) => {
+      const container = dropdown.querySelector('.ng-select-container') as HTMLElement;
+      if (container) {
+        container.click(); // Clic para cerrar
+      }
+    });
+  }
+
+  // Cerrar dropdowns cuando se hace scroll en el modal
+  setupModalScrollListener(): void {
+    const modalBody = document.querySelector('#historiaModal .modal-body-moderno');
+
+    if (modalBody) {
+      modalBody.addEventListener('scroll', () => {
+        this.closeOpenDropdowns();
+      });
+    }
+  }
+
+  fixSelectOverflow(event?: any): void {
+    setTimeout(() => {
+      // Solo ajustar si es realmente necesario
+      const dropdowns = document.querySelectorAll('.ng-dropdown-panel');
+
+      dropdowns.forEach((dropdown: Element) => {
+        const panel = dropdown as HTMLElement;
+
+        // Solo intervenir si el dropdown está fuera de la pantalla
+        const rect = panel.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const viewportWidth = window.innerWidth;
+
+        // Si el dropdown se sale por la parte inferior
+        if (rect.bottom > viewportHeight) {
+          panel.style.maxHeight = '200px';
+          panel.style.overflowY = 'auto';
+        }
+
+        // Asegurar z-index muy alto
+        panel.style.zIndex = '999999';
+      });
+    }, 10);
+  }
+
+
+  // Método para abrir el modal con focus inicial
+  abrirModalConFocus(): void {
+    $('#historiaModal').modal('show');
+
+    setTimeout(() => {
+      // Configurar listener para scroll
+      this.setupModalScrollListener();
+
+      // Poner focus en el primer campo
+      this.focusOnField('len_esf_od');
+
+      // Agregar otros listeners
+      window.addEventListener('resize', this.fixSelectOverflow.bind(this));
+
+      const modalElement = document.getElementById('historiaModal');
+      if (modalElement) {
+        modalElement.addEventListener('keydown', this.handleKeydown.bind(this));
+      }
+    }, 300);
+  }
+
+  // Métodos para manejar eventos del modal
+  onModalShown(): void {
+    // Inicializar navegación cuando se muestra el modal
+    this.initializeNavigationMaps();
+
+    // Corregir overflow de selects
+    setTimeout(() => {
+      this.fixSelectOverflow();
+    }, 100);
+
+    // Escuchar eventos de teclado
+    document.addEventListener('keydown', this.handleKeydown.bind(this));
+  }
+
+  onModalHidden(): void {
+    // Limpiar event listeners
+    document.removeEventListener('keydown', this.handleKeydown.bind(this));
+    window.removeEventListener('resize', this.fixSelectOverflow.bind(this));
+
+    // Limpiar resaltado
+    const activeFields = document.querySelectorAll('.campo-activo');
+    activeFields.forEach(field => field.classList.remove('campo-activo'));
+  }
+
+  // Método para iniciar edición con focus
+  editarHistoriaConFocus(historia: HistoriaMedica | null): void {
+    this.editarHistoria(historia);
+
+    // Agregar delay para que se cargue el formulario
+    setTimeout(() => {
+      if (this.historiaSeleccionada?.examenOcular) {
+        // Buscar el primer campo con datos o el primero vacío
+        const firstEmptyField = this.findFirstEmptyField();
+        if (firstEmptyField) {
+          this.focusOnField(firstEmptyField);
+        } else {
+          this.focusOnField('len_esf_od');
+        }
+      }
+    }, 500);
+  }
+
+  // Encontrar el primer campo vacío para poner focus
+  private findFirstEmptyField(): string | null {
+    const fieldOrder = [
+      // Lensometría
+      'len_esf_od', 'len_cil_od', 'len_eje_od', 'len_add_od', 'len_av_lejos_od', 'len_av_cerca_od',
+      'len_esf_oi', 'len_cil_oi', 'len_eje_oi', 'len_add_oi', 'len_av_lejos_oi', 'len_av_cerca_oi',
+
+      // Refracción
+      'ref_esf_od', 'ref_cil_od', 'ref_eje_od', 'ref_add_od', 'ref_avccl_od', 'ref_avccc_od',
+      'ref_esf_oi', 'ref_cil_oi', 'ref_eje_oi', 'ref_add_oi', 'ref_avccl_oi', 'ref_avccc_oi',
+
+      // Refracción Final
+      'ref_final_esf_od', 'ref_final_cil_od', 'ref_final_eje_od', 'ref_final_add_od', 'ref_final_alt_od', 'ref_final_dp_od',
+      'ref_final_esf_oi', 'ref_final_cil_oi', 'ref_final_eje_oi', 'ref_final_add_oi', 'ref_final_alt_oi', 'ref_final_dp_oi',
+
+      // AVSC/AVAE/OTROS
+      'avsc_od', 'avae_od', 'otros_od',
+      'avsc_oi', 'avae_oi', 'otros_oi'
+    ];
+
+    for (const field of fieldOrder) {
+      const value = this.historiaForm.get(field)?.value;
+      if (!value || value === '' || value === null || value === undefined) {
+        return field;
+      }
+    }
+
+    return null;
+  }
+
+  // Método para depuración y pruebas
+  testNavigation(): void {
+    console.log('=== Test de Navegación ===');
+    console.log('Mapa de navegación:', this.navigationMap);
+    console.log('Mapa de filas:', this.currentRowMap);
+    console.log('Mapa de columnas:', this.columnMap);
+
+    // Probar focus en un campo específico
+    this.focusOnField('len_esf_od');
+
+    this.swalService.showInfo('Test de Navegación',
+      'Sistema de navegación por teclado activado. Use:\n' +
+      '• Enter/→: Siguiente campo\n' +
+      '• ←: Campo anterior\n' +
+      '• ↑/↓: Navegar verticalmente\n' +
+      '• Tab: Navegación inteligente\n' +
+      '• Esc: Cerrar dropdowns'
+    );
+  }
+
 }
