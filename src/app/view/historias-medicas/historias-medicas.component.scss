@@ -129,6 +129,217 @@
       color: var(--primary-color, #3498db);
     }
   }
+
+  /* SOLUCIÓN 1: Específico para este ng-select */
+  ::ng-deep .ng-select-moderno {
+    .ng-select-container {
+      min-height: 50px !important;
+      height: 50px !important;
+      padding: 12px 16px !important;
+      font-size: 1rem !important;
+      display: flex !important;
+      align-items: center !important;
+    }
+
+    /* Ajustar la flecha para que esté centrada verticalmente */
+    .ng-arrow-wrapper {
+      height: 50px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    /* Ajustar los valores seleccionados */
+    .ng-value {
+      display: flex !important;
+      align-items: center !important;
+      height: 100% !important;
+    }
+
+    /* Ajustar el placeholder */
+    .ng-placeholder {
+      display: flex !important;
+      align-items: center !important;
+      height: 100% !important;
+      color: #94a3b8 !important;
+    }
+
+    /* Ajustar el input de búsqueda */
+    .ng-input {
+      top: 0 !important;
+      bottom: 0 !important;
+
+      input {
+        height: 48px !important;
+        /* Un poco menos para tener margen */
+        padding: 12px 16px !important;
+        font-size: 1rem !important;
+      }
+    }
+  }
+
+  /* SOLUCIÓN 2: Si la anterior no funciona completamente */
+  ::ng-deep .ng-select.ng-select-moderno {
+    .ng-select-container {
+      height: 50px !important;
+      min-height: 50px !important;
+
+      .ng-value-container {
+        height: 100% !important;
+        padding: 0 !important;
+        align-items: center !important;
+
+        .ng-input {
+          height: 100% !important;
+
+          input {
+            height: 48px !important;
+            padding: 0 16px !important;
+          }
+        }
+      }
+    }
+  }
+}
+
+/* SOLUCIÓN 3: Clase específica para el select de búsqueda */
+.select-busqueda-alto {
+  ::ng-deep .ng-select-moderno {
+    .ng-select-container {
+      height: 50px !important;
+      min-height: 50px !important;
+      line-height: 48px !important;
+
+      /* Centrar todo verticalmente */
+      .ng-value,
+      .ng-placeholder,
+      .ng-input input {
+        line-height: 48px !important;
+        height: 48px !important;
+      }
+    }
+  }
+}
+
+/* SOLUCIÓN 4: La más directa y efectiva */
+.filtro-busqueda-paciente {
+
+  /* Sobrescribir TODOS los estilos de altura */
+  ::ng-deep {
+    .ng-select.ng-select-moderno {
+      .ng-select-container {
+        /* Altura fija */
+        height: 50px !important;
+        min-height: 50px !important;
+        max-height: 50px !important;
+
+        /* Padding para contenido */
+        padding: 0 16px !important;
+
+        /* Contenedor interno */
+        .ng-value-container {
+          height: 100% !important;
+          min-height: 100% !important;
+          align-items: center !important;
+          justify-content: flex-start !important;
+          flex-wrap: nowrap !important;
+
+          /* Placeholder */
+          .ng-placeholder {
+            height: 100% !important;
+            line-height: 50px !important;
+            display: flex !important;
+            align-items: center !important;
+            color: #94a3b8 !important;
+            font-size: 1rem !important;
+          }
+
+          /* Valor seleccionado */
+          .ng-value {
+            height: 100% !important;
+            line-height: 50px !important;
+            display: flex !important;
+            align-items: center !important;
+            font-size: 1rem !important;
+          }
+
+          /* Input de búsqueda */
+          .ng-input {
+            top: 0 !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 100% !important;
+
+            input {
+              height: 100% !important;
+              padding: 0 16px !important;
+              font-size: 1rem !important;
+              line-height: 50px !important;
+              border: none !important;
+              background: transparent !important;
+            }
+          }
+        }
+
+        /* Flecha */
+        .ng-arrow-wrapper {
+          height: 50px !important;
+          width: 30px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+
+          .ng-arrow {
+            margin-top: 0 !important;
+          }
+        }
+
+        /* Botón de limpiar */
+        .ng-clear-wrapper {
+          height: 50px !important;
+          width: 30px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+      }
+    }
+  }
+}
+
+/* SOLUCIÓN 5: Reset total y configuración manual */
+.select-altura-fija {
+
+  /* Reset de todas las alturas */
+  ::ng-deep .ng-select-moderno {
+
+    /* Contenedor principal */
+    .ng-select-container {
+      /* Altura fija */
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      line-height: 48px !important;
+
+      /* Reset de padding y margin */
+      padding: 0 !important;
+      margin: 0 !important;
+
+      /* Flexbox para alinear contenido */
+      display: flex !important;
+      align-items: center !important;
+
+      /* Contenedor de valores */
+      .ng-value-container {
+        flex: 1 !important;
+        height: 100% !important;
+        padding: 0 16px !important;
+        display: flex !important;
+        align-items: center !important;
+      }
+    }
+  }
 }
 
 /* Select moderno */
@@ -2954,33 +3165,36 @@ html {
 @media (max-width: 768px) {
   ::ng-deep {
     .lensometria-moderna {
+
       /* ===== TODOS LOS DROPDOWNS CERCA DEL FOOTER ===== */
       .ng-select-moderno {
         .ng-dropdown-panel {
           /* POSICIÓN UNIFICADA CERCA DEL FOOTER */
           position: fixed !important;
-          bottom: 75px !important; /* ← CERCA DEL FOOTER PARA TODOS */
+          bottom: 75px !important;
+          /* ← CERCA DEL FOOTER PARA TODOS */
           left: 10px !important;
           right: 10px !important;
           width: auto !important;
-          max-height: 200px !important; /* Un poco más alto */
-          
+          max-height: 200px !important;
+          /* Un poco más alto */
+
           /* ESTILO VISUAL */
           z-index: 9999999 !important;
           background: white !important;
           border: 2px solid #3498db !important;
           box-shadow: 0 0 30px rgba(0, 0, 0, 0.25) !important;
           border-radius: 12px !important;
-          
+
           /* Animación desde abajo */
           animation: slideFromBottom 0.3s ease !important;
-          
+
           /* Ocultar flechas */
           &::before,
           &::after {
             display: none !important;
           }
-          
+
           /* Header del dropdown */
           &::before {
             content: 'Seleccionar';
@@ -2994,30 +3208,30 @@ html {
             margin: -2px -2px 0 -2px;
             text-align: center;
           }
-          
+
           .ng-dropdown-panel-inner {
             max-height: 180px !important;
             overflow-y: auto !important;
             padding-top: 8px;
-            
+
             /* Scrollbar para móvil */
             &::-webkit-scrollbar {
               width: 4px !important;
             }
-            
+
             &::-webkit-scrollbar-thumb {
               background: rgba(52, 152, 219, 0.4) !important;
               border-radius: 2px !important;
             }
           }
-          
+
           /* Opciones */
           .ng-option {
             padding: 12px 16px !important;
             font-size: 1rem !important;
             margin: 0 8px 4px !important;
             border-radius: 8px !important;
-            
+
             &:hover,
             &.ng-option-selected {
               background: linear-gradient(90deg, #3498db, #2980b9) !important;
@@ -3026,7 +3240,7 @@ html {
           }
         }
       }
-      
+
       /* ===== OVERLAY DE FONDO ===== */
       /* Cuando un dropdown está abierto, oscurecer fondo */
       &.dropdown-active::before {
@@ -3040,26 +3254,26 @@ html {
         z-index: 9999998;
         animation: fadeIn 0.3s ease;
       }
-      
+
       /* ===== AJUSTES POR SECCIÓN ===== */
-      
+
       /* Binocular - ya está bien */
       .lensometria-binocular {
         position: relative;
         z-index: 100;
         margin-bottom: 2rem;
       }
-      
+
       /* Filas OD/OI - asegurar z-index */
       .lensometria-fila {
         position: relative;
         z-index: 50;
-        
+
         &:last-child {
           z-index: 60;
         }
       }
-      
+
       /* Cuando un select está abierto */
       .ng-select-moderno.ng-select-opened {
         position: relative;
@@ -3067,48 +3281,50 @@ html {
       }
     }
   }
-  
+
   /* ===== ANIMACIONES ===== */
   @keyframes slideFromBottom {
     from {
       opacity: 0;
       transform: translateY(100%);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
     }
   }
-  
+
   @keyframes fadeIn {
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
   }
-  
+
   /* ===== AJUSTES GENERALES ===== */
   .lensometria-moderna {
     padding-bottom: 3rem;
     position: relative;
     overflow: visible !important;
-    
+
     /* Espacio entre secciones */
     .lensometria-binocular {
       margin-bottom: 2rem;
     }
-    
+
     .lensometria-fila {
       margin-bottom: 1.5rem;
-      
+
       &:last-child {
         margin-bottom: 0;
       }
     }
   }
-  
+
   /* ===== AJUSTE ESPECIAL PARA NO TAPAR EL SELECT ===== */
   /* Cuando dropdown está abierto, subir ligeramente el contenido */
   body.dropdown-open {
@@ -3441,4 +3657,3 @@ html {
     bottom: 100% !important;
   }
 }
-
