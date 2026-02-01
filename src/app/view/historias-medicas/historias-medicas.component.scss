@@ -586,6 +586,7 @@
 /* Estilos para inputs enfocados en tablas */
 .tabla-examen {
 
+
   input.form-control-small:focus,
   .ng-select-focused .ng-select-container {
     outline: 2px solid #3498db !important;
@@ -2807,6 +2808,26 @@ html {
     margin-bottom: 0;
     z-index: 2;
   }
+
+  .form-control-small {
+    margin-top: 1px !important;
+    height: 44px !important;
+    border: 2px solid #e9ecef;
+    transition: all 0.2s ease;
+    padding: 0.5rem 1rem;
+    border-radius: 8px !important;
+    width: 100% !important;
+    // color: #495057 !important;
+    color: #2c3e50 !important;
+
+    &:focus {
+      border: 1px solid transparent !important;
+      outline: none !important;
+      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2) !important;
+      background-color: #f8f9fa;
+    }
+  }
+
 
   @media (max-width: 1200px) {
     grid-template-columns: 70px repeat(3, 1fr) repeat(3, 1fr);
