@@ -2635,6 +2635,386 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
 
+  handleKeydown(event: KeyboardEvent): void {
+    // DEBUG
+    console.log('Tecla presionada:', event.key, 'Target:', event.target);
+
+    // Si estamos dentro de un dropdown, NO manejar navegación
+    const isInsideDropdown = (event.target as HTMLElement).closest('.ng-dropdown-panel');
+    if (isInsideDropdown) {
+      console.log('Dentro de dropdown - ignorando');
+      return;
+    }
+
+    const activeElement = document.activeElement as HTMLElement;
+    const isInExamen = activeElement.closest('.lensometria-moderna');
+
+    if (!isInExamen) return;
+
+    // Obtener el control name
+    const controlName = this.getControlNameFromElement(activeElement);
+    console.log('Control name:', controlName);
+
+    if (!controlName) return;
+
+    // Manejar teclas
+    switch (event.key) {
+      case 'Enter':
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        console.log('Enter - Navegando al siguiente de:', controlName);
+        this.navigateToNextField(controlName);
+        break;
+
+      case 'ArrowRight':
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        console.log('ArrowRight - Navegando al siguiente de:', controlName);
+        this.navigateToNextField(controlName);
+        break;
+
+      case 'ArrowLeft':
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        console.log('ArrowLeft - Navegando al anterior de:', controlName);
+        this.navigateToPreviousField(controlName);
+        break;
+
+      case 'Tab':
+        if (event.shiftKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          console.log('Shift+Tab - Navegando al anterior de:', controlName);
+          this.navigateToPreviousField(controlName);
+        } else {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          console.log('Tab - Navegando al siguiente de:', controlName);
+          this.navigateToNextField(controlName);
+        }
+        break;
+    }
+  }
+
+  // Método de respaldo para navegación
+  private fallbackKeyNavigation(element: HTMLElement, event: KeyboardEvent): void {
+    // Intentar navegar usando posición en la página
+    const allFocusableElements = Array.from(
+      document.querySelectorAll('.lensometria-moderna .ng-select-container, .lensometria-moderna .form-control-small')
+    ) as HTMLElement[];
+
+    const currentIndex = allFocusableElements.indexOf(element);
+
+    if (currentIndex === -1) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    switch (event.key) {
+      case 'Enter':
+      case 'ArrowRight':
+      case 'Tab':
+        if (currentIndex < allFocusableElements.length - 1) {
+          allFocusableElements[currentIndex + 1].focus();
+        }
+        break;
+
+      case 'ArrowLeft':
+        if (currentIndex > 0) {
+          allFocusableElements[currentIndex - 1].focus();
+        }
+        break;
+    }
+  }
+
+  // Método mejorado para obtener controlName
+  private getControlNameFromElement(element: HTMLElement): string | null {
+    // DEBUG
+    console.log('Buscando controlName en:', element.tagName, element.className);
+
+    // Caso 1: Input directo
+    if (element.getAttribute('formControlName')) {
+      return element.getAttribute('formControlName');
+    }
+
+    // Caso 2: ng-select container
+    if (element.classList.contains('ng-select-container')) {
+      const ngSelect = element.closest('.ng-select');
+      if (ngSelect) {
+        const input = ngSelect.querySelector('[formControlName]');
+        if (input) {
+          return input.getAttribute('formControlName');
+        }
+        // Buscar en el ng-select mismo
+        const controlName = ngSelect.getAttribute('formControlName');
+        if (controlName) return controlName;
+      }
+    }
+
+    // Caso 3: Buscar en padres
+    let parent = element.parentElement;
+    while (parent) {
+      const controlName = parent.getAttribute('formControlName');
+      if (controlName) return controlName;
+      parent = parent.parentElement;
+    }
+
+    // Caso 4: Buscar por data attributes
+    const dataControl = element.closest('[formControlName]');
+    if (dataControl) {
+      return dataControl.getAttribute('formControlName');
+    }
+
+    return null;
+  }
+
+  // Método simplificado para focus
+  // REEMPLAZA el método focusOnField con este:
+
+  private focusOnField(fieldName: string): void {
+    this.isNavigating = true;
+
+    console.log('Intentando poner focus en:', fieldName);
+
+    // PRIMERO: Quitar focus del elemento actual
+    const activeElement = document.activeElement as HTMLElement;
+    if (activeElement && activeElement.blur) {
+      activeElement.blur();
+    }
+
+    setTimeout(() => {
+      // SEGUNDO: Limpiar todas las clases campo-activo anteriores
+      const previousActive = document.querySelectorAll('.campo-activo');
+      previousActive.forEach(el => {
+        el.classList.remove('campo-activo');
+        console.log('Removido campo-activo de:', el);
+      });
+
+      // TERCERO: Buscar el nuevo elemento de varias maneras
+      let element: HTMLElement | null = null;
+
+      // Método 1: Buscar por formControlName directo
+      const elementsByName = document.querySelectorAll(`[formControlName="${fieldName}"]`);
+      if (elementsByName.length > 0) {
+        element = elementsByName[0] as HTMLElement;
+        console.log('Encontrado por formControlName:', element);
+      }
+
+      // Método 2: Si es un ng-select, buscar el container
+      if (!element) {
+        const ngSelects = document.querySelectorAll(`.ng-select[formControlName="${fieldName}"]`);
+        if (ngSelects.length > 0) {
+          const container = ngSelects[0].querySelector('.ng-select-container') as HTMLElement;
+          if (container) {
+            element = container;
+            console.log('Encontrado ng-select container:', element);
+          }
+        }
+      }
+
+      // Método 3: Buscar por clase específica
+      if (!element) {
+        const byClass = document.querySelectorAll(`.campo-select [formControlName="${fieldName}"]`);
+        if (byClass.length > 0) {
+          element = byClass[0] as HTMLElement;
+          console.log('Encontrado por clase:', element);
+        }
+      }
+
+      if (element) {
+        // CUARTO: Aplicar focus con diferentes métodos según el tipo
+        if (element.tagName === 'INPUT') {
+          // Es un input normal
+          element.focus();
+          (element as HTMLInputElement).select();
+          element.classList.add('campo-activo');
+          console.log('Focus puesto en input:', element);
+
+        } else if (element.classList.contains('ng-select-container')) {
+          // Es un ng-select container
+          element.focus();
+          element.classList.add('campo-activo');
+
+          // También marcar el ng-select padre
+          const ngSelect = element.closest('.ng-select');
+          if (ngSelect) {
+            ngSelect.classList.add('campo-activo');
+          }
+
+          console.log('Focus puesto en ng-select:', element);
+
+        } else {
+          // Otro tipo de elemento
+          element.focus();
+          element.classList.add('campo-activo');
+          console.log('Focus puesto en elemento genérico:', element);
+        }
+
+        // QUINTO: Scroll si es necesario
+        this.scrollToElement(element);
+
+      } else {
+        console.error('❌ NO se encontró el elemento para:', fieldName);
+
+        // Intentar fallback: buscar por posición
+        this.focusByFallback(fieldName);
+      }
+
+      this.isNavigating = false;
+    }, 50); // Delay para asegurar que el blur anterior se complete
+  }
+
+  // Método auxiliar para scroll
+  private scrollToElement(element: HTMLElement): void {
+    const modalBody = document.querySelector('.modal-body-moderno');
+    if (modalBody) {
+      const elementRect = element.getBoundingClientRect();
+      const modalRect = modalBody.getBoundingClientRect();
+
+      // Si el elemento está fuera de la vista, hacer scroll
+      if (elementRect.top < modalRect.top || elementRect.bottom > modalRect.bottom) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }
+
+  // Método de fallback si no encuentra por nombre
+  private focusByFallback(fieldName: string): void {
+    console.log('Usando fallback para:', fieldName);
+
+    // Mapear todos los campos en orden
+    const allFields = [
+      // Lensometría OD
+      'len_esf_od', 'len_cil_od', 'len_eje_od', 'len_add_od',
+      'len_av_lejos_od', 'len_av_cerca_od',
+
+      // Lensometría OI
+      'len_esf_oi', 'len_cil_oi', 'len_eje_oi', 'len_add_oi',
+      'len_av_lejos_oi', 'len_av_cerca_oi',
+
+      // Refracción OD
+      'ref_esf_od', 'ref_cil_od', 'ref_eje_od', 'ref_add_od',
+      'ref_avccl_od', 'ref_avccc_od',
+
+      // Refracción OI
+      'ref_esf_oi', 'ref_cil_oi', 'ref_eje_oi', 'ref_add_oi',
+      'ref_avccl_oi', 'ref_avccc_oi',
+
+      // Refracción Final OD
+      'ref_final_esf_od', 'ref_final_cil_od', 'ref_final_eje_od', 'ref_final_add_od',
+      'ref_final_alt_od', 'ref_final_dp_od',
+
+      // Refracción Final OI
+      'ref_final_esf_oi', 'ref_final_cil_oi', 'ref_final_eje_oi', 'ref_final_add_oi',
+      'ref_final_alt_oi', 'ref_final_dp_oi',
+
+      // AVSC/AVAE/OTROS OD
+      'avsc_od', 'avae_od', 'otros_od',
+
+      // AVSC/AVAE/OTROS OI
+      'avsc_oi', 'avae_oi', 'otros_oi'
+    ];
+
+    const currentIndex = allFields.indexOf(fieldName);
+    if (currentIndex === -1) return;
+
+    // Buscar TODOS los elementos focusables en la página
+    const allFocusable = Array.from(
+      document.querySelectorAll('.lensometria-moderna .ng-select-container, .lensometria-moderna .form-control-small')
+    ) as HTMLElement[];
+
+    if (currentIndex < allFocusable.length) {
+      const element = allFocusable[currentIndex];
+      element.focus();
+      element.classList.add('campo-activo');
+    }
+  }
+
+  // Inicializar navegación cuando se abre el modal
+  abrirModalConFocus(): void {
+    $('#historiaModal').modal('show');
+
+    setTimeout(() => {
+      // Configurar listeners globales
+      this.setupGlobalKeyListeners();
+
+      // Poner focus en el primer campo
+      setTimeout(() => {
+        this.focusOnField('len_esf_od');
+      }, 300);
+    }, 300);
+  }
+
+  setupGlobalKeyListeners(): void {
+    // Remover listeners anteriores
+    document.removeEventListener('keydown', this.boundHandleKeydown);
+
+    // Crear método bound
+    this.boundHandleKeydown = this.handleKeydown.bind(this);
+
+    // Agregar listener global
+    document.addEventListener('keydown', this.boundHandleKeydown, true); // true para captura
+
+    // También agregar al modal específicamente
+    const modal = document.getElementById('historiaModal');
+    if (modal) {
+      modal.addEventListener('keydown', this.boundHandleKeydown, true);
+    }
+
+    // Detectar mouse vs teclado
+    document.addEventListener('mousedown', () => {
+      document.body.classList.add('using-mouse');
+    });
+
+    document.addEventListener('keydown', () => {
+      document.body.classList.remove('using-mouse');
+    }, { once: true });
+  }
+
+  // Agrega esta propiedad a tu clase
+  private boundHandleKeydown: any;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   // Métodos para navegación por teclado
   private initializeNavigationMaps(): void {
@@ -2732,100 +3112,6 @@ export class HistoriasMedicasComponent implements OnInit {
       'dp': ['ref_final_dp_od', 'ref_final_dp_oi'],
       'otros': ['otros_od', 'otros_oi']
     };
-  }
-
-  // Método principal para manejar eventos de teclado
-  handleKeydown(event: KeyboardEvent): void {
-    // Evitar múltiples navegaciones simultáneas
-    if (this.isNavigating) return;
-
-    const activeElement = document.activeElement as HTMLElement;
-
-    // Verificar si estamos en una tabla de examen
-    const isExamenInput = activeElement.closest('.tabla-examen input, .tabla-examen .ng-select-container');
-
-    if (!isExamenInput) return;
-
-    // Obtener el nombre del control actual
-    const currentControlName = this.getControlNameFromElement(activeElement);
-
-    if (!currentControlName) return;
-
-    // Manejar diferentes teclas
-    switch (event.key) {
-      case 'Enter':
-        event.preventDefault();
-        this.navigateToNextField(currentControlName);
-        break;
-
-      case 'ArrowRight':
-        event.preventDefault();
-        this.navigateToNextField(currentControlName);
-        break;
-
-      case 'ArrowLeft':
-        event.preventDefault();
-        this.navigateToPreviousField(currentControlName);
-        break;
-
-      case 'ArrowDown':
-        event.preventDefault();
-        this.navigateDown(currentControlName);
-        break;
-
-      case 'ArrowUp':
-        event.preventDefault();
-        this.navigateUp(currentControlName);
-        break;
-
-      case 'Tab':
-        // Mantener el Tab dentro de las tablas
-        if (this.isInExamenTable(activeElement)) {
-          event.preventDefault();
-          if (event.shiftKey) {
-            this.navigateToPreviousField(currentControlName);
-          } else {
-            this.navigateToNextField(currentControlName);
-          }
-        }
-        break;
-
-      case 'Escape':
-        // Cerrar dropdowns abiertos
-        this.closeOpenDropdowns();
-        break;
-    }
-  }
-
-  // Obtener el nombre del control desde el elemento
-  private getControlNameFromElement(element: HTMLElement): string | null {
-    // Buscar formControlName en el elemento o sus padres
-    let currentElement: HTMLElement | null = element;
-
-    while (currentElement) {
-      const controlName = currentElement.getAttribute('formControlName');
-      if (controlName) return controlName;
-
-      // Si es un ng-select, buscar el input dentro
-      if (currentElement.classList.contains('ng-select-container')) {
-        const selectWrapper = currentElement.closest('.ng-select');
-        if (selectWrapper) {
-          const input = selectWrapper.querySelector('input[formControlName], .ng-select-container') as HTMLElement;
-          if (input && input.getAttribute('formControlName')) {
-            return input.getAttribute('formControlName');
-          }
-        }
-      }
-
-      currentElement = currentElement.parentElement;
-    }
-
-    return null;
-  }
-
-  // Verificar si está en una tabla de examen
-  private isInExamenTable(element: HTMLElement): boolean {
-    return !!element.closest('.tabla-examen');
   }
 
   // Navegar al siguiente campo (Enter/→)
@@ -2943,72 +3229,6 @@ export class HistoriasMedicasComponent implements OnInit {
     return { row: null, columnType: null, index: -1 };
   }
 
-  // Poner focus en un campo específico
-  private focusOnField(fieldName: string): void {
-    setTimeout(() => {
-      // Buscar todos los elementos con ese formControlName
-      const elements = document.querySelectorAll(`[formControlName="${fieldName}"]`);
-
-      if (elements.length > 0) {
-        const element = elements[0] as HTMLElement;
-
-        // Determinar el tipo de elemento y actuar en consecuencia
-        if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-          // Es un input normal
-          element.focus();
-          if (element.tagName === 'INPUT') {
-            (element as HTMLInputElement).select();
-          }
-
-          // Resaltar visualmente
-          this.highlightActiveField(element);
-        }
-        else if (element.classList.contains('ng-select')) {
-          // Es un ng-select
-          const container = element.querySelector('.ng-select-container') as HTMLElement;
-          if (container) {
-            container.focus();
-
-            // Abrir el dropdown automáticamente
-            setTimeout(() => {
-              if (!element.classList.contains('ng-select-opened')) {
-                container.click();
-              }
-            }, 100);
-
-            this.highlightActiveField(container);
-          }
-        }
-        else {
-          // Otro tipo de elemento
-          element.focus();
-          this.highlightActiveField(element);
-        }
-      }
-    }, 10);
-  }
-
-  // Resaltar visualmente el campo activo
-  private highlightActiveField(element: HTMLElement): void {
-    // Remover resaltado anterior
-    const previousActive = document.querySelector('.campo-activo');
-    if (previousActive) {
-      previousActive.classList.remove('campo-activo');
-    }
-
-    // Añadir resaltado al campo actual
-    if (element.classList.contains('ng-select-container')) {
-      element.classList.add('campo-activo');
-    } else if (element.closest('.ng-select')) {
-      const container = element.closest('.ng-select')?.querySelector('.ng-select-container');
-      if (container) {
-        (container as HTMLElement).classList.add('campo-activo');
-      }
-    } else {
-      element.classList.add('campo-activo');
-    }
-  }
-
   // Cerrar dropdowns abiertos
   private closeOpenDropdowns(): void {
     const openDropdowns = document.querySelectorAll('.ng-select.ng-select-opened');
@@ -3054,52 +3274,6 @@ export class HistoriasMedicasComponent implements OnInit {
         panel.style.zIndex = '999999';
       });
     }, 10);
-  }
-
-
-  // Método para abrir el modal con focus inicial
-  abrirModalConFocus(): void {
-    $('#historiaModal').modal('show');
-
-    setTimeout(() => {
-      // Configurar listener para scroll
-      this.setupModalScrollListener();
-
-      // Poner focus en el primer campo
-      this.focusOnField('len_esf_od');
-
-      // Agregar otros listeners
-      window.addEventListener('resize', this.fixSelectOverflow.bind(this));
-
-      const modalElement = document.getElementById('historiaModal');
-      if (modalElement) {
-        modalElement.addEventListener('keydown', this.handleKeydown.bind(this));
-      }
-    }, 300);
-  }
-
-  // Métodos para manejar eventos del modal
-  onModalShown(): void {
-    // Inicializar navegación cuando se muestra el modal
-    this.initializeNavigationMaps();
-
-    // Corregir overflow de selects
-    setTimeout(() => {
-      this.fixSelectOverflow();
-    }, 100);
-
-    // Escuchar eventos de teclado
-    document.addEventListener('keydown', this.handleKeydown.bind(this));
-  }
-
-  onModalHidden(): void {
-    // Limpiar event listeners
-    document.removeEventListener('keydown', this.handleKeydown.bind(this));
-    window.removeEventListener('resize', this.fixSelectOverflow.bind(this));
-
-    // Limpiar resaltado
-    const activeFields = document.querySelectorAll('.campo-activo');
-    activeFields.forEach(field => field.classList.remove('campo-activo'));
   }
 
   // Método para iniciar edición con focus
@@ -3150,24 +3324,30 @@ export class HistoriasMedicasComponent implements OnInit {
     return null;
   }
 
-  // Método para depuración y pruebas
-  testNavigation(): void {
-    console.log('=== Test de Navegación ===');
-    console.log('Mapa de navegación:', this.navigationMap);
-    console.log('Mapa de filas:', this.currentRowMap);
-    console.log('Mapa de columnas:', this.columnMap);
+  // En el método onModalShown():
+  onModalShown(): void {
+    // Inicializar navegación cuando se muestra el modal
+    this.initializeNavigationMaps();
+    this.setupGlobalKeyListeners(); // AGREGAR ESTO
 
-    // Probar focus en un campo específico
-    this.focusOnField('len_esf_od');
+    // Corregir overflow de selects
+    setTimeout(() => {
+      this.fixSelectOverflow();
+    }, 100);
+  }
 
-    this.swalService.showInfo('Test de Navegación',
-      'Sistema de navegación por teclado activado. Use:\n' +
-      '• Enter/→: Siguiente campo\n' +
-      '• ←: Campo anterior\n' +
-      '• ↑/↓: Navegar verticalmente\n' +
-      '• Tab: Navegación inteligente\n' +
-      '• Esc: Cerrar dropdowns'
-    );
+  // En el método onModalHidden():
+  onModalHidden(): void {
+    // Limpiar event listeners
+    document.removeEventListener('keydown', this.handleKeydown.bind(this));
+    window.removeEventListener('resize', this.fixSelectOverflow.bind(this));
+
+    // Limpiar resaltado
+    const activeFields = document.querySelectorAll('.campo-activo');
+    activeFields.forEach(field => field.classList.remove('campo-activo'));
+
+    // Limpiar clase using-mouse
+    document.body.classList.remove('using-mouse');
   }
 
 }
