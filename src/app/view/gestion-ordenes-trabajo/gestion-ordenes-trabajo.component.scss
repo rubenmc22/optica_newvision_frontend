@@ -3,7 +3,6 @@
 // Variables
 :host {
     --color-en-tienda: var(--degradado-color);
-    ;
     --color-en-proceso: #f57c00;
     --color-listo-lab: #388e3c;
     --color-pendiente: #ffa000;
@@ -1506,7 +1505,7 @@
             }
 
             &.btn-primary {
-                background: linear-gradient(135deg, var(--color-en-tienda), #64b5f6);
+                background: var(--degradado-color) !important;
                 color: white;
                 border: none;
 
@@ -2105,7 +2104,7 @@
                 cursor: pointer;
 
                 &.btn-primary {
-                    background: var(--color-en-tienda);
+                background: var(--degradado-color) !important;
                     color: white;
                     border-color: var(--color-en-tienda);
 
@@ -2603,30 +2602,6 @@
     }
 }
 
-/* Optimización de alturas para tarjetas */
-.info-card {
-    .info-content {
-        &.compact {
-            max-height: 170px;
-            overflow-y: auto;
-
-            /* Scrollbar personalizado */
-            &::-webkit-scrollbar {
-                width: 4px;
-            }
-
-            &::-webkit-scrollbar-track {
-                background: #f1f5f9;
-            }
-
-            &::-webkit-scrollbar-thumb {
-                background: #cbd5e1;
-                border-radius: 2px;
-            }
-        }
-    }
-}
-
 /* Ajuste específico para formulación */
 .formulacion-compact {
     .formulacion-row {
@@ -2728,7 +2703,7 @@
             max-height: 356px !important;
 
             @media (max-width: 768px) {
-                max-height: 200px !important;
+                max-height: 1150px !important;
             }
         }
     }
