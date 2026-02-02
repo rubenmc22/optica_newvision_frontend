@@ -657,6 +657,31 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
+  // Agrega este método en tu componente
+  private formatearFechaParaBackend(fechaInput: any): string {
+    // Si está vacío, null o undefined, retornar string vacío
+    if (!fechaInput || fechaInput === '' || fechaInput === null || fechaInput === undefined) {
+      return '';
+    }
+
+    // Si ya es una fecha válida
+    if (fechaInput instanceof Date && !isNaN(fechaInput.getTime())) {
+      return fechaInput.toISOString().split('T')[0];
+    }
+
+    // Si es string, intentar convertirlo
+    if (typeof fechaInput === 'string') {
+      const fecha = new Date(fechaInput);
+      if (!isNaN(fecha.getTime())) {
+        return fecha.toISOString().split('T')[0];
+      }
+    }
+
+    // Si no se puede convertir, retornar vacío
+    console.warn('No se pudo formatear la fecha:', fechaInput);
+    return '';
+  }
+
   private updateHistoria(): void {
     if (!this.historiaSeleccionada) return;
     this.cargando = true;
@@ -668,11 +693,7 @@ export class HistoriasMedicasComponent implements OnInit {
         motivo: Array.isArray(f.motivo) ? f.motivo : [f.motivo],
         otroMotivo: f.otroMotivo || '',
         tipoCristalActual: f.tipoCristalActual || '',
-        fechaUltimaGraduacion: f.ultimaGraduacion
-          ? new Date(f.ultimaGraduacion).toISOString().split('T')[0] // "YYYY-MM-DD"
-          : ''
-        ,
-
+        fechaUltimaGraduacion: this.formatearFechaParaBackend(f.ultimaGraduacion),
         medico: typeof f.medico === 'object' && f.medico?.cedula
           ? f.medico.cedula
           : typeof f.medico === 'string'

@@ -562,8 +562,10 @@ export const MOTIVOS_CONSULTA: string[] = [
 
 export const TIPOS_CRISTALES: string[] = [
     'Monofocal visión sencilla',
-    'Visión sencilla digital',
-    'Bifocal',
+    'Monofocal Visión sencilla digital',
+    'Bifocal terminado',
+    'Bifocal tallado',
+    'Progresivo convencional',
     'Progresivo digital básico',
     'Progresivo digital intermedio',
     'Progresivo digital amplio',

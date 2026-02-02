@@ -1197,17 +1197,9 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
    * Método actualizado para abrir el modal
    */
   verOrdenesEnModal(ordenes: any[], titulo: string, estado: string) {
-    console.log('Abriendo modal con:', {
-      titulo: titulo,
-      estado: estado,
-      cantidadOrdenes: ordenes.length
-    });
-
     this.ordenesModal = [...ordenes];
     this.tituloModalOrdenes = titulo;
     this.estadoModalActual = estado;
-
-    console.log('tituloModalOrdenes después de asignar:', this.tituloModalOrdenes);
 
     // Reiniciar filtros
     this.filtroModal = '';
@@ -1316,7 +1308,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
    * Método para ver detalle de venta
    */
   verDetalleVenta(ventaId: string) {
-    console.log('Ver detalle de venta:', ventaId);
     alert(`Funcionalidad para ver venta ${ventaId} en desarrollo`);
   }
 
@@ -1998,5 +1989,122 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     document.querySelector('.modal-detalle-orden')?.classList.remove('modal-mobile-full', 'modal-zoom-extremo');
   }
 
+  /**
+   * Obtener tipo de cristal de las recomendaciones
+   */
+  getTipoCristal(producto: any): string {
+    const historia = this.ordenSeleccionada?.cliente?.historia_medica;
+    const recomendaciones = historia?.recomendaciones?.[0];
+
+    if (recomendaciones?.cristal?.label) {
+      return recomendaciones.cristal.label;
+    }
+
+    return 'Cristal estándar';
+  }
+
+  /**
+   * Obtener material del lente de las recomendaciones
+   */
+  getMaterialLente(producto: any): string {
+    const historia = this.ordenSeleccionada?.cliente?.historia_medica;
+    const recomendaciones = historia?.recomendaciones?.[0];
+
+    if (recomendaciones?.material?.[0]) {
+      // Convertir código a nombre legible
+      const materialMap: { [key: string]: string } = {
+        'AR_VERDE': 'Antirreflejo Verde',
+        'AR_AZUL': 'Antirreflejo Azul',
+        'FOTOCROMATICO': 'Fotocromático',
+        'POLARIZADO': 'Polarizado',
+        'CR39': 'CR-39 Estándar',
+        'ALTO_INDICE': 'Alto Índice',
+        'TRANSITIONS': 'Transitions'
+      };
+
+      return materialMap[recomendaciones.material[0]] || recomendaciones.material[0];
+    }
+
+    return 'Material estándar';
+  }
+
+  /**
+   * Obtener información de montura del producto
+   */
+  getInfoMontura(producto: any): string {
+    const parts = [];
+
+    if (producto?.codigo_montura) parts.push(`Cod: ${producto.codigo_montura}`);
+    if (producto?.nombre_montura) parts.push(producto.nombre_montura);
+    if (producto?.marca_montura) parts.push(producto.marca_montura);
+    if (producto?.modelo_montura) parts.push(producto.modelo_montura);
+
+    return parts.length > 0 ? parts.join(' - ') : 'Montura estándar';
+  }
+
+  /**
+   * Obtener formulación completa
+   */
+  getFormulacionCompleta(orden: OrdenTrabajo): any {
+    const refraccionFinal = orden.cliente?.historia_medica?.examen_ocular_refraccion_final;
+
+    if (!refraccionFinal) {
+      return null;
+    }
+
+    return {
+      esf_od: refraccionFinal.esf_od || '--',
+      cil_od: refraccionFinal.cil_od || '--',
+      eje_od: refraccionFinal.eje_od || '--',
+      add_od: refraccionFinal.add_od || '--',
+      alt_od: refraccionFinal.alt_od || '--',
+      dp_od: refraccionFinal.dp_od || '--',
+
+      esf_oi: refraccionFinal.esf_oi || '--',
+      cil_oi: refraccionFinal.cil_oi || '--',
+      eje_oi: refraccionFinal.eje_oi || '--',
+      add_oi: refraccionFinal.add_oi || '--',
+      alt_oi: refraccionFinal.alt_oi || '--',
+      dp_oi: refraccionFinal.dp_oi || '--'
+    };
+  }
+
+  /**
+   * Obtener observaciones de la formulación
+   */
+  getObservacionesFormulacion(orden: OrdenTrabajo): string {
+    const recomendaciones = orden.cliente?.historia_medica?.recomendaciones?.[0];
+    return recomendaciones?.observaciones || '';
+  }
+
+  get observacionesFormulacion(): string {
+    if (!this.ordenSeleccionada) return '';
+    return this.getObservacionesFormulacion(this.ordenSeleccionada);
+  }
+
+  formatAditivos(aditivos: string[]): string {
+    if (!aditivos || aditivos.length === 0) return '';
+
+    // Mapear códigos a nombres legibles
+    const aditivoMap: { [key: string]: string } = {
+      'AR_BLUE_BLOCK': 'Anti-Reflejante Blue Block',
+      'FOTOCROMATICO_CR39': 'Fotocromático',
+      'ANTIREFLEJANTE': 'Anti-Reflejante',
+      'BLUE_LIGHT': 'Filtro Luz Azul',
+      'PROTECCION_UV': 'Protección UV',
+      'HIDROFOBICO': 'Tratamiento Hidrofóbico',
+      'ANTI_RAYAS': 'Anti-rayas',
+      'ESPEJEADO': 'Espejeado',
+      'COLORACION': 'Coloración',
+      'GRADIENTE': 'Degradado',
+      // Agrega más mapeos según necesites
+    };
+
+    return aditivos
+      .map(aditivo => aditivoMap[aditivo] || aditivo)
+      .join(', ');
+  }
+
+  // Métodos básicos para que compile el template
 
 }

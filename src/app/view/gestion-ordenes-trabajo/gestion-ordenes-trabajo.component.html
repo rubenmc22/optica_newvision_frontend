@@ -633,7 +633,7 @@
     <div class="header-left">
       <h2>
         <i class="bi bi-clipboard-data"></i>
-        Orden #{{ ordenSeleccionada?.ordenId || ordenSeleccionada?.codigo }}
+        Orden #{{ ordenSeleccionada?.ordenId }}
       </h2>
       <div class="orden-status">
         <span class="badge" [ngClass]="getEstadoClass(ordenSeleccionada?.estado)">
@@ -647,6 +647,10 @@
     </div>
 
     <div class="header-right">
+      <div class="venta-id" *ngIf="ordenSeleccionada?.numero_venta">
+        <i class="bi bi-receipt"></i>
+        <span>{{ ordenSeleccionada?.numero_venta }}</span>
+      </div>
       <button class="btn-close-modal" (click)="cerrarModalDetalle()" aria-label="Cerrar">
         <i class="bi bi-x-lg"></i>
       </button>
@@ -654,220 +658,285 @@
   </div>
 
   <div class="modal-body">
-    <!-- Grid de 2 columnas x 2 filas -->
-    <div class="detalle-grid-rows">
+    <!-- Estructura de 2 columnas -->
+    <div class="detalle-grid">
       
-      <!-- COLUMNA IZQUIERDA -->
-      <div class="detalle-columna detalle-columna-izquierda">
+      <!-- COLUMNA IZQUIERDA: Información del Cliente -->
+      <div class="detalle-columna">
         
-        <!-- FILA 1: Cliente -->
-        <div class="detalle-fila detalle-fila-1">
-          <div class="info-card">
-            <div class="info-header">
-              <i class="bi bi-person-circle"></i>
-              <h4>Información del Cliente</h4>
+        <!-- FILA 1: Información del Cliente -->
+        <div class="info-card">
+          <div class="info-header">
+            <i class="bi bi-person-circle"></i>
+            <h4>Información del Cliente</h4>
+          </div>
+          <div class="info-content compact">
+            <div class="info-row">
+              <span class="info-label">Paciente:</span>
+              <div class="info-value">
+                <div class="cliente-principal">
+                  <strong>{{ ordenSeleccionada?.cliente?.informacion?.nombreCompleto }}</strong>
+                  <span *ngIf="ordenSeleccionada?.cliente?.informacion?.cedula" class="cliente-cedula">
+                    • C.I. {{ ordenSeleccionada?.cliente?.informacion?.cedula }}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div class="info-content compact">
-              <!-- Línea 1: Nombre y Cédula -->
-              <div class="info-row">
-                <span class="info-label">Paciente:</span>
-                <div class="info-value">
-                  <div class="cliente-principal">
-                    <strong>{{ getClienteNombre(ordenSeleccionada) }}</strong>
-                    <span *ngIf="ordenSeleccionada?.cliente?.informacion?.cedula" class="cliente-cedula">
-                      • C.I. {{ ordenSeleccionada?.cliente?.informacion?.cedula }}
-                    </span>
-                  </div>
-                </div>
-              </div>
 
-              <!-- Línea 2: Contacto -->
-              <div class="info-row">
-                <span class="info-label">Contacto:</span>
-                <div class="info-value contacto-unificado">
-                  <!-- Teléfono -->
-                  <a *ngIf="getClienteTelefono(ordenSeleccionada)"
-                    href="tel:{{ getClienteTelefono(ordenSeleccionada) }}"
-                    class="contacto-link">
-                    <i class="bi bi-telephone"></i>
-                    {{ getClienteTelefono(ordenSeleccionada) }}
-                  </a>
-                  <span *ngIf="!getClienteTelefono(ordenSeleccionada)" class="text-muted">
-                    <i class="bi bi-telephone"></i> Sin teléfono
-                  </span>
-
-                  <!-- Separador si hay ambos -->
-                  <span *ngIf="getClienteTelefono(ordenSeleccionada) && 
-                       ordenSeleccionada?.cliente?.informacion?.email" class="separador-contacto">|</span>
-
-                  <!-- Email -->
-                  <a *ngIf="ordenSeleccionada?.cliente?.informacion?.email"
-                    href="mailto:{{ ordenSeleccionada?.cliente?.informacion?.email }}" class="contacto-link">
-                    <i class="bi bi-envelope"></i>
-                    {{ ordenSeleccionada?.cliente?.informacion?.email }}
-                  </a>
-                </div>
-              </div>
-
-              <!-- Línea 3: Tipo de persona -->
-              <div class="info-row" *ngIf="ordenSeleccionada?.cliente?.informacion?.tipoPersona">
-                <span class="info-label">Tipo:</span>
-                <span class="info-value">
-                  <span class="badge-tipo" [ngClass]="{'tipo-natural': ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'natural',
-                            'tipo-juridico': ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'juridico'}">
-                    {{ ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'natural' ? 'Persona Natural' :
-                    ordenSeleccionada?.cliente?.informacion?.tipoPersona === 'juridico' ? 'Persona Jurídica' :
-                    ordenSeleccionada?.cliente?.informacion?.tipoPersona }}
-                  </span>
+            <div class="info-row">
+              <span class="info-label">Contacto:</span>
+              <div class="info-value contacto-unificado">
+                <!-- Teléfono -->
+                <a *ngIf="ordenSeleccionada?.cliente?.informacion?.telefono"
+                  href="tel:{{ ordenSeleccionada?.cliente?.informacion?.telefono }}"
+                  class="contacto-link">
+                  <i class="bi bi-telephone"></i>
+                  {{ ordenSeleccionada?.cliente?.informacion?.telefono }}
+                </a>
+                <span *ngIf="!ordenSeleccionada?.cliente?.informacion?.telefono" class="text-muted">
+                  <i class="bi bi-telephone"></i> Sin teléfono
                 </span>
+
+                <!-- Separador si hay ambos -->
+                <span *ngIf="ordenSeleccionada?.cliente?.informacion?.telefono && 
+                     ordenSeleccionada?.cliente?.informacion?.email" class="separador-contacto">|</span>
+
+                <!-- Email -->
+                <a *ngIf="ordenSeleccionada?.cliente?.informacion?.email"
+                  href="mailto:{{ ordenSeleccionada?.cliente?.informacion?.email }}" class="contacto-link">
+                  <i class="bi bi-envelope"></i>
+                  {{ ordenSeleccionada?.cliente?.informacion?.email }}
+                </a>
               </div>
             </div>
           </div>
         </div>
-        
-        <!-- FILA 2: Productos -->
-        <div class="detalle-fila detalle-fila-2">
-          <div class="info-card">
-            <div class="info-header">
-              <i class="bi bi-box-seam"></i>
-              <h4>Productos ({{ ordenSeleccionada?.productos?.length || 1 }})</h4>
-            </div>
-            <div class="info-content compact productos-list">
-              <div class="producto-item"
-                *ngFor="let producto of ordenSeleccionada?.productos; trackBy: trackByProductoId">
-                <div class="producto-header">
-                  <strong>{{ producto?.nombre || 'Producto sin nombre' }}</strong>
-                  <span class="badge"> {{ producto?.cantidad || 1 }} unidad{{ (producto?.cantidad || 1) > 1 ? 'es' : '' }}</span>
-                </div>
-                <div class="producto-details">
-                  <small>
-                    <span class="text-muted">Marca:</span> {{ producto?.marca || 'N/A' }}
-                    <span class="separator">•</span>
-                    <span class="text-muted"> Código:</span> {{ producto?.codigo || 'N/A' }}
-                    <span class="separator">•</span>
-                    <span class="text-muted"> Modelo:</span> {{ producto?.modelo || 'N/A' }}
-                    <span class="separator">•</span>
-                    <span class="text-muted"> Precio:</span> {{ producto?.precio | currency }}
-                  </small>
-                </div>
+
+        <!-- FILA 2: Personal Asignado -->
+        <div class="info-card">
+          <div class="info-header">
+            <i class="bi bi-person-badge"></i>
+            <h4>Personal Asignado</h4>
+          </div>
+          <div class="info-content compact">
+            <div class="info-row" *ngIf="ordenSeleccionada?.especialista">
+              <span class="info-label">Especialista:</span>
+              <div class="info-value">
+                <div>{{ ordenSeleccionada?.especialista?.nombre || 'No especificado' }}</div>
+                <small class="text-muted" *ngIf="ordenSeleccionada?.especialista?.cedula">C.I. {{ ordenSeleccionada?.especialista?.cedula }}</small>
               </div>
+            </div>
+            <div class="info-row" *ngIf="ordenSeleccionada?.asesor">
+              <span class="info-label">Asesor:</span>
+              <div class="info-value">
+                <div>{{ ordenSeleccionada?.asesor?.nombre || 'No especificado' }}</div>
+                <small class="text-muted" *ngIf="ordenSeleccionada?.asesor?.cedula">C.I. {{ ordenSeleccionada?.asesor?.cedula }}</small>
+              </div>
+            </div>
+
+            <div class="text-center" *ngIf="!ordenSeleccionada?.especialista && !ordenSeleccionada?.asesor">
+              <i class="bi bi-person-x"></i>
+              <span class="text-muted">Sin personal asignado</span>
             </div>
           </div>
         </div>
-        
+
       </div>
       
-      <!-- COLUMNA DERECHA -->
-      <div class="detalle-columna detalle-columna-derecha">
-        
-        <!-- FILA 1: Formulación (si existe) -->
-        <div class="detalle-fila detalle-fila-3" *ngIf="getFormulacion(ordenSeleccionada)">
-          <div class="info-card formulacion-full">
-            <div class="info-header">
+      <!-- COLUMNA DERECHA: Formulación Compacta Moderna -->
+      <div class="detalle-columna">
+        <div class="info-card formulacion-moderna">
+          <div class="info-header">
+            <i class="bi bi-eyeglasses"></i>
+            <h4>Formulación Óptica</h4>
+          </div>
+          <div class="info-content compact formulacion-compact">
+            
+            <!-- Tarjeta de formulación principal -->
+            <div class="formulacion-card" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final">
+              <div class="formulacion-header">
+                <span class="formulacion-title">Refracción Final</span>
+                <span class="formulacion-badge">Completa</span>
+              </div>
+              
+              <div class="formulacion-grid">
+                <!-- Ojo Derecho -->
+                <div class="formulacion-eye">
+                  <div class="eye-header">
+                    <div class="eye-label">OD</div>
+                    <div class="eye-title">Ojo Derecho</div>
+                  </div>
+                  <div class="eye-values">
+                    <div class="value-item">
+                      <span class="value-label">Esfera</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.esf_od || '--' }}</span>
+                    </div>
+                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_od">
+                      <span class="value-label">Cilindro</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_od }}</span>
+                    </div>
+                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_od">
+                      <span class="value-label">Eje</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_od }}°</span>
+                    </div>
+                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_od">
+                      <span class="value-label">Add</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_od }}</span>
+                    </div>
+                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_od">
+                      <span class="value-label">Alt</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_od }}</span>
+                    </div>
+                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_od">
+                      <span class="value-label">DP</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_od }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Ojo Izquierdo -->
+                <div class="formulacion-eye">
+                  <div class="eye-header">
+                    <div class="eye-label">OI</div>
+                    <div class="eye-title">Ojo Izquierdo</div>
+                  </div>
+                  <div class="eye-values">
+                    <div class="value-item">
+                      <span class="value-label">Esfera</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.esf_oi || '--' }}</span>
+                    </div>
+                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_oi">
+                      <span class="value-label">Cilindro</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_oi }}</span>
+                    </div>
+                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_oi">
+                      <span class="value-label">Eje</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_oi }}°</span>
+                    </div>
+                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_oi">
+                      <span class="value-label">Add</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_oi }}</span>
+                    </div>
+                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_oi">
+                      <span class="value-label">Alt</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_oi }}</span>
+                    </div>
+                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_oi">
+                      <span class="value-label">DP</span>
+                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_oi }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Sección de Observaciones -->
+              <div class="formulacion-observaciones" *ngIf="observacionesFormulacion">
+                <div class="observaciones-header">
+                  <i class="bi bi-chat-text"></i>
+                  <span>Observaciones</span>
+                </div>
+                <div class="observaciones-content">
+                  <p>{{ observacionesFormulacion }}</p>
+                </div>
+              </div>
+              
+            </div>
+            
+            <!-- Información Adicional en Columna Única -->
+            <div class="info-column-full" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final">
+              
+              <!-- Sección 1: Recomendaciones -->
+              <div class="info-section" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length > 0">
+                <div class="section-header">
+                  <i class="bi bi-lightbulb"></i>
+                  <h5>Recomendaciones</h5>
+                </div>
+                <div class="section-content">
+                  <div *ngFor="let rec of ordenSeleccionada?.cliente?.historia_medica?.recomendaciones; let i = index">
+                    <div class="recomendaciones-container" *ngIf="i === 0">
+                      <div class="rec-item">
+                        <div class="rec-icon">
+                          <i class="bi bi-eyeglasses"></i>
+                        </div>
+                        <div class="rec-info">
+                          <div class="rec-label">Tipo de Cristal</div>
+                          <div class="rec-value">{{ rec.cristal?.label || rec.cristal }}</div>
+                        </div>
+                      </div>
+                      
+                      <div class="rec-item" *ngIf="rec.material?.length > 0">
+                        <div class="rec-icon">
+                          <i class="bi bi-bricks"></i>
+                        </div>
+                        <div class="rec-info">
+                          <div class="rec-label">Material</div>
+                          <div class="rec-value">{{ rec.material.join(', ') }}</div>
+                        </div>
+                      </div>
+
+                      <!-- Aditivos o Filtros -->
+                      <div class="rec-item" *ngIf="rec.aditivo?.length > 0">
+                        <div class="rec-icon">
+                          <i class="bi bi-filter-circle"></i>
+                        </div>
+                        <div class="rec-info">
+                          <div class="rec-label">Aditivos o Filtros</div>
+                          <div class="rec-value">{{ formatAditivos(rec.aditivo) }}</div>
+                        </div>
+                      </div>
+                      
+                      
+                      <div class="rec-item" *ngIf="rec.montura">
+                        <div class="rec-icon">
+                          <i class="bi bi-brilliance"></i>
+                        </div>
+                        <div class="rec-info">
+                          <div class="rec-label">Montura</div>
+                          <div class="rec-value">{{ rec.montura }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Sección 2: Producto -->
+              <div class="info-section" *ngIf="ordenSeleccionada?.productos?.length > 0">
+                <div class="section-header">
+                  <i class="bi bi-box-seam"></i>
+                  <h5>Producto</h5>
+                </div>
+                <div class="section-content">
+                  <div class="producto-ultra-compacto">
+                    <div *ngFor="let producto of ordenSeleccionada?.productos" class="producto-chip">
+                      <span class="chip-codigo" *ngIf="producto.codigo">{{ producto.codigo }}</span>
+                      <span class="chip-nombre">{{ producto.nombre }}</span>
+                      <span class="chip-marca" *ngIf="producto.marca">{{ producto.marca }}</span>
+                                 <span class="chip-marca" *ngIf="producto.modelo">{{ producto.modelo }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+            </div>
+                        
+            <!-- Sin datos -->
+            <div class="no-data" *ngIf="!ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final &&
+                !ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length">
               <i class="bi bi-eyeglasses"></i>
-              <h4>Formulación</h4>
+              <span>No hay información de formulación</span>
             </div>
-            <div class="info-content compact formulacion-compact">
-              <div class="formulacion-row">
-                <div class="formulacion-col ojo-col">
-                  <div class="ojo-label">OD</div>
-                  <div class="formulacion-valor">{{ getFormulacion(ordenSeleccionada)?.esferaOD || '--' }}</div>
-                  <div class="formulacion-extra" *ngIf="getFormulacion(ordenSeleccionada)?.cilindroOD">
-                    <small>{{ getFormulacion(ordenSeleccionada)?.cilindroOD }} x {{ getFormulacion(ordenSeleccionada)?.ejeOD }}°</small>
-                  </div>
-                </div>
-
-                <div class="formulacion-col ojo-col">
-                  <div class="ojo-label">OI</div>
-                  <div class="formulacion-valor">{{ getFormulacion(ordenSeleccionada)?.esferaOI || '--' }}</div>
-                  <div class="formulacion-extra" *ngIf="getFormulacion(ordenSeleccionada)?.cilindroOI">
-                    <small>{{ getFormulacion(ordenSeleccionada)?.cilindroOI }} x {{ getFormulacion(ordenSeleccionada)?.ejeOI }}°</small>
-                  </div>
-                </div>
-
-                <div class="formulacion-col add-col" *ngIf="getFormulacion(ordenSeleccionada)?.adicion">
-                  <div class="ojo-label">Add</div>
-                  <div class="formulacion-valor">{{ getFormulacion(ordenSeleccionada)?.adicion }}</div>
-                </div>
-              </div>
-
-              <div class="formulacion-extra-info" *ngIf="getFormulacion(ordenSeleccionada)?.observaciones">
-                <small>
-                  <i class="bi bi-info-circle"></i>
-                  {{ getFormulacion(ordenSeleccionada)?.observaciones }}
-                </small>
-              </div>
-            </div>
+            
           </div>
         </div>
-        
-        <!-- FILA 2: Observaciones y Personal -->
-        <div class="detalle-fila detalle-fila-4">
-          <div class="info-card">
-            <div class="info-header">
-              <i class="bi bi-chat-left-text"></i>
-              <h4>Observaciones</h4>
-            </div>
-            <div class="info-content compact">
-              <div *ngIf="ordenSeleccionada?.observaciones; else sinObservaciones" class="observaciones-content">
-                {{ ordenSeleccionada?.observaciones }}
-              </div>
-              <ng-template #sinObservaciones>
-                <div class="text-center">
-                  <i class="bi bi-chat-left"></i>
-                  <span class="text-muted">Sin observaciones</span>
-                </div>
-              </ng-template>
-            </div>
-          </div>
-        </div>
-        
-        <!-- FILA 3: Personal Asignado -->
-        <div class="detalle-fila detalle-fila-5">
-          <div class="info-card">
-            <div class="info-header">
-              <i class="bi bi-person-badge"></i>
-              <h4>Personal Asignado</h4>
-            </div>
-            <div class="info-content compact">
-              <div class="info-row" *ngIf="ordenSeleccionada?.especialista">
-                <span class="info-label">Especialista:</span>
-                <div class="info-value">
-                  <div>{{ ordenSeleccionada?.especialista?.nombre || 'No especificado' }}</div>
-                  <small class="text-muted">{{ getEspecialistaCargo(ordenSeleccionada?.especialista) }}</small>
-                </div>
-              </div>
-              <div class="info-row" *ngIf="ordenSeleccionada?.asesor">
-                <span class="info-label">Asesor:</span>
-                <div class="info-value">
-                  <div>{{ ordenSeleccionada?.asesor?.nombre || 'No especificado' }}</div>
-                  <small class="text-muted" *ngIf="ordenSeleccionada?.asesor?.cedula">C.I. {{ ordenSeleccionada?.asesor?.cedula }}</small>
-                </div>
-              </div>
-
-              <div class="text-center" *ngIf="!ordenSeleccionada?.especialista && !ordenSeleccionada?.asesor">
-                <i class="bi bi-person-x"></i>
-                <span class="text-muted">Sin personal asignado</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
       </div>
       
     </div>
   </div>
 
-  <!-- Footer más compacto con fecha movida -->
+  <!-- Footer del Modal -->
   <div class="modal-actions" *ngIf="ordenSeleccionada">
     <div class="actions-left">
-      <!-- ID de Venta -->
-      <div class="venta-id" *ngIf="ordenSeleccionada?.numero_venta">
-        <i class="bi bi-receipt"></i>
-        <span>{{ ordenSeleccionada?.numero_venta }}</span>
-      </div>
-      
-      <!-- Fecha de entrega movida aquí -->
       <div class="fecha-entrega-info">
         <i class="bi bi-calendar"></i>
         <span *ngIf="ordenSeleccionada.fechaEntregaEstimada; else sinFechaModal">
@@ -899,6 +968,7 @@
     </div>
   </div>
 </div>
+
 
 <!-- Modal de Archivadas -->
 <div class="modal-backdrop" *ngIf="mostrarModalArchivo" (click)="cerrarModalArchivo()"></div>
