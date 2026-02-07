@@ -1,1 +1,297 @@
-<p>cierre-caja works!</p>
+<!-- cierre-caja.component.html -->
+<div class="cierre-caja-container">
+  
+  <!-- HEADER -->
+  <div class="cierre-header">
+    <div class="header-content">
+      <div class="header-title">
+        <i class="bi bi-cash-stack"></i>
+        <h1>Cierre de Caja Diario</h1>
+        <span class="badge estado-badge" [ngClass]="getEstadoClass(cierreActual?.estado)">
+          {{ getEstadoTexto(cierreActual?.estado) }}
+        </span>
+      </div>
+      
+      <div class="header-actions">
+        <div class="fecha-selector">
+          <button class="btn-fecha" (click)="cambiarFecha(-1)">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+          <div class="fecha-display" (click)="abrirSelectorFecha()">
+            <i class="bi bi-calendar"></i>
+            <span>{{ fechaSeleccionada | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <button class="btn-fecha" (click)="cambiarFecha(1)">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+        
+        <div class="acciones-principales">
+          <button class="btn btn-primary" (click)="abrirModalInicioCaja()" 
+                  *ngIf="!cierreActual && !hayCierreAnterior">
+            <i class="bi bi-play-circle"></i> Iniciar Caja
+          </button>
+          
+          <button class="btn btn-success" (click)="abrirModalCierre()" 
+                  *ngIf="cierreActual?.estado === 'abierto'">
+            <i class="bi bi-lock"></i> Cerrar Caja
+          </button>
+          
+          <button class="btn btn-warning" (click)="exportarReporte()">
+            <i class="bi bi-file-earmark-pdf"></i> Exportar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- RESUMEN RÁPIDO -->
+  <div class="resumen-rapido">
+    <div class="resumen-grid">
+      <!-- Tarjeta 1: Efectivo Inicial -->
+      <div class="resumen-card" [ngClass]="{'highlight': cierreActual}">
+        <div class="resumen-icon" style="background: rgba(37, 99, 235, 0.1);">
+          <i class="bi bi-wallet2" style="color: #2563eb;"></i>
+        </div>
+        <div class="resumen-info">
+          <div class="resumen-label">Efectivo Inicial</div>
+          <div class="resumen-valor">{{ cierreActual?.efectivoInicial | currency:'USD':'symbol':'1.2-2' }}</div>
+          <div class="resumen-subtext" *ngIf="!cierreActual">No iniciada</div>
+        </div>
+      </div>
+      
+      <!-- Tarjeta 2: Ventas Efectivo -->
+      <div class="resumen-card">
+        <div class="resumen-icon" style="background: rgba(34, 197, 94, 0.1);">
+          <i class="bi bi-cash-coin" style="color: #22c55e;"></i>
+        </div>
+        <div class="resumen-info">
+          <div class="resumen-label">Ventas Efectivo</div>
+          <div class="resumen-valor">{{ cierreActual?.ventasEfectivo | currency:'USD':'symbol':'1.2-2' }}</div>
+          <div class="resumen-subtext">{{ transaccionesEfectivo.length }} transacciones</div>
+        </div>
+      </div>
+      
+      <!-- Tarjeta 3: Ventas Tarjeta -->
+      <div class="resumen-card">
+        <div class="resumen-icon" style="background: rgba(139, 92, 246, 0.1);">
+          <i class="bi bi-credit-card" style="color: #8b5cf6;"></i>
+        </div>
+        <div class="resumen-info">
+          <div class="resumen-label">Ventas Tarjeta</div>
+          <div class="resumen-valor">{{ cierreActual?.ventasTarjeta | currency:'USD':'symbol':'1.2-2' }}</div>
+          <div class="resumen-subtext">{{ transaccionesTarjeta.length }} transacciones</div>
+        </div>
+      </div>
+      
+      <!-- Tarjeta 4: Total Ventas -->
+      <div class="resumen-card highlight">
+        <div class="resumen-icon" style="background: rgba(234, 179, 8, 0.1);">
+          <i class="bi bi-graph-up-arrow" style="color: #eab308;"></i>
+        </div>
+        <div class="resumen-info">
+          <div class="resumen-label">Total Ventas</div>
+          <div class="resumen-valor">{{ getTotalVentas() | currency:'USD':'symbol':'1.2-2' }}</div>
+          <div class="resumen-subtext">Total del día</div>
+        </div>
+      </div>
+      
+      <!-- Tarjeta 5: Efectivo Final -->
+      <div class="resumen-card">
+        <div class="resumen-icon" style="background: rgba(239, 68, 68, 0.1);">
+          <i class="bi bi-calculator" style="color: #ef4444;"></i>
+        </div>
+        <div class="resumen-info">
+          <div class="resumen-label">Efectivo Final</div>
+          <div class="resumen-valor">{{ getEfectivoFinalTeorico() | currency:'USD':'symbol':'1.2-2' }}</div>
+          <div class="resumen-subtext" [ngClass]="{
+            'text-success': getDiferencia() >= 0,
+            'text-danger': getDiferencia() < 0
+          }">
+            {{ getDiferencia() | currency:'USD':'symbol':'1.2-2' }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- CONTENIDO PRINCIPAL -->
+  <div class="cierre-content">
+    <!-- PANEL IZQUIERDO: TRANSACCIONES -->
+    <div class="panel-transacciones">
+      <div class="panel-header">
+        <h3><i class="bi bi-list-check"></i> Transacciones del Día</h3>
+        <div class="panel-actions">
+          <button class="btn btn-sm btn-outline-primary" (click)="abrirModalTransaccion()">
+            <i class="bi bi-plus-circle"></i> Nueva Transacción
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" (click)="filtrarTransacciones()">
+            <i class="bi bi-funnel"></i> Filtrar
+          </button>
+        </div>
+      </div>
+      
+      <div class="filtros-transacciones" *ngIf="mostrarFiltros">
+        <!-- Filtros aquí -->
+      </div>
+      
+      <div class="transacciones-list">
+        <div *ngIf="transaccionesFiltradas.length === 0" class="empty-state">
+          <i class="bi bi-receipt"></i>
+          <p>No hay transacciones registradas</p>
+        </div>
+        
+        <div class="transaccion-item" *ngFor="let trans of transaccionesFiltradas">
+          <div class="transaccion-icon">
+            <i [class]="getIconoTipoTransaccion(trans.tipo)"></i>
+          </div>
+          <div class="transaccion-info">
+            <div class="transaccion-header">
+              <span class="transaccion-desc">{{ trans.descripcion }}</span>
+              <span class="transaccion-monto" [ngClass]="{
+                'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
+                'text-danger': trans.tipo === 'egreso'
+              }">
+                {{ (trans.tipo === 'egreso' ? '-' : '+') + (trans.monto | currency:'USD':'symbol':'1.2-2') }}
+              </span>
+            </div>
+            <div class="transaccion-meta">
+              <span class="badge metodo-pago">{{ trans.metodoPago | titlecase }}</span>
+              <span class="text-muted">
+                <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
+              </span>
+              <span class="text-muted">
+                <i class="bi bi-person"></i> {{ trans.usuario }}
+              </span>
+            </div>
+          </div>
+          <div class="transaccion-actions">
+            <button class="btn-action" (click)="editarTransaccion(trans)">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn-action" (click)="eliminarTransaccion(trans)">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- PANEL DERECHO: RESUMEN DETALLADO -->
+    <div class="panel-resumen">
+      <div class="panel-header">
+        <h3><i class="bi bi-pie-chart"></i> Resumen Detallado</h3>
+      </div>
+      
+      <div class="resumen-detallado">
+        <!-- Sección: Métodos de Pago -->
+        <div class="resumen-section">
+          <h4><i class="bi bi-credit-card"></i> Métodos de Pago</h4>
+          <div class="metodos-pago-list">
+            <div class="metodo-item">
+              <span class="metodo-label">Efectivo</span>
+              <span class="metodo-valor">{{ getTotalMetodoPago('efectivo') | currency:'USD':'symbol':'1.2-2' }}</span>
+              <div class="metodo-bar">
+                <div class="metodo-fill" [style.width.%]="getPorcentajeMetodoPago('efectivo')"></div>
+              </div>
+            </div>
+            <div class="metodo-item">
+              <span class="metodo-label">Tarjeta</span>
+              <span class="metodo-valor">{{ getTotalMetodoPago('tarjeta') | currency:'USD':'symbol':'1.2-2' }}</span>
+              <div class="metodo-bar">
+                <div class="metodo-fill" [style.width.%]="getPorcentajeMetodoPago('tarjeta')"></div>
+              </div>
+            </div>
+            <div class="metodo-item">
+              <span class="metodo-label">Transferencia</span>
+              <span class="metodo-valor">{{ getTotalMetodoPago('transferencia') | currency:'USD':'symbol':'1.2-2' }}</span>
+              <div class="metodo-bar">
+                <div class="metodo-fill" [style.width.%]="getPorcentajeMetodoPago('transferencia')"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Sección: Balance -->
+        <div class="resumen-section">
+          <h4><i class="bi bi-calculator"></i> Balance</h4>
+          <div class="balance-grid">
+            <div class="balance-item ingreso">
+              <span>Ingresos Totales</span>
+              <strong>{{ getTotalIngresos() | currency:'USD':'symbol':'1.2-2' }}</strong>
+            </div>
+            <div class="balance-item egreso">
+              <span>Egresos Totales</span>
+              <strong>{{ getTotalEgresos() | currency:'USD':'symbol':'1.2-2' }}</strong>
+            </div>
+            <div class="balance-item neto highlight">
+              <span>Neto del Día</span>
+              <strong>{{ getNetoDia() | currency:'USD':'symbol':'1.2-2' }}</strong>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Sección: Cierre -->
+        <div class="resumen-section cierre-section" *ngIf="cierreActual">
+          <h4><i class="bi bi-safe"></i> Cierre de Caja</h4>
+          <div class="cierre-detalle">
+            <div class="cierre-item">
+              <span>Efectivo Inicial:</span>
+              <span>{{ cierreActual.efectivoInicial | currency:'USD':'symbol':'1.2-2' }}</span>
+            </div>
+            <div class="cierre-item">
+              <span>+ Ventas Efectivo:</span>
+              <span>{{ cierreActual.ventasEfectivo | currency:'USD':'symbol':'1.2-2' }}</span>
+            </div>
+            <div class="cierre-item">
+              <span>- Egresos Efectivo:</span>
+              <span>{{ getEgresosEfectivo() | currency:'USD':'symbol':'1.2-2' }}</span>
+            </div>
+            <div class="cierre-item total">
+              <span>= Efectivo Teórico:</span>
+              <span>{{ getEfectivoFinalTeorico() | currency:'USD':'symbol':'1.2-2' }}</span>
+            </div>
+            <div class="cierre-item diferencia" [ngClass]="{
+              'positiva': getDiferencia() > 0,
+              'negativa': getDiferencia() < 0,
+              'cero': getDiferencia() === 0
+            }">
+              <span>Diferencia:</span>
+              <span>{{ getDiferencia() | currency:'USD':'symbol':'1.2-2' }}</span>
+            </div>
+          </div>
+          
+          <div class="cierre-observaciones" *ngIf="cierreActual.observaciones">
+            <h5><i class="bi bi-chat-text"></i> Observaciones</h5>
+            <p>{{ cierreActual.observaciones }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- FOOTER -->
+  <div class="cierre-footer">
+    <div class="footer-info">
+      <span class="text-muted">
+        <i class="bi bi-info-circle"></i>
+        Última actualización: {{ ultimaActualizacion | date:'HH:mm:ss' }}
+      </span>
+    </div>
+    <div class="footer-actions">
+      <button class="btn btn-outline-secondary" (click)="imprimirResumen()">
+        <i class="bi bi-printer"></i> Imprimir
+      </button>
+      <button class="btn btn-primary" (click)="guardarCierre()" 
+              *ngIf="cierreActual?.estado === 'abierto'">
+        <i class="bi bi-save"></i> Guardar Cambios
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALES -->
+<!-- Modal Inicio Caja -->
+<!-- Modal Cierre Caja -->
+<!-- Modal Transacción -->
+<!-- Modal Historial Cierres -->
