@@ -1,9 +1,9 @@
-
 export interface OpcionSelect {
     value: string | number;
     label: string;
 }
 
+// ===== VALORES DE REFRACCIÓN =====
 export const OPCIONES_REF: Record<string, OpcionSelect[]> = {
     esf: [
         { value: '0.00', label: 'Plano (0.00)' },
@@ -174,7 +174,6 @@ export const OPCIONES_REF: Record<string, OpcionSelect[]> = {
 
     cil: [
         { value: '0.00', label: '0.00' },
-        // Valores negativos
         { value: '-0.25', label: '-0.25' },
         { value: '-0.50', label: '-0.50' },
         { value: '-0.75', label: '-0.75' },
@@ -237,192 +236,16 @@ export const OPCIONES_REF: Record<string, OpcionSelect[]> = {
         { value: '-15.00', label: '-15.00' }
     ],
 
-    eje: [
-        { value: 1, label: '1°' },
-        { value: 2, label: '2°' },
-        { value: 3, label: '3°' },
-        { value: 4, label: '4°' },
-        { value: 5, label: '5°' },
-        { value: 6, label: '6°' },
-        { value: 7, label: '7°' },
-        { value: 8, label: '8°' },
-        { value: 9, label: '9°' },
-        { value: 10, label: '10°' },
-        { value: 11, label: '11°' },
-        { value: 12, label: '12°' },
-        { value: 13, label: '13°' },
-        { value: 14, label: '14°' },
-        { value: 15, label: '15°' },
-        { value: 16, label: '16°' },
-        { value: 17, label: '17°' },
-        { value: 18, label: '18°' },
-        { value: 19, label: '19°' },
-        { value: 20, label: '20°' },
-        { value: 21, label: '21°' },
-        { value: 22, label: '22°' },
-        { value: 23, label: '23°' },
-        { value: 24, label: '24°' },
-        { value: 25, label: '25°' },
-        { value: 26, label: '26°' },
-        { value: 27, label: '27°' },
-        { value: 28, label: '28°' },
-        { value: 29, label: '29°' },
-        { value: 30, label: '30°' },
-        { value: 31, label: '31°' },
-        { value: 32, label: '32°' },
-        { value: 33, label: '33°' },
-        { value: 34, label: '34°' },
-        { value: 35, label: '35°' },
-        { value: 36, label: '36°' },
-        { value: 37, label: '37°' },
-        { value: 38, label: '38°' },
-        { value: 39, label: '39°' },
-        { value: 40, label: '40°' },
-        { value: 41, label: '41°' },
-        { value: 42, label: '42°' },
-        { value: 43, label: '43°' },
-        { value: 44, label: '44°' },
-        { value: 45, label: '45°' },
-        { value: 46, label: '46°' },
-        { value: 47, label: '47°' },
-        { value: 48, label: '48°' },
-        { value: 49, label: '49°' },
-        { value: 50, label: '50°' },
-        { value: 51, label: '51°' },
-        { value: 52, label: '52°' },
-        { value: 53, label: '53°' },
-        { value: 54, label: '54°' },
-        { value: 55, label: '55°' },
-        { value: 56, label: '56°' },
-        { value: 57, label: '57°' },
-        { value: 58, label: '58°' },
-        { value: 59, label: '59°' },
-        { value: 60, label: '60°' },
-        { value: 61, label: '61°' },
-        { value: 62, label: '62°' },
-        { value: 63, label: '63°' },
-        { value: 64, label: '64°' },
-        { value: 65, label: '65°' },
-        { value: 66, label: '66°' },
-        { value: 67, label: '67°' },
-        { value: 68, label: '68°' },
-        { value: 69, label: '69°' },
-        { value: 70, label: '70°' },
-        { value: 71, label: '71°' },
-        { value: 72, label: '72°' },
-        { value: 73, label: '73°' },
-        { value: 74, label: '74°' },
-        { value: 75, label: '75°' },
-        { value: 76, label: '76°' },
-        { value: 77, label: '77°' },
-        { value: 78, label: '78°' },
-        { value: 79, label: '79°' },
-        { value: 80, label: '80°' },
-        { value: 81, label: '81°' },
-        { value: 82, label: '82°' },
-        { value: 83, label: '83°' },
-        { value: 84, label: '84°' },
-        { value: 85, label: '85°' },
-        { value: 86, label: '86°' },
-        { value: 87, label: '87°' },
-        { value: 88, label: '88°' },
-        { value: 89, label: '89°' },
-        { value: 90, label: '90°' },
-        { value: 91, label: '91°' },
-        { value: 92, label: '92°' },
-        { value: 93, label: '93°' },
-        { value: 94, label: '94°' },
-        { value: 95, label: '95°' },
-        { value: 96, label: '96°' },
-        { value: 97, label: '97°' },
-        { value: 98, label: '98°' },
-        { value: 99, label: '99°' },
-        { value: 100, label: '100°' },
-        { value: 101, label: '101°' },
-        { value: 102, label: '102°' },
-        { value: 103, label: '103°' },
-        { value: 104, label: '104°' },
-        { value: 105, label: '105°' },
-        { value: 106, label: '106°' },
-        { value: 107, label: '107°' },
-        { value: 108, label: '108°' },
-        { value: 109, label: '109°' },
-        { value: 110, label: '110°' },
-        { value: 111, label: '111°' },
-        { value: 112, label: '112°' },
-        { value: 113, label: '113°' },
-        { value: 114, label: '114°' },
-        { value: 115, label: '115°' },
-        { value: 116, label: '116°' },
-        { value: 117, label: '117°' },
-        { value: 118, label: '118°' },
-        { value: 119, label: '119°' },
-        { value: 120, label: '120°' },
-        { value: 121, label: '121°' },
-        { value: 122, label: '122°' },
-        { value: 123, label: '123°' },
-        { value: 124, label: '124°' },
-        { value: 125, label: '125°' },
-        { value: 126, label: '126°' },
-        { value: 127, label: '127°' },
-        { value: 128, label: '128°' },
-        { value: 129, label: '129°' },
-        { value: 130, label: '130°' },
-        { value: 131, label: '131°' },
-        { value: 132, label: '132°' },
-        { value: 133, label: '133°' },
-        { value: 134, label: '134°' },
-        { value: 135, label: '135°' },
-        { value: 136, label: '136°' },
-        { value: 137, label: '137°' },
-        { value: 138, label: '138°' },
-        { value: 139, label: '139°' },
-        { value: 140, label: '140°' },
-        { value: 141, label: '141°' },
-        { value: 142, label: '142°' },
-        { value: 143, label: '143°' },
-        { value: 144, label: '144°' },
-        { value: 145, label: '145°' },
-        { value: 146, label: '146°' },
-        { value: 147, label: '147°' },
-        { value: 148, label: '148°' },
-        { value: 149, label: '149°' },
-        { value: 150, label: '150°' },
-        { value: 151, label: '151°' },
-        { value: 152, label: '152°' },
-        { value: 153, label: '153°' },
-        { value: 154, label: '154°' },
-        { value: 155, label: '155°' },
-        { value: 156, label: '156°' },
-        { value: 157, label: '157°' },
-        { value: 158, label: '158°' },
-        { value: 159, label: '159°' },
-        { value: 160, label: '160°' },
-        { value: 161, label: '161°' },
-        { value: 162, label: '162°' },
-        { value: 163, label: '163°' },
-        { value: 164, label: '164°' },
-        { value: 165, label: '165°' },
-        { value: 166, label: '166°' },
-        { value: 167, label: '167°' },
-        { value: 168, label: '168°' },
-        { value: 169, label: '169°' },
-        { value: 170, label: '170°' },
-        { value: 171, label: '171°' },
-        { value: 172, label: '172°' },
-        { value: 173, label: '173°' },
-        { value: 174, label: '174°' },
-        { value: 175, label: '175°' },
-        { value: 176, label: '176°' },
-        { value: 177, label: '177°' },
-        { value: 178, label: '178°' },
-        { value: 179, label: '179°' },
-        { value: 180, label: '180°' }
-    ],
+    eje: (() => {
+        const opciones: OpcionSelect[] = [];
+        for (let i = 1; i <= 180; i++) {
+            opciones.push({ value: i, label: `${i}°` });
+        }
+        return opciones;
+    })(),
 
     add: [
         { value: '0.00', label: 'N/A (0.00)' },
-        { value: '+0.75', label: '+0.75' },
         { value: '+1.00', label: '+1.00' },
         { value: '+1.25', label: '+1.25' },
         { value: '+1.50', label: '+1.50' },
@@ -432,11 +255,30 @@ export const OPCIONES_REF: Record<string, OpcionSelect[]> = {
         { value: '+2.50', label: '+2.50' },
         { value: '+2.75', label: '+2.75' },
         { value: '+3.00', label: '+3.00' },
-        { value: '+3.25', label: '+3.25' },
-        { value: '+3.50', label: '+3.50' }
     ],
 
-    avLejos: [
+    // ALTURA - ajustado de 0 a 40 mm
+    alt: (() => {
+        const opciones: OpcionSelect[] = [];
+        for (let i = 0; i <= 40; i++) {
+            opciones.push({ value: i.toString(), label: `${i} mm` });
+        }
+        return opciones;
+    })(),
+
+    // DISTANCIA PUPILAR - ajustado de 50 a 80 mm
+    dp: (() => {
+        const opciones: OpcionSelect[] = [];
+        for (let i = 50; i <= 80; i++) {
+            opciones.push({ value: i.toString(), label: `${i} mm` });
+        }
+        return opciones;
+    })()
+};
+
+// ===== AGUDEZ VISUAL =====
+export const OPCIONES_AV: Record<string, OpcionSelect[]> = {
+    lejos: [
         { value: '20/20', label: '20/20 (Normal)' },
         { value: '20/25', label: '20/25' },
         { value: '20/30', label: '20/30' },
@@ -454,7 +296,7 @@ export const OPCIONES_REF: Record<string, OpcionSelect[]> = {
         { value: 'NLP', label: 'NLP (No Percepción Luz)' }
     ],
 
-    avCerca: [
+    cerca: [
         { value: 'J1', label: 'J1 (Excelente)' },
         { value: 'J2', label: 'J2' },
         { value: 'J3', label: 'J3' },
@@ -473,33 +315,7 @@ export const OPCIONES_REF: Record<string, OpcionSelect[]> = {
         { value: 'J20', label: 'J20' }
     ],
 
-    avBinocular: [
-        { value: '20/20', label: '20/20' },
-        { value: '20/25', label: '20/25' },
-        { value: '20/30', label: '20/30' },
-        // ... otros valores binocular ...
-    ],// Agregar estas nuevas opciones para ALT y DP si es necesario
-
-    alt: [
-        { value: '0', label: '0 mm' },
-        { value: '1', label: '1 mm' },
-        { value: '2', label: '2 mm' },
-        { value: '3', label: '3 mm' },
-        { value: '4', label: '4 mm' },
-        { value: '5', label: '5 mm' }
-        // ... agregar más valores según sea necesario
-    ],
-
-    dp: [
-        { value: '60', label: '60 mm' },
-        { value: '62', label: '62 mm' },
-        { value: '64', label: '64 mm' },
-        { value: '66', label: '66 mm' },
-        { value: '68', label: '68 mm' },
-        { value: '70', label: '70 mm' }
-    ],
-
-    // Nuevas opciones para AVSC y AVAE
+    // AV Sin Corrección
     avsc: [
         { value: '20/20', label: '20/20' },
         { value: '20/25', label: '20/25' },
@@ -515,6 +331,7 @@ export const OPCIONES_REF: Record<string, OpcionSelect[]> = {
         { value: 'LP', label: 'LP (Percepción Luz)' }
     ],
 
+    // AV Con Añadido Esférico
     avae: [
         { value: 'J1', label: 'J1 (Excelente)' },
         { value: 'J2', label: 'J2' },
@@ -526,16 +343,19 @@ export const OPCIONES_REF: Record<string, OpcionSelect[]> = {
         { value: 'J8', label: 'J8' },
         { value: 'J9', label: 'J9' },
         { value: 'J10', label: 'J10' }
+    ],
+
+    // AV Binocular
+    binocular: [
+        { value: '20/20', label: '20/20' },
+        { value: '20/25', label: '20/25' },
+        { value: '20/30', label: '20/30' }
+        // Solo mantengo los primeros 3 que tenías
     ]
 };
 
-export const opcionesAntecedentes =
-    [
-        'Diabetes', 'Hipertensión', 'Migraña', 'Fotosensibilidad',
-        'Traumatismo ocular', 'Queratocono', 'Glaucoma', 'Retinopatía diabética'
-    ];
-
-export const OPCIONES_ANTECEDENTES: string[] = [
+// ===== ANTECEDENTES =====
+export const OPCIONES_ANTECEDENTES_PERSONALES: string[] = [
     'Diabetes',
     'Hipertensión',
     'Migraña',
@@ -543,16 +363,37 @@ export const OPCIONES_ANTECEDENTES: string[] = [
     'Traumatismo ocular',
     'Queratocono',
     'Glaucoma',
+    'Retinopatía diabética',
+    'Degeneración macular',
+    'Uveítis',
+    'Catarata',
+    'Queratitis',
+    'Desprendimiento de retina',
+    'Ojo seco',
+    'Conjuntivitis alérgica',
+    'Orzuelos',
+    'Pterigion'
+];
+
+export const OPCIONES_ANTECEDENTES_FAMILIARES: string[] = [
+    'Diabetes',
+    'Hipertensión',
+    'Migraña',
+    'Traumatismo ocular',
+    'Queratocono',
+    'Glaucoma',
+    'Degeneración macular',
     'Retinopatía diabética'
 ];
 
+// ===== MOTIVOS DE CONSULTA =====
 export const MOTIVOS_CONSULTA: string[] = [
     'Molestia ocular',
     'Fatiga visual',
     'Consulta rutinaria',
     'Actualizar fórmula',
     'Sensibilidad lumínica',
-    'Dolor de cabeza',
+    'Cefalea',
     'Evaluación prequirúrgica',
     'Control post-operatorio',
     'Dificultad visual lejos',
@@ -560,11 +401,11 @@ export const MOTIVOS_CONSULTA: string[] = [
     'Otro'
 ];
 
+// ===== TIPOS DE CRISTALES =====
 export const TIPOS_CRISTALES: string[] = [
     'Monofocal visión sencilla',
     'Monofocal Visión sencilla digital',
-    'Bifocal terminado',
-    'Bifocal tallado',
+    'Bifocal',
     'Progresivo convencional',
     'Progresivo digital básico',
     'Progresivo digital intermedio',
@@ -572,19 +413,199 @@ export const TIPOS_CRISTALES: string[] = [
     'Lentes de contacto'
 ];
 
+// ===== TIPOS DE LENTES DE CONTACTO =====
+export const TIPOS_LENTES_CONTACTO: string[] = [
+    'Desechables biomedic',
+    'Desechables evolution',
+    'Toricos',
+    'Contaflex',
+    'Cosmeticos',
+    'Cosmeticos formulados'
+];
+
+// ===== MATERIALES =====
 export const MATERIALES: OpcionSelect[] = [
     { value: 'CR39', label: 'CR39' },
-    { value: 'AR_VERDE', label: 'Antirreflejo verde' },
-    { value: 'AR_BLUE_BLOCK', label: 'Antirreflejo Blue Block' },
-    { value: 'FOTOCROMATICO_CR39', label: 'Fotocromático CR39' },
-    { value: 'FOTOCROMATICO_AR', label: 'Fotocromático Antirreflejo' },
-    { value: 'FOTOCROMATICO_BLUE_BLOCK', label: 'Fotocromático Blue Block' },
     { value: 'POLICARBONATO', label: 'Policarbonato' },
     { value: 'HI_INDEX_156', label: 'Hi Index 1.56' },
     { value: 'HI_INDEX_167', label: 'Hi Index 1.67' },
     { value: 'HI_INDEX_174', label: 'Hi Index 1.74' },
-    { value: 'TRANSICION_PLUS', label: 'Transición Pluss' },
-    { value: 'FOTOSENSIBLE', label: 'Fotosensible' },
-    { value: 'POLICARBONATO_BLUE_BLOCK', label: 'Policarbonato Blue Block' },
     { value: 'OTRO', label: 'Otro (especificar)' }
 ];
+
+// ===== TRATAMIENTOS Y ADITIVOS =====
+export const TRATAMIENTOS_ADITIVOS: OpcionSelect[] = [
+    { value: 'TRANSICION_PLUS', label: 'Transición Pluss' },
+    { value: 'BLUE_BLOCK', label: 'Blue Block' },
+    { value: 'FOTOSENSIBLE', label: 'Fotosensible' },
+    { value: 'FOTOCROMATICO', label: 'Fotocromático' },
+    { value: 'ANTIREFLEJO', label: 'Antirreflejo' },
+    { value: 'AR_VERDE', label: 'Antirreflejo verde' },
+    { value: 'COLORACION_DEGRADE', label: 'Coloración en degradé' },
+    { value: 'COLORACION_FULL_COLOR', label: 'Coloración full color' },
+    { value: 'COLORACION', label: 'Coloración' }
+];
+
+// ===== FORMAS DE PAGO =====
+export const FORMAS_PAGO: OpcionSelect[] = [
+    { value: 'EFECTIVO', label: 'Efectivo' },
+    { value: 'TARJETA_CREDITO', label: 'Tarjeta de crédito' },
+    { value: 'TARJETA_DEBITO', label: 'Tarjeta de débito' },
+    { value: 'TRANSFERENCIA', label: 'Transferencia bancaria' },
+    { value: 'PAGO_MOVIL', label: 'Pago móvil' },
+    { value: 'ZELLE', label: 'Zelle' },
+];
+
+// ===== INTERFACES PARA EXAMEN OCULAR =====
+
+export interface Lensometria {
+    esf_od: string;
+    cil_od: string;
+    eje_od: string;
+    add_od: string;
+    av_lejos_od: string;
+    av_cerca_od: string;
+    av_lejos_bi: string;
+    av_bi: string;
+    esf_oi: string;
+    cil_oi: string;
+    eje_oi: string;
+    add_oi: string;
+    av_lejos_oi: string;
+    av_cerca_oi: string;
+    av_cerca_bi: string;
+}
+
+export interface Refraccion {
+    esf_od: string;
+    cil_od: string;
+    eje_od: string;
+    add_od: string;
+    avccl_od: string;   // AV con corrección lejos
+    avccc_od: string;   // AV con corrección cerca
+    avccl_bi: string;   // AV con corrección lejos binocular
+    avccc_bi: string;   // AV con corrección cerca binocular
+    esf_oi: string;
+    cil_oi: string;
+    eje_oi: string;
+    add_oi: string;
+    avccl_oi: string;
+    avccc_oi: string;
+}
+
+export interface RefraccionFinal {
+    esf_od: string;
+    cil_od: string;
+    eje_od: string;
+    add_od: string;
+    alt_od: string;     // Altura
+    dp_od: string;      // Distancia pupilar
+    esf_oi: string;
+    cil_oi: string;
+    eje_oi: string;
+    add_oi: string;
+    alt_oi: string;
+    dp_oi: string;
+}
+
+export interface AVSC_AVAE_Otros {
+    avsc_od: string;    // AV sin corrección
+    avae_od: string;    // AV con añadido esférico
+    otros_od?: string;  // Observaciones ojo derecho
+    avsc_oi: string;
+    avae_oi: string;
+    otros_oi?: string;  // Observaciones ojo izquierdo
+    avsc_bi: string;    // AV sin corrección binocular
+}
+
+export interface ExamenOcular {
+    lensometria: Lensometria;
+    refraccion: Refraccion;
+    refraccionFinal: RefraccionFinal;
+    avsc_avae_otros: AVSC_AVAE_Otros;
+}
+
+// ===== FUNCIÓN PARA CREAR EXAMEN OCULAR VACÍO =====
+export function crearExamenOcularVacio(): ExamenOcular {
+    return {
+        lensometria: {
+            esf_od: '',
+            cil_od: '',
+            eje_od: '',
+            add_od: '',
+            av_lejos_od: '',
+            av_cerca_od: '',
+            av_lejos_bi: '',
+            av_bi: '',
+            esf_oi: '',
+            cil_oi: '',
+            eje_oi: '',
+            add_oi: '',
+            av_lejos_oi: '',
+            av_cerca_oi: '',
+            av_cerca_bi: ''
+        },
+        refraccion: {
+            esf_od: '',
+            cil_od: '',
+            eje_od: '',
+            add_od: '',
+            avccl_od: '',
+            avccc_od: '',
+            avccl_bi: '',
+            avccc_bi: '',
+            esf_oi: '',
+            cil_oi: '',
+            eje_oi: '',
+            add_oi: '',
+            avccl_oi: '',
+            avccc_oi: ''
+        },
+        refraccionFinal: {
+            esf_od: '',
+            cil_od: '',
+            eje_od: '',
+            add_od: '',
+            alt_od: '',
+            dp_od: '',
+            esf_oi: '',
+            cil_oi: '',
+            eje_oi: '',
+            add_oi: '',
+            alt_oi: '',
+            dp_oi: ''
+        },
+        avsc_avae_otros: {
+            avsc_od: '',
+            avae_od: '',
+            otros_od: '',
+            avsc_oi: '',
+            avae_oi: '',
+            otros_oi: '',
+            avsc_bi: ''
+        }
+    };
+}
+
+// ===== INTERVALOS DE HORA DE USO DE LENTES =====
+export const INTERVALOS_HORA_USO: OpcionSelect[] = [
+    { value: 'MENOS_1_HORA', label: 'Menos de 1 hora' },
+    { value: '1_A_3_HORAS', label: '1 a 3 horas' },
+    { value: '3_A_6_HORAS', label: '3 a 6 horas' },
+    { value: 'MAS_6_HORAS', label: 'Más de 6 horas' }
+];
+
+// También disponible como array de strings simple
+export const INTERVALOS_HORA: string[] = [
+    'Menos de 1 hora',
+    '1 a 3 horas',
+    '3 a 6 horas',
+    'Más de 6 horas'
+];
+
+// ===== CONSTANTES PARA OJOS (Versión simplificada) =====
+export const OJOS = {
+    OD: 'OD',  // Ojo derecho
+    OI: 'OI',  // Ojo izquierdo
+    AMBOS: 'AMBOS'
+};

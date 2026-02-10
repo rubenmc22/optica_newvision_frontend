@@ -21,6 +21,19 @@ import {
 import { LoaderService } from './../../shared/loader/loader.service';
 import { trigger, transition, style, animate } from '@angular/animations';
 
+// Constantes
+import {
+  OPCIONES_REF,
+  OPCIONES_AV,
+  OPCIONES_ANTECEDENTES_PERSONALES,
+  OPCIONES_ANTECEDENTES_FAMILIARES,
+  MOTIVOS_CONSULTA,
+  TIPOS_CRISTALES,
+  MATERIALES,
+  TRATAMIENTOS_ADITIVOS,
+  INTERVALOS_HORA
+} from 'src/app/shared/constants/historias-medicas';
+
 
 @Component({
   selector: 'app-pacientes',
@@ -50,6 +63,9 @@ export class VerPacientesComponent implements OnInit {
   formOriginal: any = {};
   sedesDisponibles: Sede[] = [];
   pacientesFiltradosPorSede: Paciente[] = [];
+
+  opcionesAntecedentesPersonalesNgSelect: any[] = [];
+  opcionesAntecedentesFamiliaresNgSelect: any[] = [];
 
   //Seccion empresas
   empresaEncontrada: boolean = false;
@@ -90,35 +106,15 @@ export class VerPacientesComponent implements OnInit {
   //Perfil clinico
   usoDispositivo: string | null = null;
   intervaloSeleccionado: string | null = null;
-  intervalosHora: string[] = [
-    'Menos de 1 hora',
-    '1 a 3 horas',
-    '3 a 6 horas',
-    'Más de 6 horas'
-  ];
+  intervalosHora = INTERVALOS_HORA;
   opcionesBooleanasSimple: string[] = ['Sí', 'No'];
   opcionesGenero: string[] = [
     'Masculino',
     'Femenino',
   ];
-  opcionesAntecedentesPersonales: string[] = [
-    'Diabetes',
-    'Hipertensión',
-    'Migraña',
-    'Fotosensibilidad',
-    'Traumatismo ocular',
-    'Queratocono'
-  ];
+  opcionesAntecedentesPersonales = OPCIONES_ANTECEDENTES_PERSONALES;
 
-  opcionesAntecedentesFamiliares: string[] = [
-    'Diabetes',
-    'Hipertensión arterial',
-    'Glaucoma',
-    'Degeneración macular',
-    'Queratocono',
-    'Retinopatía diabética'
-  ];
-
+  opcionesAntecedentesFamiliares = OPCIONES_ANTECEDENTES_FAMILIARES;
   opcionesPatologiaOcular: string[] = [
     'Uveítis',
     'Catarata',
@@ -138,6 +134,8 @@ export class VerPacientesComponent implements OnInit {
     'Artritis',
     'Cefalea'
   ];
+
+  patologias: [[]];
 
   constructor(
     private fb: FormBuilder,
@@ -226,8 +224,7 @@ export class VerPacientesComponent implements OnInit {
       alergicoA: [''],
       antecedentesPersonales: [[]],
       antecedentesFamiliares: [[]],
-      patologias: [[]],
-      patologiaOcular: [[]]
+      patologias: [''],
     }, {
       validators: [
         this.requiereDescripcionCondicional('traumatismoOcular', 'traumatismoOcularDescripcion'),
@@ -239,6 +236,14 @@ export class VerPacientesComponent implements OnInit {
   ngOnInit(): void {
     this.inicializarDatosIniciales();
 
+    this.opcionesAntecedentesPersonalesNgSelect = this.convertirOpcionesNgSelect(
+      OPCIONES_ANTECEDENTES_PERSONALES
+    );
+
+    this.opcionesAntecedentesFamiliaresNgSelect = this.convertirOpcionesNgSelect(
+      OPCIONES_ANTECEDENTES_FAMILIARES
+    );
+
     // Aplicar validaciones condicionales reactivas
     this.aplicarValidacionCondicional('traumatismoOcular', 'traumatismoOcularDescripcion', this.formPaciente);
     this.aplicarValidacionCondicional('cirugiaOcular', 'cirugiaOcularDescripcion', this.formPaciente);
@@ -249,6 +254,13 @@ export class VerPacientesComponent implements OnInit {
     //Establecer orden por defecto por fecha de registro (más reciente primero)
     this.ordenActual = 'fechaRegistro';
     this.ordenAscendente = false;
+  }
+
+  private convertirOpcionesNgSelect(opciones: string[]): any[] {
+    return opciones.map(opcion => ({
+      value: opcion,
+      label: opcion
+    }));
   }
 
   private configurarValidacionCondicionalEmpresa(): void {
@@ -718,8 +730,7 @@ export class VerPacientesComponent implements OnInit {
         alergicoA,
         antecedentesPersonales,
         antecedentesFamiliares,
-        patologias,
-        patologiaOcular
+        patologias
       }
     };
 
@@ -926,8 +937,7 @@ export class VerPacientesComponent implements OnInit {
         alergicoA: pacienteFormValue.alergicoA || null,
         antecedentesPersonales: pacienteFormValue.antecedentesPersonales || [],
         antecedentesFamiliares: pacienteFormValue.antecedentesFamiliares || [],
-        patologias: pacienteFormValue.patologias || [],
-        patologiaOcular: pacienteFormValue.patologiaOcular || []
+        patologias: pacienteFormValue.patologias || ''
       }
     };
 

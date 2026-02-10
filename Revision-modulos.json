@@ -1,0 +1,124 @@
+//Pacientes
+
+- Antecedentes personales:  
+    'Diabetes',
+    'Hipertensión',
+    'Migraña',
+    'Fotosensibilidad',
+    'Traumatismo ocular',
+    'Queratocono',
+    'Glaucoma',
+    'Degeneración macular',
+    'Retinopatía diabética'
+    'Uveítis',
+    'Catarata',
+    'Queratitis',
+    'Desprendimiento de retina',
+    'Glaucoma',
+    'Queratocono',
+    'Ojo seco',
+    conjuntivis alergica,
+    orzuelos,
+    pterigion
+
+- Antecedentes familiares:  
+    'Diabetes',
+    'Hipertensión',
+    'Migraña',
+    'Traumatismo ocular',
+    'Queratocono',
+    'Glaucoma',
+    'Degeneración macular',
+    'Retinopatía diabética'
+
+
+- Patologias (campo tipo input):
+    Renales, etc 
+
+
+Errores: 
+- Revisar ultimos 2 select, se cortan
+
+Recomendaciones:
+- Unir en el archivo de historial medico dentro de constant, todas las constantes referente a paciente e historia medicas y unificarlas
+
+
+
+
+
+
+
+
+
+
+//Historia medica
+
+- MOTIVOS_CONSULTA  ( esta bien)
+
+- TIPOS_CRISTALES
+    'Monofocal visión sencilla',
+    'Monofocal Visión sencilla digital',
+    'Bifocal',
+    'Progresivo convencional',
+    'Progresivo digital básico',
+    'Progresivo digital intermedio',
+    'Progresivo digital amplio',
+    'Lentes de contacto', (otro select con las opciones de lentes de contacto) -  Desechables biomedic, desechables evolution, Toricos, contaflex, cosmeticos, cosmeticos formulados
+
+
+- MATERIALES
+    { value: 'CR39', label: 'CR39' },
+    { value: 'POLICARBONATO', label: 'Policarbonato' },
+    { value: 'HI_INDEX_156', label: 'Hi Index 1.56' },
+    { value: 'HI_INDEX_167', label: 'Hi Index 1.67' },
+    { value: 'HI_INDEX_174', label: 'Hi Index 1.74' },
+    { value: 'OTRO', label: 'Otro (especificar)' }
+
+
+- Aditivos o filtros
+    { value: 'TRANSICION_PLUS', label: 'Transición Pluss' },
+    { value: 'BLUE_BLOCK', label: 'Blue Block' },
+    { value: 'FOTOSENSIBLE', label: 'Fotosensible' },
+    { value: 'FOTOCROMATICO', label: 'Fotocromático' },
+    { value: 'ANTIREFLEJO', label: 'Antirreflejo' },
+    { value: 'AR_VERDE', label: 'Antirreflejo verde' },
+    { value: 'AR_VERDE', label: 'Coloracion en dregrade' },
+    { value: 'AR_VERDE', label: 'Coloracion full color' },
+    { value: 'AR_VERDE', label: 'Coloracion' },
+
+
+
+
+
+    alt: [ //ajustar desde 10 a 40 mm
+        { value: '0', label: '0 mm' },
+        { value: '1', label: '1 mm' },
+        { value: '2', label: '2 mm' },
+        { value: '3', label: '3 mm' },
+        { value: '4', label: '4 mm' },
+        { value: '5', label: '5 mm' }
+        // ... agregar más valores según sea necesario
+    ],
+
+    dp: [ //ajustar 50 a 80 de 1 en 1 mm
+        { value: '60', label: '60 mm' },
+        { value: '62', label: '62 mm' },
+        { value: '64', label: '64 mm' },
+        { value: '66', label: '66 mm' },
+        { value: '68', label: '68 mm' },
+        { value: '70', label: '70 mm' }
+    ],
+
+- En lensometria, mover la seccion de binocuar al final de la seccion
+- Mover avsc debajo de lensometria
+- Agregar binocular a la seccion de refraccion final
+- en avsc, agregar avsc lejos y cerca por separado, los valores de lejos es 20/50, etc, lo de cerca son j1, etc y avae es lo mismo de av lejos, etc
+- ajustar titulo de reocmendaciones por recomendaciones/indicaciones
+- cambiar titulo sugerido de montura segerida por tipo de montura sugerida
+- al seelccionar un tip ode cristal progresivo, se deben habilitar 4 campos (horizontal, vertical, diagonal y puente) en medidas cm
+
+
+Errores: 
+- Revisar ultimos 2 select, se cortan
+
+

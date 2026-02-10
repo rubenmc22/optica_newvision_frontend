@@ -15,14 +15,16 @@ import { Empleado } from '../../Interfaces/models-interface';
 import { Sede } from '../../view/login/login-interface';
 import { LoaderService } from './../../shared/loader/loader.service';
 
-
 // Constantes
 import {
   OPCIONES_REF,
-  OPCIONES_ANTECEDENTES,
+  OPCIONES_AV,
+  OPCIONES_ANTECEDENTES_PERSONALES,
+  OPCIONES_ANTECEDENTES_FAMILIARES,
   MOTIVOS_CONSULTA,
   TIPOS_CRISTALES,
-  MATERIALES
+  MATERIALES,
+  TRATAMIENTOS_ADITIVOS
 } from 'src/app/shared/constants/historias-medicas';
 
 // Servicios
@@ -41,6 +43,7 @@ import { EmpleadosService } from './../../core/services/empleados/empleados.serv
   templateUrl: './historias-medicas.component.html',
   styleUrls: ['./historias-medicas.component.scss']
 })
+
 export class HistoriasMedicasComponent implements OnInit {
   // ViewChild
   @ViewChild('selectorPaciente') selectorPaciente!: ElementRef;
@@ -97,7 +100,6 @@ export class HistoriasMedicasComponent implements OnInit {
 
   // Constantes
   opcionesRef = OPCIONES_REF;
-  opcionesAntecedentes = OPCIONES_ANTECEDENTES;
   motivosConsulta = MOTIVOS_CONSULTA;
   tiposCristales = TIPOS_CRISTALES.map(c => ({ label: c, value: c }));
   materiales: typeof MATERIALES;
@@ -105,20 +107,13 @@ export class HistoriasMedicasComponent implements OnInit {
 
   readonly materialesValidos = new Set<TipoMaterial>([
     'CR39',
-    'AR_VERDE',
-    'AR_BLUE_BLOCK',
-    'FOTOCROMATICO_CR39',
-    'FOTOCROMATICO_AR',
-    'FOTOCROMATICO_BLUE_BLOCK',
     'POLICARBONATO',
     'HI_INDEX_156',
     'HI_INDEX_167',
     'HI_INDEX_174',
-    'TRANSICION_PLUS',
-    'FOTOSENSIBLE',
-    'POLICARBONATO_BLUE_BLOCK',
     'OTRO'
   ]);
+  
 
   constructor(
     private fb: FormBuilder,

@@ -615,19 +615,8 @@
                   </div>
                 </div>
 
-                <div class="col-md-6">
-                  <div class="form-group-moderno">
-                    <label class="form-label-moderno">
-                      <i class="bi bi-droplet me-2"></i>
-                      Alergias
-                    </label>
-                    <input class="form-control-moderno" formControlName="alergicoA"
-                      placeholder="Ej: Polvo, medicamentos, alimentos..." />
-                  </div>
-                </div>
-
                 <!-- Fila 2: Dispositivos electrónicos -->
-                <div class="col-md-4">
+                <div class="col-md-3">
                   <div class="form-group-moderno">
                     <label class="form-label-moderno">
                       <i class="bi bi-laptop me-2"></i>
@@ -639,7 +628,7 @@
                   </div>
                 </div>
 
-                <div class="col-md-8" *ngIf="formPaciente.get('usoDispositivo')?.value === 'Sí'">
+                <div class="col-md-3" *ngIf="formPaciente.get('usoDispositivo')?.value === 'Sí'">
                   <div class="form-group-moderno">
                     <label class="form-label-moderno">
                       <i class="bi bi-clock me-2"></i>
@@ -652,7 +641,7 @@
                 </div>
 
                 <!-- Fila 3: Traumatismo ocular -->
-                <div class="col-md-4">
+                <div class="col-md-3">
                   <div class="form-group-moderno">
                     <label class="form-label-moderno">
                       <i class="bi bi-exclamation-triangle me-2"></i>
@@ -663,7 +652,7 @@
                   </div>
                 </div>
 
-                <div class="col-md-8" *ngIf="formPaciente.get('traumatismoOcular')?.value === 'Sí'">
+                <div class="col-md-9" *ngIf="formPaciente.get('traumatismoOcular')?.value === 'Sí'">
                   <div class="form-group-moderno">
                     <label class="form-label-moderno">
                       <i class="bi bi-journal-text me-2"></i>
@@ -675,7 +664,7 @@
                 </div>
 
                 <!-- Fila 4: Cirugía ocular -->
-                <div class="col-md-4">
+                <div class="col-md-3">
                   <div class="form-group-moderno">
                     <label class="form-label-moderno">
                       <i class="bi bi-scissors me-2"></i>
@@ -686,7 +675,7 @@
                   </div>
                 </div>
 
-                <div class="col-md-8" *ngIf="formPaciente.get('cirugiaOcular')?.value === 'Sí'">
+                <div class="col-md-9" *ngIf="formPaciente.get('cirugiaOcular')?.value === 'Sí'">
                   <div class="form-group-moderno">
                     <label class="form-label-moderno">
                       <i class="bi bi-journal-text me-2"></i>
@@ -705,7 +694,8 @@
                       Antecedentes Personales
                     </label>
                     <ng-select [items]="opcionesAntecedentesPersonales" formControlName="antecedentesPersonales"
-                      [multiple]="true" placeholder="Seleccione antecedentes..." class="ng-select-moderno"></ng-select>
+                      [multiple]="true" placeholder="Seleccione antecedentes..." class="ng-select-moderno"
+                      style="min-height: 48px !important;"></ng-select>
                   </div>
                 </div>
 
@@ -716,7 +706,19 @@
                       Antecedentes Familiares
                     </label>
                     <ng-select [items]="opcionesAntecedentesFamiliares" formControlName="antecedentesFamiliares"
-                      [multiple]="true" placeholder="Seleccione antecedentes..." class="ng-select-moderno"></ng-select>
+                      [multiple]="true" placeholder="Seleccione antecedentes..." class="ng-select-moderno"
+                      style="min-height: 48px !important;"></ng-select>
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-droplet me-2"></i>
+                      Alergias
+                    </label>
+                    <input class="form-control-moderno" formControlName="alergicoA"
+                      placeholder="Ej: Polvo, medicamentos, alimentos..." />
                   </div>
                 </div>
 
@@ -725,21 +727,12 @@
                   <div class="form-group-moderno">
                     <label class="form-label-moderno">
                       <i class="bi bi-heart-pulse me-2"></i>
-                      Patologías Generales
+                      Patologías
+                      <small class="text-muted ms-2">(Separadas por comas)</small>
                     </label>
-                    <ng-select [items]="opcionesPatologias" formControlName="patologias" [multiple]="true"
-                      placeholder="Seleccione patologías..." class="ng-select-moderno"></ng-select>
-                  </div>
-                </div>
 
-                <div class="col-md-6">
-                  <div class="form-group-moderno">
-                    <label class="form-label-moderno">
-                      <i class="bi bi-eye me-2"></i>
-                      Patologías Oculares
-                    </label>
-                    <ng-select [items]="opcionesPatologiaOcular" formControlName="patologiaOcular" [multiple]="true"
-                      placeholder="Seleccione patologías..." class="ng-select-moderno"></ng-select>
+                    <textarea class="form-control-moderno" formControlName="patologias" rows="3"
+                      placeholder="Ejemplo: Indique si el paciente posee alguna patología adicional..."></textarea>
                   </div>
                 </div>
               </div>
@@ -1073,23 +1066,6 @@
 
                   <div class="info-item">
                     <div class="info-label">
-                      <i class="bi bi-heart-pulse"></i>
-                      Patologías
-                    </div>
-                    <div class="info-value tags">
-                      <ng-container
-                        *ngIf="pacienteSeleccionado?.historiaClinica?.patologias?.length; else noPatologias">
-                        <span class="info-tag"
-                          *ngFor="let patologia of pacienteSeleccionado?.historiaClinica?.patologias">
-                          {{ patologia }}
-                        </span>
-                      </ng-container>
-                      <ng-template #noPatologias>---</ng-template>
-                    </div>
-                  </div>
-
-                  <div class="info-item">
-                    <div class="info-label">
                       <i class="bi bi-scissors"></i>
                       Cirugía Ocular
                     </div>
@@ -1103,63 +1079,6 @@
                     </div>
                     <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcular || '---' }}
                     </div>
-                  </div>
-                </div>
-
-                <!-- Columna 2 -->
-                <div class="info-column">
-                  <div class="info-item">
-                    <div class="info-label">
-                      <i class="bi bi-brightness-high"></i>
-                      Fotofobia
-                    </div>
-                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.fotofobia || '---' }}</div>
-                  </div>
-
-                  <div class="info-item">
-                    <div class="info-label">
-                      <i class="bi bi-eye"></i>
-                      Patología Ocular
-                    </div>
-                    <div class="info-value tags">
-                      <ng-container
-                        *ngIf="pacienteSeleccionado?.historiaClinica?.patologiaOcular?.length; else noPatologiaOcular">
-                        <span class="info-tag"
-                          *ngFor="let patologia of pacienteSeleccionado?.historiaClinica?.patologiaOcular">
-                          {{ patologia }}
-                        </span>
-                      </ng-container>
-                      <ng-template #noPatologiaOcular>---</ng-template>
-                    </div>
-                  </div>
-
-                  <div class="info-item" *ngIf="pacienteSeleccionado?.historiaClinica?.cirugiaOcular === 'Sí'">
-                    <div class="info-label">
-                      <i class="bi bi-journal-text"></i>
-                      Descripción Cirugía
-                    </div>
-                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcularDescripcion || '---'
-                      }}</div>
-                  </div>
-
-                  <div class="info-item" *ngIf="pacienteSeleccionado?.historiaClinica?.traumatismoOcular === 'Sí'">
-                    <div class="info-label">
-                      <i class="bi bi-journal-text"></i>
-                      Descripción Traumatismo
-                    </div>
-                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcularDescripcion ||
-                      '---' }}</div>
-                  </div>
-                </div>
-
-                <!-- Columna 3 -->
-                <div class="info-column">
-                  <div class="info-item">
-                    <div class="info-label">
-                      <i class="bi bi-droplet"></i>
-                      Alergias
-                    </div>
-                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.alergicoA || '---' }}</div>
                   </div>
 
                   <div class="info-item">
@@ -1179,6 +1098,37 @@
                     </div>
                   </div>
 
+                </div>
+
+
+                <!-- Columna 2 -->
+                <div class="info-column">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-brightness-high"></i>
+                      Fotofobia
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.fotofobia || '---' }}</div>
+                  </div>
+
+                  <div class="info-item" *ngIf="pacienteSeleccionado?.historiaClinica?.cirugiaOcular === 'Sí'">
+                    <div class="info-label">
+                      <i class="bi bi-journal-text"></i>
+                      Descripción Cirugía
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcularDescripcion || '---'
+                      }}</div>
+                  </div>
+
+                  <div class="info-item" *ngIf="pacienteSeleccionado?.historiaClinica?.traumatismoOcular === 'Sí'">
+                    <div class="info-label">
+                      <i class="bi bi-journal-text"></i>
+                      Descripción Traumatismo
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.traumatismoOcularDescripcion ||
+                      '---' }}</div>
+                  </div>
+
                   <div class="info-item">
                     <div class="info-label">
                       <i class="bi bi-people"></i>
@@ -1195,6 +1145,17 @@
                       <ng-template #noFamiliares>---</ng-template>
                     </div>
                   </div>
+                </div>
+
+                <!-- Columna 3 -->
+                <div class="info-column">
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-droplet"></i>
+                      Alergias
+                    </div>
+                    <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.alergicoA || '---' }}</div>
+                  </div>
 
                   <div class="info-item">
                     <div class="info-label">
@@ -1203,6 +1164,26 @@
                     </div>
                     <div class="info-value">{{ pacienteSeleccionado?.historiaClinica?.usoDispositivo || '---' }}</div>
                   </div>
+
+
+                  <div class="info-item">
+                    <div class="info-label">
+                      <i class="bi bi-heart-pulse"></i>
+                      Patologías
+                    </div>
+                    <div class="info-value tags">
+                      <ng-container
+                        *ngIf="pacienteSeleccionado?.historiaClinica?.patologias?.length; else noPatologias">
+                        <span class="info-tag"
+                          *ngFor="let patologia of pacienteSeleccionado?.historiaClinica?.patologias">
+                          {{ patologia }}
+                        </span>
+                      </ng-container>
+                      <ng-template #noPatologias>---</ng-template>
+                    </div>
+                  </div>
+
+
                 </div>
               </div>
             </div>

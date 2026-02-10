@@ -532,8 +532,27 @@ body {
 
 .form-group-moderno .ng-select.ng-select-single .ng-select-container {
   height: 48px !important;
+  min-height: 48px !important;
   top: 2px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+}
+
+.form-group-moderno .ng-select.ng-select-multiple .ng-placeholder {
+  position: absolute !important;
+  top: 10px !important;
+  /* Ajusta este valor según necesites */
+  left: 10px !important;
+//  color: #6c757d !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+
+
+.form-group-moderno .ng-select-container {
+  height: 48px !important;
+  min-height: 48px !important;
 }
 
 
