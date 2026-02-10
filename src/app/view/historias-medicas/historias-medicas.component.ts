@@ -100,6 +100,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
   // Constantes
   opcionesRef = OPCIONES_REF;
+    opcionesAV = OPCIONES_AV;
   motivosConsulta = MOTIVOS_CONSULTA;
   tiposCristales = TIPOS_CRISTALES.map(c => ({ label: c, value: c }));
   materiales: typeof MATERIALES;

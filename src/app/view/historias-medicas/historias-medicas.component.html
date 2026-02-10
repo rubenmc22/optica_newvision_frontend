@@ -841,36 +841,8 @@
                   <h6>Lensometría</h6>
                 </div>
                 
-                <div class="lensometria-moderna lensometria-scroll-fixed">
-                  <!-- Primero la sección binocular (arriba) -->
-                  <div class="lensometria-binocular binocular-top">
-                    <div class="binocular-header">
-                      <i class="bi bi-eye"></i>
-                      <span>Binocular</span>
-                    </div>
-                    
-                    <div class="binocular-campos">
-                      <div class="binocular-campo">
-                        <label>AV Lejos BI</label>
-                        <ng-select [items]="opcionesRef['avBinocular']" bindLabel="label" bindValue="value"
-                          formControlName="len_av_lejos_bi" placeholder="AV BI" [searchable]="true"
-                          class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
-                        </ng-select>
-                      </div>
-                      
-                      <div class="binocular-campo">
-                        <label>AV Cerca BI</label>
-                        <ng-select [items]="opcionesRef['avBinocular']" bindLabel="label" bindValue="value"
-                          formControlName="len_av_bi" placeholder="AV BI" [searchable]="true" 
-                          class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
-                        </ng-select>
-                      </div>
-                    </div>
-                  </div>
-                            
-                  <!-- Luego las filas OD y OI (abajo) -->
+                <div class="lensometria-moderna lensometria-scroll-fixed">                          
+                  <!-- filas OD y OI  -->
                   <div class="lensometria-filas-container">
                     <!-- Cabecera de campos -->
                     <div class="lensometria-header">
@@ -892,7 +864,7 @@
                       <div class="campo-select">
                         <ng-select [items]="opcionesRef['esf']" formControlName="len_esf_od" 
                           [searchable]="true" placeholder="ESF" class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -900,7 +872,7 @@
                         <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                           formControlName="len_cil_od" placeholder="CIL" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -908,7 +880,7 @@
                         <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                           formControlName="len_eje_od" placeholder="EJE" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -916,7 +888,7 @@
                         <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                           formControlName="len_add_od" placeholder="ADD" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -924,7 +896,7 @@
                         <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
                           formControlName="len_av_lejos_od" placeholder="AV Lejos" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -932,7 +904,7 @@
                         <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
                           formControlName="len_av_cerca_od" placeholder="AV Cerca" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                     </div>
@@ -947,7 +919,7 @@
                         <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
                           formControlName="len_esf_oi" placeholder="ESF" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -955,7 +927,7 @@
                         <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                           formControlName="len_cil_oi" placeholder="CIL" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -963,7 +935,7 @@
                         <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                           formControlName="len_eje_oi" placeholder="EJE" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -971,7 +943,7 @@
                         <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                           formControlName="len_add_oi" placeholder="ADD" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -979,7 +951,7 @@
                         <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
                           formControlName="len_av_lejos_oi" placeholder="AV Lejos" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -987,9 +959,130 @@
                         <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
                           formControlName="len_av_cerca_oi" placeholder="AV Cerca" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
+                    </div>
+                  </div>
+
+                   <!--sección binocular  -->
+                  <div class="lensometria-binocular binocular-top">
+                    <div class="binocular-header">
+                      <i class="bi bi-eye"></i>
+                      <span>Binocular</span>
+                    </div>
+                    
+                    <div class="binocular-campos">
+                      <div class="binocular-campo">
+                        <label>AV Lejos</label>
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                          formControlName="len_av_lejos_bi" placeholder="AV lejos BI" [searchable]="true"
+                          class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"> 
+                        </ng-select>
+                      </div>
+                      
+                      <div class="binocular-campo">
+                        <label>AV Cerca</label>
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                          formControlName="len_av_bi" placeholder="AV cerca BI" [searchable]="true" 
+                          class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"> 
+                        </ng-select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- AVSC - AVAE - OTROS -->
+              <div class="examen-subseccion">
+                <div class="subseccion-header">
+                  <i class="bi bi-eye"></i>
+                  <h6>AVSC - AVAE - OTROS</h6>
+                </div>
+                
+                <div class="lensometria-moderna lensometria-scroll-fixed">
+                  <!-- Cabecera de campos (4 columnas) -->
+                  <div class="avsc-header">
+                    <div class="campo-label">Ojo</div>
+                    <div class="campo-label">AVSC Lejos</div>
+                    <div class="campo-label">AVSC Cerca</div>
+                    <div class="campo-label">AVAE</div>
+                    <div class="campo-label">OTROS</div>
+                  </div>
+                  
+                  <!-- Fila OD -->
+                  <div class="avsc-fila ojo-fila">
+                    <div class="ojo-label">
+                      <span class="ojo-tag ojo-od">OD</span>
+                    </div>
+                    
+                    <!-- AVSC Lejos OD -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                        formControlName="avsc_od" placeholder="AVSC Lejos" [searchable]="true" 
+                        class="ng-select-moderno">
+                      </ng-select>
+                    </div>
+                    
+                    <!-- AVSC Cerca OD -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                        formControlName="avsc_cerca_od" placeholder="AVSC Cerca" [searchable]="true" 
+                        class="ng-select-moderno">
+                      </ng-select>
+                    </div>
+                    
+                    <!-- AVAE OD -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                        formControlName="avae_od" placeholder="AVAE" [searchable]="true" 
+                        class="ng-select-moderno">
+                      </ng-select>
+                    </div>
+                    
+                    <!-- OTROS OD -->
+                    <div class="campo-input">
+                      <input type="text" class="form-control-small" formControlName="otros_od" 
+                        placeholder="Observaciones">
+                    </div>
+                  </div>
+                  
+                  <!-- Fila OI -->
+                  <div class="avsc-fila ojo-fila">
+                    <div class="ojo-label">
+                      <span class="ojo-tag ojo-oi">OI</span>
+                    </div>
+                    
+                    <!-- AVSC Lejos OI -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                        formControlName="avsc_oi" placeholder="AVSC Lejos" [searchable]="true" 
+                        class="ng-select-moderno">
+                      </ng-select>
+                    </div>
+                    
+                    <!-- AVSC Cerca OI -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                        formControlName="avsc_cerca_oi" placeholder="AVSC Cerca" [searchable]="true" 
+                        class="ng-select-moderno">
+                      </ng-select>
+                    </div>
+                    
+                    <!-- AVAE OI -->
+                    <div class="campo-select">
+                      <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                        formControlName="avae_oi" placeholder="AVAE" [searchable]="true" 
+                        class="ng-select-moderno">
+                      </ng-select>
+                    </div>
+                    
+                    <!-- OTROS OI -->
+                    <div class="campo-input">
+                      <input type="text" class="form-control-small" formControlName="otros_oi" 
+                        placeholder="Observaciones">
                     </div>
                   </div>
                 </div>
@@ -1002,35 +1095,7 @@
                   <h6>Refracción</h6>
                 </div>
                 
-                <div class="lensometria-moderna lensometria-scroll-fixed">
-                  <!-- Sección binocular para Refracción -->
-                  <div class="lensometria-binocular binocular-top">
-                    <div class="binocular-header">
-                      <i class="bi bi-eye"></i>
-                      <span>Binocular</span>
-                    </div>
-                    
-                    <div class="binocular-campos">
-                      <div class="binocular-campo">
-                        <label>AVCCL BI</label>
-                        <ng-select [items]="opcionesRef['avBinocular']" bindLabel="label" bindValue="value"
-                          formControlName="ref_avccl_bi" placeholder="AVCCL BI" [searchable]="true"
-                          class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
-                        </ng-select>
-                      </div>
-                      
-                      <div class="binocular-campo">
-                        <label>AVCCC BI</label>
-                        <ng-select [items]="opcionesRef['avBinocular']" bindLabel="label" bindValue="value"
-                          formControlName="ref_avccc_bi" placeholder="AVCCC BI" [searchable]="true"
-                          class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
-                        </ng-select>
-                      </div>
-                    </div>
-                  </div>
-                  
+                <div class="lensometria-moderna lensometria-scroll-fixed">                 
                   <!-- Tabla de datos OD/OI -->
                   <div class="lensometria-filas-container">
                     <!-- Cabecera de campos -->
@@ -1054,7 +1119,7 @@
                         <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
                           formControlName="ref_esf_od" placeholder="ESF" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -1062,7 +1127,7 @@
                         <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                           formControlName="ref_cil_od" placeholder="CIL" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -1070,7 +1135,7 @@
                         <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                           formControlName="ref_eje_od" placeholder="EJE" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -1078,7 +1143,7 @@
                         <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                           formControlName="ref_add_od" placeholder="ADD" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -1086,7 +1151,7 @@
                         <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccl_od" placeholder="AVCCL" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -1094,7 +1159,7 @@
                         <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccc_od" placeholder="AVCCC" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                     </div>
@@ -1109,7 +1174,7 @@
                         <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
                           formControlName="ref_esf_oi" placeholder="ESF" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -1117,7 +1182,7 @@
                         <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                           formControlName="ref_cil_oi" placeholder="CIL" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -1125,7 +1190,7 @@
                         <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                           formControlName="ref_eje_oi" placeholder="EJE" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -1133,7 +1198,7 @@
                         <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                           formControlName="ref_add_oi" placeholder="ADD" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -1141,7 +1206,7 @@
                         <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccl_oi" placeholder="AVCCL" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                         </ng-select>
                       </div>
                       
@@ -1149,7 +1214,35 @@
                         <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccc_oi" placeholder="AVCCC" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  >
+                        </ng-select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Sección binocular para Refracción -->
+                  <div class="lensometria-binocular binocular-top">
+                    <div class="binocular-header">
+                      <i class="bi bi-eye"></i>
+                      <span>Binocular</span>
+                    </div>
+                    
+                    <div class="binocular-campos">
+                      <div class="binocular-campo">
+                        <label>AVCCL</label>
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
+                          formControlName="ref_avccl_bi" placeholder="AVCCL BI" [searchable]="true"
+                          class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()" > 
+                        </ng-select>
+                      </div>
+                      
+                      <div class="binocular-campo">
+                        <label>AVCCC</label>
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                          formControlName="ref_avccc_bi" placeholder="AVCCC BI" [searchable]="true"
+                          class="ng-select-moderno"
+                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()" > 
                         </ng-select>
                       </div>
                     </div>
@@ -1186,7 +1279,7 @@
                       <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_esf_od" placeholder="ESF" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                       </ng-select>
                     </div>
                     
@@ -1194,7 +1287,7 @@
                       <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_cil_od" placeholder="CIL" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                       </ng-select>
                     </div>
                     
@@ -1202,7 +1295,7 @@
                       <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_eje_od" placeholder="EJE" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                       </ng-select>
                     </div>
                     
@@ -1210,7 +1303,7 @@
                       <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_add_od" placeholder="ADD" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                       </ng-select>
                     </div>
                     
@@ -1235,7 +1328,7 @@
                       <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_esf_oi" placeholder="ESF" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                       </ng-select>
                     </div>
                     
@@ -1243,7 +1336,7 @@
                       <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_cil_oi" placeholder="CIL" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                       </ng-select>
                     </div>
                     
@@ -1251,7 +1344,7 @@
                       <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_eje_oi" placeholder="EJE" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                       </ng-select>
                     </div>
                     
@@ -1259,7 +1352,7 @@
                       <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_add_oi" placeholder="ADD" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
+                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
                       </ng-select>
                     </div>
                     
@@ -1276,79 +1369,6 @@
                 </div>
               </div>
 
-              <!-- AVSC - AVAE - OTROS -->
-              <div class="examen-subseccion">
-                <div class="subseccion-header">
-                  <i class="bi bi-eye"></i>
-                  <h6>AVSC - AVAE - OTROS</h6>
-                </div>
-                
-                <div class="lensometria-moderna lensometria-scroll-fixed">
-                  <!-- Cabecera de campos -->
-                  <div class="lensometria-header">
-                    <div class="campo-label">Ojo</div>
-                    <div class="campo-label">AVSC</div>
-                    <div class="campo-label">AVAE</div>
-                    <div class="campo-label">OTROS</div>
-                  </div>
-                  
-                  <!-- Fila OD -->
-                  <div class="lensometria-fila ojo-fila">
-                    <div class="ojo-label">
-                      <span class="ojo-tag ojo-od">OD</span>
-                    </div>
-                    
-                    <div class="campo-select">
-                      <ng-select [items]="opcionesRef['avsc']" bindLabel="label" bindValue="value"
-                        formControlName="avsc_od" placeholder="AVSC" [searchable]="true" 
-                        class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
-                      </ng-select>
-                    </div>
-                    
-                    <div class="campo-select">
-                      <ng-select [items]="opcionesRef['avae']" bindLabel="label" bindValue="value"
-                        formControlName="avae_od" placeholder="AVAE" [searchable]="true" 
-                        class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
-                      </ng-select>
-                    </div>
-                    
-                    <div class="campo-input">
-                      <input type="text" class="form-control-small" formControlName="otros_od" 
-                        placeholder="OTROS" (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  >
-                    </div>
-                  </div>
-                  
-                  <!-- Fila OI -->
-                  <div class="lensometria-fila ojo-fila">
-                    <div class="ojo-label">
-                      <span class="ojo-tag ojo-oi">OI</span>
-                    </div>
-                    
-                    <div class="campo-select">
-                      <ng-select [items]="opcionesRef['avsc']" bindLabel="label" bindValue="value"
-                        formControlName="avsc_oi" placeholder="AVSC" [searchable]="true" 
-                        class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
-                      </ng-select>
-                    </div>
-                    
-                    <div class="campo-select">
-                      <ng-select [items]="opcionesRef['avae']" bindLabel="label" bindValue="value"
-                        formControlName="avae_oi" placeholder="AVAE" [searchable]="true" 
-                        class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > <!-- AGREGADO -->
-                      </ng-select>
-                    </div>
-                    
-                    <div class="campo-input">
-                      <input type="text" class="form-control-small" formControlName="otros_oi" 
-                        placeholder="OTROS" (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  >
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
