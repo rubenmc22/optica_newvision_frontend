@@ -1,4 +1,15 @@
 import { Paciente } from '../pacientes/paciente-interface';
+import {
+  OPCIONES_REF,
+  OPCIONES_AV,
+  OPCIONES_ANTECEDENTES_PERSONALES,
+  OPCIONES_ANTECEDENTES_FAMILIARES,
+  MOTIVOS_CONSULTA,
+  TIPOS_CRISTALES,
+  TIPOS_LENTES_CONTACTO,
+  MATERIALES,
+  TRATAMIENTOS_ADITIVOS
+} from 'src/app/shared/constants/historias-medicas';
 
 // Interfaz base para historia médica
 export interface HistoriaMedicaBase {
@@ -83,7 +94,6 @@ export interface ExamenOcular {
     av_lejos_od: string;
     av_cerca_od: string;
     av_lejos_bi: string;
-    av_bi: string;
     esf_oi: string;
     cil_oi: string;
     eje_oi: string;
@@ -123,13 +133,14 @@ export interface ExamenOcular {
     dp_oi: string;
   };
   avsc_avae_otros: {
-    avsc_od: string;
     avae_od: string;
     otros_od?: string;
-    avsc_oi: string;
     avae_oi: string;
     otros_oi?: string;
-    avsc_bi: string;
+    avsc_lejos_od?: string;
+    avsc_cerca_od?: string;
+    avsc_lejos_oi?: string;
+    avsc_cerca_oi?: string;
   };
 }
 
@@ -147,11 +158,18 @@ export interface HistorialResponse {
 
 // Interfaz para recomendaciones
 export interface Recomendaciones {
-  cristal: Cristal;
+  cristal: typeof TIPOS_CRISTALES[0] | null;
   material: TipoMaterial | TipoMaterial[];
+  tipoLentesContacto?: string;
   montura: string;
   cristalSugerido?: string;
   observaciones?: string;
+
+  medidaHorizontal?: string;
+  medidaVertical?: string;
+  medidaDiagonal?: string;
+  medidaPuente?: string;
+  materialPersonalizado?: string;
 }
 
 // Interfaz para conformidad
@@ -187,20 +205,6 @@ export interface HistoriaMedicaCompleta {
 
 // Tipos específicos
 export type TipoGenero = '' | 'Masculino' | 'Femenino' | 'Otro';
-export interface Cristal {
-  label: string;
-  value: TipoCristal;
-}
-export type TipoCristal =
-  | 'VISIÓN SENCILLA (CR-39)'
-  | 'AR Básico'
-  | 'AR Blue Filter'
-  | 'Fotocromático'
-  | 'Polarizado'
-  | 'Coloración'
-  | 'Bifocal'
-  | 'Progresivo (CR39 First)'
-  | 'Progresivo (Digital)';
 
 export type TipoMaterial =
   | 'CR39'

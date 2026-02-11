@@ -402,27 +402,25 @@ export const MOTIVOS_CONSULTA: string[] = [
 ];
 
 // ===== TIPOS DE CRISTALES =====
-export const TIPOS_CRISTALES: string[] = [
-    'Monofocal visión sencilla',
-    'Monofocal Visión sencilla digital',
-    'Bifocal',
-    'Progresivo convencional',
-    'Progresivo digital básico',
-    'Progresivo digital intermedio',
-    'Progresivo digital amplio',
-    'Lentes de contacto'
+export const TIPOS_CRISTALES: any[] = [
+  { value: 'MONOFOCAL', label: 'Monofocal visión sencilla' },
+  { value: 'MONOFOCAL_DIGITAL', label: 'Monofocal Visión sencilla digital' },
+  { value: 'BIFOCAL', label: 'Bifocal' },
+  { value: 'PROGRESIVO_CONVENCIONAL', label: 'Progresivo convencional' },
+  { value: 'PROGRESIVO_DIGITAL_BASICO', label: 'Progresivo digital básico' },
+  { value: 'PROGRESIVO_DIGITAL_INTERMEDIO', label: 'Progresivo digital intermedio' },
+  { value: 'PROGRESIVO_DIGITAL_AMPLIO', label: 'Progresivo digital amplio' },
+  { value: 'LENTES_CONTACTO', label: 'Lentes de contacto' }
 ];
 
-// ===== TIPOS DE LENTES DE CONTACTO =====
-export const TIPOS_LENTES_CONTACTO: string[] = [
-    'Desechables biomedic',
-    'Desechables evolution',
-    'Toricos',
-    'Contaflex',
-    'Cosmeticos',
-    'Cosmeticos formulados'
+export const TIPOS_LENTES_CONTACTO: any[] = [
+  { value: 'DESECHABLES_BIOMEDIC', label: 'Desechables biomedic' },
+  { value: 'DESECHABLES_EVOLUTION', label: 'Desechables evolution' },
+  { value: 'TORICOS', label: 'Toricos' },
+  { value: 'CONTAFLEX', label: 'Contaflex' },
+  { value: 'COSMETICOS', label: 'Cosmeticos' },
+  { value: 'COSMETICOS_FORMULADOS', label: 'Cosmeticos formulados' }
 ];
-
 // ===== MATERIALES =====
 export const MATERIALES: OpcionSelect[] = [
     { value: 'CR39', label: 'CR39' },

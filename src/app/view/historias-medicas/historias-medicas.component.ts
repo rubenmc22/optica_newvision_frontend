@@ -23,6 +23,7 @@ import {
   OPCIONES_ANTECEDENTES_FAMILIARES,
   MOTIVOS_CONSULTA,
   TIPOS_CRISTALES,
+  TIPOS_LENTES_CONTACTO,
   MATERIALES,
   TRATAMIENTOS_ADITIVOS
 } from 'src/app/shared/constants/historias-medicas';
@@ -86,7 +87,6 @@ export class HistoriasMedicasComponent implements OnInit {
   pacienteIdSeleccionado: string | null = null;
   historial: HistoriaMedica[] = [];
   notaConformidad: string = 'PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE.';
-  mostrarMaterialPersonalizado: boolean[] = [];
   horaEvaluacion: string = '';
   mostrarBotonVolver = false;
 
@@ -100,11 +100,18 @@ export class HistoriasMedicasComponent implements OnInit {
 
   // Constantes
   opcionesRef = OPCIONES_REF;
-    opcionesAV = OPCIONES_AV;
+  opcionesAV = OPCIONES_AV;
   motivosConsulta = MOTIVOS_CONSULTA;
-  tiposCristales = TIPOS_CRISTALES.map(c => ({ label: c, value: c }));
+  tiposCristales = TIPOS_CRISTALES;
+  tiposLentesContacto = TIPOS_LENTES_CONTACTO;
   materiales: typeof MATERIALES;
   materialLabels!: Map<TipoMaterial, string>;
+  mostrarSelectLentesContacto: boolean = false;
+
+  // ARRAYS DE VISIBILIDAD PARA RECOMENDACIONES 
+  mostrarMedidasProgresivo: boolean[] = [];
+  mostrarTipoLentesContacto: boolean[] = [];
+  mostrarMaterialPersonalizado: boolean[] = [];
 
   readonly materialesValidos = new Set<TipoMaterial>([
     'CR39',
@@ -114,7 +121,7 @@ export class HistoriasMedicasComponent implements OnInit {
     'HI_INDEX_174',
     'OTRO'
   ]);
-  
+
 
   constructor(
     private fb: FormBuilder,
@@ -142,6 +149,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
     // Inicializar mapas de navegación
     this.initializeNavigationMaps();
+
   }
 
   // ***************************
@@ -218,6 +226,7 @@ export class HistoriasMedicasComponent implements OnInit {
       motivo: [[], Validators.required],
       otroMotivo: [''],
       tipoCristalActual: [''],
+      tipoLentesContacto: [''],
       ultimaGraduacion: [''],
 
       // Lensometría
@@ -228,7 +237,6 @@ export class HistoriasMedicasComponent implements OnInit {
       len_av_lejos_od: [''],
       len_av_cerca_od: [''],
       len_av_lejos_bi: [''],
-      len_av_bi: [''],
       len_esf_oi: [''],
       len_cil_oi: [''],
       len_eje_oi: [''],
@@ -268,10 +276,12 @@ export class HistoriasMedicasComponent implements OnInit {
       ref_final_dp_oi: [''],
 
       // AVSC - AVAE - OTROS
-      avsc_od: [''],
+      avsc_lejos_od: [''],
+      avsc_cerca_od: [''],
       avae_od: [''],
       otros_od: [''],
-      avsc_oi: [''],
+      avsc_lejos_oi: [''],
+      avsc_cerca_oi: [''],
       avae_oi: [''],
       otros_oi: [''],
 
@@ -281,7 +291,12 @@ export class HistoriasMedicasComponent implements OnInit {
 
       // Recomendaciones
       recomendaciones: this.fb.array([this.crearRecomendacion()])
+
     });
+
+    this.mostrarMedidasProgresivo = [false];
+    this.mostrarTipoLentesContacto = [false];
+    this.mostrarMaterialPersonalizado = [false];
   }
 
   private inicializarDatosIniciales(): void {
@@ -450,7 +465,7 @@ export class HistoriasMedicasComponent implements OnInit {
       examenOcular: {
         lensometria: {
           esf_od: '', cil_od: '', eje_od: '', add_od: '',
-          av_lejos_od: '', av_cerca_od: '', av_lejos_bi: '', av_bi: '',
+          av_lejos_od: '', av_cerca_od: '', av_lejos_bi: '',
           esf_oi: '', cil_oi: '', eje_oi: '', add_oi: '',
           av_lejos_oi: '', av_cerca_oi: '', av_cerca_bi: ''
         },
@@ -465,9 +480,16 @@ export class HistoriasMedicasComponent implements OnInit {
           esf_oi: '', cil_oi: '', eje_oi: '', add_oi: '', alt_oi: '', dp_oi: ''
         },
         avsc_avae_otros: {
-          avsc_od: '', avae_od: '', otros_od: '',
-          avsc_oi: '', avae_oi: '', otros_oi: '',
-          avsc_bi: ''
+          avsc_lejos_od: '',
+          avsc_cerca_od: '',
+          avae_od: '',
+          otros_od: '',
+
+          avsc_lejos_oi: '',
+          avsc_cerca_oi: '',
+          avae_oi: '',
+          otros_oi: ''
+
         }
       },
 
@@ -522,7 +544,6 @@ export class HistoriasMedicasComponent implements OnInit {
         len_av_lejos_od: eo.lensometria.av_lejos_od,
         len_av_cerca_od: eo.lensometria.av_cerca_od,
         len_av_lejos_bi: eo.lensometria.av_lejos_bi,
-        len_av_bi: eo.lensometria.av_bi,
         len_esf_oi: eo.lensometria.esf_oi,
         len_cil_oi: eo.lensometria.cil_oi,
         len_eje_oi: eo.lensometria.eje_oi,
@@ -561,14 +582,17 @@ export class HistoriasMedicasComponent implements OnInit {
         ref_final_alt_oi: eo.refraccionFinal.alt_oi,
         ref_final_dp_oi: eo.refraccionFinal.dp_oi,
 
-        // AVSC / AVAE / OTROS
-        avsc_od: eo.avsc_avae_otros.avsc_od,
+        // AVSC / AVAE / OTROS - VERSIÓN CORREGIDA (LEJOS/CERCA)
+        avsc_lejos_od: eo.avsc_avae_otros.avsc_lejos_od,
+        avsc_cerca_od: eo.avsc_avae_otros.avsc_cerca_od,
         avae_od: eo.avsc_avae_otros.avae_od,
         otros_od: eo.avsc_avae_otros.otros_od,
-        avsc_oi: eo.avsc_avae_otros.avsc_oi,
+
+        avsc_lejos_oi: eo.avsc_avae_otros.avsc_lejos_oi,
+        avsc_cerca_oi: eo.avsc_avae_otros.avsc_cerca_oi,
         avae_oi: eo.avsc_avae_otros.avae_oi,
         otros_oi: eo.avsc_avae_otros.otros_oi,
-        avsc_bi: eo.avsc_avae_otros.avsc_bi,
+
 
         // Diagnóstico / Tratamiento
         diagnostico: dt.diagnostico,
@@ -578,14 +602,28 @@ export class HistoriasMedicasComponent implements OnInit {
       this.onMotivoChange(this.historiaForm.value.motivo);
 
       this.recomendaciones.clear();
-      h.recomendaciones.forEach(r => {
+
+      // En el bucle de recomendaciones:
+      h.recomendaciones.forEach((r, index) => {
         const grupo = this.crearRecomendacion(r);
         this.recomendaciones.push(grupo);
+
+        // Extraer valor del cristal como string
+        const valorCristal = this.obtenerValorCristalComoString(r.cristal);
+
+        // Establecer visibilidad basada en los datos precargados
+        const esProgresivo = this.esCristalProgresivo(valorCristal);
+        const esMonofocalDigital = this.esMonofocalDigital(valorCristal);
+        const mostrarMedidas = esProgresivo || esMonofocalDigital;
+
+        this.mostrarMedidasProgresivo[index] = mostrarMedidas;
+        this.mostrarTipoLentesContacto[index] = this.esLentesContacto(valorCristal);
+        this.mostrarMaterialPersonalizado[index] = r.material?.includes('OTRO') || false;
       });
 
       this.formOriginalHistoria = this.historiaForm.value;
     }
-    // ✅ Solo carga empleados si no están disponibles
+    //Solo carga empleados si no están disponibles
     if (!this.medicoTratante || this.medicoTratante.length === 0) {
       this.loadEmployees(cargarYPrecargar);
     } else {
@@ -705,7 +743,6 @@ export class HistoriasMedicasComponent implements OnInit {
           av_lejos_od: f.len_av_lejos_od,
           av_cerca_od: f.len_av_cerca_od,
           av_lejos_bi: f.len_av_lejos_bi,
-          av_bi: f.len_av_bi,
           esf_oi: f.len_esf_oi,
           cil_oi: f.len_cil_oi,
           eje_oi: f.len_eje_oi,
@@ -745,13 +782,16 @@ export class HistoriasMedicasComponent implements OnInit {
           dp_oi: f.ref_final_dp_oi
         },
         avsc_avae_otros: {
-          avsc_od: f.avsc_od,
-          avae_od: f.avae_od,
-          otros_od: f.otros_od,
-          avsc_oi: f.avsc_oi,
-          avae_oi: f.avae_oi,
-          otros_oi: f.otros_oi,
-          avsc_bi: f.avsc_bi
+          avsc_lejos_od: f.avsc_lejos_od || '',
+          avsc_cerca_od: f.avsc_cerca_od || '',
+          avae_od: f.avae_od || '',
+          otros_od: f.otros_od || '',
+
+          // AVSC Lejos y Cerca para OI
+          avsc_lejos_oi: f.avsc_lejos_oi || '',
+          avsc_cerca_oi: f.avsc_cerca_oi || '',
+          avae_oi: f.avae_oi || '',
+          otros_oi: f.otros_oi || ''
         }
       },
       diagnosticoTratamiento: {
@@ -1152,23 +1192,37 @@ export class HistoriasMedicasComponent implements OnInit {
     return this.fb.group({
       cristal: [rec?.cristal || null, Validators.required],
       material: [rec?.material || [], Validators.required],
-      materialPersonalizado: [''],
+      materialPersonalizado: [rec?.materialPersonalizado || ''],
       montura: [rec?.montura || ''],
-      observaciones: [rec?.observaciones || '']
+      observaciones: [rec?.observaciones || ''],
+
+      // Campos para medidas de progresivos (AGREGAR VALORES PRECARGADOS)
+      medidaHorizontal: [rec?.medidaHorizontal || ''],
+      medidaVertical: [rec?.medidaVertical || ''],
+      medidaDiagonal: [rec?.medidaDiagonal || ''],
+      medidaPuente: [rec?.medidaPuente || ''],
+
+      // Campo para tipo de lentes de contacto
+      tipoLentesContacto: [rec?.tipoLentesContacto || '']
     });
   }
 
   agregarRecomendacion(): void {
     this.recomendaciones.push(this.crearRecomendacion());
+
+    // Añadir entradas en los arrays de visibilidad
+    this.mostrarMedidasProgresivo.push(false);
+    this.mostrarTipoLentesContacto.push(false);
+    this.mostrarMaterialPersonalizado.push(false);
   }
 
   eliminarRecomendacion(index: number): void {
     this.recomendaciones.removeAt(index);
-  }
 
-  verificarMaterialOtro(index: number): void {
-    const materialesSeleccionados = this.recomendaciones.at(index).get('material')?.value || [];
-    this.mostrarMaterialPersonalizado[index] = materialesSeleccionados.includes('OTRO');
+    // Remover también los estados de visibilidad
+    this.mostrarMedidasProgresivo.splice(index, 1);
+    this.mostrarTipoLentesContacto.splice(index, 1);
+    this.mostrarMaterialPersonalizado.splice(index, 1);
   }
 
   private mapRecomendaciones(): Recomendaciones[] {
@@ -1191,7 +1245,12 @@ export class HistoriasMedicasComponent implements OnInit {
         material: materialesCombinados,
         montura: grupo.get('montura')?.value || '',
         cristalSugerido: grupo.get('cristalSugerido')?.value || '',
-        observaciones: grupo.get('observaciones')?.value || ''
+        observaciones: grupo.get('observaciones')?.value || '',
+        tipoLentesContacto: grupo.get('tipoLentesContacto')?.value || '',
+        medidaHorizontal: grupo.get('medidaHorizontal')?.value || '',
+        medidaVertical: grupo.get('medidaVertical')?.value || '',
+        medidaDiagonal: grupo.get('medidaDiagonal')?.value || '',
+        medidaPuente: grupo.get('medidaPuente')?.value || ''
       };
     });
   }
@@ -1212,7 +1271,6 @@ export class HistoriasMedicasComponent implements OnInit {
         av_lejos_od: f.len_av_lejos_od || '',
         av_cerca_od: f.len_av_cerca_od || '',
         av_lejos_bi: f.len_av_lejos_bi || '',
-        av_bi: f.len_av_bi || '',
         esf_oi: f.len_esf_oi || '',
         cil_oi: f.len_cil_oi || '',
         eje_oi: f.len_eje_oi || '',
@@ -1252,13 +1310,16 @@ export class HistoriasMedicasComponent implements OnInit {
         dp_oi: f.ref_final_dp_oi || ''
       },
       avsc_avae_otros: {
-        avsc_od: f.avsc_od || '',
+        avsc_lejos_od: f.avsc_lejos_od || '',
+        avsc_cerca_od: f.avsc_cerca_od || '',
         avae_od: f.avae_od || '',
         otros_od: f.otros_od || '',
-        avsc_oi: f.avsc_oi || '',
+
+        // AVSC Lejos y Cerca para OI
+        avsc_lejos_oi: f.avsc_lejos_oi || '',
+        avsc_cerca_oi: f.avsc_cerca_oi || '',
         avae_oi: f.avae_oi || '',
-        otros_oi: f.otros_oi || '',
-        avsc_bi: f.avsc_bi || ''
+        otros_oi: f.otros_oi || ''
       }
     };
   }
@@ -2026,180 +2087,181 @@ export class HistoriasMedicasComponent implements OnInit {
     }
 
     return `
-    <div class="seccion-print page-break">
-      <div class="seccion-header-print">
-        <h2>EXÁMENES OCULARES</h2>
-      </div>
-
-      <!-- Lensometría -->
-      ${this.historiaSeleccionada.examenOcular.lensometria ? `
-      <div class="examen-subseccion-print">
-        <h3>Lensometría</h3>
-        <table class="tabla-print">
-          <thead>
-            <tr>
-              <th>Ojo</th>
-              <th>ESF</th>
-              <th>CIL</th>
-              <th>EJE</th>
-              <th>ADD</th>
-              <th>AV Lejos</th>
-              <th>AV Lejos BI</th>
-              <th>AV Cerca</th>
-              <th>AV Cerca BI</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>OD</strong></td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.esf_od)}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.cil_od)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.lensometria.eje_od || '—'}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.add_od)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.lensometria.av_lejos_od || '—'}</td>
-              <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.lensometria.av_lejos_bi || '—'}</td>
-              <td>${this.historiaSeleccionada.examenOcular.lensometria.av_cerca_od || '—'}</td>
-              <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.lensometria.av_cerca_bi || '—'}</td>
-            </tr>
-            <tr>
-              <td><strong>OI</strong></td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.esf_oi)}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.cil_oi)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.lensometria.eje_oi || '—'}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.add_oi)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.lensometria.av_lejos_oi || '—'}</td>
-              <td>${this.historiaSeleccionada.examenOcular.lensometria.av_cerca_oi || '—'}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      ` : ''}
-
-      <!-- AVSC - AVAE - OTROS -->
-      ${this.historiaSeleccionada.examenOcular.avsc_avae_otros ? `
-      <div class="examen-subseccion-print">
-        <h3>AVSC - AVAE - OTROS</h3>
-        <table class="tabla-print">
-          <thead>
-            <tr>
-              <th>Ojo</th>
-              <th>AVSC</th>
-              <th>AVSC BI</th>
-              <th>AVAE</th>
-              <th>OTROS</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>OD</strong></td>
-              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avsc_od || '—'}</td>
-              <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avsc_bi || '—'}</td>
-              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avae_od || '—'}</td>
-              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.otros_od || '—'}</td>
-            </tr>
-            <tr>
-              <td><strong>OI</strong></td>
-              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avsc_oi || '—'}</td>
-              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avae_oi || '—'}</td>
-              <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.otros_oi || '—'}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      ` : ''}
-
-      <!-- Hora de evaluación -->
-      ${this.horaEvaluacion ? `
-      <div class="hora-evaluacion-print">
-        <strong>Hora de evaluación:</strong> ${this.horaEvaluacion}
-      </div>
-      ` : ''}
-
-      <!-- Refracción -->
-      ${this.historiaSeleccionada.examenOcular.refraccion ? `
-      <div class="examen-subseccion-print">
-        <h3>Refracción</h3>
-        <table class="tabla-print">
-          <thead>
-            <tr>
-              <th>Ojo</th>
-              <th>ESF</th>
-              <th>CIL</th>
-              <th>EJE</th>
-              <th>ADD</th>
-              <th>AVCCL</th>
-              <th>AVCCL BI</th>
-              <th>AVCCC</th>
-              <th>AVCCC BI</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>OD</strong></td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.esf_od)}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.cil_od)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccion.eje_od || '—'}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.add_od)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccion.avccl_od || '—'}</td>
-              <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.refraccion.avccl_bi || '—'}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccion.avccc_od || '—'}</td>
-              <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.refraccion.avccc_bi || '—'}</td>
-            </tr>
-            <tr>
-              <td><strong>OI</strong></td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.esf_oi)}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.cil_oi)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccion.eje_oi || '—'}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.add_oi)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccion.avccl_oi || '—'}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccion.avccc_oi || '—'}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      ` : ''}
-
-      <!-- Refracción Final -->
-      ${this.historiaSeleccionada.examenOcular.refraccionFinal ? `
-      <div class="examen-subseccion-print">
-        <h3>Refracción Final</h3>
-        <table class="tabla-print">
-          <thead>
-            <tr>
-              <th>Ojo</th>
-              <th>ESF</th>
-              <th>CIL</th>
-              <th>EJE</th>
-              <th>ADD</th>
-              <th>ALT</th>
-              <th>DP</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>OD</strong></td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.esf_od)}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.cil_od)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.eje_od || '—'}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.add_od)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.alt_od || '—'}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.dp_od || '—'}</td>
-            </tr>
-            <tr>
-              <td><strong>OI</strong></td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.esf_oi)}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.cil_oi)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.eje_oi || '—'}</td>
-              <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.add_oi)}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.alt_oi || '—'}</td>
-              <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.dp_oi || '—'}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      ` : ''}
+  <div class="seccion-print page-break">
+    <div class="seccion-header-print">
+      <h2>EXÁMENES OCULARES</h2>
     </div>
-  `;
+
+    <!-- Lensometría -->
+    ${this.historiaSeleccionada.examenOcular.lensometria ? `
+    <div class="examen-subseccion-print">
+      <h3>Lensometría</h3>
+      <table class="tabla-print">
+        <thead>
+          <tr>
+            <th>Ojo</th>
+            <th>ESF</th>
+            <th>CIL</th>
+            <th>EJE</th>
+            <th>ADD</th>
+            <th>AV Lejos</th>
+            <th>AV Lejos BI</th>
+            <th>AV Cerca</th>
+            <th>AV Cerca BI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>OD</strong></td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.esf_od)}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.cil_od)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.lensometria.eje_od || '—'}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.add_od)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.lensometria.av_lejos_od || '—'}</td>
+            <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.lensometria.av_lejos_bi || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.lensometria.av_cerca_od || '—'}</td>
+            <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.lensometria.av_cerca_bi || '—'}</td>
+          </tr>
+          <tr>
+            <td><strong>OI</strong></td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.esf_oi)}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.cil_oi)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.lensometria.eje_oi || '—'}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.lensometria.add_oi)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.lensometria.av_lejos_oi || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.lensometria.av_cerca_oi || '—'}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    ` : ''}
+
+    <!-- AVSC - AVAE - OTROS (VERSIÓN CORREGIDA CON LEJOS/CERCA) -->
+    ${this.historiaSeleccionada.examenOcular.avsc_avae_otros ? `
+    <div class="examen-subseccion-print">
+      <h3>AVSC - AVAE - OTROS</h3>
+      <table class="tabla-print">
+        <thead>
+          <tr>
+            <th>Ojo</th>
+            <th>AVSC Lejos</th>
+            <th>AVSC Cerca</th>
+            <th>AVAE</th>
+            <th>OTROS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>OD</strong></td>
+            <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avsc_lejos_od || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avsc_cerca_od || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avae_od || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.otros_od || '—'}</td>
+          </tr>
+          <tr>
+            <td><strong>OI</strong></td>
+            <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avsc_lejos_oi || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avsc_cerca_oi || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.avae_oi || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.avsc_avae_otros.otros_oi || '—'}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    ` : ''}
+
+    <!-- Hora de evaluación -->
+    ${this.horaEvaluacion ? `
+    <div class="hora-evaluacion-print">
+      <strong>Hora de evaluación:</strong> ${this.horaEvaluacion}
+    </div>
+    ` : ''}
+
+    <!-- Refracción -->
+    ${this.historiaSeleccionada.examenOcular.refraccion ? `
+    <div class="examen-subseccion-print">
+      <h3>Refracción</h3>
+      <table class="tabla-print">
+        <thead>
+          <tr>
+            <th>Ojo</th>
+            <th>ESF</th>
+            <th>CIL</th>
+            <th>EJE</th>
+            <th>ADD</th>
+            <th>AVCCL</th>
+            <th>AVCCL BI</th>
+            <th>AVCCC</th>
+            <th>AVCCC BI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>OD</strong></td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.esf_od)}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.cil_od)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccion.eje_od || '—'}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.add_od)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccion.avccl_od || '—'}</td>
+            <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.refraccion.avccl_bi || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccion.avccc_od || '—'}</td>
+            <td rowspan="2" class="merged-cell-print">${this.historiaSeleccionada.examenOcular.refraccion.avccc_bi || '—'}</td>
+          </tr>
+          <tr>
+            <td><strong>OI</strong></td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.esf_oi)}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.cil_oi)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccion.eje_oi || '—'}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccion.add_oi)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccion.avccl_oi || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccion.avccc_oi || '—'}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    ` : ''}
+
+    <!-- Refracción Final -->
+    ${this.historiaSeleccionada.examenOcular.refraccionFinal ? `
+    <div class="examen-subseccion-print">
+      <h3>Refracción Final</h3>
+      <table class="tabla-print">
+        <thead>
+          <tr>
+            <th>Ojo</th>
+            <th>ESF</th>
+            <th>CIL</th>
+            <th>EJE</th>
+            <th>ADD</th>
+            <th>ALT</th>
+            <th>DP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>OD</strong></td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.esf_od)}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.cil_od)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.eje_od || '—'}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.add_od)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.alt_od || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.dp_od || '—'}</td>
+          </tr>
+          <tr>
+            <td><strong>OI</strong></td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.esf_oi)}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.cil_oi)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.eje_oi || '—'}</td>
+            <td>${this.getValorFormateado(this.historiaSeleccionada.examenOcular.refraccionFinal.add_oi)}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.alt_oi || '—'}</td>
+            <td>${this.historiaSeleccionada.examenOcular.refraccionFinal.dp_oi || '—'}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    ` : ''}
+  </div>
+`;
   }
 
   private generarRecomendacionesImpresion(): string {
@@ -2207,40 +2269,65 @@ export class HistoriasMedicasComponent implements OnInit {
       return '';
     }
 
-    const recomendacionesHTML = this.historiaSeleccionada.recomendaciones.map((rec, index) => `
-    <div class="recomendacion-item-print">
-      <div class="recomendacion-header-print">
-        <h4>Lente #${index + 1}</h4>
+    const recomendacionesHTML = this.historiaSeleccionada.recomendaciones.map((rec, index) => {
+      // Generar HTML para medidas si existen
+      const medidasHTML = (rec.medidaHorizontal || rec.medidaVertical || rec.medidaDiagonal || rec.medidaPuente) ? `
+        <div class="recomendacion-field">
+          <label>Medidas:</label>
+          <div class="medidas-detail">
+            ${rec.medidaHorizontal ? `<div>Horizontal: ${rec.medidaHorizontal} cm</div>` : ''}
+            ${rec.medidaVertical ? `<div>Vertical: ${rec.medidaVertical} cm</div>` : ''}
+            ${rec.medidaDiagonal ? `<div>Diagonal: ${rec.medidaDiagonal} cm</div>` : ''}
+            ${rec.medidaPuente ? `<div>Puente: ${rec.medidaPuente} cm</div>` : ''}
+          </div>
+        </div>
+      ` : '';
+
+      // Generar HTML para tipo de lentes de contacto si existe
+      const lentesContactoHTML = rec.tipoLentesContacto ? `
+        <div class="recomendacion-field">
+          <label>Tipo de lentes de contacto:</label>
+          <span>${rec.tipoLentesContacto}</span>
+        </div>
+      ` : '';
+
+      return `
+      <div class="recomendacion-item-print">
+        <div class="recomendacion-header-print">
+          <h4>Lente #${index + 1}</h4>
+        </div>
+        <div class="recomendacion-content-print">
+          <div class="recomendacion-field">
+            <label>Tipo de cristal:</label>
+            <span>${rec.cristal?.label || 'No especificado'}</span>
+          </div>
+          ${lentesContactoHTML}
+          <div class="recomendacion-field">
+            <label>Material:</label>
+            <span>${this.getMaterialLabel(rec.material)}</span>
+          </div>
+          ${medidasHTML}
+          <div class="recomendacion-field">
+            <label>Montura sugerida:</label>
+            <span>${rec.montura || 'No especificada'}</span>
+          </div>
+          <div class="recomendacion-field full-width">
+            <label>Observaciones:</label>
+            <span>${rec.observaciones || 'Sin observaciones'}</span>
+          </div>
+        </div>
       </div>
-      <div class="recomendacion-content-print">
-        <div class="recomendacion-field">
-          <label>Tipo de cristal:</label>
-          <span>${rec.cristal?.label || 'No especificado'}</span>
-        </div>
-        <div class="recomendacion-field">
-          <label>Material:</label>
-          <span>${this.getMaterialLabel(rec.material)}</span>
-        </div>
-        <div class="recomendacion-field">
-          <label>Montura sugerida:</label>
-          <span>${rec.montura || 'No especificada'}</span>
-        </div>
-        <div class="recomendacion-field full-width">
-          <label>Observaciones:</label>
-          <span>${rec.observaciones || 'Sin observaciones'}</span>
-        </div>
-      </div>
-    </div>
-  `).join('');
+    `;
+    }).join('');
 
     return `
-    <div class="seccion-print no-break">
-      <div class="seccion-header-print">
-        <h2>RECOMENDACIONES DE LENTES</h2>
+      <div class="seccion-print no-break">
+        <div class="seccion-header-print">
+          <h2>RECOMENDACIONES DE LENTES</h2>
+        </div>
+        ${recomendacionesHTML}
       </div>
-      ${recomendacionesHTML}
-    </div>
-  `;
+    `;
   }
 
   private obtenerEstilosImpresion(): string {
@@ -2996,43 +3083,6 @@ export class HistoriasMedicasComponent implements OnInit {
   // Agrega esta propiedad a tu clase
   private boundHandleKeydown: any;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // Métodos para navegación por teclado
   private initializeNavigationMaps(): void {
     // Mapa principal para navegación horizontal (Enter/→)
@@ -3044,10 +3094,8 @@ export class HistoriasMedicasComponent implements OnInit {
       'len_add_od': 'len_av_lejos_od',
       'len_av_lejos_od': 'len_av_cerca_od',
       'len_av_cerca_od': 'len_av_lejos_bi',
-      'len_av_lejos_bi': 'len_av_bi',
 
       // Lensometría - Fila OI (después de binocular OD)
-      'len_av_bi': 'len_esf_oi',
       'len_esf_oi': 'len_cil_oi',
       'len_cil_oi': 'len_eje_oi',
       'len_eje_oi': 'len_add_oi',
@@ -3365,6 +3413,120 @@ export class HistoriasMedicasComponent implements OnInit {
 
     // Limpiar clase using-mouse
     document.body.classList.remove('using-mouse');
+  }
+
+  onTipoCristalChange(valor: any): void {
+    // Si el valor es un objeto (ng-select), extraer el valor
+    const tipoCristal = typeof valor === 'object' ? valor?.value : valor;
+
+    // Mostrar/ocultar select de lentes de contacto
+    this.mostrarSelectLentesContacto = tipoCristal === 'LENTES_CONTACTO';
+
+    // Si se cambia a otra opción, limpiar el campo de lentes de contacto
+    if (!this.mostrarSelectLentesContacto) {
+      this.historiaForm.get('tipoLentesContacto')?.setValue(null);
+    }
+
+    // Forzar detección de cambios
+    this.cdr.detectChanges();
+  }
+
+  // Método para manejar cambios en materiales
+  verificarMaterialOtro(index: number): void {
+    const materialesSeleccionados = this.recomendaciones.at(index).get('material')?.value || [];
+    this.mostrarMaterialPersonalizado[index] = materialesSeleccionados.includes('OTRO');
+
+    if (!this.mostrarMaterialPersonalizado[index]) {
+      const recomendacionGroup = this.recomendaciones.at(index) as FormGroup;
+      recomendacionGroup.get('materialPersonalizado')?.setValue('');
+    }
+  }
+
+  onCristalChange(event: any, index: number): void {
+    // Extraer el valor como string
+    const valorString = this.obtenerValorCristalComoString(event);
+
+    // Mostrar medidas para PROGRESIVO o MONOFOCAL_DIGITAL
+    const mostrarMedidas = this.requiereMedidas(valorString);
+
+    // Verificar si es LENTES DE CONTACTO
+    const esLentesContacto = this.esLentesContacto(valorString);
+
+    // Actualizar visibilidad
+    this.mostrarMedidasProgresivo[index] = mostrarMedidas;
+    this.mostrarTipoLentesContacto[index] = esLentesContacto;
+
+    // Limpiar campos si cambia de tipo
+    const recomendacionGroup = this.recomendaciones.at(index) as FormGroup;
+
+    if (!mostrarMedidas) {
+      recomendacionGroup.get('medidaHorizontal')?.setValue('');
+      recomendacionGroup.get('medidaVertical')?.setValue('');
+      recomendacionGroup.get('medidaDiagonal')?.setValue('');
+      recomendacionGroup.get('medidaPuente')?.setValue('');
+    }
+
+    if (!esLentesContacto) {
+      recomendacionGroup.get('tipoLentesContacto')?.setValue('');
+    }
+
+    // Forzar detección de cambios
+    setTimeout(() => {
+      this.cdr.detectChanges();
+    }, 0);
+  }
+
+  // Método para verificar si es MONOFOCAL_DIGITAL
+  private esMonofocalDigital(valor: string): boolean {
+    if (!valor) return false;
+    return valor.toUpperCase() === 'MONOFOCAL_DIGITAL';
+  }
+
+  // Método auxiliar para obtener el valor como string
+  private obtenerValorCristalComoString(cristal: any): string {
+    if (!cristal) return '';
+
+    // Si ya es string
+    if (typeof cristal === 'string') {
+      return cristal;
+    }
+
+    // Si es objeto con propiedad value
+    if (cristal && typeof cristal === 'object' && 'value' in cristal) {
+      return String(cristal.value);
+    }
+
+    // Si es objeto sin propiedad value, intentar convertirlo
+    return String(cristal);
+  }
+
+  // Método para verificar si es progresivo
+  private esCristalProgresivo(valor: string): boolean {
+    if (!valor) return false;
+    return valor.toUpperCase().includes('PROGRESIVO');
+  }
+
+  // Método para verificar si es lentes de contacto
+  private esLentesContacto(valor: string): boolean {
+    if (!valor) return false;
+    return valor.toUpperCase() === 'LENTES_CONTACTO';
+  }
+
+  // Método para verificar si el cristal requiere medidas
+  private requiereMedidas(cristal: any): boolean {
+    const valor = this.obtenerValorCristalComoString(cristal);
+    const valorUpper = valor.toUpperCase();
+
+    // Lista de tipos que requieren medidas
+    const tiposConMedidas = [
+      'PROGRESIVO_CONVENCIONAL',
+      'PROGRESIVO_DIGITAL_BASICO',
+      'PROGRESIVO_DIGITAL_INTERMEDIO',
+      'PROGRESIVO_DIGITAL_AMPLIO',
+      'MONOFOCAL_DIGITAL'
+    ];
+
+    return tiposConMedidas.some(tipo => valorUpper.includes(tipo));
   }
 
 }

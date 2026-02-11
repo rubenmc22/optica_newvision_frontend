@@ -3790,3 +3790,446 @@ body:not(.using-mouse) .campo-activo {
     bottom: 100% !important;
   }
 }
+
+// En tu archivo historias-medicas.component.scss
+
+// Sección de medidas para progresivos
+.medidas-progresivo-section {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  //background: linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(66, 133, 244, 0.15);
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.08);
+  position: relative;
+  overflow: hidden;
+
+  &:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom, #4285f4, #34a853);
+  }
+
+  // Alerta informativa
+  .medidas-info-alert {
+    margin-bottom: 1.5rem;
+
+    .alert {
+      background: var(--degradado-pastel);
+      border: 1px solid rgba(66, 133, 244, 0.2);
+      border-radius: 10px;
+      padding: 1rem;
+
+      .d-flex {
+        i {
+          color: #4285f4;
+          font-size: 1.5rem;
+        }
+
+        div {
+          h6 {
+            color: #1a237e;
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+          }
+
+          p {
+            color: #5f6368;
+            font-size: 0.85rem;
+            line-height: 1.4;
+
+            strong {
+              color: #d93025;
+              font-weight: 600;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Campos de medidas
+  // Campos de medidas
+  .medidas-progresivo-campos {
+    .col-md-3 {
+      &:nth-child(1) .form-group-moderno {
+        .form-label-moderno i {
+          color: #4285f4; // Azul para horizontal
+        }
+
+        .input-unit {
+          background: rgba(66, 133, 244, 0.1);
+          color: #4285f4;
+        }
+      }
+
+      &:nth-child(2) .form-group-moderno {
+        .form-label-moderno i {
+          color: #34a853; // Verde para vertical
+        }
+
+        .input-unit {
+          background: rgba(52, 168, 83, 0.1);
+          color: #34a853;
+        }
+      }
+
+      &:nth-child(3) .form-group-moderno {
+        .form-label-moderno i {
+          color: #fbbc05; // Amarillo para diagonal
+        }
+
+        .input-unit {
+          background: rgba(251, 188, 5, 0.1);
+          color: #fbbc05;
+        }
+      }
+
+      &:nth-child(4) .form-group-moderno {
+        .form-label-moderno i {
+          color: #ea4335; // Rojo para puente
+        }
+
+        .input-unit {
+          background: rgba(234, 67, 53, 0.1);
+          color: #ea4335;
+        }
+      }
+    }
+
+    .form-group-moderno {
+      margin-bottom: 1.25rem;
+      position: relative;
+
+      .form-label-moderno {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: #1a237e;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        transition: color 0.2s ease;
+
+        i {
+          font-size: 1.1rem;
+          transition: color 0.2s ease;
+        }
+
+        .required {
+          color: #d93025;
+          margin-left: 0.25rem;
+          font-weight: 700;
+        }
+      }
+
+      .input-with-unit {
+        position: relative;
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.25rem;
+
+        .form-control-moderno {
+          flex: 1;
+          padding: 0.625rem 3rem 0.625rem 0.875rem;
+          background: white;
+          border: 2px solid #e0e0e0;
+          border-radius: 8px;
+          transition: all 0.3s ease;
+          height: 42px;
+          font-size: 0.95rem;
+          color: #1a237e;
+          font-weight: 500;
+
+          &:focus {
+            border-color: #4285f4;
+            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.15);
+            outline: none;
+
+            ~.input-unit {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          &:hover {
+            border-color: #b3c1e1;
+          }
+
+          &::placeholder {
+            color: #9aa0a6;
+            font-size: 0.85rem;
+            font-weight: normal;
+          }
+
+          // Estilos específicos para input type="number"
+          &[type="number"] {
+            appearance: textfield;
+
+            &::-webkit-outer-spin-button,
+            &::-webkit-inner-spin-button {
+              appearance: none;
+              margin: 0;
+              opacity: 0.7;
+              transition: opacity 0.2s ease;
+
+              &:hover {
+                opacity: 1;
+              }
+            }
+
+            // Firefox
+            -moz-appearance: textfield;
+          }
+        }
+
+        .input-unit {
+          position: absolute;
+          right: 12px;
+          font-weight: 600;
+          font-size: 0.8rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          pointer-events: none;
+          transition: all 0.2s ease;
+          opacity: 0.9;
+          transform: translateY(-1px);
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+        }
+      }
+
+      .form-text.text-muted {
+        margin-top: 0.25rem;
+        font-size: 0.75rem;
+        color: #5f6368;
+        padding-left: 0.25rem;
+        line-height: 1.4;
+        font-style: italic;
+        display: block;
+        min-height: 1rem;
+      }
+
+      // Estados de validación
+      &.ng-invalid.ng-touched {
+        .form-label-moderno {
+          color: #d93025;
+
+          i {
+            color: #d93025;
+          }
+        }
+
+        .form-control-moderno {
+          border-color: #d93025;
+          background: rgba(234, 67, 53, 0.05);
+
+          &:focus {
+            box-shadow: 0 0 0 3px rgba(234, 67, 53, 0.15);
+          }
+        }
+
+        .input-unit {
+          background: rgba(234, 67, 53, 0.15);
+          color: #d93025;
+        }
+
+        .form-text.text-muted {
+          color: #d93025;
+        }
+      }
+
+      &.ng-valid.ng-touched {
+        .form-label-moderno {
+          color: #34a853;
+
+          i {
+            color: #34a853;
+          }
+        }
+
+        .form-control-moderno {
+          border-color: #34a853;
+          background: rgba(52, 168, 83, 0.05);
+
+          &:focus {
+            box-shadow: 0 0 0 3px rgba(52, 168, 83, 0.15);
+          }
+        }
+
+        .input-unit {
+          background: rgba(52, 168, 83, 0.15);
+          color: #34a853;
+        }
+
+        .form-text.text-muted {
+          color: #34a853;
+        }
+      }
+    }
+  }
+
+  // Efecto de enfoque mejorado
+  .form-group-moderno:focus-within {
+    .form-label-moderno {
+      color: #4285f4;
+
+      i {
+        color: #4285f4;
+      }
+    }
+  }
+
+  // Responsive
+  @media (max-width: 768px) {
+    .medidas-progresivo-campos {
+      .col-md-3 {
+        margin-bottom: 1.5rem;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+
+      .form-group-moderno {
+        margin-bottom: 1.5rem;
+
+        .input-with-unit {
+          .form-control-moderno {
+            padding-right: 2.5rem;
+            font-size: 0.9rem;
+          }
+
+          .input-unit {
+            right: 10px;
+            font-size: 0.75rem;
+            padding: 0.2rem 0.4rem;
+          }
+        }
+
+        .form-text.text-muted {
+          font-size: 0.7rem;
+        }
+      }
+    }
+  }
+
+  // Estado de validación
+  .ng-invalid.ng-touched {
+    .form-control-moderno {
+      border-color: #d93025;
+      background: rgba(234, 67, 53, 0.05);
+
+      &:focus {
+        box-shadow: 0 0 0 3px rgba(234, 67, 53, 0.15);
+      }
+    }
+  }
+
+  .ng-valid.ng-touched {
+    .form-control-moderno {
+      border-color: #34a853;
+      background: rgba(52, 168, 83, 0.05);
+
+      &:focus {
+        box-shadow: 0 0 0 3px rgba(52, 168, 83, 0.15);
+      }
+    }
+  }
+
+  // Responsive
+  @media (max-width: 768px) {
+    padding: 1rem;
+
+    .medidas-progresivo-campos {
+      .col-md-3 {
+        margin-bottom: 1rem;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+
+    .input-with-unit {
+      .input-unit {
+        right: 8px;
+        font-size: 0.8rem;
+        padding: 0.2rem 0.4rem;
+      }
+    }
+  }
+
+  // Animación de entrada
+  animation: slideIn 0.3s ease-out;
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+// Asegurar que los inputs tengan el estilo correcto dentro de las recomendaciones
+.recomendacion-card {
+  .medidas-progresivo-section {
+    margin: 1rem 0;
+    border: 1px solid rgba(66, 133, 244, 0.2);
+
+    .form-control-moderno {
+      background: white !important;
+    }
+  }
+}
+
+// Estilos para cuando está en modo edición
+.modo-edicion {
+  .medidas-progresivo-section {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+    border-color: rgba(255, 193, 7, 0.3);
+
+    &:before {
+      background: linear-gradient(to bottom, #ffb300, #ff9800);
+    }
+  }
+}
+
+// Tooltips informativos (opcional)
+.tooltip-info {
+  position: relative;
+  display: inline-block;
+  margin-left: 0.5rem;
+  cursor: help;
+
+  i {
+    color: #5f6368;
+    font-size: 0.9rem;
+  }
+
+  &:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a237e;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}

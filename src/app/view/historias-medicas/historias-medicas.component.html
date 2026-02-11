@@ -387,29 +387,26 @@
                       <thead>
                         <tr>
                           <th>Ojo</th>
-                          <th>AVSC</th>
-                          <th class="merged-cell">AVSC BI</th>
+                          <th>AVSC Lejos</th>
+                          <th>AVSC Cerca</th>
                           <th>AVAE</th>
-                          <th colspan="2">OTROS</th>
+                          <th>OTROS</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
                           <td><strong>OD</strong></td>
-                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_od || '—' }}</td>
-                          <td rowspan="2" class="merged-cell">
-                            {{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_bi || '—' }}
-                          </td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_lejos_od || '—' }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_cerca_od || '—' }}</td>
                           <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avae_od || '—' }}</td>
-                          <td colspan="2">{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_od || '—' }}
-                          </td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_od || '—' }}</td>
                         </tr>
                         <tr>
                           <td><strong>OI</strong></td>
-                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_oi || '—' }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_lejos_oi || '—' }}</td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avsc_cerca_oi || '—' }}</td>
                           <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.avae_oi || '—' }}</td>
-                          <td colspan="2">{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_oi || '—' }}
-                          </td>
+                          <td>{{ historiaSeleccionada?.examenOcular?.avsc_avae_otros?.otros_oi || '—' }}</td>
                         </tr>
                       </tbody>
                     </table>
@@ -579,32 +576,67 @@
 
                 <ng-container
                   *ngIf="historiaSeleccionada?.recomendaciones as recomendaciones; else sinRecomendaciones">
-                  <div class="recomendaciones-grid">
-                    <div *ngFor="let rec of recomendaciones; let i = index" class="recomendacion-card">
-                      <div class="recomendacion-header">
-                        <i class="bi bi-eyeglasses"></i>
-                        <span>Lente #{{ i + 1 }}</span>
-                      </div>
-                      <div class="recomendacion-body">
-                        <div class="recomendacion-item">
-                          <label>Tipo de cristal</label>
-                          <div class="dato-valor">{{ rec.cristal.label || 'No especificado' }}</div>
+                  <!-- En la sección de recomendaciones de la vista (línea ~900) -->
+                    <div class="recomendaciones-grid">
+                      <div *ngFor="let rec of recomendaciones; let i = index" class="recomendacion-card">
+                        <div class="recomendacion-header">
+                          <i class="bi bi-eyeglasses"></i>
+                          <span>Lente #{{ i + 1 }}</span>
                         </div>
-                        <div class="recomendacion-item">
-                          <label>Material</label>
-                          <div class="dato-valor">{{ getMaterialLabel(rec.material) }}</div>
-                        </div>
-                        <div class="recomendacion-item">
-                          <label>Montura sugerida</label>
-                          <div class="dato-valor">{{ rec.montura || 'No especificada' }}</div>
-                        </div>
-                        <div class="recomendacion-item full-width">
-                          <label>Observaciones</label>
-                          <div class="dato-valor">{{ rec.observaciones || 'Sin observaciones' }}</div>
+                        <div class="recomendacion-body">
+                          <div class="recomendacion-item">
+                            <label>Tipo de cristal</label>
+                            <div class="dato-valor">{{ rec.cristal?.label || 'No especificado' }}</div>
+                          </div>
+                          
+                          <!-- AGREGAR TIPO DE LENTES DE CONTACTO -->
+                          <div class="recomendacion-item" *ngIf="rec.tipoLentesContacto">
+                            <label>Tipo de lentes de contacto</label>
+                            <div class="dato-valor">{{ rec.tipoLentesContacto || 'No especificado' }}</div>
+                          </div>
+                          
+                          <div class="recomendacion-item">
+                            <label>Material</label>
+                            <div class="dato-valor">{{ getMaterialLabel(rec.material) }}</div>
+                          </div>
+                          <div class="recomendacion-item">
+                            <label>Montura sugerida</label>
+                            <div class="dato-valor">{{ rec.montura || 'No especificada' }}</div>
+                          </div>
+                          
+                          <!-- AGREGAR CAMPOS DE MEDIDAS SI EXISTEN -->
+                          <div class="medidas-section" *ngIf="rec.medidaHorizontal || rec.medidaVertical || rec.medidaDiagonal || rec.medidaPuente">
+                            <div class="medidas-header">
+                              <i class="bi bi-rulers"></i>
+                              <label>Medidas del lente</label>
+                            </div>
+                            <div class="medidas-grid">
+                              <div class="medida-item" *ngIf="rec.medidaHorizontal">
+                                <label>Horizontal:</label>
+                                <span>{{ rec.medidaHorizontal }} cm</span>
+                              </div>
+                              <div class="medida-item" *ngIf="rec.medidaVertical">
+                                <label>Vertical:</label>
+                                <span>{{ rec.medidaVertical }} cm</span>
+                              </div>
+                              <div class="medida-item" *ngIf="rec.medidaDiagonal">
+                                <label>Diagonal:</label>
+                                <span>{{ rec.medidaDiagonal }} cm</span>
+                              </div>
+                              <div class="medida-item" *ngIf="rec.medidaPuente">
+                                <label>Puente:</label>
+                                <span>{{ rec?.medidaPuente || '' }} cm</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div class="recomendacion-item full-width">
+                            <label>Observaciones</label>
+                            <div class="dato-valor">{{ rec.observaciones || 'Sin observaciones' }}</div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
                 </ng-container>
                 <ng-template #sinRecomendaciones>
                   <div class="empty-state">
@@ -733,8 +765,7 @@
 
                       <ng-template ng-label-tmp let-item="item">
                         <div class="paciente-seleccionado">
-                          {{ item?.informacionPersonal?.nombreCompleto }} - CI: {{ item?.informacionPersonal?.cedula
-                          }}
+                          {{ item?.informacionPersonal?.nombreCompleto }} - CI: {{ item?.informacionPersonal?.cedula }}
                         </div>
                       </ng-template>
                     </ng-select>
@@ -773,6 +804,20 @@
                     </label>
                     <ng-select [items]="tiposCristales" bindLabel="label" bindValue="value"
                       formControlName="tipoCristalActual" [searchable]="true" placeholder="Seleccione un tipo..."
+                      (change)="onTipoCristalChange($event)" class="ng-select-moderno">
+                    </ng-select>
+                  </div>
+                </div>
+
+                <!-- Select para tipo de lentes de contacto (se muestra solo si se selecciona "Lentes de contacto") -->
+                <div class="col-md-4" *ngIf="mostrarSelectLentesContacto">
+                  <div class="form-group-moderno">
+                    <label class="form-label-moderno">
+                      <i class="bi bi-eye me-2"></i>
+                      Tipo de Lente de Contacto
+                    </label>
+                    <ng-select [items]="tiposLentesContacto" bindLabel="label" bindValue="value"
+                      formControlName="tipoLentesContacto" [searchable]="true" placeholder="Seleccione el tipo..."
                       class="ng-select-moderno">
                     </ng-select>
                   </div>
@@ -893,7 +938,7 @@
                       </div>
                       
                       <div class="campo-select">
-                        <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                           formControlName="len_av_lejos_od" placeholder="AV Lejos" [searchable]="true"
                           class="ng-select-moderno"
                           (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
@@ -901,7 +946,7 @@
                       </div>
                       
                       <div class="campo-select">
-                        <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                           formControlName="len_av_cerca_od" placeholder="AV Cerca" [searchable]="true"
                           class="ng-select-moderno"
                           (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
@@ -948,7 +993,7 @@
                       </div>
                       
                       <div class="campo-select">
-                        <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                           formControlName="len_av_lejos_oi" placeholder="AV Lejos" [searchable]="true"
                           class="ng-select-moderno"
                           (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
@@ -956,7 +1001,7 @@
                       </div>
                       
                       <div class="campo-select">
-                        <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                           formControlName="len_av_cerca_oi" placeholder="AV Cerca" [searchable]="true"
                           class="ng-select-moderno"
                           (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
@@ -985,7 +1030,7 @@
                       <div class="binocular-campo">
                         <label>AV Cerca</label>
                         <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
-                          formControlName="len_av_bi" placeholder="AV cerca BI" [searchable]="true" 
+                          formControlName="len_av_cerca_bi" placeholder="AV cerca BI" [searchable]="true" 
                           class="ng-select-moderno"
                           (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"> 
                         </ng-select>
@@ -1018,15 +1063,15 @@
                       <span class="ojo-tag ojo-od">OD</span>
                     </div>
                     
-                    <!-- AVSC Lejos OD -->
+                    <!-- AVSC Lejos  -->
                     <div class="campo-select">
                       <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
-                        formControlName="avsc_od" placeholder="AVSC Lejos" [searchable]="true" 
+                        formControlName="avsc_lejos_od" placeholder="AVSC Lejos" [searchable]="true" 
                         class="ng-select-moderno">
                       </ng-select>
                     </div>
                     
-                    <!-- AVSC Cerca OD -->
+                    <!-- AVSC Cerca  -->
                     <div class="campo-select">
                       <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                         formControlName="avsc_cerca_od" placeholder="AVSC Cerca" [searchable]="true" 
@@ -1034,9 +1079,9 @@
                       </ng-select>
                     </div>
                     
-                    <!-- AVAE OD -->
+                    <!-- AVAE -->
                     <div class="campo-select">
-                      <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
+                      <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                         formControlName="avae_od" placeholder="AVAE" [searchable]="true" 
                         class="ng-select-moderno">
                       </ng-select>
@@ -1058,7 +1103,7 @@
                     <!-- AVSC Lejos OI -->
                     <div class="campo-select">
                       <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
-                        formControlName="avsc_oi" placeholder="AVSC Lejos" [searchable]="true" 
+                        formControlName="avsc_lejos_oi" placeholder="AVSC Lejos" [searchable]="true" 
                         class="ng-select-moderno">
                       </ng-select>
                     </div>
@@ -1148,7 +1193,7 @@
                       </div>
                       
                       <div class="campo-select">
-                        <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccl_od" placeholder="AVCCL" [searchable]="true"
                           class="ng-select-moderno"
                           (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
@@ -1156,7 +1201,7 @@
                       </div>
                       
                       <div class="campo-select">
-                        <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccc_od" placeholder="AVCCC" [searchable]="true"
                           class="ng-select-moderno"
                           (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
@@ -1203,7 +1248,7 @@
                       </div>
                       
                       <div class="campo-select">
-                        <ng-select [items]="opcionesRef['avLejos']" bindLabel="label" bindValue="value"
+                        <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccl_oi" placeholder="AVCCL" [searchable]="true"
                           class="ng-select-moderno"
                           (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
@@ -1211,7 +1256,7 @@
                       </div>
                       
                       <div class="campo-select">
-                        <ng-select [items]="opcionesRef['avCerca']" bindLabel="label" bindValue="value"
+                        <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccc_oi" placeholder="AVCCC" [searchable]="true"
                           class="ng-select-moderno"
                           (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  >
@@ -1414,7 +1459,7 @@
                 <i class="bi bi-chat-square-text"></i>
               </div>
               <div class="section-title-content">
-                <h6 class="section-title">Recomendaciones</h6>
+                <h6 class="section-title">Recomendaciones/Indicaciones</h6>
                 <button class="btn-agregar-recomendacion" type="button" (click)="agregarRecomendacion()">
                   <i class="bi bi-plus-circle"></i>
                   Añadir lente
@@ -1441,8 +1486,20 @@
                       <div class="col-md-4">
                         <div class="form-group-moderno">
                           <label class="form-label-moderno">Tipo de cristal <span class="required">*</span></label>
-                          <ng-select [items]="tiposCristales" [searchable]="true" formControlName="cristal"
-                            placeholder="Seleccione el cristal..." class="ng-select-moderno">
+                          <ng-select [items]="tiposCristales" bindLabel="label" bindValue="label"
+                            formControlName="cristal" placeholder="Seleccione el cristal..." [searchable]="true"
+                            (change)="onCristalChange($event, i)" class="ng-select-moderno">
+                          </ng-select>
+                        </div>
+                      </div>
+
+                      <!-- Tipo de Lentes de Contacto (se muestra solo si se selecciona "Lentes de contacto") -->
+                      <div class="col-md-4" *ngIf="mostrarTipoLentesContacto[i]">
+                        <div class="form-group-moderno">
+                          <label class="form-label-moderno">Tipo de Lentes de Contacto <span class="required">*</span></label>
+                          <ng-select [items]="tiposLentesContacto" bindLabel="label" bindValue="label"
+                            formControlName="tipoLentesContacto" placeholder="Seleccione el tipo..." [searchable]="true"
+                            class="ng-select-moderno">
                           </ng-select>
                         </div>
                       </div>
@@ -1470,24 +1527,112 @@
                       <!-- Montura -->
                       <div class="col-md-4">
                         <div class="form-group-moderno">
-                          <label class="form-label-moderno">Montura sugerida</label>
+                          <label class="form-label-moderno">Tipo de Montura sugerida</label>
                           <input type="text" class="form-control-moderno" formControlName="montura"
                             placeholder="Ej: Rectangular metálica" />
                         </div>
                       </div>
 
-                      <!-- Observaciones -->
-                    <div class="col-md-8">
-                      <div class="form-group-moderno has-observaciones-subtitle">
-                        <label class="form-label-moderno">Observaciones</label>
-                        <span class="observaciones-subtitle">
-                          <i class="bi bi-info-circle"></i>
-                          Estas observaciones servirán de guía para la orden de trabajo
-                        </span>
-                        <textarea class="form-control-moderno" rows="2" formControlName="observaciones"
-                          placeholder="Notas específicas para este lente"></textarea>
+                      <!-- Sección para medidas de progresivos -->
+                      <div class="col-12" *ngIf="mostrarMedidasProgresivo[i]">
+                        <div class="medidas-progresivo-section">
+                          <!-- Mensaje informativo -->
+                          <div class="medidas-info-alert">
+                            <div class="alert alert-info mb-3">
+                              <div class="d-flex align-items-center">
+                                <i class="bi bi-rulers me-2 fs-5"></i>
+                                <div>
+                                  <h6 class="mb-1">📏 Medidas para Cristales Progresivos</h6>
+                                  <p class="mb-0 small">
+                                    Es <strong>OBLIGATORIO</strong> tomar estas medidas para garantizar la correcta adaptación 
+                                    de los lentes progresivos. Mida en centímetros (cm) con precisión.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Campos de medidas -->
+                          <div class="row g-3 medidas-progresivo-campos">
+                            <div class="col-md-3">
+                              <div class="form-group-moderno">
+                                <label class="form-label-moderno">
+                                  <i class="bi bi-arrows-expand-h"></i> Horizontal
+                                  <span class="required">*</span>
+                                </label>
+                                <div class="input-with-unit">
+                                  <input type="number" step="0.1" min="0.1" max="10" 
+                                    class="form-control-moderno" formControlName="medidaHorizontal"
+                                    placeholder="Ej: 5.2" />
+                                  <span class="input-unit">cm</span>
+                                </div>
+                                <small class="form-text text-muted">Ancho del lente</small>
+                              </div>
+                            </div>
+
+                            <div class="col-md-3">
+                              <div class="form-group-moderno">
+                                <label class="form-label-moderno">
+                                  <i class="bi bi-arrows-expand-v"></i> Vertical
+                                  <span class="required">*</span>
+                                </label>
+                                <div class="input-with-unit">
+                                  <input type="number" step="0.1" min="0.1" max="10" 
+                                    class="form-control-moderno" formControlName="medidaVertical"
+                                    placeholder="Ej: 4.8" />
+                                  <span class="input-unit">cm</span>
+                                </div>
+                                <small class="form-text text-muted">Alto del lente</small>
+                              </div>
+                            </div>
+
+                            <div class="col-md-3">
+                              <div class="form-group-moderno">
+                                <label class="form-label-moderno">
+                                  <i class="bi bi-arrow-right-up"></i> Diagonal
+                                  <span class="required">*</span>
+                                </label>
+                                <div class="input-with-unit">
+                                  <input type="number" step="0.1" min="0.1" max="15" 
+                                    class="form-control-moderno" formControlName="medidaDiagonal"
+                                    placeholder="Ej: 7.1" />
+                                  <span class="input-unit">cm</span>
+                                </div>
+                                <small class="form-text text-muted">Diagonal del lente</small>
+                              </div>
+                            </div>
+
+                            <div class="col-md-3">
+                              <div class="form-group-moderno">
+                                <label class="form-label-moderno">
+                                  <i class="bi bi-bridge"></i> Puente
+                                  <span class="required">*</span>
+                                </label>
+                                <div class="input-with-unit">
+                                  <input type="number" step="0.1" min="0.1" max="5" 
+                                    class="form-control-moderno" formControlName="medidaPuente"
+                                    placeholder="Ej: 1.8" />
+                                  <span class="input-unit">cm</span>
+                                </div>
+                                <small class="form-text text-muted">Distancia entre lentes</small>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+
+                      <!-- Observaciones -->
+                      <div class="col-12">
+                        <div class="form-group-moderno has-observaciones-subtitle">
+                          <label class="form-label-moderno">Observaciones</label>
+                          <span class="observaciones-subtitle">
+                            <i class="bi bi-info-circle"></i>
+                            Estas observaciones servirán de guía para la orden de trabajo
+                          </span>
+                          <textarea class="form-control-moderno" rows="2" formControlName="observaciones"
+                            placeholder="Notas específicas para este lente (ej: filtro blue light, tratamiento antireflejante, etc.)"></textarea>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
