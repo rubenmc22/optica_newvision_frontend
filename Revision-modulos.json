@@ -1,55 +1,3 @@
-//Pacientes
-
-- Antecedentes personales:  
-    'Diabetes',
-    'Hipertensión',
-    'Migraña',
-    'Fotosensibilidad',
-    'Traumatismo ocular',
-    'Queratocono',
-    'Glaucoma',
-    'Degeneración macular',
-    'Retinopatía diabética'
-    'Uveítis',
-    'Catarata',
-    'Queratitis',
-    'Desprendimiento de retina',
-    'Glaucoma',
-    'Queratocono',
-    'Ojo seco',
-    conjuntivis alergica,
-    orzuelos,
-    pterigion
-
-- Antecedentes familiares:  
-    'Diabetes',
-    'Hipertensión',
-    'Migraña',
-    'Traumatismo ocular',
-    'Queratocono',
-    'Glaucoma',
-    'Degeneración macular',
-    'Retinopatía diabética'
-
-
-- Patologias (campo tipo input):
-    Renales, etc 
-
-
-Errores: 
-- Revisar ultimos 2 select, se cortan
-
-Recomendaciones:
-- Unir en el archivo de historial medico dentro de constant, todas las constantes referente a paciente e historia medicas y unificarlas
-
-
-
-
-
-
-
-
-
 
 //Historia medica
 
@@ -109,12 +57,12 @@ Recomendaciones:
         { value: '70', label: '70 mm' }
     ],
 
-- En lensometria, mover la seccion de binocuar al final de la seccion
-- Mover avsc debajo de lensometria
-- Agregar binocular a la seccion de refraccion final
-- en avsc, agregar avsc lejos y cerca por separado, los valores de lejos es 20/50, etc, lo de cerca son j1, etc y avae es lo mismo de av lejos, etc
-- ajustar titulo de reocmendaciones por recomendaciones/indicaciones
-- cambiar titulo sugerido de montura segerida por tipo de montura sugerida
+- En lensometria, mover la seccion de binocuar al final de la seccion  (LISTO)
+- Mover avsc debajo de lensometria (LISTO)
+- Agregar binocular a la seccion de refraccion final (LISTO)
+- en avsc, agregar avsc lejos y cerca por separado, los valores de lejos es 20/50, etc, lo de cerca son j1, etc y avae es lo mismo de av lejos, etc (LISTO)
+- ajustar titulo de reocmendaciones por recomendaciones/indicaciones (LISTO)
+- cambiar titulo sugerido de montura segerida por tipo de montura sugerida (LISTO)
 - al seelccionar un tip ode cristal progresivo, se deben habilitar 4 campos (horizontal, vertical, diagonal y puente) en medidas cm
 
 

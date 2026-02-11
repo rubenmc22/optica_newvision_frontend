@@ -2151,6 +2151,7 @@
     .required {
       color: #e74c3c;
       margin-left: 2px;
+       font-weight: 700;
     }
   }
 
@@ -2210,6 +2211,12 @@
       font-weight: 600;
       color: #2c3e50;
       font-size: 1rem;
+    }
+
+    .required {
+      color: #e74c3c;
+      margin-left: 1px;
+       font-weight: 700;
     }
   }
 }
@@ -4231,5 +4238,136 @@ body:not(.using-mouse) .campo-activo {
     white-space: nowrap;
     z-index: 1000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+}
+
+/* =============================================
+   SELECTS DEL HEADER - ABRIR HACIA ARRIBA (como en examen ocular)
+   ============================================= */
+
+::ng-deep {
+  /* Todos los ng-select del header del modal */
+  .form-section .section-content .row {
+    .ng-select-moderno {
+      .ng-dropdown-panel {
+        /* Siempre abrir hacia arriba */
+        top: auto !important;
+        bottom: 100% !important;
+        margin-top: 0 !important;
+        margin-bottom: 8px !important;
+        
+        /* Z-index alto para estar por encima */
+        z-index: 999999 !important;
+        
+        /* Sombra y estilos consistentes con examen ocular */
+        box-shadow: 
+          0 -6px 25px rgba(0, 0, 0, 0.15),
+          0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+        border-radius: 12px !important;
+        border: 1px solid #e0e0e0 !important;
+        background: white !important;
+
+        /* Flecha indicadora hacia abajo (porque abre hacia arriba) */
+        &::before {
+          content: '';
+          position: absolute;
+          top: 100%;
+          left: 20px;
+          border-left: 8px solid transparent;
+          border-right: 8px solid transparent;
+          border-top: 8px solid #ffffff;
+          z-index: 1000000;
+        }
+
+        &::after {
+          content: '';
+          position: absolute;
+          top: 100%;
+          left: 20px;
+          border-left: 8px solid transparent;
+          border-right: 8px solid transparent;
+          border-top: 8px solid #e0e0e0;
+          z-index: 999999;
+          margin-left: -8px;
+        }
+      }
+      
+      /* Cuando el select está abierto */
+      &.ng-select-opened {
+        .ng-select-container {
+          border-color: #3498db;
+          border-bottom-left-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+          border-top-left-radius: 8px !important;
+          border-top-right-radius: 8px !important;
+        }
+      }
+    }
+  }
+
+  /* Select específico de especialista */
+  .form-group-moderno .ng-select-moderno[formControlName="medico"] {
+    .ng-dropdown-panel {
+      bottom: 100% !important;
+      top: auto !important;
+    }
+  }
+
+  /* Select específico de tipo de cristal */
+  .form-group-moderno .ng-select-moderno[formControlName="tipoCristalActual"] {
+    .ng-dropdown-panel {
+      bottom: 100% !important;
+      top: auto !important;
+    }
+  }
+}
+
+/* =============================================
+   AJUSTE PARA MÓVILES - SIGUIENDO EL MISMO PATRÓN
+   ============================================= */
+
+@media (max-width: 768px) {
+  ::ng-deep {
+    /* Selects del header en móvil - posición fija cerca del footer */
+    .form-section .section-content .row {
+      .ng-select-moderno {
+        .ng-dropdown-panel {
+          position: fixed !important;
+          bottom: 75px !important;
+          left: 10px !important;
+          right: 10px !important;
+          width: auto !important;
+          max-height: 200px !important;
+          z-index: 9999999 !important;
+          border: 2px solid #3498db !important;
+          animation: slideFromBottom 0.3s ease !important;
+          
+          /* Header del dropdown */
+          &::before {
+            content: 'Seleccionar';
+            display: block !important;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            font-weight: 600;
+            font-size: 1rem;
+            border-radius: 10px 10px 0 0;
+            margin: -2px -2px 0 -2px;
+            text-align: center;
+          }
+
+          /* Ocultar flechas en móvil */
+          &::after {
+            display: none !important;
+          }
+
+          .ng-dropdown-panel-inner {
+            max-height: 180px !important;
+            overflow-y: auto !important;
+          }
+        }
+      }
+    }
   }
 }

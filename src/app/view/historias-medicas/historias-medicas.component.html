@@ -802,9 +802,15 @@
                       <i class="bi bi-eyeglasses me-2"></i>
                       Tipo de cristal actual
                     </label>
-                    <ng-select [items]="tiposCristales" bindLabel="label" bindValue="value"
-                      formControlName="tipoCristalActual" [searchable]="true" placeholder="Seleccione un tipo..."
-                      (change)="onTipoCristalChange($event)" class="ng-select-moderno">
+                    <ng-select 
+                      [items]="tiposCristales" 
+                      bindLabel="label" 
+                      bindValue="value"
+                      formControlName="tipoCristalActual" 
+                      [searchable]="true" 
+                      placeholder="Seleccione un tipo..."
+                      (change)="onTipoCristalChange($event)" 
+                      class="ng-select-moderno"> 
                     </ng-select>
                   </div>
                 </div>
@@ -839,24 +845,15 @@
                       <i class="bi bi-person-badge me-2"></i>
                       Especialista <span class="required">*</span>
                     </label>
-                    <ng-select [items]="medicoTratante.length > 0 ? medicoTratante : []" bindLabel="nombre"
-                      formControlName="medico" [searchable]="true" [disabled]="medicoTratante.length === 0"
-                      placeholder="Seleccione un médico..." (change)="onMedicoSeleccionado($event)"
-                      class="ng-select-moderno">
-
-                      <ng-template ng-notfound-tmp>
-                        <div class="ng-notfound">
-                          <i class="bi bi-search"></i>
-                          No hay médicos registrados
-                        </div>
-                      </ng-template>
-
-                      <ng-template ng-option-tmp let-item="item">
-                        <div class="medico-option">
-                          <div class="medico-nombre">{{ item.nombre }}</div>
-                          <div class="medico-info">CI: {{ item.cedula }} • {{ item.cargoNombre }}</div>
-                        </div>
-                      </ng-template>
+                   <ng-select 
+                      [items]="medicoTratante.length > 0 ? medicoTratante : []" 
+                      bindLabel="nombre"
+                      formControlName="medico" 
+                      [searchable]="true" 
+                      [disabled]="medicoTratante.length === 0"
+                      placeholder="Seleccione un médico..." 
+                      (change)="onMedicoSeleccionado($event)"
+                      class="ng-select-moderno">  
                     </ng-select>
 
                     <div class="form-error"
@@ -1299,7 +1296,7 @@
               <div class="examen-subseccion">
                 <div class="subseccion-header">
                   <i class="bi bi-prescription"></i>
-                  <h6>Refracción Final</h6>
+                  <h6>Refracción Final</h6>  <span class="required">*</span>
                 </div>
                 
                 <div class="lensometria-moderna lensometria-scroll-fixed">
