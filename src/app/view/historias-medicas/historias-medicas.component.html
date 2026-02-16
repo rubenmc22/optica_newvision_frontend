@@ -711,7 +711,7 @@
 
 <!-- Modal modernizado para agregar/editar historia -->
 <div class="modal fade" id="historiaModal" tabindex="-1" aria-labelledby="historiaModalLabel" data-bs-backdrop="static"
-  aria-hidden="true" (hidden.bs.modal)="limpiarModal()">
+  aria-hidden="true" (hidden.bs.modal)="limpiarModal()" (shown.bs.modal)="onModalShown()">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content modal-moderna">
 

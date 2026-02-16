@@ -1285,7 +1285,7 @@ export class HistoriasMedicasComponent implements OnInit {
       }
 
       this.facturacionData.montoBase = montoBase;
-      this.facturacionData.realizoCompraLentes = this.realizoCompraLentes; 
+      this.facturacionData.realizoCompraLentes = this.realizoCompraLentes;
 
       this.cdr.detectChanges();
     }
@@ -3513,11 +3513,16 @@ export class HistoriasMedicasComponent implements OnInit {
     return null;
   }
 
-  // En el método onModalShown():
   onModalShown(): void {
-    // Inicializar navegación cuando se muestra el modal
     this.initializeNavigationMaps();
-    this.setupGlobalKeyListeners(); // AGREGAR ESTO
+    this.setupGlobalKeyListeners();
+
+    setTimeout(() => {
+      const modalBody = document.querySelector('#historiaModal .modal-body-moderno');
+      if (modalBody) {
+        modalBody.scrollTop = 0;
+      }
+    }, 100);
 
     // Corregir overflow de selects
     setTimeout(() => {
@@ -3939,5 +3944,7 @@ export class HistoriasMedicasComponent implements OnInit {
       this.calcularTotal();
     }
   }
+
+
 
 }
