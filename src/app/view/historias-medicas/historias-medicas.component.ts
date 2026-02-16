@@ -444,7 +444,7 @@ export class HistoriasMedicasComponent implements OnInit {
     }
 
     // Usar el método mejorado para abrir modal
-    this.abrirModalConFocus();
+    this.abrirModalConFocus(false);
 
   }
 
@@ -3166,17 +3166,19 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   // Inicializar navegación cuando se abre el modal
-  abrirModalConFocus(): void {
+  abrirModalConFocus(enfocarPrimerCampo: boolean = true): void {
     $('#historiaModal').modal('show');
 
     setTimeout(() => {
       // Configurar listeners globales
       this.setupGlobalKeyListeners();
 
-      // Poner focus en el primer campo
-      setTimeout(() => {
-        this.focusOnField('len_esf_od');
-      }, 300);
+      // Poner focus en el primer campo SOLO si se solicita
+      if (enfocarPrimerCampo) {
+        setTimeout(() => {
+          this.focusOnField('len_esf_od');
+        }, 300);
+      }
     }, 300);
   }
 
