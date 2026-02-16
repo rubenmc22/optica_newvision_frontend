@@ -1226,7 +1226,7 @@ export class HistoriasMedicasComponent implements OnInit {
     // Resetear estado
     this.realizoCompraLentes = false;
 
-    // Determinar tipo de profesional basado en cargoId
+    // Determinar tipo de profesional
     const medicoAny = medico as any;
     this.esOftalmologoSeleccionado = medicoAny?.cargoId === 'oftalmologo';
     this.esOptometristaSeleccionado = medicoAny?.cargoId === 'optometrista';
@@ -1237,33 +1237,29 @@ export class HistoriasMedicasComponent implements OnInit {
 
       this.historiaService.getMontosConsulta(sede, 'oftalmologo').subscribe({
         next: (montos) => {
-          // Crear facturacionData con los valores del servicio
+          const pagoMedico = montos.montoMedico;
+          const pagoOptica = montos.montoOptica;
+          const montoBase = pagoMedico + pagoOptica;
+
           this.facturacionData = {
             tipoProfesional: 'oftalmologo',
             realizoCompraLentes: false,
-            montoBase: montos.montoMedico + montos.montoOptica,
-            montoCompraLentes: montos.montoMedico,
-            pagoOpticaBase: montos.montoOptica,
-            pagoMedicoBase: montos.montoMedico,
-            pagoOptica: montos.montoOptica,
-            pagoMedico: montos.montoMedico,
-            montoTotal: montos.montoMedico + montos.montoOptica
+            montoBase: montoBase,
+            montoTotal: montoBase, // Inicialmente igual al base
+            pagoOptica: pagoOptica,
+            pagoMedico: pagoMedico
           };
 
           this.cdr.detectChanges();
         },
         error: () => {
-          // Valores por defecto si hay error
           this.facturacionData = {
             tipoProfesional: 'oftalmologo',
             realizoCompraLentes: false,
             montoBase: 40,
-            montoCompraLentes: 20,
-            pagoOpticaBase: 20,
-            pagoMedicoBase: 20,
+            montoTotal: 40,
             pagoOptica: 20,
-            pagoMedico: 20,
-            montoTotal: 40
+            pagoMedico: 20
           };
         }
       });
@@ -1276,21 +1272,21 @@ export class HistoriasMedicasComponent implements OnInit {
 
   onCambioCompraLentes(): void {
     if (this.facturacionData) {
-      const medico = this.facturacionData.pagoMedicoBase || 20;
-      const optica = this.facturacionData.pagoOpticaBase || 20;
-      const total = medico + optica;
+      const pagoMedico = this.facturacionData.pagoMedico;
+      const pagoOptica = this.facturacionData.pagoOptica;
+      const montoBase = pagoMedico + pagoOptica;
 
       if (this.realizoCompraLentes) {
+        this.facturacionData.montoTotal = pagoMedico;
         this.facturacionData.pagoOptica = 0;
-        this.facturacionData.pagoMedico = medico;
-        this.facturacionData.montoTotal = medico;
-        this.facturacionData.montoBase = total;
       } else {
-        this.facturacionData.pagoOptica = optica;
-        this.facturacionData.pagoMedico = medico;
-        this.facturacionData.montoTotal = total;
-        this.facturacionData.montoBase = total;
+        this.facturacionData.montoTotal = montoBase;
+        this.facturacionData.pagoOptica = pagoOptica;
       }
+
+      this.facturacionData.montoBase = montoBase;
+      this.facturacionData.realizoCompraLentes = this.realizoCompraLentes; 
+
       this.cdr.detectChanges();
     }
   }
@@ -3878,14 +3874,12 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   abrirModalMontos(): void {
-    // Usar datos actuales de facturacionData
     if (this.facturacionData) {
       this.montosForm.patchValue({
-        montoMedico: this.facturacionData.pagoMedicoBase || 20,
-        montoOptica: this.facturacionData.pagoOpticaBase || 20
+        montoMedico: this.facturacionData.pagoMedico || 20,
+        montoOptica: this.facturacionData.pagoOptica || 20
       });
     } else {
-      // Valores por defecto
       this.montosForm.patchValue({
         montoMedico: 20,
         montoOptica: 20
@@ -3894,7 +3888,6 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.calcularTotal();
 
-    // Abrir modal usando Bootstrap
     const modalElement = document.getElementById('modalMontos');
     if (modalElement) {
       const modal = new bootstrap.Modal(modalElement);
@@ -3905,37 +3898,25 @@ export class HistoriasMedicasComponent implements OnInit {
   guardarMontos(): void {
     const medico = Number(this.montosForm.get('montoMedico')?.value) || 0;
     const optica = Number(this.montosForm.get('montoOptica')?.value) || 0;
-    const total = medico + optica;
+    const montoBase = medico + optica;
+    const compraLentes = this.realizoCompraLentes;
 
-    // Actualizar facturacionData
-    if (!this.facturacionData) {
-      this.facturacionData = {
-        tipoProfesional: 'oftalmologo',
-        realizoCompraLentes: this.realizoCompraLentes || false,
-        montoBase: total,
-        montoCompraLentes: medico,
-        pagoOpticaBase: optica,
-        pagoMedicoBase: medico,
-        pagoOptica: this.realizoCompraLentes ? 0 : optica,
-        pagoMedico: medico,
-        montoTotal: this.realizoCompraLentes ? medico : total
-      };
-    } else {
-      this.facturacionData.pagoOpticaBase = optica;
-      this.facturacionData.pagoMedicoBase = medico;
-      this.facturacionData.montoBase = total;
-      this.facturacionData.montoCompraLentes = medico;
+    let pagoOptica = optica;
+    let montoTotal = montoBase;
 
-      if (this.realizoCompraLentes) {
-        this.facturacionData.pagoOptica = 0;
-        this.facturacionData.pagoMedico = medico;
-        this.facturacionData.montoTotal = medico;
-      } else {
-        this.facturacionData.pagoOptica = optica;
-        this.facturacionData.pagoMedico = medico;
-        this.facturacionData.montoTotal = total;
-      }
+    if (compraLentes) {
+      pagoOptica = 0;
+      montoTotal = medico;
     }
+
+    this.facturacionData = {
+      tipoProfesional: 'oftalmologo',
+      realizoCompraLentes: compraLentes,
+      montoBase: montoBase,
+      montoTotal: montoTotal,
+      pagoOptica: pagoOptica,
+      pagoMedico: medico
+    };
 
     // Cerrar modal
     const modalElement = document.getElementById('modalMontos');

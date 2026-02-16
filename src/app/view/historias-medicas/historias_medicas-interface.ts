@@ -56,19 +56,14 @@ export interface DatosConsulta {
   };
 }
 
+// En historias_medicas-interface.ts
 export interface FacturacionConsulta {
   tipoProfesional: 'oftalmologo' | 'optometrista';
   realizoCompraLentes: boolean;
-
-  montoBase: number;        // 40 por defecto
-  montoCompraLentes: number; // 20 por defecto
-  porcentajeOptica: number;  // 50%
-  porcentajeMedico: number;  // 50%
-
-  // ✅ CALCULADOS AUTOMÁTICAMENTE (solo lectura)
-  montoTotal: number;
-  pagoOptica: number;
-  pagoMedico: number;
+  montoBase: number;        // ← NUEVO: suma de médico + óptica (siempre igual)
+  montoTotal: number;       // ← Lo que realmente paga (depende del switch)
+  pagoOptica: number;       // ← Pago a la óptica (0 si compra lentes)
+  pagoMedico: number;       // ← Pago al médico (siempre igual)
 }
 
 export interface Auditoria {
@@ -95,8 +90,8 @@ export interface Medico {
   id: number;
   nombre: string;
   cedula: string;
-  cargoId: string;        
-  cargoNombre?: string;   
+  cargoId: string;
+  cargoNombre?: string;
   email?: string;
   telefono?: string;
   rolId?: string;
