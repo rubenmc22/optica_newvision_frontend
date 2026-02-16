@@ -2151,7 +2151,7 @@
     .required {
       color: #e74c3c;
       margin-left: 2px;
-       font-weight: 700;
+      font-weight: 700;
     }
   }
 
@@ -2216,7 +2216,7 @@
     .required {
       color: #e74c3c;
       margin-left: 1px;
-       font-weight: 700;
+      font-weight: 700;
     }
   }
 }
@@ -4239,7 +4239,7 @@ body:not(.using-mouse) .campo-activo {
     z-index: 1000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
-  
+
 }
 
 /* =============================================
@@ -4247,6 +4247,7 @@ body:not(.using-mouse) .campo-activo {
    ============================================= */
 
 ::ng-deep {
+
   /* Todos los ng-select del header del modal */
   .form-section .section-content .row {
     .ng-select-moderno {
@@ -4256,12 +4257,12 @@ body:not(.using-mouse) .campo-activo {
         bottom: 100% !important;
         margin-top: 0 !important;
         margin-bottom: 8px !important;
-        
+
         /* Z-index alto para estar por encima */
         z-index: 999999 !important;
-        
+
         /* Sombra y estilos consistentes con examen ocular */
-        box-shadow: 
+        box-shadow:
           0 -6px 25px rgba(0, 0, 0, 0.15),
           0 0 0 1px rgba(0, 0, 0, 0.05) !important;
         border-radius: 12px !important;
@@ -4292,7 +4293,7 @@ body:not(.using-mouse) .campo-activo {
           margin-left: -8px;
         }
       }
-      
+
       /* Cuando el select está abierto */
       &.ng-select-opened {
         .ng-select-container {
@@ -4329,6 +4330,7 @@ body:not(.using-mouse) .campo-activo {
 
 @media (max-width: 768px) {
   ::ng-deep {
+
     /* Selects del header en móvil - posición fija cerca del footer */
     .form-section .section-content .row {
       .ng-select-moderno {
@@ -4342,7 +4344,7 @@ body:not(.using-mouse) .campo-activo {
           z-index: 9999999 !important;
           border: 2px solid #3498db !important;
           animation: slideFromBottom 0.3s ease !important;
-          
+
           /* Header del dropdown */
           &::before {
             content: 'Seleccionar';
@@ -4369,5 +4371,405 @@ body:not(.using-mouse) .campo-activo {
         }
       }
     }
+  }
+}
+
+/* =============================================
+   TARJETA DE FACTURACIÓN - VERSIÓN COMPLETA
+   ============================================= */
+
+.facturacion-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  max-width: 800px;
+  /* Ancho máximo, no ocupa todo */
+  margin-bottom: 1rem;
+
+  &.optometrista {
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    border-left: 4px solid #2e7d32;
+    max-width: 400px;
+    /* Más angosta */
+  }
+
+  .facturacion-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e9ecef;
+
+    i {
+      font-size: 1.1rem;
+      color: #3498db;
+    }
+
+    span {
+      font-weight: 600;
+      color: #2c3e50;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-config {
+      background: transparent;
+      border: none;
+      color: #6c757d;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: #e9ecef;
+        transform: rotate(90deg);
+      }
+    }
+  }
+
+  .facturacion-mensaje {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #f8f9fa;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.25rem;
+
+    i {
+      color: #3498db;
+      font-size: 1rem;
+    }
+
+    span {
+      color: #2c3e50;
+      font-size: 0.95rem;
+    }
+
+    .costo-destacado {
+      font-weight: 700;
+      color: #27ae60;
+      font-size: 1.1rem;
+      margin-left: 0.25rem;
+    }
+
+    &.optometrista {
+      background: transparent;
+      padding: 0;
+      margin-bottom: 0;
+
+      i {
+        color: #2e7d32;
+      }
+
+      span {
+        color: #1e4620;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .facturacion-switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f1f8ff;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.25rem;
+
+    .switch-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      color: #2c3e50;
+      font-size: 0.9rem;
+
+      i {
+        color: #3498db;
+        font-size: 0.95rem;
+      }
+    }
+
+    .custom-switch {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      input[type="checkbox"] {
+        display: none;
+      }
+
+      label {
+        width: 44px;
+        height: 24px;
+        background: #e0e0e0;
+        border-radius: 24px;
+        position: relative;
+        cursor: pointer;
+
+        &::after {
+          content: '';
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 20px;
+          height: 20px;
+          background: white;
+          border-radius: 50%;
+          transition: all 0.3s ease;
+        }
+      }
+
+      input[type="checkbox"]:checked+label {
+        background: #27ae60;
+
+        &::after {
+          left: 22px;
+        }
+      }
+
+      .switch-estado {
+        font-weight: 600;
+        font-size: 0.85rem;
+        min-width: 35px;
+        color: #2c3e50;
+      }
+    }
+  }
+
+  .facturacion-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+
+    &.sin-cargo {
+      background: linear-gradient(135deg, #fff8e7, #ffecb3);
+      border-color: #f39c12;
+
+      .total-monto {
+        color: #e67e22;
+      }
+    }
+
+    .total-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      color: #2c3e50;
+
+      i {
+        color: #3498db;
+        font-size: 1rem;
+      }
+    }
+
+    .total-monto {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #27ae60;
+    }
+  }
+
+  /* Estilos para modo configuración */
+  .facturacion-config {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 0.75rem;
+    border: 1px solid #e9ecef;
+
+    .config-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #dee2e6;
+
+      i {
+        color: #3498db;
+      }
+
+      span {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.9rem;
+      }
+
+      .btn-close-config {
+        margin-left: auto;
+        background: transparent;
+        border: none;
+        color: #6c757d;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+
+        &:hover {
+          background: #e9ecef;
+          color: #dc3545;
+        }
+      }
+    }
+
+    .config-pagos {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .config-item {
+      label {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.25rem;
+
+        i {
+          font-size: 0.8rem;
+          color: #6c757d;
+        }
+      }
+
+      .form-control {
+        height: 36px;
+        font-size: 0.9rem;
+        border: 2px solid #e9ecef;
+
+        &:focus {
+          border-color: #3498db;
+          box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+      }
+    }
+
+    .config-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: white;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      margin-bottom: 0.75rem;
+      border: 1px solid #e9ecef;
+
+      span {
+        font-size: 0.85rem;
+        color: #6c757d;
+      }
+
+      strong {
+        font-size: 1rem;
+        color: #27ae60;
+      }
+    }
+
+    .config-actions {
+      display: flex;
+      justify-content: flex-end;
+
+      .btn {
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem;
+
+        i {
+          margin-right: 0.25rem;
+        }
+      }
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 576px) {
+    .config-pagos {
+      grid-template-columns: 1fr !important;
+      gap: 0.75rem !important;
+    }
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .facturacion-card {
+    padding: 1.25rem;
+    max-width: 100%;
+  }
+
+  .facturacion-switch {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .config-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+.modal-header {
+  background: var(--degradado-color);
+  color: white;
+  padding: 1.5rem 2rem;
+  border-bottom: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+
+  i {
+    font-size: 1.5rem;
+    color: white;
+  }
+
+}
+
+.btn-primary {
+  background: var(--degradado-color) !important;
+  border: none;
+  color: white;
+  //padding: 0.75rem 1.5rem;
+  //border-radius: 8px;
+  //font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.75rem;
+    justify-content: center;
+    width: 100%;
   }
 }

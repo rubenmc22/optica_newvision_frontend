@@ -71,17 +71,19 @@ export class HistoriaMedicaService {
     return edad;
   }
 
-  private getFechaMasReciente(historias: any[]): string {
-    if (!historias || historias.length === 0) return '';
 
-    const fechas = historias
-      .map(h => h.fecha)
-      .filter(fecha => fecha);
+  // Agrega este método al servicio existente
+  // En historia-medica.service.ts
+  getMontosConsulta(sedeId: string, tipoProfesional: 'oftalmologo' | 'optometrista'): Observable<any> {
+    // Datos dummy - SOLO montos, sin total
+    const montosDummy = {
+      'guatire-oftalmologo': { montoMedico: 30, montoOptica: 30 },
+      'guarenas-oftalmologo': { montoMedico: 22, montoOptica: 23 },
+      'guatire-optometrista': { montoMedico: 0, montoOptica: 0 }
+    };
 
-    if (fechas.length === 0) return '';
-
-    return fechas.reduce((latest, fecha) =>
-      fecha > latest ? fecha : latest, fechas[0]);
+    const key = `${sedeId}-${tipoProfesional}`;
+    return of(montosDummy[key] || { montoMedico: 30, montoOptica: 30 });
   }
 }
 

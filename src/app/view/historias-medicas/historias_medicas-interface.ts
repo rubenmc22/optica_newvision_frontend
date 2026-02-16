@@ -36,6 +36,39 @@ export interface DatosConsulta {
 
   tipoCristalActual?: string;
   fechaUltimaGraduacion?: string;
+
+  facturacion?: {
+    // Tipo de consulta (lo deducimos del médico)
+    tipoProfesional: 'oftalmologo' | 'optometrista';
+
+    // ¿El paciente compró los lentes hoy?
+    realizoCompraLentes: boolean;
+
+    // Montos calculados automáticamente
+    montoTotal: number;      // 0 | 20 | 40
+    pagoOptica: number;      // 0 | 20
+    pagoMedico: number;      // 0 | 20
+
+    // Datos de pago (cuando se implemente caja)
+    metodoPago?: string;
+    fechaPago?: string;
+    estadoPago?: 'pendiente' | 'pagado' | 'anulado';
+  };
+}
+
+export interface FacturacionConsulta {
+  tipoProfesional: 'oftalmologo' | 'optometrista';
+  realizoCompraLentes: boolean;
+
+  montoBase: number;        // 40 por defecto
+  montoCompraLentes: number; // 20 por defecto
+  porcentajeOptica: number;  // 50%
+  porcentajeMedico: number;  // 50%
+
+  // ✅ CALCULADOS AUTOMÁTICAMENTE (solo lectura)
+  montoTotal: number;
+  pagoOptica: number;
+  pagoMedico: number;
 }
 
 export interface Auditoria {
@@ -58,13 +91,21 @@ export interface RespuestaCreacionHistoria {
   historial_medico: HistoriaMedica;
 }
 
-
-
 export interface Medico {
   id: number;
   nombre: string;
   cedula: string;
-  // otros campos...
+  cargoId: string;        
+  cargoNombre?: string;   
+  email?: string;
+  telefono?: string;
+  rolId?: string;
+  rolNombre?: string;
+  estatus?: boolean;
+  fechaNacimiento?: string;
+  avatarUrl?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Interfaz para antecedentes

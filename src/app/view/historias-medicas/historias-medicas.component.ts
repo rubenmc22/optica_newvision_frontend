@@ -66,6 +66,12 @@ export class HistoriasMedicasComponent implements OnInit {
   tareasPendientes = 0;
   dataIsReady = false;
 
+  esOftalmologoSeleccionado: boolean = false;
+  esOptometristaSeleccionado: boolean = false;
+  realizoCompraLentes: boolean = false;
+  facturacionData: any = null;
+  mostrarConfig: boolean = false;
+
   // Empleados
   isLoading = true;
   employees: any[] = [];
@@ -89,6 +95,12 @@ export class HistoriasMedicasComponent implements OnInit {
   notaConformidad: string = 'PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE.';
   horaEvaluacion: string = '';
   mostrarBotonVolver = false;
+
+  mostrarModalMontos: boolean = false;
+  montoMedico: number = 20;
+  montoOptica: number = 20;
+  totalCalculado: number = 40;
+
 
   private navigationMap: { [key: string]: string } = {};
   private isNavigating = false;
@@ -122,6 +134,8 @@ export class HistoriasMedicasComponent implements OnInit {
     'OTRO'
   ]);
 
+  montosForm: FormGroup;
+
 
   constructor(
     private fb: FormBuilder,
@@ -150,7 +164,16 @@ export class HistoriasMedicasComponent implements OnInit {
     // Inicializar mapas de navegación
     this.initializeNavigationMaps();
 
+    // En el constructor, ya lo tienes:
+    this.montosForm = this.fb.group({
+      montoMedico: [20],
+      montoOptica: [20],
+      total: [{ value: 40, disabled: true }]
+    });
+
   }
+
+
 
   // ***************************
   // * Métodos de inicialización
@@ -443,7 +466,15 @@ export class HistoriasMedicasComponent implements OnInit {
         otroMotivo: '',
         medico: { cedula: '', nombre: '', cargo: '' },
         nombre_asesor: '',
-        cedula_asesor: ''
+        cedula_asesor: '',
+
+        facturacion: {
+          tipoProfesional: 'optometrista',
+          realizoCompraLentes: false,
+          montoTotal: 0,
+          pagoOptica: 0,
+          pagoMedico: 0
+        }
       },
 
       antecedentes: {
@@ -599,6 +630,20 @@ export class HistoriasMedicasComponent implements OnInit {
         tratamiento: dt.tratamiento
       });
 
+      if (dc.facturacion) {
+        this.esOftalmologoSeleccionado = dc.facturacion.tipoProfesional === 'oftalmologo';
+        this.esOptometristaSeleccionado = dc.facturacion.tipoProfesional === 'optometrista';
+        this.realizoCompraLentes = dc.facturacion.realizoCompraLentes || false;
+        this.facturacionData = { ...dc.facturacion };
+      } else {
+        // Si no hay facturación, resetear
+        this.esOftalmologoSeleccionado = false;
+        this.esOptometristaSeleccionado = false;
+        this.realizoCompraLentes = false;
+        this.facturacionData = null;
+      }
+
+
       this.onMotivoChange(this.historiaForm.value.motivo);
 
       this.recomendaciones.clear();
@@ -732,7 +777,8 @@ export class HistoriasMedicasComponent implements OnInit {
           ? f.medico.cedula
           : typeof f.medico === 'string'
             ? f.medico
-            : ''
+            : '',
+        facturacion: this.facturacionData
       },
       examenOcular: {
         lensometria: {
@@ -813,7 +859,9 @@ export class HistoriasMedicasComponent implements OnInit {
         const historiaAdaptada = {
           ...historia,
           datosConsulta: {
-            ...historia.datosConsulta
+            ...historia.datosConsulta,
+            medico: this.medicoSeleccionado?.cedula,
+            facturacion: this.facturacionData
           }
         };
 
@@ -869,6 +917,7 @@ export class HistoriasMedicasComponent implements OnInit {
         tipoCristalActual: formValue.tipoCristalActual,
         fechaUltimaGraduacion: formValue.ultimaGraduacion,
         medico: formValue.medico?.cedula,
+        facturacion: this.facturacionData || '',
       },
       examenOcular: this.mapExamenOcular(),
       diagnosticoTratamiento: {
@@ -1171,9 +1220,92 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
-  onMedicoSeleccionado(medico: Medico): void {
+  onMedicoSeleccionado(medico: any): void {
     this.medicoSeleccionado = medico;
+
+    // Resetear estado
+    this.realizoCompraLentes = false;
+
+    // Determinar tipo de profesional basado en cargoId
+    const medicoAny = medico as any;
+    this.esOftalmologoSeleccionado = medicoAny?.cargoId === 'oftalmologo';
+    this.esOptometristaSeleccionado = medicoAny?.cargoId === 'optometrista';
+
+    // Si es oftalmólogo, cargar montos del servicio
+    if (this.esOftalmologoSeleccionado) {
+      const sede = this.sedePacienteSeleccionado || this.sedeActiva;
+
+      this.historiaService.getMontosConsulta(sede, 'oftalmologo').subscribe({
+        next: (montos) => {
+          // Crear facturacionData con los valores del servicio
+          this.facturacionData = {
+            tipoProfesional: 'oftalmologo',
+            realizoCompraLentes: false,
+            montoBase: montos.montoMedico + montos.montoOptica,
+            montoCompraLentes: montos.montoMedico,
+            pagoOpticaBase: montos.montoOptica,
+            pagoMedicoBase: montos.montoMedico,
+            pagoOptica: montos.montoOptica,
+            pagoMedico: montos.montoMedico,
+            montoTotal: montos.montoMedico + montos.montoOptica
+          };
+
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          // Valores por defecto si hay error
+          this.facturacionData = {
+            tipoProfesional: 'oftalmologo',
+            realizoCompraLentes: false,
+            montoBase: 40,
+            montoCompraLentes: 20,
+            pagoOpticaBase: 20,
+            pagoMedicoBase: 20,
+            pagoOptica: 20,
+            pagoMedico: 20,
+            montoTotal: 40
+          };
+        }
+      });
+    } else {
+      this.facturacionData = null;
+    }
+
+    this.cdr.detectChanges();
   }
+
+  onCambioCompraLentes(): void {
+    if (this.facturacionData) {
+      const medico = this.facturacionData.pagoMedicoBase || 20;
+      const optica = this.facturacionData.pagoOpticaBase || 20;
+      const total = medico + optica;
+
+      if (this.realizoCompraLentes) {
+        this.facturacionData.pagoOptica = 0;
+        this.facturacionData.pagoMedico = medico;
+        this.facturacionData.montoTotal = medico;
+        this.facturacionData.montoBase = total;
+      } else {
+        this.facturacionData.pagoOptica = optica;
+        this.facturacionData.pagoMedico = medico;
+        this.facturacionData.montoTotal = total;
+        this.facturacionData.montoBase = total;
+      }
+      this.cdr.detectChanges();
+    }
+  }
+
+  // Método principal de cálculo
+  private calcularYActualizarFacturacion(): void {
+    this.facturacionData = this.calcularFacturacion(
+      this.medicoSeleccionado,
+      this.realizoCompraLentes
+    );
+
+    // ✅ Forzar actualización de la vista
+    this.cdr.detectChanges();
+  }
+
 
   getNombreMedico(medico: { nombre?: string; cargo?: string } | null | undefined): string {
     if (!medico || !medico.nombre) return 'Médico no registrado';
@@ -1603,6 +1735,24 @@ export class HistoriasMedicasComponent implements OnInit {
     this.modoEdicion = false;
     this.historiaForm.reset();
     this.recomendaciones.clear();
+
+    //REINICIAR ESTADOS DE FACTURACIÓN
+    this.esOftalmologoSeleccionado = false;
+    this.esOptometristaSeleccionado = false;
+    this.realizoCompraLentes = false;
+    this.facturacionData = null;
+    this.medicoSeleccionado = null;
+
+    //REINICIAR ARRAYS DE VISIBILIDAD DE RECOMENDACIONES
+    this.mostrarMedidasProgresivo = [false];
+    this.mostrarTipoLentesContacto = [false];
+    this.mostrarMaterialPersonalizado = [false];
+
+    this.mostrarConfig = false;
+    this.facturacionData = null;
+
+    //FORZAR DETECCIÓN DE CAMBIOS
+    this.cdr.detectChanges();
   }
 
   // ***************************
@@ -2741,12 +2891,10 @@ export class HistoriasMedicasComponent implements OnInit {
 
   handleKeydown(event: KeyboardEvent): void {
     // DEBUG
-    console.log('Tecla presionada:', event.key, 'Target:', event.target);
 
     // Si estamos dentro de un dropdown, NO manejar navegación
     const isInsideDropdown = (event.target as HTMLElement).closest('.ng-dropdown-panel');
     if (isInsideDropdown) {
-      console.log('Dentro de dropdown - ignorando');
       return;
     }
 
@@ -2757,8 +2905,6 @@ export class HistoriasMedicasComponent implements OnInit {
 
     // Obtener el control name
     const controlName = this.getControlNameFromElement(activeElement);
-    console.log('Control name:', controlName);
-
     if (!controlName) return;
 
     // Manejar teclas
@@ -2767,7 +2913,6 @@ export class HistoriasMedicasComponent implements OnInit {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        console.log('Enter - Navegando al siguiente de:', controlName);
         this.navigateToNextField(controlName);
         break;
 
@@ -2775,7 +2920,6 @@ export class HistoriasMedicasComponent implements OnInit {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        console.log('ArrowRight - Navegando al siguiente de:', controlName);
         this.navigateToNextField(controlName);
         break;
 
@@ -2783,7 +2927,6 @@ export class HistoriasMedicasComponent implements OnInit {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        console.log('ArrowLeft - Navegando al anterior de:', controlName);
         this.navigateToPreviousField(controlName);
         break;
 
@@ -2792,13 +2935,11 @@ export class HistoriasMedicasComponent implements OnInit {
           event.preventDefault();
           event.stopPropagation();
           event.stopImmediatePropagation();
-          console.log('Shift+Tab - Navegando al anterior de:', controlName);
           this.navigateToPreviousField(controlName);
         } else {
           event.preventDefault();
           event.stopPropagation();
           event.stopImmediatePropagation();
-          console.log('Tab - Navegando al siguiente de:', controlName);
           this.navigateToNextField(controlName);
         }
         break;
@@ -2838,9 +2979,6 @@ export class HistoriasMedicasComponent implements OnInit {
 
   // Método mejorado para obtener controlName
   private getControlNameFromElement(element: HTMLElement): string | null {
-    // DEBUG
-    console.log('Buscando controlName en:', element.tagName, element.className);
-
     // Caso 1: Input directo
     if (element.getAttribute('formControlName')) {
       return element.getAttribute('formControlName');
@@ -2883,8 +3021,6 @@ export class HistoriasMedicasComponent implements OnInit {
   private focusOnField(fieldName: string): void {
     this.isNavigating = true;
 
-    console.log('Intentando poner focus en:', fieldName);
-
     // PRIMERO: Quitar focus del elemento actual
     const activeElement = document.activeElement as HTMLElement;
     if (activeElement && activeElement.blur) {
@@ -2896,7 +3032,6 @@ export class HistoriasMedicasComponent implements OnInit {
       const previousActive = document.querySelectorAll('.campo-activo');
       previousActive.forEach(el => {
         el.classList.remove('campo-activo');
-        console.log('Removido campo-activo de:', el);
       });
 
       // TERCERO: Buscar el nuevo elemento de varias maneras
@@ -2906,7 +3041,6 @@ export class HistoriasMedicasComponent implements OnInit {
       const elementsByName = document.querySelectorAll(`[formControlName="${fieldName}"]`);
       if (elementsByName.length > 0) {
         element = elementsByName[0] as HTMLElement;
-        console.log('Encontrado por formControlName:', element);
       }
 
       // Método 2: Si es un ng-select, buscar el container
@@ -2916,7 +3050,6 @@ export class HistoriasMedicasComponent implements OnInit {
           const container = ngSelects[0].querySelector('.ng-select-container') as HTMLElement;
           if (container) {
             element = container;
-            console.log('Encontrado ng-select container:', element);
           }
         }
       }
@@ -2926,7 +3059,6 @@ export class HistoriasMedicasComponent implements OnInit {
         const byClass = document.querySelectorAll(`.campo-select [formControlName="${fieldName}"]`);
         if (byClass.length > 0) {
           element = byClass[0] as HTMLElement;
-          console.log('Encontrado por clase:', element);
         }
       }
 
@@ -2937,7 +3069,6 @@ export class HistoriasMedicasComponent implements OnInit {
           element.focus();
           (element as HTMLInputElement).select();
           element.classList.add('campo-activo');
-          console.log('Focus puesto en input:', element);
 
         } else if (element.classList.contains('ng-select-container')) {
           // Es un ng-select container
@@ -2950,13 +3081,10 @@ export class HistoriasMedicasComponent implements OnInit {
             ngSelect.classList.add('campo-activo');
           }
 
-          console.log('Focus puesto en ng-select:', element);
-
         } else {
           // Otro tipo de elemento
           element.focus();
           element.classList.add('campo-activo');
-          console.log('Focus puesto en elemento genérico:', element);
         }
 
         // QUINTO: Scroll si es necesario
@@ -2989,8 +3117,6 @@ export class HistoriasMedicasComponent implements OnInit {
 
   // Método de fallback si no encuentra por nombre
   private focusByFallback(fieldName: string): void {
-    console.log('Usando fallback para:', fieldName);
-
     // Mapear todos los campos en orden
     const allFields = [
       // Lensometría OD
@@ -3527,6 +3653,308 @@ export class HistoriasMedicasComponent implements OnInit {
     ];
 
     return tiposConMedidas.some(tipo => valorUpper.includes(tipo));
+  }
+
+  // Toggle modo configuración
+  toggleConfiguracion(): void {
+    this.mostrarConfig = !this.mostrarConfig;
+  }
+
+  // Calcular pago óptica
+  calcularPagoOptica(): number {
+    if (!this.facturacionData) return 0;
+    return (this.facturacionData.montoBase * this.facturacionData.porcentajeOptica) / 100;
+  }
+
+  // Calcular pago médico
+  calcularPagoMedico(): number {
+    if (!this.facturacionData) return 0;
+    return (this.facturacionData.montoBase * this.facturacionData.porcentajeMedico) / 100;
+  }
+
+  // Validar que los porcentajes sumen 100
+  validarPorcentajes(): void {
+    if (!this.facturacionData) return;
+
+    // Asegurar valores entre 0 y 100
+    if (this.facturacionData.porcentajeOptica < 0) this.facturacionData.porcentajeOptica = 0;
+    if (this.facturacionData.porcentajeOptica > 100) this.facturacionData.porcentajeOptica = 100;
+    if (this.facturacionData.porcentajeMedico < 0) this.facturacionData.porcentajeMedico = 0;
+    if (this.facturacionData.porcentajeMedico > 100) this.facturacionData.porcentajeMedico = 100;
+
+    // Ajustar automáticamente si se pasa de 100
+    if (this.facturacionData.porcentajeOptica + this.facturacionData.porcentajeMedico > 100) {
+      this.facturacionData.porcentajeMedico = 100 - this.facturacionData.porcentajeOptica;
+    }
+
+    this.recalcularMontos();
+  }
+
+  // Calcular pago óptica en consulta sin compra
+  calcularPagoOpticaSinCompra(): number {
+    if (!this.facturacionData) return 0;
+    return Math.round((this.facturacionData.montoBase * this.facturacionData.porcentajeOptica) / 100);
+  }
+
+  // Calcular pago médico en consulta sin compra
+  calcularPagoMedicoSinCompra(): number {
+    if (!this.facturacionData) return 0;
+    return Math.round((this.facturacionData.montoBase * this.facturacionData.porcentajeMedico) / 100);
+  }
+
+  // Recalcular montos
+  recalcularMontos(): void {
+    if (!this.facturacionData) return;
+
+    // Asegurar valores mínimos
+    if (this.facturacionData.montoBase < 0) this.facturacionData.montoBase = 0;
+    if (this.facturacionData.montoCompraLentes < 0) this.facturacionData.montoCompraLentes = 0;
+
+    this.calcularYActualizarFacturacion();
+  }
+
+
+
+  // Actualizar total cuando cambian los montos
+  actualizarTotalSinCompra(): void {
+    if (!this.facturacionData) return;
+    this.calcularYActualizarFacturacion();
+  }
+
+  // Calcular facturación
+  private calcularFacturacion(medico: any, realizoCompra: boolean): any {
+    if (!medico || medico.cargoId !== 'oftalmologo') {
+      return {
+        tipoProfesional: 'optometrista',
+        realizoCompraLentes: false,
+        pagoOpticaBase: 0,
+        pagoMedicoBase: 0,
+        pagoOptica: 0,
+        pagoMedico: 0,
+        montoTotal: 0
+      };
+    }
+
+    // Usar los valores actuales de facturacionData
+    const pagoOpticaBase = this.facturacionData?.pagoOpticaBase || 20;
+    const pagoMedicoBase = this.facturacionData?.pagoMedicoBase || 20;
+    const montoBase = pagoOpticaBase + pagoMedicoBase;
+
+    if (realizoCompra) {
+      // Con compra: solo paga el médico
+      return {
+        tipoProfesional: 'oftalmologo',
+        realizoCompraLentes: true,
+        montoBase: pagoMedicoBase,
+        montoCompraLentes: pagoMedicoBase,
+        pagoOpticaBase: pagoOpticaBase,
+        pagoMedicoBase: pagoMedicoBase,
+        pagoOptica: 0,
+        pagoMedico: pagoMedicoBase,
+        montoTotal: pagoMedicoBase
+      };
+    } else {
+      // Sin compra: pagan ambos
+      return {
+        tipoProfesional: 'oftalmologo',
+        realizoCompraLentes: false,
+        montoBase: montoBase,
+        montoCompraLentes: pagoMedicoBase,
+        pagoOpticaBase: pagoOpticaBase,
+        pagoMedicoBase: pagoMedicoBase,
+        pagoOptica: pagoOpticaBase,
+        pagoMedico: pagoMedicoBase,
+        montoTotal: montoBase
+      };
+    }
+  }
+
+  private obtenerTipoEspecialista(): 'oftalmologo' | 'optometrista' {
+    // Usar la propiedad 'cargo' que existe en la interfaz
+    const cargo = this.medicoSeleccionado.cargoId?.toLowerCase() || '';
+
+    if (cargo.includes('oftalmologo')) {
+      return 'oftalmologo';
+    }
+
+    return 'optometrista';
+  }
+
+  calcularTotalMontos(): void {
+    // Obtener valores crudos primero
+    const medicoRaw = this.montosForm.get('montoMedico')?.value;
+    const opticaRaw = this.montosForm.get('montoOptica')?.value;
+
+    // Convertir a número
+    const medico = Number(medicoRaw) || 0;
+    const optica = Number(opticaRaw) || 0;
+
+    // Calcular total
+    const total = medico + optica;
+
+    // Actualizar el total
+    this.montosForm.get('total')?.setValue(total);
+
+    // Forzar detección de cambios
+    this.cdr.detectChanges();
+  }
+
+  onInputChange(event: any, campo: 'medico' | 'optica'): void {
+    const valor = event.target.value;
+    const soloNumeros = valor.replace(/[^0-9]/g, '');
+    const numero = soloNumeros ? parseInt(soloNumeros, 10) : 0;
+
+    if (campo === 'medico') {
+      this.montoMedico = numero;
+    } else {
+      this.montoOptica = numero;
+    }
+
+    this.calcularTotal();
+
+    // Actualizar el valor del input
+    event.target.value = numero;
+  }
+
+  parseToNumber(value: any): number {
+    const num = Number(String(value).replace(/[^0-9]/g, ''));
+    return isNaN(num) ? 0 : num;
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+  // Prevenir caracteres no numéricos
+  onKeyPress(event: KeyboardEvent): void {
+    const charCode = event.which ? event.which : event.keyCode;
+    // Permitir solo números (0-9) y teclas de control
+    if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+      event.preventDefault();
+    }
+  }
+
+  // Limpiar el valor cuando cambia
+  onMontoChange(): void {
+    const medicoControl = this.montosForm.get('montoMedico');
+    const opticaControl = this.montosForm.get('montoOptica');
+
+    if (medicoControl) {
+      const valorLimpio = this.limpiarValor(medicoControl.value);
+      medicoControl.setValue(valorLimpio, { emitEvent: false });
+    }
+
+    if (opticaControl) {
+      const valorLimpio = this.limpiarValor(opticaControl.value);
+      opticaControl.setValue(valorLimpio, { emitEvent: false });
+    }
+
+    this.calcularTotal();
+  }
+
+  // Limpiar valor (eliminar caracteres no numéricos)
+  limpiarValor(valor: any): number {
+    if (!valor) return 0;
+    const soloNumeros = String(valor).replace(/[^0-9]/g, '');
+    return soloNumeros ? parseInt(soloNumeros, 10) : 0;
+  }
+
+  // Calcular total
+  calcularTotal(): void {
+    const medico = this.montosForm.get('montoMedico')?.value || 0;
+    const optica = this.montosForm.get('montoOptica')?.value || 0;
+    const total = Number(medico) + Number(optica);
+
+    this.montosForm.get('total')?.setValue(total);
+  }
+
+  abrirModalMontos(): void {
+    // Usar datos actuales de facturacionData
+    if (this.facturacionData) {
+      this.montosForm.patchValue({
+        montoMedico: this.facturacionData.pagoMedicoBase || 20,
+        montoOptica: this.facturacionData.pagoOpticaBase || 20
+      });
+    } else {
+      // Valores por defecto
+      this.montosForm.patchValue({
+        montoMedico: 20,
+        montoOptica: 20
+      });
+    }
+
+    this.calcularTotal();
+
+    // Abrir modal usando Bootstrap
+    const modalElement = document.getElementById('modalMontos');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  guardarMontos(): void {
+    const medico = Number(this.montosForm.get('montoMedico')?.value) || 0;
+    const optica = Number(this.montosForm.get('montoOptica')?.value) || 0;
+    const total = medico + optica;
+
+    // Actualizar facturacionData
+    if (!this.facturacionData) {
+      this.facturacionData = {
+        tipoProfesional: 'oftalmologo',
+        realizoCompraLentes: this.realizoCompraLentes || false,
+        montoBase: total,
+        montoCompraLentes: medico,
+        pagoOpticaBase: optica,
+        pagoMedicoBase: medico,
+        pagoOptica: this.realizoCompraLentes ? 0 : optica,
+        pagoMedico: medico,
+        montoTotal: this.realizoCompraLentes ? medico : total
+      };
+    } else {
+      this.facturacionData.pagoOpticaBase = optica;
+      this.facturacionData.pagoMedicoBase = medico;
+      this.facturacionData.montoBase = total;
+      this.facturacionData.montoCompraLentes = medico;
+
+      if (this.realizoCompraLentes) {
+        this.facturacionData.pagoOptica = 0;
+        this.facturacionData.pagoMedico = medico;
+        this.facturacionData.montoTotal = medico;
+      } else {
+        this.facturacionData.pagoOptica = optica;
+        this.facturacionData.pagoMedico = medico;
+        this.facturacionData.montoTotal = total;
+      }
+    }
+
+    // Cerrar modal
+    const modalElement = document.getElementById('modalMontos');
+    if (modalElement) {
+      const modal = bootstrap.Modal.getInstance(modalElement);
+      modal?.hide();
+    }
+
+    this.cdr.detectChanges();
+  }
+
+  cancelarMontos(): void {
+    this.mostrarModalMontos = false;
+    // Restaurar valores originales
+    if (this.facturacionData) {
+      this.montosForm.patchValue({
+        montoMedico: this.facturacionData.pagoMedicoBase || 20,
+        montoOptica: this.facturacionData.pagoOpticaBase || 20
+      });
+      this.calcularTotal();
+    }
   }
 
 }
