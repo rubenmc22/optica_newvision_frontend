@@ -56,6 +56,7 @@ export interface MetodoPago {
     banco?: string;
     bancoObject?: { codigo: string; nombre: string };
     moneda?: string;
+    bancoPunto?: string; 
 }
 
 export interface DatosRecibo {

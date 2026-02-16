@@ -345,7 +345,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     onHistoriaSeleccionada(event: any): void {
-
         // El evento puede ser el valor directamente o un objeto
         let historiaId: string | null = null;
 
@@ -1460,9 +1459,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             porcentajeMinimo: this.porcentajeMinimoOrdenTrabajo,
             razon: 'Forzado manualmente por usuario'
         };
-
-        // Aquí podrías enviar estos datos a un servicio de auditoría
-        console.log('Orden de trabajo forzada:', datosForzado);
     }
 
 
@@ -1877,14 +1873,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             'efectivo': this.monedaEfectivo.toLowerCase() === 'eur' ? 'euro' :
                 this.monedaEfectivo.toLowerCase() === 'ves' ? 'bolivar' :
                     this.monedaEfectivo.toLowerCase() === 'bs' ? 'bolivar' : 'dolar',
+            'punto': 'bolivar',
             'zelle': 'dolar',
-            'debito': 'bolivar',
-            'credito': 'bolivar',
             'pagomovil': 'bolivar',
             'transferencia': 'bolivar'
         };
 
-        return monedasPorMetodo[tipoMetodo];
+        return monedasPorMetodo[tipoMetodo] || 'dolar';
     }
 
     esMetodoEnBolivares(tipoMetodo: string): boolean {
@@ -2305,7 +2300,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const metodo = this.venta.metodosDePago[index];
 
         metodo.moneda = this.getMonedaParaMetodo(metodo.tipo);
-
         metodo.monto = 0;
         metodo.valorTemporal = '';
         metodo.referencia = '';
@@ -2314,7 +2308,26 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         metodo.banco = '';
         metodo.bancoObject = null;
 
+        // Limpiar banco de punto si existe
+        if (metodo.bancoPunto) {
+            metodo.bancoPunto = '';
+        }
+
         this.onMetodoPagoChange(index);
+    }
+
+    onBancoPuntoChange(metodo: any): void {
+        if (metodo.bancoPunto) {
+            const bancoSeleccionado = this.bancosPuntoVenta.find(b => b.id === metodo.bancoPunto);
+            if (bancoSeleccionado) {
+                // Guardar AMBOS: código y nombre
+                metodo.bancoCodigo = bancoSeleccionado.codigo; // ← '0114' o '0108'
+                metodo.bancoNombre = bancoSeleccionado.nombre; // ← 'BNC' o 'Provincial'
+            }
+        } else {
+            metodo.bancoCodigo = '';
+            metodo.bancoNombre = '';
+        }
     }
 
     agregarMetodo(): void {
@@ -2327,6 +2340,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             bancoNombre: '',
             banco: '',
             bancoObject: null,
+            bancoPunto: '', // ← Nuevo campo para punto de venta
             moneda: ''
         });
 
@@ -2466,6 +2480,29 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
     }
 
+    // En tu componente, modifica las opciones disponibles
+    tiposPago = [
+        { value: 'efectivo', label: '💵 Efectivo', icon: 'bi-cash' },
+        { value: 'punto', label: '💳 Punto de Venta', icon: 'bi-credit-card' },
+        { value: 'pagomovil', label: '📱 Pago Móvil', icon: 'bi-phone' },
+        { value: 'transferencia', label: '🏦 Transferencia', icon: 'bi-bank' },
+        { value: 'zelle', label: '🌐 Zelle', icon: 'bi-globe' }
+    ];
+
+    // Bancos disponibles para punto de venta
+    bancosPuntoVenta = [
+        { id: 'bnc', nombre: 'BNC', codigo: '0114' },
+        { id: 'provincial', nombre: 'Provincial', codigo: '0108' },
+        { id: 'bancamiga', nombre: 'Bancamiga', codigo: '0172' }
+    ];
+
+    // Agrega este método en tu componente GenerarVentaComponent
+    getNombreBancoPunto(bancoId: string): string {
+        const banco = this.bancosPuntoVenta.find(b => b.id === bancoId);
+        return banco ? `${banco.nombre} (${banco.codigo})` : 'Banco no especificado';
+    }
+
+
     bancosDisponibles: Array<{ codigo: string; nombre: string }> = [
         { codigo: '0102', nombre: 'Banco de Venezuela' },
         { codigo: '0134', nombre: 'Banesco' },
@@ -2525,10 +2562,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     necesitaBanco(tipoMetodo: string): boolean {
-        const metodosConBanco = ['pagomovil', 'transferencia'];
+        // Punto de venta tiene su propio selector de bancos
+        if (tipoMetodo === 'punto') return false;
+
+        const metodosConBanco = ['pagomovil', 'transferencia', 'zelle'];
         return metodosConBanco.includes(tipoMetodo);
     }
-
     get puedeGenerarVenta(): boolean {
         // 1. Verificar que hay productos
         if (this.venta.productos.length === 0) {
@@ -2609,7 +2648,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (!metodo.tipo) return false;
         if (!metodo.monto || metodo.monto <= 0) return false;
 
-        // Validar campos condicionales
+        // Validar punto de venta
+        if (metodo.tipo === 'punto') {
+            return !!metodo.bancoPunto; // Solo necesita banco, no referencia
+        }
+
+        // Validar efectivo (solo monto)
+        if (metodo.tipo === 'efectivo') {
+            return true;
+        }
+
+        // Validar otros métodos (pagomovil, transferencia, zelle)
         if (this.necesitaBanco(metodo.tipo) && (!metodo.banco || !metodo.bancoObject)) {
             return false;
         }
@@ -2832,29 +2881,43 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }));
 
         // Métodos de pago
-        const metodosPagoData = this.venta.metodosDePago.map(metodo => ({
-            tipo: metodo.tipo,
-            monto: metodo.monto,
-            moneda: this.getMonedaParaMetodo(metodo.tipo),
-            referencia: metodo.referencia || null,
-            bancoCodigo: metodo.bancoCodigo || null,
-            bancoNombre: metodo.bancoNombre || null
-        }));
+        const metodosPagoData = this.venta.metodosDePago.map(metodo => {
+            let bancoCodigo = null;
+            let bancoNombre = null;
 
-        // CALCULAR TOTALES CORRECTAMENTE
-        // 1. Calcular SUBTOTAL 
+            if (metodo.tipo === 'punto' && metodo.bancoPunto) {
+                const banco = this.bancosPuntoVenta.find(b => b.id === metodo.bancoPunto);
+                bancoCodigo = banco?.codigo || null;
+                bancoNombre = banco?.nombre || null;
+            } else {
+                bancoCodigo = metodo.bancoCodigo || null;
+                bancoNombre = metodo.bancoNombre || null;
+            }
+
+            return {
+                tipo: metodo.tipo,
+                monto: metodo.monto,
+                moneda: this.getMonedaParaMetodo(metodo.tipo),
+                referencia: metodo.referencia || null,
+                bancoCodigo: bancoCodigo,
+                bancoNombre: bancoNombre
+            };
+        });
+
+        //Calcular SUBTOTAL 
         const subtotalSinIva = this.subtotalCorregido;
 
-        // 1. Base imponible SIN IVA
+        //Base imponible SIN IVA
         const baseImponible = this.subtotalCorregido;
-        // 2. Descuento sobre base imponible (SIN IVA)
+
+        //Descuento sobre base imponible (SIN IVA)
         const descuentoMonto = this.venta.descuento ? (baseImponible * (this.venta.descuento / 100)) : 0;
         const baseConDescuento = baseImponible - descuentoMonto;
 
-        // 3. IVA sobre base con descuento
+        //IVA sobre base con descuento
         const ivaCorrecto = this.calcularIvaSobreBaseConDescuento(baseConDescuento);
 
-        // 4. Total final
+        //Total final
         const totalCorrecto = baseConDescuento + ivaCorrecto;
 
         // Determinar total pagado según forma de pago
@@ -2944,13 +3007,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 totalPagado: this.redondear(totalPagado)
             };
         }
-
-        console.log('DEBUG - Estado orden trabajo:', {
-            generarOrdenTrabajo: this.generarOrdenTrabajo,
-            forzarOrdenTrabajo: this.forzarOrdenTrabajo,
-            tieneRequisitos: this.verificarRequisitosOrdenTrabajo(),
-            debeGenerar: this.generarOrdenTrabajo || this.forzarOrdenTrabajo
-        });
 
         return datosParaAPI;
     }
@@ -4142,8 +4198,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     formatearTipoPago(tipo: string): string {
         const tipos: { [key: string]: string } = {
             'efectivo': 'EFECTIVO',
-            'debito': 'T. DÉBITO',
-            'credito': 'T. CRÉDITO',
+            'punto': 'PUNTO DE VENTA',
             'pagomovil': 'PAGO MÓVIL',
             'transferencia': 'TRANSFERENCIA',
             'zelle': 'ZELLE'
@@ -5191,8 +5246,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     private obtenerEmojiMetodoPago(tipo: string): string {
         const emojis: { [key: string]: string } = {
             'efectivo': '💵',
-            'debito': '💳',
-            'credito': '💳',
+            'punto': '💳',
             'pagomovil': '📱',
             'transferencia': '🏦',
             'zelle': '🌐'
@@ -5720,7 +5774,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         if (this.empresaReferidaInfo) {
             // Solo limpiar el toggle, no la información de la empresa
-            console.log('Información de empresa mantiene sus datos:', this.empresaReferidaInfo);
         }
     }
 
@@ -5738,7 +5791,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             panelClass: ['snackbar-info']
         });
 
-        console.log('Uso de empresa en venta:', this.usarEmpresaEnVenta);
     }
 
     obtenerInfoEmpresaParaAPI(): any {
@@ -5764,14 +5816,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private autocompletarDatosCliente(datosCliente: any): void {
-        console.log('🔍 Datos recibidos del API:', datosCliente);
-
         // Verificar primero si realmente hay datos del cliente
         const clienteInfo = datosCliente.cliente || datosCliente;
 
         // Si la cédula es null, no hay cliente - SALIR INMEDIATAMENTE
         if (!clienteInfo || clienteInfo.cedula === null) {
-            console.log('⚠️ Cliente no existe en la base de datos');
             this.clienteEncontrado = false;
             this.validacionIntentada = true;
             this.mensajeValidacionCliente = 'Cliente no encontrado';
@@ -5795,8 +5844,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.clienteSinPaciente.tipoPersona = 'natural';
         }
 
-        console.log('🔍 Información extraída del cliente:', clienteInfo);
-
         // 3. Autocompletar datos básicos del cliente (solo si no son null)
         this.clienteSinPaciente.nombreCompleto = clienteInfo.nombre || clienteInfo.nombreCompleto || '';
         this.clienteSinPaciente.telefono = clienteInfo.telefono || '';
@@ -5806,15 +5853,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // 4. IMPORTANTE: Manejar información de empresa si existe y no es null
         const empresaInfo = clienteInfo.informacionEmpresa;
 
-        console.log('🔍 DEBUG - Datos de empresa del API:', empresaInfo);
-
         if (empresaInfo?.referidoEmpresa === true &&
             empresaInfo.empresaNombre !== null &&
             empresaInfo.empresaRif !== null &&
             empresaInfo.empresaNombre.trim() !== '' &&
             empresaInfo.empresaRif.trim() !== '') {
-
-            console.log('📋 Cliente tiene empresa referida:', empresaInfo);
 
             // Usar los nombres de propiedades correctos del API
             this.empresaReferidaInfo = {
@@ -5825,8 +5868,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 direccion: empresaInfo.empresaDireccion || '',
                 email: empresaInfo.empresaCorreo || ''
             };
-
-            console.log('✅ empresaReferidaInfo creado:', this.empresaReferidaInfo);
 
             // Activar por defecto si tiene empresa referida
             this.usarEmpresaEnVenta = true;
@@ -5841,7 +5882,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
 
         } else {
-            console.log('📋 Cliente NO tiene empresa referida o la empresa no tiene datos válidos');
             this.empresaReferidaInfo = null;
             this.usarEmpresaEnVenta = false;
         }
@@ -6066,7 +6106,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Verificar si la cédula actual es la misma que se envió a buscar
             if (this.clienteSinPaciente.cedula?.trim() !== cedula) {
                 // El usuario cambió la cédula durante la búsqueda, ignorar resultado
-                console.log('Cédula cambiada durante la búsqueda, ignorando resultado');
                 this.validandoCliente = false;
                 return;
             }
@@ -6620,7 +6659,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Activar el uso de empresa por defecto si tiene empresa referida
             this.usarEmpresaEnVenta = true;
 
-            console.log('📋 Empresa referida cargada para paciente:', this.empresaReferidaInfo);
         } else {
             this.empresaReferidaInfo = null;
             this.usarEmpresaEnVenta = false;
