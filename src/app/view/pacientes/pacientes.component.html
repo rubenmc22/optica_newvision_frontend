@@ -1172,18 +1172,16 @@
                       Patologías
                     </div>
                     <div class="info-value tags">
-                      <ng-container
-                        *ngIf="pacienteSeleccionado?.historiaClinica?.patologias?.length; else noPatologias">
-                        <span class="info-tag"
-                          *ngFor="let patologia of pacienteSeleccionado?.historiaClinica?.patologias">
+                      <ng-container *ngIf="pacienteSeleccionado?.historiaClinica?.patologias; else noPatologias">
+                        <span class="info-tag" *ngFor="let patologia of formatearPatologiasArray(pacienteSeleccionado.historiaClinica.patologias)">
                           {{ patologia }}
                         </span>
                       </ng-container>
-                      <ng-template #noPatologias>---</ng-template>
+                      <ng-template #noPatologias>
+                        ---
+                      </ng-template>
                     </div>
                   </div>
-
-
                 </div>
               </div>
             </div>

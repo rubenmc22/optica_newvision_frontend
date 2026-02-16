@@ -659,6 +659,7 @@ export class VerPacientesComponent implements OnInit {
       this.marcarCamposComoTouched();
       return;
     }
+
     this.cargando = true;
     const mapGenero = this.formPaciente.value.genero === 'Masculino'
       ? 'm'
@@ -669,48 +670,26 @@ export class VerPacientesComponent implements OnInit {
     // Obtener valores del formulario
     const formValues = this.formPaciente.value;
 
+    console.log('formValues', formValues);
+
     // Procesar uso de dispositivos electrónicos
     const usoDispositivoValue = formValues.usoDispositivo === 'Sí'
       ? `Sí, ${formValues.intervaloUso}`
       : 'No';
 
-    const {
-      nombreCompleto,
-      cedula,
-      telefono,
-      email,
-      fechaNacimiento,
-      ocupacion,
-      genero,
-      direccion,
-      redesSociales,
-      usuarioLentes,
-      fotofobia,
-      traumatismoOcular,
-      traumatismoOcularDescripcion,
-      cirugiaOcular,
-      cirugiaOcularDescripcion,
-      alergicoA,
-      antecedentesPersonales,
-      antecedentesFamiliares,
-      patologias,
-      patologiaOcular
-    } = formValues;
-
     const nuevoPaciente = {
       informacionPersonal: {
         esMenorSinCedula: formValues.esMenorSinCedula,
-        nombreCompleto,
-        cedula,
-        telefono,
+        nombreCompleto: formValues.nombreCompleto,
+        cedula: formValues.cedula,
+        telefono: formValues.telefono,
         email: formValues.email?.trim() || null,
-        fechaNacimiento,
-        ocupacion,
+        fechaNacimiento: formValues.fechaNacimiento,
+        ocupacion: formValues.ocupacion,
         genero: mapGenero,
-        direccion
+        direccion: formValues.direccion
       },
       redesSociales: this.redesSociales.value,
-      //Información de empresa 
       informacionEmpresa: formValues.referidoEmpresa ? {
         referidoEmpresa: true,
         empresaNombre: formValues.empresaNombre,
@@ -718,44 +697,51 @@ export class VerPacientesComponent implements OnInit {
         empresaTelefono: formValues.empresaTelefono,
         empresaDireccion: formValues.empresaDireccion
       } : null,
-
       historiaClinica: {
-        usuarioLentes,
-        fotofobia,
+        usuarioLentes: formValues.usuarioLentes,
+        fotofobia: formValues.fotofobia,
         usoDispositivo: usoDispositivoValue,
-        traumatismoOcular,
-        traumatismoOcularDescripcion,
-        cirugiaOcular,
-        cirugiaOcularDescripcion,
-        alergicoA,
-        antecedentesPersonales,
-        antecedentesFamiliares,
-        patologias
+        traumatismoOcular: formValues.traumatismoOcular,
+        traumatismoOcularDescripcion: formValues.traumatismoOcularDescripcion,
+        cirugiaOcular: formValues.cirugiaOcular,
+        cirugiaOcularDescripcion: formValues.cirugiaOcularDescripcion,
+        alergicoA: formValues.alergicoA,
+        antecedentesPersonales: formValues.antecedentesPersonales,
+        antecedentesFamiliares: formValues.antecedentesFamiliares,
+        patologias: formValues.patologias
       }
     };
+
+    console.log('nuevoPaciente', nuevoPaciente);
 
     this.pacientesService.createPaciente(nuevoPaciente).subscribe({
       next: (response) => {
         this.cargando = false;
 
+        console.log('response', response);
+
+        const pacienteData = response.paciente;
+
         // Transformar la respuesta del paciente
         const pacienteTransformado = {
-          ...response,
-          key: response.key || response.id,
-          fechaRegistro: this.formatearFecha(response.created_at),
-          fechaRegistroRaw: response.created_at,
-          fechaActualizacion: this.formatearFecha(response.updated_at),
-          fechaActualizacionRaw: response.updated_at,
-          sede: response.sede || this.sedeActiva,
+          ...pacienteData,
+          key: pacienteData.key || pacienteData.id,
+          fechaRegistro: this.formatearFecha(pacienteData.created_at),
+          fechaRegistroRaw: pacienteData.created_at,
+          fechaActualizacion: this.formatearFecha(pacienteData.updated_at),
+          fechaActualizacionRaw: pacienteData.updated_at,
+          sede: pacienteData.sedeId || this.sedeActiva,
           informacionPersonal: {
-            ...response.informacionPersonal,
-            edad: this.calcularEdad(response.informacionPersonal.fechaNacimiento),
-            genero: response.informacionPersonal.genero === 'm' ? 'Masculino' :
-              response.informacionPersonal.genero === 'f' ? 'Femenino' : 'Otro'
+            ...pacienteData.informacionPersonal,
+            edad: this.calcularEdad(pacienteData.informacionPersonal.fechaNacimiento),
+            genero: pacienteData.informacionPersonal.genero === 'm' ? 'Masculino' :
+              pacienteData.informacionPersonal.genero === 'f' ? 'Femenino' : 'Otro'
           }
         };
 
-        // ✅ Encontrar la posición correcta para insertar (orden descendente por fecha de creación)
+        console.log('pacienteTransformado', pacienteTransformado);
+
+        // Encontrar la posición correcta para insertar (orden descendente por fecha de creación)
         const fechaCreacion = new Date(pacienteTransformado.fechaRegistroRaw).getTime();
         let posicionInsercion = 0;
 
@@ -791,23 +777,26 @@ export class VerPacientesComponent implements OnInit {
           const sede = sedeRaw.replace(/^Sede\s+/i, '').trim();
 
           const mensajeHTML = `
-        <br>
-        <div class="swal-custom-content ">
-          <h5 class="text-danger mb-2">
-            <i class="fas fa-id-card me-2"></i> Cédula ya registrada
-          </h5>
-          <ul class="list-unstyled mb-3">
-            <li><strong>Cédula:</strong> ${cedula}</li>
-            <li><strong>Sede:</strong> ${sede}</li>
-          </ul><br>
-          <div class="text-muted small">
-            <i class="fas fa-info-circle me-1"></i> Cada cédula debe ser única por sede. Revisa los datos ingresados.
+          <br>
+          <div class="swal-custom-content">
+            <h5 class="text-danger mb-2">
+              <i class="fas fa-id-card me-2"></i> Cédula ya registrada
+            </h5>
+            <ul class="list-unstyled mb-3">
+              <li><strong>Cédula:</strong> ${cedula}</li>
+              <li><strong>Sede:</strong> ${sede}</li>
+            </ul><br>
+            <div class="text-muted small">
+              <i class="fas fa-info-circle me-1"></i> Cada cédula debe ser única por sede. Revisa los datos ingresados.
+            </div>
           </div>
-        </div>
         `;
           this.swalService.showWarning('', mensajeHTML, true);
           return;
         }
+
+        console.error('Error al crear paciente:', error);
+        this.swalService.showError('Error', 'No se pudo registrar el paciente. Intente nuevamente.');
       }
     });
   }
@@ -1151,6 +1140,9 @@ export class VerPacientesComponent implements OnInit {
     const redes = paciente?.redesSociales ?? [];
     const historia = paciente?.historiaClinica ?? {};
 
+    console.log('info', info);
+    console.log('historia', historia);
+
     // Manejar el caso cuando informacionEmpresa es null
     const empresa = paciente?.informacionEmpresa;
 
@@ -1164,7 +1156,7 @@ export class VerPacientesComponent implements OnInit {
       cedula: info.cedula ?? noEspecificadoTexto,
       telefono: info.telefono ?? noEspecificadoTexto,
       email: info.email ?? noEspecificadoTexto,
-      fechaNacimiento: this.formatearFecha(info.fechaNacimiento),
+      fechaNacimiento: info.fechaNacimiento ? this.formatearFecha(info.fechaNacimiento) : '',
       edad: this.calcularEdad(info.fechaNacimiento),
       ocupacion: info.ocupacion ?? noEspecificadoTexto,
       genero: info.genero || '--',
@@ -1208,12 +1200,7 @@ export class VerPacientesComponent implements OnInit {
         antecedentesFamiliares: Array.isArray(historia.antecedentesFamiliares) && historia.antecedentesFamiliares.length > 0
           ? historia.antecedentesFamiliares
           : noEspecificadoArray,
-        patologias: Array.isArray(historia.patologias) && historia.patologias.length > 0
-          ? historia.patologias
-          : noEspecificadoArray,
-        patologiaOcular: Array.isArray(historia.patologiaOcular) && historia.patologiaOcular.length > 0
-          ? historia.patologiaOcular
-          : noEspecificadoArray
+        patologias: historia.patologias || '',
       }
     };
 
@@ -2298,6 +2285,18 @@ export class VerPacientesComponent implements OnInit {
   actualizarPacientesPorSede(): void {
     // Llama al método unificado de filtrado
     this.aplicarFiltroTexto();
+  }
+
+  // En tu componente (pacientes.component.ts), agrega este método:
+  // Método adicional para la opción de tags
+  formatearPatologiasArray(patologias: string): string[] {
+    if (!patologias) return [];
+
+    return patologias.split(',').map(item => {
+      const itemLimpio = item.trim();
+      if (itemLimpio.length === 0) return '';
+      return itemLimpio.charAt(0).toUpperCase() + itemLimpio.slice(1).toLowerCase();
+    }).filter(item => item !== '');
   }
 
 
