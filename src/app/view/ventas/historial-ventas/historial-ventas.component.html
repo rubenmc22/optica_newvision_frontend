@@ -454,13 +454,15 @@
                   </div>
                   <div class="detail-item">
                     <small class="text-muted">Forma Pago</small>
-                    <span class="text-capitalize badge forma-pago-badge" [ngClass]="{
-                                    'forma-contado': venta.formaPago === 'contado',
-                                    'forma-cashea': venta.formaPago === 'cashea',
-                                    'forma-abono': venta.formaPago === 'abono'
-                                }">
-                      {{venta.formaPago}}
-                    </span>
+               <span class="text-capitalize badge forma-pago-badge" 
+                      [ngClass]="{
+                        'forma-contado': venta.formaPago === 'contado',
+                        'forma-contado-pendiente': venta.formaPago === 'de_contado-pendiente',
+                        'forma-cashea': venta.formaPago === 'cashea',
+                        'forma-abono': venta.formaPago === 'abono'
+                      }">
+                  {{ getFormaPagoDisplay(venta.formaPago) }}
+               </span>
                   </div>
                 </div>
               </div>
@@ -729,7 +731,7 @@
                       <span>Realizar Pago</span>
                     </button>
 
-                    <button *ngIf="mostrarBotonEditar(venta)" class="btn btn-outline-primary btn-sm accion-btn"
+                    <button *ngIf="mostrarBotonAbonar(venta)" class="btn btn-outline-primary btn-sm accion-btn"
                       (click)="editarVenta(venta)">
                       <i class="bi-cash-coin"></i>
                       <span>Abonar</span>

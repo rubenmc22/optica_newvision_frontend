@@ -706,6 +706,21 @@ export class HistorialVentasComponent implements OnInit {
     return ventaAdaptada;
   }
 
+  private normalizarFormaPago(formaPagoApi: string): string {
+    const mapeo: { [key: string]: string } = {
+      'contado': 'contado',
+      'de_contado': 'contado',
+      'contado-pendiente': 'contado-pendiente',
+      'de_contado-pendiente': 'contado-pendiente',
+      'abono': 'abono',
+      'cashea': 'cashea',
+      'credito': 'credito'
+    };
+
+    const clave = formaPagoApi?.toLowerCase() || '';
+    return mapeo[clave] || formaPagoApi;
+  }
+
   private determinarEstadoVenta(estatusVenta: string): string {
     // Si está cancelada o anulada en el API, mantener cancelada
     if (estatusVenta === 'cancelada' || estatusVenta === 'cancelado' || estatusVenta === 'anulada') {
@@ -727,16 +742,6 @@ export class HistorialVentasComponent implements OnInit {
     };
 
     return mapeo[estatusPago] || estatusPago;
-  }
-
-  /**
-   * Calcula la conversión a bolívares
-   */
-  private calcularConversionBs(monto: number, moneda: string): number {
-    if (moneda === 'bolivar') return monto;
-
-    const tasa = this.tasasPorId[moneda] || 1;
-    return this.redondear(monto * tasa);
   }
 
   private mapearEstadoParaFiltros(estatusPago: string): string {
@@ -2233,13 +2238,18 @@ export class HistorialVentasComponent implements OnInit {
 
     const deuda = this.getDeudaPendiente(venta);
 
+    console.log('Deuda', deuda);
+
     if (deuda === 0) {
       return 'Pago completado';
     } else {
+      // Para de_contado-pendiente, mostrar mensaje específico
+      if (venta.formaPago === 'de_contado-pendiente') {
+        return 'Pendiente de pago completo';
+      }
       return 'Pendiente por pago';
     }
   }
-
 
   // Método para obtener la clase CSS del estatus de pago (actualizado)
   getEstatusPagoClase(venta: any): string {
@@ -5308,7 +5318,7 @@ export class HistorialVentasComponent implements OnInit {
   getFormaPagoDisplay(formaPago: string): string {
     const formas: { [key: string]: string } = {
       'contado': 'Contado',
-      'contado-pendiente': 'Contado - Pendiente por Pago',
+      'de_contado-pendiente': 'Contado - Pendiente por Pago',
       'abono': 'Abono',
       'cashea': 'Cashea',
       'credito': 'Crédito'
@@ -5668,19 +5678,15 @@ export class HistorialVentasComponent implements OnInit {
   /**
    *  REALIZAR PAGO = FORMA DE PAGO DE CONTADO - PENDIENTE
    */
-  // Método para mostrar botón de pago
   mostrarBotonRealizarPago(venta: any): boolean {
     if (!venta || venta.estado === 'cancelada') {
       return false;
     }
 
-    // Solo para contado-pendiente con deuda
-    // const esContadoPendiente = venta.formaPago === 'contado-pendiente' &&
-    //  this.getDeudaPendiente(venta) > 0;
+    // Usar el valor exacto del API: "de_contado-pendiente"
+    const esContadoPendiente = venta.formaPago === 'de_contado-pendiente' &&
+      this.getDeudaPendiente(venta) > 0;
 
-    const esContadoPendiente = venta.formaPago === 'contado'; //cambiar esto
-
-    // return esContadoPendiente;
     return esContadoPendiente;
   }
 
