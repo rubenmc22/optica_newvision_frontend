@@ -1239,7 +1239,7 @@ export class HistoriasMedicasComponent implements OnInit {
         next: (montos) => {
           const pagoMedico = montos.montoMedico;
           const pagoOptica = montos.montoOptica;
-          const montoBase = pagoMedico + pagoOptica;
+          const montoBase = montos.total; // total ya es medico + optica
 
           this.facturacionData = {
             tipoProfesional: 'oftalmologo',
@@ -1250,9 +1250,12 @@ export class HistoriasMedicasComponent implements OnInit {
             pagoMedico: pagoMedico
           };
 
+          console.log('Montos cargados del API:', montos);
           this.cdr.detectChanges();
         },
-        error: () => {
+        error: (error) => {
+          console.error('Error cargando montos:', error);
+          // Valores por defecto si hay error
           this.facturacionData = {
             tipoProfesional: 'oftalmologo',
             realizoCompraLentes: false,

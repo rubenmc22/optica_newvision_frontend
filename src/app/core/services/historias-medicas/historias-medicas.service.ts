@@ -72,18 +72,33 @@ export class HistoriaMedicaService {
   }
 
 
-  // Agrega este método al servicio existente
   // En historia-medica.service.ts
   getMontosConsulta(sedeId: string, tipoProfesional: 'oftalmologo' | 'optometrista'): Observable<any> {
-    // Datos dummy - SOLO montos, sin total
-    const montosDummy = {
-      'guatire-oftalmologo': { montoMedico: 30, montoOptica: 30 },
-      'guarenas-oftalmologo': { montoMedico: 22, montoOptica: 23 },
-      'guatire-optometrista': { montoMedico: 0, montoOptica: 0 }
-    };
+    // El API solo retorna costo_total_consulta y costo_medico_consulta
+    return this.http.get<any>(`${environment.apiUrl}/configuracion/get-costos-consultas`).pipe(
+      timeout(this.REQUEST_TIMEOUT),
+      map(response => {
+        // Calcular montoOptica = total - medico
+        const total = parseFloat(response.costo_total_consulta) || 0;
+        const medico = parseFloat(response.costo_medico_consulta) || 0;
+        const optica = total - medico;
 
-    const key = `${sedeId}-${tipoProfesional}`;
-    return of(montosDummy[key] || { montoMedico: 30, montoOptica: 30 });
+        return {
+          montoMedico: medico,
+          montoOptica: optica,
+          total: total
+        };
+      }),
+      catchError(error => {
+        console.error('Error obteniendo costos de consulta:', error);
+        // Valores por defecto en caso de error
+        return of({
+          montoMedico: 20,
+          montoOptica: 20,
+          total: 40
+        });
+      })
+    );
   }
 }
 
