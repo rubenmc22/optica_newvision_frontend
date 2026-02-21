@@ -48,7 +48,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
 
   menuItems = [
     {
-      label: 'Dashboard',
+      label: 'Tablero Principal',
       icon: 'fas fa-tachometer-alt',
       routerLink: '/dashboard',
       roles: ['admin', 'gerente', 'asesor-optico']
@@ -71,7 +71,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       underConstruction: false
     },
     {
-      label: 'Ventas',
+      label: 'Gestión de Ventas',
       icon: 'fas fa-shopping-cart',
       routerLink: '/ventas',
       roles: ['admin', 'gerente', 'asesor-optico'],

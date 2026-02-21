@@ -26,6 +26,13 @@ import { NgSelectComponent } from '@ng-select/ng-select';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+// Constantes
+import {
+    TIPOS_CRISTALES,
+    TIPOS_LENTES_CONTACTO,
+    MATERIALES,
+} from 'src/app/shared/constants/historias-medicas';
+
 
 @Component({
     selector: 'app-generar-venta',
@@ -538,17 +545,69 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
     }
 
-    getMaterialesRecomendados(): string {
-        if (!this.historiaMedica?.recomendaciones?.[0]?.material) {
-            return '--';
+    getMaterialesRecomendados(material: any): string {
+        if (!material) return '--';
+
+        if (Array.isArray(material)) {
+            if (material.length === 0) return '--';
+
+            // Mapear los materiales a sus etiquetas
+            return material.map(m => {
+                // Buscar en la constante MATERIALES
+                const encontrado = MATERIALES.find(mat => mat.value === m || mat.label === m);
+                return encontrado?.label || m;
+            }).join(', ');
         }
 
-        const material = this.historiaMedica.recomendaciones[0].material;
-        if (Array.isArray(material)) {
-            return material.join(', ');
-        }
-        return material || '--';
+        // Si es un string
+        const encontrado = MATERIALES.find(mat => mat.value === material || mat.label === material);
+        return encontrado?.label || material;
     }
+
+    getTipoCristalRecomendado(cristal: any): string {
+        if (!cristal) return '--';
+
+        // Si es string
+        if (typeof cristal === 'string') {
+            const encontrado = TIPOS_CRISTALES.find(c =>
+                c.value === cristal || c.label === cristal
+            );
+            return encontrado?.label || cristal;
+        }
+
+        // Si es objeto con label
+        if (cristal?.label) {
+            return cristal.label;
+        }
+
+        return '--';
+    }
+
+    // Método para obtener el tipo de lente de contacto (ya existe pero podemos mejorarlo)
+    getTipoLenteContactoLabel(valor: string | undefined | null): string {
+        if (!valor || valor === '') return '--';
+
+        const encontrado = TIPOS_LENTES_CONTACTO.find(t =>
+            t.value === valor ||
+            t.label === valor ||
+            t.value?.toLowerCase() === valor?.toLowerCase() ||
+            t.label?.toLowerCase() === valor?.toLowerCase()
+        );
+
+        return encontrado?.label || valor;
+    }
+
+    // Método para determinar si es una recomendación de lentes de contacto
+esLenteContactoRecomendacion(rec: any): boolean {
+    if (!rec || !rec.cristal) return false;
+    
+    const cristalStr = typeof rec.cristal === 'string' 
+        ? rec.cristal 
+        : rec.cristal?.label || '';
+    
+    return cristalStr.toLowerCase().includes('contacto') || 
+           (rec.tipoLentesContacto && rec.tipoLentesContacto !== '');
+}
 
     // Método público para usar en plantillas
     tieneFormulaCompleta(historia: any): boolean {

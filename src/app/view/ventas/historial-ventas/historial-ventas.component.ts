@@ -1443,10 +1443,6 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  private generarNuevoRecibo(venta: any): void {
-    //   console.log('Generando nuevo recibo para venta:', venta);
-  }
-
   private marcarControlesComoSucios(formGroup: FormGroup): void {
     Object.keys(formGroup.controls).forEach(key => {
       const control = formGroup.get(key);
