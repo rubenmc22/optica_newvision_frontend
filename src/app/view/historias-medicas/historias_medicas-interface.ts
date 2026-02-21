@@ -21,7 +21,7 @@ export interface HistoriaMedicaBase {
 }
 
 export interface DatosConsulta {
-  motivo: string[]; // Siempre es un array
+  motivo: string[];
   otroMotivo?: string;
 
   medico: {
@@ -33,23 +33,16 @@ export interface DatosConsulta {
   nombre_asesor?: string;
   cedula_asesor?: string;
   cedulaAsesor?: string;
-
   tipoCristalActual?: string;
+  tipoLentesContacto?: string;
   fechaUltimaGraduacion?: string;
 
   facturacion?: {
-    // Tipo de consulta (lo deducimos del médico)
     tipoProfesional: 'oftalmologo' | 'optometrista';
-
-    // ¿El paciente compró los lentes hoy?
     realizoCompraLentes: boolean;
-
-    // Montos calculados automáticamente
-    montoTotal: number;      // 0 | 20 | 40
-    pagoOptica: number;      // 0 | 20
-    pagoMedico: number;      // 0 | 20
-
-    // Datos de pago (cuando se implemente caja)
+    montoTotal: number;
+    pagoOptica: number;
+    pagoMedico: number;
     metodoPago?: string;
     fechaPago?: string;
     estadoPago?: 'pendiente' | 'pagado' | 'anulado';
@@ -60,10 +53,10 @@ export interface DatosConsulta {
 export interface FacturacionConsulta {
   tipoProfesional: 'oftalmologo' | 'optometrista';
   realizoCompraLentes: boolean;
-  montoBase: number;        // ← NUEVO: suma de médico + óptica (siempre igual)
-  montoTotal: number;       // ← Lo que realmente paga (depende del switch)
-  pagoOptica: number;       // ← Pago a la óptica (0 si compra lentes)
-  pagoMedico: number;       // ← Pago al médico (siempre igual)
+  montoBase: number;
+  montoTotal: number;
+  pagoOptica: number;
+  pagoMedico: number;
 }
 
 export interface Auditoria {

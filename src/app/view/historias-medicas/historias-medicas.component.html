@@ -128,23 +128,23 @@
         <div class="panel-inferior" *ngIf="historiaSeleccionada">
           <div class="card card-secundaria" [class.collapsed]="panelInferiorColapsado">
             <div class="card-header-detalle" (click)="togglePanelInferior()">
-  <div class="header-left">
-    <div class="header-icon">
-      <i class="bi bi-eye-fill"></i>
-    </div>
-    <div class="header-text">
-      <div class="header-title">Detalle del Examen</div>
-    </div>
-  </div>
-  <div class="header-right">
-    <div class="detalle-numero">
-      <span class="numero-label">N° historia:</span>
-      <span class="numero-valor">{{ historiaSeleccionada?.nHistoria || '' }}</span>
-    </div>
-    <button class="collapse-toggle" [class.collapsed]="panelInferiorColapsado">
-      <i class="bi bi-chevron-down"></i>
-    </button>
-  </div>
+              <div class="header-left">
+                <div class="header-icon">
+                  <i class="bi bi-eye-fill"></i>
+                </div>
+                <div class="header-text">
+                  <div class="header-title">Detalle del Examen</div>
+                </div>
+              </div>
+              <div class="header-right">
+                <div class="detalle-numero">
+                  <span class="numero-label">N° historia:</span>
+                  <span class="numero-valor">{{ historiaSeleccionada?.nHistoria || '' }}</span>
+                </div>
+                <button class="collapse-toggle" [class.collapsed]="panelInferiorColapsado">
+                  <i class="bi bi-chevron-down"></i>
+                </button>
+              </div>
             </div>
 
             <div class="card-body-detalle">
@@ -200,10 +200,17 @@
                     <label>Usa Lentes</label>
                     <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.usuarioLentes || 'No especificado' }}</div>
                   </div>
+
                   <div class="dato-item">
                     <label>Cristal Actual</label>
-                    <div class="dato-valor">{{ historiaSeleccionada?.datosConsulta?.tipoCristalActual || 'No specificado' }}</div>
+                    <div class="dato-valor">  {{ getTipoCristalActualConModelo() }}</div>
                   </div>
+
+                  <div class="dato-item" *ngIf="historiaSeleccionada?.datosConsulta?.tipoCristalActual === 'LENTES_CONTACTO'">
+                    <label>Modelo de Lentes de Contacto</label>
+                    <div class="dato-valor">{{ getModeloLenteContactoActual() || 'No especificado' }}</div>
+                  </div>
+
                   <div class="dato-item">
                     <label>Última Graduación</label>
                     <div class="dato-valor">
@@ -211,16 +218,19 @@
                       (historiaSeleccionada?.datosConsulta?.fechaUltimaGraduacion | date: 'dd/MM/yyyy') : 'No eecificado' }}
                     </div>
                   </div>
+
                   <div class="dato-item">
                     <label>Fotofobia</label>
                     <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.fotofobia || 'No especificado'}}
                     </div>
                   </div>
+
                   <div class="dato-item">
                     <label>Alergias</label>
                     <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.alergicoA || 'No especificado'
                       }}</div>
                   </div>
+                  
                   <div class="dato-item">
                     <label>Cirugía Ocular</label>
                     <div class="dato-valor">{{ pacienteSeleccionado?.historiaClinica?.cirugiaOcular || 'No especificado'}}</div>
@@ -586,13 +596,13 @@
                         <div class="recomendacion-body">
                           <div class="recomendacion-item">
                             <label>Tipo de cristal</label>
-                            <div class="dato-valor">{{ rec.cristal?.label || 'No especificado' }}</div>
+                            <div class="dato-valor">{{ getTipoCristalRecomendado(rec.cristal) }}</div>
                           </div>
                           
                           <!-- AGREGAR TIPO DE LENTES DE CONTACTO -->
                           <div class="recomendacion-item" *ngIf="rec.tipoLentesContacto">
                             <label>Tipo de lentes de contacto</label>
-                            <div class="dato-valor">{{ rec.tipoLentesContacto || 'No especificado' }}</div>
+                            <div class="dato-valor">{{ getTipoLenteContactoLabel(rec.tipoLentesContacto) }}</div>
                           </div>
                           
                           <div class="recomendacion-item">

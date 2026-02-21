@@ -422,6 +422,12 @@ export class HistoriasMedicasComponent implements OnInit {
     this.historiaEnEdicion = this.generarHistoria('crear');
     this.modoEdicion = false;
     this.onMotivoChange([]);
+
+    // Resetear arrays de visibilidad a estado inicial
+    this.mostrarMedidasProgresivo = [false];
+    this.mostrarTipoLentesContacto = [false];
+    this.mostrarMaterialPersonalizado = [false];
+
     this.iniciarFlujoHistoria();
   }
 
@@ -441,11 +447,13 @@ export class HistoriasMedicasComponent implements OnInit {
       this.precargarHistoriaSeleccionada();
     } else {
       this.prepararNuevaHistoria();
+      // Asegurar arrays inicializados para nueva historia
+      this.mostrarMedidasProgresivo = [false];
+      this.mostrarTipoLentesContacto = [false];
+      this.mostrarMaterialPersonalizado = [false];
     }
 
-    // Usar el método mejorado para abrir modal
     this.abrirModalConFocus(false);
-
   }
 
   private generarHistoria(modo: 'crear' | 'editar', historiaExistente?: HistoriaMedica): HistoriaMedica {
@@ -565,6 +573,7 @@ export class HistoriasMedicasComponent implements OnInit {
         otroMotivo: dc.otroMotivo,
         medico: dc.medico ?? null,
         tipoCristalActual: dc.tipoCristalActual,
+        tipoLentesContacto: dc.tipoLentesContacto || '',
         ultimaGraduacion: dc.fechaUltimaGraduacion,
 
         // Lensometría
@@ -630,6 +639,8 @@ export class HistoriasMedicasComponent implements OnInit {
         tratamiento: dt.tratamiento
       });
 
+      this.mostrarSelectLentesContacto = dc.tipoCristalActual === 'LENTES_CONTACTO';
+
       if (dc.facturacion) {
         this.esOftalmologoSeleccionado = dc.facturacion.tipoProfesional === 'oftalmologo';
         this.esOptometristaSeleccionado = dc.facturacion.tipoProfesional === 'optometrista';
@@ -646,6 +657,11 @@ export class HistoriasMedicasComponent implements OnInit {
 
       this.onMotivoChange(this.historiaForm.value.motivo);
 
+      // Limpiar arrays de visibilidad
+      this.mostrarMedidasProgresivo = [];
+      this.mostrarTipoLentesContacto = []; // ✅ IMPORTANTE: Limpiar array
+      this.mostrarMaterialPersonalizado = [];
+
       this.recomendaciones.clear();
 
       // En el bucle de recomendaciones:
@@ -655,6 +671,13 @@ export class HistoriasMedicasComponent implements OnInit {
 
         // Extraer valor del cristal como string
         const valorCristal = this.obtenerValorCristalComoString(r.cristal);
+
+        console.log(`Recomendación ${index}:`, {
+          cristalOriginal: r.cristal,
+          valorCristal: valorCristal,
+          tipoLentesContacto: r.tipoLentesContacto,
+          esLentesContacto: this.esLentesContacto(valorCristal)
+        });
 
         // Establecer visibilidad basada en los datos precargados
         const esProgresivo = this.esCristalProgresivo(valorCristal);
@@ -680,9 +703,25 @@ export class HistoriasMedicasComponent implements OnInit {
 
   private prepararNuevaHistoria(): void {
     if (this.modoEdicion) return;
+
     this.historiaForm.reset();
     this.recomendaciones.clear();
+
+    // Agregar una recomendación vacía
     this.agregarRecomendacion();
+
+    // Resetear arrays de visibilidad
+    this.mostrarMedidasProgresivo = [false];
+    this.mostrarTipoLentesContacto = [false];
+    this.mostrarMaterialPersonalizado = [false];
+
+    // Resetear otros estados
+    this.mostrarSelectLentesContacto = false;
+    this.esOftalmologoSeleccionado = false;
+    this.esOptometristaSeleccionado = false;
+    this.realizoCompraLentes = false;
+    this.facturacionData = null;
+    this.medicoSeleccionado = null;
   }
 
   guardarHistoria(): void {
@@ -772,6 +811,7 @@ export class HistoriasMedicasComponent implements OnInit {
         motivo: Array.isArray(f.motivo) ? f.motivo : [f.motivo],
         otroMotivo: f.otroMotivo || '',
         tipoCristalActual: f.tipoCristalActual || '',
+        tipoLentesContacto: f.tipoLentesContacto || '',
         fechaUltimaGraduacion: this.formatearFechaParaBackend(f.ultimaGraduacion),
         medico: typeof f.medico === 'object' && f.medico?.cedula
           ? f.medico.cedula
@@ -915,6 +955,7 @@ export class HistoriasMedicasComponent implements OnInit {
         motivo: Array.isArray(formValue.motivo) ? formValue.motivo : [formValue.motivo],
         otroMotivo: formValue.otroMotivo || '',
         tipoCristalActual: formValue.tipoCristalActual,
+        tipoLentesContacto: formValue.tipoLentesContacto || '',
         fechaUltimaGraduacion: formValue.ultimaGraduacion,
         medico: formValue.medico?.cedula,
         facturacion: this.facturacionData || '',
@@ -1345,6 +1386,9 @@ export class HistoriasMedicasComponent implements OnInit {
     this.mostrarMedidasProgresivo.push(false);
     this.mostrarTipoLentesContacto.push(false);
     this.mostrarMaterialPersonalizado.push(false);
+
+    // Forzar detección de cambios
+    this.cdr.detectChanges();
   }
 
   eliminarRecomendacion(index: number): void {
@@ -1375,7 +1419,6 @@ export class HistoriasMedicasComponent implements OnInit {
         cristal: grupo.get('cristal')?.value || [],
         material: materialesCombinados,
         montura: grupo.get('montura')?.value || '',
-        cristalSugerido: grupo.get('cristalSugerido')?.value || '',
         observaciones: grupo.get('observaciones')?.value || '',
         tipoLentesContacto: grupo.get('tipoLentesContacto')?.value || '',
         medidaHorizontal: grupo.get('medidaHorizontal')?.value || '',
@@ -1732,25 +1775,32 @@ export class HistoriasMedicasComponent implements OnInit {
   limpiarModal(): void {
     this.historiaEnEdicion = null;
     this.modoEdicion = false;
+
+    // Resetear el formulario completo
     this.historiaForm.reset();
+
+    // Limpiar el FormArray de recomendaciones
     this.recomendaciones.clear();
 
-    //REINICIAR ESTADOS DE FACTURACIÓN
+    // AGREGAR UNA RECOMENDACIÓN POR DEFECTO (vacía)
+    this.agregarRecomendacion();
+
+    // Resetear estados de facturación
     this.esOftalmologoSeleccionado = false;
     this.esOptometristaSeleccionado = false;
     this.realizoCompraLentes = false;
     this.facturacionData = null;
     this.medicoSeleccionado = null;
+    this.mostrarSelectLentesContacto = false;
 
-    //REINICIAR ARRAYS DE VISIBILIDAD DE RECOMENDACIONES
+    // Resetear arrays de visibilidad - SOLO UN ELEMENTO (el de la recomendación por defecto)
     this.mostrarMedidasProgresivo = [false];
     this.mostrarTipoLentesContacto = [false];
     this.mostrarMaterialPersonalizado = [false];
 
     this.mostrarConfig = false;
-    this.facturacionData = null;
 
-    //FORZAR DETECCIÓN DE CAMBIOS
+    // Forzar detección de cambios
     this.cdr.detectChanges();
   }
 
@@ -3618,17 +3668,21 @@ export class HistoriasMedicasComponent implements OnInit {
   private obtenerValorCristalComoString(cristal: any): string {
     if (!cristal) return '';
 
-    // Si ya es string
+    // Si es string
     if (typeof cristal === 'string') {
       return cristal;
     }
 
     // Si es objeto con propiedad value
-    if (cristal && typeof cristal === 'object' && 'value' in cristal) {
-      return String(cristal.value);
+    if (cristal && typeof cristal === 'object') {
+      if ('value' in cristal && cristal.value) {
+        return String(cristal.value);
+      }
+      if ('label' in cristal && cristal.label) {
+        return String(cristal.label);
+      }
     }
 
-    // Si es objeto sin propiedad value, intentar convertirlo
     return String(cristal);
   }
 
@@ -3641,7 +3695,13 @@ export class HistoriasMedicasComponent implements OnInit {
   // Método para verificar si es lentes de contacto
   private esLentesContacto(valor: string): boolean {
     if (!valor) return false;
-    return valor.toUpperCase() === 'LENTES_CONTACTO';
+
+    const valorNormalizado = valor.toString().toUpperCase().trim();
+
+    // Detectar diferentes formatos posibles
+    return valorNormalizado === 'LENTES_CONTACTO' ||
+      valorNormalizado === 'LENTES DE CONTACTO' ||
+      valorNormalizado.includes('LENTES') && valorNormalizado.includes('CONTACTO');
   }
 
   // Método para verificar si el cristal requiere medidas
@@ -3948,6 +4008,62 @@ export class HistoriasMedicasComponent implements OnInit {
     }
   }
 
+  // Para mostrar el tipo de cristal actual con su modelo (si aplica)
+  // Para mostrar el tipo de cristal actual con su modelo (si aplica)
+  getTipoCristalActualConModelo(): string {
+    const tipoCristal = this.historiaSeleccionada?.datosConsulta?.tipoCristalActual;
+    const modeloContacto = this.historiaSeleccionada?.datosConsulta?.tipoLentesContacto;
 
+    if (!tipoCristal) return 'No especificado';
+
+    // Buscar la etiqueta del tipo de cristal
+    const cristalEncontrado = TIPOS_CRISTALES.find(c => c.value === tipoCristal);
+    let texto = cristalEncontrado?.label || tipoCristal;
+
+    // Si es lentes de contacto y tiene modelo, mostrarlo
+    if (tipoCristal === 'LENTES_CONTACTO' && modeloContacto) {
+      const modeloEncontrado = TIPOS_LENTES_CONTACTO.find(m => m.value === modeloContacto || m.label === modeloContacto);
+      texto += ` - ${modeloEncontrado?.label || modeloContacto}`;
+    }
+
+    return texto;
+  }
+
+  // Para mostrar el tipo de cristal recomendado
+  getTipoCristalRecomendado(cristal: any): string {
+    if (!cristal) return 'No especificado';
+
+    // Si es string, buscar en TIPOS_CRISTALES
+    if (typeof cristal === 'string') {
+      const encontrado = TIPOS_CRISTALES.find(c => c.value === cristal || c.label === cristal);
+      return encontrado?.label || cristal;
+    }
+
+    // Si es objeto con label
+    if (cristal.label) {
+      return cristal.label;
+    }
+
+    return 'No especificado';
+  }
+
+  // Para mostrar el tipo de lente de contacto recomendado
+  getTipoLenteContactoLabel(valor: string): string {
+    if (!valor) return 'No especificado';
+    const encontrado = TIPOS_LENTES_CONTACTO.find(t => t.value === valor || t.label === valor);
+    return encontrado?.label || valor;
+  }
+
+  // Para el modelo de lente de contacto actual
+  getModeloLenteContactoActual(): string {
+    const modelo = this.historiaSeleccionada?.datosConsulta?.tipoLentesContacto;
+    if (!modelo) return '';
+
+    const encontrado = TIPOS_LENTES_CONTACTO.find(m =>
+      m.value === modelo || m.label === modelo
+    );
+
+    return encontrado?.label || modelo;
+  }
 
 }
