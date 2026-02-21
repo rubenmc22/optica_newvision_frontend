@@ -583,28 +583,87 @@
                                 </div>
                             </div>
 
-                            <!-- Recomendaciones -->
-                            <div class="recomendaciones-section">
-                                <div class="section-header">
-                                    <h5>Recomendaciones</h5>
+                           <!-- Indicaciones - Versión Compacta con Texto Legible -->
+                        <div *ngIf="historiaMedica?.recomendaciones?.length > 0"
+                            class="recomendaciones-section-compact">
+                            <div class="section-header-compact-resumen">
+                                <div class="header-left">
                                     <i class="bi bi-clipboard-check"></i>
+                                    <h5>Indicaciones</h5>
                                 </div>
-                                <div class="recomendaciones-grid">
-                                    <div class="recomendacion-item">
-                                        <span class="rec-label">Montura</span>
-                                        <span class="rec-value">{{ historiaMedica.recomendaciones[0].montura }}</span>
+                                <span class="badge-count">{{ historiaMedica.recomendaciones.length }}</span>
+                            </div>
+
+                            <div class="recomendaciones-vertical-compact">
+                                <div *ngFor="let rec of historiaMedica.recomendaciones; let i = index"
+                                    class="recomendacion-card-compact">
+                                    <!-- Header -->
+                                    <div class="card-header-compact">
+                                        <span class="indicacion-numero">#{{ i + 1 }}</span>
+                                        <span class="badge-tipo"
+                                            [ngClass]="esLenteContactoRecomendacion(rec) ? 'tipo-contacto' : 'tipo-normal'">
+                                            {{ esLenteContactoRecomendacion(rec) ? '👁️ Lentes de contacto' : '👓 Lentes convencionales' }}
+                                        </span>
                                     </div>
-                                    <div class="recomendacion-item">
-                                        <span class="rec-label">Material</span>
-                                        <span class="rec-value">{{ materialesRecomendados }}</span>
+
+                                    <!-- Grid de 4 columnas para información principal -->
+                                    <div class="info-grid-compact">
+                                        <!-- Tipo de cristal -->
+                                        <div class="info-item">
+                                            <span class="info-label">CRISTAL</span>
+                                            <span class="info-value">{{ getTipoCristalRecomendado(rec.cristal) }}</span>
+                                        </div>
+
+                                        <!-- Material -->
+                                        <div class="info-item">
+                                            <span class="info-label">MATERIAL</span>
+                                            <span class="info-value">{{ getMaterialesRecomendados(rec.material)
+                                                }}</span>
+                                        </div>
+
+                                        <!-- Montura (si existe) -->
+                                        <div class="info-item" *ngIf="rec.montura && rec.montura !== ''">
+                                            <span class="info-label">MONTURA</span>
+                                            <span class="info-value">{{ rec.montura }}</span>
+                                        </div>
+
+                                        <!-- Modelo lente contacto (si aplica) -->
+                                        <div class="info-item"
+                                            *ngIf="rec.tipoLentesContacto && rec.tipoLentesContacto !== ''">
+                                            <span class="info-label">MODELO CONTACTO</span>
+                                            <span class="info-value highlight">{{
+                                                getTipoLenteContactoLabel(rec.tipoLentesContacto) }}</span>
+                                        </div>
+
+                                        <!-- Espacio para mantener grid cuando falta algún campo -->
+                                        <div class="info-item" *ngIf="!rec.montura || rec.montura === ''"></div>
                                     </div>
-                                    <div class="recomendacion-item">
-                                        <span class="rec-label">Cristal</span>
-                                        <span class="rec-value">{{ historiaMedica.recomendaciones[0].cristal.label
-                                            }}</span>
+
+                                    <!-- Medidas en línea (si existen) -->
+                                    <div class="medidas-line"
+                                        *ngIf="rec.medidaHorizontal || rec.medidaVertical || rec.medidaDiagonal || rec.medidaPuente">
+                                        <i class="bi bi-rulers"></i>
+                                        <span class="medidas-label">Medidas:</span>
+                                        <span *ngIf="rec.medidaHorizontal" class="medida-chip">H: {{
+                                            rec.medidaHorizontal }} cm</span>
+                                        <span *ngIf="rec.medidaVertical" class="medida-chip">V: {{ rec.medidaVertical }}
+                                            cm</span>
+                                        <span *ngIf="rec.medidaDiagonal" class="medida-chip">D: {{ rec.medidaDiagonal }}
+                                            cm</span>
+                                        <span *ngIf="rec.medidaPuente" class="medida-chip">P: {{ rec.medidaPuente }}
+                                            cm</span>
+                                    </div>
+
+                                    <!-- Observaciones (si existen) -->
+                                    <div class="observaciones-line"
+                                        *ngIf="rec.observaciones && rec.observaciones !== ''">
+                                        <i class="bi bi-chat-text"></i>
+                                        <span class="observaciones-label">Observaciones:</span>
+                                        <span class="observaciones-text">{{ rec.observaciones }}</span>
                                     </div>
                                 </div>
                             </div>
+                        </div>
                         </ng-container>
 
                         <ng-template #sinFormulacion>
@@ -866,8 +925,7 @@
                                             <i class="bi bi-envelope"></i>
                                             <div>
                                                 <span class="detail-label">Email:</span>
-                                                <span class="detail-value">{{ empresaReferidaInfo?.email || 'No
-                                                    disponible' }}</span>
+                                                <span class="detail-value">{{ empresaReferidaInfo?.email || 'No disponible' }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -940,8 +998,7 @@
                                     <div class="form-group">
                                         <label class="form-label required">
                                             <i class="bi bi-person"></i>
-                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón
-                                            Social' }}
+                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón Social' }}
                                         </label>
                                         <input type="text" class="form-control modern-input"
                                             style="margin-bottom: -10px !important;"
@@ -1026,8 +1083,7 @@
                                                 'Los datos fueron autocompletados desde nuestra base de datos' :
                                                 validandoCliente ?
                                                 'Buscando información del cliente...' :
-                                                'Complete los datos manualmente. El cliente será registrado al generar
-                                                la venta.' }}
+                                                'Complete los datos manualmente. El cliente será registrado al generar la venta.' }}
                                             </div>
                                         </div>
                                     </div>

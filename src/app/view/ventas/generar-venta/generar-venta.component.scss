@@ -618,6 +618,43 @@
     }
 }
 
+.section-header-compact-resumen {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--degradado-color);
+    color: white;
+    border-bottom: 1px solid #dee2e6;
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        i {
+            color: white;
+            font-size: 20px;
+        }
+
+        h5 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+        }
+    }
+
+    .badge-count {
+        background: white;
+        color: var(--primary-color);
+        font-size: 14px;
+        font-weight: 600;
+        padding: 4px 12px;
+        border-radius: 20px;
+    }
+}
+
 // Contenedor vertical
 .recomendaciones-vertical-compact {
     display: flex;
