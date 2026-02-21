@@ -686,7 +686,6 @@
             <div class="info-row">
               <span class="info-label">Contacto:</span>
               <div class="info-value contacto-unificado">
-                <!-- Teléfono -->
                 <a *ngIf="ordenSeleccionada?.cliente?.informacion?.telefono"
                   href="tel:{{ ordenSeleccionada?.cliente?.informacion?.telefono }}"
                   class="contacto-link">
@@ -696,12 +695,8 @@
                 <span *ngIf="!ordenSeleccionada?.cliente?.informacion?.telefono" class="text-muted">
                   <i class="bi bi-telephone"></i> Sin teléfono
                 </span>
-
-                <!-- Separador si hay ambos -->
                 <span *ngIf="ordenSeleccionada?.cliente?.informacion?.telefono && 
                      ordenSeleccionada?.cliente?.informacion?.email" class="separador-contacto">|</span>
-
-                <!-- Email -->
                 <a *ngIf="ordenSeleccionada?.cliente?.informacion?.email"
                   href="mailto:{{ ordenSeleccionada?.cliente?.informacion?.email }}" class="contacto-link">
                   <i class="bi bi-envelope"></i>
@@ -733,204 +728,219 @@
                 <small class="text-muted" *ngIf="ordenSeleccionada?.asesor?.cedula">C.I. {{ ordenSeleccionada?.asesor?.cedula }}</small>
               </div>
             </div>
-
             <div class="text-center" *ngIf="!ordenSeleccionada?.especialista && !ordenSeleccionada?.asesor">
               <i class="bi bi-person-x"></i>
               <span class="text-muted">Sin personal asignado</span>
             </div>
           </div>
         </div>
-
       </div>
       
-      <!-- COLUMNA DERECHA: Formulación Compacta Moderna -->
+      <!-- COLUMNA DERECHA: Formulación y Producto -->
       <div class="detalle-columna">
         <div class="info-card formulacion-moderna">
           <div class="info-header">
             <i class="bi bi-eyeglasses"></i>
-            <h4>Formulación Óptica</h4>
+            <h4>Detalles de la Orden</h4>
           </div>
           <div class="info-content compact formulacion-compact">
             
-            <!-- Tarjeta de formulación principal -->
-            <div class="formulacion-card" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final">
-              <div class="formulacion-header">
-                <span class="formulacion-title">Refracción Final</span>
-                <span class="formulacion-badge">Completa</span>
-              </div>
-              
-              <div class="formulacion-grid">
-                <!-- Ojo Derecho -->
-                <div class="formulacion-eye">
-                  <div class="eye-header">
-                    <div class="eye-label">OD</div>
-                    <div class="eye-title">Ojo Derecho</div>
-                  </div>
-                  <div class="eye-values">
-                    <div class="value-item">
-                      <span class="value-label">Esfera</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.esf_od || '--' }}</span>
-                    </div>
-                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_od">
-                      <span class="value-label">Cilindro</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_od }}</span>
-                    </div>
-                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_od">
-                      <span class="value-label">Eje</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_od }}°</span>
-                    </div>
-                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_od">
-                      <span class="value-label">Add</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_od }}</span>
-                    </div>
-                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_od">
-                      <span class="value-label">Alt</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_od }}</span>
-                    </div>
-                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_od">
-                      <span class="value-label">DP</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_od }}</span>
-                    </div>
-                  </div>
+            <!-- TABS para organizar la información -->
+            <div class="detalle-tabs">
+              <button class="tab-btn" [class.active]="tabActivaDetalle === 'formulacion'" (click)="tabActivaDetalle = 'formulacion'">
+                <i class="bi bi-prescription"></i> Formulación
+              </button>
+              <button class="tab-btn" [class.active]="tabActivaDetalle === 'producto'" (click)="tabActivaDetalle = 'producto'">
+                <i class="bi bi-box-seam"></i> Producto
+              </button>
+              <button class="tab-btn" [class.active]="tabActivaDetalle === 'indicaciones'" (click)="tabActivaDetalle = 'indicaciones'">
+                <i class="bi bi-lightbulb"></i> Indicaciones
+              </button>
+            </div>
+            
+            <!-- CONTENIDO DE FORMULACIÓN -->
+            <div class="tab-content" *ngIf="tabActivaDetalle === 'formulacion'">
+              <div class="formulacion-card-moderna" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final">
+                <div class="formulacion-header-compact">
+                  <span class="formulacion-title">Refracción Final</span>
+                  <span class="formulacion-badge" [ngClass]="tieneFormulaCompleta(ordenSeleccionada) ? 'completa' : 'incompleta'">
+                    {{ tieneFormulaCompleta(ordenSeleccionada) ? 'Completa' : 'Incompleta' }}
+                  </span>
                 </div>
                 
-                <!-- Ojo Izquierdo -->
-                <div class="formulacion-eye">
-                  <div class="eye-header">
-                    <div class="eye-label">OI</div>
-                    <div class="eye-title">Ojo Izquierdo</div>
+                <!-- Grid de valores ópticos -->
+                <div class="optometria-grid">
+                  <!-- Ojo Derecho -->
+                  <div class="ojo-box">
+                    <div class="ojo-titulo ojo-od">
+                      <span>OD</span>
+                      <small>Ojo Derecho</small>
+                    </div>
+                    <div class="ojo-valores">
+                      <div class="valor-item">
+                        <span class="valor-label">Esfera</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.esf_od || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Cilindro</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_od || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Eje</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_od || '--' }}°</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Add</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_od || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">ALT</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_od || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">DP</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_od || '--' }}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div class="eye-values">
-                    <div class="value-item">
-                      <span class="value-label">Esfera</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.esf_oi || '--' }}</span>
+                  
+                  <!-- Ojo Izquierdo -->
+                  <div class="ojo-box">
+                    <div class="ojo-titulo ojo-oi">
+                      <span>OI</span>
+                      <small>Ojo Izquierdo</small>
                     </div>
-                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_oi">
-                      <span class="value-label">Cilindro</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_oi }}</span>
-                    </div>
-                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_oi">
-                      <span class="value-label">Eje</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_oi }}°</span>
-                    </div>
-                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_oi">
-                      <span class="value-label">Add</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_oi }}</span>
-                    </div>
-                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_oi">
-                      <span class="value-label">Alt</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_oi }}</span>
-                    </div>
-                    <div class="value-item" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_oi">
-                      <span class="value-label">DP</span>
-                      <span class="value">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_oi }}</span>
+                    <div class="ojo-valores">
+                      <div class="valor-item">
+                        <span class="valor-label">Esfera</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.esf_oi || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Cilindro</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.cil_oi || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Eje</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.eje_oi || '--' }}°</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">Add</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.add_oi || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">ALT</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.alt_oi || '--' }}</span>
+                      </div>
+                      <div class="valor-item">
+                        <span class="valor-label">DP</span>
+                        <span class="valor-num">{{ ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final?.dp_oi || '--' }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
               
-              <!-- Sección de Observaciones -->
-              <div class="formulacion-observaciones" *ngIf="observacionesFormulacion">
-                <div class="observaciones-header">
-                  <i class="bi bi-chat-text"></i>
-                  <span>Observaciones</span>
-                </div>
-                <div class="observaciones-content">
-                  <p>{{ observacionesFormulacion }}</p>
-                </div>
+              <div class="no-data" *ngIf="!ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final">
+                <i class="bi bi-eyeglasses"></i>
+                <span>No hay datos de formulación</span>
               </div>
-              
             </div>
             
-            <!-- Información Adicional en Columna Única -->
-            <div class="info-column-full" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final">
-              
-              <!-- Sección 1: Recomendaciones -->
-              <div class="info-section" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length > 0">
-                <div class="section-header">
-                  <i class="bi bi-lightbulb"></i>
-                  <h5>Recomendaciones</h5>
-                </div>
-                <div class="section-content">
-                  <div *ngFor="let rec of ordenSeleccionada?.cliente?.historia_medica?.recomendaciones; let i = index">
-                    <div class="recomendaciones-container" *ngIf="i === 0">
-                      <div class="rec-item">
-                        <div class="rec-icon">
-                          <i class="bi bi-eyeglasses"></i>
-                        </div>
-                        <div class="rec-info">
-                          <div class="rec-label">Tipo de Cristal</div>
-                          <div class="rec-value">{{ rec.cristal?.label || rec.cristal }}</div>
-                        </div>
-                      </div>
-                      
-                      <div class="rec-item" *ngIf="rec.material?.length > 0">
-                        <div class="rec-icon">
-                          <i class="bi bi-bricks"></i>
-                        </div>
-                        <div class="rec-info">
-                          <div class="rec-label">Material</div>
-                          <div class="rec-value">{{ rec.material.join(', ') }}</div>
-                        </div>
-                      </div>
-
-                      <!-- Aditivos o Filtros -->
-                      <div class="rec-item" *ngIf="rec.aditivo?.length > 0">
-                        <div class="rec-icon">
-                          <i class="bi bi-filter-circle"></i>
-                        </div>
-                        <div class="rec-info">
-                          <div class="rec-label">Aditivos o Filtros</div>
-                          <div class="rec-value">{{ formatAditivos(rec.aditivo) }}</div>
-                        </div>
-                      </div>
-                      
-                      
-                      <div class="rec-item" *ngIf="rec.montura">
-                        <div class="rec-icon">
-                          <i class="bi bi-brilliance"></i>
-                        </div>
-                        <div class="rec-info">
-                          <div class="rec-label">Montura</div>
-                          <div class="rec-value">{{ rec.montura }}</div>
-                        </div>
-                      </div>
+            <!-- CONTENIDO DE PRODUCTO -->
+            <div class="tab-content" *ngIf="tabActivaDetalle === 'producto'">
+              <div class="producto-detalle-moderno" *ngIf="ordenSeleccionada?.productos?.length > 0">
+                <div *ngFor="let producto of ordenSeleccionada?.productos" class="producto-card">
+                  <div class="producto-header">
+                    <i class="bi bi-box"></i>
+                    <span class="producto-nombre">{{ producto.nombre }}</span>
+                  </div>
+                  <div class="producto-info-grid">
+                    <div class="producto-info-item" *ngIf="producto.codigo">
+                      <span class="info-label">Código:</span>
+                      <span class="info-value">{{ producto.codigo }}</span>
+                    </div>
+                    <div class="producto-info-item" *ngIf="producto.marca">
+                      <span class="info-label">Marca:</span>
+                      <span class="info-value">{{ producto.marca }}</span>
+                    </div>
+                    <div class="producto-info-item" *ngIf="producto.modelo">
+                      <span class="info-label">Modelo:</span>
+                      <span class="info-value">{{ producto.modelo }}</span>
+                    </div>
+                    <div class="producto-info-item" *ngIf="producto.cantidad">
+                      <span class="info-label">Cantidad:</span>
+                      <span class="info-value">{{ producto.cantidad }}</span>
                     </div>
                   </div>
                 </div>
               </div>
               
-              <!-- Sección 2: Producto -->
-              <div class="info-section" *ngIf="ordenSeleccionada?.productos?.length > 0">
-                <div class="section-header">
-                  <i class="bi bi-box-seam"></i>
-                  <h5>Producto</h5>
-                </div>
-                <div class="section-content">
-                  <div class="producto-ultra-compacto">
-                    <div *ngFor="let producto of ordenSeleccionada?.productos" class="producto-chip">
-                      <span class="chip-codigo" *ngIf="producto.codigo">{{ producto.codigo }}</span>
-                      <span class="chip-nombre">{{ producto.nombre }}</span>
-                      <span class="chip-marca" *ngIf="producto.marca">{{ producto.marca }}</span>
-                                 <span class="chip-marca" *ngIf="producto.modelo">{{ producto.modelo }}</span>
-                    </div>
-                  </div>
-                </div>
+              <div class="no-data" *ngIf="!ordenSeleccionada?.productos?.length">
+                <i class="bi bi-box"></i>
+                <span>No hay productos asociados</span>
               </div>
-              
-            </div>
-                        
-            <!-- Sin datos -->
-            <div class="no-data" *ngIf="!ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final &&
-                !ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length">
-              <i class="bi bi-eyeglasses"></i>
-              <span>No hay información de formulación</span>
             </div>
             
+            <!-- CONTENIDO DE INDICACIONES -->
+            <div class="tab-content" *ngIf="tabActivaDetalle === 'indicaciones'">
+              <div class="indicaciones-detalle" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length > 0">
+                <div *ngFor="let rec of ordenSeleccionada?.cliente?.historia_medica?.recomendaciones; let i = index" class="indicacion-card-detalle">
+                  <div class="indicacion-header">
+                    <span class="indicacion-numero">#{{ i + 1 }}</span>
+                    <span class="badge-tipo" [ngClass]="esLenteContactoRecomendacion(rec) ? 'tipo-contacto' : 'tipo-normal'">
+                      {{ esLenteContactoRecomendacion(rec) ? '👁️ Contacto' : '👓 Convencional' }}
+                    </span>
+                  </div>
+                  
+                  <div class="indicacion-grid">
+                    <div class="indicacion-item">
+                      <span class="item-label">Cristal</span>
+                      <span class="item-value">{{ getTipoCristalRecomendado(rec.cristal) }}</span>
+                    </div>
+                    <div class="indicacion-item">
+                      <span class="item-label">Material</span>
+                      <span class="item-value">{{ getMaterialesRecomendados(rec.material) }}</span>
+                    </div>
+                    <div class="indicacion-item" *ngIf="rec.montura">
+                      <span class="item-label">Montura</span>
+                      <span class="item-value">{{ rec.montura }}</span>
+                    </div>
+                    <div class="indicacion-item" *ngIf="rec.tipoLentesContacto">
+                      <span class="item-label">Modelo Contacto</span>
+                      <span class="item-value highlight">{{ getTipoLenteContactoLabel(rec.tipoLentesContacto) }}</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Medidas (si existen) -->
+                  <div class="medidas-detalle" *ngIf="rec.medidaHorizontal || rec.medidaVertical || rec.medidaDiagonal || rec.medidaPuente">
+                    <div class="medidas-titulo">
+                      <i class="bi bi-rulers"></i>
+                      <span>Medidas:</span>
+                    </div>
+                    <div class="medidas-chips">
+                      <span *ngIf="rec.medidaHorizontal" class="medida-chip">H: {{ rec.medidaHorizontal }} cm</span>
+                      <span *ngIf="rec.medidaVertical" class="medida-chip">V: {{ rec.medidaVertical }} cm</span>
+                      <span *ngIf="rec.medidaDiagonal" class="medida-chip">D: {{ rec.medidaDiagonal }} cm</span>
+                      <span *ngIf="rec.medidaPuente" class="medida-chip">P: {{ rec.medidaPuente }} cm</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Observaciones -->
+                  <div class="observaciones-detalle" *ngIf="rec.observaciones">
+                    <i class="bi bi-chat-text"></i>
+                    <span class="observaciones-text">{{ rec.observaciones }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="no-data" *ngIf="!ordenSeleccionada?.cliente?.historia_medica?.recomendaciones?.length">
+                <i class="bi bi-lightbulb"></i>
+                <span>No hay indicaciones registradas</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      
     </div>
   </div>
 
@@ -943,7 +953,7 @@
           Entrega: {{ getFechaEntregaFormateada(ordenSeleccionada) }}
         </span>
         <ng-template #sinFechaModal>
-          <span class="text-warning" style="margin-left: 5px;">Sin fecha de entrega</span>
+          <span class="text-warning">Sin fecha de entrega</span>
         </ng-template>
       </div>
     </div>

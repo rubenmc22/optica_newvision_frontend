@@ -5,6 +5,14 @@ import { OrdenTrabajo, OrdenesTrabajoResponse, EstadoOrden } from './gestion-ord
 import { LoaderService } from './../../shared/loader/loader.service';
 import { SwalService } from '../../core/services/swal/swal.service';
 
+// Constantes
+import {
+  TIPOS_CRISTALES,
+  TIPOS_LENTES_CONTACTO,
+  MATERIALES,
+  TRATAMIENTOS_ADITIVOS
+} from 'src/app/shared/constants/historias-medicas';
+
 @Component({
   selector: 'app-gestion-ordenes-trabajo',
   standalone: false,
@@ -29,6 +37,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   ordenesModal: any[] = [];
   tituloModalOrdenes: string = '';
   estadoModalActual: string = '';
+  tabActivaDetalle: string = 'formulacion'; // Puede ser 'formulacion', 'producto' o 'indicaciones'
+
 
   // Datos de ejemplo
   todasLasOrdenes: OrdenTrabajo[] = [];
@@ -1989,48 +1999,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     document.querySelector('.modal-detalle-orden')?.classList.remove('modal-mobile-full', 'modal-zoom-extremo');
   }
 
-  /**
-   * Obtener tipo de cristal de las recomendaciones
-   */
-  getTipoCristal(producto: any): string {
-    const historia = this.ordenSeleccionada?.cliente?.historia_medica;
-    const recomendaciones = historia?.recomendaciones?.[0];
-
-    if (recomendaciones?.cristal?.label) {
-      return recomendaciones.cristal.label;
-    }
-
-    return 'Cristal estándar';
-  }
-
-  /**
-   * Obtener material del lente de las recomendaciones
-   */
-  getMaterialLente(producto: any): string {
-    const historia = this.ordenSeleccionada?.cliente?.historia_medica;
-    const recomendaciones = historia?.recomendaciones?.[0];
-
-    if (recomendaciones?.material?.[0]) {
-      // Convertir código a nombre legible
-      const materialMap: { [key: string]: string } = {
-        'AR_VERDE': 'Antirreflejo Verde',
-        'AR_AZUL': 'Antirreflejo Azul',
-        'FOTOCROMATICO': 'Fotocromático',
-        'POLARIZADO': 'Polarizado',
-        'CR39': 'CR-39 Estándar',
-        'ALTO_INDICE': 'Alto Índice',
-        'TRANSITIONS': 'Transitions'
-      };
-
-      return materialMap[recomendaciones.material[0]] || recomendaciones.material[0];
-    }
-
-    return 'Material estándar';
-  }
-
-  /**
-   * Obtener información de montura del producto
-   */
   getInfoMontura(producto: any): string {
     const parts = [];
 
@@ -2042,9 +2010,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     return parts.length > 0 ? parts.join(' - ') : 'Montura estándar';
   }
 
-  /**
-   * Obtener formulación completa
-   */
   getFormulacionCompleta(orden: OrdenTrabajo): any {
     const refraccionFinal = orden.cliente?.historia_medica?.examen_ocular_refraccion_final;
 
@@ -2069,9 +2034,6 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     };
   }
 
-  /**
-   * Obtener observaciones de la formulación
-   */
   getObservacionesFormulacion(orden: OrdenTrabajo): string {
     const recomendaciones = orden.cliente?.historia_medica?.recomendaciones?.[0];
     return recomendaciones?.observaciones || '';
@@ -2082,29 +2044,129 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     return this.getObservacionesFormulacion(this.ordenSeleccionada);
   }
 
-  formatAditivos(aditivos: string[]): string {
-    if (!aditivos || aditivos.length === 0) return '';
+  tieneFormulaCompleta(orden: OrdenTrabajo | null): boolean {
+    if (!orden || !orden.cliente?.historia_medica?.examen_ocular_refraccion_final) {
+      return false;
+    }
 
-    // Mapear códigos a nombres legibles
-    const aditivoMap: { [key: string]: string } = {
-      'AR_BLUE_BLOCK': 'Anti-Reflejante Blue Block',
-      'FOTOCROMATICO_CR39': 'Fotocromático',
-      'ANTIREFLEJANTE': 'Anti-Reflejante',
-      'BLUE_LIGHT': 'Filtro Luz Azul',
-      'PROTECCION_UV': 'Protección UV',
-      'HIDROFOBICO': 'Tratamiento Hidrofóbico',
-      'ANTI_RAYAS': 'Anti-rayas',
-      'ESPEJEADO': 'Espejeado',
-      'COLORACION': 'Coloración',
-      'GRADIENTE': 'Degradado',
-      // Agrega más mapeos según necesites
-    };
+    const refraccion = orden.cliente.historia_medica.examen_ocular_refraccion_final;
 
-    return aditivos
-      .map(aditivo => aditivoMap[aditivo] || aditivo)
+    const odTieneDatos = refraccion.esf_od && refraccion.esf_od !== '' && refraccion.esf_od !== '--';
+    const oiTieneDatos = refraccion.esf_oi && refraccion.esf_oi !== '' && refraccion.esf_oi !== '--';
+
+    return odTieneDatos || oiTieneDatos;
+  }
+
+  esLenteContactoRecomendacion(rec: any): boolean {
+    if (!rec || !rec.cristal) return false;
+
+    let cristalValue = '';
+
+    if (typeof rec.cristal === 'string') {
+      cristalValue = rec.cristal;
+    } else if (rec.cristal?.value) {
+      cristalValue = rec.cristal.value;
+    } else if (rec.cristal?.label) {
+      cristalValue = rec.cristal.label;
+    }
+
+    const esLentesContacto = TIPOS_CRISTALES.some(tc =>
+      (tc.value === cristalValue || tc.label === cristalValue) &&
+      tc.value === 'LENTES_CONTACTO'
+    );
+
+    return esLentesContacto || (rec.tipoLentesContacto && rec.tipoLentesContacto !== '');
+  }
+
+  getTipoCristalRecomendado(cristal: any): string {
+    if (!cristal) return 'No especificado';
+
+    let valorBuscar = '';
+
+    // Extraer el valor a buscar
+    if (typeof cristal === 'string') {
+      valorBuscar = cristal;
+    } else if (cristal?.value) {
+      valorBuscar = cristal.value;
+    } else if (cristal?.label) {
+      valorBuscar = cristal.label;
+    }
+
+    // Buscar en TIPOS_CRISTALES
+    const encontrado = TIPOS_CRISTALES.find(tc =>
+      tc.value === valorBuscar || tc.label === valorBuscar
+    );
+
+    return encontrado?.label || valorBuscar || 'No especificado';
+  }
+
+  getMaterialesRecomendados(material: any): string {
+    if (!material) return 'No especificado';
+
+    const materialesArray = Array.isArray(material) ? material : [material];
+
+    if (materialesArray.length === 0) return 'No especificado';
+
+    return materialesArray.map(m => {
+      // Buscar en MATERIALES
+      const encontrado = MATERIALES.find(mat => mat.value === m || mat.label === m);
+      return encontrado?.label || m;
+    }).join(', ');
+  }
+
+
+  getTipoLenteContactoLabel(valor: string | undefined | null): string {
+    if (!valor || valor === '') return 'No especificado';
+
+    // Buscar en TIPOS_LENTES_CONTACTO
+    const encontrado = TIPOS_LENTES_CONTACTO.find(tlc =>
+      tlc.value === valor || tlc.label === valor
+    );
+
+    return encontrado?.label || valor;
+  }
+
+  formatAditivos(aditivos: string[] | string | undefined | null): string {
+    if (!aditivos) return '';
+
+    const aditivosArray = Array.isArray(aditivos) ? aditivos : [aditivos];
+
+    if (aditivosArray.length === 0) return '';
+
+    return aditivosArray
+      .map(aditivo => {
+        // Buscar en TRATAMIENTOS_ADITIVOS
+        const encontrado = TRATAMIENTOS_ADITIVOS.find(ta =>
+          ta.value === aditivo || ta.label === aditivo
+        );
+        return encontrado?.label || aditivo;
+      })
       .join(', ');
   }
 
-  // Métodos básicos para que compile el template
+  getMaterialLente(producto: any): string {
+    const historia = this.ordenSeleccionada?.cliente?.historia_medica;
+    const recomendaciones = historia?.recomendaciones?.[0];
+
+    if (recomendaciones?.material?.length > 0) {
+      return this.getMaterialesRecomendados(recomendaciones.material);
+    }
+
+    return 'Material estándar';
+  }
+
+  /**
+   * Obtiene el tipo de cristal (para compatibilidad con métodos existentes)
+   */
+  getTipoCristal(producto: any): string {
+    const historia = this.ordenSeleccionada?.cliente?.historia_medica;
+    const recomendaciones = historia?.recomendaciones?.[0];
+
+    if (recomendaciones?.cristal) {
+      return this.getTipoCristalRecomendado(recomendaciones.cristal);
+    }
+
+    return 'Cristal estándar';
+  }
 
 }

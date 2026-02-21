@@ -19,13 +19,10 @@ import { LoaderService } from './../../shared/loader/loader.service';
 import {
   OPCIONES_REF,
   OPCIONES_AV,
-  OPCIONES_ANTECEDENTES_PERSONALES,
-  OPCIONES_ANTECEDENTES_FAMILIARES,
   MOTIVOS_CONSULTA,
   TIPOS_CRISTALES,
   TIPOS_LENTES_CONTACTO,
   MATERIALES,
-  TRATAMIENTOS_ADITIVOS
 } from 'src/app/shared/constants/historias-medicas';
 
 // Servicios
