@@ -2089,7 +2089,7 @@
 .error-message-moderno {
     margin-top: 0.5rem;
     font-size: 0.7rem;
-    color: var(--danger-color);
+    color: var(--danger-color) !important;
     display: flex;
     align-items: center;
     gap: 0.25rem;
@@ -2428,6 +2428,8 @@
     padding: 0.75rem;
     border-bottom: 1px solid #f1f3f4;
     color: #495057;
+    text-align: center !important;
+    vertical-align: middle !important;
 }
 
 .producto-row-moderno:hover {
@@ -4198,6 +4200,7 @@
     font-size: 0.9rem;
     transition: all 0.3s ease;
     width: 100%;
+    min-height: 48px;
 
     &:focus {
         border-color: var(--primary-color);
@@ -4222,7 +4225,7 @@
 }
 
 .btn-validar-compact {
-    background: #0d6efd;
+    background: var(--degradado-color);
     color: white;
     border: none;
     border-radius: 0.375rem;
@@ -4233,11 +4236,11 @@
     justify-content: center;
     padding: 0;
     flex-shrink: 0;
-    margin-top: 8px !important;
+    margin-top: 0px !important;
     cursor: pointer;
 
     &:hover:not(:disabled) {
-        background: #0b5ed7;
+        background: var(--degradado-color);
         transform: scale(1.05);
         transition: all 0.2s ease;
     }
@@ -6046,4 +6049,40 @@
     .asesor-layout-horizontal {
         grid-template-columns: 1fr;
     }
+}
+
+/* Para centrar el contenedor flex de producto */
+.table-moderna .info-with-icon {
+    display: flex !important;
+  //  align-items: center !important;
+  //  justify-content: center !important;
+    gap: 8px;
+    width: 100%;
+}
+
+/* Para centrar el control de cantidad */
+.table-moderna .cantidad-control-moderno {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px;
+    width: 100%;
+}
+
+/* Para centrar el texto del precio y subtotal */
+.table-moderna .precio-unitario,
+.table-moderna .subtotal-monto {
+    display: inline-block;
+    width: 100%;
+    text-align: center !important;
+}
+
+/* Para centrar el botón de eliminar */
+.table-moderna .acciones {
+    text-align: center !important;
+}
+
+.table-moderna .btn-eliminar-moderno {
+    margin: 0 auto;
+    display: inline-block;
 }

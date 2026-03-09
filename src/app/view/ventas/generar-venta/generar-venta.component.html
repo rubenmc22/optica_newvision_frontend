@@ -483,11 +483,11 @@
                         <table class="table-moderna table-consulta">
                             <thead>
                                 <tr>
-                                    <th>Consulta</th>
-                                    <th>Costo Médico (editable)</th>
-                                    <th>Costo Óptica (editable)</th>
-                                    <th>Total</th>
-                                    <th></th>
+                                    <th class="text-center">Consulta</th>
+                                    <th class="text-center">Costo Médico (editable)</th>
+                                    <th class="text-center">Costo Óptica (editable)</th>
+                                    <th class="text-center">Total</th>
+                                    <th class="text-center"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -599,42 +599,54 @@
                     </div>
 
                     <div class="table-scroll">
-                        <table class="table-moderna">
+                        <table class="table-moderna" style="width: 100%;">
                             <thead>
                                 <tr>
-                                    <th>Producto</th>
-                                    <th>Precio</th>
-                                    <th>Cantidad</th>
-                                    <th>Subtotal</th>
-                                    <th>Acciones</th>
+                                    <th class="text-center">Producto</th>
+                                    <th class="text-center">Precio</th>
+                                    <th class="text-center">Cantidad</th>
+                                    <th class="text-center">Subtotal</th>
+                                    <th class="text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr *ngFor="let item of venta.productos; trackBy: trackByItem" class="producto-row-moderno">
-                                    <td class="producto-info">
-                                        <div class="info-with-icon">
+                                    <!-- Celda 1: Producto -->
+                                    <td>
+                                        <div class="info-with-icon" style="display: flex; align-items: center; gap: 8px;">
                                             <i class="bi bi-box"></i>
-                                            <div>
-                                                <span class="producto-nombre">{{ item.nombre }}</span>
-                                                <small class="producto-codigo" *ngIf="item.codigo && item.codigo !== 'N/A'">{{ item.codigo }}</small>
+                                           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                                <span class="producto-nombre" style="font-weight: 500; color: #2d3436;">{{ item.nombre }}</span>
+                                                <small class="producto-codigo" style="background: #e1e8ed; color: #2c3e50; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.5px;" 
+                                                    *ngIf="item.codigo && item.codigo !== 'N/A'">
+                                                    {{ item.codigo }}
+                                                </small>
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="text-center precio">
-                                        <span class="precio-unitario">{{ formatearMoneda(item.precio) }}</span>
+                                    
+                                    <!-- Celda 2: Precio -->
+                                    <td style="text-align: center; vertical-align: middle;">
+                                        <span class="precio-unitario" style="display: block; text-align: center;">{{ formatearMoneda(item.precio) }}</span>
                                     </td>
-                                    <td class="text-center cantidad-cell">
-                                        <div class="cantidad-control-moderno">
+                                    
+                                    <!-- Celda 3: Cantidad -->
+                                    <td style="text-align: center; vertical-align: middle;">
+                                        <div class="cantidad-control-moderno" style="display: flex; align-items: center; justify-content: center; gap: 5px;">
                                             <button class="btn-qty" (click)="disminuirCantidad(item)">-</button>
                                             <span class="cantidad">{{ item.cantidad }}</span>
                                             <button class="btn-qty" (click)="aumentarCantidad(item)">+</button>
                                         </div>
                                     </td>
-                                    <td class="text-center subtotal">
-                                        <span class="subtotal-monto">{{ formatearMoneda(item.precio * item.cantidad) }}</span>
+                                    
+                                    <!-- Celda 4: Subtotal -->
+                                    <td style="text-align: center; vertical-align: middle;">
+                                        <span class="subtotal-monto" style="display: block; text-align: center;">{{ formatearMoneda(item.precio * item.cantidad) }}</span>
                                     </td>
-                                    <td class="text-center acciones">
-                                        <button class="btn-eliminar-moderno" (click)="eliminarItem(item)" title="Eliminar del carrito">
+                                    
+                                    <!-- Celda 5: Acciones -->
+                                    <td style="text-align: center; vertical-align: middle;">
+                                        <button class="btn-eliminar-moderno" (click)="eliminarItem(item)" title="Eliminar del carrito" style="margin: 0 auto;">
                                             <i class="bi bi-trash3"></i>
                                         </button>
                                     </td>
@@ -673,7 +685,7 @@
                 <div *ngIf="tipoVenta === 'consulta_productos' && (consultaEnCarrito || venta.productos.length > 0)" 
                     class="productos-table-container-moderno">
                     <div class="table-header">
-                        <h5 class="mb-0"><i class="bi bi-cart me-2"></i>Carrito de Venta</h5>
+                        <h5 class="mb-0"><i class="bi bi-cart me-2"></i>Carrito</h5>
                         <span class="badge-count">{{ totalItemsVisual }} items</span>
                     </div>
 
@@ -732,14 +744,17 @@
                                 <!-- DESPUÉS: Mostrar productos físicos -->
                                 <tr *ngFor="let item of venta.productos; trackBy: trackByItem" class="producto-row-moderno">
                                     <td class="producto-info">
-                                        <div class="info-with-icon">
-                                            <i class="bi bi-box"></i>
-                                            <div>
-                                                <span class="producto-nombre">{{ item.nombre }}</span>
-                                                <small class="producto-codigo" *ngIf="item.codigo && item.codigo !== 'N/A'">{{ item.codigo }}</small>
-                                            </div>
+                                    <div class="info-with-icon" style="display: flex; align-items: center; gap: 10px;">
+                                        <i class="bi bi-box" style="font-size: 20px; color: #6c757d;"></i>
+                                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                            <span class="producto-nombre" style="font-weight: 500; color: #2d3436; font-size: 14px;">{{ item.nombre }}</span>
+                                            <small class="producto-codigo" style="background: #e1e8ed; color: #2c3e50; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; display: inline-block; white-space: nowrap;" 
+                                                *ngIf="item.codigo && item.codigo !== 'N/A'">
+                                                {{ item.codigo }}
+                                            </small>
                                         </div>
-                                    </td>
+                                    </div>
+                                </td>
                                     <td class="text-center precio">
                                         <span class="precio-unitario">{{ formatearMoneda(item.precio) }}</span>
                                     </td>
