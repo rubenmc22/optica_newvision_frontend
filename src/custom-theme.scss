@@ -538,26 +538,53 @@ body {
 
 }
 
+.panel-moderno .ng-select.ng-select-single .ng-select-container {
+  height: 48px !important;
+  min-height: 48px !important;
+  top: 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  background: transparent;
+
+  &:focus {
+    outline: none;
+  }
+
+  &::placeholder {
+    color: #adb5bd;
+  }
+
+}
+
 .form-group-moderno .ng-select.ng-select-multiple .ng-placeholder {
   position: absolute !important;
   top: 10px !important;
   /* Ajusta este valor según necesites */
   left: 10px !important;
-//  color: #6c757d !important;
+  //  color: #6c757d !important;
   margin: 0 !important;
   padding: 0 !important;
 }
 
+.buscador-productos-moderno .ng-placeholder .ng-star-inserted {
+  margin-left: 0px !important;
 
+}
+
+.ng-select .ng-select-container .ng-value-container .ng-placeholder {
+  //margin-left: 30px !important;
+  color: #adb5bd;
+}
 
 .form-group-moderno .ng-select-container {
   height: 48px !important;
   min-height: 48px !important;
 }
 
-
-
-// En tu componente de recuperación de contraseña
 :host {
   // Sobrescribir específicamente los colores de focus
   --mdc-outlined-text-field-focus-outline-color: #3b82f6;

@@ -5,7 +5,7 @@ import { SystemConfigService } from '../../system-config/system-config.service';
 import { GenerarVentaService } from './generar-venta.service';
 import { Tasa } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
-import { forkJoin, map, Subject, Observable, of, lastValueFrom } from 'rxjs';
+import { forkJoin, map, Subject, Observable, of, lastValueFrom, debounceTime, distinctUntilChanged } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -14,7 +14,7 @@ import { PacientesService } from '../../../core/services/pacientes/pacientes.ser
 import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
 import { Paciente } from '../../pacientes/paciente-interface';
 import { HistoriaMedica } from './../../historias-medicas/historias_medicas-interface';
-import { VentaDto, ProductoVentaCalculado, CuotaCashea } from '../venta-interfaz';
+import { VentaDto, ProductoVentaCalculado, CuotaCashea, ItemCarrito, ProductoVentaDto, MetodoPago, FormaPagoDetalle } from '../venta-interfaz';
 import { Empleado, User } from '../../../Interfaces/models-interface';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { trigger, transition, style, animate } from '@angular/animations';
@@ -72,7 +72,44 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         private systemConfigService: SystemConfigService,
         private productoConversionService: ProductoConversionService,
         private clienteService: ClienteService
-    ) { }
+    ) {
+    }
+
+
+    // ============================================
+    // PROPIEDADES ADICIONALES (agregar a las existentes)
+    // ============================================
+
+    // Tipo de venta (3 opciones)
+    tipoVenta: 'solo_consulta' | 'consulta_productos' | 'solo_productos' = 'solo_consulta';
+
+    // Control de montos de consulta
+    montoConsulta: number = 0;
+    montoConsultaOriginal: number = 0;
+    pagoMedico: number = 0;
+    pagoOptica: number = 0;
+
+    // Para saber si la consulta ya está en el carrito
+    consultaEnCarrito: boolean = false;
+
+    filtroHistoriasTexto: string = '';
+
+    // Flag para controlar mensajes
+    mostradoMensajeSoloConsulta: boolean = false;
+    mostrandoBusqueda: boolean = false;
+
+    paginaActual: number = 1;
+    itemsPorPagina: number = 20;
+
+    textoBusquedaHistoria: string = '';
+    mostrarResultadosPacientes: boolean = false;
+    dropdownAbierto: boolean = false;
+
+    // Filtro de categoría
+    filtroCategoria: 'todos' | 'lentes' | 'monturas' | 'accesorios' = 'todos';
+
+    // Para la búsqueda de pacientes
+    buscandoPaciente: boolean = false;
 
     // === PROPIEDADES ===
     monedaSistema: string = 'USD';
@@ -80,6 +117,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     private configSubscription!: Subscription;
     monedaEfectivo: string = 'USD';
     filterInput = new Subject<string>();
+    textoBusquedaPaciente: string = '';
+    intentoGenerar: boolean = false;
 
     dataIsReady = false;
     tareasPendientes = 0;
@@ -88,7 +127,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     currentUser: User | null = null;
     nivelCashea: 'nivel1' | 'nivel2' | 'nivel3' | 'nivel4' | 'nivel5' | 'nivel6' = 'nivel3';
     ivaPorcentaje = 0;
-    requierePaciente: boolean = false;
     valorTemporal: string = '';
     montoExcedido: boolean = false;
     maximoCuotasPermitidas = 6;
@@ -181,7 +219,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     informacionVenta: any = null;
     // OBTENER INFORMACIÓN DE LA SEDE DESDE EL COMPONENTE
 
-    venta: VentaDto = {
+    venta: VentaDto & { productos: ItemCarrito[] } = {
         productos: [],
         moneda: 'dolar',
         formaPago: 'contado',
@@ -235,6 +273,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                         (p.stock ?? 0) > 0
                     );
             }
+        });
+
+        window.addEventListener('focus', () => {
+            //this.recargarPacientes();
         });
     }
 
@@ -351,108 +393,34 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
     }
 
-    onHistoriaSeleccionada(event: any): void {
-        // El evento puede ser el valor directamente o un objeto
-        let historiaId: string | null = null;
-
-        if (event === null || event === undefined) {
-            this.historiaMedica = null;
-            this.historiaMedicaSeleccionada = null;
-            this.cdr.detectChanges();
-            return;
-        }
-
-        if (typeof event === 'object' && event !== null) {
-            // Si es un objeto, extraer el valor
-            historiaId = event.value || event.key || event.id?.toString() || null;
-        } else {
-            // Si es un string/number directamente
-            historiaId = event?.toString() || null;
-        }
-
-        if (!historiaId || historiaId.trim() === '') {
-            console.warn('ID de historia vacío o inválido:', historiaId);
-            this.historiaMedica = null;
-            this.historiaMedicaSeleccionada = null;
-            this.cdr.detectChanges();
-            return;
-        }
-
-        // Buscar la historia seleccionada - comparar como string
-        const historiaSeleccionada = this.historiasMedicas.find(h =>
-            h.key === historiaId ||
-            h.id.toString() === historiaId
-        );
-
-        if (historiaSeleccionada) {
-            this.historiaMedica = historiaSeleccionada.data;
-            this.historiaMedicaSeleccionada = historiaSeleccionada.data;
-
-            // Forzar la detección de cambios
-            this.cdr.detectChanges();
-
-            // Mostrar mensaje informativo si no es la más reciente
-            if (!historiaSeleccionada.esReciente) {
-                this.snackBar.open(
-                    `✅ Historia ${historiaSeleccionada.nHistoria} seleccionada`,
-                    'Cerrar',
-                    {
-                        duration: 2000,
-                        panelClass: ['snackbar-success']
-                    }
-                );
-            }
-
-            // Verificar si la nueva historia tiene fórmula
-            if (!historiaSeleccionada.tieneFormula) {
-                this.snackBar.open(
-                    '⚠️ Esta historia no tiene fórmula óptica registrada',
-                    'Cerrar',
-                    {
-                        duration: 3000,
-                        panelClass: ['snackbar-warning']
-                    }
-                );
-            }
-        } else {
-            console.warn('❌ Historia no encontrada. ID buscado:', historiaId);
-            console.warn('Keys disponibles:', this.historiasMedicas?.map(h => h.key));
-            this.historiaMedica = null;
-            this.historiaMedicaSeleccionada = null;
-            this.cdr.detectChanges();
-        }
-    }
-
-    // === MÉTODOS DE PACIENTES ===
     onPacienteSeleccionado(pacienteSeleccionado: Paciente | null): void {
+        // Solo aplicar si el tipo requiere paciente
+        if (this.tipoVenta === 'solo_productos') return;
+
         this.registrarTarea();
 
-        // Limpiar selección anterior si es necesario
+        // Caso: se deseleccionó el paciente
         if (!pacienteSeleccionado) {
             this.limpiarSeleccionPaciente();
+            this.mostrandoBusqueda = true; // Mostrar buscador
             this.completarTarea();
             return;
         }
 
-        // Establecer paciente seleccionado
+        // Caso: se seleccionó un paciente
         this.pacienteSeleccionado = pacienteSeleccionado;
+        this.mostrandoBusqueda = false; // Ocultar buscador, mostrar tarjeta
 
         // Cargar información de empresa referida si aplica
-        if (pacienteSeleccionado) {
-            this.cargarInfoEmpresaReferida(pacienteSeleccionado);
-        } else {
-            this.empresaReferidaInfo = null;
-        }
+        this.cargarInfoEmpresaReferida(pacienteSeleccionado);
 
         // Limpiar historias previas
         this.historiasMedicas = [];
         this.historiaSeleccionadaId = null;
         this.historiaMedica = null;
         this.historiaMedicaSeleccionada = null;
-
-        // Resetear orden de trabajo
-        this.generarOrdenTrabajo = false;
-        this.forzarOrdenTrabajo = false;
+        this.montoConsulta = 0;
+        this.montoConsultaOriginal = 0;
 
         if (!pacienteSeleccionado?.key) {
             console.error('No se encontró la clave del paciente seleccionado.');
@@ -465,10 +433,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.historiaService.getHistoriasPorPaciente(pacienteKey).pipe(take(1)).subscribe({
             next: (historiales: any[]) => {
                 if (!historiales || historiales.length === 0) {
-                    this.swalService.showWarning(
-                        'Sin historia médica',
-                        'Este paciente no tiene historia registrada. Puedes continuar si es una venta libre.'
-                    );
+                    if (this.tipoVenta !== 'solo_productos') {
+                        this.swalService.showWarning(
+                            'Sin historia médica',
+                            'Este paciente no tiene historia registrada. Solo puede realizar venta de productos.'
+                        );
+                    }
                     this.completarTarea();
                     return;
                 }
@@ -482,10 +452,15 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     const fecha = new Date(historia.auditoria.fechaCreacion);
                     const tieneFormula = this.tieneFormulaCompleta(historia);
 
+                    // Obtener tipo de profesional de medico.cargo
+                    const tipoProfesional = historia.datosConsulta?.medico?.cargo === 'Oftalmólogo'
+                        ? 'oftalmologo'
+                        : 'optometrista';
+
                     return {
                         key: historia.id.toString(),
                         id: historia.id,
-                        nHistoria: historia.nHistoria || `H-${historia.id}`,
+                        nHistoria: historia.nHistoria,
                         fechaFormateada: fecha.toLocaleDateString('es-VE', {
                             day: '2-digit',
                             month: 'long',
@@ -494,11 +469,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                             minute: '2-digit'
                         }),
                         fechaCreacion: historia.auditoria.fechaCreacion,
-                        profesionalNombre: historia.auditoria?.creadoPor?.nombre ||
-                            historia.datosConsulta?.medico?.nombre ||
-                            'Desconocido',
+                        datosConsulta: {
+                            motivo: historia.datosConsulta?.motivo,
+                            medico: historia.datosConsulta?.medico,
+                            formulaExterna: historia.datosConsulta?.formulaExterna || false,
+                            pagoPendiente: historia.datosConsulta?.pagoPendiente
+                        },
+                        auditoria: historia.auditoria,
                         esReciente: index === 0,
                         tieneFormula: tieneFormula,
+                        tipoProfesional: tipoProfesional,
+                        formulaExterna: historia.datosConsulta?.formulaExterna || false,
                         formula: {
                             od: tieneFormula ?
                                 `${historia.examenOcular?.refraccionFinal?.esf_od || '--'}/${historia.examenOcular?.refraccionFinal?.cil_od || '--'}` :
@@ -512,24 +493,38 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     };
                 });
 
-                // Seleccionar automáticamente la historia más reciente
-                if (this.historiasMedicas.length > 0) {
-                    this.historiaSeleccionadaId = this.historiasMedicas[0].key;
-                    this.historiaMedica = this.historiasMedicas[0].data;
-                    this.historiaMedicaSeleccionada = this.historiasMedicas[0].data;
+                if (this.tipoVenta === 'solo_consulta') {
+                    // Para solo consulta: seleccionar la primera historia de oftalmólogo no externa
+                    const historiaOftalmologo = this.historiasMedicas.find(h =>
+                        h.tipoProfesional === 'oftalmologo' && !h.formulaExterna
+                    );
 
-                    // Mostrar mensaje informativo si la historia más reciente no tiene fórmula
-                    if (!this.historiasMedicas[0].tieneFormula) {
-                        this.swalService.showInfo(
-                            'Sin fórmula óptica',
-                            'La historia más reciente no tiene fórmula registrada. Puedes seleccionar otra historia o continuar con venta libre.'
-                        );
+                    if (historiaOftalmologo) {
+                        setTimeout(() => {
+                            this.seleccionarHistoria(historiaOftalmologo);
+                            // AGREGAR CONSULTA AUTOMÁTICAMENTE
+                            this.agregarConsultaAlCarrito();
+                        }, 100);
+                    } else {
+                        this.historiaSeleccionadaId = null;
+                        this.historiaMedicaSeleccionada = null;
+
+                        if (this.historiasMedicas.length > 0) {
+                            /* this.swalService.showWarning(
+                                 'Sin historias de oftalmólogo',
+                                 'El paciente tiene historias pero ninguna es de oftalmólogo. No puede realizar venta solo de consulta.'
+                             );*/
+                        }
                     }
-
-                    // Actualizar estado de orden de trabajo después de cargar la historia
-                    setTimeout(() => {
-                        this.actualizarEstadoOrdenTrabajo();
-                    }, 100);
+                } else if (this.tipoVenta === 'consulta_productos') {
+                    // Para consulta + productos: seleccionar la historia más reciente
+                    if (this.historiasMedicas.length > 0) {
+                        setTimeout(() => {
+                            this.seleccionarHistoria(this.historiasMedicas[0]);
+                            // AGREGAR CONSULTA AUTOMÁTICAMENTE
+                            this.agregarConsultaAlCarrito();
+                        }, 100);
+                    }
                 }
 
                 this.completarTarea();
@@ -543,6 +538,46 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 this.completarTarea();
             }
         });
+    }
+
+    get historiasFiltradasParaConsulta(): any[] {
+        if (!this.historiasMedicas || this.historiasMedicas.length === 0) {
+            return [];
+        }
+
+        return this.historiasMedicas.filter(h =>
+            h.tipoProfesional === 'oftalmologo' && // Solo oftalmólogo
+            !h.formulaExterna                       // No externas
+        );
+    }
+
+    get historiasParaConsultaProductos(): any[] {
+        return this.historiasMedicas || [];
+    }
+
+    /**
+     * Limpia la selección de paciente (método auxiliar)
+     */
+    /**
+ * Limpia la selección de paciente (método auxiliar)
+ */
+    limpiarSeleccionPaciente(): void {
+        this.pacienteSeleccionado = null;
+        this.historiasMedicas = [];
+        this.historiaSeleccionadaId = null;
+        this.historiaMedica = null;
+        this.historiaMedicaSeleccionada = null;
+        this.empresaReferidaInfo = null;
+        this.generarOrdenTrabajo = false;
+        this.forzarOrdenTrabajo = false;
+        this.mostrandoBusqueda = true;
+        this.textoBusquedaPaciente = '';
+        this.mostrarResultadosPacientes = false;
+
+        // LIMPIAR CARRITO COMPLETAMENTE
+        this.limpiarCarritoCompleto();
+
+        this.cdr.detectChanges();
     }
 
     getMaterialesRecomendados(material: any): string {
@@ -598,16 +633,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     // Método para determinar si es una recomendación de lentes de contacto
-esLenteContactoRecomendacion(rec: any): boolean {
-    if (!rec || !rec.cristal) return false;
-    
-    const cristalStr = typeof rec.cristal === 'string' 
-        ? rec.cristal 
-        : rec.cristal?.label || '';
-    
-    return cristalStr.toLowerCase().includes('contacto') || 
-           (rec.tipoLentesContacto && rec.tipoLentesContacto !== '');
-}
+    esLenteContactoRecomendacion(rec: any): boolean {
+        if (!rec || !rec.cristal) return false;
+
+        const cristalStr = typeof rec.cristal === 'string'
+            ? rec.cristal
+            : rec.cristal?.label || '';
+
+        return cristalStr.toLowerCase().includes('contacto') ||
+            (rec.tipoLentesContacto && rec.tipoLentesContacto !== '');
+    }
 
     // Método público para usar en plantillas
     tieneFormulaCompleta(historia: any): boolean {
@@ -699,14 +734,24 @@ esLenteContactoRecomendacion(rec: any): boolean {
         }
     }
 
+
     agregarProductoAlCarrito(producto: any): void {
+
         if (!producto || !producto.id) {
             console.error('Producto inválido o sin ID:', producto);
             this.swalService.showWarning('Error', 'No se puede agregar un producto inválido al carrito.');
             return;
         }
 
-        const yaExiste = this.venta.productos.find(p => p.id === producto.id);
+        // Validar que no sea solo consulta (no se pueden agregar productos)
+        if (this.tipoVenta === 'solo_consulta') {
+            this.swalService.showWarning(
+                'Operación no permitida',
+                'En ventas solo de consulta no se pueden agregar productos.'
+            );
+            return;
+        }
+
         const stockDisponible = producto.stock ?? 0;
         const precioBase = +(producto.precio ?? 0);
         const precioFinal = +(producto.precioConIva ?? 0);
@@ -723,44 +768,65 @@ esLenteContactoRecomendacion(rec: any): boolean {
             return;
         }
 
+
+        const yaExiste = this.venta.productos.find(p => p.id === producto.id) as ItemCarrito | undefined;
+
         if (yaExiste) {
+            // Verificar que no sea una consulta (no debería, pero por seguridad)
+            if (yaExiste.tipo === 'CONSULTA') {
+                console.error('Error: Un producto no puede ser de tipo CONSULTA');
+                return;
+            }
+
             const nuevaCantidad = (yaExiste.cantidad ?? 1) + 1;
 
             if (nuevaCantidad > stockDisponible) {
-                this.swalService.showWarning('Stock insuficiente', `Solo hay ${stockDisponible} unidades disponibles.`);
+                this.swalService.showWarning(
+                    'Stock insuficiente',
+                    `Solo hay ${stockDisponible} unidades disponibles.`
+                );
                 return;
             }
 
             yaExiste.cantidad = nuevaCantidad;
+        }
 
-        } else {
-            this.venta.productos.push({
+        else {
+            // Crear el item con la interfaz ItemCarrito
+            const nuevoItem: ItemCarrito = {
                 id: producto.id,
                 nombre: producto.nombre,
-                codigo: producto.codigo,
+                codigo: producto.codigo || 'N/A',
                 precio: precioBase,
                 precioConIva: precioFinal,
                 moneda: monedaOriginal,
                 cantidad: 1,
-                aplicaIva,
-                stock: producto.stock ?? 0
-            });
+                aplicaIva: aplicaIva,
+                stock: producto.stock ?? 0,
+                tipo: 'PRODUCTO',  // Importante: marcar como PRODUCTO
+                descripcion: producto.descripcion || undefined
+            };
+
+            this.venta.productos.push(nuevoItem);
 
         }
 
         this.actualizarProductosConDetalle();
 
+        // Limpiar selección del producto
         setTimeout(() => {
+            this.productoSeleccionado = null;
+            if (this.productoSelect) {
+                this.productoSelect.clearModel();
+            }
             this.cdr.detectChanges();
-        });
+        }, 100);
     }
-
 
     eliminarProducto(id: string): void {
         const eliminado = this.venta.productos.find(p => p.id === id)?.nombre;
         this.venta.productos = this.venta.productos.filter(p => p.id !== id);
         this.actualizarProductosConDetalle();
-        this.snackBar.open(`${eliminado} eliminado`, 'Cerrar', { duration: 2000 });
     }
 
     filtrarProductoPorNombreOCodigo(term: string, item: Producto): boolean {
@@ -902,7 +968,6 @@ esLenteContactoRecomendacion(rec: any): boolean {
         const monedaMetodo = metodo.moneda || this.getMonedaParaMetodo(metodo.tipo);
 
         if (!metodo.tipo) {
-            this.snackBar.open('⚠️ Primero selecciona un método de pago', 'Cerrar', { duration: 3000 });
             metodo.valorTemporal = '';
             metodo.monto = 0;
             return;
@@ -941,10 +1006,6 @@ esLenteContactoRecomendacion(rec: any): boolean {
 
         // Mostrar advertencia si el usuario intentó exceder el máximo
         if (monto > maximoEnMonedaMetodo) {
-            this.snackBar.open(`⚠️ El monto se ajustó al máximo disponible: ${this.formatearMoneda(montoFinal, monedaMetodo)}`, 'Cerrar', {
-                duration: 3000,
-                panelClass: ['snackbar-warning']
-            });
         }
 
         this.cdr.detectChanges();
@@ -963,10 +1024,6 @@ esLenteContactoRecomendacion(rec: any): boolean {
             this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
             this.generarCuotasCashea();
 
-            this.snackBar.open(`Se asignó el monto mínimo: ${this.formatearMoneda(minimo, this.venta.moneda)}`, 'Cerrar', {
-                duration: 2000,
-                panelClass: ['snackbar-info']
-            });
             return;
         }
 
@@ -987,10 +1044,6 @@ esLenteContactoRecomendacion(rec: any): boolean {
             this.valorInicialTemporal = this.formatearMoneda(minimo, this.venta.moneda);
             this.generarCuotasCashea();
 
-            this.snackBar.open(`El monto mínimo es ${this.formatearMoneda(minimo, this.venta.moneda)}. Se ajustó automáticamente.`, 'Cerrar', {
-                duration: 3000,
-                panelClass: ['snackbar-warning']
-            });
             return;
         }
 
@@ -1326,43 +1379,23 @@ esLenteContactoRecomendacion(rec: any): boolean {
     onFormaPagoChange(valor: string): void {
         const formaPagoAnterior = this.venta.formaPago;
         this.limpiarCamposFormaPagoAnterior();
+
+        // Validar según el tipo de venta
+        if (this.tipoVenta === 'solo_consulta') {
+            // Solo consulta: solo permite contado y cashea
+            if (valor !== 'contado' && valor !== 'cashea') {
+                this.swalService.showWarning(
+                    'Forma de pago no válida',
+                    'Para ventas solo de consulta, solo se permite pago de contado o Cashea.'
+                );
+                return;
+            }
+        }
+
         this.venta.formaPago = valor;
 
-        // Si se sale de 'abono', limpiar sus campos
-        if (formaPagoAnterior === 'abono' && valor !== 'abono') {
-            this.limpiarCamposAbono();
-        }
-
-        // Si se entra a 'abono', asegurarse de empezar limpio
-        if (valor === 'abono' && formaPagoAnterior !== 'abono') {
-            this.limpiarCamposAbono();
-        }
-
-        if (valor === 'cashea') {
-            this.venta.moneda = 'dolar';
-            this.controlarCuotasPorNivel();
-            this.actualizarMontoInicialCashea();
-            this.generarCuotasCashea();
-            this.valorInicialTemporal = this.formatearMoneda(this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea), this.venta.moneda);
-        } else if (valor === 'de_contado-pendiente') {
-            this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
-            this.resetearMetodosPago();
-            this.generarOrdenTrabajo = false;
-            this.forzarOrdenTrabajo = false;
-        } else {
-            this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
-        }
-
-        if (valor !== 'de_contado-pendiente') {
-            this.venta.metodosDePago = [];
-        }
-
-        this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
-
-        // Actualizar estado de orden de trabajo
-        this.actualizarEstadoOrdenTrabajo();
+        // ... resto del código existente ...
     }
-
     // Nuevo método para resetear métodos de pago
     private resetearMetodosPago(): void {
         this.venta.metodosDePago = [];
@@ -1446,10 +1479,7 @@ esLenteContactoRecomendacion(rec: any): boolean {
             if (cumpleCondicionesAutomaticas) {
                 this.generarOrdenTrabajo = true;
                 this.forzarOrdenTrabajo = false;
-                this.snackBar.open('✅ Orden activada', 'Cerrar', {
-                    duration: 2000,
-                    panelClass: ['snackbar-success']
-                });
+
                 return;
             }
 
@@ -1468,20 +1498,12 @@ esLenteContactoRecomendacion(rec: any): boolean {
                 mensaje = 'Orden activada manualmente';
             }
 
-            this.snackBar.open(`⚠️ ${mensaje}`, 'Cerrar', {
-                duration: 3000,
-                panelClass: ['snackbar-warning']
-            });
         }
         // 4. Si está ACTIVADO y el usuario lo quiere DESACTIVAR
         else {
             this.generarOrdenTrabajo = false;
             this.forzarOrdenTrabajo = false;
 
-            this.snackBar.open('Orden desactivada', 'Cerrar', {
-                duration: 2000,
-                panelClass: ['snackbar-info']
-            });
         }
     }
 
@@ -2206,11 +2228,28 @@ esLenteContactoRecomendacion(rec: any): boolean {
         this.cdr.detectChanges();
     }
 
+    /**
+ * Resetea completamente el estado de la venta
+ */
     resetearVentaCompleta(resetFormaPago: boolean = true): void {
-        // 1. Limpiar productos
+        // ============================================
+        // 0. RESTABLECER TIPO DE VENTA (opcional)
+        // ============================================
+        this.tipoVenta = 'solo_consulta'; // Valor por defecto
+        this.consultaEnCarrito = false;
+        this.intentoGenerar = false;
+        this.buscandoPaciente = false;
+        this.textoBusquedaPaciente = '';
+        this.filtroCategoria = 'todos';
+
+        // ============================================
+        // 1. LIMPIAR PRODUCTOS DEL CARRITO
+        // ============================================
         this.venta.productos = [];
 
-        // 2. Restablecer propiedades básicas de venta
+        // ============================================
+        // 2. RESTABLECER PROPIEDADES BÁSICAS DE VENTA
+        // ============================================
         this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
         this.venta.descuento = 0;
         this.venta.impuesto = 16;
@@ -2224,28 +2263,51 @@ esLenteContactoRecomendacion(rec: any): boolean {
             this.venta.formaPago = 'contado';
         }
 
-        // 4. Limpiar propiedades específicas de Cashea
+        // ============================================
+        // 3. LIMPIAR DATOS DE CONSULTA
+        // ============================================
+        this.montoConsulta = 0;
+        this.montoConsultaOriginal = 0;
+        this.pagoMedico = 0;
+        this.pagoOptica = 0;
+
+        // ============================================
+        // 4. LIMPIAR PROPIEDADES ESPECÍFICAS DE CASHEA
+        // ============================================
         this.nivelCashea = 'nivel3';
         this.cantidadCuotasCashea = 3;
         this.cuotasCashea = [];
         this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
         this.valorInicialTemporal = '';
 
-        // 5. Limpiar abono
+        // ============================================
+        // 5. LIMPIAR ABONO
+        // ============================================
         this.valorTemporal = '';
         this.montoExcedido = false;
 
-        // 6. Restablecer moneda efectivo
+        // ============================================
+        // 6. RESTABLECER MONEDA EFECTIVO
+        // ============================================
         this.monedaEfectivo = this.monedaSistema;
 
-        // 7. Limpiar selecciones
+        // ============================================
+        // 7. LIMPIAR SELECCIONES
+        // ============================================
         this.pacienteSeleccionado = null;
         this.productoSeleccionado = null;
         this.asesorSeleccionado = this.currentUser?.id ?? null;
 
+        this.historiaMedica = null;
+        this.historiaMedicaSeleccionada = null;
+        this.historiaSeleccionadaId = null;
+        this.historiasMedicas = [];
+
         this.limpiarTodosLosSelects();
 
-        // 8. Limpiar cliente sin paciente
+        // ============================================
+        // 8. LIMPIAR CLIENTE SIN PACIENTE
+        // ============================================
         this.clienteSinPaciente = {
             tipoPersona: 'natural',
             nombreCompleto: '',
@@ -2254,24 +2316,41 @@ esLenteContactoRecomendacion(rec: any): boolean {
             email: ''
         };
 
-        this.requierePaciente = false;
-        this.historiaMedica = null;
-        this.mostrarSelectorAsesor = false;
-
-        // 9. Limpiar validación de cliente
+        // ============================================
+        // 9. LIMPIAR VALIDACIÓN DE CLIENTE
+        // ============================================
         this.validandoCliente = false;
         this.clienteEncontrado = false;
         this.mensajeValidacionCliente = '';
+        this.cedulaAnterior = '';
+        this.validacionIntentada = false;
+        this.editandoManual = false;
 
-        // Limpiar estado de cliente referido
+        // ============================================
+        // 10. LIMPIAR ESTADO DE EMPRESA REFERIDA
+        // ============================================
         this.clienteEsReferido = false;
         this.mostrarInfoEmpresa = false;
         this.usarEmpresaEnVenta = false;
         this.empresaReferidaInfo = null;
         this.limpiarEmpresaReferidaCliente();
 
-        // 10. Actualizar productos con la moneda correcta
+        // ============================================
+        // 11. LIMPIAR ESTADO DE ORDEN DE TRABAJO
+        // ============================================
+        this.generarOrdenTrabajo = false;
+        this.forzarOrdenTrabajo = false;
+        this.mostrarSelectorAsesor = false;
+
+        // ============================================
+        // 12. ACTUALIZAR PRODUCTOS CON LA MONEDA CORRECTA
+        // ============================================
         this.actualizarProductosConDetalle();
+
+        // ============================================
+        // 13. FORZAR DETECCIÓN DE CAMBIOS
+        // ============================================
+        this.cdr.detectChanges();
     }
 
     // === MÉTODOS ADICIONALES NECESARIOS ===
@@ -2627,79 +2706,55 @@ esLenteContactoRecomendacion(rec: any): boolean {
         const metodosConBanco = ['pagomovil', 'transferencia', 'zelle'];
         return metodosConBanco.includes(tipoMetodo);
     }
+
     get puedeGenerarVenta(): boolean {
-        // 1. Verificar que hay productos
-        if (this.venta.productos.length === 0) {
-            return false;
-        }
+        // Según el tipo de venta
+        switch (this.tipoVenta) {
+            case 'solo_productos':
+                // Solo productos: requiere al menos un producto
+                return this.venta.productos.length > 0;
 
-        // 2. Validar información del cliente según el tipo de venta
-        if (this.requierePaciente) {
-            // Venta con paciente - debe tener paciente seleccionado
-            if (!this.pacienteSeleccionado) {
-                return false;
-            }
-        } else {
-            // Venta sin paciente - debe tener información del cliente completa
-            if (!this.validarClienteSinPaciente()) {
-                return false;
-            }
-        }
+            case 'solo_consulta':
+                // Solo consulta: requiere paciente, historia y consulta en carrito
+                if (!this.pacienteSeleccionado) return false;
+                if (!this.historiaMedicaSeleccionada) return false;
+                if (!this.consultaEnCarrito) return false;
 
-        // 3. Verificar asesor seleccionado
-        if (!this.asesorSeleccionado) {
-            return false;
-        }
+                // Solo acepta contado o cashea
+                if (this.venta.formaPago !== 'contado' && this.venta.formaPago !== 'cashea') {
+                    return false;
+                }
 
-        // 4. Para forma de pago "pendiente", no se requieren métodos de pago
-        if (this.venta.formaPago === 'de_contado-pendiente') {
-            return true; // Permite generar venta sin métodos de pago
-        }
+                // Validar métodos de pago según la forma seleccionada
+                return this.validarMetodosPago();
 
-        // 5. Para otras formas de pago, verificar métodos
-        if (this.venta.metodosDePago.length === 0) {
-            return false;
-        }
+            case 'consulta_productos':
+                // Consulta + productos: requiere paciente, historia y al menos un item (consulta o producto)
+                if (!this.pacienteSeleccionado) return false;
+                if (!this.historiaMedicaSeleccionada) return false;
 
-        // 6. Verificar que todos los métodos de pago estén completamente configurados
-        const metodosCompletos = this.venta.metodosDePago.every(metodo => {
-            if (!metodo.tipo) return false;
-            if (!metodo.monto || metodo.monto <= 0) return false;
-            if (this.necesitaBanco(metodo.tipo)) {
-                if (!metodo.banco || !metodo.bancoObject) return false;
-            }
-            if (this.necesitaReferencia(metodo.tipo)) {
-                if (!metodo.referencia || metodo.referencia.trim() === '') return false;
-            }
-            return true;
-        });
+                // Debe tener consulta o productos
+                const tieneItems = this.consultaEnCarrito || this.venta.productos.length > 0;
+                if (!tieneItems) return false;
 
-        if (!metodosCompletos) {
-            return false;
-        }
+                // Validar métodos de pago
+                return this.validarMetodosPago();
 
-        // 7. Validaciones financieras
-        const montoCubierto = this.totalPagadoPorMetodos;
-        const montoRequerido = this.montoCubiertoPorMetodos;
-        const diferencia = Math.abs(montoCubierto - montoRequerido);
-        const pagoCompleto = diferencia < 0.01;
-
-        // Verificar condiciones específicas por forma de pago
-        switch (this.venta.formaPago) {
-            case 'contado':
-                return pagoCompleto;
-            case 'abono':
-                return pagoCompleto && (this.venta.montoAbonado ?? 0) > 0;
-            case 'cashea':
-                const inicialCubierto = pagoCompleto;
-                const tieneInicialValida = (this.venta.montoInicial ?? 0) >=
-                    this.calcularInicialCasheaPorNivel(this.montoTotal, this.nivelCashea);
-                return inicialCubierto && tieneInicialValida;
-            case 'de_contado-pendiente':
-                return true; // Siempre permite generar
             default:
                 return false;
         }
+    }
+
+    private validarMetodosPago(): boolean {
+        // Para forma de pago pendiente, no se requieren métodos
+        if (this.venta.formaPago === 'de_contado-pendiente') {
+            return true;
+        }
+
+        // Para otras formas, verificar métodos completos
+        if (this.venta.metodosDePago.length === 0) return false;
+
+        return this.venta.metodosDePago.every(metodo => this.metodoCompleto(metodo));
     }
 
     // Método para verificar si un método de pago específico está completo
@@ -2812,174 +2867,142 @@ esLenteContactoRecomendacion(rec: any): boolean {
         });
     }
 
-    // Método para limpiar cuando se deselecciona paciente
-    limpiarSeleccionPaciente(): void {
-        this.pacienteSeleccionado = null;
-        this.historiasMedicas = [];
-        this.historiaSeleccionadaId = null;
-        this.historiaMedica = null;
-        this.historiaMedicaSeleccionada = null;
-        this.empresaReferidaInfo = null;
-        this.generarOrdenTrabajo = false;
-        this.forzarOrdenTrabajo = false;
+    /**
+     * Limpia la búsqueda de pacientes
+     */
+    limpiarBusquedaPaciente(): void {
+        this.textoBusquedaPaciente = '';
+        this.mostrarResultadosPacientes = false;
+        this.cdr.detectChanges();
     }
+
 
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
 
-        // Verificar requisitos para orden de trabajo
-        const tieneRequisitos = this.verificarRequisitosOrdenTrabajo();
+        // ============================================
+        // 1. IDENTIFICAR CONSULTA EN EL CARRITO
+        // ============================================
+        const consultaEnVenta = this.venta.productos.find(p => p.tipo === 'CONSULTA') as ItemCarrito | undefined;
+        const tieneConsulta = !!consultaEnVenta;
+        const tieneProductos = this.venta.productos.some(p => p.tipo !== 'CONSULTA');
 
-        if (!tieneRequisitos) {
-            // No hay requisitos, no se genera orden de trabajo
-            this.generarOrdenTrabajo = false;
-            this.forzarOrdenTrabajo = false;
-        } else {
-            // Actualizar estado según la lógica normal
-            this.actualizarEstadoOrdenTrabajo();
+        // Validar consistencia según el tipo seleccionado
+        let productosFiltrados = [...this.venta.productos];
+
+        if (this.tipoVenta === 'solo_consulta' && tieneProductos) {
+            console.warn('Venta solo consulta con productos - se ignorarán los productos');
+            productosFiltrados = productosFiltrados.filter(p => p.tipo === 'CONSULTA');
         }
 
-        // La decisión final incluye el forzamiento
-        const debeGenerarOrdenTrabajo = tieneRequisitos &&
-            (this.generarOrdenTrabajo || this.forzarOrdenTrabajo);
-
-        // Si se intenta forzar sin requisitos, mostrar error
-        if (this.forzarOrdenTrabajo && !tieneRequisitos) {
-            this.mostrarErrorRequisitosOrdenTrabajo();
-            throw new Error('No se puede forzar orden de trabajo sin requisitos');
+        if (this.tipoVenta === 'solo_productos' && tieneConsulta) {
+            console.warn('Venta solo productos con consulta - se ignorará la consulta');
+            productosFiltrados = productosFiltrados.filter(p => p.tipo !== 'CONSULTA');
         }
 
-        let estadoVenta = 'completada';
-        let estadoPago = 'completado';
-
-        // Determinar estado del pago basado en la forma de pago y deuda
-        if (this.venta.formaPago === 'de_contado-pendiente') {
-            estadoVenta = 'pendiente';
-            estadoPago = 'pendiente';
-
-        } else if (this.venta.formaPago === 'abono') {
-            const montoAbonado = this.venta.montoAbonado || 0;
-            const montoTotal = this.montoTotal;
-            const diferencia = Math.abs(montoAbonado - montoTotal);
-            estadoPago = diferencia < 0.01 ? 'completado' : 'pendiente';
-
-        } else if (this.venta.formaPago === 'cashea') {
-            const totalPagadoCashea = this.totalPagadoCashea;
-            const montoTotal = this.montoTotal;
-            const diferencia = Math.abs(totalPagadoCashea - montoTotal);
-            estadoPago = diferencia < 0.01 ? 'completado' : 'pendiente';
-        }
-
-        // OBTENER LA TASA ACTUAL UTILIZADA
-        const tasaUtilizada = this.obtenerTasaUtilizada();
-
-        // OBTENER INFORMACIÓN DEL ESPECIALISTA (MÉDICO) DESDE LA HISTORIA MÉDICA
-        let especialistaData = null;
-        let historiaMedicaData = null;
-
-        if (this.historiaMedicaSeleccionada) {
-            // Buscar el profesional en la historia médica
-            const profesional = this.historiaMedicaSeleccionada.datosConsulta?.medico
-
-            if (profesional) {
-                especialistaData = {
-                    cedula: profesional.cedula || null
-                };
-            }
-
-            // Preparar datos de la historia médica para incluir en cliente
-            historiaMedicaData = {
-                id: this.historiaMedicaSeleccionada.id,
-                key: this.historiaMedicaSeleccionada.id || null,
-                nHistoria: this.historiaMedicaSeleccionada.nHistoria,
-                fechaCreacion: this.historiaMedicaSeleccionada.auditoria?.fechaCreacion || fechaActual.toISOString()
-            };
-        }
-
-        // Preparar datos del cliente CON LA HISTORIA MÉDICA DENTRO
-        let clienteData: any = {};
-        if (this.requierePaciente && this.pacienteSeleccionado) {
-            clienteData = {
-                tipo: 'paciente',
-                informacion: {
-                    tipoPersona: 'natural',
-                    nombreCompleto: this.pacienteSeleccionado.informacionPersonal?.nombreCompleto,
-                    cedula: this.pacienteSeleccionado.informacionPersonal?.cedula,
-                    telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
-                    email: this.pacienteSeleccionado.informacionPersonal?.email
-                },
-                // HISTORIA MÉDICA DENTRO DEL OBJETO CLIENTE
-                historiaMedica: historiaMedicaData,
-                // ESPECIALISTA/MÉDICO TAMBIÉN DENTRO DEL CLIENTE
-                especialista: especialistaData,
-
-                informacionEmpresa: this.obtenerInfoEmpresaParaAPI()
-            };
-        } else if (!this.requierePaciente) {
-            clienteData = {
-                tipo: 'cliente_general',
-                informacion: {
-                    tipoPersona: this.clienteSinPaciente.tipoPersona,
-                    nombreCompleto: this.clienteSinPaciente.nombreCompleto,
-                    cedula: this.clienteSinPaciente.cedula,
-                    telefono: this.clienteSinPaciente.telefono,
-                    email: this.clienteSinPaciente.email
-                },
-                // Para cliente general, no hay historia médica ni especialista
-                informacionEmpresa: this.obtenerInfoEmpresaParaAPI(),
-                historiaMedica: null,
-                especialista: null
-            };
-        }
-
-        // Productos
-        const productosData = this.venta.productos.map(producto => ({
-            productoId: producto.id,
-            cantidad: producto.cantidad,
-            moneda: producto.moneda
+        // ============================================
+        // 2. PREPARAR PRODUCTOS
+        // ============================================
+        const productosData: ProductoVentaDto[] = productosFiltrados.map(p => ({
+            id: p.id,
+            nombre: p.nombre,
+            codigo: p.codigo || 'N/A',
+            precio: p.precio || 0,
+            precioConIva: p.precioConIva || 0,
+            aplicaIva: p.aplicaIva || false,
+            cantidad: p.cantidad || 1,
+            moneda: p.moneda || 'dolar',
+            stock: p.stock || 0
         }));
 
-        // Métodos de pago
-        const metodosPagoData = this.venta.metodosDePago.map(metodo => {
-            let bancoCodigo = null;
-            let bancoNombre = null;
+        // ============================================
+        // 3. PREPARAR MÉTODOS DE PAGO
+        // ============================================
+        const metodosPagoData: MetodoPago[] = this.venta.metodosDePago.map(metodo => ({
+            tipo: metodo.tipo,
+            monto: metodo.monto || 0,
+            referencia: metodo.referencia || undefined,
+            bancoCodigo: metodo.bancoCodigo || undefined,
+            bancoNombre: metodo.bancoNombre || undefined,
+            moneda: metodo.moneda || this.getMonedaParaMetodo(metodo.tipo),
+            bancoPunto: metodo.bancoPunto || undefined
+        }));
 
-            if (metodo.tipo === 'punto' && metodo.bancoPunto) {
-                const banco = this.bancosPuntoVenta.find(b => b.id === metodo.bancoPunto);
-                bancoCodigo = banco?.codigo || null;
-                bancoNombre = banco?.nombre || null;
+        // ============================================
+        // 4. CALCULAR TOTALES SEGÚN TIPO DE VENTA
+        // ============================================
+        const productosFisicos = productosFiltrados.filter(p => p.tipo !== 'CONSULTA');
+        const subtotalProductos = this.calcularSubtotalSinIvaPorProductos(productosFisicos);
+
+        // ============================================
+        // 5. CALCULAR MONTOS DE CONSULTA CON LA NUEVA LÓGICA
+        // ============================================
+        let montoConsulta = 0;
+        let pagoMedicoConsulta = 0;
+        let pagoOpticaConsulta = 0;
+        let historiaIdConsulta = '';
+        let esFormulaExterna = false;
+        let tipoEspecialista = '';
+
+        if (consultaEnVenta && this.historiaMedicaSeleccionada) {
+            const especialista = this.historiaMedicaSeleccionada.datosConsulta?.medico;
+            historiaIdConsulta = this.historiaMedicaSeleccionada.id;
+            esFormulaExterna = this.historiaMedicaSeleccionada.datosConsulta?.formulaExterna || false;
+            tipoEspecialista = especialista?.cargo || '';
+
+            // Obtener metadata de la consulta si existe
+            const metadata = consultaEnVenta.metadata || {};
+
+            if (this.tipoVenta === 'solo_consulta') {
+                // ============================================
+                // CASO 1: SOLO CONSULTA - Se cobra el TOTAL (médico + óptica)
+                // ============================================
+                montoConsulta = consultaEnVenta.precio || 0; // Monto del carrito (puede ser editado)
+
+                // Calcular el desglose proporcional si el monto fue modificado
+                const totalOriginal = metadata.totalOriginal;
+
+                if (totalOriginal > 0 && montoConsulta !== totalOriginal) {
+                    // Si el monto fue modificado, ajustar proporcionalmente médico y óptica
+                    const proporcion = montoConsulta / totalOriginal;
+                    pagoMedicoConsulta = (metadata.costoMedico || 0) * proporcion;
+                    pagoOpticaConsulta = (metadata.costoOptica || 0) * proporcion;
+                } else {
+                    // Usar valores originales
+                    pagoMedicoConsulta = metadata.costoMedico || 0;
+                    pagoOpticaConsulta = metadata.costoOptica || 0;
+                }
+
+            } else if (this.tipoVenta === 'consulta_productos') {
+
+                // CASO 2: CONSULTA + PRODUCTOS - Solo se cobra el COSTO MÉDICO
+                montoConsulta = consultaEnVenta.precio || 0; // Monto del carrito (solo médico, puede ser editado)
+                pagoMedicoConsulta = montoConsulta; // El monto completo va al médico
+                pagoOpticaConsulta = 0; // La óptica NO recibe pago en este tipo de venta
+
             } else {
-                bancoCodigo = metodo.bancoCodigo || null;
-                bancoNombre = metodo.bancoNombre || null;
+                // ============================================
+                // CASO 3: SOLO PRODUCTOS - No hay consulta
+                // ============================================
+                montoConsulta = 0;
+                pagoMedicoConsulta = 0;
+                pagoOpticaConsulta = 0;
             }
+        }
 
-            return {
-                tipo: metodo.tipo,
-                monto: metodo.monto,
-                moneda: this.getMonedaParaMetodo(metodo.tipo),
-                referencia: metodo.referencia || null,
-                bancoCodigo: bancoCodigo,
-                bancoNombre: bancoNombre
-            };
-        });
+        // ============================================
+        // 6. CALCULAR DESCUENTOS E IVA
+        // ============================================
+        const descuentoMonto = this.venta.descuento ? (subtotalProductos * (this.venta.descuento / 100)) : 0;
+        const subtotalConDescuento = subtotalProductos - descuentoMonto;
+        const ivaCalculado = this.calcularIvaSobreProductos(subtotalConDescuento, productosFisicos);
 
-        //Calcular SUBTOTAL 
-        const subtotalSinIva = this.subtotalCorregido;
+        // Total final (productos + consulta)
+        const totalFinal = subtotalConDescuento + ivaCalculado + montoConsulta;
 
-        //Base imponible SIN IVA
-        const baseImponible = this.subtotalCorregido;
-
-        //Descuento sobre base imponible (SIN IVA)
-        const descuentoMonto = this.venta.descuento ? (baseImponible * (this.venta.descuento / 100)) : 0;
-        const baseConDescuento = baseImponible - descuentoMonto;
-
-        //IVA sobre base con descuento
-        const ivaCorrecto = this.calcularIvaSobreBaseConDescuento(baseConDescuento);
-
-        //Total final
-        const totalCorrecto = baseConDescuento + ivaCorrecto;
-
-        // Determinar total pagado según forma de pago
+        // ============================================
+        // 7. DETERMINAR TOTAL PAGADO SEGÚN FORMA DE PAGO
+        // ============================================
         let totalPagado = 0;
         switch (this.venta.formaPago) {
             case 'contado':
@@ -2991,49 +3014,24 @@ esLenteContactoRecomendacion(rec: any): boolean {
             case 'cashea':
                 totalPagado = this.totalPagadoCashea;
                 break;
+            case 'de_contado-pendiente':
+                totalPagado = 0;
+                break;
             default:
                 totalPagado = this.totalPagadoPorMetodos;
         }
 
-        // Construir el objeto final PARA API
-        const datosParaAPI: any = {
-            venta: {
-                fecha: fechaActual.toISOString(),
-                estado: estadoVenta,
-                estatus_pago: estadoPago,
-                formaPago: this.venta.formaPago,
-                moneda: this.venta.moneda,
-                observaciones: this.venta.observaciones || null,
-                impuesto: this.venta.impuesto,
-                tasa_cambio: tasaUtilizada,
-            },
-            totales: {
-                subtotal: this.redondear(subtotalSinIva),
-                descuento: this.redondear(descuentoMonto),
-                iva: this.redondear(ivaCorrecto),
-                total: this.redondear(totalCorrecto),
-                totalPagado: this.redondear(totalPagado)
-            },
-            cliente: clienteData,
-            asesor: {
-                id: parseInt(this.asesorSeleccionado || '0')
-            },
-            productos: productosData,
-            metodosPago: metodosPagoData,
-            generarOrdenTrabajo: debeGenerarOrdenTrabajo,
-            auditoria: {
-                usuarioCreacion: parseInt(this.currentUser?.id || '0'),
-                fechaCreacion: fechaActual.toISOString()
-            }
-        };
+        // ============================================
+        // 8. PREPARAR FORMA_PAGO_DETALLE
+        // ============================================
+        let formaPagoDetalle: FormaPagoDetalle | undefined = undefined;
 
-        // AGREGAR INFORMACIÓN ESPECÍFICA SEGÚN LA FORMA DE PAGO
         if (this.venta.formaPago === 'cashea') {
-            datosParaAPI.formaPago = {
+            formaPagoDetalle = {
                 tipo: 'cashea',
                 nivel: this.nivelCashea,
-                montoTotal: this.redondear(totalCorrecto),
-                montoInicial: this.venta.montoInicial,
+                montoTotal: totalFinal,
+                montoInicial: this.venta.montoInicial || 0,
                 cantidadCuotas: this.cantidadCuotasCashea.toString(),
                 montoPorCuota: this.montoPrimeraCuota,
                 cuotasAdelantadas: this.resumenCashea.cantidad,
@@ -3048,40 +3046,156 @@ esLenteContactoRecomendacion(rec: any): boolean {
                     seleccionada: cuota.seleccionada
                 }))
             };
-
         } else if (this.venta.formaPago === 'abono') {
-            const deudaPendienteAbono = Math.max(totalCorrecto - totalPagado, 0);
-            const porcentajeAbonado = totalCorrecto > 0 ? (totalPagado / totalCorrecto) * 100 : 0;
+            const deudaPendiente = Math.max(totalFinal - totalPagado, 0);
+            const porcentajePagado = totalFinal > 0 ? (totalPagado / totalFinal) * 100 : 0;
 
-            datosParaAPI.formaPagoDetalle = {
+            formaPagoDetalle = {
                 tipo: 'abono',
                 montoAbonado: this.redondear(totalPagado),
-                deudaPendiente: this.redondear(deudaPendienteAbono),
-                porcentajePagado: this.redondear(porcentajeAbonado)
+                deudaPendiente: this.redondear(deudaPendiente),
+                porcentajePagado: this.redondear(porcentajePagado)
             };
         } else if (this.venta.formaPago === 'contado') {
-            datosParaAPI.formaPagoDetalle = {
+            formaPagoDetalle = {
                 tipo: 'contado',
-                montoTotal: this.redondear(totalCorrecto),
-                totalPagado: this.redondear(totalPagado)
+                montoTotal: totalFinal,
+                totalPagado: totalPagado
             };
         }
 
-        return datosParaAPI;
+        // ============================================
+        // 9. CONSTRUIR OBJETO BASE
+        // ============================================
+        const ventaBase: VentaDto = {
+            moneda: this.venta.moneda,
+            formaPago: this.venta.formaPago,
+            productos: productosFiltrados,
+            impuesto: this.venta.impuesto || 16,
+            metodosDePago: metodosPagoData,
+            descuento: this.venta.descuento || 0,
+            observaciones: this.venta.observaciones || undefined,
+            sede: this.sedeActiva || undefined,
+            total: this.redondear(totalFinal),
+            montoInicial: this.venta.montoInicial || undefined,
+            numeroCuotas: this.venta.numeroCuotas || undefined,
+            montoAbonado: this.venta.montoAbonado || undefined,
+            formaPagoDetalle: formaPagoDetalle,
+            pacienteId: this.tipoVenta !== 'solo_productos' && this.pacienteSeleccionado
+                ? this.pacienteSeleccionado.id
+                : undefined
+        };
+
+        // ============================================
+        // 10. AGREGAR METADATOS ADICIONALES
+        // ============================================
+        const datosCompletos = {
+            ...ventaBase,
+            tipoVenta: this.tipoVenta,
+
+            // Información de consulta con el desglose correcto
+            ...(consultaEnVenta && historiaIdConsulta ? {
+                consulta: {
+                    historiaId: historiaIdConsulta,
+                    montoTotal: this.redondear(montoConsulta),
+                    pagoMedico: this.redondear(pagoMedicoConsulta),
+                    pagoOptica: this.redondear(pagoOpticaConsulta),
+                    esFormulaExterna: esFormulaExterna,
+                    tipoEspecialista: tipoEspecialista,
+                    // Información adicional útil para el backend
+                    tipoVentaConsulta: this.tipoVenta,
+                    montoOriginal: consultaEnVenta.metadata?.totalOriginal || montoConsulta
+                }
+            } : {}),
+
+            // Datos del cliente
+            cliente: this.tipoVenta !== 'solo_productos' && this.pacienteSeleccionado ? {
+                id: this.pacienteSeleccionado.id,
+                nombre: this.pacienteSeleccionado.informacionPersonal?.nombreCompleto,
+                cedula: this.pacienteSeleccionado.informacionPersonal?.cedula,
+                telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
+                email: this.pacienteSeleccionado.informacionPersonal?.email
+            } : {
+                tipo: 'anonimo',
+                nombre: 'CLIENTE GENERAL'
+            },
+
+            // Asesor
+            asesor: {
+                id: this.asesorSeleccionado ? parseInt(this.asesorSeleccionado) : null
+            },
+
+            // Auditoría
+            auditoria: {
+                usuarioCreacion: parseInt(this.currentUser?.id || '0'),
+                fechaCreacion: fechaActual.toISOString()
+            }
+        };
+
+        return datosCompletos;
     }
 
-    // Método auxiliar para limpiar el objeto
+
+    /**
+     * Calcula el subtotal sin IVA de todos los productos
+     */
+    /*   private calcularSubtotalSinIva(): number {
+           if (!Array.isArray(this.productosConDetalle) || this.productosConDetalle.length === 0) {
+               return 0;
+           }
+   
+           return this.productosConDetalle.reduce((acc, producto) => {
+               const precioSinIva = producto.precioConvertido || 0;
+               const cantidad = producto.cantidad || 1;
+               return acc + (precioSinIva * cantidad);
+           }, 0);
+       }*/
+
+
+    /**
+     * Determina si un producto genera orden de trabajo
+     */
+    private productoGeneraOrden(producto: any): boolean {
+        if (!producto || !producto.nombre) return false;
+
+        const nombre = producto.nombre.toLowerCase();
+        const palabrasClave = [
+            'lente', 'cristal', 'progresivo', 'bifocal',
+            'monofocal', 'oftálmico', 'lente de contacto',
+            'lentes de contacto', 'armazón', 'montura'
+        ];
+
+        // Buscar en el nombre
+        const coincideNombre = palabrasClave.some(palabra => nombre.includes(palabra));
+
+        // Buscar en la categoría si existe
+        const categoria = (producto.categoria || '').toLowerCase();
+        const coincideCategoria = palabrasClave.some(palabra => categoria.includes(palabra));
+
+        return coincideNombre || coincideCategoria;
+    }
+
+    /**
+     * Limpia objetos eliminando propiedades null/undefined
+     */
     private limpiarObjeto(obj: any): any {
-        Object.keys(obj).forEach(key => {
-            if (obj[key] === null || obj[key] === undefined || obj[key] === '') {
-                delete obj[key];
-            } else if (typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
-                this.limpiarObjeto(obj[key]);
-                if (Object.keys(obj[key]).length === 0) {
-                    delete obj[key];
+        if (obj === null || obj === undefined) return obj;
+
+        if (Array.isArray(obj)) {
+            return obj.map(item => this.limpiarObjeto(item)).filter(item => item !== null && item !== undefined);
+        }
+
+        if (typeof obj === 'object') {
+            const cleaned: any = {};
+            for (const [key, value] of Object.entries(obj)) {
+                const cleanedValue = this.limpiarObjeto(value);
+                if (cleanedValue !== null && cleanedValue !== undefined && cleanedValue !== '') {
+                    cleaned[key] = cleanedValue;
                 }
             }
-        });
+            return Object.keys(cleaned).length > 0 ? cleaned : null;
+        }
+
         return obj;
     }
 
@@ -3174,18 +3288,8 @@ esLenteContactoRecomendacion(rec: any): boolean {
 
     private actualizarNumeroVentaRecibo(numeroVenta: string): void {
         if (this.datosRecibo) {
+            // Solo actualizar el número de venta
             this.datosRecibo.numeroVenta = numeroVenta;
-            const datosApi = this.prepararDatosParaAPI();
-
-            if (datosApi.totales) {
-                this.datosRecibo.totales = {
-                    subtotal: datosApi.totales.subtotal,
-                    descuento: datosApi.totales.descuento,
-                    iva: datosApi.totales.iva,
-                    total: datosApi.totales.total,
-                    totalPagado: datosApi.totales.totalPagado
-                };
-            }
         }
     }
 
@@ -6330,18 +6434,6 @@ esLenteContactoRecomendacion(rec: any): boolean {
         }
     }
 
-    getMensajeTooltipBotonGenerar(): string {
-        if (this.venta.productos.length === 0) {
-            return 'Agrega al menos un producto para continuar';
-        }
-
-        if (this.requierePaciente && !this.pacienteSeleccionado) {
-            return 'Selecciona un paciente para continuar';
-        }
-
-        return 'Haz clic para generar la venta';
-    }
-
     abrirModalResumenConValidacion(): void {
         // Validar productos
         if (this.venta.productos.length === 0) {
@@ -6457,11 +6549,16 @@ esLenteContactoRecomendacion(rec: any): boolean {
         return baseImponible - descuento;
     }
 
+    /**
+ * Calcula el IVA sobre una base con descuento usando productosConDetalle
+ */
     calcularIvaSobreBaseConDescuento(baseConDescuento: number): number {
-        if (!Array.isArray(this.productosConDetalle)) return 0;
+        if (!Array.isArray(this.productosConDetalle) || this.productosConDetalle.length === 0) {
+            return 0;
+        }
 
         // Calcular qué porcentaje del total representa cada producto que aplica IVA
-        const subtotalSinIva = this.calcularSubtotalSinIva();
+        const subtotalSinIva = this.calcularSubtotalSinIvaGlobal();
         if (subtotalSinIva === 0) return 0;
 
         let ivaTotal = 0;
@@ -6502,13 +6599,31 @@ esLenteContactoRecomendacion(rec: any): boolean {
         return precioSinIva * cantidad;
     }
 
-    calcularSubtotalSinIva(): number {
+    /**
+ * VERSIÓN 1: Para uso general con this.productosConDetalle
+ */
+    calcularSubtotalSinIvaGlobal(): number {
         if (!Array.isArray(this.productosConDetalle) || this.productosConDetalle.length === 0) {
             return 0;
         }
 
         return this.productosConDetalle.reduce((acc, producto) => {
-            return acc + this.calcularSubtotalSinIvaProducto(producto);
+            const precioSinIva = producto.precioConvertido || 0;
+            const cantidad = producto.cantidad || 1;
+            return acc + (precioSinIva * cantidad);
+        }, 0);
+    }
+
+    /**
+     * VERSIÓN 2: Para uso específico con un array de productos (ej: en prepararDatosParaAPI)
+     */
+    calcularSubtotalSinIvaPorProductos(productos: ItemCarrito[]): number {
+        if (!productos || productos.length === 0) return 0;
+
+        return productos.reduce((acc, p) => {
+            const precioSinIva = p.precio || 0;
+            const cantidad = p.cantidad || 1;
+            return acc + (precioSinIva * cantidad);
         }, 0);
     }
 
@@ -6528,7 +6643,7 @@ esLenteContactoRecomendacion(rec: any): boolean {
     }
 
     calcularDescuento(): number {
-        const subtotalSinIva = this.calcularSubtotalSinIva();
+        const subtotalSinIva = this.calcularSubtotalSinIvaGlobal();
         const descuentoPorcentaje = this.venta.descuento ?? 0;
 
         // Descuento sobre subtotal SIN IVA
@@ -6536,7 +6651,7 @@ esLenteContactoRecomendacion(rec: any): boolean {
     }
 
     calcularProporcionProducto(producto: any): number {
-        const subtotalTotalSinIva = this.calcularSubtotalSinIva();
+        const subtotalTotalSinIva = this.calcularSubtotalSinIvaGlobal();
         if (subtotalTotalSinIva === 0) return 0;
 
         const subtotalProducto = this.calcularSubtotalSinIvaProducto(producto);
@@ -6602,7 +6717,7 @@ esLenteContactoRecomendacion(rec: any): boolean {
     // === MÉTODOS PARA EL RESUMEN EN HTML ===
 
     get subtotalCorregido(): number {
-        return this.calcularSubtotalSinIva();
+        return this.calcularSubtotalSinIvaGlobal();
     }
 
     get ivaCorregido(): number {
@@ -6628,7 +6743,7 @@ esLenteContactoRecomendacion(rec: any): boolean {
     }
 
     get subtotalSinIva(): number {
-        return this.calcularSubtotalSinIva();
+        return this.calcularSubtotalSinIvaGlobal();
     }
 
     get descuentoAplicado(): number {
@@ -6834,5 +6949,881 @@ esLenteContactoRecomendacion(rec: any): boolean {
         this.mostrarInfoEmpresa = false;
     }
 
+    agregarConsultaAlCarrito(): void {
+        console.log('🔄 Intentando agregar consulta al carrito');
+        console.log('Historia seleccionada:', this.historiaMedicaSeleccionada);
+
+        if (!this.historiaMedicaSeleccionada) {
+            console.log('❌ No hay historia seleccionada');
+            this.snackBar.open('No hay historia médica seleccionada', 'Cerrar', { duration: 3000 });
+            return;
+        }
+
+        // Verificar si es cobrable
+        if (!this.esConsultaCobrable(this.historiaMedicaSeleccionada)) {
+            const motivo = this.getMensajeConsulta(this.historiaMedicaSeleccionada);
+            console.log('❌ No es cobrable:', motivo);
+            this.snackBar.open(`❌ ${motivo || 'Esta consulta no está disponible para cobro'}`, 'Cerrar', {
+                duration: 4000,
+                panelClass: ['snackbar-warning']
+            });
+            return;
+        }
+
+        // Verificar si ya existe
+        if (this.consultaEnCarrito) {
+            console.log('⚠️ Ya hay una consulta en el carrito');
+            this.snackBar.open('La consulta ya está en el carrito', 'Cerrar', { duration: 2000 });
+            return;
+        }
+
+        console.log('✅ Procediendo a obtener costos...');
+        // this.loader.showWithMessage('🔄 Obteniendo costos de consulta...');
+
+        this.generarVentaService.getCostosConsulta(this.historiaMedicaSeleccionada.id).pipe(take(1)).subscribe({
+            next: (costos) => {
+                // this.loader.hide();
+                console.log('✅ Costos obtenidos:', costos);
+
+                const medico = this.historiaMedicaSeleccionada?.datosConsulta?.medico;
+
+                // Convertir strings a números (del API vienen como strings)
+                const totalConsulta = parseFloat(costos.totalConsulta) || 0;
+                const costoMedico = parseFloat(costos.costoMedico) || 0;
+                const costoOptica = parseFloat(costos.costoOptica) || 0;
+
+                console.log('Costos parseados:', { totalConsulta, costoMedico, costoOptica });
+
+                // Determinar monto según tipo de venta
+                if (this.tipoVenta === 'solo_consulta') {
+                    // SOLO CONSULTA: se cobra el total (médico + óptica)
+                    this.pagoMedico = costoMedico;
+                    this.pagoOptica = costoOptica;
+                    this.montoConsulta = totalConsulta;
+                    this.montoConsultaOriginal = totalConsulta;
+
+                } else if (this.tipoVenta === 'consulta_productos') {
+                    // CONSULTA + PRODUCTOS: solo se cobran honorarios médicos
+                    this.pagoMedico = costoMedico;
+                    this.pagoOptica = 0; // La óptica no aplica
+                    this.montoConsulta = costoMedico;
+                    this.montoConsultaOriginal = totalConsulta;
+                }
+
+                this.consultaEnCarrito = true;
+                this.cdr.detectChanges();
+            },
+            error: (error) => {
+                this.loader.hide();
+                console.error('❌ Error al obtener costos:', error);
+                this.snackBar.open('❌ Error al obtener costos de consulta', 'Cerrar', {
+                    duration: 3000,
+                    panelClass: ['snackbar-error']
+                });
+            }
+        });
+    }
+
+    // Para saber si mostrar el campo de monto de consulta
+    get mostrarMontoConsulta(): boolean {
+        return this.tipoVenta !== 'solo_productos' &&
+            !!this.historiaMedicaSeleccionada;
+    }
+
+    // Para saber qué formas de pago mostrar
+    get formasPagoDisponibles(): any[] {
+        if (this.tipoVenta === 'solo_consulta') {
+            // Solo consulta: contado y cashea
+            return [
+                { value: 'contado', label: 'Contado' },
+                { value: 'cashea', label: 'Cashea' }
+            ];
+        } else {
+            // Otros tipos: todas
+            return [
+                { value: 'contado', label: 'Contado' },
+                { value: 'abono', label: 'Abono' },
+                { value: 'cashea', label: 'Cashea' },
+                { value: 'de_contado-pendiente', label: 'Pendiente' }
+            ];
+        }
+    }
+
+    // Para saber si mostrar el resumen
+    get puedeMostrarResumen(): boolean {
+        switch (this.tipoVenta) {
+            case 'solo_productos':
+                return this.venta.productos.length > 0;
+
+            case 'solo_consulta':
+                return this.consultaEnCarrito;
+
+            case 'consulta_productos':
+                return this.consultaEnCarrito || this.venta.productos.length > 0;
+
+            default:
+                return false;
+        }
+    }
+
+    // Para el tooltip del botón generar
+    getMensajeTooltipBotonGenerar(): string {
+        switch (this.tipoVenta) {
+            case 'solo_productos':
+                return this.venta.productos.length === 0
+                    ? 'Agrega al menos un producto'
+                    : 'Generar venta';
+
+            case 'solo_consulta':
+                if (!this.pacienteSeleccionado) return 'Selecciona un paciente';
+                if (!this.historiaMedicaSeleccionada) return 'Selecciona una historia';
+                if (!this.consultaEnCarrito) return 'Agrega la consulta al carrito';
+                return 'Generar venta';
+
+            case 'consulta_productos':
+                if (!this.pacienteSeleccionado) return 'Selecciona un paciente';
+                if (!this.historiaMedicaSeleccionada) return 'Selecciona una historia';
+                if (!this.consultaEnCarrito && this.venta.productos.length === 0) {
+                    return 'Agrega consulta o productos';
+                }
+                return 'Generar venta';
+
+            default:
+                return 'Generar venta';
+        }
+    }
+
+    get otrasHistorias(): any[] {
+        if (!this.historiasMedicas || !this.historiaMedicaSeleccionada) {
+            return this.historiasMedicas || [];
+        }
+        return this.historiasMedicas.filter(h =>
+            h.id !== this.historiaMedicaSeleccionada.id
+        );
+    }
+
+    getMontoConsulta(historia?: any): number {
+        const h = historia || this.historiaMedicaSeleccionada;
+        if (!h) return 0;
+
+        // Para solo consulta, usar el total
+        if (this.tipoVenta === 'solo_consulta') {
+            // Aquí deberías obtener el total de la consulta (médico + óptica)
+            // Por ahora, retornamos 60 como ejemplo
+            return 60;
+        } else {
+            // Para consulta+productos, solo honorarios médicos
+            return 40;
+        }
+    }
+
+    limpiarCarrito(): void {
+        this.venta.productos = [];
+        this.consultaEnCarrito = false;
+        this.actualizarProductosConDetalle();
+    }
+
+    // Actualiza eliminarItem
+    eliminarItem(item: ItemCarrito): void {
+        if (item.tipo === 'CONSULTA') {
+            this.consultaEnCarrito = false;
+        }
+        this.venta.productos = this.venta.productos.filter(p => p.id !== item.id);
+        this.actualizarProductosConDetalle();
+    }
+
+    // Actualiza aumentarCantidad
+    aumentarCantidad(item: ItemCarrito): void {
+        if (item.tipo === 'CONSULTA') return; // No aumentar cantidad de consultas
+
+        const producto = this.venta.productos.find(p => p.id === item.id) as ItemCarrito;
+        if (producto && producto.cantidad < (producto.stock || 999)) {
+            producto.cantidad = (producto.cantidad || 1) + 1;
+            this.actualizarProductosConDetalle();
+        }
+    }
+
+    // Actualiza disminuirCantidad
+    disminuirCantidad(item: ItemCarrito): void {
+        if (item.tipo === 'CONSULTA') return; // No disminuir cantidad de consultas
+
+        const producto = this.venta.productos.find(p => p.id === item.id) as ItemCarrito;
+        if (producto && (producto.cantidad || 1) > 1) {
+            producto.cantidad = (producto.cantidad || 1) - 1;
+            this.actualizarProductosConDetalle();
+        }
+    }
+
+    trackByItem(index: number, item: any): string {
+        return item.id || index.toString();
+    }
+
+    getIconoCategoria(producto: any): string {
+        if (!producto) return 'bi-box';
+
+        const nombre = (producto.nombre || '').toLowerCase();
+        const categoria = (producto.categoria || '').toLowerCase();
+
+        if (nombre.includes('lente') || categoria.includes('lente')) return 'bi-eyeglasses';
+        if (nombre.includes('montura') || categoria.includes('montura')) return 'bi-bag';
+        if (nombre.includes('accesorio') || categoria.includes('accesorio')) return 'bi-stopwatch';
+        if (nombre.includes('contacto') || categoria.includes('contacto')) return 'bi-eye';
+
+        return 'bi-box';
+    }
+
+
+    get pasoPacienteCompletado(): boolean {
+        return this.tipoVenta === 'solo_productos' || !!this.pacienteSeleccionado;
+    }
+
+    get pasoHistoriaCompletado(): boolean {
+        if (this.tipoVenta === 'solo_productos') return true;
+        return !!this.historiaMedicaSeleccionada;
+    }
+
+    get pasoProductosCompletado(): boolean {
+        if (this.tipoVenta === 'solo_consulta') {
+            return this.consultaEnCarrito;
+        }
+        return this.venta.productos.length > 0;
+    }
+
+    seleccionarTipoVenta(tipo: 'solo_consulta' | 'consulta_productos' | 'solo_productos'): void {
+        console.log('🔄 Cambiando tipo de venta a:', tipo);
+
+        // Guardar tipo anterior
+        const tipoAnterior = this.tipoVenta;
+
+        // Actualizar tipo
+        this.tipoVenta = tipo;
+        this.intentoGenerar = false;
+
+        // ============================================
+        // LIMPIAR CARRITO AL CAMBIAR DE TIPO
+        // ============================================
+        this.limpiarCarritoCompleto();
+
+        if (tipo === 'solo_productos') {
+            // Solo productos: no requiere paciente ni historia
+            this.pacienteSeleccionado = null;
+            this.historiaMedicaSeleccionada = null;
+            this.historiaSeleccionadaId = null;
+            this.historiasMedicas = [];
+        }
+
+        // Mostrar mensaje contextual
+        let mensaje = '';
+        switch (tipo) {
+            case 'solo_consulta':
+                mensaje = '🩺 Venta solo de consulta - Solo contado o Cashea';
+                break;
+            case 'consulta_productos':
+                mensaje = '👓 Venta con consulta y productos - Todas las formas de pago';
+                break;
+            case 'solo_productos':
+                mensaje = '🛒 Venta solo de productos - Sin historia médica';
+                break;
+        }
+
+        this.cdr.detectChanges();
+    }
+
+    verDetalleHistoria(): void {
+        if (!this.historiaMedicaSeleccionada) return;
+
+        this.swalService.showInfo(
+            'Detalle de Historia',
+            `Historia: ${this.historiaMedicaSeleccionada.nHistoria || 'N/A'}<br>` +
+            `Fecha: ${new Date(this.historiaMedicaSeleccionada.auditoria?.fechaCreacion).toLocaleDateString()}<br>` +
+            `Médico: ${this.historiaMedicaSeleccionada.datosConsulta?.medico?.nombre || 'N/A'}<br>` +
+            `Tipo: ${this.getHistoriaTagText()}`
+        );
+    }
+
+    get productosFiltradosPorCategoria(): Producto[] {
+        if (this.filtroCategoria === 'todos') {
+            return this.productosFiltradosPorSede;
+        }
+
+        return this.productosFiltradosPorSede.filter(p => {
+            const nombre = (p.nombre || '').toLowerCase();
+            const categoria = (p.categoria || '').toLowerCase();
+            const filtro = this.filtroCategoria;
+
+            switch (filtro) {
+                case 'lentes':
+                    return nombre.includes('lente') || categoria.includes('lente');
+                case 'monturas':
+                    return nombre.includes('montura') || categoria.includes('montura');
+                case 'accesorios':
+                    return nombre.includes('accesorio') || categoria.includes('accesorio');
+                default:
+                    return true;
+            }
+        });
+    }
+
+    get requierePaciente(): boolean {
+        return this.tipoVenta !== 'solo_productos';
+    }
+
+    get esSoloConsulta(): boolean {
+        return this.tipoVenta === 'solo_consulta';
+    }
+
+    get esConsultaProductos(): boolean {
+        return this.tipoVenta === 'consulta_productos';
+    }
+
+    get esSoloProductos(): boolean {
+        return this.tipoVenta === 'solo_productos';
+    }
+
+    getHistoriaMarkerClass(): string {
+        return this.getHistoriaMarkerClassForHistoria(this.historiaMedicaSeleccionada);
+    }
+
+    getHistoriaIcon(): string {
+        return this.getHistoriaIconForHistoria(this.historiaMedicaSeleccionada);
+    }
+
+    getHistoriaTagText(): string {
+        return this.getHistoriaTagTextForHistoria(this.historiaMedicaSeleccionada);
+    }
+
+    getHistoriaTagClass(): string {
+        return this.getHistoriaTagClassForHistoria(this.historiaMedicaSeleccionada);
+    }
+
+    getHistoriaMarkerClassForHistoria(historia: any): string {
+        if (!historia || !historia.data) return '';
+
+        const fact = historia.data.datosConsulta?.facturacion;
+        const formulaExterna = historia.data.datosConsulta?.formulaExterna;
+
+        if (formulaExterna) return 'marker-externa';
+        if (fact?.tipoProfesional === 'oftalmologo') return 'marker-oftalmologo';
+        if (fact?.tipoProfesional === 'optometrista') return 'marker-optometrista';
+        return 'marker-default';
+    }
+
+    getHistoriaIconForHistoria(historia: any): string {
+        if (!historia || !historia.data) return 'bi-clock';
+
+        const formulaExterna = historia.data.datosConsulta?.formulaExterna;
+        const tipoProfesional = historia.data.datosConsulta?.facturacion?.tipoProfesional;
+
+        if (formulaExterna) return 'bi-box-arrow-up-right';
+        if (tipoProfesional === 'oftalmologo') return 'bi-person-badge';
+        if (tipoProfesional === 'optometrista') return 'bi-person';
+        return 'bi-clock';
+    }
+
+    getHistoriaTagTextForHistoria(historia: any): string {
+        const h = historia?.data || historia;
+        if (!h) return '';
+
+        const formulaExterna = h.datosConsulta?.formulaExterna;
+        const tipoProfesional = h.datosConsulta?.medico?.cargo;
+
+        if (formulaExterna) return '🔷 Fórmula externa';
+        if (tipoProfesional === 'Oftalmólogo') return '👁️ Oftalmólogo';
+        if (tipoProfesional === 'Optometrista') return '👓 Optometrista';
+        return '📋 Historia';
+    }
+
+    getHistoriaTagClassForHistoria(historia: any): string {
+        const h = historia?.data || historia;
+        if (!h) return '';
+
+        const formulaExterna = h.datosConsulta?.formulaExterna;
+        const tipoProfesional = h.datosConsulta?.medico?.cargo;
+
+        if (formulaExterna) return 'tag-externa';
+        if (tipoProfesional === 'Oftalmólogo') return 'tag-oftalmologo';
+        if (tipoProfesional === 'Optometrista') return 'tag-optometrista';
+        return 'tag-default';
+    }
+
+    // ============================================
+    // MÉTODO PARA CREAR PACIENTE RÁPIDO
+    // ============================================
+    crearPacienteRapido(): void {
+        // Opción 1: Abrir en nueva pestaña 
+        const url = '/pacientes?abrirModal=nuevo';
+        window.open(url, '_blank');
+
+        this.snackBar.open('Serás redirigido para crear un nuevo paciente', 'Cerrar', {
+            duration: 3000
+        });
+    }
+
+    private calcularIvaSobreProductos(baseConDescuento: number, productos: ItemCarrito[]): number {
+        if (!productos || productos.length === 0) return 0;
+
+        // Calcular qué porcentaje del total sin IVA representa cada producto
+        const subtotalSinIva = this.calcularSubtotalSinIvaPorProductos(productos);
+        if (subtotalSinIva === 0) return 0;
+
+        let ivaTotal = 0;
+
+        productos.forEach(producto => {
+            if (producto.aplicaIva) {
+                const precioSinIva = producto.precio || 0;
+                const cantidad = producto.cantidad || 1;
+                const subtotalProducto = precioSinIva * cantidad;
+                const porcentajeProducto = subtotalProducto / subtotalSinIva;
+
+                const baseProductoConDescuento = baseConDescuento * porcentajeProducto;
+                ivaTotal += baseProductoConDescuento * (this.ivaPorcentaje / 100);
+            }
+        });
+
+        return this.redondear(ivaTotal);
+    }
+
+    buscarPacientes(): void {
+        this.mostrarResultadosPacientes = this.textoBusquedaPaciente.trim().length >= 3;
+        this.cdr.detectChanges();
+    }
+
+    seleccionarPaciente(paciente: any): void {
+        this.pacienteSeleccionado = paciente;
+        this.mostrarResultadosPacientes = false;
+        this.mostrandoBusqueda = false; // Ocultar buscador, mostrar tarjeta
+        this.textoBusquedaPaciente = '';
+        this.onPacienteSeleccionado(paciente);
+        this.cdr.detectChanges();
+    }
+
+    buscarHistorias(): void {
+        this.cdr.detectChanges();
+    }
+
+    get pacientesFiltrados(): any[] {
+        if (!this.textoBusquedaPaciente || this.textoBusquedaPaciente.trim().length < 3) {
+            return [];
+        }
+
+        const filtro = this.textoBusquedaPaciente.toLowerCase().trim();
+        return this.todosLosPacientes.filter(p => {
+            const nombre = (p.informacionPersonal?.nombreCompleto || '').toLowerCase();
+            const cedula = (p.informacionPersonal?.cedula || '').toLowerCase();
+            const email = (p.informacionPersonal?.email || '').toLowerCase();
+
+            return nombre.includes(filtro) || cedula.includes(filtro) || email.includes(filtro);
+        }).slice(0, 10); // Limitar a 10 resultados
+    }
+
+    recargarPacientes(): void {
+        this.pacientesService.getPacientes().pipe(take(1)).subscribe({
+            next: (response) => {
+                this.todosLosPacientes = response.pacientes || [];
+                this.pacientesFiltradosPorSede = this.todosLosPacientes;
+
+                this.snackBar.open('✅ Lista de pacientes actualizada', 'Cerrar', {
+                    duration: 2000,
+                    panelClass: ['snackbar-success']
+                });
+
+                // Si estaba buscando, actualizar resultados
+                if (this.textoBusquedaPaciente) {
+                    this.buscarPacientes();
+                }
+
+                this.cdr.detectChanges();
+            },
+            error: (error) => {
+                console.error('Error recargando pacientes:', error);
+                this.snackBar.open('❌ Error al actualizar pacientes', 'Cerrar', {
+                    duration: 3000,
+                    panelClass: ['snackbar-error']
+                });
+            }
+        });
+    }
+
+    esConsultaCobrable(historia?: any): boolean {
+        const h = historia || this.historiaMedicaSeleccionada;
+        if (!h) {
+            console.log('❌ No hay historia');
+            return false;
+        }
+
+        console.log('🔍 Verificando cobrababilidad:', {
+            id: h.id,
+            nHistoria: h.nHistoria,
+            cargo: h.datosConsulta?.medico?.cargo,
+            pagoPendiente: h.datosConsulta?.pagoPendiente,
+            formulaExterna: h.datosConsulta?.formulaExterna
+        });
+
+        // Verificar que sea oftalmólogo y no externa
+        const esOftalmologo = h.datosConsulta?.medico?.cargo === 'Oftalmólogo';
+        const esExterna = h.datosConsulta?.formulaExterna === true;
+
+        if (esExterna) {
+            console.log('❌ Es fórmula externa');
+            return false;
+        }
+
+        if (!esOftalmologo) {
+            console.log('❌ No es oftalmólogo');
+            return false;
+        }
+
+        // Verificar pago pendiente
+        const pagoPendiente = h.datosConsulta?.pagoPendiente === true;
+        if (!pagoPendiente) {
+            console.log('❌ No tiene pago pendiente');
+            return false;
+        }
+
+        console.log('✅ ES COBRABLE');
+        return true;
+    }
+    getMensajeConsulta(historia?: any): string {
+        const h = historia || this.historiaMedicaSeleccionada;
+        if (!h) return '';
+
+        const esOftalmologo = h.datosConsulta?.medico?.cargo === 'Oftalmólogo';
+        const pagoPendiente = h.datosConsulta?.pagoPendiente;
+        const formulaExterna = h.datosConsulta?.formulaExterna;
+
+        if (formulaExterna) {
+            return 'Fórmula externa - No genera cobro de consulta';
+        }
+
+        if (!esOftalmologo) {
+            return 'Solo consultas de oftalmólogo generan cobro';
+        }
+
+        if (pagoPendiente === false) {
+            return 'Consulta ya pagada';
+        }
+
+        return '';
+    }
+
+    /**
+     * Maneja la selección de una historia - SIMPLIFICADO
+     */
+    onHistoriaSeleccionada(event: any): void {
+        console.log('Historia seleccionada:', event);
+
+        if (!event) {
+            this.historiaMedicaSeleccionada = null;
+            return;
+        }
+
+        // Asignar la historia seleccionada (viene como objeto completo)
+        this.historiaMedicaSeleccionada = event;
+        this.historiaMedica = event;
+
+        this.cdr.detectChanges();
+    }
+
+    get totalHistoriasSegunTipo(): number {
+        if (this.tipoVenta === 'solo_consulta') {
+            return this.historiasOftalmologoNoExternas.length;
+        }
+        return this.historiasMedicas.length;
+    }
+
+    /**
+     * Solo historias de oftalmólogo que NO son externas
+     */
+    get historiasOftalmologoNoExternas(): any[] {
+        if (!this.historiasMedicas || this.historiasMedicas.length === 0) {
+            return [];
+        }
+        return this.historiasMedicas.filter(h =>
+            h.tipoProfesional === 'oftalmologo' && !h.formulaExterna
+        );
+    }
+
+
+    get historiasFiltradas(): any[] {
+        if (!this.historiasMedicas || this.historiasMedicas.length === 0) {
+            return [];
+        }
+
+        // PASO 1: Filtrar por tipo de venta
+        let historiasBase: any[];
+
+        if (this.tipoVenta === 'solo_consulta') {
+            // Solo consulta: exclusivamente oftalmólogo no externas
+            historiasBase = this.historiasMedicas.filter(h =>
+                h.tipoProfesional === 'oftalmologo' && !h.formulaExterna
+            );
+        } else {
+            // Consulta + productos: TODAS las historias
+            historiasBase = this.historiasMedicas;
+        }
+
+        // PASO 2: Si no hay filtro de texto, devolver base
+        if (!this.filtroHistoriasTexto || this.filtroHistoriasTexto.trim() === '') {
+            return historiasBase;
+        }
+
+        // PASO 3: Aplicar filtro de búsqueda
+        const filtro = this.filtroHistoriasTexto.toLowerCase().trim();
+
+        return historiasBase.filter(h => {
+            const nHistoria = (h.nHistoria || '').toLowerCase();
+            const medico = (h.datosConsulta?.medico?.nombre || '').toLowerCase();
+            const fecha = new Date(h.auditoria?.fechaCreacion).toLocaleDateString().toLowerCase();
+
+            return nHistoria.includes(filtro) ||
+                medico.includes(filtro) ||
+                fecha.includes(filtro);
+        });
+    }
+
+    getTituloHistoria(historia: any): string {
+        if (historia.formulaExterna) {
+            return 'Fórmula externa - No genera cobro';
+        }
+
+        if (historia.tipoProfesional === 'oftalmologo') {
+            const estado = historia.datosConsulta?.pagoPendiente === true ? 'Pendiente' : 'Pagada';
+            return `Consulta de oftalmólogo - ${estado}`;
+        }
+
+        if (historia.tipoProfesional === 'optometrista') {
+            return 'Consulta de optometrista - Sin costo';
+        }
+
+        return 'Historia clínica';
+    }
+
+    esHistoriaSeleccionable(historia: any): boolean {
+        if (this.tipoVenta === 'solo_consulta') {
+            return historia.tipoProfesional === 'oftalmologo' && !historia.formulaExterna;
+        }
+        return true;
+    }
+
+    seleccionarHistoria(historia: any): void {
+        console.log('📋 seleccionarHistoria llamado');
+        console.log('Historia:', historia);
+
+        // Guardar historia anterior para referencia
+        const historiaAnterior = this.historiaMedicaSeleccionada;
+        const tipoVentaAnterior = this.tipoVenta;
+
+        // Validar según tipo de venta
+        if (this.tipoVenta === 'solo_consulta') {
+            if (historia.tipoProfesional !== 'oftalmologo' || historia.formulaExterna) {
+                // Limpiar carrito si había consulta
+                if (this.consultaEnCarrito) {
+                    this.limpiarCarritoCompleto();
+                }
+
+                // Actualizar la historia seleccionada (aunque no sea válida para cobro)
+                this.actualizarHistoriaSeleccionada(historia);
+                return;
+            }
+        }
+
+        // Si ya estaba seleccionada, no hacer nada
+        if (this.historiaSeleccionadaId === historia.id) {
+            return;
+        }
+
+        // Verificar si la nueva historia es cobrable
+        const esNuevaCobrable = this.esConsultaCobrable(historia);
+        console.log('¿Es nueva historia cobrable?', esNuevaCobrable);
+
+        // ============================================
+        // CASO 1: Había consulta y nueva historia NO es cobrable
+        // ============================================
+        if (this.consultaEnCarrito && !esNuevaCobrable) {
+            console.log('🧹 Había consulta pero nueva historia NO es cobrable - limpiando carrito');
+            this.limpiarCarritoCompleto();
+            this.actualizarHistoriaSeleccionada(historia);
+            return;
+        }
+
+        // ============================================
+        // CASO 2: Había consulta y nueva historia SÍ es cobrable
+        // ============================================
+        if (this.consultaEnCarrito && esNuevaCobrable) {
+            console.log('🔄 Había consulta y nueva historia SÍ es cobrable - reemplazando');
+            this.limpiarCarritoCompleto();
+            this.actualizarHistoriaSeleccionada(historia);
+            // Agregar la nueva consulta
+            setTimeout(() => {
+                this.agregarConsultaAlCarrito();
+            }, 100);
+            return;
+        }
+
+        // ============================================
+        // CASO 3: No había consulta y nueva historia SÍ es cobrable
+        // ============================================
+        if (!this.consultaEnCarrito && esNuevaCobrable) {
+            console.log('✅ No había consulta y nueva historia es cobrable - agregando');
+            this.actualizarHistoriaSeleccionada(historia);
+            // Agregar la consulta
+            setTimeout(() => {
+                this.agregarConsultaAlCarrito();
+            }, 100);
+            return;
+        }
+
+        // ============================================
+        // CASO 4: No había consulta y nueva historia NO es cobrable
+        // ============================================
+        if (!this.consultaEnCarrito && !esNuevaCobrable) {
+            console.log('ℹ️ No había consulta y nueva historia no es cobrable');
+            this.actualizarHistoriaSeleccionada(historia);
+            return;
+        }
+    }
+
+
+    private actualizarHistoriaSeleccionada(historia: any): void {
+        this.historiaSeleccionadaId = historia.id;
+        this.historiaMedicaSeleccionada = historia;
+        this.cdr.detectChanges();
+
+    }
+
+    limpiarFiltro(): void {
+        this.filtroHistoriasTexto = '';
+        this.cdr.detectChanges();
+
+        setTimeout(() => {
+            const input = document.querySelector('.minimal-search-input') as HTMLInputElement;
+            if (input) {
+                input.focus();
+            }
+        }, 50);
+    }
+
+    get historiasPaginadas(): any[] {
+        const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
+        const fin = inicio + this.itemsPorPagina;
+        return this.historiasFiltradas.slice(inicio, fin);
+    }
+
+    get totalPaginas(): number {
+        return Math.ceil(this.historiasFiltradas.length / this.itemsPorPagina);
+    }
+
+    cambiarPagina(nuevaPagina: number): void {
+        if (nuevaPagina >= 1 && nuevaPagina <= this.totalPaginas) {
+            this.paginaActual = nuevaPagina;
+            // Scroll al inicio del contenedor
+            setTimeout(() => {
+                const container = document.querySelector('.historias-scroll-container');
+                if (container) {
+                    container.scrollTop = 0;
+                }
+            }, 50);
+        }
+    }
+
+    filtrarHistorias(): void {
+        this.paginaActual = 1;
+        this.cdr.detectChanges();
+    }
+
+    get carritoTotalmenteVacio(): boolean {
+        // No hay productos Y no hay consulta
+        return this.venta.productos.length === 0 && !this.consultaEnCarrito;
+    }
+
+    get montoTotalVenta(): number {
+        let total = 0;
+        // Sumar productos
+        for (const item of this.venta.productos) {
+            total += (item.precio || 0) * (item.cantidad || 1);
+        }
+        // Sumar consulta
+        if (this.consultaEnCarrito) {
+            total += this.montoConsulta || 0;
+        }
+        return total;
+    }
+
+    // Actualizar total de consulta cuando cambian médico u óptica
+    actualizarTotalConsulta(): void {
+        this.montoConsulta = (this.pagoMedico || 0) + (this.pagoOptica || 0);
+        this.cdr.detectChanges();
+    }
+
+    // Verificar si la consulta ya está agregada
+    consultaYaAgregada(): boolean {
+        return this.consultaEnCarrito;
+    }
+
+    // Obtener nombre del médico
+    obtenerNombreMedico(historia: any): string {
+        if (!historia) return 'No especificado';
+        return historia.datosConsulta?.medico?.nombre || 'No especificado';
+    }
+
+    // Total de items visuales
+    get totalItemsVisual(): number {
+        let total = this.venta.productos.length;
+        if (this.consultaEnCarrito) {
+            total += 1;
+        }
+        return total;
+    }
+
+    // Texto del resumen según el tipo de venta
+    get textoResumen(): string {
+        if (this.tipoVenta === 'solo_consulta') {
+            return 'Total consulta:';
+        }
+        if (this.tipoVenta === 'consulta_productos') {
+            if (this.consultaEnCarrito && this.venta.productos.length > 0) {
+                return 'Total (consulta + productos):';
+            } else if (this.consultaEnCarrito) {
+                return 'Total consulta:';
+            } else {
+                return 'Total productos:';
+            }
+        }
+        return 'Total:';
+    }
+
+    get pasoItemsCompletado(): boolean {
+        if (this.tipoVenta === 'solo_consulta') {
+            return this.consultaEnCarrito;
+        }
+        if (this.tipoVenta === 'consulta_productos') {
+            return this.consultaEnCarrito || this.venta.productos.length > 0;
+        }
+        return this.venta.productos.length > 0;
+    }
+
+    limpiarCarritoCompleto(): void {
+        if (this.tipoVenta === 'solo_consulta') {
+            // Solo consulta: limpiar consulta
+            this.limpiarConsulta();
+        } else if (this.tipoVenta === 'consulta_productos') {
+            // Consulta + productos: limpiar todo
+            this.limpiarConsulta();
+            this.venta.productos = [];
+        } else {
+            // Solo productos: limpiar productos
+            this.venta.productos = [];
+        }
+
+        this.actualizarProductosConDetalle();
+    }
+
+    private limpiarConsulta(): void {
+        this.consultaEnCarrito = false;
+        this.montoConsulta = 0;
+        this.montoConsultaOriginal = 0;
+        this.pagoMedico = 0;
+        this.pagoOptica = 0;
+    }
 
 }

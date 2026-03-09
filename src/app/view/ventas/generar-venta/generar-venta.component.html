@@ -1,474 +1,845 @@
-<div class="card contenedor-generar-venta-moderno">
-    <!-- Encabezado modernizado -->
-    <div class="card-header-moderno">
+<div class="card contenedor-generar-venta-moderno venta-dashboard">
+
+    <!-- HEADER-->
+    <div class="card-header-moderno glass-header">
         <div class="header-content">
-            <div class="header-icon">
-                <i class="bi bi-cart-plus"></i>
+            <div class="header-left">
+                <div class="header-icon animated-icon">
+                    <i class="bi bi-cart-plus"></i>
+                    <div class="icon-glow"></div>
+                </div>
+                <div class="header-text">
+                    <h4 class="header-title gradient-text">Generar Venta</h4>
+                    <div class="header-subtitle">Experiencia de venta inteligente</div>
+                </div>
             </div>
-            <div class="header-text">
-                <h4 class="header-title">Generar Venta</h4>
-                <div class="header-subtitle">Complete la información del paciente y agregue productos</div>
+            <div class="header-right">
+                <div class="live-indicator">
+                    <span class="pulse-dot"></span>
+                    <span class="indicator-text">Modo venta activo</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Cuerpo -->
-    <div class="card-body-moderno">
-        <!-- Barra de información contextual -->
-        <div class="context-bar">
-            <div class="context-info">
-                <i class="bi bi-info-circle"></i>
-                <span class="context-text">
-                    Selecciona un paciente si aplica y agrega productos para continuar la venta.
-                </span>
-            </div>
+    <!-- SELECTOR DE TIPO DE VENTA (3 OPCIONES) CON CONTEXTO INTEGRADO -->
+    <div class="tipo-venta-selector">
+        <div class="selector-header">
+            <i class="bi bi-shop"></i>
+            <span>¿Qué tipo de venta deseas realizar?</span>
 
-            <!-- Switch paciente modernizado -->
-            <div class="patient-toggle">
-                <div class="toggle-content">
-                    <i class="bi bi-person-circle"></i>
-                    <span class="toggle-label">Paciente</span>
-                    <span class="toggle-badge" [ngClass]="requierePaciente ? 'badge-included' : 'badge-excluded'">
-                        {{ requierePaciente ? 'Incluido' : 'No incluido' }}
-                    </span>
+            <!-- CONTEXTO DE VENTA INTEGRADO EN EL HEADER DEL SELECTOR -->
+            <div class="header-context" [ngSwitch]="tipoVenta">
+                <div class="context-chip" *ngSwitchCase="'solo_consulta'">
+                    <i class="bi bi-person-badge"></i>
+                    <span><strong>Solo consulta:</strong> Selecciona paciente y historia con oftalmólogo.</span>
+                    <span class="badge-moderno" *ngIf="pacienteSeleccionado">Paciente seleccionado ✓</span>
+                    <span class="badge-warning">Solo contado o Cashea</span>
                 </div>
-                <label class="modern-switch">
-                    <input type="checkbox" [(ngModel)]="requierePaciente">
-                    <span class="slider"></span>
-                </label>
-            </div>
 
-            <!-- Mensaje informativo cuando el switch está activado -->
-            <div *ngIf="requierePaciente" class="info-message-toggle" @fadeInOut>
-                <div class="info-content">
-                    <i class="bi bi-info-circle"></i>
-                    <div class="info-text">
-                        <strong>Orden de trabajo automática:</strong>
-                        <span>Si la historia médica contiene fórmula óptica, se generará una orden de trabajo para el
-                            laboratorio.</span>
-                    </div>
+                <div class="context-chip" *ngSwitchCase="'consulta_productos'">
+                    <i class="bi bi-journal-medical"></i>
+                    <span><strong>Consulta + Productos:</strong> Selecciona paciente y agrega productos.</span>
+                    <span class="badge-moderno" *ngIf="pacienteSeleccionado">Paciente seleccionado ✓</span>
+                </div>
+
+                <div class="context-chip" *ngSwitchCase="'solo_productos'">
+                    <i class="bi bi-cart"></i>
+                    <span><strong>Solo productos:</strong> Venta sin historia médica.</span>
+                </div>
+
+                <div class="context-chip" *ngSwitchDefault>
+                    <i class="bi bi-question-circle"></i>
+                    <span>Selecciona un tipo de venta para continuar</span>
                 </div>
             </div>
         </div>
 
-        <!-- Paneles principales -->
-        <div class="paneles-container">
-            <!-- 🧑 Panel Paciente y Contexto Clínico -->
-            <section class="panel-moderno panel-paciente" *ngIf="requierePaciente">
-                <div class="panel-header">
+        <div class="selector-opciones tres-opciones">
+            <!-- Opción 1: Solo Consulta -->
+            <div class="opcion-card modern-card" [class.active]="tipoVenta === 'solo_consulta'"
+                (click)="seleccionarTipoVenta('solo_consulta')">
+                <div class="card-bg-pattern"></div>
+                <div class="card-header-icon">
+                    <div class="opcion-icono" style="background: linear-gradient(135deg, #4361ee, #3a0ca3);">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <div class="opcion-badge" *ngIf="tipoVenta === 'solo_consulta'">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                </div>
+                <div class="opcion-contenido">
+                    <h6>Solo Consulta</h6>
+                    <p>Pago de consulta médica</p>
+                </div>
+            </div>
+
+            <!-- Opción 2: Consulta + Productos -->
+            <div class="opcion-card modern-card highlight-card" [class.active]="tipoVenta === 'consulta_productos'"
+                (click)="seleccionarTipoVenta('consulta_productos')">
+                <div class="card-bg-pattern"></div>
+                <div class="card-header-icon">
+                    <div class="opcion-icono" style="background: linear-gradient(135deg, #06d6a0, #118ab2);">
+                        <i class="bi bi-journal-medical"></i>
+                    </div>
+                    <div class="opcion-badge" *ngIf="tipoVenta === 'consulta_productos'">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                </div>
+                <div class="opcion-contenido">
+                    <h6>Consulta + Productos</h6>
+                    <p>Consulta y venta de lentes</p>
+                </div>
+            </div>
+
+            <!-- Opción 3: Solo Productos -->
+            <div class="opcion-card modern-card" [class.active]="tipoVenta === 'solo_productos'"
+                (click)="seleccionarTipoVenta('solo_productos')">
+                <div class="card-bg-pattern"></div>
+                <div class="card-header-icon">
+                    <div class="opcion-icono" style="background: linear-gradient(135deg, #ff9e00, #f37121);">
+                        <i class="bi bi-cart"></i>
+                    </div>
+                    <div class="opcion-badge" *ngIf="tipoVenta === 'solo_productos'">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                </div>
+                <div class="opcion-contenido">
+                    <h6>Solo Productos</h6>
+                    <p>Venta sin historia médica</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANELES PRINCIPALES -->
+    <div class="paneles-container modern-grid" [class.single-column]="tipoVenta === 'solo_productos'">
+
+        <!-- PANEL PACIENTE (solo para tipos que requieren paciente) -->
+        <section class="panel-moderno panel-paciente glass-panel"
+            *ngIf="tipoVenta === 'solo_consulta' || tipoVenta === 'consulta_productos'">
+
+            <div class="panel-header modern-header">
+                <div class="header-left">
                     <i class="bi bi-person-vcard"></i>
                     <span>Información del Paciente</span>
                 </div>
-                <div class="panel-body">
-                    <!-- Buscador de paciente -->
-                    <div class="buscador-moderno">
+                <span class="required-badge pulse">Requerido</span>
+            </div>
+
+            <div class="panel-body">
+
+                <!-- Buscador de paciente  -->
+                <div class="buscador-moderno modern-search-container">
+                    <!-- En el buscador de pacientes -->
+                    <div class="search-header">
+                        <span>Buscar paciente</span>
+                        <button class="btn-refresh" (click)="recargarPacientes()" title="Actualizar lista">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+
+                    <!-- Mostrar paciente seleccionado -->
+                    <div class="selected-patient-card" *ngIf="pacienteSeleccionado && !mostrandoBusqueda">
+                        <div class="selected-patient-info">
+                            <div class="patient-avatar">
+                                <i class="bi bi-person-circle"></i>
+                            </div>
+                            <div class="patient-details">
+                                <div class="patient-name">{{ pacienteSeleccionado.informacionPersonal.nombreCompleto }}
+                                </div>
+                                <div class="patient-meta">
+                                    <span><i class="bi bi-card-text"></i> {{
+                                        pacienteSeleccionado.informacionPersonal.cedula }}</span>
+                                    <span class="separator">•</span>
+                                    <span><i class="bi bi-telephone"></i> {{
+                                        pacienteSeleccionado.informacionPersonal.telefono || 'Sin teléfono' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn-clear-selection" (click)="limpiarSeleccionPaciente()"
+                            title="Cambiar paciente">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <!-- Buscador (visible solo cuando no hay paciente seleccionado o estamos buscando) -->
+                    <div *ngIf="!pacienteSeleccionado || mostrandoBusqueda" class="modern-search-wrapper"
+                        [class.focused]="buscandoPaciente">
+                        <i class="bi bi-search search-icon"></i>
+                        <input type="text" class="modern-search-input" placeholder="Nombre o cédula..."
+                            [(ngModel)]="textoBusquedaPaciente"
+                            (focus)="buscandoPaciente = true; mostrandoBusqueda = true"
+                            (blur)="buscandoPaciente = false" (input)="buscarPacientes()">
+
+                        <div class="search-actions">
+                            <button class="btn-clear" *ngIf="textoBusquedaPaciente" (click)="limpiarBusquedaPaciente()">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Resultados de búsqueda -->
+                    <div class="modern-search-results"
+                        *ngIf="mostrarResultadosPacientes && pacientesFiltrados.length > 0">
+                        <div class="results-header">
+                            <span>{{ pacientesFiltrados.length }} resultados</span>
+                            <button class="btn-nuevo" (click)="crearPacienteRapido()">
+                                <i class="bi bi-plus-circle"></i> Nuevo
+                            </button>
+                        </div>
+                        <div class="results-list">
+                            <div class="result-item" *ngFor="let p of pacientesFiltrados"
+                                (click)="seleccionarPaciente(p)" [class.selected]="pacienteSeleccionado?.id === p.id">
+                                <div class="item-avatar">
+                                    <i class="bi bi-person-circle"></i>
+                                </div>
+                                <div class="item-info">
+                                    <div class="item-nombre">{{ p.informacionPersonal.nombreCompleto }}</div>
+                                    <div class="item-detalles">
+                                        <span class="badge-cedula"><i class="bi bi-card-text"></i> {{
+                                            p.informacionPersonal.cedula }}</span>
+                                        <span class="badge-telefono" *ngIf="p.informacionPersonal.telefono">
+                                            <i class="bi bi-telephone"></i> {{ p.informacionPersonal.telefono }}
+                                        </span>
+                                    </div>
+                                    <div class="item-ultima-visita" *ngIf="p.ultimaVisita">
+                                        Última visita: {{ p.ultimaVisita | date:'dd/MM/yyyy' }}
+                                    </div>
+                                </div>
+                                <div class="item-action">
+                                    <i class="bi bi-arrow-right-circle"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sin resultados -->
+                    <div class="no-results-message"
+                        *ngIf="mostrarResultadosPacientes && textoBusquedaPaciente && pacientesFiltrados.length === 0">
+                        <i class="bi bi-emoji-frown"></i>
+                        <p>No se encontraron pacientes con "{{ textoBusquedaPaciente }}"</p>
+                        <button class="btn-create" (click)="crearPacienteRapido()">
+                            <i class="bi bi-plus-circle"></i> Crear nuevo paciente
+                        </button>
+                    </div>
+
+                    <div class="search-hint" *ngIf="!pacienteSeleccionado && !mostrandoBusqueda">
+                        <i class="bi bi-info-circle"></i>
+                        Haz clic en "Cambiar paciente" para buscar
+                    </div>
+                </div>
+
+                <!-- SELECTOR DE HISTORIAS -->
+                <div *ngIf="pacienteSeleccionado" class="historias-selector-moderno">
+
+                    <!-- Header con título y contador -->
+                    <div class="selector-header">
+                        <div class="header-left">
+                            <i class="bi bi-clock-history"></i>
+                            <span>Historial Clínico</span>
+                        </div>
+
+                        <div class="header-badges">
+                            <!-- SOLO CONSULTA: solo oftalmólogo no externas -->
+                            <ng-container *ngIf="tipoVenta === 'solo_consulta'">
+                                <span class="badge-count" *ngIf="historiasOftalmologoNoExternas.length > 0">
+                                    {{ historiasOftalmologoNoExternas.length }}
+                                    {{ historiasOftalmologoNoExternas.length === 1 ? 'historia' : 'historias' }}
+                                    <span class="badge-info ms-1">(oftalmólogo)</span>
+                                </span>
+                                <span class="badge-warning"
+                                    *ngIf="historiasOftalmologoNoExternas.length === 0 && historiasMedicas.length > 0">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    Sin oftalmólogo
+                                </span>
+                            </ng-container>
+
+                            <!-- CONSULTA + PRODUCTOS: todas las historias -->
+                            <span class="badge-count"
+                                *ngIf="tipoVenta === 'consulta_productos' && historiasMedicas.length > 0">
+                                {{ historiasMedicas.length }}
+                                {{ historiasMedicas.length === 1 ? 'historia' : 'historias' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Buscador (solo si hay historias) -->
+                    <div class="search-box-minimal" *ngIf="historiasMedicas.length > 0">
+                        <i class="bi bi-search"></i>
+                        <input type="text" #buscadorHistorias placeholder="Buscar por # historia o médico..."
+                            [(ngModel)]="filtroHistoriasTexto" (input)="filtrarHistorias()"
+                            (keydown.escape)="limpiarFiltro()" class="minimal-search-input">
+                        <button class="btn-clear-search" *ngIf="filtroHistoriasTexto" (click)="limpiarFiltro()"
+                            title="Limpiar filtro">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                        <span class="search-hint" *ngIf="historiasFiltradas.length > 0">
+                            {{ historiasFiltradas.length }} de {{ totalHistoriasSegunTipo }}
+                        </span>
+                    </div>
+
+                    <!-- Grid de 2 columnas con scroll -->
+                    <div class="historias-grid-2cols" [class.empty]="historiasFiltradas.length === 0">
+
+                        <!-- Estados vacíos -->
+                        <div class="grid-empty-state"
+                            *ngIf="tipoVenta === 'solo_consulta' && historiasOftalmologoNoExternas.length === 0 && historiasMedicas.length > 0">
+                            <i class="bi bi-eye-slash"></i>
+                            <p>No hay historias de oftalmólogo disponibles</p>
+                            <small>Las historias de optometrista no son válidas para venta solo de consulta</small>
+                        </div>
+
+                        <div class="grid-empty-state" *ngIf="historiasMedicas.length === 0">
+                            <i class="bi bi-journal-x"></i>
+                            <p>El paciente no tiene historias clínicas</p>
+                            <small>Puedes crear una nueva historia desde el módulo correspondiente</small>
+                        </div>
+
+                        <div class="grid-empty-state"
+                            *ngIf="historiasMedicas.length > 0 && historiasFiltradas.length === 0 && filtroHistoriasTexto">
+                            <i class="bi bi-search"></i>
+                            <p>No se encontraron historias con "{{ filtroHistoriasTexto }}"</p>
+                            <button class="btn-clear-filter" (click)="limpiarFiltro()">
+                                <i class="bi bi-x-circle"></i> Limpiar filtro
+                            </button>
+                        </div>
+
+                        <!-- Cards de historias -->
+                        <div *ngFor="let h of historiasFiltradas" class="historia-card-2cols"
+                            [class.selected]="h.id === historiaSeleccionadaId"
+                            [class.oftalmologo]="h.tipoProfesional === 'oftalmologo'"
+                            [class.optometrista]="h.tipoProfesional === 'optometrista'"
+                            [class.externa]="h.formulaExterna"
+                            [class.no-seleccionable]="tipoVenta === 'solo_consulta' && (h.tipoProfesional !== 'oftalmologo' || h.formulaExterna)"
+                            (click)="seleccionarHistoria(h)" (keydown.enter)="seleccionarHistoria(h)" tabindex="0"
+                            role="button">
+
+                            <!-- CHECK VERDE DE SELECCIÓN -->
+                            <div class="selection-check" *ngIf="h.id === historiaSeleccionadaId">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </div>
+
+                            <!-- Header de la card -->
+                            <div class="card-header-compact">
+                                <div class="header-left">
+                                    <span class="especialista-badge" [ngClass]="{
+                                            'oftalmologo': h.tipoProfesional === 'oftalmologo',
+                                            'optometrista': h.tipoProfesional === 'optometrista',
+                                            'externa': h.formulaExterna
+                                        }">
+                                        <i class="bi" [ngClass]="{
+                                            'bi-eye': h.tipoProfesional === 'oftalmologo',
+                                            'bi-eyeglasses': h.tipoProfesional === 'optometrista',
+                                            'bi-box-arrow-up-right': h.formulaExterna
+                                        }"></i>
+                                        <span>
+                                            {{ h.formulaExterna ? 'Fórmula externa' :
+                                            (h.tipoProfesional === 'oftalmologo' ? 'Oftalmólogo' : 'Optometrista') }}
+                                        </span>
+                                    </span>
+                                </div>
+
+                                <!-- Badge de fórmula externa -->
+                                <span class="badge-externa-mini"
+                                    *ngIf="tipoVenta === 'consulta_productos' && h.formulaExterna"
+                                    title="Fórmula externa">
+                                    <i class="bi bi-box-arrow-up-right"></i> Externa
+                                </span>
+                            </div>
+
+                            <!-- Cuerpo de la card -->
+                            <div class="card-body-compact">
+                                <div class="info-line">
+                                    <span class="historia-numero">#{{ h.nHistoria }}</span>
+                                    <span class="historia-fecha">{{ h.auditoria?.fechaCreacion | date:'dd/MM/yy'
+                                        }}</span>
+                                </div>
+
+                                <div class="medico-line" *ngIf="h.datosConsulta?.medico?.nombre">
+                                    <i class="bi bi-person"></i>
+                                    <span>{{ h.datosConsulta.medico.nombre }}</span>
+                                </div>
+
+                                <!-- Status de pago -->
+                                <div class="status-line"
+                                    *ngIf="h.tipoProfesional === 'oftalmologo' && !h.formulaExterna">
+                                    <span class="status-badge"
+                                        [class.pendiente]="h.datosConsulta?.pagoPendiente === true"
+                                        [class.pagado]="h.datosConsulta?.pagoPendiente === false">
+                                        <i class="bi" [ngClass]="{
+                                            'bi-clock': h.datosConsulta?.pagoPendiente === true,
+                                            'bi-check-circle': h.datosConsulta?.pagoPendiente === false
+                                        }"></i>
+                                        {{ h.datosConsulta?.pagoPendiente === true ? 'Pago pendiente' : 'Pagado' }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Overlay para no seleccionables -->
+                            <div class="no-selectable-overlay"
+                                *ngIf="tipoVenta === 'solo_consulta' && (h.tipoProfesional !== 'oftalmologo' || h.formulaExterna)"
+                                title="No válida para venta solo de consulta">
+                                <i class="bi bi-slash-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 🛒 PANEL CARRITO (siempre visible) -->
+        <section class="panel-moderno panel-productos glass-panel">
+            <div class="panel-header modern-header">
+                <div class="header-left">
+                    <i class="bi bi-cart"></i>
+                    <span>Carrito de {{ tipoVenta === 'solo_consulta' ? 'Consulta' : 'Productos' }}</span>
+                </div>
+                <span class="badge-requerido" [ngClass]="{
+                        'opcional': tipoVenta === 'consulta_productos',
+                        'requerido': tipoVenta === 'solo_productos',
+                        'info': tipoVenta === 'solo_consulta'
+                    }">
+                    {{ tipoVenta === 'solo_productos' ? 'Requerido' :
+                    (tipoVenta === 'solo_consulta' ? 'Solo consulta' : 'Opcional') }}
+                </span>
+            </div>
+
+            <div class="panel-body">
+                <!-- Buscador de productos (solo si no es solo consulta) -->
+                <div class="buscador-productos-moderno" *ngIf="tipoVenta !== 'solo_consulta'">
+                    <div class="buscador-header">
                         <label class="form-label-moderno">
                             <i class="bi bi-search"></i>
-                            Buscar paciente
+                            Buscar producto
                         </label>
-                        <ng-select #selectorPaciente id="selectorPaciente" [items]="pacientesFiltradosPorSede"
-                            bindLabel="informacionPersonal.nombreCompleto" [selectOnTab]="true" [clearable]="true"
-                            [searchable]="true" [(ngModel)]="pacienteSeleccionado"
-                            (search)="actualizarFiltroTexto($event)" (change)="onPacienteSeleccionado($event)"
-                            [searchFn]="filtrarPorNombreOCedula" placeholder="Buscar por nombre o cédula..."
-                            class="modern-ng-select">
+                        <div class="filtros-rapidos">
+                            <button class="filtro-chip" [class.active]="filtroCategoria === 'todos'"
+                                (click)="filtroCategoria = 'todos'">Todos</button>
+                            <button class="filtro-chip" [class.active]="filtroCategoria === 'lentes'"
+                                (click)="filtroCategoria = 'lentes'">Lentes</button>
+                            <button class="filtro-chip" [class.active]="filtroCategoria === 'monturas'"
+                                (click)="filtroCategoria = 'monturas'">Monturas</button>
+                            <button class="filtro-chip" [class.active]="filtroCategoria === 'accesorios'"
+                                (click)="filtroCategoria = 'accesorios'">Accesorios</button>
+                        </div>
+                    </div>
+
+                    <div class="search-wrapper">
+                        <i class="bi bi-search search-icon"></i>
+                        <ng-select #productoSelect [items]="productosFiltradosPorCategoria" bindLabel="nombre"
+                            bindValue="id" [searchable]="true" [clearable]="true" [selectOnTab]="true"
+                            [(ngModel)]="productoSeleccionado" (change)="onProductoSeleccionadoChange($event)"
+                            [searchFn]="filtrarProductoPorNombreOCodigo"
+                            placeholder="Buscar por nombre, código o categoría..." class="modern-ng-select">
 
                             <ng-template ng-option-tmp let-item="item">
-                                <div class="paciente-option">
-                                    <strong>{{ item.informacionPersonal.nombreCompleto }}</strong>
-                                    <small class="text-muted">— {{ item.informacionPersonal.cedula }}</small>
+                                <div class="producto-option-moderno">
+                                    <div class="option-imagen">
+                                        <i class="bi" [ngClass]="getIconoCategoria(item)"></i>
+                                    </div>
+                                    <div class="option-info">
+                                        <strong>{{ item.nombre }}</strong>
+                                        <div class="option-detalles">
+                                            <span class="codigo">{{ item.codigo }}</span>
+                                            <span class="separator">•</span>
+                                            <span class="precio">{{ formatearMoneda(item.precio) }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="option-stock" [class.low-stock]="item.stock < 5">
+                                        <i class="bi bi-box"></i>
+                                        {{ item.stock }}
+                                    </div>
                                 </div>
                             </ng-template>
 
                             <ng-template ng-notfound-tmp>
-                                <div class="not-found-message">
-                                    <i class="bi bi-exclamation-circle"></i>
-                                    No se encontraron pacientes con ese nombre o cédula
+                                <div class="not-found-moderno">
+                                    <i class="bi bi-search"></i>
+                                    <span>No se encontraron productos</span>
                                 </div>
                             </ng-template>
                         </ng-select>
                     </div>
+                </div>
 
-                    <!-- Selector de historia médica -->
-                    <div *ngIf="pacienteSeleccionado && historiasMedicas.length > 0" class="selector-historia-moderno">
-                        <label class="form-label-moderno">
-                            <i class="bi bi-clipboard-pulse"></i>
-                            Seleccionar historia médica
-                        </label>
-                        <ng-select [items]="historiasMedicas" bindLabel="fechaFormateada" bindValue="key"
-                            [searchable]="false" [clearable]="false" [(ngModel)]="historiaSeleccionadaId"
-                            (change)="onHistoriaSeleccionada($event)" placeholder="Selecciona una historia médica..."
-                            class="modern-ng-select">
+                <!-- Mensaje para solo consulta -->
+                <div *ngIf="tipoVenta === 'solo_consulta'" class="solo-consulta-message">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Venta solo de consulta:</strong> No se pueden agregar productos.
+                        La consulta se agrega automáticamente al seleccionar una historia.
+                    </div>
+                </div>
 
-                            <ng-template ng-label-tmp let-item="item">
-                                <div class="historia-label">
-                                    <span class="historia-fecha">{{item.fechaFormateada}}</span>
-                                    <span *ngIf="item.esReciente" class="badge bg-info ms-2">MÁS RECIENTE</span>
-                                </div>
-                            </ng-template>
-
-                            <ng-template ng-option-tmp let-item="item">
-                                <div class="historia-option">
-                                    <div class="historia-header">
-                                        <strong>{{item.nHistoria}}</strong>
-                                        <small class="text-muted"> {{item.fechaFormateada}}</small>
-                                        <span *ngIf="item.esReciente" class="badge bg-info ms-2">MÁS RECIENTE</span>
-                                    </div>
-                                    <div class="historia-detalle">
-                                        <div class="row">
-                                            <div class="col-6">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-person-badge"></i>
-                                                    {{item.profesionalNombre || 'Sin profesional'}}
-                                                </small>
-                                            </div>
-                                            <div class="col-6 text-end">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-emoji-sunglasses"></i> {{item.motivo}}
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </ng-template>
-                        </ng-select>
-                        <small class="form-text text-muted">
-                            Por defecto se selecciona la historia más reciente. Puedes cambiar si es necesario.
-                        </small>
+                <!-- CASO 1: SOLO CONSULTA  -->
+                <div *ngIf="tipoVenta === 'solo_consulta' && consultaEnCarrito" class="productos-table-container-moderno">
+                    <div class="table-header">
+                        <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Detalle de Consulta Médica</h5>
+                        <span class="badge-count">1 consulta</span>
                     </div>
 
-                    <!-- En la sección de formulación clínica -->
-                    <div *ngIf="historiaMedica && tieneFormulaCompleta(historiaMedica)" class="formulacion-section">
-                        <div class="section-header-formulacion">
-                            <div class="header-left">
-                                <i class="bi bi-eyeglasses"></i>
-                                <h5>Formulación Clínica</h5>
-                            </div>
-                            <span *ngIf="!tieneFormulaCompleta(historiaMedica)" class="badge-warning">
-                                <i class="bi bi-exclamation-triangle"></i> Sin fórmula
-                            </span>
-                        </div>
-
-                        <div class="formulacion-section">
-                            <div class="formulacion-grid">
-                                <!-- Ojo Derecho -->
-                                <div class="ojo-card">
-                                    <div class="ojo-header ojo-derecho">
-                                        <i class="bi bi-eye-fill"></i>
-                                        <span>Ojo Derecho (OD)</span>
-                                    </div>
-                                    <div class="ojo-params">
-                                        <div class="param">
-                                            <span class="param-label">Esfera (ESF)</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.esf_od || '--' }}</span>
+                    <div class="table-scroll">
+                        <table class="table-moderna table-consulta">
+                            <thead>
+                                <tr>
+                                    <th>Consulta</th>
+                                    <th>Costo Médico (editable)</th>
+                                    <th>Costo Óptica (editable)</th>
+                                    <th>Total</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="consulta-row">
+                                    <!-- Columna 1: Información de la consulta -->
+                                    <td class="consulta-info">
+                                        <div class="info-with-icon">
+                                            <i class="bi bi-person-badge fs-4 text-primary"></i>
+                                            <div>
+                                                <span class="consulta-nombre fw-bold">Consulta Oftalmología</span>
+                                            </div>
                                         </div>
-                                        <div class="param">
-                                            <span class="param-label">Cilindro (CIL)</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.cil_od || '--' }}</span>
+                                    </td>
+                                    
+                                    <!-- Columna 2: Costo Médico (editable) -->
+                                    <td class="monto-medico">
+                                        <div class="monto-label-group">
+                                            <div class="monto-editable">
+                                                <span class="moneda-simbolo">{{ obtenerSimboloMoneda('dolar') }}</span>
+                                                <input type="number" 
+                                                    class="form-control form-control-sm monto-input"
+                                                    [(ngModel)]="pagoMedico"
+                                                    (input)="actualizarTotalConsulta()"
+                                                    min="0"
+                                                    step="1"
+                                                    placeholder="0">
+                                            </div>
                                         </div>
-                                        <div class="param">
-                                            <span class="param-label">Eje</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.eje_od || '--' }}</span>
+                                    </td>
+                                    
+                                    <!-- Columna 3: Costo Óptica (editable) -->
+                                    <td class="monto-optica">
+                                        <div class="monto-label-group">
+                                            <div class="monto-editable">
+                                                <span class="moneda-simbolo">{{ obtenerSimboloMoneda('dolar') }}</span>
+                                                <input type="number" 
+                                                    class="form-control form-control-sm monto-input"
+                                                    [(ngModel)]="pagoOptica"
+                                                    (input)="actualizarTotalConsulta()"
+                                                    min="0"
+                                                    step="1"
+                                                    placeholder="0">
+                                            </div>
                                         </div>
-                                        <div class="param">
-                                            <span class="param-label">ADD</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.add_od || '--' }}</span>
+                                    </td>
+                                    
+                                    <!-- Columna 4: Total (calculado automáticamente) -->
+                                    <td class="monto-total">
+                                        <div class="total-display">
+                                            <span class="total-valor fw-bold fs-5">{{ formatearMoneda(montoConsulta) }}</span>
                                         </div>
-                                        <div class="param">
-                                            <span class="param-label">ALT</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.alt_od || '--' }}</span>
-                                        </div>
-                                        <div class="param">
-                                            <span class="param-label">DP</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.dp_od || '--' }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Ojo Izquierdo -->
-                                <div class="ojo-card">
-                                    <div class="ojo-header ojo-izquierdo">
-                                        <i class="bi bi-eye-fill"></i>
-                                        <span>Ojo Izquierdo (OI)</span>
-                                    </div>
-                                    <div class="ojo-params">
-                                        <div class="param">
-                                            <span class="param-label">Esfera (ESF)</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.esf_oi || '--' }}</span>
-                                        </div>
-                                        <div class="param">
-                                            <span class="param-label">Cilindro (CIL)</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.cil_oi || '--' }}</span>
-                                        </div>
-                                        <div class="param">
-                                            <span class="param-label">Eje</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.eje_oi || '--' }}</span>
-                                        </div>
-                                        <div class="param">
-                                            <span class="param-label">ADD</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.add_oi || '--' }}</span>
-                                        </div>
-                                        <div class="param">
-                                            <span class="param-label">ALT</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.alt_oi || '--' }}</span>
-                                        </div>
-                                        <div class="param">
-                                            <span class="param-label">DP</span>
-                                            <span class="param-value">{{
-                                                historiaMedica?.examenOcular?.refraccionFinal?.dp_oi || '--' }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Indicaciones - Versión Compacta con Texto Legible -->
-                        <div *ngIf="historiaMedica?.recomendaciones?.length > 0"
-                            class="recomendaciones-section-compact">
-                            <div class="section-header-compact">
-                                <div class="header-left">
-                                    <i class="bi bi-clipboard-check"></i>
-                                    <h5>Indicaciones</h5>
-                                </div>
-                                <span class="badge-count">{{ historiaMedica.recomendaciones.length }}</span>
-                            </div>
-
-                            <div class="recomendaciones-vertical-compact">
-                                <div *ngFor="let rec of historiaMedica.recomendaciones; let i = index"
-                                    class="recomendacion-card-compact">
-                                    <!-- Header -->
-                                    <div class="card-header-compact">
-                                        <span class="indicacion-numero">#{{ i + 1 }}</span>
-                                        <span class="badge-tipo"
-                                            [ngClass]="esLenteContactoRecomendacion(rec) ? 'tipo-contacto' : 'tipo-normal'">
-                                            {{ esLenteContactoRecomendacion(rec) ? '👁️ Lentes de contacto' : '👓 Lentes convencionales' }}
+                                    </td>
+                                    
+                                    <!-- Columna 5: Acciones (bloqueado) -->
+                                    <td class="acciones">
+                                        <span class="lock-icon" title="La consulta no se puede eliminar individualmente">
+                                            <i class="bi bi-lock"></i>
                                         </span>
-                                    </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-                                    <!-- Grid de 4 columnas para información principal -->
-                                    <div class="info-grid-compact">
-                                        <!-- Tipo de cristal -->
-                                        <div class="info-item">
-                                            <span class="info-label">CRISTAL</span>
-                                            <span class="info-value">{{ getTipoCristalRecomendado(rec.cristal) }}</span>
-                                        </div>
-
-                                        <!-- Material -->
-                                        <div class="info-item">
-                                            <span class="info-label">MATERIAL</span>
-                                            <span class="info-value">{{ getMaterialesRecomendados(rec.material)
-                                                }}</span>
-                                        </div>
-
-                                        <!-- Montura (si existe) -->
-                                        <div class="info-item" *ngIf="rec.montura && rec.montura !== ''">
-                                            <span class="info-label">MONTURA</span>
-                                            <span class="info-value">{{ rec.montura }}</span>
-                                        </div>
-
-                                        <!-- Modelo lente contacto (si aplica) -->
-                                        <div class="info-item"
-                                            *ngIf="rec.tipoLentesContacto && rec.tipoLentesContacto !== ''">
-                                            <span class="info-label">MODELO CONTACTO</span>
-                                            <span class="info-value highlight">{{
-                                                getTipoLenteContactoLabel(rec.tipoLentesContacto) }}</span>
-                                        </div>
-
-                                        <!-- Espacio para mantener grid cuando falta algún campo -->
-                                        <div class="info-item" *ngIf="!rec.montura || rec.montura === ''"></div>
-                                    </div>
-
-                                    <!-- Medidas en línea (si existen) -->
-                                    <div class="medidas-line"
-                                        *ngIf="rec.medidaHorizontal || rec.medidaVertical || rec.medidaDiagonal || rec.medidaPuente">
-                                        <i class="bi bi-rulers"></i>
-                                        <span class="medidas-label">Medidas:</span>
-                                        <span *ngIf="rec.medidaHorizontal" class="medida-chip">H: {{
-                                            rec.medidaHorizontal }} cm</span>
-                                        <span *ngIf="rec.medidaVertical" class="medida-chip">V: {{ rec.medidaVertical }}
-                                            cm</span>
-                                        <span *ngIf="rec.medidaDiagonal" class="medida-chip">D: {{ rec.medidaDiagonal }}
-                                            cm</span>
-                                        <span *ngIf="rec.medidaPuente" class="medida-chip">P: {{ rec.medidaPuente }}
-                                            cm</span>
-                                    </div>
-
-                                    <!-- Observaciones (si existen) -->
-                                    <div class="observaciones-line"
-                                        *ngIf="rec.observaciones && rec.observaciones !== ''">
-                                        <i class="bi bi-chat-text"></i>
-                                        <span class="observaciones-label">Observaciones:</span>
-                                        <span class="observaciones-text">{{ rec.observaciones }}</span>
-                                    </div>
+                    <!-- Resumen para solo consulta -->
+                    <div class="resumen-venta-moderno">
+                        <div class="resumen-content">
+                            <div class="resumen-info">
+                                <div class="resumen-label">
+                                    <i class="bi bi-receipt"></i>
+                                    <span>Total consulta:</span>
+                                </div>
+                                <div class="resumen-total">
+                                    <span class="total-valor fs-4">{{ formatearMoneda(montoConsulta) }}</span>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Mensaje cuando no hay indicaciones -->
-                        <div *ngIf="!historiaMedica?.recomendaciones || historiaMedica.recomendaciones.length === 0"
-                            class="no-recomendaciones-compact">
-                            <i class="bi bi-info-circle"></i>
-                            <span>Sin indicaciones</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 🛒 Panel Carrito de Productos -->
-            <section class="panel-moderno panel-productos">
-                <div class="panel-header">
-                    <i class="bi bi-cart"></i>
-                    <span>Carrito de Productos</span>
-                </div>
-                <div class="panel-body">
-                    <!-- Buscador de productos -->
-                    <div class="buscador-productos">
-                        <div class="buscador-main">
-                            <label class="form-label-moderno">
-                                <i class="bi bi-search"></i>
-                                Buscar producto
-                            </label>
-                            <ng-select #productoSelect id="selectorProducto" [items]="productosFiltradosPorSede"
-                                bindLabel="nombre" bindValue="id" [searchable]="true" [clearable]="true"
-                                [selectOnTab]="true" [(ngModel)]="productoSeleccionado"
-                                (change)="onProductoSeleccionadoChange($event)"
-                                [searchFn]="filtrarProductoPorNombreOCodigo" placeholder="Buscar por nombre o código..."
-                                class="modern-ng-select">
-
-                                <ng-template ng-option-tmp let-item="item">
-                                    <div class="producto-option">
-                                        <strong>{{ item.nombre }}</strong>
-                                        <small class="text-muted">— {{ item.codigo }}</small>
-                                        <small class="stock-badge" [class.low-stock]="item.stock < 5">
-                                            Stock: {{ item.stock }}
-                                        </small>
-                                    </div>
-                                </ng-template>
-
-                                <ng-template ng-notfound-tmp>
-                                    <div class="not-found-message">
-                                        <i class="bi bi-exclamation-circle"></i>
-                                        No se encontraron productos con ese nombre o código
-                                    </div>
-                                </ng-template>
-                            </ng-select>
-                        </div>
-                    </div>
-
-                    <!-- Tabla de productos mejorada -->
-                    <div *ngIf="venta.productos.length > 0" class="productos-table-container">
-                        <div class="section-header">
-                            <i class="bi bi-cart-check"></i>
-                            <h5>Productos en el Carrito</h5>
-                            <span class="badge bg-primary">{{ venta.productos.length }} producto{{
-                                venta.productos.length > 1 ? 's' : '' }}</span>
-                        </div>
-
-                        <div class="table-scroll-container">
-                            <table class="table-moderna">
-                                <thead>
-                                    <tr>
-                                        <th class="text-center">Producto</th>
-                                        <th class="text-center">Precio Unit.</th>
-                                        <th class="text-center">Cant.</th>
-                                        <th class="text-center">Subtotal</th>
-                                        <!-- QUITAMOS la columna de IVA -->
-                                        <th class="text-center">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr *ngFor="let p of productosConDetalle; trackBy: trackByProducto"
-                                        class="producto-row">
-
-                                        <!-- Columna Producto -->
-                                        <td class="producto-info">
-                                            <div class="producto-details">
-                                                <span class="producto-nombre">{{ p.nombre }}</span>
-                                                <small class="producto-codigo text-muted">{{ p.codigo }}</small>
-                                            </div>
-                                        </td>
-
-                                        <!-- Columna Precio -->
-                                        <td class="text-center precio">
-                                            <span class="precio-unitario">
-                                                <!-- Mostrar precio SIN IVA -->
-                                                {{ formatearMoneda(getPrecioParaMostrar(p)) }}
-                                            </span>
-                                            <!-- Referencia en Bs si no es bolívar -->
-                                            <small *ngIf="!esMonedaBolivar(monedaSistema)" class="text-muted d-block">
-                                                {{ formatearMoneda(getPrecioEnBs(p), 'bolivar') }}
-                                            </small>
-                                        </td>
-
-                                        <!-- Columna Cantidad -->
-                                        <td class="text-center cantidad-cell">
-                                            <div class="cantidad-control">
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number" [ngModel]="p.cantidad ?? 1"
-                                                        (ngModelChange)="onCantidadChange(p, $event)" min="1"
-                                                        max="{{ p.stock }}" class="form-control cantidad-input"
-                                                        [class.border-warning]="(p.cantidad ?? 1) > p.stock" />
-                                                </div>
-                                                <small class="stock-info"
-                                                    [class.text-danger]="(p.cantidad ?? 1) > p.stock"
-                                                    [class.text-muted]="(p.cantidad ?? 1) <= p.stock">
-                                                    {{ p.stock }} disponible{{ p.stock > 1 ? 's' : '' }}
-                                                </small>
-                                            </div>
-                                        </td>
-
-                                        <!-- Columna Subtotal -->
-                                        <td class="text-center subtotal">
-                                            <!-- Mostrar subtotal SIN IVA -->
-                                            {{ formatearMoneda(p.subtotal) }}
-                                        </td>
-
-                                        <!-- Columna Acciones -->
-                                        <td class="text-center acciones">
-                                            <button class="btn-eliminar" (click)="eliminarProducto(p.id)"
-                                                title="Eliminar del carrito">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Resumen y botón de generar venta -->
-                    <div *ngIf="venta.productos.length > 0" @fadeInOut class="resumen-venta">
-                        <div class="resumen-content">
-                            <div class="monto-total">
-                                <i class="bi bi-receipt"></i>
-                                <span class="resumen-label">Monto total (sin IVA):</span>
-                                <span class="monto-valor">
-                                    {{ formatearMoneda(totalProductos) }}
-                                </span>
-                            </div>
-                            <button class="btn-generar-venta" (click)="abrirModalResumen()"
-                                [disabled]="!puedeGenerarVentaDesdeCarrito()" [title]="getMensajeTooltipBotonGenerar()">
+                            <button class="btn-generar-moderno" (click)="abrirModalResumen()"
+                                [disabled]="!puedeGenerarVenta">
                                 <i class="bi bi-check-lg"></i>
-                                Generar Venta
+                                <span>Generar Venta</span>
+                                <div class="btn-glow"></div>
+                            </button>
+                        </div>
+
+                        <!-- Barra de progreso -->
+                        <div class="validation-progress">
+                            <div class="progress-step" [class.completed]="pasoPacienteCompletado">
+                                <i class="bi" [ngClass]="pasoPacienteCompletado ? 'bi-check-circle-fill' : 'bi-person'"></i>
+                                <span>Paciente</span>
+                            </div>
+                            <div class="progress-step" [class.completed]="pasoHistoriaCompletado">
+                                <i class="bi" [ngClass]="pasoHistoriaCompletado ? 'bi-check-circle-fill' : 'bi-journal'"></i>
+                                <span>Historia</span>
+                            </div>
+                            <div class="progress-step" [class.completed]="pasoItemsCompletado">
+                                <i class="bi" [ngClass]="pasoItemsCompletado ? 'bi-check-circle-fill' : 'bi-cart'"></i>
+                                <span>Consulta</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CASO 2: SOLO PRODUCTOS -->
+                <div *ngIf="tipoVenta === 'solo_productos' && venta.productos.length > 0" class="productos-table-container-moderno">
+                    <div class="table-header">
+                        <h5 class="mb-0"><i class="bi bi-box me-2"></i>Productos en el Carrito</h5>
+                        <span class="badge-count">{{ venta.productos.length }} items</span>
+                    </div>
+
+                    <div class="table-scroll">
+                        <table class="table-moderna">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Precio</th>
+                                    <th>Cantidad</th>
+                                    <th>Subtotal</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let item of venta.productos; trackBy: trackByItem" class="producto-row-moderno">
+                                    <td class="producto-info">
+                                        <div class="info-with-icon">
+                                            <i class="bi bi-box"></i>
+                                            <div>
+                                                <span class="producto-nombre">{{ item.nombre }}</span>
+                                                <small class="producto-codigo" *ngIf="item.codigo && item.codigo !== 'N/A'">{{ item.codigo }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center precio">
+                                        <span class="precio-unitario">{{ formatearMoneda(item.precio) }}</span>
+                                    </td>
+                                    <td class="text-center cantidad-cell">
+                                        <div class="cantidad-control-moderno">
+                                            <button class="btn-qty" (click)="disminuirCantidad(item)">-</button>
+                                            <span class="cantidad">{{ item.cantidad }}</span>
+                                            <button class="btn-qty" (click)="aumentarCantidad(item)">+</button>
+                                        </div>
+                                    </td>
+                                    <td class="text-center subtotal">
+                                        <span class="subtotal-monto">{{ formatearMoneda(item.precio * item.cantidad) }}</span>
+                                    </td>
+                                    <td class="text-center acciones">
+                                        <button class="btn-eliminar-moderno" (click)="eliminarItem(item)" title="Eliminar del carrito">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Resumen para solo productos -->
+                    <div class="resumen-venta-moderno">
+                        <div class="resumen-content">
+                            <div class="resumen-info">
+                                <div class="resumen-label">
+                                    <i class="bi bi-receipt"></i>
+                                    <span>Total productos:</span>
+                                </div>
+                                <div class="resumen-total">
+                                    <span class="total-valor fs-4">{{ formatearMoneda(montoTotalVenta) }}</span>
+                                    <small *ngIf="venta.descuento" class="descuento-badge">
+                                        -{{ venta.descuento }}% desc.
+                                    </small>
+                                </div>
+                            </div>
+
+                            <button class="btn-generar-moderno" (click)="abrirModalResumen()"
+                                [disabled]="!puedeGenerarVenta">
+                                <i class="bi bi-check-lg"></i>
+                                <span>Generar Venta</span>
+                                <div class="btn-glow"></div>
                             </button>
                         </div>
                     </div>
                 </div>
-            </section>
-        </div>
+
+                <!-- CASO 3: CONSULTA + PRODUCTOS -->
+                <div *ngIf="tipoVenta === 'consulta_productos' && (consultaEnCarrito || venta.productos.length > 0)" 
+                    class="productos-table-container-moderno">
+                    <div class="table-header">
+                        <h5 class="mb-0"><i class="bi bi-cart me-2"></i>Carrito de Venta</h5>
+                        <span class="badge-count">{{ totalItemsVisual }} items</span>
+                    </div>
+
+                    <div class="table-scroll">
+                        <table class="table-moderna">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">Item</th>
+                                    <th class="text-center">Precio (editable)</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-center">Subtotal</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                                <tbody>
+                                <!-- PRIMERO: Mostrar la consulta (si existe) - SOLO UNA VEZ -->
+                                <tr *ngIf="consultaEnCarrito" class="producto-row-moderno item-consulta">
+                                    <td class="producto-info">
+                                        <div class="info-with-icon">
+                                            <i class="bi bi-person-badge text-primary"></i>
+                                            <div>
+                                                <span class="producto-nombre">Consulta Oftalmológica</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    
+                                    <!-- Precio de consulta (EDITABLE - solo médico) -->
+                                    <td class="text-center precio">
+                                        <div class="monto-editable">
+                                            <span class="moneda-simbolo">{{ obtenerSimboloMoneda('dolar') }}</span>
+                                            <input type="number" 
+                                                class="form-control form-control-sm monto-input"
+                                                [(ngModel)]="pagoMedico"
+                                                (input)="actualizarTotalConsulta()"
+                                                min="0"
+                                                step="1"
+                                                placeholder="0">
+                                        </div>
+                                    </td>
+                                    
+                                    <td class="text-center cantidad-cell">
+                                        <span class="cantidad-fija">1</span>
+                                    </td>
+                                    
+                                    <td class="text-center subtotal">
+                                        <span class="subtotal-monto">{{ formatearMoneda(pagoMedico) }}</span>
+                                    </td>
+                                    
+                                    <td class="text-center acciones">
+                                        <span class="lock-icon" title="La consulta no se puede eliminar individualmente">
+                                            <i class="bi bi-lock"></i>
+                                        </span>
+                                    </td>
+                                </tr>
+
+                                <!-- DESPUÉS: Mostrar productos físicos -->
+                                <tr *ngFor="let item of venta.productos; trackBy: trackByItem" class="producto-row-moderno">
+                                    <td class="producto-info">
+                                        <div class="info-with-icon">
+                                            <i class="bi bi-box"></i>
+                                            <div>
+                                                <span class="producto-nombre">{{ item.nombre }}</span>
+                                                <small class="producto-codigo" *ngIf="item.codigo && item.codigo !== 'N/A'">{{ item.codigo }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center precio">
+                                        <span class="precio-unitario">{{ formatearMoneda(item.precio) }}</span>
+                                    </td>
+                                    <td class="text-center cantidad-cell">
+                                        <div class="cantidad-control-moderno">
+                                            <button class="btn-qty" (click)="disminuirCantidad(item)">-</button>
+                                            <span class="cantidad">{{ item.cantidad }}</span>
+                                            <button class="btn-qty" (click)="aumentarCantidad(item)">+</button>
+                                        </div>
+                                    </td>
+                                    <td class="text-center subtotal">
+                                        <span class="subtotal-monto">{{ formatearMoneda(item.precio * item.cantidad) }}</span>
+                                    </td>
+                                    <td class="text-center acciones">
+                                        <button class="btn-eliminar-moderno" (click)="eliminarItem(item)" title="Eliminar del carrito">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Resumen para consulta + productos -->
+                    <div class="resumen-venta-moderno">
+                        <div class="resumen-content">
+                            <div class="resumen-info">
+                                <div class="resumen-label">
+                                    <i class="bi bi-receipt"></i>
+                                    <span>{{ textoResumen }}</span>
+                                </div>
+                                <div class="resumen-total">
+                                    <span class="total-valor fs-4">{{ formatearMoneda(montoTotalVenta) }}</span>
+                                    <small *ngIf="venta.descuento" class="descuento-badge">
+                                        -{{ venta.descuento }}% desc.
+                                    </small>
+                                </div>
+                            </div>
+
+                            <button class="btn-generar-moderno" (click)="abrirModalResumen()"
+                                [disabled]="!puedeGenerarVenta">
+                                <i class="bi bi-check-lg"></i>
+                                <span>Generar Venta</span>
+                                <div class="btn-glow"></div>
+                            </button>
+                        </div>
+
+                        <!-- Barra de progreso -->
+                        <div class="validation-progress">
+                            <div class="progress-step" [class.completed]="pasoPacienteCompletado">
+                                <i class="bi" [ngClass]="pasoPacienteCompletado ? 'bi-check-circle-fill' : 'bi-person'"></i>
+                                <span>Paciente</span>
+                            </div>
+                            <div class="progress-step" [class.completed]="pasoHistoriaCompletado">
+                                <i class="bi" [ngClass]="pasoHistoriaCompletado ? 'bi-check-circle-fill' : 'bi-journal'"></i>
+                                <span>Historia</span>
+                            </div>
+                            <div class="progress-step" [class.completed]="pasoItemsCompletado">
+                                <i class="bi" [ngClass]="pasoItemsCompletado ? 'bi-check-circle-fill' : 'bi-cart'"></i>
+                                <span>Items</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =========================================== -->
+                <!-- ESTADO VACÍO (para cuando no hay nada)      -->
+                <!-- =========================================== -->
+                <div *ngIf="(tipoVenta === 'solo_consulta' && !consultaEnCarrito) || 
+                            (tipoVenta === 'solo_productos' && venta.productos.length === 0) ||
+                            (tipoVenta === 'consulta_productos' && !consultaEnCarrito && venta.productos.length === 0)" 
+                    class="empty-cart-moderno">
+                    <div class="empty-icon">
+                        <i class="bi bi-cart3"></i>
+                    </div>
+                    <h4>Carrito vacío</h4>
+                    <p [ngSwitch]="tipoVenta">
+                        <span *ngSwitchCase="'solo_consulta'">Selecciona una historia para agregar la consulta automáticamente</span>
+                        <span *ngSwitchCase="'consulta_productos'">Selecciona una historia para agregar la consulta y luego agrega productos</span>
+                        <span *ngSwitchCase="'solo_productos'">Agrega productos para continuar</span>
+                    </p>
+
+                    <!-- Sugerencia de consulta pendiente -->
+                    <div class="sugerencia-consulta" *ngIf="(tipoVenta === 'solo_consulta' || tipoVenta === 'consulta_productos') && 
+                                historiaMedicaSeleccionada && 
+                                esConsultaCobrable(historiaMedicaSeleccionada) && 
+                                !consultaYaAgregada()">
+                        <span class="sugerencia-label">💡 Sugerencia:</span>
+                        <button class="btn-outline-moderno" (click)="agregarConsultaAlCarrito()">
+                            <i class="bi bi-plus-circle"></i> Agregar consulta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 </div>
+
+
+
 
 <!-- Modal resumen de venta -->
 <div class="modal fade" id="resumenVentaModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"
@@ -583,87 +954,90 @@
                                 </div>
                             </div>
 
-                           <!-- Indicaciones - Versión Compacta con Texto Legible -->
-                        <div *ngIf="historiaMedica?.recomendaciones?.length > 0"
-                            class="recomendaciones-section-compact">
-                            <div class="section-header-compact-resumen">
-                                <div class="header-left">
-                                    <i class="bi bi-clipboard-check"></i>
-                                    <h5>Indicaciones</h5>
+                            <!-- Indicaciones - Versión Compacta con Texto Legible -->
+                            <div *ngIf="historiaMedica?.recomendaciones?.length > 0"
+                                class="recomendaciones-section-compact">
+                                <div class="section-header-compact-resumen">
+                                    <div class="header-left">
+                                        <i class="bi bi-clipboard-check"></i>
+                                        <h5>Indicaciones</h5>
+                                    </div>
+                                    <span class="badge-count">{{ historiaMedica.recomendaciones.length }}</span>
                                 </div>
-                                <span class="badge-count">{{ historiaMedica.recomendaciones.length }}</span>
-                            </div>
 
-                            <div class="recomendaciones-vertical-compact">
-                                <div *ngFor="let rec of historiaMedica.recomendaciones; let i = index"
-                                    class="recomendacion-card-compact">
-                                    <!-- Header -->
-                                    <div class="card-header-compact">
-                                        <span class="indicacion-numero">#{{ i + 1 }}</span>
-                                        <span class="badge-tipo"
-                                            [ngClass]="esLenteContactoRecomendacion(rec) ? 'tipo-contacto' : 'tipo-normal'">
-                                            {{ esLenteContactoRecomendacion(rec) ? '👁️ Lentes de contacto' : '👓 Lentes convencionales' }}
-                                        </span>
-                                    </div>
-
-                                    <!-- Grid de 4 columnas para información principal -->
-                                    <div class="info-grid-compact">
-                                        <!-- Tipo de cristal -->
-                                        <div class="info-item">
-                                            <span class="info-label">CRISTAL</span>
-                                            <span class="info-value">{{ getTipoCristalRecomendado(rec.cristal) }}</span>
+                                <div class="recomendaciones-vertical-compact">
+                                    <div *ngFor="let rec of historiaMedica.recomendaciones; let i = index"
+                                        class="recomendacion-card-compact">
+                                        <!-- Header -->
+                                        <div class="card-header-compact">
+                                            <span class="indicacion-numero">#{{ i + 1 }}</span>
+                                            <span class="badge-tipo"
+                                                [ngClass]="esLenteContactoRecomendacion(rec) ? 'tipo-contacto' : 'tipo-normal'">
+                                                {{ esLenteContactoRecomendacion(rec) ? '👁️ Lentes de contacto' : '👓 Lentes convencionales' }}
+                                            </span>
                                         </div>
 
-                                        <!-- Material -->
-                                        <div class="info-item">
-                                            <span class="info-label">MATERIAL</span>
-                                            <span class="info-value">{{ getMaterialesRecomendados(rec.material)
-                                                }}</span>
+                                        <!-- Grid de 4 columnas para información principal -->
+                                        <div class="info-grid-compact">
+                                            <!-- Tipo de cristal -->
+                                            <div class="info-item">
+                                                <span class="info-label">CRISTAL</span>
+                                                <span class="info-value">{{ getTipoCristalRecomendado(rec.cristal)
+                                                    }}</span>
+                                            </div>
+
+                                            <!-- Material -->
+                                            <div class="info-item">
+                                                <span class="info-label">MATERIAL</span>
+                                                <span class="info-value">{{ getMaterialesRecomendados(rec.material)
+                                                    }}</span>
+                                            </div>
+
+                                            <!-- Montura (si existe) -->
+                                            <div class="info-item" *ngIf="rec.montura && rec.montura !== ''">
+                                                <span class="info-label">MONTURA</span>
+                                                <span class="info-value">{{ rec.montura }}</span>
+                                            </div>
+
+                                            <!-- Modelo lente contacto (si aplica) -->
+                                            <div class="info-item"
+                                                *ngIf="rec.tipoLentesContacto && rec.tipoLentesContacto !== ''">
+                                                <span class="info-label">MODELO CONTACTO</span>
+                                                <span class="info-value highlight">{{
+                                                    getTipoLenteContactoLabel(rec.tipoLentesContacto) }}</span>
+                                            </div>
+
+                                            <!-- Espacio para mantener grid cuando falta algún campo -->
+                                            <div class="info-item" *ngIf="!rec.montura || rec.montura === ''"></div>
                                         </div>
 
-                                        <!-- Montura (si existe) -->
-                                        <div class="info-item" *ngIf="rec.montura && rec.montura !== ''">
-                                            <span class="info-label">MONTURA</span>
-                                            <span class="info-value">{{ rec.montura }}</span>
+                                        <!-- Medidas en línea (si existen) -->
+                                        <div class="medidas-line"
+                                            *ngIf="rec.medidaHorizontal || rec.medidaVertical || rec.medidaDiagonal || rec.medidaPuente">
+                                            <i class="bi bi-rulers"></i>
+                                            <span class="medidas-label">Medidas:</span>
+                                            <span *ngIf="rec.medidaHorizontal" class="medida-chip">H: {{
+                                                rec.medidaHorizontal }} cm</span>
+                                            <span *ngIf="rec.medidaVertical" class="medida-chip">V: {{
+                                                rec.medidaVertical }}
+                                                cm</span>
+                                            <span *ngIf="rec.medidaDiagonal" class="medida-chip">D: {{
+                                                rec.medidaDiagonal }}
+                                                cm</span>
+                                            <span *ngIf="rec.medidaPuente" class="medida-chip">P: {{ rec.medidaPuente }}
+                                                cm</span>
                                         </div>
 
-                                        <!-- Modelo lente contacto (si aplica) -->
-                                        <div class="info-item"
-                                            *ngIf="rec.tipoLentesContacto && rec.tipoLentesContacto !== ''">
-                                            <span class="info-label">MODELO CONTACTO</span>
-                                            <span class="info-value highlight">{{
-                                                getTipoLenteContactoLabel(rec.tipoLentesContacto) }}</span>
+                                        <!-- Observaciones (si existen) -->
+                                        <div class="observaciones-line"
+                                            *ngIf="rec.observaciones && rec.observaciones !== ''">
+                                            <i class="bi bi-chat-text"></i>
+                                            <span class="observaciones-label">Observaciones:</span>
+                                            <span class="observaciones-text">{{ rec.observaciones }}</span>
                                         </div>
-
-                                        <!-- Espacio para mantener grid cuando falta algún campo -->
-                                        <div class="info-item" *ngIf="!rec.montura || rec.montura === ''"></div>
-                                    </div>
-
-                                    <!-- Medidas en línea (si existen) -->
-                                    <div class="medidas-line"
-                                        *ngIf="rec.medidaHorizontal || rec.medidaVertical || rec.medidaDiagonal || rec.medidaPuente">
-                                        <i class="bi bi-rulers"></i>
-                                        <span class="medidas-label">Medidas:</span>
-                                        <span *ngIf="rec.medidaHorizontal" class="medida-chip">H: {{
-                                            rec.medidaHorizontal }} cm</span>
-                                        <span *ngIf="rec.medidaVertical" class="medida-chip">V: {{ rec.medidaVertical }}
-                                            cm</span>
-                                        <span *ngIf="rec.medidaDiagonal" class="medida-chip">D: {{ rec.medidaDiagonal }}
-                                            cm</span>
-                                        <span *ngIf="rec.medidaPuente" class="medida-chip">P: {{ rec.medidaPuente }}
-                                            cm</span>
-                                    </div>
-
-                                    <!-- Observaciones (si existen) -->
-                                    <div class="observaciones-line"
-                                        *ngIf="rec.observaciones && rec.observaciones !== ''">
-                                        <i class="bi bi-chat-text"></i>
-                                        <span class="observaciones-label">Observaciones:</span>
-                                        <span class="observaciones-text">{{ rec.observaciones }}</span>
                                     </div>
                                 </div>
                             </div>
-                        </div>
                         </ng-container>
 
                         <ng-template #sinFormulacion>
@@ -1213,8 +1587,7 @@
                                 <!-- Resumen Cashea - Mensaje claro -->
                                 <div class="resumen-cashea" [ngClass]="{ 
                                     'resumen-invalido': !casheaBalanceValido,
-                                    'resumen-completo': esPagoCompletoCashea 
-                                }">
+                                    'resumen-completo': esPagoCompletoCashea }">
                                     <div class="resumen-content">
                                         <span class="resumen-text">
                                             {{ mensajeResumenCashea }}

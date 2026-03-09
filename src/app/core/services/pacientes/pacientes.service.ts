@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, Subject } from 'rxjs';
 import { map, catchError, timeout } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import { ErrorHandlerService } from '../../services/errorHandlerService';
@@ -14,10 +14,17 @@ export class PacientesService {
 
   private readonly REQUEST_TIMEOUT = 8000; // 8 segundos
 
+  private abrirModalNuevoPacienteSource = new Subject<void>();
+  abrirModalNuevoPaciente$ = this.abrirModalNuevoPacienteSource.asObservable();
+
   constructor(
     private http: HttpClient,
     private errorHandler: ErrorHandlerService
   ) { }
+
+  solicitarAbrirModalNuevoPaciente(): void {
+    this.abrirModalNuevoPacienteSource.next();
+  }
 
   getPacientes(): Observable<{ pacientes: any[] }> {
     return this.http

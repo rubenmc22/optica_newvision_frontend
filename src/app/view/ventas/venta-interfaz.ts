@@ -2,7 +2,7 @@ export interface VentaDto {
     pacienteId?: string;
     moneda: string;
     formaPago: string;
-    productos: ProductoVentaDto[];
+    productos: ItemCarrito[];
     impuesto: number;
     descuento?: number;
     observaciones?: string;
@@ -46,6 +46,32 @@ export interface ProductoVentaDto {
     aplicaIva: boolean;
 }
 
+export interface ItemCarrito extends ProductoVentaDto {
+    tipo?: 'CONSULTA' | 'PRODUCTO';
+    descripcion?: string;
+    precioOriginal?: number;
+    historiaId?: string;
+
+    montoEditable?: boolean;
+    montoMinimo?: number;
+    montoMaximo?: number;
+
+    metadata?: {
+        tipoVenta?: 'solo_consulta' | 'consulta_productos';  // BIEN
+        costoMedico?: number;                                // BIEN
+        costoOptica?: number;                                 // BIEN
+        totalOriginal?: number;                               // BIEN
+        medicoNombre?: string;                                // OPCIONAL - útil para mostrar
+        fechaConsulta?: string;                               // OPCIONAL - útil para referencia
+        // Podrías agregar estos campos si los necesitas:
+        nHistoria?: string;                                   // Para referencia rápida
+        medicoId?: string;                                    // Para trazabilidad
+    };
+
+    editando?: boolean;
+    valorTemporal?: string;
+}
+
 export interface MetodoPago {
     tipo: string;
     monto: number;
@@ -56,7 +82,7 @@ export interface MetodoPago {
     banco?: string;
     bancoObject?: { codigo: string; nombre: string };
     moneda?: string;
-    bancoPunto?: string; 
+    bancoPunto?: string;
 }
 
 export interface DatosRecibo {
@@ -185,11 +211,11 @@ export interface EstadisticasVentas {
 }
 
 export interface ResumenFiltros {
-  periodo: string;
-  fechaDesde: string;
-  fechaHasta: string;
-  anio: number;
-  mes: number;
-  asesor: string;
-  formaPago: string;
+    periodo: string;
+    fechaDesde: string;
+    fechaHasta: string;
+    anio: number;
+    mes: number;
+    asesor: string;
+    formaPago: string;
 }

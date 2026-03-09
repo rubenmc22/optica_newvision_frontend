@@ -13,10 +13,17 @@ export interface VentaResponse {
   datos?: any;
 }
 
+export interface CostosConsulta {
+  totalConsulta: string;
+  costoMedico: string;
+  costoOptica: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class GenerarVentaService {
+
 
   private baseUrl = `${environment.apiUrl}`;
 
@@ -33,5 +40,9 @@ export class GenerarVentaService {
    */
   crearVenta(datosVenta: any): Observable<VentaResponse> {
     return this.http.post<VentaResponse>(`${this.baseUrl}/ventas-add`, datosVenta);
+  }
+
+  getCostosConsulta(historiaId: string): Observable<CostosConsulta> {
+    return this.http.get<CostosConsulta>(`${this.baseUrl}/configuracion/costoConsultas`);
   }
 }

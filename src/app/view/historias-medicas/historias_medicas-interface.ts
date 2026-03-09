@@ -37,26 +37,13 @@ export interface DatosConsulta {
   tipoLentesContacto?: string;
   fechaUltimaGraduacion?: string;
 
-  facturacion?: {
-    tipoProfesional: 'oftalmologo' | 'optometrista';
-    realizoCompraLentes: boolean;
-    montoTotal: number;
-    pagoOptica: number;
-    pagoMedico: number;
-    metodoPago?: string;
-    fechaPago?: string;
-    estadoPago?: 'pendiente' | 'pagado' | 'anulado';
+  formulaExterna?: boolean;
+  pagoPendiente?: boolean;
+  datosFormulaExterna?: {
+    profesional?: string;
+    fechaFormula?: string;
+    observaciones?: string;
   };
-}
-
-// En historias_medicas-interface.ts
-export interface FacturacionConsulta {
-  tipoProfesional: 'oftalmologo' | 'optometrista';
-  realizoCompraLentes: boolean;
-  montoBase: number;
-  montoTotal: number;
-  pagoOptica: number;
-  pagoMedico: number;
 }
 
 export interface Auditoria {

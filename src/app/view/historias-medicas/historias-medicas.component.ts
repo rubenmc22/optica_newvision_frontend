@@ -473,13 +473,13 @@ export class HistoriasMedicasComponent implements OnInit {
         nombre_asesor: '',
         cedula_asesor: '',
 
-        facturacion: {
+     /*  facturacion: {
           tipoProfesional: 'optometrista',
           realizoCompraLentes: false,
           montoTotal: 0,
           pagoOptica: 0,
           pagoMedico: 0
-        }
+        }*/
       },
 
       antecedentes: {
@@ -638,18 +638,18 @@ export class HistoriasMedicasComponent implements OnInit {
 
       this.mostrarSelectLentesContacto = dc.tipoCristalActual === 'LENTES_CONTACTO';
 
-      if (dc.facturacion) {
+     /* if (dc.facturacion) {
         this.esOftalmologoSeleccionado = dc.facturacion.tipoProfesional === 'oftalmologo';
         this.esOptometristaSeleccionado = dc.facturacion.tipoProfesional === 'optometrista';
         this.realizoCompraLentes = dc.facturacion.realizoCompraLentes || false;
         this.facturacionData = { ...dc.facturacion };
-      } else {
+      } else {*/
         // Si no hay facturación, resetear
         this.esOftalmologoSeleccionado = false;
         this.esOptometristaSeleccionado = false;
         this.realizoCompraLentes = false;
         this.facturacionData = null;
-      }
+     // }
 
 
       this.onMotivoChange(this.historiaForm.value.motivo);
@@ -815,7 +815,7 @@ export class HistoriasMedicasComponent implements OnInit {
           : typeof f.medico === 'string'
             ? f.medico
             : '',
-        facturacion: this.facturacionData
+       // facturacion: this.facturacionData
       },
       examenOcular: {
         lensometria: {
