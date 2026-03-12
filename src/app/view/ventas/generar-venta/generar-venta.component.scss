@@ -217,7 +217,7 @@
         .pulse-dot {
             width: 8px;
             height: 8px;
-            background: #06d6a0;
+            background: var(--primary-color) !important;;
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
@@ -911,11 +911,11 @@
 }
 
 .modern-switch input:checked+.slider {
-    background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+    background: var(--degradado-color) !important;;
 }
 
 .modern-switch input:focus+.slider {
-    box-shadow: 0 0 1px #4caf50;
+    box-shadow: 0 0 1px var(--primary-color) !important;;
 }
 
 .modern-switch input:checked+.slider:before {
@@ -1517,10 +1517,16 @@
     border-color: #4299e1;
 }
 
+/* Forzar estilo de la card seleccionada */
 .historia-card-2cols.selected {
-    border: 2px solid #4299e1;
-    background: #ebf8ff;
+    color: var(--primary-color) !important;
+     border: 2px solid #4299e1;
+    background: #f4f9ff !important;
+    box-shadow: 0 8px 16px rgba(81, 152, 218, 0.2) !important;
+    position: relative !important;
+    overflow: visible !important;
 }
+
 
 /* Header compacto */
 .card-header-compact {
@@ -1772,13 +1778,13 @@
     position: absolute;
     top: -8px;
     right: -8px;
-    z-index: 20;
+    z-index: 10;
     animation: pop-in 0.2s ease-out;
 }
 
 .selection-check i {
     font-size: 24px;
-    color: #10b981;
+    color: var(--primary-color) !important;;
     /* Verde más moderno */
     filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.3));
     background: white;
@@ -1802,32 +1808,6 @@
     }
 }
 
-/* También mejorar el estilo de la card seleccionada */
-.historia-card-2cols.selected {
-    border: 2px solid #10b981;
-    /* Verde en lugar de azul */
-    background: #f0fdf4;
-    /* Verde muy claro de fondo */
-    box-shadow: 0 8px 16px rgba(16, 185, 129, 0.15);
-}
-
-/* Opcional: agregar un indicador de borde izquierdo */
-.historia-card-2cols.selected::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 10%;
-    height: 80%;
-    width: 4px;
-    background: #10b981;
-    border-radius: 0 4px 4px 0;
-}
-
-/* Mejorar el hover de la card seleccionada */
-.historia-card-2cols.selected:hover {
-    border-color: #059669;
-    background: #e6f7e6;
-}
 
 // Panel moderno
 .panel-moderno {
@@ -2707,7 +2687,7 @@
 }
 
 .btn-generar-moderno {
-    background: linear-gradient(135deg, #198754, #0f5132);
+    background: var(--degradado-color);
     border: none;
     border-radius: 30px;
     padding: 12px 30px;
@@ -2874,12 +2854,12 @@
         border-width: 2px;
 
         &:hover {
-            border-color: #06d6a0;
+            border-color: var(--primary-color) !important;
         }
 
         &.active {
-            border-color: #06d6a0;
-            background: #f0fff9;
+            border-color: var(--primary-color) !important;
+            background: #f4f9ff;
         }
     }
 
@@ -3594,8 +3574,6 @@
 /* =============================================
    CHECK DE SELECCIÓN - VERSIÓN ULTRA FORZADA
    ============================================= */
-
-/* Eliminar cualquier otro indicador que pueda estar interfiriendo */
 .historia-card-2cols .selected-indicator {
     display: none !important;
 }
@@ -3616,7 +3594,7 @@
 
 .historia-card-2cols .selection-check i {
     font-size: 28px !important;
-    color: #10b981 !important;
+    color: var(--primary-color) !important;
     background: white !important;
     border-radius: 50% !important;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
@@ -3627,14 +3605,6 @@
     text-align: center !important;
 }
 
-/* Forzar estilo de la card seleccionada */
-.historia-card-2cols.selected {
-    border: 2px solid #10b981 !important;
-    background: #f0fdf4 !important;
-    box-shadow: 0 8px 16px rgba(16, 185, 129, 0.2) !important;
-    position: relative !important;
-    overflow: visible !important;
-}
 
 /* Asegurar que el contenedor no corte el check */
 .historia-card-2cols {
@@ -3788,7 +3758,7 @@
 
     &:hover {
         background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-        border-color: #4caf50;
+        border-color: var(--primary-color) !important;;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
     }
@@ -6054,8 +6024,8 @@
 /* Para centrar el contenedor flex de producto */
 .table-moderna .info-with-icon {
     display: flex !important;
-  //  align-items: center !important;
-  //  justify-content: center !important;
+    //  align-items: center !important;
+    //  justify-content: center !important;
     gap: 8px;
     width: 100%;
 }

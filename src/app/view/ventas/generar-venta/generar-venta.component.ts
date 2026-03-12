@@ -2074,10 +2074,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // === MÉTODOS DE VENTA ===
     abrirModalResumen(): void {
-        if (this.venta.productos.length === 0) {
-            this.swalService.showWarning('Sin productos', 'Debes agregar al menos un producto para continuar.');
-            return;
+        // Validar según el tipo de venta
+        if (this.tipoVenta === 'solo_productos' || this.tipoVenta === 'consulta_productos') {
+            // Para ventas con productos, verificar que haya productos
+            if (this.venta.productos.length === 0 && !this.consultaEnCarrito) {
+                this.swalService.showWarning('Sin items', 'Debes agregar items al carrito para continuar.');
+                return;
+            }
         }
+
+        // Para solo consulta, ya validamos en puedeGenerarVenta que hay consulta
 
         const hayFormulacion = !!this.historiaMedica?.examenOcular?.refraccionFinal;
         if (hayFormulacion && !this.pacienteSeleccionado) {
@@ -2093,7 +2099,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             modal.show();
         }
     }
-
 
     limpiarTodosLosSelects(): void {
         this.productoSeleccionado = null;
@@ -2716,29 +2721,60 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             case 'solo_consulta':
                 // Solo consulta: requiere paciente, historia y consulta en carrito
-                if (!this.pacienteSeleccionado) return false;
-                if (!this.historiaMedicaSeleccionada) return false;
-                if (!this.consultaEnCarrito) return false;
-
-                // Solo acepta contado o cashea
-                if (this.venta.formaPago !== 'contado' && this.venta.formaPago !== 'cashea') {
+                if (!this.pacienteSeleccionado) {
+                    console.log('❌ No hay paciente seleccionado');
+                    return false;
+                }
+                if (!this.historiaMedicaSeleccionada) {
+                    console.log('❌ No hay historia seleccionada');
+                    return false;
+                }
+                if (!this.consultaEnCarrito) {
+                    console.log('❌ No hay consulta en el carrito');
                     return false;
                 }
 
-                // Validar métodos de pago según la forma seleccionada
-                return this.validarMetodosPago();
+                // Validar que los montos sean válidos
+                if (this.montoConsulta <= 0) {
+                    console.log('❌ Monto de consulta inválido:', this.montoConsulta);
+                    return false;
+                }
+
+                // Solo acepta contado o cashea (esto sí debe validarse)
+                if (this.venta.formaPago !== 'contado' && this.venta.formaPago !== 'cashea') {
+                    console.log('❌ Forma de pago no válida para solo consulta:', this.venta.formaPago);
+                    return false;
+                }
+
+                // ✅ NO validamos métodos de pago aquí, eso es en el modal
+                return true;
 
             case 'consulta_productos':
-                // Consulta + productos: requiere paciente, historia y al menos un item (consulta o producto)
-                if (!this.pacienteSeleccionado) return false;
-                if (!this.historiaMedicaSeleccionada) return false;
+                // Consulta + productos: requiere paciente, historia y al menos un item
+                if (!this.pacienteSeleccionado) {
+                    console.log('❌ No hay paciente seleccionado');
+                    return false;
+                }
+                if (!this.historiaMedicaSeleccionada) {
+                    console.log('❌ No hay historia seleccionada');
+                    return false;
+                }
 
                 // Debe tener consulta o productos
                 const tieneItems = this.consultaEnCarrito || this.venta.productos.length > 0;
-                if (!tieneItems) return false;
+                if (!tieneItems) {
+                    console.log('❌ No hay items en el carrito');
+                    return false;
+                }
 
-                // Validar métodos de pago
-                return this.validarMetodosPago();
+                // Si hay consulta, validar monto
+                if (this.consultaEnCarrito && this.pagoMedico <= 0) {
+                    console.log('❌ Monto de consulta inválido:', this.pagoMedico);
+                    return false;
+                }
+
+                // ✅ NO validamos métodos de pago aquí
+                return true;
 
             default:
                 return false;
@@ -2752,7 +2788,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         // Para otras formas, verificar métodos completos
-        if (this.venta.metodosDePago.length === 0) return false;
+        if (this.venta.metodosDePago.length === 0) {
+            console.log('❌ No hay métodos de pago');
+            return false;
+        }
 
         return this.venta.metodosDePago.every(metodo => this.metodoCompleto(metodo));
     }
@@ -2880,45 +2919,27 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
 
-        // ============================================
-        // 1. IDENTIFICAR CONSULTA EN EL CARRITO
-        // ============================================
-        const consultaEnVenta = this.venta.productos.find(p => p.tipo === 'CONSULTA') as ItemCarrito | undefined;
-        const tieneConsulta = !!consultaEnVenta;
-        const tieneProductos = this.venta.productos.some(p => p.tipo !== 'CONSULTA');
+        // 1. PREPARAR PRODUCTOS
+        // Filtrar solo productos físicos (excluir consultas)
+        const productosFisicos = this.venta.productos.filter(p => p.tipo !== 'CONSULTA');
 
-        // Validar consistencia según el tipo seleccionado
-        let productosFiltrados = [...this.venta.productos];
-
-        if (this.tipoVenta === 'solo_consulta' && tieneProductos) {
-            console.warn('Venta solo consulta con productos - se ignorarán los productos');
-            productosFiltrados = productosFiltrados.filter(p => p.tipo === 'CONSULTA');
-        }
-
-        if (this.tipoVenta === 'solo_productos' && tieneConsulta) {
-            console.warn('Venta solo productos con consulta - se ignorará la consulta');
-            productosFiltrados = productosFiltrados.filter(p => p.tipo !== 'CONSULTA');
-        }
-
-        // ============================================
-        // 2. PREPARAR PRODUCTOS
-        // ============================================
-        const productosData: ProductoVentaDto[] = productosFiltrados.map(p => ({
+        // Mapear productos al formato esperado por el API
+        const productosData = productosFisicos.map(p => ({
             id: p.id,
             nombre: p.nombre,
             codigo: p.codigo || 'N/A',
             precio: p.precio || 0,
             precioConIva: p.precioConIva || 0,
-            aplicaIva: p.aplicaIva || false,
-            cantidad: p.cantidad || 1,
             moneda: p.moneda || 'dolar',
-            stock: p.stock || 0
+            cantidad: p.cantidad || 1,
+            aplicaIva: p.aplicaIva || false,
+            stock: p.stock || 0,
+            tipo: 'PRODUCTO',
+            descripcion: p.descripcion || ''
         }));
 
-        // ============================================
-        // 3. PREPARAR MÉTODOS DE PAGO
-        // ============================================
-        const metodosPagoData: MetodoPago[] = this.venta.metodosDePago.map(metodo => ({
+        // 2. PREPARAR MÉTODOS DE PAGO
+        const metodosPagoData = this.venta.metodosDePago.map(metodo => ({
             tipo: metodo.tipo,
             monto: metodo.monto || 0,
             referencia: metodo.referencia || undefined,
@@ -2928,81 +2949,34 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             bancoPunto: metodo.bancoPunto || undefined
         }));
 
-        // ============================================
-        // 4. CALCULAR TOTALES SEGÚN TIPO DE VENTA
-        // ============================================
-        const productosFisicos = productosFiltrados.filter(p => p.tipo !== 'CONSULTA');
-        const subtotalProductos = this.calcularSubtotalSinIvaPorProductos(productosFisicos);
+        // 3. CALCULAR TOTALES
+        // Subtotal de productos (sin IVA)
+        const subtotalProductos = productosFisicos.reduce((acc, p) => {
+            return acc + ((p.precio || 0) * (p.cantidad || 1));
+        }, 0);
 
-        // ============================================
-        // 5. CALCULAR MONTOS DE CONSULTA CON LA NUEVA LÓGICA
-        // ============================================
-        let montoConsulta = 0;
-        let pagoMedicoConsulta = 0;
-        let pagoOpticaConsulta = 0;
-        let historiaIdConsulta = '';
-        let esFormulaExterna = false;
-        let tipoEspecialista = '';
-
-        if (consultaEnVenta && this.historiaMedicaSeleccionada) {
-            const especialista = this.historiaMedicaSeleccionada.datosConsulta?.medico;
-            historiaIdConsulta = this.historiaMedicaSeleccionada.id;
-            esFormulaExterna = this.historiaMedicaSeleccionada.datosConsulta?.formulaExterna || false;
-            tipoEspecialista = especialista?.cargo || '';
-
-            // Obtener metadata de la consulta si existe
-            const metadata = consultaEnVenta.metadata || {};
-
-            if (this.tipoVenta === 'solo_consulta') {
-                // ============================================
-                // CASO 1: SOLO CONSULTA - Se cobra el TOTAL (médico + óptica)
-                // ============================================
-                montoConsulta = consultaEnVenta.precio || 0; // Monto del carrito (puede ser editado)
-
-                // Calcular el desglose proporcional si el monto fue modificado
-                const totalOriginal = metadata.totalOriginal;
-
-                if (totalOriginal > 0 && montoConsulta !== totalOriginal) {
-                    // Si el monto fue modificado, ajustar proporcionalmente médico y óptica
-                    const proporcion = montoConsulta / totalOriginal;
-                    pagoMedicoConsulta = (metadata.costoMedico || 0) * proporcion;
-                    pagoOpticaConsulta = (metadata.costoOptica || 0) * proporcion;
-                } else {
-                    // Usar valores originales
-                    pagoMedicoConsulta = metadata.costoMedico || 0;
-                    pagoOpticaConsulta = metadata.costoOptica || 0;
-                }
-
-            } else if (this.tipoVenta === 'consulta_productos') {
-
-                // CASO 2: CONSULTA + PRODUCTOS - Solo se cobra el COSTO MÉDICO
-                montoConsulta = consultaEnVenta.precio || 0; // Monto del carrito (solo médico, puede ser editado)
-                pagoMedicoConsulta = montoConsulta; // El monto completo va al médico
-                pagoOpticaConsulta = 0; // La óptica NO recibe pago en este tipo de venta
-
-            } else {
-                // ============================================
-                // CASO 3: SOLO PRODUCTOS - No hay consulta
-                // ============================================
-                montoConsulta = 0;
-                pagoMedicoConsulta = 0;
-                pagoOpticaConsulta = 0;
-            }
-        }
-
-        // ============================================
-        // 6. CALCULAR DESCUENTOS E IVA
-        // ============================================
+        // Calcular descuento (sobre subtotal sin IVA)
         const descuentoMonto = this.venta.descuento ? (subtotalProductos * (this.venta.descuento / 100)) : 0;
         const subtotalConDescuento = subtotalProductos - descuentoMonto;
-        const ivaCalculado = this.calcularIvaSobreProductos(subtotalConDescuento, productosFisicos);
+
+        // Calcular IVA sobre productos que aplican IVA
+        let ivaCalculado = 0;
+        productosFisicos.forEach(producto => {
+            if (producto.aplicaIva) {
+                const subtotalProducto = (producto.precio || 0) * (producto.cantidad || 1);
+                const proporcionProducto = subtotalProducto / subtotalProductos;
+                const baseProductoConDescuento = subtotalConDescuento * proporcionProducto;
+                ivaCalculado += baseProductoConDescuento * (this.ivaPorcentaje / 100);
+            }
+        });
+
+        // Total productos (con descuento e IVA)
+        const totalProductos = subtotalConDescuento + ivaCalculado;
 
         // Total final (productos + consulta)
-        const totalFinal = subtotalConDescuento + ivaCalculado + montoConsulta;
+        const totalFinal = totalProductos + (this.consultaEnCarrito ? this.montoConsulta : 0);
 
-        // ============================================
-        // 7. DETERMINAR TOTAL PAGADO SEGÚN FORMA DE PAGO
-        // ============================================
+        // 4. DETERMINAR TOTAL PAGADO SEGÚN FORMA DE PAGO
         let totalPagado = 0;
         switch (this.venta.formaPago) {
             case 'contado':
@@ -3021,10 +2995,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 totalPagado = this.totalPagadoPorMetodos;
         }
 
-        // ============================================
-        // 8. PREPARAR FORMA_PAGO_DETALLE
-        // ============================================
-        let formaPagoDetalle: FormaPagoDetalle | undefined = undefined;
+        // 5. PREPARAR FORMA_PAGO_DETALLE
+        let formaPagoDetalle: any = null;
 
         if (this.venta.formaPago === 'cashea') {
             formaPagoDetalle = {
@@ -3065,12 +3037,70 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         // ============================================
-        // 9. CONSTRUIR OBJETO BASE
+        // 6. PREPARAR INFORMACIÓN DEL CLIENTE
         // ============================================
-        const ventaBase: VentaDto = {
+        let clienteData: any;
+
+        if (this.tipoVenta === 'solo_productos') {
+            // Para solo productos: puede ser cliente general o cliente con datos
+            if (this.clienteSinPaciente && this.clienteSinPaciente.nombreCompleto) {
+                // Cliente con datos ingresados manualmente
+                clienteData = {
+                    tipo: this.clienteSinPaciente.tipoPersona === 'juridica' ? 'juridico' : 'natural',
+                    nombre: this.clienteSinPaciente.nombreCompleto,
+                    cedula: this.clienteSinPaciente.cedula,
+                    telefono: this.clienteSinPaciente.telefono,
+                    email: this.clienteSinPaciente.email || undefined
+                };
+
+                // Agregar información de empresa si aplica
+                if (this.usarEmpresaEnVenta && this.empresaReferidaInfo) {
+                    clienteData.informacionEmpresa = {
+                        referidoEmpresa: true,
+                        empresaNombre: this.empresaReferidaInfo.nombre,
+                        empresaRif: this.empresaReferidaInfo.rif,
+                        empresaTelefono: this.empresaReferidaInfo.telefono,
+                        empresaDireccion: this.empresaReferidaInfo.direccion,
+                        empresaCorreo: this.empresaReferidaInfo.email
+                    };
+                }
+            } else {
+                // Cliente anónimo
+                clienteData = {
+                    tipo: 'anonimo',
+                    nombre: 'CLIENTE GENERAL'
+                };
+            }
+        } else {
+            // Para consulta o consulta+productos: requiere paciente
+            if (this.pacienteSeleccionado) {
+                clienteData = {
+                    id: this.pacienteSeleccionado.id,
+                    tipo: 'paciente',
+                    nombre: this.pacienteSeleccionado.informacionPersonal?.nombreCompleto,
+                    cedula: this.pacienteSeleccionado.informacionPersonal?.cedula,
+                    telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
+                    email: this.pacienteSeleccionado.informacionPersonal?.email
+                };
+
+                // Agregar información de empresa referida si existe
+                if (this.usarEmpresaEnVenta && this.empresaReferidaInfo) {
+                    clienteData.informacionEmpresa = {
+                        referidoEmpresa: true,
+                        empresaNombre: this.empresaReferidaInfo.nombre,
+                        empresaRif: this.empresaReferidaInfo.rif,
+                        empresaTelefono: this.empresaReferidaInfo.telefono,
+                        empresaDireccion: this.empresaReferidaInfo.direccion,
+                        empresaCorreo: this.empresaReferidaInfo.email
+                    };
+                }
+            }
+        }
+
+        // 7. CONSTRUIR OBJETO BASE SEGÚN TIPO DE VENTA
+        const ventaBase: any = {
             moneda: this.venta.moneda,
             formaPago: this.venta.formaPago,
-            productos: productosFiltrados,
             impuesto: this.venta.impuesto || 16,
             metodosDePago: metodosPagoData,
             descuento: this.venta.descuento || 0,
@@ -3081,76 +3111,62 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             numeroCuotas: this.venta.numeroCuotas || undefined,
             montoAbonado: this.venta.montoAbonado || undefined,
             formaPagoDetalle: formaPagoDetalle,
-            pacienteId: this.tipoVenta !== 'solo_productos' && this.pacienteSeleccionado
-                ? this.pacienteSeleccionado.id
-                : undefined
-        };
-
-        // ============================================
-        // 10. AGREGAR METADATOS ADICIONALES
-        // ============================================
-        const datosCompletos = {
-            ...ventaBase,
             tipoVenta: this.tipoVenta,
-
-            // Información de consulta con el desglose correcto
-            ...(consultaEnVenta && historiaIdConsulta ? {
-                consulta: {
-                    historiaId: historiaIdConsulta,
-                    montoTotal: this.redondear(montoConsulta),
-                    pagoMedico: this.redondear(pagoMedicoConsulta),
-                    pagoOptica: this.redondear(pagoOpticaConsulta),
-                    esFormulaExterna: esFormulaExterna,
-                    tipoEspecialista: tipoEspecialista,
-                    // Información adicional útil para el backend
-                    tipoVentaConsulta: this.tipoVenta,
-                    montoOriginal: consultaEnVenta.metadata?.totalOriginal || montoConsulta
-                }
-            } : {}),
-
-            // Datos del cliente
-            cliente: this.tipoVenta !== 'solo_productos' && this.pacienteSeleccionado ? {
-                id: this.pacienteSeleccionado.id,
-                nombre: this.pacienteSeleccionado.informacionPersonal?.nombreCompleto,
-                cedula: this.pacienteSeleccionado.informacionPersonal?.cedula,
-                telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
-                email: this.pacienteSeleccionado.informacionPersonal?.email
-            } : {
-                tipo: 'anonimo',
-                nombre: 'CLIENTE GENERAL'
-            },
-
-            // Asesor
+            cliente: clienteData,
             asesor: {
-                id: this.asesorSeleccionado ? parseInt(this.asesorSeleccionado) : null
+                id: this.asesorSeleccionado ? parseInt(this.asesorSeleccionado) :
+                    (this.currentUser?.id ? parseInt(this.currentUser.id) : null)
             },
-
-            // Auditoría
             auditoria: {
-                usuarioCreacion: parseInt(this.currentUser?.id || '0'),
+                usuarioCreacion: this.currentUser?.id ? parseInt(this.currentUser.id) : 0,
                 fechaCreacion: fechaActual.toISOString()
             }
         };
 
-        return datosCompletos;
+        // 8. AGREGAR PRODUCTOS SEGÚN TIPO DE VENTA
+        if (this.tipoVenta === 'solo_productos') {
+            // Solo productos: solo productos físicos
+            ventaBase.productos = productosData;
+
+        } else if (this.tipoVenta === 'solo_consulta') {
+            // Solo consulta: no lleva productos físicos, solo información de consulta
+            ventaBase.productos = []; // Array vacío de productos
+
+            // Agregar información de consulta
+            if (this.consultaEnCarrito && this.historiaMedicaSeleccionada) {
+                ventaBase.consulta = {
+                    historiaId: this.historiaMedicaSeleccionada.id,
+                    montoTotal: this.redondear(this.montoConsulta),
+                    pagoMedico: this.redondear(this.pagoMedico),
+                    pagoOptica: this.redondear(this.pagoOptica),
+                    esFormulaExterna: this.historiaMedicaSeleccionada.datosConsulta?.formulaExterna || false,
+                    tipoEspecialista: this.historiaMedicaSeleccionada.datosConsulta?.medico?.cargo || '',
+                    tipoVentaConsulta: this.tipoVenta,
+                    montoOriginal: this.montoConsultaOriginal
+                };
+            }
+
+        } else if (this.tipoVenta === 'consulta_productos') {
+            // Consulta + productos: productos físicos + información de consulta
+            ventaBase.productos = productosData;
+
+            // Agregar información de consulta
+            if (this.consultaEnCarrito && this.historiaMedicaSeleccionada) {
+                ventaBase.consulta = {
+                    historiaId: this.historiaMedicaSeleccionada.id,
+                    montoTotal: this.redondear(this.pagoMedico), // En consulta+productos solo se cobra el médico
+                    pagoMedico: this.redondear(this.pagoMedico),
+                    pagoOptica: 0, // La óptica no aplica en este tipo de venta
+                    esFormulaExterna: this.historiaMedicaSeleccionada.datosConsulta?.formulaExterna || false,
+                    tipoEspecialista: this.historiaMedicaSeleccionada.datosConsulta?.medico?.cargo || '',
+                    tipoVentaConsulta: this.tipoVenta,
+                    montoOriginal: this.montoConsultaOriginal
+                };
+            }
+        }
+
+        return ventaBase;
     }
-
-
-    /**
-     * Calcula el subtotal sin IVA de todos los productos
-     */
-    /*   private calcularSubtotalSinIva(): number {
-           if (!Array.isArray(this.productosConDetalle) || this.productosConDetalle.length === 0) {
-               return 0;
-           }
-   
-           return this.productosConDetalle.reduce((acc, producto) => {
-               const precioSinIva = producto.precioConvertido || 0;
-               const cantidad = producto.cantidad || 1;
-               return acc + (precioSinIva * cantidad);
-           }, 0);
-       }*/
-
 
     /**
      * Determina si un producto genera orden de trabajo
@@ -3201,6 +3217,15 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // === MÉTODOS DE VENTA Y RECIBO ===
     async generarVenta(): Promise<void> {
+
+        if (!this.validarMetodosPago()) {
+            this.swalService.showWarning(
+                'Métodos de pago incompletos',
+                'Completa todos los métodos de pago antes de generar la venta.'
+            );
+            return;
+        }
+
         if (!this.puedeGenerarVenta) {
             this.swalService.showWarning(
                 'No se puede generar la venta',
@@ -6950,12 +6975,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     agregarConsultaAlCarrito(): void {
-        console.log('🔄 Intentando agregar consulta al carrito');
-        console.log('Historia seleccionada:', this.historiaMedicaSeleccionada);
-
         if (!this.historiaMedicaSeleccionada) {
             console.log('❌ No hay historia seleccionada');
-            this.snackBar.open('No hay historia médica seleccionada', 'Cerrar', { duration: 3000 });
             return;
         }
 
@@ -6963,36 +6984,24 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (!this.esConsultaCobrable(this.historiaMedicaSeleccionada)) {
             const motivo = this.getMensajeConsulta(this.historiaMedicaSeleccionada);
             console.log('❌ No es cobrable:', motivo);
-            this.snackBar.open(`❌ ${motivo || 'Esta consulta no está disponible para cobro'}`, 'Cerrar', {
-                duration: 4000,
-                panelClass: ['snackbar-warning']
-            });
             return;
         }
 
         // Verificar si ya existe
         if (this.consultaEnCarrito) {
             console.log('⚠️ Ya hay una consulta en el carrito');
-            this.snackBar.open('La consulta ya está en el carrito', 'Cerrar', { duration: 2000 });
             return;
         }
-
-        console.log('✅ Procediendo a obtener costos...');
-        // this.loader.showWithMessage('🔄 Obteniendo costos de consulta...');
 
         this.generarVentaService.getCostosConsulta(this.historiaMedicaSeleccionada.id).pipe(take(1)).subscribe({
             next: (costos) => {
                 // this.loader.hide();
-                console.log('✅ Costos obtenidos:', costos);
-
                 const medico = this.historiaMedicaSeleccionada?.datosConsulta?.medico;
 
                 // Convertir strings a números (del API vienen como strings)
                 const totalConsulta = parseFloat(costos.totalConsulta) || 0;
                 const costoMedico = parseFloat(costos.costoMedico) || 0;
                 const costoOptica = parseFloat(costos.costoOptica) || 0;
-
-                console.log('Costos parseados:', { totalConsulta, costoMedico, costoOptica });
 
                 // Determinar monto según tipo de venta
                 if (this.tipoVenta === 'solo_consulta') {
@@ -7190,8 +7199,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     seleccionarTipoVenta(tipo: 'solo_consulta' | 'consulta_productos' | 'solo_productos'): void {
-        console.log('🔄 Cambiando tipo de venta a:', tipo);
-
         // Guardar tipo anterior
         const tipoAnterior = this.tipoVenta;
 
@@ -7510,8 +7517,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
      * Maneja la selección de una historia - SIMPLIFICADO
      */
     onHistoriaSeleccionada(event: any): void {
-        console.log('Historia seleccionada:', event);
-
         if (!event) {
             this.historiaMedicaSeleccionada = null;
             return;
@@ -7606,9 +7611,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     seleccionarHistoria(historia: any): void {
-        console.log('📋 seleccionarHistoria llamado');
-        console.log('Historia:', historia);
-
         // Guardar historia anterior para referencia
         const historiaAnterior = this.historiaMedicaSeleccionada;
         const tipoVentaAnterior = this.tipoVenta;
@@ -7634,13 +7636,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         // Verificar si la nueva historia es cobrable
         const esNuevaCobrable = this.esConsultaCobrable(historia);
-        console.log('¿Es nueva historia cobrable?', esNuevaCobrable);
 
         // ============================================
         // CASO 1: Había consulta y nueva historia NO es cobrable
         // ============================================
         if (this.consultaEnCarrito && !esNuevaCobrable) {
-            console.log('🧹 Había consulta pero nueva historia NO es cobrable - limpiando carrito');
             this.limpiarCarritoCompleto();
             this.actualizarHistoriaSeleccionada(historia);
             return;
@@ -7650,7 +7650,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // CASO 2: Había consulta y nueva historia SÍ es cobrable
         // ============================================
         if (this.consultaEnCarrito && esNuevaCobrable) {
-            console.log('🔄 Había consulta y nueva historia SÍ es cobrable - reemplazando');
             this.limpiarCarritoCompleto();
             this.actualizarHistoriaSeleccionada(historia);
             // Agregar la nueva consulta
@@ -7664,7 +7663,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // CASO 3: No había consulta y nueva historia SÍ es cobrable
         // ============================================
         if (!this.consultaEnCarrito && esNuevaCobrable) {
-            console.log('✅ No había consulta y nueva historia es cobrable - agregando');
             this.actualizarHistoriaSeleccionada(historia);
             // Agregar la consulta
             setTimeout(() => {
@@ -7677,7 +7675,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // CASO 4: No había consulta y nueva historia NO es cobrable
         // ============================================
         if (!this.consultaEnCarrito && !esNuevaCobrable) {
-            console.log('ℹ️ No había consulta y nueva historia no es cobrable');
             this.actualizarHistoriaSeleccionada(historia);
             return;
         }
