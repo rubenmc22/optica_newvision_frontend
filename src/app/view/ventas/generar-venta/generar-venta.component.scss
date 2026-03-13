@@ -217,7 +217,8 @@
         .pulse-dot {
             width: 8px;
             height: 8px;
-            background: var(--primary-color) !important;;
+            background: var(--primary-color) !important;
+            ;
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
@@ -911,11 +912,13 @@
 }
 
 .modern-switch input:checked+.slider {
-    background: var(--degradado-color) !important;;
+    background: var(--degradado-color) !important;
+    ;
 }
 
 .modern-switch input:focus+.slider {
-    box-shadow: 0 0 1px var(--primary-color) !important;;
+    box-shadow: 0 0 1px var(--primary-color) !important;
+    ;
 }
 
 .modern-switch input:checked+.slider:before {
@@ -1520,7 +1523,7 @@
 /* Forzar estilo de la card seleccionada */
 .historia-card-2cols.selected {
     color: var(--primary-color) !important;
-     border: 2px solid #4299e1;
+    border: 2px solid #4299e1;
     background: #f4f9ff !important;
     box-shadow: 0 8px 16px rgba(81, 152, 218, 0.2) !important;
     position: relative !important;
@@ -1784,7 +1787,8 @@
 
 .selection-check i {
     font-size: 24px;
-    color: var(--primary-color) !important;;
+    color: var(--primary-color) !important;
+    ;
     /* Verde más moderno */
     filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.3));
     background: white;
@@ -3758,7 +3762,8 @@
 
     &:hover {
         background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-        border-color: var(--primary-color) !important;;
+        border-color: var(--primary-color) !important;
+        ;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
     }
@@ -4578,26 +4583,25 @@
     }
 }
 
-.section-actions {
-    .btn-add-method {
-        background: var(--degradado-color);
-        border: none;
-        color: white;
-        padding: 0.75rem 1.25rem;
-        border-radius: 8px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: all 0.3s ease;
-        cursor: pointer;
+.btn-add-method {
+    background: var(--degradado-color);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
 
-        &:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 }
+
 
 .moneda-selector-container {
     background: #f8f9fa;
