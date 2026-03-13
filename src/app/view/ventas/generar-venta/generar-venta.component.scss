@@ -3602,18 +3602,19 @@
     background: white !important;
     border-radius: 50% !important;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
-    display: block !important;
+   display: block !important;
     width: 28px !important;
     height: 28px !important;
     line-height: 28px !important;
     text-align: center !important;
+    z-index: 1;
 }
 
 
 /* Asegurar que el contenedor no corte el check */
 .historia-card-2cols {
-    position: relative !important;
-    overflow: visible !important;
+    //position: relative !important;
+   // overflow: visible !important;
 }
 
 
@@ -6059,4 +6060,19 @@
 .table-moderna .btn-eliminar-moderno {
     margin: 0 auto;
     display: inline-block;
+}
+
+/* En tu archivo de estilos */
+.resumen-item.consulta {
+    background: rgba(13, 110, 253, 0.05);
+    border-left: 3px solid #0d6efd;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.desglose-consulta {
+    display: block;
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 2px;
 }

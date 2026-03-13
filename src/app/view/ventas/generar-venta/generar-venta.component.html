@@ -315,10 +315,6 @@
                             (click)="seleccionarHistoria(h)" (keydown.enter)="seleccionarHistoria(h)" tabindex="0"
                             role="button">
 
-                            <!-- CHECK VERDE DE SELECCIÓN -->
-                            <div class="selection-check" *ngIf="h.id === historiaSeleccionadaId">
-                                <i class="bi bi-check-circle-fill"></i>
-                            </div>
 
                             <!-- Header de la card -->
                             <div class="card-header-compact">
@@ -498,7 +494,9 @@
                                         <div class="info-with-icon">
                                             <i class="bi bi-person-badge fs-4 text-primary"></i>
                                             <div>
-                                                <span class="consulta-nombre fw-bold">Consulta Oftalmología</span>
+                                                 <span class="producto-nombre">
+                                                    Consulta de {{ historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo }}
+                                                </span>
                                             </div>
                                         </div>
                                     </td>
@@ -560,8 +558,8 @@
                                 </div>
                             </div>
 
-                            <button class="btn-generar-moderno" (click)="abrirModalResumen()"
-                                [disabled]="!puedeGenerarVenta">
+                           <button class="btn-generar-moderno" (click)="abrirModalResumen()"
+                                [disabled]="!puedeAbrirModal">
                                 <i class="bi bi-check-lg"></i>
                                 <span>Generar Venta</span>
                                 <div class="btn-glow"></div>
@@ -700,32 +698,41 @@
                             <thead>
                                 <tr>
                                     <th class="text-center">Item</th>
-                                    <th class="text-center">Precio (editable)</th>
+                                    <th class="text-center">Precio</th>
                                     <th class="text-center">Cant.</th>
                                     <th class="text-center">Subtotal</th>
                                     <th class="text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- PRIMERO: Mostrar la consulta (si existe) - SOLO UNA VEZ -->
+                                <!-- PRIMERO: Mostrar la consulta (si existe) -->
                                 <tr *ngIf="consultaEnCarrito" class="producto-row-moderno item-consulta">
                                     <td class="producto-info">
                                         <div class="info-with-icon">
-                                            <i class="bi bi-person-badge text-primary"></i>
+                                            <i class="bi bi-person-badge" 
+                                            [class.text-primary]="historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo === 'Oftalmólogo'"
+                                            [class.text-info]="historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo === 'Optometrista'"></i>
                                             <div>
-                                                <span class="producto-nombre">Consulta Oftalmológica</span>
+                                                <span class="producto-nombre">
+                                                    Consulta de {{ historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo || 'Optometrista' }}
+                                                </span>
                                             </div>
                                         </div>
                                     </td>
 
-                                    <!-- Precio de consulta (EDITABLE - solo médico) -->
+                                    <!-- Precio de consulta -->
                                     <td class="text-center precio">
-                                        <div class="monto-editable">
-                                            <span class="moneda-simbolo">{{ obtenerSimboloMoneda('dolar') }}</span>
-                                            <input type="number" class="form-control form-control-sm monto-input"
-                                                [(ngModel)]="pagoMedico" (input)="actualizarTotalConsulta()" min="0"
-                                                step="1" placeholder="0">
-                                        </div>
+                                        <ng-container *ngIf="historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo === 'Oftalmólogo'">
+                                            <div class="monto-editable">
+                                                <span class="moneda-simbolo">{{ obtenerSimboloMoneda('dolar') }}</span>
+                                                <input type="number" class="form-control form-control-sm monto-input"
+                                                    [(ngModel)]="pagoMedico" (input)="actualizarTotalConsulta()" min="0"
+                                                    step="1" placeholder="0">
+                                            </div>
+                                        </ng-container>
+                                        <ng-container *ngIf="historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo === 'Optometrista'">
+                                            <span class="precio-unitario text-success">$0,00</span>
+                                        </ng-container>
                                     </td>
 
                                     <td class="text-center cantidad-cell">
@@ -737,29 +744,20 @@
                                     </td>
 
                                     <td class="text-center acciones">
-                                        <span class="lock-icon"
-                                            title="La consulta no se puede eliminar individualmente">
+                                        <span class="lock-icon" title="La consulta no se puede eliminar individualmente">
                                             <i class="bi bi-lock"></i>
                                         </span>
                                     </td>
                                 </tr>
 
                                 <!-- DESPUÉS: Mostrar productos físicos -->
-                                <tr *ngFor="let item of venta.productos; trackBy: trackByItem"
-                                    class="producto-row-moderno">
+                                <tr *ngFor="let item of venta.productos; trackBy: trackByItem" class="producto-row-moderno">
                                     <td class="producto-info">
-                                        <div class="info-with-icon"
-                                            style="display: flex; align-items: center; gap: 10px;">
+                                        <div class="info-with-icon" style="display: flex; align-items: center; gap: 10px;">
                                             <i class="bi bi-box" style="font-size: 20px; color: #6c757d;"></i>
                                             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                                <span class="producto-nombre"
-                                                    style="font-weight: 500; color: #2d3436; font-size: 14px;">{{
-                                                    item.nombre }}</span>
-                                                <small class="producto-codigo"
-                                                    style="background: #e1e8ed; color: #2c3e50; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; display: inline-block; white-space: nowrap;"
-                                                    *ngIf="item.codigo && item.codigo !== 'N/A'">
-                                                    {{ item.codigo }}
-                                                </small>
+                                                <span class="producto-nombre" style="font-weight: 500; color: #2d3436; font-size: 14px;">{{ item.nombre }}</span>
+                                                <small class="producto-codigo" style="background: #e1e8ed; color: #2c3e50; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; display: inline-block; white-space: nowrap;" *ngIf="item.codigo && item.codigo !== 'N/A'">{{ item.codigo }}</small>
                                             </div>
                                         </div>
                                     </td>
@@ -774,12 +772,10 @@
                                         </div>
                                     </td>
                                     <td class="text-center subtotal">
-                                        <span class="subtotal-monto">{{ formatearMoneda(item.precio * item.cantidad)
-                                            }}</span>
+                                        <span class="subtotal-monto">{{ formatearMoneda(item.precio * item.cantidad) }}</span>
                                     </td>
                                     <td class="text-center acciones">
-                                        <button class="btn-eliminar-moderno" (click)="eliminarItem(item)"
-                                            title="Eliminar del carrito">
+                                        <button class="btn-eliminar-moderno" (click)="eliminarItem(item)" title="Eliminar del carrito">
                                             <i class="bi bi-trash3"></i>
                                         </button>
                                     </td>
@@ -804,24 +800,22 @@
                                 </div>
                             </div>
 
-                            <button class="btn-generar-moderno" (click)="abrirModalResumen()"
-                                [disabled]="!puedeGenerarVenta">
-                                <i class="bi bi-check-lg"></i>
-                                <span>Generar Venta</span>
-                                <div class="btn-glow"></div>
-                            </button>
-                        </div>
+                                            <button class="btn-generar-moderno" (click)="abrirModalResumen()"
+                                                [disabled]="!puedeAbrirModal">
+                                                <i class="bi bi-check-lg"></i>
+                                                <span>Generar Venta</span>
+                                                <div class="btn-glow"></div>
+                                            </button>
+                                        </div>
 
                         <!-- Barra de progreso -->
                         <div class="validation-progress">
                             <div class="progress-step" [class.completed]="pasoPacienteCompletado">
-                                <i class="bi"
-                                    [ngClass]="pasoPacienteCompletado ? 'bi-check-circle-fill' : 'bi-person'"></i>
+                                <i class="bi" [ngClass]="pasoPacienteCompletado ? 'bi-check-circle-fill' : 'bi-person'"></i>
                                 <span>Paciente</span>
                             </div>
                             <div class="progress-step" [class.completed]="pasoHistoriaCompletado">
-                                <i class="bi"
-                                    [ngClass]="pasoHistoriaCompletado ? 'bi-check-circle-fill' : 'bi-journal'"></i>
+                                <i class="bi" [ngClass]="pasoHistoriaCompletado ? 'bi-check-circle-fill' : 'bi-journal'"></i>
                                 <span>Historia</span>
                             </div>
                             <div class="progress-step" [class.completed]="pasoItemsCompletado">
@@ -871,7 +865,7 @@
 
 
 <!-- Modal resumen de venta -->
-<div class="modal fade" id="resumenVentaModal" style="z-index: 10000;" tabindex="-1" aria-hidden="true"
+<div class="modal fade" id="resumenVentaModal"  tabindex="-1" aria-hidden="true"
     data-bs-backdrop="static" data-bs-keyboard="false" (shown.bs.modal)="onModalShown()">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -1143,8 +1137,7 @@
                                             <i class="bi bi-envelope"></i>
                                             <div>
                                                 <span class="detail-label">Email:</span>
-                                                <span class="detail-value">{{ empresaReferidaInfo?.email || 'No
-                                                    disponible' }}</span>
+                                                <span class="detail-value">{{ empresaReferidaInfo?.email || 'No disponible' }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1217,8 +1210,7 @@
                                     <div class="form-group">
                                         <label class="form-label required">
                                             <i class="bi bi-person"></i>
-                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón
-                                            Social' }}
+                                            {{ clienteSinPaciente.tipoPersona === 'natural' ? 'Nombre Completo' : 'Razón Social' }}
                                         </label>
                                         <input type="text" class="form-control modern-input"
                                             style="margin-bottom: -10px !important;"
@@ -1303,8 +1295,7 @@
                                                 'Los datos fueron autocompletados desde nuestra base de datos' :
                                                 validandoCliente ?
                                                 'Buscando información del cliente...' :
-                                                'Complete los datos manualmente. El cliente será registrado al generar
-                                                la venta.' }}
+                                                'Complete los datos manualmente. El cliente será registrado al generar la venta.' }}
                                             </div>
                                         </div>
                                     </div>
@@ -1771,6 +1762,21 @@
                                 <span class="resumen-value">{{ formatearMoneda(subtotalSinIva, venta.moneda) }}</span>
                             </div>
 
+                            <div *ngIf="consultaEnCarrito" class="resumen-item consulta">
+                                <span class="resumen-label">
+                                    <i class="bi bi-person-badge me-1"></i>
+                                    Consulta {{ tipoVenta === 'solo_consulta' ? 'completa' : 'médica' }}
+                                </span>
+                                <span class="resumen-value">
+                                    {{ formatearMoneda(tipoVenta === 'solo_consulta' ? montoConsulta : pagoMedico, venta.moneda) }}
+                                    <small *ngIf="tipoVenta === 'solo_consulta'" class="desglose-consulta">
+                                        (Médico: {{ formatearMoneda(pagoMedico, venta.moneda) }} 
+                                        + Óptica: {{ formatearMoneda(pagoOptica, venta.moneda) }})
+                                    </small>
+                                </span>
+                            </div>
+
+                        
                             <!-- Descuento (solo si existe) -->
                             <div *ngIf="tieneDescuento" class="resumen-item">
                                 <span class="resumen-label">
