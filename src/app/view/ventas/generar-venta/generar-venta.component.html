@@ -481,8 +481,8 @@
                             <thead>
                                 <tr>
                                     <th class="text-center">Consulta</th>
-                                    <th class="text-center">Costo Médico (editable)</th>
-                                    <th class="text-center">Costo Óptica (editable)</th>
+                                    <th class="text-center">Costo Médico </th>
+                                    <th class="text-center">Costo Óptica </th>
                                     <th class="text-center">Total</th>
                                     <th class="text-center"></th>
                                 </tr>
@@ -844,17 +844,6 @@
                             luego agrega productos</span>
                         <span *ngSwitchCase="'solo_productos'">Agrega productos para continuar</span>
                     </p>
-
-                    <!-- Sugerencia de consulta pendiente -->
-                    <div class="sugerencia-consulta" *ngIf="(tipoVenta === 'solo_consulta' || tipoVenta === 'consulta_productos') && 
-                                historiaMedicaSeleccionada && 
-                                esConsultaCobrable(historiaMedicaSeleccionada) && 
-                                !consultaYaAgregada()">
-                        <span class="sugerencia-label">💡 Sugerencia:</span>
-                        <button class="btn-outline-moderno" (click)="agregarConsultaAlCarrito()">
-                            <i class="bi bi-plus-circle"></i> Agregar consulta
-                        </button>
-                    </div>
                 </div>
             </div>
         </section>
@@ -2118,9 +2107,8 @@
             <!-- Footer modernizado -->
             <div class="modal-footer-detalle">
                 <div class="footer-actions">
-                    <button type="button" class="btn btn-secondary btn-detalle" data-bs-dismiss="modal"
+                    <button type="button" class="btn btn-secondary-cancelar" data-bs-dismiss="modal"
                         [disabled]="generandoVenta">
-                        <i class="bi bi-x-circle me-2"></i>
                         {{ generandoVenta ? 'Cancelando...' : 'Cancelar' }}
                     </button>
                     <button type="button" class="btn btn-success btn-detalle" (click)="generarVenta()"
@@ -2524,29 +2512,28 @@
                     <!-- Totales compactos -->
                     <div class="totales-compactos mb-3">
                         <div class="row justify-content-end">
-                            <div class="col-md-6">
+                            <div class="-col-md-6">
                                 <table class="table table-sm table-bordered">
-                                    <!-- Subtotal - usar datosRecibo.totales.subtotal -->
+                                    <!-- Subtotal (productos) -->
                                     <tr>
-                                        <td class="fw-bold">Subtotal (sin IVA):</td>
+                                        <td class="fw-bold">Subtotal (productos):</td>
                                         <td class="text-end">{{ formatearMoneda(datosRecibo?.totales?.subtotal,
+                                            datosRecibo?.configuracion?.moneda) }}</td>
+                                    </tr>
+
+                                    <!-- Consulta (si existe) -->
+                                    <tr *ngIf="consultaEnCarrito">
+                                        <td class="fw-bold">Consulta:</td>
+                                        <td class="text-end">{{ formatearMoneda(montoConsulta,
                                             datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
 
                                     <!-- Descuento - solo si existe -->
                                     <tr *ngIf="datosRecibo?.totales?.descuento > 0">
-                                        <td class="fw-bold">Descuento ({{ datosRecibo?.configuracion?.descuento }}%):
-                                        </td>
+                                        <td class="fw-bold">Descuento ({{ datosRecibo?.configuracion?.descuento }}%):</td>
                                         <td class="text-end text-danger">- {{
                                             formatearMoneda(datosRecibo?.totales?.descuento,
                                             datosRecibo?.configuracion?.moneda) }}</td>
-                                    </tr>
-
-                                    <!-- Subtotal con descuento - solo si hay descuento -->
-                                    <tr *ngIf="datosRecibo?.totales?.descuento > 0">
-                                        <td class="fw-bold">Subtotal con descuento:</td>
-                                        <td class="text-end">{{ formatearMoneda(datosRecibo?.totales?.subtotal -
-                                            datosRecibo?.totales?.descuento, datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
 
                                     <!-- IVA -->
@@ -2557,39 +2544,45 @@
                                             datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
 
-                                    <!-- Mostrar según forma de pago -->
+                                    <!-- Línea separadora visual (opcional) -->
+                                    <tr><td colspan="2"><hr class="my-1"></td></tr>
+
+                                    <!-- Totales según forma de pago -->
                                     <tr *ngIf="datosRecibo?.configuracion?.formaPago === 'contado'"
                                         class="table-success">
-                                        <td class="fw-bold">Total pagado:</td>
+                                        <td class="fw-bold">TOTAL PAGADO:</td>
                                         <td class="text-end fw-bold">{{
                                             formatearMoneda(datosRecibo?.totales?.totalPagado,
                                             datosRecibo?.configuracion?.moneda) }}</td>
                                     </tr>
 
-                                    <tr *ngIf="datosRecibo?.configuracion?.formaPago === 'cashea'" class="table-info">
-                                        <td class="fw-bold">Total a pagar:</td>
-                                        <td class="text-end fw-bold">{{ formatearMoneda(datosRecibo?.totales?.total,
-                                            datosRecibo?.configuracion?.moneda) }}</td>
-                                    </tr>
-                                    <tr *ngIf="datosRecibo?.configuracion?.formaPago === 'cashea'"
-                                        class="table-warning">
-                                        <td class="fw-bold">Total pagado ahora:</td>
-                                        <td class="text-end fw-bold">{{
-                                            formatearMoneda(datosRecibo?.totales?.totalPagado,
-                                            datosRecibo?.configuracion?.moneda) }}</td>
-                                    </tr>
+                                    <ng-container *ngIf="datosRecibo?.configuracion?.formaPago === 'cashea'">
+                                        <tr class="table-info">
+                                            <td class="fw-bold">Total a pagar:</td>
+                                            <td class="text-end fw-bold">{{ formatearMoneda(datosRecibo?.totales?.total,
+                                                datosRecibo?.configuracion?.moneda) }}</td>
+                                        </tr>
+                                        <tr class="table-warning">
+                                            <td class="fw-bold">Total pagado ahora:</td>
+                                            <td class="text-end fw-bold">{{
+                                                formatearMoneda(datosRecibo?.totales?.totalPagado,
+                                                datosRecibo?.configuracion?.moneda) }}</td>
+                                        </tr>
+                                    </ng-container>
 
-                                    <tr *ngIf="datosRecibo?.configuracion?.formaPago === 'abono'" class="table-info">
-                                        <td class="fw-bold">Total a pagar:</td>
-                                        <td class="text-end fw-bold">{{ formatearMoneda(datosRecibo?.totales?.total,
-                                            datosRecibo?.configuracion?.moneda) }}</td>
-                                    </tr>
-                                    <tr *ngIf="datosRecibo?.configuracion?.formaPago === 'abono'" class="table-warning">
-                                        <td class="fw-bold">Total abonado:</td>
-                                        <td class="text-end fw-bold">{{
-                                            formatearMoneda(datosRecibo?.totales?.totalPagado,
-                                            datosRecibo?.configuracion?.moneda) }}</td>
-                                    </tr>
+                                    <ng-container *ngIf="datosRecibo?.configuracion?.formaPago === 'abono'">
+                                        <tr class="table-info">
+                                            <td class="fw-bold">Total a pagar:</td>
+                                            <td class="text-end fw-bold">{{ formatearMoneda(datosRecibo?.totales?.total,
+                                                datosRecibo?.configuracion?.moneda) }}</td>
+                                        </tr>
+                                        <tr class="table-warning">
+                                            <td class="fw-bold">Total abonado:</td>
+                                            <td class="text-end fw-bold">{{
+                                                formatearMoneda(datosRecibo?.totales?.totalPagado,
+                                                datosRecibo?.configuracion?.moneda) }}</td>
+                                        </tr>
+                                    </ng-container>
                                 </table>
                             </div>
                         </div>

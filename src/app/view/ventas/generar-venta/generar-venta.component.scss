@@ -3596,28 +3596,6 @@
     pointer-events: none !important;
 }
 
-.historia-card-2cols .selection-check i {
-    font-size: 28px !important;
-    color: var(--primary-color) !important;
-    background: white !important;
-    border-radius: 50% !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
-   display: block !important;
-    width: 28px !important;
-    height: 28px !important;
-    line-height: 28px !important;
-    text-align: center !important;
-    z-index: 1;
-}
-
-
-/* Asegurar que el contenedor no corte el check */
-.historia-card-2cols {
-    //position: relative !important;
-   // overflow: visible !important;
-}
-
-
 /* Animación */
 @keyframes pop-in {
     0% {
@@ -5495,6 +5473,21 @@
         font-weight: 500;
         display: flex;
         align-items: center;
+        background: var(--degradado-color) !important;
+
+        i {
+            font-size: 1.1rem;
+        }
+    }
+
+    .btn-secondary-cancelar {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        background: #6c757d !important;
+        color: white;
 
         i {
             font-size: 1.1rem;

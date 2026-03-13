@@ -3811,40 +3811,74 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const textoTotalAPagar = this.getTextoTotalAPagarParaHTML(formaPago);
             const textoTotalPagado = this.getTextoTotalPagadoParaHTML(formaPago);
 
+            // Construir las filas de la tabla
+            let filasTotales = '';
+
+            // Subtotal (productos)
+            filasTotales += `
+        <tr>
+            <td class="fw-bold" style="font-size: 12px;">Subtotal (productos):</td>
+            <td class="text-end" style="font-size: 12px;">${formatearMonedaLocal(datos.totales.subtotal)}</td>
+        </tr>
+    `;
+
+            // Consulta (si existe)
+            if (this.consultaEnCarrito) {
+                filasTotales += `
+            <tr>
+                <td class="fw-bold" style="font-size: 12px;">Consulta:</td>
+                <td class="text-end" style="font-size: 12px;">${formatearMonedaLocal(this.montoConsulta)}</td>
+            </tr>
+        `;
+            }
+
+            // Descuento (si existe)
+            if (datos.totales.descuento > 0) {
+                filasTotales += `
+            <tr>
+                <td class="fw-bold" style="font-size: 12px;">Descuento:</td>
+                <td class="text-end text-danger" style="font-size: 12px;">- ${formatearMonedaLocal(datos.totales.descuento)}</td>
+            </tr>
+        `;
+            }
+
+            // IVA
+            filasTotales += `
+        <tr>
+            <td class="fw-bold" style="font-size: 12px;">IVA:</td>
+            <td class="text-end" style="font-size: 12px;">${formatearMonedaLocal(datos.totales.iva)}</td>
+        </tr>
+    `;
+
+            // Total a pagar (si aplica)
+            if (mostrarTotalAPagar) {
+                filasTotales += `
+            <tr class="table-info">
+                <td class="fw-bold" style="font-size: 13px;">${textoTotalAPagar}:</td>
+                <td class="text-end fw-bold" style="font-size: 13px;">${formatearMonedaLocal(datos.totales.total)}</td>
+            </tr>
+        `;
+            }
+
+            // Total pagado (siempre al final)
+            filasTotales += `
+        <tr class="table-success">
+            <td class="fw-bold" style="font-size: 13px;">${textoTotalPagado}:</td>
+            <td class="text-end fw-bold" style="font-size: 13px;">${formatearMonedaLocal(datos.totales.totalPagado)}</td>
+        </tr>
+    `;
+
             return `
-                        <div class="totales-compactos page-break-avoid">
-                            <div style="display: flex; justify-content: flex-end;">
-                                <div style="width: 50%;">
-                                    <table style="width: 100%;">
-                                        <tr>
-                                            <td class="fw-bold" style="font-size: 12px;">Subtotal:</td>
-                                            <td class="text-end" style="font-size: 12px;">${formatearMonedaLocal(datos.totales.subtotal)}</td>
-                                        </tr>
-                                        ${datos.totales.descuento > 0 ? `
-                                            <tr>
-                                                <td class="fw-bold" style="font-size: 12px;">Descuento:</td>
-                                                <td class="text-end text-danger" style="font-size: 12px;">- ${formatearMonedaLocal(datos.totales.descuento)}</td>
-                                            </tr>
-                                        ` : ''}
-                                        <tr>
-                                            <td class="fw-bold" style="font-size: 12px;">IVA:</td>
-                                            <td class="text-end" style="font-size: 12px;">${formatearMonedaLocal(datos.totales.iva)}</td>
-                                        </tr>
-                                        ${mostrarTotalAPagar ? `
-                                            <tr class="table-info">
-                                                <td class="fw-bold" style="font-size: 13px;">${textoTotalAPagar}:</td>
-                                                <td class="text-end fw-bold" style="font-size: 13px;">${formatearMonedaLocal(datos.totales.total)}</td>
-                                            </tr>
-                                        ` : ''}
-                                        <tr class="table-success">
-                                            <td class="fw-bold" style="font-size: 13px;">${textoTotalPagado}:</td>
-                                            <td class="text-end fw-bold" style="font-size: 13px;">${formatearMonedaLocal(datos.totales.totalPagado)}</td>
-                                        </tr>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+        <div class="totales-compactos page-break-avoid">
+            <div style="display: flex; justify-content: flex-end;">
+                <div style="width: 50%;">
+                    <table style="width: 100%;">
+                        ${filasTotales}
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
         };
 
         return `
@@ -4701,14 +4735,31 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             currentY += 6;
 
-            // Preparar datos para la tabla
-            const tableData = datos.productos.map((producto: any, index: number) => [
-                (index + 1).toString(),
-                producto.nombre,
-                producto.cantidad.toString(),
-                this.formatearMonedaParaPDF(producto.precioUnitario),
-                this.formatearMonedaParaPDF(producto.subtotal)
-            ]);
+            // En la tabla de productos, antes de mapear los datos
+            let tableData = [];
+
+            // Agregar consulta primero si existe
+            if (this.consultaEnCarrito) {
+                tableData.push([
+                    '1',
+                    `CONSULTA: ${this.obtenerNombreMedico(this.historiaMedicaSeleccionada)}`,
+                    '1',
+                    this.formatearMonedaParaPDF(this.montoConsulta),
+                    this.formatearMonedaParaPDF(this.montoConsulta)
+                ]);
+            }
+
+            // Agregar productos después
+            if (datos.productos && datos.productos.length > 0) {
+                const productosData = datos.productos.map((producto: any, index: number) => [
+                    (this.consultaEnCarrito ? index + 2 : index + 1).toString(),
+                    producto.nombre,
+                    producto.cantidad.toString(),
+                    this.formatearMonedaParaPDF(producto.precioUnitario),
+                    this.formatearMonedaParaPDF(producto.subtotal)
+                ]);
+                tableData = [...tableData, ...productosData];
+            }
 
             // Crear tabla con autoTable
             autoTable(pdf, {
@@ -4871,18 +4922,32 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             const totalesWidth = contentWidth / 2;
             const totalesX = marginLeft + (contentWidth - totalesWidth);
 
-            // Crear tabla de totales
-            const totalesData = [
-                ['Subtotal:', this.formatearMonedaParaPDF(datos.totales.subtotal)],
-                ['Descuento:', `- ${this.formatearMonedaParaPDF(datos.totales.descuento)}`],
-                ['IVA:', this.formatearMonedaParaPDF(datos.totales.iva)],
-                ['TOTAL:', this.formatearMonedaParaPDF(datos.totales.totalPagado)]
-            ];
+            // Crear array base para los totales
+            let totalesData = [];
+
+            // Subtotal de productos
+            totalesData.push(['Subtotal (productos):', this.formatearMonedaParaPDF(datos.totales.subtotal)]);
+
+            // Consulta (si existe)
+            if (this.consultaEnCarrito) {
+                totalesData.push(['Consulta:', this.formatearMonedaParaPDF(this.montoConsulta)]);
+            }
+
+            // Descuento (si existe)
+            if (datos.totales.descuento > 0) {
+                totalesData.push(['Descuento:', `- ${this.formatearMonedaParaPDF(datos.totales.descuento)}`]);
+            }
+
+            // IVA
+            totalesData.push(['IVA:', this.formatearMonedaParaPDF(datos.totales.iva)]);
+
+            // TOTAL (siempre al final)
+            totalesData.push(['TOTAL:', this.formatearMonedaParaPDF(datos.totales.totalPagado)]);
 
             // Dibujar tabla de totales
             let totalY = currentY;
             totalesData.forEach((row, index) => {
-                const isTotal = index === 3;
+                const isTotal = index === totalesData.length - 1;
 
                 // Fondo para total
                 if (isTotal) {
@@ -4899,7 +4964,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 pdf.setFontSize(isTotal ? 11 : 10);
                 pdf.setFont('helvetica', 'bold');
 
-                if (index === 1) { // Descuento
+                if (row[0].includes('Descuento')) {
                     pdf.setTextColor(220, 53, 69);
                 } else if (isTotal) {
                     pdf.setTextColor(25, 135, 84);
@@ -5240,9 +5305,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const baseParaDescuento = subtotalConIva;
         const descuento = this.venta?.descuento ? (baseParaDescuento * (this.venta.descuento / 100)) : 0;
 
-        // 4. Calcular total REAL (subtotal con IVA - descuento)
-        const totalReal = baseParaDescuento - descuento;
-
         // Determinar el total pagado según la forma de pago REAL
         let totalPagado = 0;
         switch (this.venta.formaPago) {
@@ -5259,6 +5321,27 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 totalPagado = this.totalPagadoPorMetodos;
         }
         const productosConDetalles = this.obtenerProductosConDetalles();
+
+        if (this.consultaEnCarrito) {
+            const consultaItem = {
+                nombre: `Consulta de ${this.historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo || 'Oftalmología'}`,
+                codigo: `CONS-${this.historiaMedicaSeleccionada?.nHistoria}`,
+                cantidad: 1,
+                precioUnitario: this.montoConsulta,
+                subtotal: this.montoConsulta,
+                iva: 0,
+                total: this.montoConsulta,
+                aplicaIva: false,
+                esConsulta: true,
+                medico: this.obtenerNombreMedico(this.historiaMedicaSeleccionada)
+            };
+
+            // Insertar al inicio del array de productos
+            productosConDetalles.unshift(consultaItem);
+        }
+
+        // Calcular totales incluyendo consulta
+        const totalReal = productosConDetalles.reduce((sum, item) => sum + (item.total || 0), 0);
 
         let clienteInfo = {
             nombre: 'CLIENTE GENERAL',
