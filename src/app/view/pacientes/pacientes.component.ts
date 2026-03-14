@@ -7,7 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import * as bootstrap from 'bootstrap';
 import { ModalService } from '../../core/services/modal/modal.service';
 import { Paciente } from './paciente-interface';
-import { Observable, of, forkJoin, lastValueFrom, Subscription  } from 'rxjs';
+import { Observable, of, forkJoin, lastValueFrom, Subscription } from 'rxjs';
 import { take, catchError } from 'rxjs/operators';
 import { Sede } from '../../view/login/login-interface';
 import { AuthService } from '../../core/services/auth/auth.service';
@@ -115,15 +115,6 @@ export class VerPacientesComponent implements OnInit {
   opcionesAntecedentesPersonales = OPCIONES_ANTECEDENTES_PERSONALES;
 
   opcionesAntecedentesFamiliares = OPCIONES_ANTECEDENTES_FAMILIARES;
-  opcionesPatologiaOcular: string[] = [
-    'Uveítis',
-    'Catarata',
-    'Queratitis',
-    'Desprendimiento de retina',
-    'Glaucoma',
-    'Queratocono',
-    'Ojo seco'
-  ];
 
   opcionesPatologias: string[] = [
     'Diabetes',
@@ -142,7 +133,7 @@ export class VerPacientesComponent implements OnInit {
     private fb: FormBuilder,
     private pacientesService: PacientesService,
     private router: Router,
-       private route: ActivatedRoute,
+    private route: ActivatedRoute,
     private cdRef: ChangeDetectorRef,
     private modalService: ModalService,
     private swalService: SwalService,
@@ -236,19 +227,19 @@ export class VerPacientesComponent implements OnInit {
   }
 
   ngOnInit(): void {
-      this.route.queryParams.subscribe(params => {
-        if (params['abrirModal'] === 'nuevo') {
-            // Esperar a que la vista cargue
-            setTimeout(() => {
-                this.abrirModalAgregarPaciente();
-            }, 500);
-        }
+    this.route.queryParams.subscribe(params => {
+      if (params['abrirModal'] === 'nuevo') {
+        // Esperar a que la vista cargue
+        setTimeout(() => {
+          this.abrirModalAgregarPaciente();
+        }, 500);
+      }
     });
-    
+
     // También mantener la suscripción al servicio
     this.modalSubscription = this.pacientesService.abrirModalNuevoPaciente$.subscribe(() => {
-        // Esto solo funcionará si ya estás en el módulo de pacientes
-        this.abrirModalAgregarPaciente();
+      // Esto solo funcionará si ya estás en el módulo de pacientes
+      this.abrirModalAgregarPaciente();
     });
 
     this.inicializarDatosIniciales();
@@ -560,7 +551,6 @@ export class VerPacientesComponent implements OnInit {
                   antecedentesPersonales: historia.antecedentesPersonales ?? [],
                   antecedentesFamiliares: historia.antecedentesFamiliares ?? [],
                   patologias: historia.patologias ?? [],
-                  patologiaOcular: historia.patologiaOcular ?? []
                 }
               };
             })
@@ -858,7 +848,6 @@ export class VerPacientesComponent implements OnInit {
       antecedentesPersonales: paciente.historiaClinica?.antecedentesPersonales ?? [],
       antecedentesFamiliares: paciente.historiaClinica?.antecedentesFamiliares ?? [],
       patologias: paciente.historiaClinica?.patologias ?? [],
-      patologiaOcular: paciente.historiaClinica?.patologiaOcular ?? [],
       redesSociales: paciente.redesSociales ?? [],
       referidoEmpresa: paciente.informacionEmpresa?.referidoEmpresa || false,
       empresaNombre: paciente.informacionEmpresa?.empresaNombre || '',
@@ -1289,8 +1278,7 @@ export class VerPacientesComponent implements OnInit {
         alergicoA: null,
         antecedentesPersonales: [],
         antecedentesFamiliares: [],
-        patologias: [],
-        patologiaOcular: []
+        patologias: []
       }
     };
   }
@@ -1317,7 +1305,6 @@ export class VerPacientesComponent implements OnInit {
       antecedentesPersonales: [],
       antecedentesFamiliares: [],
       patologias: [],
-      patologiaOcular: [],
       sede: this.sedeActiva,
       fechaRegistro: ''
     });

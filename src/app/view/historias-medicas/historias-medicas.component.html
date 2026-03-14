@@ -177,11 +177,19 @@
                     <label>Ocupación</label>
                     <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.ocupacion }}</div>
                   </div>
-                  <div class="dato-item full-width">
+
+                  <!-- Segunda fila: Ocupación y Motivo (cada uno ocupa 2 columnas) -->
+                  <div class="dato-item">
+                    <label>Ocupación</label>
+                    <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.ocupacion }}</div>
+                  </div>
+                  <div class="dato-item motivo-item">
                     <label>Motivo</label>
                     <div class="dato-valor">{{ getMotivoVisual() }}</div>
                   </div>
-                  <div class="dato-item full-width">
+                  
+                  <!-- Tercera fila: Dirección (ocupa toda la fila) -->
+                  <div class="dato-item direccion-item">
                     <label>Dirección</label>
                     <div class="dato-valor">{{ pacienteSeleccionado?.informacionPersonal?.direccion }}</div>
                   </div>
@@ -285,33 +293,16 @@
                     </div>
                   </div>
 
+                  <!-- Sección de Patologías Generales  -->
                   <div class="tags-group">
                     <label>Patologías Generales</label>
                     <div class="tags-container">
-                      <ng-container
-                        *ngIf="(pacienteSeleccionado?.historiaClinica?.patologias ?? []).length > 0; else sinPatologias">
-                        <span *ngFor="let patologia of pacienteSeleccionado?.historiaClinica?.patologias ?? []"
-                          class="tag tag-secondary">
+                      <ng-container *ngIf="getPatologiasProcesadas().length > 0; else sinPatologias">
+                        <span *ngFor="let patologia of getPatologiasProcesadas()" class="tag tag-secondary">
                           {{ patologia }}
                         </span>
                       </ng-container>
                       <ng-template #sinPatologias>
-                        <span class="tag tag-secondary">No reportados</span>
-                      </ng-template>
-                    </div>
-                  </div>
-
-                  <div class="tags-group">
-                    <label>Patologías Oculares</label>
-                    <div class="tags-container">
-                      <ng-container
-                        *ngIf="(pacienteSeleccionado?.historiaClinica?.patologiaOcular ?? []).length > 0; else sinPatologiaOcular">
-                        <span *ngFor="let pat of pacienteSeleccionado?.historiaClinica?.patologiaOcular ?? []"
-                          class="tag tag-warning">
-                          {{ pat }}
-                        </span>
-                      </ng-container>
-                      <ng-template #sinPatologiaOcular>
                         <span class="tag tag-secondary">No reportados</span>
                       </ng-template>
                     </div>
@@ -586,7 +577,7 @@
 
                 <ng-container
                   *ngIf="historiaSeleccionada?.recomendaciones as recomendaciones; else sinRecomendaciones">
-                  <!-- En la sección de recomendaciones de la vista (línea ~900) -->
+                  <!-- En la sección de recomendaciones de la vista -->
                     <div class="recomendaciones-grid">
                       <div *ngFor="let rec of recomendaciones; let i = index" class="recomendacion-card">
                         <div class="recomendacion-header">
@@ -862,7 +853,6 @@
                       [searchable]="true" 
                       [disabled]="medicoTratante.length === 0"
                       placeholder="Seleccione un médico..." 
-                      (change)="onMedicoSeleccionado($event)"
                       class="ng-select-moderno">  
                     </ng-select>
 
@@ -873,76 +863,6 @@
                   </div>
                 </div>
               </div>
-
-              <div class="row mt-4">
-              <div class="col-12">
-                
-                <!-- TARJETA PARA OFTALMÓLOGO -->
-                <div *ngIf="esOftalmologoSeleccionado" class="facturacion-card">
-                  
-                  <!-- HEADER con toggle -->
-                  <div class="facturacion-header">
-                    <i class="bi bi-cash-coin"></i>
-                    <span>Honorarios de la consulta</span>
-                    <button type="button" class="btn-config" (click)="abrirModalMontos()" 
-                              [title]="'Configurar montos'">
-                        <i class="bi bi-gear"></i>
-                    </button>
-                  </div>
-
-                  <!-- MODO SIMPLE -->
-                  <div *ngIf="!mostrarConfig">
-                    <div class="facturacion-mensaje">
-                      <i class="bi bi-info-circle-fill"></i>
-                      <span>
-                        <strong>Consulta con oftalmólogo:</strong> 
-                        <span class="costo-destacado">${{ facturacionData?.montoBase }}</span>
-                      </span>
-                    </div>
-
-                    <!-- SWITCH -->
-                    <div class="facturacion-switch">
-                      <span class="switch-label">
-                        <i class="bi bi-eyeglasses"></i>
-                        ¿El paciente comprará los lentes hoy?
-                      </span>
-                      <div class="custom-switch">
-                        <input type="checkbox" id="compraLentesSwitch" 
-                              [(ngModel)]="realizoCompraLentes"
-                              [ngModelOptions]="{standalone: true}"
-                              (change)="onCambioCompraLentes()">
-                        <label for="compraLentesSwitch"></label>
-                        <span class="switch-estado">{{ realizoCompraLentes ? 'Sí' : 'No' }}</span>
-                      </div>
-                    </div>
-
-                    <!-- TOTAL A PAGAR -->
-                    <div class="facturacion-total" [ngClass]="{'sin-cargo': realizoCompraLentes}">
-                      <div class="total-label">
-                        <i class="bi" [ngClass]="realizoCompraLentes ? 'bi-check-circle' : 'bi-receipt'"></i>
-                        <span>Total a pagar:</span>
-                      </div>
-                      <div class="total-monto">
-                        ${{ facturacionData?.montoTotal }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- TARJETA PARA OPTOMETRISTA -->
-                <div *ngIf="esOptometristaSeleccionado" class="facturacion-card optometrista">
-                  <div class="facturacion-header">
-                    <i class="bi bi-cash-stack"></i>
-                    <span>Consulta gratuita</span>
-                  </div>
-                  <div class="facturacion-mensaje optometrista">
-                    <i class="bi bi-info-circle-fill"></i>
-                    <span>Las consultas con optometrista no generan ningún cargo.</span>
-                  </div>
-                </div>
-              </div>
-              </div>
-
             </div>
           </div>
 
@@ -1570,12 +1490,20 @@
                         </div>
                       </div>
 
-                      <!-- Tipo de Lentes de Contacto (se muestra solo si se selecciona "Lentes de contacto") -->
+                      <!-- Tipo de Lentes de Contacto -->
                       <div class="col-md-4" *ngIf="mostrarTipoLentesContacto[i]">
                         <div class="form-group-moderno">
-                          <label class="form-label-moderno">Tipo de Lentes de Contacto <span class="required">*</span></label>
-                          <ng-select [items]="tiposLentesContacto" bindLabel="label" bindValue="label"
-                            formControlName="tipoLentesContacto" placeholder="Seleccione el tipo..." [searchable]="true"
+                          <label class="form-label-moderno">
+                            Tipo de Lentes de Contacto <span class="required">*</span>
+                          </label>
+                          <ng-select 
+                            [items]="tiposLentesContacto" 
+                            bindLabel="label" 
+                            bindValue="label"
+                            formControlName="tipoLentesContacto" 
+                            [placeholder]="'Seleccione el tipo...'"
+                            [searchable]="true"
+                            [clearable]="false"
                             class="ng-select-moderno">
                           </ng-select>
                         </div>
@@ -1739,76 +1667,4 @@
 
 <div *ngIf="mostrarBotonVolver && dataIsReady" class="boton-flotante" (click)="volverAlListado()">
   🧭 ¿Volver al listado de pacientes?
-</div>
-
-
-<!-- Modal para montos -->
-<div class="modal fade" id="modalMontos" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      
-      <!-- Header -->
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="bi bi-cash-coin me-2"></i>
-          Configurar Montos
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-
-      <!-- Body -->
-      <div class="modal-body">
-        <form [formGroup]="montosForm">
-          <div class="mb-3">
-            <label class="form-label fw-bold">
-              <i class="bi bi-person-badge text-primary me-1"></i>
-              Monto Médico ($)
-            </label>
-            <input type="number" class="form-control form-control-lg" 
-                   formControlName="montoMedico"
-                   (input)="calcularTotal()"
-                   min="0" step="5"
-                   placeholder="Ej: 20">
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label fw-bold">
-              <i class="bi bi-building text-success me-1"></i>
-              Monto Óptica ($)
-            </label>
-            <input type="number" class="form-control form-control-lg" 
-                   formControlName="montoOptica"
-                   (input)="calcularTotal()"
-                   min="0" step="5"
-                   placeholder="Ej: 20">
-          </div>
-
-          <div class="bg-light p-3 rounded-3 mt-3">
-            <div class="d-flex justify-content-between align-items-center">
-              <span class="fw-bold fs-5">Total Consulta:</span>
-              <span class="text-primary fw-bold fs-4">${{ montosForm.get('total')?.value }}</span>
-            </div>
-          </div>
-
-          <div class="text-muted small mt-2">
-            <i class="bi bi-info-circle"></i>
-            Estos montos se usarán para la facturación de la consulta actual
-          </div>
-        </form>
-      </div>
-
-      <!-- Footer -->
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="bi bi-x-circle me-1"></i>
-          Cancelar
-        </button>
-        <button type="button" class="btn btn-primary" (click)="guardarMontos()" [disabled]="!montosForm.valid">
-          <i class="bi bi-check-circle me-1"></i>
-          Guardar
-        </button>
-      </div>
-
-    </div>
-  </div>
 </div>

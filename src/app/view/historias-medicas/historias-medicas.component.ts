@@ -63,12 +63,6 @@ export class HistoriasMedicasComponent implements OnInit {
   tareasPendientes = 0;
   dataIsReady = false;
 
-  esOftalmologoSeleccionado: boolean = false;
-  esOptometristaSeleccionado: boolean = false;
-  realizoCompraLentes: boolean = false;
-  facturacionData: any = null;
-  mostrarConfig: boolean = false;
-
   // Empleados
   isLoading = true;
   employees: any[] = [];
@@ -92,13 +86,7 @@ export class HistoriasMedicasComponent implements OnInit {
   notaConformidad: string = 'PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE.';
   horaEvaluacion: string = '';
   mostrarBotonVolver = false;
-
-  mostrarModalMontos: boolean = false;
-  montoMedico: number = 20;
-  montoOptica: number = 20;
-  totalCalculado: number = 40;
-
-
+  private boundHandleKeydown: any;
   private navigationMap: { [key: string]: string } = {};
   private isNavigating = false;
   private currentRowMap: { [key: string]: string[] } = {};
@@ -132,7 +120,6 @@ export class HistoriasMedicasComponent implements OnInit {
   ]);
 
   montosForm: FormGroup;
-
 
   constructor(
     private fb: FormBuilder,
@@ -281,7 +268,7 @@ export class HistoriasMedicasComponent implements OnInit {
       ref_avccl_oi: [''],
       ref_avccc_oi: [''],
 
-      // Refracción Final
+      // Refracción Final - AGREGAR VALIDADORES REQUIRED
       ref_final_esf_od: ['', Validators.required],
       ref_final_cil_od: ['', Validators.required],
       ref_final_eje_od: ['', Validators.required],
@@ -305,13 +292,12 @@ export class HistoriasMedicasComponent implements OnInit {
       avae_oi: [''],
       otros_oi: [''],
 
-      // Diagnóstico y Tratamiento
-      diagnostico: [''],
-      tratamiento: [''],
+      // Diagnóstico y Tratamiento - AGREGAR VALIDADORES REQUIRED
+      diagnostico: ['', Validators.required],
+      tratamiento: ['', Validators.required],
 
       // Recomendaciones
       recomendaciones: this.fb.array([this.crearRecomendacion()])
-
     });
 
     this.mostrarMedidasProgresivo = [false];
@@ -472,14 +458,6 @@ export class HistoriasMedicasComponent implements OnInit {
         medico: { cedula: '', nombre: '', cargo: '' },
         nombre_asesor: '',
         cedula_asesor: '',
-
-     /*  facturacion: {
-          tipoProfesional: 'optometrista',
-          realizoCompraLentes: false,
-          montoTotal: 0,
-          pagoOptica: 0,
-          pagoMedico: 0
-        }*/
       },
 
       antecedentes: {
@@ -495,7 +473,6 @@ export class HistoriasMedicasComponent implements OnInit {
         antecedentesPersonales: [],
         antecedentesFamiliares: [],
         patologias: [],
-        patologiaOcular: []
       },
 
       examenOcular: {
@@ -619,7 +596,7 @@ export class HistoriasMedicasComponent implements OnInit {
         ref_final_alt_oi: eo.refraccionFinal.alt_oi,
         ref_final_dp_oi: eo.refraccionFinal.dp_oi,
 
-        // AVSC / AVAE / OTROS - VERSIÓN CORREGIDA (LEJOS/CERCA)
+        // AVSC / AVAE / OTROS 
         avsc_lejos_od: eo.avsc_avae_otros.avsc_lejos_od,
         avsc_cerca_od: eo.avsc_avae_otros.avsc_cerca_od,
         avae_od: eo.avsc_avae_otros.avae_od,
@@ -630,7 +607,6 @@ export class HistoriasMedicasComponent implements OnInit {
         avae_oi: eo.avsc_avae_otros.avae_oi,
         otros_oi: eo.avsc_avae_otros.otros_oi,
 
-
         // Diagnóstico / Tratamiento
         diagnostico: dt.diagnostico,
         tratamiento: dt.tratamiento
@@ -638,43 +614,19 @@ export class HistoriasMedicasComponent implements OnInit {
 
       this.mostrarSelectLentesContacto = dc.tipoCristalActual === 'LENTES_CONTACTO';
 
-     /* if (dc.facturacion) {
-        this.esOftalmologoSeleccionado = dc.facturacion.tipoProfesional === 'oftalmologo';
-        this.esOptometristaSeleccionado = dc.facturacion.tipoProfesional === 'optometrista';
-        this.realizoCompraLentes = dc.facturacion.realizoCompraLentes || false;
-        this.facturacionData = { ...dc.facturacion };
-      } else {*/
-        // Si no hay facturación, resetear
-        this.esOftalmologoSeleccionado = false;
-        this.esOptometristaSeleccionado = false;
-        this.realizoCompraLentes = false;
-        this.facturacionData = null;
-     // }
-
-
       this.onMotivoChange(this.historiaForm.value.motivo);
 
       // Limpiar arrays de visibilidad
       this.mostrarMedidasProgresivo = [];
-      this.mostrarTipoLentesContacto = []; // ✅ IMPORTANTE: Limpiar array
+      this.mostrarTipoLentesContacto = [];
       this.mostrarMaterialPersonalizado = [];
 
       this.recomendaciones.clear();
 
-      // En el bucle de recomendaciones:
       h.recomendaciones.forEach((r, index) => {
         const grupo = this.crearRecomendacion(r);
         this.recomendaciones.push(grupo);
-
-        // Extraer valor del cristal como string
         const valorCristal = this.obtenerValorCristalComoString(r.cristal);
-
-        console.log(`Recomendación ${index}:`, {
-          cristalOriginal: r.cristal,
-          valorCristal: valorCristal,
-          tipoLentesContacto: r.tipoLentesContacto,
-          esLentesContacto: this.esLentesContacto(valorCristal)
-        });
 
         // Establecer visibilidad basada en los datos precargados
         const esProgresivo = this.esCristalProgresivo(valorCristal);
@@ -714,10 +666,6 @@ export class HistoriasMedicasComponent implements OnInit {
 
     // Resetear otros estados
     this.mostrarSelectLentesContacto = false;
-    this.esOftalmologoSeleccionado = false;
-    this.esOptometristaSeleccionado = false;
-    this.realizoCompraLentes = false;
-    this.facturacionData = null;
     this.medicoSeleccionado = null;
   }
 
@@ -815,7 +763,6 @@ export class HistoriasMedicasComponent implements OnInit {
           : typeof f.medico === 'string'
             ? f.medico
             : '',
-       // facturacion: this.facturacionData
       },
       examenOcular: {
         lensometria: {
@@ -897,8 +844,7 @@ export class HistoriasMedicasComponent implements OnInit {
           ...historia,
           datosConsulta: {
             ...historia.datosConsulta,
-            medico: this.medicoSeleccionado?.cedula,
-            facturacion: this.facturacionData
+            medico: this.medicoSeleccionado?.cedula
           }
         };
 
@@ -934,6 +880,11 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
+  // Agrega este método en el componente
+  getPatologiasProcesadas(): string[] {
+    return this.procesarPatologias(this.pacienteSeleccionado?.historiaClinica?.patologias);
+  }
+
   private crearHistoria(): void {
     if (!this.pacienteParaNuevaHistoria) {
       this.swalService.showError('Error', 'No hay ningún paciente seleccionado');
@@ -955,7 +906,6 @@ export class HistoriasMedicasComponent implements OnInit {
         tipoLentesContacto: formValue.tipoLentesContacto || '',
         fechaUltimaGraduacion: formValue.ultimaGraduacion,
         medico: formValue.medico?.cedula,
-        facturacion: this.facturacionData || '',
       },
       examenOcular: this.mapExamenOcular(),
       diagnosticoTratamiento: {
@@ -989,7 +939,17 @@ export class HistoriasMedicasComponent implements OnInit {
         // Recargar y seleccionar directamente la recién creada
         this.cargarHistoriasMedicas(
           paciente.key,
-          undefined,
+          () => {
+            const historiaEncontrada = this.historial.find(h => h.id === historiaCreada.id);
+
+            if (historiaEncontrada) {
+              this.historiaSeleccionada = historiaEncontrada;
+            } else if (this.historial.length > 0) {
+              this.historiaSeleccionada = this.historial[0];
+            }
+
+            this.cdr.detectChanges();
+          },
           historiaCreada.id
         );
 
@@ -1011,9 +971,6 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
-  // ***************************
-  // * Métodos de pacientes
-  // ***************************
   cargarPacientes(): void {
     this.tareaIniciada();
     this.pacientesService.getPacientes().subscribe({
@@ -1058,8 +1015,7 @@ export class HistoriasMedicasComponent implements OnInit {
                 alergicoA: historia.alergicoA ?? null,
                 antecedentesPersonales: historia.antecedentesPersonales ?? [],
                 antecedentesFamiliares: historia.antecedentesFamiliares ?? [],
-                patologias: historia.patologias ?? [],
-                patologiaOcular: historia.patologiaOcular ?? []
+                patologias: historia.patologias ?? []
               }
             };
           })
@@ -1068,7 +1024,6 @@ export class HistoriasMedicasComponent implements OnInit {
         this.actualizarPacientesPorSede();
         this.actualizarPacientesFiltrados();
 
-        // 🔍 Precarga si hay idPaciente en la ruta
         let idPaciente: string | null = null;
         let actualRoute: ActivatedRoute | null = this.route;
 
@@ -1086,7 +1041,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
           if (paciente) {
             this.pacienteSeleccionado = paciente;
-            this.pacienteIdSeleccionado = paciente.id; // aquí guardas el ID numérico
+            this.pacienteIdSeleccionado = paciente.id;
             this.pacienteParaNuevaHistoria = paciente;
 
             // Usar la key para cargar historias
@@ -1101,7 +1056,6 @@ export class HistoriasMedicasComponent implements OnInit {
       error: (err: HttpErrorResponse) => {
         this.pacientes = [];
 
-        // Caso específico: no hay pacientes registrados
         if (err.status === 404) {
           this.swalService.showWarning(
             'Sin registros',
@@ -1123,12 +1077,14 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.historiaService.getHistoriasPorPaciente(pacienteId).subscribe({
       next: (historias: HistoriaMedica[]) => {
+        // Ordenar historias por fecha (más reciente primero)
         this.historial = historias.sort((a, b) => {
-          const fechaA = new Date(a.auditoria?.fechaCreacion || '').getTime();
-          const fechaB = new Date(b.auditoria?.fechaCreacion || '').getTime();
+          const fechaA = new Date(a.auditoria?.fechaCreacion || a.fecha || '').getTime();
+          const fechaB = new Date(b.auditoria?.fechaCreacion || b.fecha || '').getTime();
 
           if (fechaA !== fechaB) return fechaB - fechaA;
 
+          // Si tienen la misma fecha, ordenar por número de historia
           const extraerSecuencia = (nHistoria: string): number => {
             const partes = nHistoria?.split('-');
             return partes?.length === 3 ? parseInt(partes[2], 10) : 0;
@@ -1137,11 +1093,18 @@ export class HistoriasMedicasComponent implements OnInit {
           return extraerSecuencia(b.nHistoria) - extraerSecuencia(a.nHistoria);
         });
 
+        console.log('Historias ordenadas:', this.historial);
+
+        // Seleccionar la historia adecuada
         if (historiaIdSeleccionar) {
+          // Buscar la historia por ID
           const encontrada = this.historial.find(h => h.id === historiaIdSeleccionar);
           this.historiaSeleccionada = encontrada || this.historial[0] || null;
+          console.log('Historia seleccionada por ID:', this.historiaSeleccionada);
         } else {
+          // Seleccionar la primera (más reciente)
           this.historiaSeleccionada = this.historial[0] || null;
+          console.log('Historia seleccionada (primera):', this.historiaSeleccionada);
         }
 
         this.setHoraEvaluacion();
@@ -1153,6 +1116,7 @@ export class HistoriasMedicasComponent implements OnInit {
       },
       error: (err: HttpErrorResponse) => {
         this.cargando = false;
+        console.error('Error al cargar historias:', err);
 
         if (err.status === 404) {
           this.snackBar.open(
@@ -1163,10 +1127,14 @@ export class HistoriasMedicasComponent implements OnInit {
               panelClass: ['snackbar-warning']
             }
           );
-          return;
+          this.historial = [];
+          this.historiaSeleccionada = null;
+          this.mostrarElementos = false;
+          this.mostrarSinHistorial = true;
         }
-      }
 
+        if (callback) callback();
+      }
     });
   }
 
@@ -1202,10 +1170,6 @@ export class HistoriasMedicasComponent implements OnInit {
     const paciente = this.historiaForm.get('paciente')?.value;
     this.pacienteParaNuevaHistoria = paciente;
   }
-
-  // ***************************
-  // * Métodos de empleados
-  // ***************************
 
   private loadEmployees(callback?: () => void): void {
     this.isLoading = true;
@@ -1258,100 +1222,10 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
-  onMedicoSeleccionado(medico: any): void {
-    this.medicoSeleccionado = medico;
-
-    // Resetear estado
-    this.realizoCompraLentes = false;
-
-    // Determinar tipo de profesional
-    const medicoAny = medico as any;
-    this.esOftalmologoSeleccionado = medicoAny?.cargoId === 'oftalmologo';
-    this.esOptometristaSeleccionado = medicoAny?.cargoId === 'optometrista';
-
-    // Si es oftalmólogo, cargar montos del servicio
-    if (this.esOftalmologoSeleccionado) {
-      const sede = this.sedePacienteSeleccionado || this.sedeActiva;
-
-      this.historiaService.getMontosConsulta(sede, 'oftalmologo').subscribe({
-        next: (montos) => {
-          const pagoMedico = montos.montoMedico;
-          const pagoOptica = montos.montoOptica;
-          const montoBase = montos.total; // total ya es medico + optica
-
-          this.facturacionData = {
-            tipoProfesional: 'oftalmologo',
-            realizoCompraLentes: false,
-            montoBase: montoBase,
-            montoTotal: montoBase, // Inicialmente igual al base
-            pagoOptica: pagoOptica,
-            pagoMedico: pagoMedico
-          };
-
-          console.log('Montos cargados del API:', montos);
-          this.cdr.detectChanges();
-        },
-        error: (error) => {
-          console.error('Error cargando montos:', error);
-          // Valores por defecto si hay error
-          this.facturacionData = {
-            tipoProfesional: 'oftalmologo',
-            realizoCompraLentes: false,
-            montoBase: 40,
-            montoTotal: 40,
-            pagoOptica: 20,
-            pagoMedico: 20
-          };
-        }
-      });
-    } else {
-      this.facturacionData = null;
-    }
-
-    this.cdr.detectChanges();
-  }
-
-  onCambioCompraLentes(): void {
-    if (this.facturacionData) {
-      const pagoMedico = this.facturacionData.pagoMedico;
-      const pagoOptica = this.facturacionData.pagoOptica;
-      const montoBase = pagoMedico + pagoOptica;
-
-      if (this.realizoCompraLentes) {
-        this.facturacionData.montoTotal = pagoMedico;
-        this.facturacionData.pagoOptica = 0;
-      } else {
-        this.facturacionData.montoTotal = montoBase;
-        this.facturacionData.pagoOptica = pagoOptica;
-      }
-
-      this.facturacionData.montoBase = montoBase;
-      this.facturacionData.realizoCompraLentes = this.realizoCompraLentes;
-
-      this.cdr.detectChanges();
-    }
-  }
-
-  // Método principal de cálculo
-  private calcularYActualizarFacturacion(): void {
-    this.facturacionData = this.calcularFacturacion(
-      this.medicoSeleccionado,
-      this.realizoCompraLentes
-    );
-
-    // ✅ Forzar actualización de la vista
-    this.cdr.detectChanges();
-  }
-
-
   getNombreMedico(medico: { nombre?: string; cargo?: string } | null | undefined): string {
     if (!medico || !medico.nombre) return 'Médico no registrado';
     return medico.cargo ? `${medico.nombre} (${medico.cargo})` : medico.nombre;
   }
-
-  // ***************************
-  // * Métodos de recomendaciones
-  // ***************************
 
   get recomendaciones(): FormArray {
     return this.historiaForm.get('recomendaciones') as FormArray;
@@ -1365,14 +1239,12 @@ export class HistoriasMedicasComponent implements OnInit {
       montura: [rec?.montura || ''],
       observaciones: [rec?.observaciones || ''],
 
-      // Campos para medidas de progresivos (AGREGAR VALORES PRECARGADOS)
       medidaHorizontal: [rec?.medidaHorizontal || ''],
       medidaVertical: [rec?.medidaVertical || ''],
       medidaDiagonal: [rec?.medidaDiagonal || ''],
       medidaPuente: [rec?.medidaPuente || ''],
 
-      // Campo para tipo de lentes de contacto
-      tipoLentesContacto: [rec?.tipoLentesContacto || '']
+      tipoLentesContacto: [rec?.tipoLentesContacto || null]
     });
   }
 
@@ -1391,7 +1263,6 @@ export class HistoriasMedicasComponent implements OnInit {
   eliminarRecomendacion(index: number): void {
     this.recomendaciones.removeAt(index);
 
-    // Remover también los estados de visibilidad
     this.mostrarMedidasProgresivo.splice(index, 1);
     this.mostrarTipoLentesContacto.splice(index, 1);
     this.mostrarMaterialPersonalizado.splice(index, 1);
@@ -1425,10 +1296,6 @@ export class HistoriasMedicasComponent implements OnInit {
       };
     });
   }
-
-  // ***************************
-  // * Métodos de examen ocular
-  // ***************************
 
   private mapExamenOcular(): ExamenOcular {
     const f = this.historiaForm.value;
@@ -1495,31 +1362,6 @@ export class HistoriasMedicasComponent implements OnInit {
     };
   }
 
-  // ***************************
-  // * Métodos de antecedentes
-  // ***************************
-
-  private mapAntecedentes(): Antecedentes {
-    const f = this.historiaForm.value;
-
-    return {
-      tipoCristalActual: f.tipoCristalActual,
-      ultimaGraduacion: f.ultimaGraduacion,
-      usuarioLentes: f.usuarioLentes ?? false,
-      fotofobia: f.fotofobia ?? false,
-      alergicoA: f.alergicoA ?? '',
-      cirugiaOcular: f.cirugiaOcular ?? false,
-      cirugiaOcularDescripcion: f.cirugiaOcularDescripcion ?? '',
-      traumatismoOcular: f.traumatismoOcular ?? false,
-      usoDispositivo: f.usoDispositivo ?? false,
-      antecedentesPersonales: f.antecedentesPersonales ?? [],
-      antecedentesFamiliares: f.antecedentesFamiliares ?? [],
-      patologias: f.patologias ?? [],
-      patologiaOcular: f.patologiaOcular ?? []
-    };
-  }
-
-  // Métodos para alternar el estado
   togglePanelSuperior() {
     this.panelSuperiorColapsado = !this.panelSuperiorColapsado;
   }
@@ -1528,9 +1370,6 @@ export class HistoriasMedicasComponent implements OnInit {
     this.panelInferiorColapsado = !this.panelInferiorColapsado;
   }
 
-  // ***************************
-  // * Métodos de sedes
-  // ***************************
   actualizarPacientesPorSede(): void {
     this.limpiarDatos();
 
@@ -1544,17 +1383,9 @@ export class HistoriasMedicasComponent implements OnInit {
     return paciente?.sede?.toLowerCase() || '';
   }
 
-  // ***************************
-  // * Métodos de búsqueda/filtrado
-  // ***************************
-
   actualizarFiltroTexto(event: { term: string; items: any[] }): void {
     this.filtro = event.term;
     this.actualizarPacientesFiltrados();
-  }
-
-  logEventoSearch(event: any): void {
-    //  console.log('Evento search:', event);
   }
 
   filtrarPacientes(term: string): Observable<Paciente[]> {
@@ -1608,10 +1439,6 @@ export class HistoriasMedicasComponent implements OnInit {
     }
   }
 
-  // ***************************
-  // * Métodos de utilidad
-  // ***************************
-
   formatearFecha(fechaIso: string | Date): string {
     if (!fechaIso) return 'Fecha inválida';
 
@@ -1640,8 +1467,6 @@ export class HistoriasMedicasComponent implements OnInit {
     const [año, mes, dia] = fecha.split('T')[0].split('-').map(Number);
     return new Date(año, mes - 1, dia); // Sin zona horaria
   }
-
-
 
   calcularEdad(fechaNacimiento: string | undefined): number {
     if (!fechaNacimiento) return 0;
@@ -1687,7 +1512,10 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   historiaModificada(): boolean {
-    if (!this.modoEdicion) return true;
+    // Si no está en modo edición (es creación), siempre retorna true
+    if (!this.modoEdicion) {
+      return true;
+    }
 
     const actual = this.historiaForm.value;
 
@@ -1697,6 +1525,11 @@ export class HistoriasMedicasComponent implements OnInit {
 
       if (Array.isArray(valorActual) && Array.isArray(valorOriginal)) {
         return !this.arraysIguales(valorActual, valorOriginal);
+      }
+
+      if (typeof valorActual === 'object' && valorActual !== null &&
+        typeof valorOriginal === 'object' && valorOriginal !== null) {
+        return JSON.stringify(valorActual) !== JSON.stringify(valorOriginal);
       }
 
       return valorActual !== valorOriginal;
@@ -1710,21 +1543,17 @@ export class HistoriasMedicasComponent implements OnInit {
     return arr1.every((val, i) => val === arr2[i]);
   }
 
-  // ***************************
-  // * Métodos de UI/eventos
-  // ***************************
-
   onMotivoChange(selectedOptions: any[]) {
     this.mostrarInputOtroMotivo = selectedOptions.includes('Otro');
     const otroMotivoControl = this.historiaForm.get('otroMotivo');
 
     if (this.mostrarInputOtroMotivo) {
       otroMotivoControl?.setValidators([Validators.required]);
-      otroMotivoControl?.enable(); // ✅ habilita el campo si aplica
+      otroMotivoControl?.enable();
     } else {
       otroMotivoControl?.clearValidators();
       otroMotivoControl?.setValue('');
-      otroMotivoControl?.disable(); // ✅ deshabilita si no aplica
+      otroMotivoControl?.disable();
     }
 
     otroMotivoControl?.updateValueAndValidity();
@@ -1779,59 +1608,25 @@ export class HistoriasMedicasComponent implements OnInit {
     // Limpiar el FormArray de recomendaciones
     this.recomendaciones.clear();
 
-    // AGREGAR UNA RECOMENDACIÓN POR DEFECTO (vacía)
+    // AGREGAR UNA RECOMENDACIÓN POR DEFECTO 
     this.agregarRecomendacion();
 
     // Resetear estados de facturación
-    this.esOftalmologoSeleccionado = false;
-    this.esOptometristaSeleccionado = false;
-    this.realizoCompraLentes = false;
-    this.facturacionData = null;
     this.medicoSeleccionado = null;
     this.mostrarSelectLentesContacto = false;
 
-    // Resetear arrays de visibilidad - SOLO UN ELEMENTO (el de la recomendación por defecto)
+    // Resetear arrays de visibilidad 
     this.mostrarMedidasProgresivo = [false];
     this.mostrarTipoLentesContacto = [false];
     this.mostrarMaterialPersonalizado = [false];
-
-    this.mostrarConfig = false;
 
     // Forzar detección de cambios
     this.cdr.detectChanges();
   }
 
-  // ***************************
-  // * Métodos de validación
-  // ***************************
-
-  checkInvalidControls() {
-    Object.keys(this.historiaForm.controls).forEach(key => {
-      const control = this.historiaForm.get(key);
-      if (control?.invalid) {
-        /*  console.log(`Campo inválido: ${key}`, {
-            value: control.value,
-            errors: control.errors
-          });*/
-      }
-    });
-  }
-
-  // ***************************
-  // * Getters
-  // ***************************
-
   get patologias(): string[] {
-    return this.historiaSeleccionada?.antecedentes?.patologias ?? [];
+    return this.procesarPatologias(this.historiaSeleccionada?.antecedentes?.patologias);
   }
-
-  get patologiaOcular(): string[] {
-    return this.historiaSeleccionada?.antecedentes?.patologiaOcular ?? [];
-  }
-
-  // ***************************
-  // * Métodos de comparación
-  // ***************************
 
   compareStrings(a: string, b: string): boolean {
     return a === b;
@@ -1856,17 +1651,13 @@ export class HistoriasMedicasComponent implements OnInit {
       return '—';
     }
 
-    // Si es un objeto, intenta extraer el valor
     if (typeof valor === 'object' && valor !== null) {
-      // Para objetos de formularios reactivos
       if (valor.value !== undefined) {
         return this.formatNumeroOptico(valor.value);
       }
-      // Para objetos con propiedad label
       if (valor.label !== undefined) {
         return this.formatNumeroOptico(valor.label);
       }
-      // Para otros objetos, mostrar string
       return '—';
     }
 
@@ -1878,11 +1669,9 @@ export class HistoriasMedicasComponent implements OnInit {
       return '—';
     }
 
-    // Convertir a número si es posible
     const numValor = parseFloat(valor);
 
     if (!isNaN(numValor)) {
-      // Formatear números ópticos con signo
       if (numValor > 0) {
         return `+${numValor}`;
       } else if (numValor < 0) {
@@ -1892,7 +1681,6 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     }
 
-    // Si no es número, devolver el string original
     return valor.toString();
   }
 
@@ -2183,25 +1971,13 @@ export class HistoriasMedicasComponent implements OnInit {
           <div class="fila-antecedente">
             <label class="label-antecedente">Patologías Generales:</label>
             <div class="tags-fila">
-              ${(this.pacienteSeleccionado?.historiaClinica?.patologias ?? []).length > 0 ?
-        this.pacienteSeleccionado.historiaClinica.patologias.map(pat =>
-          `<span class="tag-fila">${pat}</span>`
-        ).join('') :
+               ${this.procesarPatologias(this.pacienteSeleccionado?.historiaClinica?.patologias).map(pat =>
+        `<span class="tag-fila">${pat}</span>`
+      ).join('')}
         '<span class="tag-fila empty">No reportados</span>'
       }
             </div>
           </div>
-
-          <div class="fila-antecedente">
-            <label class="label-antecedente">Patologías Oculares:</label>
-            <div class="tags-fila">
-              ${(this.pacienteSeleccionado?.historiaClinica?.patologiaOcular ?? []).length > 0 ?
-        this.pacienteSeleccionado.historiaClinica.patologiaOcular.map(pat =>
-          `<span class="tag-fila">${pat}</span>`
-        ).join('') :
-        '<span class="tag-fila empty">No reportados</span>'
-      }
-            </div>
           </div>
         </div>
       </div>
@@ -2934,11 +2710,7 @@ export class HistoriasMedicasComponent implements OnInit {
   `;
   }
 
-
   handleKeydown(event: KeyboardEvent): void {
-    // DEBUG
-
-    // Si estamos dentro de un dropdown, NO manejar navegación
     const isInsideDropdown = (event.target as HTMLElement).closest('.ng-dropdown-panel');
     if (isInsideDropdown) {
       return;
@@ -2992,38 +2764,6 @@ export class HistoriasMedicasComponent implements OnInit {
     }
   }
 
-  // Método de respaldo para navegación
-  private fallbackKeyNavigation(element: HTMLElement, event: KeyboardEvent): void {
-    // Intentar navegar usando posición en la página
-    const allFocusableElements = Array.from(
-      document.querySelectorAll('.lensometria-moderna .ng-select-container, .lensometria-moderna .form-control-small')
-    ) as HTMLElement[];
-
-    const currentIndex = allFocusableElements.indexOf(element);
-
-    if (currentIndex === -1) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    switch (event.key) {
-      case 'Enter':
-      case 'ArrowRight':
-      case 'Tab':
-        if (currentIndex < allFocusableElements.length - 1) {
-          allFocusableElements[currentIndex + 1].focus();
-        }
-        break;
-
-      case 'ArrowLeft':
-        if (currentIndex > 0) {
-          allFocusableElements[currentIndex - 1].focus();
-        }
-        break;
-    }
-  }
-
-  // Método mejorado para obtener controlName
   private getControlNameFromElement(element: HTMLElement): string | null {
     // Caso 1: Input directo
     if (element.getAttribute('formControlName')) {
@@ -3061,35 +2801,27 @@ export class HistoriasMedicasComponent implements OnInit {
     return null;
   }
 
-  // Método simplificado para focus
-  // REEMPLAZA el método focusOnField con este:
-
   private focusOnField(fieldName: string): void {
     this.isNavigating = true;
 
-    // PRIMERO: Quitar focus del elemento actual
     const activeElement = document.activeElement as HTMLElement;
     if (activeElement && activeElement.blur) {
       activeElement.blur();
     }
 
     setTimeout(() => {
-      // SEGUNDO: Limpiar todas las clases campo-activo anteriores
       const previousActive = document.querySelectorAll('.campo-activo');
       previousActive.forEach(el => {
         el.classList.remove('campo-activo');
       });
 
-      // TERCERO: Buscar el nuevo elemento de varias maneras
       let element: HTMLElement | null = null;
 
-      // Método 1: Buscar por formControlName directo
       const elementsByName = document.querySelectorAll(`[formControlName="${fieldName}"]`);
       if (elementsByName.length > 0) {
         element = elementsByName[0] as HTMLElement;
       }
 
-      // Método 2: Si es un ng-select, buscar el container
       if (!element) {
         const ngSelects = document.querySelectorAll(`.ng-select[formControlName="${fieldName}"]`);
         if (ngSelects.length > 0) {
@@ -3100,7 +2832,6 @@ export class HistoriasMedicasComponent implements OnInit {
         }
       }
 
-      // Método 3: Buscar por clase específica
       if (!element) {
         const byClass = document.querySelectorAll(`.campo-select [formControlName="${fieldName}"]`);
         if (byClass.length > 0) {
@@ -3109,59 +2840,49 @@ export class HistoriasMedicasComponent implements OnInit {
       }
 
       if (element) {
-        // CUARTO: Aplicar focus con diferentes métodos según el tipo
         if (element.tagName === 'INPUT') {
-          // Es un input normal
           element.focus();
           (element as HTMLInputElement).select();
           element.classList.add('campo-activo');
 
         } else if (element.classList.contains('ng-select-container')) {
-          // Es un ng-select container
           element.focus();
           element.classList.add('campo-activo');
 
-          // También marcar el ng-select padre
           const ngSelect = element.closest('.ng-select');
           if (ngSelect) {
             ngSelect.classList.add('campo-activo');
           }
 
         } else {
-          // Otro tipo de elemento
           element.focus();
           element.classList.add('campo-activo');
         }
 
-        // QUINTO: Scroll si es necesario
         this.scrollToElement(element);
 
       } else {
         console.error('❌ NO se encontró el elemento para:', fieldName);
 
-        // Intentar fallback: buscar por posición
         this.focusByFallback(fieldName);
       }
 
       this.isNavigating = false;
-    }, 50); // Delay para asegurar que el blur anterior se complete
+    }, 50);
   }
 
-  // Método auxiliar para scroll
   private scrollToElement(element: HTMLElement): void {
     const modalBody = document.querySelector('.modal-body-moderno');
     if (modalBody) {
       const elementRect = element.getBoundingClientRect();
       const modalRect = modalBody.getBoundingClientRect();
 
-      // Si el elemento está fuera de la vista, hacer scroll
       if (elementRect.top < modalRect.top || elementRect.bottom > modalRect.bottom) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }
   }
 
-  // Método de fallback si no encuentra por nombre
   private focusByFallback(fieldName: string): void {
     // Mapear todos los campos en orden
     const allFields = [
@@ -3236,7 +2957,7 @@ export class HistoriasMedicasComponent implements OnInit {
     this.boundHandleKeydown = this.handleKeydown.bind(this);
 
     // Agregar listener global
-    document.addEventListener('keydown', this.boundHandleKeydown, true); // true para captura
+    document.addEventListener('keydown', this.boundHandleKeydown, true);
 
     // También agregar al modal específicamente
     const modal = document.getElementById('historiaModal');
@@ -3254,8 +2975,7 @@ export class HistoriasMedicasComponent implements OnInit {
     }, { once: true });
   }
 
-  // Agrega esta propiedad a tu clase
-  private boundHandleKeydown: any;
+
 
   // Métodos para navegación por teclado
   private initializeNavigationMaps(): void {
@@ -3621,47 +3341,165 @@ export class HistoriasMedicasComponent implements OnInit {
     }
   }
 
-  onCristalChange(event: any, index: number): void {
-    // Extraer el valor como string
-    const valorString = this.obtenerValorCristalComoString(event);
-
-    // Mostrar medidas para PROGRESIVO o MONOFOCAL_DIGITAL
-    const mostrarMedidas = this.requiereMedidas(valorString);
-
-    // Verificar si es LENTES DE CONTACTO
-    const esLentesContacto = this.esLentesContacto(valorString);
-
-    // Actualizar visibilidad
-    this.mostrarMedidasProgresivo[index] = mostrarMedidas;
-    this.mostrarTipoLentesContacto[index] = esLentesContacto;
-
-    // Limpiar campos si cambia de tipo
-    const recomendacionGroup = this.recomendaciones.at(index) as FormGroup;
-
-    if (!mostrarMedidas) {
-      recomendacionGroup.get('medidaHorizontal')?.setValue('');
-      recomendacionGroup.get('medidaVertical')?.setValue('');
-      recomendacionGroup.get('medidaDiagonal')?.setValue('');
-      recomendacionGroup.get('medidaPuente')?.setValue('');
-    }
-
-    if (!esLentesContacto) {
-      recomendacionGroup.get('tipoLentesContacto')?.setValue('');
-    }
-
-    // Forzar detección de cambios
-    setTimeout(() => {
-      this.cdr.detectChanges();
-    }, 0);
+  // En tu componente
+  get patologiasArray(): string[] {
+    return this.procesarPatologias(this.pacienteSeleccionado?.historiaClinica?.patologias);
   }
 
-  // Método para verificar si es MONOFOCAL_DIGITAL
+  get patologiasTexto(): string {
+    const array = this.procesarPatologias(this.pacienteSeleccionado?.historiaClinica?.patologias);
+    return array.length > 0 ? array.join(', ') : 'No reportados';
+  }
+
+  // Método genérico para procesar cualquier campo que pueda venir en diferentes formatos
+  procesarCampoArray(valor: any): string[] {
+    if (!valor) return [];
+
+    // Si ya es un array
+    if (Array.isArray(valor)) {
+      return valor;
+    }
+
+    // Si es un string
+    if (typeof valor === 'string') {
+      const strValue = valor.trim();
+      if (!strValue) return [];
+
+      // Determinar el separador (| o ,)
+      if (strValue.includes('|')) {
+        return strValue.split('|')
+          .map(item => item.trim())
+          .filter(item => item !== '');
+      }
+
+      if (strValue.includes(',')) {
+        return strValue.split(',')
+          .map(item => item.trim())
+          .filter(item => item !== '');
+      }
+
+      // Si es un string sin separadores
+      return [strValue];
+    }
+
+    return [];
+  }
+
+  // Método específico para patologias
+  private procesarPatologias(patologias: any): string[] {
+    if (!patologias) return [];
+
+    // Si ya es un array
+    if (Array.isArray(patologias)) {
+      return patologias;
+    }
+
+    // Si es un string
+    if (typeof patologias === 'string') {
+      const strValue = patologias.trim();
+      if (!strValue) return [];
+
+      // Probar primero con | como separador
+      if (strValue.includes('|')) {
+        return strValue.split('|')
+          .map(item => item.trim())
+          .filter(item => item !== '');
+      }
+
+      // Probar con , como separador
+      if (strValue.includes(',')) {
+        return strValue.split(',')
+          .map(item => item.trim())
+          .filter(item => item !== '');
+      }
+
+      // Si no hay separadores, es un solo elemento
+      return [strValue];
+    }
+
+    return [];
+  }
+
+  onCristalChange(event: any, index: number): void {
+  const valorString = this.obtenerValorCristalComoString(event);
+  const mostrarMedidas = this.requiereMedidas(valorString);
+  const esLentesContacto = this.esLentesContacto(valorString);
+
+  const recomendacionGroup = this.recomendaciones.at(index) as FormGroup;
+  
+  // Resetear el campo material a array vacío
+  recomendacionGroup.get('material')?.setValue([]);
+  recomendacionGroup.get('material')?.markAsPristine();
+  recomendacionGroup.get('material')?.markAsUntouched();
+  
+  // Resetear material personalizado
+  recomendacionGroup.get('materialPersonalizado')?.setValue('');
+  this.mostrarMaterialPersonalizado[index] = false;
+
+  // Actualizar visibilidad
+  this.mostrarMedidasProgresivo[index] = mostrarMedidas;
+  this.mostrarTipoLentesContacto[index] = esLentesContacto;
+
+  const tipoLentesControl = recomendacionGroup.get('tipoLentesContacto');
+  const medidaHorizontalControl = recomendacionGroup.get('medidaHorizontal');
+  const medidaVerticalControl = recomendacionGroup.get('medidaVertical');
+  const medidaDiagonalControl = recomendacionGroup.get('medidaDiagonal');
+  const medidaPuenteControl = recomendacionGroup.get('medidaPuente');
+
+  // Manejar validadores y valores para medidas
+  if (mostrarMedidas) {
+    medidaHorizontalControl?.setValidators([Validators.required]);
+    medidaVerticalControl?.setValidators([Validators.required]);
+    medidaDiagonalControl?.setValidators([Validators.required]);
+    medidaPuenteControl?.setValidators([Validators.required]);
+
+  } else {
+    medidaHorizontalControl?.clearValidators();
+    medidaVerticalControl?.clearValidators();
+    medidaDiagonalControl?.clearValidators();
+    medidaPuenteControl?.clearValidators();
+    
+    medidaHorizontalControl?.setValue('');
+    medidaVerticalControl?.setValue('');
+    medidaDiagonalControl?.setValue('');
+    medidaPuenteControl?.setValue('');
+  }
+
+  if (esLentesContacto) {
+    tipoLentesControl?.setValidators([Validators.required]);
+    if (!tipoLentesControl?.value) {
+      tipoLentesControl?.setValue(null);
+    } else {
+      if (tipoLentesControl.value === '') {
+        tipoLentesControl?.setValue(null);
+      }
+    }
+  } else {
+    tipoLentesControl?.clearValidators();
+    tipoLentesControl?.setValue(null);
+  }
+
+  // Actualizar validación de todos los campos
+  medidaHorizontalControl?.updateValueAndValidity();
+  medidaVerticalControl?.updateValueAndValidity();
+  medidaDiagonalControl?.updateValueAndValidity();
+  medidaPuenteControl?.updateValueAndValidity();
+  tipoLentesControl?.updateValueAndValidity();
+
+  // Forzar detección de cambios
+  setTimeout(() => {
+    this.cdr.detectChanges();
+
+  }, 0);
+}
+
+
+
   private esMonofocalDigital(valor: string): boolean {
     if (!valor) return false;
     return valor.toUpperCase() === 'MONOFOCAL_DIGITAL';
   }
 
-  // Método auxiliar para obtener el valor como string
   private obtenerValorCristalComoString(cristal: any): string {
     if (!cristal) return '';
 
@@ -3718,120 +3556,6 @@ export class HistoriasMedicasComponent implements OnInit {
     return tiposConMedidas.some(tipo => valorUpper.includes(tipo));
   }
 
-  // Toggle modo configuración
-  toggleConfiguracion(): void {
-    this.mostrarConfig = !this.mostrarConfig;
-  }
-
-  // Calcular pago óptica
-  calcularPagoOptica(): number {
-    if (!this.facturacionData) return 0;
-    return (this.facturacionData.montoBase * this.facturacionData.porcentajeOptica) / 100;
-  }
-
-  // Calcular pago médico
-  calcularPagoMedico(): number {
-    if (!this.facturacionData) return 0;
-    return (this.facturacionData.montoBase * this.facturacionData.porcentajeMedico) / 100;
-  }
-
-  // Validar que los porcentajes sumen 100
-  validarPorcentajes(): void {
-    if (!this.facturacionData) return;
-
-    // Asegurar valores entre 0 y 100
-    if (this.facturacionData.porcentajeOptica < 0) this.facturacionData.porcentajeOptica = 0;
-    if (this.facturacionData.porcentajeOptica > 100) this.facturacionData.porcentajeOptica = 100;
-    if (this.facturacionData.porcentajeMedico < 0) this.facturacionData.porcentajeMedico = 0;
-    if (this.facturacionData.porcentajeMedico > 100) this.facturacionData.porcentajeMedico = 100;
-
-    // Ajustar automáticamente si se pasa de 100
-    if (this.facturacionData.porcentajeOptica + this.facturacionData.porcentajeMedico > 100) {
-      this.facturacionData.porcentajeMedico = 100 - this.facturacionData.porcentajeOptica;
-    }
-
-    this.recalcularMontos();
-  }
-
-  // Calcular pago óptica en consulta sin compra
-  calcularPagoOpticaSinCompra(): number {
-    if (!this.facturacionData) return 0;
-    return Math.round((this.facturacionData.montoBase * this.facturacionData.porcentajeOptica) / 100);
-  }
-
-  // Calcular pago médico en consulta sin compra
-  calcularPagoMedicoSinCompra(): number {
-    if (!this.facturacionData) return 0;
-    return Math.round((this.facturacionData.montoBase * this.facturacionData.porcentajeMedico) / 100);
-  }
-
-  // Recalcular montos
-  recalcularMontos(): void {
-    if (!this.facturacionData) return;
-
-    // Asegurar valores mínimos
-    if (this.facturacionData.montoBase < 0) this.facturacionData.montoBase = 0;
-    if (this.facturacionData.montoCompraLentes < 0) this.facturacionData.montoCompraLentes = 0;
-
-    this.calcularYActualizarFacturacion();
-  }
-
-
-
-  // Actualizar total cuando cambian los montos
-  actualizarTotalSinCompra(): void {
-    if (!this.facturacionData) return;
-    this.calcularYActualizarFacturacion();
-  }
-
-  // Calcular facturación
-  private calcularFacturacion(medico: any, realizoCompra: boolean): any {
-    if (!medico || medico.cargoId !== 'oftalmologo') {
-      return {
-        tipoProfesional: 'optometrista',
-        realizoCompraLentes: false,
-        pagoOpticaBase: 0,
-        pagoMedicoBase: 0,
-        pagoOptica: 0,
-        pagoMedico: 0,
-        montoTotal: 0
-      };
-    }
-
-    // Usar los valores actuales de facturacionData
-    const pagoOpticaBase = this.facturacionData?.pagoOpticaBase || 20;
-    const pagoMedicoBase = this.facturacionData?.pagoMedicoBase || 20;
-    const montoBase = pagoOpticaBase + pagoMedicoBase;
-
-    if (realizoCompra) {
-      // Con compra: solo paga el médico
-      return {
-        tipoProfesional: 'oftalmologo',
-        realizoCompraLentes: true,
-        montoBase: pagoMedicoBase,
-        montoCompraLentes: pagoMedicoBase,
-        pagoOpticaBase: pagoOpticaBase,
-        pagoMedicoBase: pagoMedicoBase,
-        pagoOptica: 0,
-        pagoMedico: pagoMedicoBase,
-        montoTotal: pagoMedicoBase
-      };
-    } else {
-      // Sin compra: pagan ambos
-      return {
-        tipoProfesional: 'oftalmologo',
-        realizoCompraLentes: false,
-        montoBase: montoBase,
-        montoCompraLentes: pagoMedicoBase,
-        pagoOpticaBase: pagoOpticaBase,
-        pagoMedicoBase: pagoMedicoBase,
-        pagoOptica: pagoOpticaBase,
-        pagoMedico: pagoMedicoBase,
-        montoTotal: montoBase
-      };
-    }
-  }
-
   private obtenerTipoEspecialista(): 'oftalmologo' | 'optometrista' {
     // Usar la propiedad 'cargo' que existe en la interfaz
     const cargo = this.medicoSeleccionado.cargoId?.toLowerCase() || '';
@@ -3843,181 +3567,15 @@ export class HistoriasMedicasComponent implements OnInit {
     return 'optometrista';
   }
 
-  calcularTotalMontos(): void {
-    // Obtener valores crudos primero
-    const medicoRaw = this.montosForm.get('montoMedico')?.value;
-    const opticaRaw = this.montosForm.get('montoOptica')?.value;
-
-    // Convertir a número
-    const medico = Number(medicoRaw) || 0;
-    const optica = Number(opticaRaw) || 0;
-
-    // Calcular total
-    const total = medico + optica;
-
-    // Actualizar el total
-    this.montosForm.get('total')?.setValue(total);
-
-    // Forzar detección de cambios
-    this.cdr.detectChanges();
-  }
-
-  onInputChange(event: any, campo: 'medico' | 'optica'): void {
-    const valor = event.target.value;
-    const soloNumeros = valor.replace(/[^0-9]/g, '');
-    const numero = soloNumeros ? parseInt(soloNumeros, 10) : 0;
-
-    if (campo === 'medico') {
-      this.montoMedico = numero;
-    } else {
-      this.montoOptica = numero;
-    }
-
-    this.calcularTotal();
-
-    // Actualizar el valor del input
-    event.target.value = numero;
-  }
-
-  parseToNumber(value: any): number {
-    const num = Number(String(value).replace(/[^0-9]/g, ''));
-    return isNaN(num) ? 0 : num;
-  }
-
-
-
-
-
-
-
-
-
-
-
-
-  // Prevenir caracteres no numéricos
-  onKeyPress(event: KeyboardEvent): void {
-    const charCode = event.which ? event.which : event.keyCode;
-    // Permitir solo números (0-9) y teclas de control
-    if (charCode > 31 && (charCode < 48 || charCode > 57)) {
-      event.preventDefault();
-    }
-  }
-
-  // Limpiar el valor cuando cambia
-  onMontoChange(): void {
-    const medicoControl = this.montosForm.get('montoMedico');
-    const opticaControl = this.montosForm.get('montoOptica');
-
-    if (medicoControl) {
-      const valorLimpio = this.limpiarValor(medicoControl.value);
-      medicoControl.setValue(valorLimpio, { emitEvent: false });
-    }
-
-    if (opticaControl) {
-      const valorLimpio = this.limpiarValor(opticaControl.value);
-      opticaControl.setValue(valorLimpio, { emitEvent: false });
-    }
-
-    this.calcularTotal();
-  }
-
-  // Limpiar valor (eliminar caracteres no numéricos)
-  limpiarValor(valor: any): number {
-    if (!valor) return 0;
-    const soloNumeros = String(valor).replace(/[^0-9]/g, '');
-    return soloNumeros ? parseInt(soloNumeros, 10) : 0;
-  }
-
-  // Calcular total
-  calcularTotal(): void {
-    const medico = this.montosForm.get('montoMedico')?.value || 0;
-    const optica = this.montosForm.get('montoOptica')?.value || 0;
-    const total = Number(medico) + Number(optica);
-
-    this.montosForm.get('total')?.setValue(total);
-  }
-
-  abrirModalMontos(): void {
-    if (this.facturacionData) {
-      this.montosForm.patchValue({
-        montoMedico: this.facturacionData.pagoMedico || 20,
-        montoOptica: this.facturacionData.pagoOptica || 20
-      });
-    } else {
-      this.montosForm.patchValue({
-        montoMedico: 20,
-        montoOptica: 20
-      });
-    }
-
-    this.calcularTotal();
-
-    const modalElement = document.getElementById('modalMontos');
-    if (modalElement) {
-      const modal = new bootstrap.Modal(modalElement);
-      modal.show();
-    }
-  }
-
-  guardarMontos(): void {
-    const medico = Number(this.montosForm.get('montoMedico')?.value) || 0;
-    const optica = Number(this.montosForm.get('montoOptica')?.value) || 0;
-    const montoBase = medico + optica;
-    const compraLentes = this.realizoCompraLentes;
-
-    let pagoOptica = optica;
-    let montoTotal = montoBase;
-
-    if (compraLentes) {
-      pagoOptica = 0;
-      montoTotal = medico;
-    }
-
-    this.facturacionData = {
-      tipoProfesional: 'oftalmologo',
-      realizoCompraLentes: compraLentes,
-      montoBase: montoBase,
-      montoTotal: montoTotal,
-      pagoOptica: pagoOptica,
-      pagoMedico: medico
-    };
-
-    // Cerrar modal
-    const modalElement = document.getElementById('modalMontos');
-    if (modalElement) {
-      const modal = bootstrap.Modal.getInstance(modalElement);
-      modal?.hide();
-    }
-
-    this.cdr.detectChanges();
-  }
-
-  cancelarMontos(): void {
-    this.mostrarModalMontos = false;
-    // Restaurar valores originales
-    if (this.facturacionData) {
-      this.montosForm.patchValue({
-        montoMedico: this.facturacionData.pagoMedicoBase || 20,
-        montoOptica: this.facturacionData.pagoOpticaBase || 20
-      });
-      this.calcularTotal();
-    }
-  }
-
-  // Para mostrar el tipo de cristal actual con su modelo (si aplica)
-  // Para mostrar el tipo de cristal actual con su modelo (si aplica)
   getTipoCristalActualConModelo(): string {
     const tipoCristal = this.historiaSeleccionada?.datosConsulta?.tipoCristalActual;
     const modeloContacto = this.historiaSeleccionada?.datosConsulta?.tipoLentesContacto;
 
     if (!tipoCristal) return 'No especificado';
 
-    // Buscar la etiqueta del tipo de cristal
     const cristalEncontrado = TIPOS_CRISTALES.find(c => c.value === tipoCristal);
     let texto = cristalEncontrado?.label || tipoCristal;
 
-    // Si es lentes de contacto y tiene modelo, mostrarlo
     if (tipoCristal === 'LENTES_CONTACTO' && modeloContacto) {
       const modeloEncontrado = TIPOS_LENTES_CONTACTO.find(m => m.value === modeloContacto || m.label === modeloContacto);
       texto += ` - ${modeloEncontrado?.label || modeloContacto}`;
@@ -4026,17 +3584,14 @@ export class HistoriasMedicasComponent implements OnInit {
     return texto;
   }
 
-  // Para mostrar el tipo de cristal recomendado
   getTipoCristalRecomendado(cristal: any): string {
     if (!cristal) return 'No especificado';
 
-    // Si es string, buscar en TIPOS_CRISTALES
     if (typeof cristal === 'string') {
       const encontrado = TIPOS_CRISTALES.find(c => c.value === cristal || c.label === cristal);
       return encontrado?.label || cristal;
     }
 
-    // Si es objeto con label
     if (cristal.label) {
       return cristal.label;
     }
@@ -4044,14 +3599,12 @@ export class HistoriasMedicasComponent implements OnInit {
     return 'No especificado';
   }
 
-  // Para mostrar el tipo de lente de contacto recomendado
   getTipoLenteContactoLabel(valor: string): string {
     if (!valor) return 'No especificado';
     const encontrado = TIPOS_LENTES_CONTACTO.find(t => t.value === valor || t.label === valor);
     return encontrado?.label || valor;
   }
 
-  // Para el modelo de lente de contacto actual
   getModeloLenteContactoActual(): string {
     const modelo = this.historiaSeleccionada?.datosConsulta?.tipoLentesContacto;
     if (!modelo) return '';

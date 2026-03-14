@@ -1,0 +1,587 @@
+/*
+ * PACIENTES
+*/
+//Add paciente
+{
+    "informacionPersonal": {
+        "nombreCompleto": "maria perez",
+        "cedula": "100000",
+        "telefono": "04124454544",
+        "email": "rubemm18@gmail.com",
+        "fechaNacimiento": "2023-06-06",
+        "ocupacion": "maestra",
+        "genero": "f",
+        "direccion": "test",
+        "esMenorSinCedula": false
+    },
+    "redesSociales": [],
+    "informacionEmpresa": null,
+    "historiaClinica": {
+        "usuarioLentes": "No",
+        "fotofobia": "Sí",
+        "usoDispositivo": "Sí, Menos de 1 hora",
+        "traumatismoOcular": "Sí",
+        "traumatismoOcularDescripcion": "tesrt",
+        "cirugiaOcular": "Sí",
+        "cirugiaOcularDescripcion": "test",
+        "alergicoA": "polvo, tierra",
+        "antecedentesPersonales": [
+            "Diabetes",
+            "Hipertensión"
+        ],
+        "antecedentesFamiliares": [
+            "Migraña",
+            "Hipertensión"
+        ],
+        "patologias": "paciente renal, diabetes, dolor de cabeza"
+    }
+}
+
+
+//add historial medico
+{
+    "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
+    "datosConsulta": {
+        "motivo": [
+            "Otro"
+        ],
+        "otroMotivo": "test",
+        "tipoCristalActual": "LENTES_CONTACTO",
+        "tipoLentesContacto": "TORICOS",
+        "fechaUltimaGraduacion": "2023-02-14",
+        "medico": "8759927"
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": {
+                "value": "+0.50",
+                "label": "+0.50"
+            },
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "av_lejos_od": "20/30",
+            "av_cerca_od": "J3",
+            "av_lejos_bi": "20/30",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "av_lejos_oi": "20/30",
+            "av_cerca_oi": "J3",
+            "av_cerca_bi": "J3"
+        },
+        "refraccion": {
+            "esf_od": "+0.50",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "avccl_od": "20/30",
+            "avccc_od": "J3",
+            "avccl_bi": "20/30",
+            "avccc_bi": "J3",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "avccl_oi": "20/30",
+            "avccc_oi": "J3"
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.50",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "2",
+            "dp_od": "12",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "2",
+            "dp_oi": "12"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "20/30",
+            "avsc_cerca_od": "J3",
+            "avae_od": "20/30",
+            "otros_od": "test",
+            "avsc_lejos_oi": "20/30",
+            "avsc_cerca_oi": "J3",
+            "avae_oi": "J3",
+            "otros_oi": "test"
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "rar",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Progresivo convencional",
+            "material": [
+                "POLICARBONATO"
+            ],
+            "montura": "test",
+            "observaciones": "test",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": 2,
+            "medidaVertical": 4,
+            "medidaDiagonal": 7,
+            "medidaPuente": 5
+        },
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "CR39"
+            ],
+            "montura": "test",
+            "observaciones": "test",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}
+//get historial
+{
+    "id": 61,
+    "nHistoria": "H-20260220-002",
+    "pacienteId": "28acbaf873ad2772e216895c44281940",
+    "datosConsulta": {
+        "motivo": [
+            "Molestia ocular"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "LENTES_CONTACTO",
+        "fechaUltimaGraduacion": "2026-02-09",
+        "medico": {
+            "cedula": "8759927",
+            "nombre": "Gerardo Martinez",
+            "cargo": "Oftalmólogo"
+        },
+           "formulaExterna": false, //nuevo
+        "pagoPendiente": true //nuevo
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.50",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "02",
+            "dp_od": "21",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.25",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "12",
+            "dp_oi": "21"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "test",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Progresivo convencional",
+            "material": [
+                "HI_INDEX_156"
+            ],
+            "montura": "test",
+            "cristalSugerido": "",
+            "observaciones": "test",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": 2,
+            "medidaVertical": 1,
+            "medidaDiagonal": 2,
+            "medidaPuente": 3
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    },
+    "auditoria": {
+        "fechaCreacion": "2026-02-20T16:43:21.000Z",
+        "fechaActualizacion": "2026-02-20T16:43:21.000Z",
+        "creadoPor": {
+            "cedula": "24367965",
+            "nombre": "Ruben Dario Martinez Castro",
+            "cargo": "Gerente"
+        },
+        "actualizadoPor": {
+            "cedula": "24367965",
+            "nombre": "Ruben Dario Martinez Castro",
+            "cargo": "Gerente"
+        }
+    }
+}
+
+//getVentas
+{
+    "message": "ok",
+    "ventas": [
+        {
+            "venta": {
+                "key": "1cc93777-f1a4-4084-9a04-309c2dbefdda",
+                "numero_venta": "V-000099",
+                "numero_recibo": "R-000099",
+                "fecha": "2026-02-20T19:27:28.000Z",
+                "estatus_venta": "completada",
+                "estatus_pago": "pendiente",
+                "formaPago": "de_contado-pendiente",
+                "moneda": "dolar",
+                "observaciones": null,
+                "impuesto": 16,
+                "motivo_cancelacion": null
+            },
+            "totales": {
+                "descuento": 68.13,
+                "subtotal": 681.26,
+                "iva": 93.51,
+                "total": 706.64,
+                "totalPagado": 0
+            },
+            "cliente": {
+                "historiaMedica": "H-20260216-005",
+                "tipo": "paciente",
+                "informacion": {
+                    "tipoPersona": "natural",
+                    "nombreCompleto": "Dario Castro",
+                    "cedula": "8759927",
+                    "telefono": "04123920817",
+                    "email": "rubemm18@gmail.com"
+                },
+                "especialista": {
+                    "id": 47,
+                    "cedula": "8759927",
+                    "nombre": "Gerardo Martinez"
+                },
+                "informacionEmpresa": {
+                    "referidoEmpresa": true,
+                    "empresaNombre": "Hebe  Shop CA",
+                    "empresaRif": "J-12345678",
+                    "empresaTelefono": "02123440533",
+                    "empresaDireccion": "Caracas, los ruices",
+                    "empresaCorreo": null
+                }
+            },
+            "asesor": {
+                "id": 5,
+                "cedula": "24367965",
+                "nombre": "Ruben Dario Martinez Castro"
+            },
+            "productos": [
+                {
+                    "cantidad": 1,
+                    "precio_unitario_sin_iva": 31.86,
+                    "tiene_iva": 0,
+                    "precio_unitario": 31.86,
+                    "total": 31.86,
+                    "datos": {
+                        "id": 17,
+                        "nombre": "Lentes de prueba",
+                        "marca": "Palazzo",
+                        "color": "Gris",
+                        "codigo": "PR-000017",
+                        "material": "Metal",
+                        "categoria": "Monturas",
+                        "modelo": "Premium"
+                    }
+                },
+                {
+                    "cantidad": 1,
+                    "precio_unitario_sin_iva": 649.4,
+                    "tiene_iva": 1,
+                    "precio_unitario": 753.3,
+                    "total": 753.3,
+                    "datos": {
+                        "id": 26,
+                        "nombre": "Laptop ",
+                        "marca": "HP",
+                        "color": null,
+                        "codigo": "PR-000026",
+                        "material": "Metal",
+                        "categoria": "Misceláneos",
+                        "modelo": "Intel"
+                    }
+                }
+            ],
+            "metodosPago": [
+                {
+                    "numero_pago": 1,
+                    "montoAbonado": 0,
+                    "metodosPago": [],
+                    "observaciones": null
+                }
+            ],
+            "formaPago": {
+                "tipo": "de_contado-pendiente",
+                "montoTotal": 706.64,
+                "cuotasAdelantadas": 0,
+                "montoAdelantado": 0,
+                "deudaPendiente": 0,
+                "nivel": null,
+                "montoInicial": 0,
+                "cantidadCuotas": 0,
+                "montoPorCuota": 0,
+                "totalPagadoAhora": 0,
+                "cuotas": []
+            },
+            "auditoria": {
+                "usuarioCreacion": {
+                    "id": 5,
+                    "cedula": "24367965",
+                    "nombre": "Ruben Dario Martinez Castro"
+                },
+                "fechaCreacion": "2026-02-20T15:27:28.000Z",
+                "fechaModificacion": "2026-02-20T15:27:28.000Z"
+            }
+        },
+    ]
+}
+//crear venta - solo productos (revisar cliente)
+{
+    "moneda": "dolar",
+    "formaPago": "contado",
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 31.86,
+            "moneda": "dolar"
+        }
+    ],
+    "descuento": 0,
+    "sede": "guatire",
+    "total": 31.86,
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 31.86,
+        "totalPagado": 31.86
+    },
+    "tipoVenta": "solo_productos",
+    "cliente": {
+        "tipo": "natural",
+        "nombre": "Ruben dario Martinez castro",
+        "cedula": "24367965",
+        "telefono": "04123920817",
+        "email": "rubemm@gmail.com"
+    },
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-12T23:59:04.904Z"
+    },
+    "productos": [
+        {
+            "id": "17",
+            "nombre": "Lentes de prueba",
+            "codigo": "PR-000017",
+            "precio": 31.86,
+            "precioConIva": 31.86,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": false,
+            "stock": 26,
+            "tipo": "PRODUCTO",
+            "descripcion": "Test"
+        }
+    ]
+}
+
+
+//crear venta - solo consulta 
+{
+    "moneda": "dolar",
+    "formaPago": "contado",
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 60,
+            "moneda": "dolar"
+        }
+    ],
+    "descuento": 0,
+    "sede": "guatire",
+    "total": 60,
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 60,
+        "totalPagado": 60
+    },
+    "tipoVenta": "solo_consulta",
+    "cliente": {
+        "id": 31,
+        "tipo": "paciente",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-13T01:10:16.731Z"
+    },
+    "productos": [],
+    "consulta": {
+        "historiaId": 60,
+        "montoTotal": 60,
+        "pagoMedico": 40,
+        "pagoOptica": 20,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "solo_consulta",
+        "montoOriginal": 60
+    }
+}
+
+//crear venta - consulta + productos
+{
+    "moneda": "dolar",
+    "formaPago": "contado",
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 71.86,
+            "moneda": "dolar"
+        }
+    ],
+    "descuento": 0,
+    "sede": "guatire",
+    "total": 71.86,
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 71.86,
+        "totalPagado": 71.86
+    },
+    "tipoVenta": "consulta_productos",
+    "cliente": {
+        "id": 31,
+        "tipo": "paciente",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-13T01:51:30.429Z"
+    },
+    "productos": [
+        {
+            "id": "17",
+            "nombre": "Lentes de prueba",
+            "codigo": "PR-000017",
+            "precio": 31.86,
+            "precioConIva": 31.86,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": false,
+            "stock": 26,
+            "tipo": "PRODUCTO",
+            "descripcion": "Test"
+        }
+    ],
+    "consulta": {
+        "historiaId": 60,
+        "montoTotal": 40,
+        "pagoMedico": 40,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 60
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+//PENDIENTES
+- Ajustar el api de "crear venta" de acuerdo al tipo de venta
+- Los montos que se envian sobre las consultas, deben guardarse/actualizarse al generar la venta
+- El historial de venta debe retornar lo mismo que al crear la venta, es decir, el monto de la consulta y con la tasa del moment para poder calcular el monto pagado en bs
+- Quitar de las apis de "pacientes" patologiaOcular, solo dejar patologias
+- En el api de get historia medica no me esta retornando el tipo de lente de contacto (campo: tipoLentesContacto). Debe retornar lo mismo que se envia al crear la historia medica

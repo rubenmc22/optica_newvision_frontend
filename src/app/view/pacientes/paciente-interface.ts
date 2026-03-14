@@ -59,7 +59,6 @@ export interface Paciente {
     antecedentesPersonales?: string[] | null;
     antecedentesFamiliares?: string[] | null;
     patologias?: string[] | null;
-    patologiaOcular?: string[] | null;
   };
 }
 

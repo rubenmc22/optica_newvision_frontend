@@ -1205,76 +1205,67 @@
   }
 }
 
-/* Grid de datos */
 .datos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
-  width: 100%;
+  margin: 1rem 0;
 
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-    min-width: 100%;
-  }
+  .dato-item {
+    display: flex;
+    flex-direction: column;
 
-  @media (min-width: 769px) and (max-width: 1024px) {
-    grid-template-columns: repeat(2, 1fr);
+    label {
+      font-size: 0.85rem;
+      color: #6c757d;
+      margin-bottom: 0.25rem;
+      font-weight: 500;
+    }
+
+    .dato-valor {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.95rem;
+      color: #2c3e50;
+      min-height: 2.5rem;
+      word-break: break-word;
+    }
+
+    // Clases para ocupar múltiples columnas
+    &.col-span-2 {
+      grid-column: span 2;
+    }
+
+    &.col-span-4 {
+      grid-column: span 4;
+    }
+
+    // Clases específicas para motivo y dirección
+    &.motivo-item {
+      grid-column: span 2;
+    }
+
+    &.direccion-item {
+      grid-column: span 4;
+    }
   }
 }
 
-.dato-item {
-  &.full-width {
-    grid-column: 1 / -1 !important;
-  }
+// Responsive para móviles
+@media (max-width: 768px) {
+  .datos-grid {
+    grid-template-columns: 1fr;
 
-  label {
-    display: block;
-    font-weight: 600;
-    color: #2c3e50;
-    font-size: 0.85rem;
-    margin-bottom: 0.5rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    .dato-item {
 
-    @media (max-width: 768px) {
-      font-size: 0.8rem;
-      margin-bottom: 0.375rem;
-    }
-  }
-
-  .dato-valor {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    padding: 0.75rem;
-    font-size: 0.9rem;
-    color: #495057;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    word-break: break-word;
-
-    @media (max-width: 768px) {
-      padding: 0.5rem;
-      font-size: 0.85rem;
-      min-height: 38px;
-    }
-  }
-
-  .dato-valor-large {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    padding: 1rem;
-    font-size: 0.9rem;
-    color: #495057;
-    min-height: 80px;
-
-    @media (max-width: 768px) {
-      padding: 0.75rem;
-      min-height: 60px;
-      font-size: 0.85rem;
+      &.col-span-2,
+      &.col-span-4,
+      &.motivo-item,
+      &.direccion-item {
+        grid-column: span 1;
+      }
     }
   }
 }
@@ -3424,8 +3415,8 @@ body:not(.using-mouse) .campo-activo {
         }
 
         &.ng-option-selected {
-          background: linear-gradient(90deg, #3498db, #2980b9) !important;
-          color: white !important;
+          background: #e3f2fd;
+          color: black !important;
           font-weight: 500 !important;
         }
       }
@@ -3509,7 +3500,7 @@ body:not(.using-mouse) .campo-activo {
 
             &:hover,
             &.ng-option-selected {
-              background: linear-gradient(90deg, #3498db, #2980b9) !important;
+              background: #e3f2fd !important;
               color: white !important;
             }
           }
