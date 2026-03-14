@@ -750,6 +750,8 @@ export class HistoriasMedicasComponent implements OnInit {
     this.cargando = true;
     const f = this.historiaForm.value;
 
+    const esOftalmologo = f.medico?.cargoId?.toLowerCase() === 'oftalmologo' || false;
+
     const historiaActualizada: HistoriaMedica = {
       ...this.historiaSeleccionada,
       datosConsulta: {
@@ -763,6 +765,7 @@ export class HistoriasMedicasComponent implements OnInit {
           : typeof f.medico === 'string'
             ? f.medico
             : '',
+        pagoPendiente: esOftalmologo ? true : false
       },
       examenOcular: {
         lensometria: {
@@ -897,6 +900,8 @@ export class HistoriasMedicasComponent implements OnInit {
     }
 
     const formValue = this.historiaForm.value;
+    const esOftalmologo = formValue.medico?.cargoId?.toLowerCase() === 'oftalmologo' || false;
+
     const historia: any = {
       pacienteId: this.pacienteParaNuevaHistoria.key,
       datosConsulta: {
@@ -906,7 +911,9 @@ export class HistoriasMedicasComponent implements OnInit {
         tipoLentesContacto: formValue.tipoLentesContacto || '',
         fechaUltimaGraduacion: formValue.ultimaGraduacion,
         medico: formValue.medico?.cedula,
+        pagoPendiente: esOftalmologo ? true : false
       },
+
       examenOcular: this.mapExamenOcular(),
       diagnosticoTratamiento: {
         diagnostico: formValue.diagnostico || '',
@@ -3421,77 +3428,77 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   onCristalChange(event: any, index: number): void {
-  const valorString = this.obtenerValorCristalComoString(event);
-  const mostrarMedidas = this.requiereMedidas(valorString);
-  const esLentesContacto = this.esLentesContacto(valorString);
+    const valorString = this.obtenerValorCristalComoString(event);
+    const mostrarMedidas = this.requiereMedidas(valorString);
+    const esLentesContacto = this.esLentesContacto(valorString);
 
-  const recomendacionGroup = this.recomendaciones.at(index) as FormGroup;
-  
-  // Resetear el campo material a array vacío
-  recomendacionGroup.get('material')?.setValue([]);
-  recomendacionGroup.get('material')?.markAsPristine();
-  recomendacionGroup.get('material')?.markAsUntouched();
-  
-  // Resetear material personalizado
-  recomendacionGroup.get('materialPersonalizado')?.setValue('');
-  this.mostrarMaterialPersonalizado[index] = false;
+    const recomendacionGroup = this.recomendaciones.at(index) as FormGroup;
 
-  // Actualizar visibilidad
-  this.mostrarMedidasProgresivo[index] = mostrarMedidas;
-  this.mostrarTipoLentesContacto[index] = esLentesContacto;
+    // Resetear el campo material a array vacío
+    recomendacionGroup.get('material')?.setValue([]);
+    recomendacionGroup.get('material')?.markAsPristine();
+    recomendacionGroup.get('material')?.markAsUntouched();
 
-  const tipoLentesControl = recomendacionGroup.get('tipoLentesContacto');
-  const medidaHorizontalControl = recomendacionGroup.get('medidaHorizontal');
-  const medidaVerticalControl = recomendacionGroup.get('medidaVertical');
-  const medidaDiagonalControl = recomendacionGroup.get('medidaDiagonal');
-  const medidaPuenteControl = recomendacionGroup.get('medidaPuente');
+    // Resetear material personalizado
+    recomendacionGroup.get('materialPersonalizado')?.setValue('');
+    this.mostrarMaterialPersonalizado[index] = false;
 
-  // Manejar validadores y valores para medidas
-  if (mostrarMedidas) {
-    medidaHorizontalControl?.setValidators([Validators.required]);
-    medidaVerticalControl?.setValidators([Validators.required]);
-    medidaDiagonalControl?.setValidators([Validators.required]);
-    medidaPuenteControl?.setValidators([Validators.required]);
+    // Actualizar visibilidad
+    this.mostrarMedidasProgresivo[index] = mostrarMedidas;
+    this.mostrarTipoLentesContacto[index] = esLentesContacto;
 
-  } else {
-    medidaHorizontalControl?.clearValidators();
-    medidaVerticalControl?.clearValidators();
-    medidaDiagonalControl?.clearValidators();
-    medidaPuenteControl?.clearValidators();
-    
-    medidaHorizontalControl?.setValue('');
-    medidaVerticalControl?.setValue('');
-    medidaDiagonalControl?.setValue('');
-    medidaPuenteControl?.setValue('');
-  }
+    const tipoLentesControl = recomendacionGroup.get('tipoLentesContacto');
+    const medidaHorizontalControl = recomendacionGroup.get('medidaHorizontal');
+    const medidaVerticalControl = recomendacionGroup.get('medidaVertical');
+    const medidaDiagonalControl = recomendacionGroup.get('medidaDiagonal');
+    const medidaPuenteControl = recomendacionGroup.get('medidaPuente');
 
-  if (esLentesContacto) {
-    tipoLentesControl?.setValidators([Validators.required]);
-    if (!tipoLentesControl?.value) {
-      tipoLentesControl?.setValue(null);
+    // Manejar validadores y valores para medidas
+    if (mostrarMedidas) {
+      medidaHorizontalControl?.setValidators([Validators.required]);
+      medidaVerticalControl?.setValidators([Validators.required]);
+      medidaDiagonalControl?.setValidators([Validators.required]);
+      medidaPuenteControl?.setValidators([Validators.required]);
+
     } else {
-      if (tipoLentesControl.value === '') {
-        tipoLentesControl?.setValue(null);
-      }
+      medidaHorizontalControl?.clearValidators();
+      medidaVerticalControl?.clearValidators();
+      medidaDiagonalControl?.clearValidators();
+      medidaPuenteControl?.clearValidators();
+
+      medidaHorizontalControl?.setValue('');
+      medidaVerticalControl?.setValue('');
+      medidaDiagonalControl?.setValue('');
+      medidaPuenteControl?.setValue('');
     }
-  } else {
-    tipoLentesControl?.clearValidators();
-    tipoLentesControl?.setValue(null);
+
+    if (esLentesContacto) {
+      tipoLentesControl?.setValidators([Validators.required]);
+      if (!tipoLentesControl?.value) {
+        tipoLentesControl?.setValue(null);
+      } else {
+        if (tipoLentesControl.value === '') {
+          tipoLentesControl?.setValue(null);
+        }
+      }
+    } else {
+      tipoLentesControl?.clearValidators();
+      tipoLentesControl?.setValue(null);
+    }
+
+    // Actualizar validación de todos los campos
+    medidaHorizontalControl?.updateValueAndValidity();
+    medidaVerticalControl?.updateValueAndValidity();
+    medidaDiagonalControl?.updateValueAndValidity();
+    medidaPuenteControl?.updateValueAndValidity();
+    tipoLentesControl?.updateValueAndValidity();
+
+    // Forzar detección de cambios
+    setTimeout(() => {
+      this.cdr.detectChanges();
+
+    }, 0);
   }
-
-  // Actualizar validación de todos los campos
-  medidaHorizontalControl?.updateValueAndValidity();
-  medidaVerticalControl?.updateValueAndValidity();
-  medidaDiagonalControl?.updateValueAndValidity();
-  medidaPuenteControl?.updateValueAndValidity();
-  tipoLentesControl?.updateValueAndValidity();
-
-  // Forzar detección de cambios
-  setTimeout(() => {
-    this.cdr.detectChanges();
-
-  }, 0);
-}
 
 
 

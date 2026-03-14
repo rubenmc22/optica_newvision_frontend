@@ -3454,7 +3454,7 @@
             .info-value {
                 font-size: 16px;
                 font-weight: 500;
-                color: #2c3e50;
+                color: white;
                 word-wrap: break-word;
                 white-space: normal;
                 line-height: 1.4;
@@ -3685,7 +3685,7 @@
 .modal-body-detalle {
     padding: 1.5rem;
     background: #f8f9fa;
-    max-height: 70vh;
+    max-height: 68vh;
     overflow-y: auto;
 }
 
@@ -3698,6 +3698,16 @@
     overflow: hidden;
     animation: slideInUp 0.4s ease-out;
 }
+
+.paciente-detalle,
+.cliente-general,
+.resumen,
+.pago {
+    border-left: 4px solid var(--primary-color);
+    margin: 1.5rem 0;
+}
+
+
 
 .card-header-detalle {
     display: flex;
@@ -5336,121 +5346,277 @@
     }
 }
 
-// Orden de trabajo
+// =============================================
+// ORDEN DE TRABAJO - MODERNO Y MINIMALISTA
+// =============================================
 .orden-trabajo {
-    .orden-body {
-        padding: 1.5rem;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+    border: 1px solid #f0f0f0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border-left: 4px solid var(--primary-color);
+    margin: 1.5rem 0;
+
+    &:hover {
+        box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.15);
     }
 
+    .card-header-detalle {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        background: #fafbfc;
+        border-bottom: 1px solid #edf2f7;
+
+        i {
+            font-size: 1.2rem;
+            color: #3b82f6;
+            background: #eef2ff;
+            padding: 0.5rem;
+            border-radius: 12px;
+        }
+
+        span {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.95rem;
+        }
+    }
+
+    .orden-body {
+        padding: 1.25rem 1.5rem;
+    }
+
+    // Alerta minimalista
     .orden-alert {
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        padding: 1rem 1.25rem;
+        padding: 0.75rem 1rem;
         background: #fef2f2;
-        border-left: 4px solid #dc2626;
-        border-radius: 8px;
+        border: 1px solid #fee2e2;
+        border-radius: 16px;
 
         i {
-            color: #dc2626;
-            font-size: 1.25rem;
+            font-size: 1.1rem;
+            color: #ef4444;
+            background: #fee2e2;
+            padding: 0.4rem;
+            border-radius: 10px;
         }
 
-        strong {
-            color: #991b1b;
-            font-size: 0.95rem;
-        }
+        div {
+            flex: 1;
 
-        p {
-            color: #7f1d1d;
-            font-size: 0.85rem;
-            margin: 0.25rem 0 0 0;
-            opacity: 0.9;
+            strong {
+                display: block;
+                font-size: 0.85rem;
+                color: #991b1b;
+                margin-bottom: 0.15rem;
+            }
+
+            p {
+                font-size: 0.75rem;
+                color: #b91c1c;
+                margin: 0;
+                opacity: 0.9;
+            }
         }
     }
 
+    // Grid de información minimalista
+    .orden-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+        background: #f8fafc;
+        padding: 1rem;
+        border-radius: 18px;
+        margin-bottom: 0rem;
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+
+            .info-label {
+                font-size: 0.65rem;
+                font-weight: 600;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+            }
+
+            .info-value {
+                font-size: 0.9rem;
+                font-weight: 600;
+                color: var(--primary-color) !important;
+                ;
+
+                &.activa {
+                    color: #10b981;
+                }
+
+                &.completo {
+                    color: #10b981;
+                }
+            }
+        }
+    }
+
+    // Control principal
     .orden-content {
-        padding: 0;
-    }
-
-    .orden-status-display {
         display: flex;
-        align-items: center;
+        flex-direction: column;
         gap: 1rem;
-        padding: 1.5rem;
-        background: #f8f9fa;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
-        border: 1px solid #e9ecef;
-        transition: all 0.3s ease;
-
-        &.active {
-            background: #e8f5e9;
-            border-color: #28a745;
-
-            .status-icon i {
-                color: #28a745;
-            }
-
-            .status-text h3 {
-                color: #28a745;
-            }
-        }
-    }
-
-    .status-icon i {
-        font-size: 2.5rem;
-        color: #6c757d;
-        transition: color 0.3s ease;
-    }
-
-    .status-text {
-        h3 {
-            margin: 0 0 0.25rem 0;
-            font-size: 1.25rem;
-            color: #212529;
-        }
-
-        p {
-            margin: 0;
-            color: #6c757d;
-            font-size: 0.95rem;
-        }
     }
 
     .orden-control {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 1.25rem;
-        background: white;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-    }
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+        transition: all 0.2s ease;
 
-    .control-label {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
+        &:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
 
-        span:first-child {
-            font-weight: 600;
-            color: #495057;
+        .control-contexto {
+            flex: 1;
+
+            .contexto-texto {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 0.9rem;
+                color: #475569;
+
+                i {
+                    font-size: 1rem;
+                    color: #3b82f6;
+                }
+            }
+        }
+
+        .control-switch {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+
+            .switch-label {
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .switch {
+                position: relative;
+                display: inline-block;
+                width: 52px;
+                height: 26px;
+
+                input {
+                    opacity: 0;
+                    width: 0;
+                    height: 0;
+                }
+
+                .slider {
+                    position: absolute;
+                    cursor: pointer;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background-color: #e2e8f0;
+                    transition: .3s;
+                    border-radius: 34px;
+
+                    &:before {
+                        position: absolute;
+                        content: "";
+                        height: 20px;
+                        width: 20px;
+                        left: 3px;
+                        bottom: 3px;
+                        background-color: white;
+                        transition: .3s;
+                        border-radius: 50%;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                    }
+                }
+
+                input:checked+.slider {
+                    background: var(--degradado-color) !important;
+
+                    &:before {
+                        transform: translateX(26px);
+                    }
+                }
+            }
         }
     }
 
-    .status-badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        background: #f8f9fa;
-        color: #6c757d;
-        border: 1px solid #dee2e6;
+    // Badge de estado
+    .orden-status-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1rem;
+        background: var(--degradado-color) !important;
+        border-radius: 30px;
+        font-size: 0.75rem;
+        color: white;
+        border: 1px dashed #cbd5e1;
+        width: fit-content;
 
-        &.active {
-            background: var(--degradado-color);
+        i {
+            font-size: 0.9rem;
+        }
+
+        &.activa {
+            background: #f0fdf4;
+            border-color: #86efac;
             color: white;
+
+            i {
+                color: #22c55e;
+            }
+        }
+    }
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .orden-trabajo {
+        .orden-info-grid {
+            grid-template-columns: 1fr 1fr;
+
+            .info-item:last-child {
+                grid-column: span 2;
+            }
+        }
+
+        .orden-control {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start;
+
+            .control-switch {
+                width: 100%;
+                justify-content: space-between;
+            }
         }
     }
 }
@@ -6068,4 +6234,632 @@
     font-size: 0.75rem;
     color: #666;
     margin-top: 2px;
+}
+
+// =============================================
+// RESPONSIVE PARA ZOOM 125% (aprox 1200px - 1400px)
+// =============================================
+@media screen and (min-width: 1200px) and (max-width: 1400px) {
+
+    // MANTENER EL APILADO
+    .paneles-container.modern-grid {
+        flex-direction: column !important;
+
+        .panel-paciente,
+        .panel-productos {
+            width: 100% !important;
+            min-width: 100% !important;
+            flex: 0 0 auto !important;
+            margin-bottom: 1rem;
+        }
+    }
+
+    // =============================================
+    // CORRECCIÓN PARA BÚSQUEDA DE PACIENTES
+    // =============================================
+    .buscador-moderno {
+        position: relative;
+        z-index: 10000 !important; // Muy alto
+
+        .modern-search-wrapper {
+            position: relative;
+            z-index: 10001 !important;
+            background: white;
+        }
+
+        .modern-search-results {
+            position: absolute !important;
+            z-index: 10002 !important;
+            max-height: 350px !important;
+            overflow-y: auto !important;
+            background: white !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
+            width: 100% !important;
+            left: 0 !important;
+            top: 100% !important;
+            margin-top: 5px !important;
+            border-radius: 8px !important;
+            border: 1px solid #e9ecef !important;
+        }
+    }
+
+    // Asegurar que el panel del paciente permita desbordamiento
+    .panel-paciente {
+        overflow: visible !important;
+        position: relative;
+        z-index: 1020;
+    }
+
+    .panel-paciente .panel-body {
+        overflow: visible !important;
+        position: relative;
+    }
+
+    // El resto de los estilos de ajuste se mantienen
+    .card-header-moderno {
+        padding: 1rem !important;
+
+        .header-content {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .header-right {
+            margin-left: 0;
+            width: 100%;
+            justify-content: flex-start;
+        }
+    }
+
+    .tipo-venta-selector {
+        margin: 1rem !important;
+
+        .selector-header {
+            flex-wrap: wrap;
+
+            .header-context {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .context-chip {
+                width: 100%;
+            }
+        }
+    }
+
+    .paneles-container {
+        padding: 1rem !important;
+    }
+
+    .table-scroll {
+        overflow-x: auto;
+
+        .table-moderna {
+            min-width: 600px;
+        }
+    }
+
+    .table-moderna {
+        font-size: 0.85rem;
+
+        th,
+        td {
+            padding: 0.5rem !important;
+        }
+
+        .producto-nombre {
+            font-size: 0.85rem;
+        }
+
+        .producto-codigo {
+            font-size: 0.7rem !important;
+            padding: 1px 4px !important;
+        }
+    }
+
+    .historias-grid-2cols {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .historia-card-2cols {
+        padding: 8px;
+
+        .especialista-badge {
+            font-size: 0.65rem;
+            padding: 2px 4px;
+        }
+
+        .historia-numero {
+            font-size: 0.7rem;
+        }
+
+        .medico-line {
+            font-size: 0.7rem;
+        }
+    }
+
+    .monto-editable {
+        max-width: 120px;
+
+        .monto-input {
+            width: 70px;
+            font-size: 0.8rem;
+        }
+    }
+
+    .resumen-venta-moderno {
+        padding: 1rem;
+
+        .total-valor {
+            font-size: 1.2rem;
+        }
+
+        .btn-generar-moderno {
+            padding: 8px 20px;
+            font-size: 0.9rem;
+        }
+    }
+}
+
+// =============================================
+// PARA PANTALLAS MÁS PEQUEÑAS (menos de 1200px)
+// =============================================
+@media (max-width: 1199px) {
+
+    // MANTENER EL APILADO
+    .paneles-container.modern-grid {
+        flex-direction: column !important;
+
+        .panel-paciente,
+        .panel-productos {
+            width: 100% !important;
+            min-width: 100% !important;
+            flex: 0 0 auto !important;
+        }
+    }
+
+    // MISMA CORRECCIÓN PARA BÚSQUEDA
+    .buscador-moderno {
+        position: relative;
+        z-index: 1020 !important;
+
+        .modern-search-wrapper {
+            position: relative;
+            z-index: 1021 !important;
+        }
+
+        .modern-search-results {
+            position: absolute !important;
+            z-index: 1022 !important;
+            max-height: 350px !important;
+            overflow-y: auto !important;
+            background: white !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
+            width: 100% !important;
+            left: 0 !important;
+            top: 100% !important;
+            margin-top: 5px !important;
+            border-radius: 8px !important;
+            border: 1px solid #e9ecef !important;
+        }
+    }
+
+    .panel-paciente {
+        overflow: visible !important;
+        position: relative;
+        z-index: 1010;
+    }
+
+    .panel-paciente .panel-body {
+        overflow: visible !important;
+    }
+}
+
+#resumenVentaModal {
+    .modal-content {
+        margin-top: -12px !important;
+    }
+}
+
+// =============================================
+// ESTILOS MODERNOS PARA RESUMEN FINANCIERO
+// =============================================
+
+.resumen-grid-moderno {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.resumen-card {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid #edf2f7;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        border-color: transparent;
+    }
+
+    &.featured {
+        grid-column: span 2;
+        background: var(--degradado-pastel);
+        border-color: transparent;
+        position: relative;
+
+        .card-content {
+            color: black;
+
+            .card-label,
+            .card-value,
+            .card-badge {
+                color: black;
+            }
+        }
+
+        .card-glow {
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+            animation: rotate 10s linear infinite;
+            pointer-events: none;
+        }
+    }
+
+    .card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+
+        .card-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1a202c;
+            line-height: 1.2;
+            margin-bottom: 0.15rem;
+
+            &.total {
+                font-size: 1.5rem;
+            }
+
+            &.text-danger {
+                color: #e53e3e;
+            }
+        }
+
+        .card-badge {
+            font-size: 0.7rem;
+            color: #a0aec0;
+            font-weight: 500;
+        }
+    }
+}
+
+.bg-oftalmologo {
+    background: linear-gradient(135deg, #4299e1, #3182ce);
+}
+
+.bg-optometrista {
+    background: linear-gradient(135deg, #9f7aea, #805ad5);
+}
+
+.text-oftalmologo {
+    color: #4299e1;
+}
+
+.text-optometrista {
+    color: #9f7aea;
+}
+
+.desglose-mini {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+
+    .desglose-item {
+        font-size: 0.7rem;
+        color: #718096;
+        display: flex;
+        align-items: center;
+        gap: 0.15rem;
+
+        i {
+            font-size: 0.65rem;
+        }
+    }
+}
+
+// Timeline
+.timeline-calculo {
+    background: #f7fafc;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+    border: 1px solid #edf2f7;
+
+    .timeline-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.5rem 0;
+        position: relative;
+
+        &:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 2rem;
+            width: 2px;
+            height: calc(100% - 0.5rem);
+            background: linear-gradient(to bottom, #cbd5e0, transparent);
+        }
+
+        &.total {
+            margin-top: 0.5rem;
+            padding-top: 0.75rem;
+            border-top: 2px dashed #cbd5e0;
+        }
+
+        .timeline-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #a0aec0, #718096);
+            border: 3px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 2;
+        }
+
+        .timeline-content {
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            .timeline-label {
+                font-size: 0.85rem;
+                color: #4a5568;
+            }
+
+            .timeline-value {
+                font-weight: 600;
+                color: #2d3748;
+
+                &.text-danger {
+                    color: #e53e3e;
+                }
+            }
+        }
+    }
+}
+
+// Separador moderno
+.separador-moderno {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .separador-texto {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #4a5568;
+        white-space: nowrap;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .separador-linea {
+        flex: 1;
+        height: 2px;
+        background: linear-gradient(90deg, #cbd5e0, transparent);
+    }
+}
+
+// Métodos de pago modernos
+.metodos-grid-compacto {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+
+    .metodo-chip {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        background: white;
+        border-radius: 30px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        transition: all 0.2s ease;
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            border-color: #cbd5e0;
+        }
+
+        &.metodo-efectivo {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border-color: #fbbf24;
+        }
+
+        &.metodo-punto {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            border-color: #3b82f6;
+        }
+
+        &.metodo-pagomovil {
+            background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+            border-color: #22c55e;
+        }
+
+        &.metodo-transferencia {
+            background: linear-gradient(135deg, #f3e8ff, #e9d5ff);
+            border-color: #a855f7;
+        }
+
+        &.metodo-zelle {
+            background: linear-gradient(135deg, #ffe4e6, #fecdd3);
+            border-color: #ef4444;
+        }
+
+        .chip-icon {
+            i {
+                font-size: 1rem;
+            }
+        }
+
+        .chip-info {
+            display: flex;
+            flex-direction: column;
+
+            .chip-tipo {
+                font-size: 0.7rem;
+                font-weight: 600;
+                color: #1e293b;
+            }
+
+            .chip-monto {
+                font-size: 0.75rem;
+                font-weight: 500;
+                color: #475569;
+            }
+        }
+
+        .chip-badge {
+            margin-left: 0.25rem;
+            color: #64748b;
+            font-size: 0.7rem;
+        }
+    }
+}
+
+// Forma de pago compacta
+.forma-pago-compacto {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+
+    .pago-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 30px;
+        color: white;
+        font-weight: 600;
+        font-size: 0.85rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
+        &.bg-contado {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        &.bg-abono {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        &.bg-cashea {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        &.bg-pendiente {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+        }
+
+        i {
+            font-size: 1rem;
+        }
+    }
+
+    .pago-detalles {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+
+        .detalle-item {
+            font-size: 0.9rem;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+
+            i {
+                font-size: 0.7rem;
+                color: #94a3b8;
+            }
+        }
+    }
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .resumen-grid-moderno {
+        grid-template-columns: 1fr;
+
+        .resumen-card.featured {
+            grid-column: span 1;
+        }
+    }
+
+    .timeline-calculo {
+        padding: 0.75rem;
+    }
+
+    .forma-pago-compacto {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }

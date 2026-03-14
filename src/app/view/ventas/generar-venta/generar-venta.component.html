@@ -389,7 +389,7 @@
             <div class="panel-header modern-header">
                 <div class="header-left">
                     <i class="bi bi-cart"></i>
-                    <span>Carrito de {{ tipoVenta === 'solo_consulta' ? 'Consulta' : 'Productos' }}</span>
+                    <span>Productos y/o Servicios</span>
                 </div>
                 <span class="badge-requerido" [ngClass]="{
                         'opcional': tipoVenta === 'consulta_productos',
@@ -1736,261 +1736,230 @@
                 <!-- 🧾 Totales - Modernizado -->
                 <div class="info-card resumen">
                     <div class="card-header-detalle">
-                        <i class="bi bi-graph-up"></i>
-                        <span>Resumen Financiero</span>
+                        <div class="header-icon">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </div>
+                        <div class="header-content">
+                            <span>Resumen Financiero</span>
+                            <small class="text-muted">Detalle de montos</small>
+                        </div>
+                        <div class="header-badge" *ngIf="venta.moneda">
+                            <span class="badge-moneda">{{ obtenerSimboloMoneda(venta.moneda) }}</span>
+                        </div>
                     </div>
+
                     <div class="card-body-detalle">
-                        <!-- Totales principales -->
-                        <div class="resumen-grid">
-                            <!-- Subtotal -->
-                            <div class="resumen-item">
-                                <span class="resumen-label">
-                                    <i class="bi bi-cart me-1"></i>
-                                    Subtotal (sin IVA)
-                                </span>
-                                <span class="resumen-value">{{ formatearMoneda(subtotalSinIva, venta.moneda) }}</span>
+                        <!-- Grid de tarjetas de resumen -->
+                        <div class="resumen-grid-moderno">
+                            
+                            <!-- Tarjeta: Productos -->
+                            <div class="resumen-card" *ngIf="venta.productos.length > 0">
+                                <div class="card-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                                    <i class="bi bi-box-seam"></i>
+                                </div>
+                                <div class="card-content">
+                                    <span class="card-label">Productos</span>
+                                    <span class="card-value">{{ formatearMoneda(calcularSubtotalSinIvaGlobal(), venta.moneda) }}</span>
+                                    <span class="card-badge">{{ venta.productos.length }} item{{ venta.productos.length > 1 ? 's' : '' }}</span>
+                                </div>
                             </div>
 
-                            <div *ngIf="consultaEnCarrito" class="resumen-item consulta">
-                                <span class="resumen-label">
-                                    <i class="bi bi-person-badge me-1"></i>
-                                    Consulta {{ tipoVenta === 'solo_consulta' ? 'completa' : 'médica' }}
-                                </span>
-                                <span class="resumen-value">
-                                    {{ formatearMoneda(tipoVenta === 'solo_consulta' ? montoConsulta : pagoMedico, venta.moneda) }}
-                                    <small *ngIf="tipoVenta === 'solo_consulta'" class="desglose-consulta">
-                                        (Médico: {{ formatearMoneda(pagoMedico, venta.moneda) }} 
-                                        + Óptica: {{ formatearMoneda(pagoOptica, venta.moneda) }})
-                                    </small>
-                                </span>
+                            <!-- Tarjeta: Consulta (si existe) -->
+                            <div class="resumen-card consulta-card" *ngIf="consultaEnCarrito" 
+                                [class.full-width]="tipoVenta === 'solo_consulta'">
+                                <div class="card-icon" [ngClass]="{
+                                    'bg-oftalmologo': historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo === 'Oftalmólogo',
+                                    'bg-optometrista': historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo === 'Optometrista'
+                                }">
+                                    <i class="bi bi-person-badge"></i>
+                                </div>
+                                <div class="card-content">
+                                    <span class="card-label">
+                                        Consulta 
+                                        <span class="tipo-consulta" [ngClass]="{
+                                            'text-oftalmologo': historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo === 'Oftalmólogo',
+                                            'text-optometrista': historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo === 'Optometrista'
+                                        }">
+                                            {{ historiaMedicaSeleccionada?.datosConsulta?.medico?.cargo }}
+                                        </span>
+                                    </span>
+                                    <span class="card-value">{{ formatearMoneda(tipoVenta === 'solo_consulta' ? montoConsulta : pagoMedico, venta.moneda) }}</span>
+                                    
+                                    <!-- Desglose para solo consulta -->
+                                    <div class="desglose-mini" *ngIf="tipoVenta === 'solo_consulta'">
+                                        <span class="desglose-item">
+                                            <i class="bi bi-person"></i> {{ formatearMoneda(pagoMedico, venta.moneda) }}
+                                        </span>
+                                        <span class="desglose-item">
+                                            <i class="bi bi-eyeglasses"></i> {{ formatearMoneda(pagoOptica, venta.moneda) }}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
-                        
-                            <!-- Descuento (solo si existe) -->
-                            <div *ngIf="tieneDescuento" class="resumen-item">
-                                <span class="resumen-label">
-                                    <i class="bi bi-tag me-1"></i>
-                                    Descuento ({{ venta.descuento }}%)
-                                </span>
-                                <span class="resumen-value descuento">
-                                    -{{ formatearMoneda(descuentoAplicado, venta.moneda) }}
-                                </span>
+                            <!-- Tarjeta: Subtotal (siempre visible) -->
+                            <div class="resumen-card subtotal-card">
+                                <div class="card-icon" style="background: linear-gradient(135deg, #f6b93b, #e67e22);">
+                                    <i class="bi bi-cart-plus"></i>
+                                </div>
+                                <div class="card-content">
+                                    <span class="card-label">Subtotal</span>
+                                    <span class="card-value">{{ formatearMoneda(subtotalSinIva, venta.moneda) }}</span>
+                                    <span class="card-badge">Base imponible</span>
+                                </div>
                             </div>
 
-                            <!-- Subtotal con descuento (solo si hay descuento) -->
-                            <div *ngIf="tieneDescuento" class="resumen-item subtotal-con-descuento">
-                                <span class="resumen-label">
-                                    <i class="bi bi-calculator me-1"></i>
-                                    Subtotal con descuento
-                                </span>
-                                <span class="resumen-value">
-                                    {{ formatearMoneda(subtotalConDescuento, venta.moneda) }}
-                                </span>
+                            <!-- Tarjeta: Descuento (solo si existe) -->
+                            <div class="resumen-card descuento-card" *ngIf="tieneDescuento">
+                                <div class="card-icon" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                                    <i class="bi bi-tag"></i>
+                                </div>
+                                <div class="card-content">
+                                    <span class="card-label">Descuento {{ venta.descuento }}%</span>
+                                    <span class="card-value text-danger">-{{ formatearMoneda(descuentoAplicado, venta.moneda) }}</span>
+                                    <span class="card-badge">Ahorro</span>
+                                </div>
                             </div>
 
-                            <!-- IVA -->
-                            <div class="resumen-item iva">
-                                <span class="resumen-label">
-                                    <i class="bi bi-percent me-1"></i>
-                                    IVA ({{ ivaPorcentaje }}%)
-                                </span>
-                                <span class="resumen-value">
-                                    {{ formatearMoneda(ivaCalculado, venta.moneda) }}
-                                </span>
+                            <!-- Tarjeta: Subtotal con descuento (solo si hay descuento) -->
+                            <div class="resumen-card subtotal-con-descuento-card" *ngIf="tieneDescuento">
+                                <div class="card-icon" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                                    <i class="bi bi-calculator"></i>
+                                </div>
+                                <div class="card-content">
+                                    <span class="card-label">Subtotal c/desc.</span>
+                                    <span class="card-value">{{ formatearMoneda(subtotalConDescuento, venta.moneda) }}</span>
+                                    <span class="card-badge">Después de descuento</span>
+                                </div>
                             </div>
 
-                            <!-- Separador visual (solo si hay descuento) -->
-                            <div *ngIf="tieneDescuento" class="resumen-separator">
-                                <i class="bi bi-arrow-down"></i>
+                            <!-- Tarjeta: IVA (solo si aplica) -->
+                            <div class="resumen-card iva-card" *ngIf="ivaCalculado > 0">
+                                <div class="card-icon" style="background: linear-gradient(135deg, #27ae60, #229954);">
+                                    <i class="bi bi-percent"></i>
+                                </div>
+                                <div class="card-content">
+                                    <span class="card-label">IVA {{ ivaPorcentaje }}%</span>
+                                    <span class="card-value">{{ formatearMoneda(ivaCalculado, venta.moneda) }}</span>
+                                    <span class="card-badge">Impuesto</span>
+                                </div>
                             </div>
 
-                            <!-- Total a pagar -->
-                            <div class="resumen-item total-pagar">
-                                <span class="resumen-label">
-                                    <i class="bi bi-cash-stack me-1"></i>
-                                    Total a pagar
-                                </span>
-                                <span class="resumen-value total-amount">
-                                    {{ formatearMoneda(totalPagar, venta.moneda) }}
-                                </span>
-                            </div>
-
-                            <!-- Mini resumen (si hay descuento) -->
-                            <div *ngIf="tieneDescuento" class="resumen-info">
-                                <small>
-                                    <i class="bi bi-info-circle me-1"></i>
-                                    Incluye {{ venta.descuento }}% de descuento
-                                </small>
+                            <!-- Tarjeta: Total (siempre visible, destacada) -->
+                            <div class="resumen-card total-card featured">
+                                <div class="card-icon" style="background: linear-gradient(135deg, #00b894, #00cec9);">
+                                    <i class="bi bi-cash-stack"></i>
+                                </div>
+                                <div class="card-content">
+                                    <span class="card-label">TOTAL A PAGAR</span>
+                                    <span class="card-value total">{{ formatearMoneda(totalPagar, venta.moneda) }}</span>
+                                    <span class="card-badge" *ngIf="venta.moneda !== 'bolivar'">
+                                        {{ formatearMoneda(obtenerEquivalenteBs(totalPagar), 'bolivar') }}
+                                    </span>
+                                </div>
+                                <div class="card-glow"></div>
                             </div>
                         </div>
 
-                        <!-- Detalles de forma de pago -->
-                        <div class="forma-pago-detalle">
-                            <h6 class="detalle-title">
-                                <i class="bi bi-credit-card-2-front"></i>
-                                Detalles de pago
-                            </h6>
-
-                            <!-- Contado -->
-                            <div *ngIf="venta.formaPago === 'contado'" class="detalle-contado">
-                                <div class="detalle-item">
-                                    <span class="detalle-label">Forma de pago:</span>
-                                    <span class="detalle-value">{{ venta.formaPago | titlecase }}</span>
-                                </div>
-                                <div class="detalle-item">
-                                    <span class="detalle-label">Monto total:</span>
-                                    <span class="detalle-value">
-                                        {{ formatearMoneda(redondearDosDecimales(montoTotal), venta.moneda) }}
-                                        <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                            {{
-                                            formatearMoneda(redondearDosDecimales(obtenerEquivalenteBs(montoTotal)),
-                                            'bolivar') }}
-                                        </span>
-                                    </span>
+                        <!-- Línea de tiempo del cálculo (innovador) -->
+                        <div class="timeline-calculo" *ngIf="venta.productos.length > 0 || consultaEnCarrito">
+                            <div class="timeline-item" [class.active]="true">
+                                <div class="timeline-dot"></div>
+                                <div class="timeline-content">
+                                    <span class="timeline-label">Base</span>
+                                    <span class="timeline-value">{{ formatearMoneda(subtotalSinIva, venta.moneda) }}</span>
                                 </div>
                             </div>
-
-                            <!-- Cashea -->
-                            <div *ngIf="venta.formaPago === 'cashea'" class="detalle-cashea">
-                                <div class="detalle-grid">
-                                    <div class="detalle-item">
-                                        <span class="detalle-label">Forma de pago:</span>
-                                        <span class="detalle-value">{{ venta.formaPago | titlecase }}</span>
-                                    </div>
-                                    <div class="detalle-item">
-                                        <span class="detalle-label">Nivel Cashea:</span>
-                                        <span class="detalle-value">{{ obtenerNombreNivelCashea(nivelCashea) }}</span>
-                                    </div>
-                                    <div class="detalle-item">
-                                        <span class="detalle-label">Inicial:</span>
-                                        <span class="detalle-value">
-                                            {{ formatearMoneda(redondearDosDecimales(venta.montoInicial), venta.moneda)
-                                            }}
-                                            <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                {{
-                                                formatearMoneda(redondearDosDecimales(obtenerEquivalenteBs(venta.montoInicial)),
-                                                'bolivar') }}
-                                            </span>
-                                        </span>
-                                    </div>
-                                    <div class="detalle-item">
-                                        <span class="detalle-label">Cuotas:</span>
-                                        <span class="detalle-value">
-                                            {{ cantidadCuotas }} de {{
-                                            formatearMoneda(redondearDosDecimales(montoPrimeraCuota), venta.moneda) }}
-                                        </span>
-                                    </div>
-                                    <div *ngIf="resumenCashea.cantidad > 0" class="detalle-item">
-                                        <span class="detalle-label">Adelanto:</span>
-                                        <span class="detalle-value">
-                                            {{ formatearMoneda(resumenCashea.total, venta.moneda) }}
-                                            <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                {{ formatearMoneda(resumenCashea.totalBs, 'bolivar') }}
-                                            </span>
-                                            <small class="detail-text">({{ resumenCashea.cantidad }} cuota{{
-                                                resumenCashea.cantidad > 1 ? 's' : '' }})</small>
-                                        </span>
-                                    </div>
-
-                                    <!-- Versión compacta del total pagado -->
-                                    <div class="detalle-item total-pagado-item">
-                                        <span class="detalle-label">Total a pagar ahora:</span>
-                                        <span class="detalle-value total-pagado-value">
-                                            <strong>{{ formatearMoneda(totalPagadoCashea, venta.moneda) }}</strong>
-                                            <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                {{ formatearMoneda(totalPagadoCasheaBs, 'bolivar') }}
-                                            </span>
-                                            <small class="detail-text">
-                                                (Inicial {{ formatearMoneda(redondearDosDecimales(venta.montoInicial),
-                                                venta.moneda) }}
-                                                + {{ resumenCashea.cantidad }} cuota{{ resumenCashea.cantidad > 1 ? 's'
-                                                : '' }}
-                                                {{ formatearMoneda(resumenCashea.total, venta.moneda) }})
-                                            </small>
-                                        </span>
-                                    </div>
+                            <div class="timeline-item" *ngIf="tieneDescuento" [class.active]="true">
+                                <div class="timeline-dot" style="background: #e74c3c;"></div>
+                                <div class="timeline-content">
+                                    <span class="timeline-label">- Descuento</span>
+                                    <span class="timeline-value text-danger">-{{ formatearMoneda(descuentoAplicado, venta.moneda) }}</span>
                                 </div>
                             </div>
+                            <div class="timeline-item" *ngIf="ivaCalculado > 0" [class.active]="true">
+                                <div class="timeline-dot" style="background: #27ae60;"></div>
+                                <div class="timeline-content">
+                                    <span class="timeline-label">+ IVA</span>
+                                    <span class="timeline-value">{{ formatearMoneda(ivaCalculado, venta.moneda) }}</span>
+                                </div>
+                            </div>
+                            <div class="timeline-item total" [class.active]="true">
+                                <div class="timeline-dot" style="background: #00b894;"></div>
+                                <div class="timeline-content">
+                                    <span class="timeline-label fw-bold">= TOTAL</span>
+                                    <span class="timeline-value fw-bold">{{ formatearMoneda(totalPagar, venta.moneda) }}</span>
+                                </div>
+                            </div>
+                        </div>
 
-                            <!-- Abono parcial -->
-                            <div *ngIf="venta.formaPago === 'abono'" class="detalle-abono">
-                                <div class="detalle-grid">
-                                    <div class="detalle-item">
-                                        <span class="detalle-label">Monto abonado:</span>
-                                        <span class="detalle-value">
-                                            {{ formatearMoneda(redondearDosDecimales(venta.montoAbonado ?? 0),
-                                            venta.moneda) }}
-                                            <span *ngIf="venta.moneda !== 'bolivar'" class="conversion-text">
-                                                {{
-                                                formatearMoneda(redondearDosDecimales(obtenerEquivalenteBs(venta.montoAbonado
-                                                ?? 0)), 'bolivar') }}
-                                            </span>
-                                        </span>
+                        <!-- Separador visual -->
+                        <div class="separador-moderno my-3">
+                            <span class="separador-texto">Métodos de pago aplicados</span>
+                            <span class="separador-linea"></span>
+                        </div>
+
+                        <!-- Resumen de métodos de pago (modernizado) -->
+                        <div class="metodos-resumen-moderno">
+                            <div class="metodos-grid-compacto">
+                                <div *ngFor="let metodo of venta.metodosDePago" class="metodo-chip" 
+                                    [ngClass]="{
+                                        'metodo-efectivo': metodo.tipo === 'efectivo',
+                                        'metodo-punto': metodo.tipo === 'punto',
+                                        'metodo-pagomovil': metodo.tipo === 'pagomovil',
+                                        'metodo-transferencia': metodo.tipo === 'transferencia',
+                                        'metodo-zelle': metodo.tipo === 'zelle'
+                                    }">
+                                    <div class="chip-icon">
+                                        <i class="bi" [ngClass]="{
+                                            'bi-cash': metodo.tipo === 'efectivo',
+                                            'bi-credit-card': metodo.tipo === 'punto',
+                                            'bi-phone': metodo.tipo === 'pagomovil',
+                                            'bi-bank': metodo.tipo === 'transferencia',
+                                            'bi-globe': metodo.tipo === 'zelle'
+                                        }"></i>
                                     </div>
-                                    <div class="detalle-item">
-                                        <span class="detalle-label">Total adeudado:</span>
-                                        <span class="detalle-value">
-                                            {{ formatearMoneda(redondearDosDecimales(montoTotal - (venta.montoAbonado ??
-                                            0)), venta.moneda) }}
-                                        </span>
+                                    <div class="chip-info">
+                                        <span class="chip-tipo">{{ metodo.tipo | titlecase }}</span>
+                                        <span class="chip-monto">{{ formatearMoneda(metodo.monto, getMonedaParaMetodo(metodo.tipo)) }}</span>
+                                    </div>
+                                    <div class="chip-badge" *ngIf="metodo.referencia" title="Referencia: {{ metodo.referencia }}">
+                                        <i class="bi bi-hash"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Resumen de métodos de pago -->
-                        <div class="metodos-resumen">
-                            <h6 class="detalle-title">
-                                <i class="bi bi-wallet2"></i>
-                                Métodos de pago aplicados
-                            </h6>
+                        <!-- Detalles de forma de pago (compacto) -->
+                        <div class="forma-pago-compacto mt-3" *ngIf="venta.formaPago">
+                            <div class="pago-badge" [ngClass]="{
+                                'bg-contado': venta.formaPago === 'contado',
+                                'bg-abono': venta.formaPago === 'abono',
+                                'bg-cashea': venta.formaPago === 'cashea',
+                                'bg-pendiente': venta.formaPago === 'de_contado-pendiente'
+                            }">
+                                <i class="bi" [ngClass]="{
+                                    'bi-cash-coin': venta.formaPago === 'contado',
+                                    'bi-piggy-bank': venta.formaPago === 'abono',
+                                    'bi-calendar-check': venta.formaPago === 'cashea',
+                                    'bi-clock-history': venta.formaPago === 'de_contado-pendiente'
+                                }"></i>
+                                <span>{{ venta.formaPago === 'de_contado-pendiente' ? 'Pago pendiente' : (venta.formaPago | titlecase) }}</span>
+                            </div>
 
-                            <div class="metodos-list">
-                                <div *ngFor="let metodo of venta.metodosDePago" class="metodo-resumen-item"
-                                    [class.con-datos]="metodo.referencia || metodo.banco"
-                                    [class.pago-movil]="metodo.tipo === 'pago_movil' || metodo.tipo === 'pagomovil'"
-                                    [class.transferencia]="metodo.tipo === 'transferencia'">
-
-                                    <div class="metodo-info">
-                                        <!-- Tipo de método de pago -->
-                                        <span class="metodo-tipo">
-                                            {{ metodo.tipo | titlecase }}
-                                        </span>
-
-                                        <!-- Contenedor para referencia y banco (solo visible si existen) -->
-                                        <div *ngIf="metodo.referencia || metodo.banco" class="metodo-datos-container">
-
-                                            <!-- Mostrar referencia si existe -->
-                                            <span *ngIf="metodo.referencia" class="metodo-referencia">
-                                                <span class="referencia-label">Ref:</span>
-                                                <span class="referencia-value">{{ metodo.referencia }}</span>
-                                            </span>
-
-                                            <!-- Mostrar banco si existe -->
-                                            <span *ngIf="metodo.banco" class="metodo-banco">
-                                                <span class="banco-label">Banco:</span>
-                                                <span class="banco-value">{{ metodo.banco }}</span>
-                                            </span>
-
-                                        </div>
-                                    </div>
-
-                                    <!-- Monto y conversión -->
-                                    <span class="metodo-monto">
-                                        <span class="monto-principal">
-                                            {{ formatearMoneda(redondear(metodo.monto ?? 0),
-                                            getMonedaParaMetodo(metodo.tipo)) }}
-                                        </span>
-
-                                        <span *ngIf="getMonedaParaMetodo(metodo.tipo) !== 'bolivar'"
-                                            class="conversion-text">
-                                            <span class="conversion-value">
-                                                {{ formatearMoneda(redondear(calcularConversionBs(metodo.monto ?? 0,
-                                                metodo.tipo)), 'bolivar') }}
-                                            </span>
-                                        </span>
-                                    </span>
-                                </div>
+                            <!-- Detalles específicos por tipo de pago -->
+                            <div class="pago-detalles" *ngIf="venta.formaPago === 'cashea'">
+                                <span class="detalle-item">
+                                    <i class="bi bi-arrow-up"></i> Inicial: {{ formatearMoneda(venta.montoInicial, venta.moneda) }}
+                                </span>
+                                <span class="detalle-item" *ngIf="resumenCashea.cantidad > 0">
+                                    <i class="bi bi-calendar-plus"></i> +{{ resumenCashea.cantidad }} cuota{{ resumenCashea.cantidad > 1 ? 's' : '' }}
+                                </span>
+                            </div>
+                            <div class="pago-detalles" *ngIf="venta.formaPago === 'abono'">
+                                <span class="detalle-item">
+                                    <i class="bi bi-arrow-down"></i> Adeudado: {{ formatearMoneda(montoTotal - (venta.montoAbonado || 0), venta.moneda) }}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -2046,9 +2015,9 @@
                     </div>
                 </div>
 
-                <!-- 🛠️ Control de Orden de Trabajo -->
+                <!-- Control de Orden de Trabajo -->
                 <div class="info-card orden orden-trabajo"
-                    *ngIf="requierePaciente && pacienteSeleccionado && historiaMedicaSeleccionada">
+                    *ngIf="tipoVenta !== 'solo_consulta' && requierePaciente && pacienteSeleccionado && historiaMedicaSeleccionada && venta.productos.length > 0">
 
                     <!-- Header minimalista -->
                     <div class="card-header-detalle">
@@ -2057,7 +2026,7 @@
                     </div>
 
                     <div class="orden-body">
-                        <!-- Alerta simplificada -->
+                        <!-- Alerta simplificada (solo cuando no hay fórmula) -->
                         <div class="orden-alert" *ngIf="!tieneFormulaCompleta(historiaMedicaSeleccionada)">
                             <i class="bi bi-exclamation-triangle"></i>
                             <div>
@@ -2066,38 +2035,50 @@
                             </div>
                         </div>
 
-                        <!-- Estado y control -->
+                        <!-- Estado y control (solo cuando hay fórmula) -->
                         <ng-container *ngIf="tieneFormulaCompleta(historiaMedicaSeleccionada)">
                             <div class="orden-content">
-                                <!-- Estado principal -->
-                                <div class="orden-status-display" [class.active]="generarOrdenTrabajo">
-                                    <div class="status-icon">
-                                        <i class="bi" [class.bi-check-circle]="generarOrdenTrabajo"
-                                            [class.bi-pause-circle]="!generarOrdenTrabajo"></i>
-                                    </div>
-                                    <div class="status-text">
-                                        <h3>{{ generarOrdenTrabajo ? 'Orden ACTIVADA' : 'Orden PAUSADA' }}</h3>
-                                        <p>{{ generarOrdenTrabajo ?
-                                            'Se generará automáticamente al finalizar' :
-                                            'La generación está suspendida' }}</p>
-                                    </div>
-                                </div>
-
-                                <!-- Control de activación -->
-                                <div class="orden-control">
-                                    <div class="control-label">
-                                        <span>Generación automática</span>
-                                        <span class="status-badge" [class.active]="generarOrdenTrabajo">
-                                            {{ generarOrdenTrabajo ? 'ACTIVA' : 'INACTIVA' }}
+                                
+                                <!-- Grid de información minimalista -->
+                                <div class="orden-info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Estado</span>
+                                        <span class="info-value" [class.activa]="generarOrdenTrabajo">
+                                            {{ generarOrdenTrabajo ? 'Activa' : 'Inactiva' }}
                                         </span>
                                     </div>
-
-                                    <label class="switch">
-                                        <input type="checkbox" [checked]="generarOrdenTrabajo"
-                                            (change)="toggleSwitchOrdenTrabajo()">
-                                        <span class="slider"></span>
-                                    </label>
                                 </div>
+
+                                <!-- Control de activación con contexto integrado -->
+                                <div class="orden-control">
+                                    <div class="control-contexto">
+                                        <div class="contexto-texto">
+                                            <i class="bi bi-info-circle"></i>
+                                            <span *ngIf="venta.formaPago === 'contado'">Pago de contado - Orden activa por defecto</span>
+                                            <span *ngIf="venta.formaPago === 'cashea'">Plan Cashea - Orden activa por defecto</span>
+                                            <span *ngIf="venta.formaPago === 'abono' && porcentajeAbonadoDelTotal >= 50">Abono superior al 50% - Orden activa por defecto</span>
+                                            <span *ngIf="venta.formaPago === 'abono' && porcentajeAbonadoDelTotal < 50">Abono inferior al 50% - Orden inactiva (puedes activarla)</span>
+                                            <span *ngIf="venta.formaPago === 'de_contado-pendiente'">Pago pendiente - Orden inactiva (puedes activarla)</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="control-switch">
+                                        <span class="switch-label">Generar orden</span>
+                                        <label class="switch">
+                                            <input type="checkbox" [checked]="generarOrdenTrabajo"
+                                                (change)="toggleSwitchOrdenTrabajo()">
+                                            <span class="slider round"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Badge de estado compacto -->
+                                <div class="orden-status-badge" [class.activa]="generarOrdenTrabajo">
+                                    <i class="bi" [class.bi-check-circle-fill]="generarOrdenTrabajo"
+                                                [class.bi-pause-circle-fill]="!generarOrdenTrabajo"></i>
+                                    <span>{{ generarOrdenTrabajo ? 'La orden se generará al finalizar' : 'Orden no generada' }}</span>
+                                </div>
+
                             </div>
                         </ng-container>
                     </div>

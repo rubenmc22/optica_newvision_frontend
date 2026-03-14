@@ -1,6 +1,6 @@
-/*
+/**
  * PACIENTES
-*/
+ */
 //Add paciente
 {
     "informacionPersonal": {
@@ -36,56 +36,58 @@
         "patologias": "paciente renal, diabetes, dolor de cabeza"
     }
 }
-
-
 //add historial medico
 {
+    "id": 65,
+    "nHistoria": "H-20260314-004",
     "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
     "datosConsulta": {
         "motivo": [
-            "Otro"
+            "Consulta rutinaria"
         ],
-        "otroMotivo": "test",
-        "tipoCristalActual": "LENTES_CONTACTO",
-        "tipoLentesContacto": "TORICOS",
-        "fechaUltimaGraduacion": "2023-02-14",
-        "medico": "8759927"
+        "otroMotivo": "",
+        "tipoCristalActual": "BIFOCAL",
+        "fechaUltimaGraduacion": null,
+        "medico": {
+            "cedula": "8759927",
+            "nombre": "Gerardo Martinez",
+            "cargo": "Oftalmólogo"
+        },
+        "formulaExterna": false,
+        "pagoPendiente": false
     },
     "examenOcular": {
         "lensometria": {
-            "esf_od": {
-                "value": "+0.50",
-                "label": "+0.50"
-            },
-            "cil_od": "-0.50",
-            "eje_od": 3,
-            "add_od": "+1.25",
-            "av_lejos_od": "20/30",
-            "av_cerca_od": "J3",
-            "av_lejos_bi": "20/30",
-            "esf_oi": "+0.50",
-            "cil_oi": "-0.50",
-            "eje_oi": 3,
-            "add_oi": "+1.25",
-            "av_lejos_oi": "20/30",
-            "av_cerca_oi": "J3",
-            "av_cerca_bi": "J3"
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
         },
         "refraccion": {
-            "esf_od": "+0.50",
-            "cil_od": "-0.50",
-            "eje_od": 3,
-            "add_od": "+1.25",
-            "avccl_od": "20/30",
-            "avccc_od": "J3",
-            "avccl_bi": "20/30",
-            "avccc_bi": "J3",
-            "esf_oi": "+0.50",
-            "cil_oi": "-0.50",
-            "eje_oi": 3,
-            "add_oi": "+1.25",
-            "avccl_oi": "20/30",
-            "avccc_oi": "J3"
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
         },
         "refraccionFinal": {
             "esf_od": "+0.50",
@@ -93,50 +95,37 @@
             "eje_od": 3,
             "add_od": "+1.25",
             "alt_od": "2",
-            "dp_od": "12",
+            "dp_od": "2",
             "esf_oi": "+0.50",
             "cil_oi": "-0.50",
             "eje_oi": 3,
             "add_oi": "+1.25",
             "alt_oi": "2",
-            "dp_oi": "12"
+            "dp_oi": "2"
         },
         "avsc_avae_otros": {
-            "avsc_lejos_od": "20/30",
-            "avsc_cerca_od": "J3",
-            "avae_od": "20/30",
-            "otros_od": "test",
-            "avsc_lejos_oi": "20/30",
-            "avsc_cerca_oi": "J3",
-            "avae_oi": "J3",
-            "otros_oi": "test"
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
         }
     },
     "diagnosticoTratamiento": {
-        "diagnostico": "rar",
+        "diagnostico": "test",
         "tratamiento": "test"
     },
     "recomendaciones": [
         {
-            "cristal": "Progresivo convencional",
+            "cristal": "Monofocal visión sencilla",
             "material": [
                 "POLICARBONATO"
             ],
-            "montura": "test",
-            "observaciones": "test",
-            "tipoLentesContacto": "",
-            "medidaHorizontal": 2,
-            "medidaVertical": 4,
-            "medidaDiagonal": 7,
-            "medidaPuente": 5
-        },
-        {
-            "cristal": "Monofocal visión sencilla",
-            "material": [
-                "CR39"
-            ],
-            "montura": "test",
-            "observaciones": "test",
+            "montura": "",
+            "observaciones": "",
             "tipoLentesContacto": "",
             "medidaHorizontal": "",
             "medidaVertical": "",
@@ -146,6 +135,20 @@
     ],
     "conformidad": {
         "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    },
+    "auditoria": {
+        "fechaCreacion": "2026-03-14T19:45:46.965Z",
+        "fechaActualizacion": "2026-03-14T19:45:46.968Z",
+        "creadoPor": {
+            "cedula": "24367965",
+            "nombre": "Ruben Dario Martinez Castro",
+            "cargo": "Gerente"
+        },
+        "actualizadoPor": {
+            "cedula": "24367965",
+            "nombre": "Ruben Dario Martinez Castro",
+            "cargo": "Gerente"
+        }
     }
 }
 //get historial
@@ -165,7 +168,7 @@
             "nombre": "Gerardo Martinez",
             "cargo": "Oftalmólogo"
         },
-           "formulaExterna": false, //nuevo
+        "formulaExterna": false, //nuevo
         "pagoPendiente": true //nuevo
     },
     "examenOcular": {
@@ -264,7 +267,6 @@
         }
     }
 }
-
 //getVentas
 {
     "message": "ok",
@@ -439,8 +441,6 @@
         }
     ]
 }
-
-
 //crear venta - solo consulta 
 {
     "moneda": "dolar",
@@ -497,7 +497,6 @@
         "montoOriginal": 60
     }
 }
-
 //crear venta - consulta + productos
 {
     "moneda": "dolar",
@@ -506,17 +505,17 @@
     "metodosDePago": [
         {
             "tipo": "efectivo",
-            "monto": 71.86,
+            "monto": 1187.04,
             "moneda": "dolar"
         }
     ],
     "descuento": 0,
     "sede": "guatire",
-    "total": 71.86,
+    "total": 1187.04,
     "formaPagoDetalle": {
         "tipo": "contado",
-        "montoTotal": 71.86,
-        "totalPagado": 71.86
+        "montoTotal": 1187.0376,
+        "totalPagado": 1187.04
     },
     "tipoVenta": "consulta_productos",
     "cliente": {
@@ -540,7 +539,7 @@
     },
     "auditoria": {
         "usuarioCreacion": 5,
-        "fechaCreacion": "2026-03-13T01:51:30.429Z"
+        "fechaCreacion": "2026-03-14T19:34:15.963Z"
     },
     "productos": [
         {
@@ -555,6 +554,19 @@
             "stock": 26,
             "tipo": "PRODUCTO",
             "descripcion": "Test"
+        },
+        {
+            "id": "27",
+            "nombre": "Iphone",
+            "codigo": "PR-000027",
+            "precio": 961.36,
+            "precioConIva": 1115.18,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": true,
+            "stock": 29,
+            "tipo": "PRODUCTO",
+            "descripcion": ""
         }
     ],
     "consulta": {
@@ -568,15 +580,6 @@
         "montoOriginal": 60
     }
 }
-
-
-
-
-
-
-
-
-
 
 
 //PENDIENTES
