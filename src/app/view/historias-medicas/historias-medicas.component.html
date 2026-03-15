@@ -846,7 +846,7 @@
                       <i class="bi bi-person-badge me-2"></i>
                       Especialista <span class="required">*</span>
                     </label>
-                   <ng-select 
+                    <ng-select 
                       [items]="medicoTratante.length > 0 ? medicoTratante : []" 
                       bindLabel="nombre"
                       formControlName="medico" 
@@ -866,16 +866,103 @@
             </div>
           </div>
 
-        <!-- Sección Examen Ocular -->
+          <!-- Sección Examen Ocular -->
           <div class="form-section">
             <div class="section-header">
               <div class="section-icon">
                 <i class="bi bi-eye"></i>
               </div>
-              <h6 class="section-title">Examen Ocular</h6>
+              <div class="section-title-content" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <h6 class="section-title">Examen Ocular</h6>
+                
+                <!-- SWITCH DE FÓRMULA EXTERNA EN EL HEADER -->
+                <div class="formula-externa-header" *ngIf="historiaForm.get('medico')?.value">
+                  <div class="formula-externa-switch">
+                    <label class="switch-moderno">
+                      <input type="checkbox" formControlName="esFormulaExterna" (change)="onFormulaExternaChange()">
+                      <span class="slider-moderno round"></span>
+                    </label>
+                    <span class="switch-label" [class.text-primary]="historiaForm.get('esFormulaExterna')?.value">
+                      <i class="bi" [ngClass]="historiaForm.get('esFormulaExterna')?.value ? 'bi-box-arrow-up-right' : 'bi-file-text'"></i>
+                      Fórmula Externa
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-
+            
             <div class="section-content">
+              <!-- CAMPOS PARA FÓRMULA EXTERNA (DENTRO DEL CONTENT) -->
+              <div class="formula-externa-fields" *ngIf="historiaForm.get('esFormulaExterna')?.value">
+                <!-- Grid de campos -->
+                <div class="formula-externa-grid">
+                  <div class="formula-externa-grid-item">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-person-badge me-2"></i>
+                        Médico Oftalmólogo Referido <span class="required">*</span>
+                      </label>
+                      <input type="text" class="form-control-moderno" formControlName="medicoReferido"
+                        placeholder="Nombre del médico que emitió la fórmula...">
+                      <small class="form-text text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Nombre del especialista externo que realizó la fórmula
+                      </small>
+                      <div class="form-error" *ngIf="historiaForm.get('medicoReferido')?.invalid && historiaForm.get('medicoReferido')?.touched">
+                        <i class="bi bi-exclamation-circle"></i> Este campo es requerido para fórmula externa
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="formula-externa-grid-item">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        Lugar del Consultorio <span class="required">*</span>
+                      </label>
+                      <input type="text" class="form-control-moderno" formControlName="lugarConsultorio"
+                        placeholder="Ciudad, clínica o consultorio...">
+                      <small class="form-text text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Ubicación donde se realizó la consulta externa
+                      </small>
+                      <div class="form-error" *ngIf="historiaForm.get('lugarConsultorio')?.invalid && historiaForm.get('lugarConsultorio')?.touched">
+                        <i class="bi bi-exclamation-circle"></i> Este campo es requerido para fórmula externa
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Mensaje informativo según el caso -->
+                <div class="formula-externa-info" *ngIf="historiaForm.get('medico')?.value && historiaForm.get('medico')?.value?.id !== 'EXTERNO'">
+                  <i class="bi bi-arrow-repeat"></i>
+                  <span>
+                    <strong>Rectificación de fórmula externa:</strong> 
+                    El especialista {{ getNombreMedicoSeleccionado() }} 
+                    verificará y ajustará la fórmula del Dr. {{ historiaForm.get('medicoReferido')?.value || 'externo' }}.
+                    <span *ngIf="esOftalmologoSeleccionado()" class="badge bg-warning text-dark ms-2">
+                      <i class="bi bi-cash"></i> Generará costo de consulta
+                    </span>
+                    <span *ngIf="esOptometristaSeleccionado()" class="badge bg-info text-dark ms-2">
+                      <i class="bi bi-gift"></i> Sin costo 
+                    </span>
+                  </span>
+                </div>
+
+                <div class="formula-externa-info" *ngIf="!historiaForm.get('medico')?.value || historiaForm.get('medico')?.value?.id === 'EXTERNO'">
+                  <i class="bi bi-box-arrow-up-right"></i>
+                  <span>
+                    <strong>Fórmula externa pura:</strong> 
+                    Solo se registrará la fórmula del Dr. {{ historiaForm.get('medicoReferido')?.value || 'externo' }}.
+                    <span class="badge bg-secondary text-white ms-2">Sin costo</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Separador visual -->
+              <div class="section-divider" *ngIf="historiaForm.get('esFormulaExterna')?.value"></div>
+
+
               <!-- Lensometría -->
               <div class="examen-subseccion">
                 <div class="subseccion-header">
@@ -906,7 +993,7 @@
                       <div class="campo-select">
                         <ng-select [items]="opcionesRef['esf']" formControlName="len_esf_od" 
                           [searchable]="true" placeholder="ESF" class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -914,7 +1001,7 @@
                         <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                           formControlName="len_cil_od" placeholder="CIL" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -922,7 +1009,7 @@
                         <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                           formControlName="len_eje_od" placeholder="EJE" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -930,7 +1017,7 @@
                         <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                           formControlName="len_add_od" placeholder="ADD" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -938,7 +1025,7 @@
                         <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                           formControlName="len_av_lejos_od" placeholder="AV Lejos" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -946,7 +1033,7 @@
                         <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                           formControlName="len_av_cerca_od" placeholder="AV Cerca" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                     </div>
@@ -961,7 +1048,7 @@
                         <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
                           formControlName="len_esf_oi" placeholder="ESF" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -969,7 +1056,7 @@
                         <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                           formControlName="len_cil_oi" placeholder="CIL" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -977,7 +1064,7 @@
                         <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                           formControlName="len_eje_oi" placeholder="EJE" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -985,7 +1072,7 @@
                         <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                           formControlName="len_add_oi" placeholder="ADD" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -993,7 +1080,7 @@
                         <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                           formControlName="len_av_lejos_oi" placeholder="AV Lejos" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1001,13 +1088,13 @@
                         <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                           formControlName="len_av_cerca_oi" placeholder="AV Cerca" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                     </div>
                   </div>
 
-                   <!--sección binocular  -->
+                  <!--sección binocular  -->
                   <div class="lensometria-binocular binocular-top">
                     <div class="binocular-header">
                       <i class="bi bi-eye"></i>
@@ -1020,7 +1107,7 @@
                         <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                           formControlName="len_av_lejos_bi" placeholder="AV lejos BI" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"> 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1029,7 +1116,7 @@
                         <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                           formControlName="len_av_cerca_bi" placeholder="AV cerca BI" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"> 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                     </div>
@@ -1161,7 +1248,7 @@
                         <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
                           formControlName="ref_esf_od" placeholder="ESF" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1169,7 +1256,7 @@
                         <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                           formControlName="ref_cil_od" placeholder="CIL" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1177,7 +1264,7 @@
                         <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                           formControlName="ref_eje_od" placeholder="EJE" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1185,7 +1272,7 @@
                         <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                           formControlName="ref_add_od" placeholder="ADD" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1193,7 +1280,7 @@
                         <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccl_od" placeholder="AVCCL" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1201,7 +1288,7 @@
                         <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccc_od" placeholder="AVCCC" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                     </div>
@@ -1216,7 +1303,7 @@
                         <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
                           formControlName="ref_esf_oi" placeholder="ESF" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1224,7 +1311,7 @@
                         <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                           formControlName="ref_cil_oi" placeholder="CIL" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1232,7 +1319,7 @@
                         <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                           formControlName="ref_eje_oi" placeholder="EJE" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1240,7 +1327,7 @@
                         <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                           formControlName="ref_add_oi" placeholder="ADD" [searchable]="true" 
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1248,7 +1335,7 @@
                         <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccl_oi" placeholder="AVCCL" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1256,7 +1343,7 @@
                         <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccc_oi" placeholder="AVCCC" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  >
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
                         </ng-select>
                       </div>
                     </div>
@@ -1275,7 +1362,7 @@
                         <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccl_bi" placeholder="AVCCL BI" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()" > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                       
@@ -1284,7 +1371,7 @@
                         <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                           formControlName="ref_avccc_bi" placeholder="AVCCC BI" [searchable]="true"
                           class="ng-select-moderno"
-                          (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()" > 
+                          (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                         </ng-select>
                       </div>
                     </div>
@@ -1321,7 +1408,7 @@
                       <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_esf_od" placeholder="ESF" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                       </ng-select>
                     </div>
                     
@@ -1329,7 +1416,7 @@
                       <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_cil_od" placeholder="CIL" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                       </ng-select>
                     </div>
                     
@@ -1337,7 +1424,7 @@
                       <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_eje_od" placeholder="EJE" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                       </ng-select>
                     </div>
                     
@@ -1345,18 +1432,18 @@
                       <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_add_od" placeholder="ADD" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                       </ng-select>
                     </div>
                     
                     <div class="campo-input">
                       <input type="text" class="form-control-small" formControlName="ref_final_alt_od"
-                        placeholder="ALT" (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  >
+                        placeholder="ALT" (keydown)="handleKeydown($event)">
                     </div>
                     
                     <div class="campo-input">
                       <input type="text" class="form-control-small" formControlName="ref_final_dp_od"
-                        placeholder="DP" (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  >
+                        placeholder="DP" (keydown)="handleKeydown($event)">
                     </div>
                   </div>
                   
@@ -1370,7 +1457,7 @@
                       <ng-select [items]="opcionesRef['esf']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_esf_oi" placeholder="ESF" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                       </ng-select>
                     </div>
                     
@@ -1378,7 +1465,7 @@
                       <ng-select [items]="opcionesRef['cil']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_cil_oi" placeholder="CIL" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                       </ng-select>
                     </div>
                     
@@ -1386,7 +1473,7 @@
                       <ng-select [items]="opcionesRef['eje']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_eje_oi" placeholder="EJE" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                       </ng-select>
                     </div>
                     
@@ -1394,23 +1481,22 @@
                       <ng-select [items]="opcionesRef['add']" bindLabel="label" bindValue="value"
                         formControlName="ref_final_add_oi" placeholder="ADD" [searchable]="true"
                         class="ng-select-moderno"
-                        (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  > 
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()"> 
                       </ng-select>
                     </div>
                     
                     <div class="campo-input">
                       <input type="text" class="form-control-small" formControlName="ref_final_alt_oi"
-                        placeholder="ALT" (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  >
+                        placeholder="ALT" (keydown)="handleKeydown($event)">
                     </div>
                     
                     <div class="campo-input">
                       <input type="text" class="form-control-small" formControlName="ref_final_dp_oi"
-                        placeholder="DP" (keydown)="handleKeydown($event)"   (open)="fixSelectOverflow()"  >
+                        placeholder="DP" (keydown)="handleKeydown($event)">
                     </div>
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
 

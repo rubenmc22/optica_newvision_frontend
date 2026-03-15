@@ -38,22 +38,19 @@
 }
 //add historial medico
 {
-    "id": 65,
-    "nHistoria": "H-20260314-004",
     "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
     "datosConsulta": {
         "motivo": [
-            "Consulta rutinaria"
+            "Fatiga visual"
         ],
         "otroMotivo": "",
-        "tipoCristalActual": "BIFOCAL",
+        "tipoCristalActual": "MONOFOCAL_DIGITAL",
+        "tipoLentesContacto": "",
         "fechaUltimaGraduacion": null,
-        "medico": {
-            "cedula": "8759927",
-            "nombre": "Gerardo Martinez",
-            "cargo": "Oftalmólogo"
-        },
-        "formulaExterna": false,
+        "medico": "8759927",
+        "medicoReferido": "Raul morales",
+        "lugarConsultorio": "Caracas",
+        "formulaExterna": true,
         "pagoPendiente": false
     },
     "examenOcular": {
@@ -94,13 +91,13 @@
             "cil_od": "-0.50",
             "eje_od": 3,
             "add_od": "+1.25",
-            "alt_od": "2",
+            "alt_od": "1",
             "dp_od": "2",
             "esf_oi": "+0.50",
             "cil_oi": "-0.50",
             "eje_oi": 3,
             "add_oi": "+1.25",
-            "alt_oi": "2",
+            "alt_oi": "1",
             "dp_oi": "2"
         },
         "avsc_avae_otros": {
@@ -115,8 +112,8 @@
         }
     },
     "diagnosticoTratamiento": {
-        "diagnostico": "test",
-        "tratamiento": "test"
+        "diagnostico": "TEST",
+        "tratamiento": "TEST"
     },
     "recomendaciones": [
         {
@@ -135,20 +132,6 @@
     ],
     "conformidad": {
         "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
-    },
-    "auditoria": {
-        "fechaCreacion": "2026-03-14T19:45:46.965Z",
-        "fechaActualizacion": "2026-03-14T19:45:46.968Z",
-        "creadoPor": {
-            "cedula": "24367965",
-            "nombre": "Ruben Dario Martinez Castro",
-            "cargo": "Gerente"
-        },
-        "actualizadoPor": {
-            "cedula": "24367965",
-            "nombre": "Ruben Dario Martinez Castro",
-            "cargo": "Gerente"
-        }
     }
 }
 //get historial
@@ -523,14 +506,38 @@
     "tipoVenta": "consulta_productos",
     "moneda": "dolar",
     "sede": "guatire",
-    "total": 1155.18,
+    "total": 71.86,
     "descuento": 0,
     "impuesto": 16,
     "metodosDePago": [
         {
             "tipo": "efectivo",
-            "monto": 1155.18,
+            "monto": 10,
             "moneda": "dolar"
+        },
+        {
+            "tipo": "punto",
+            "monto": 15000,
+            "bancoCodigo": "0114",
+            "bancoNombre": "BNC",
+            "moneda": "bolivar",
+            "bancoPunto": "bnc"
+        },
+        {
+            "tipo": "pagomovil",
+            "monto": 10000,
+            "referencia": "12121212",
+            "bancoCodigo": "0102",
+            "bancoNombre": "Banco de Venezuela",
+            "moneda": "bolivar"
+        },
+        {
+            "tipo": "transferencia",
+            "monto": 2639.34,
+            "referencia": "12121212",
+            "bancoCodigo": "0102",
+            "bancoNombre": "Banco de Venezuela",
+            "moneda": "bolivar"
         }
     ],
     "cliente": {
@@ -559,26 +566,26 @@
     },
     "auditoria": {
         "usuarioCreacion": 5,
-        "fechaCreacion": "2026-03-15T17:03:00.564Z"
+        "fechaCreacion": "2026-03-15T18:12:29.645Z"
     },
     "formaPagoDetalle": {
         "tipo": "contado",
-        "montoTotal": 1155.1776,
-        "totalPagado": 1155.18
+        "montoTotal": 71.86,
+        "totalPagado": 71.86
     },
     "productos": [
         {
-            "id": "27",
-            "nombre": "Iphone",
-            "codigo": "PR-000027",
-            "precio": 961.36,
-            "precioConIva": 1115.18,
+            "id": "17",
+            "nombre": "Lentes de prueba",
+            "codigo": "PR-000017",
+            "precio": 31.86,
+            "precioConIva": 31.86,
             "moneda": "dolar",
             "cantidad": 1,
-            "aplicaIva": true,
-            "stock": 29,
+            "aplicaIva": false,
+            "stock": 26,
             "tipo": "PRODUCTO",
-            "descripcion": ""
+            "descripcion": "Test"
         }
     ],
     "consulta": {
@@ -929,3 +936,205 @@
 
 
 
+
+{
+    "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
+    "datosConsulta": {
+        "motivo": [
+            "Fatiga visual"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "MONOFOCAL_DIGITAL",
+        "tipoLentesContacto": "",
+        "fechaUltimaGraduacion": null,
+        "medico": "8759927",
+        "medicoReferido": "Raul morales",
+        "lugarConsultorio": "Caracas",
+        "formulaExterna": true,
+        "pagoPendiente": false
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.50",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "1",
+            "dp_od": "2",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "1",
+            "dp_oi": "2"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "TEST",
+        "tratamiento": "TEST"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "POLICARBONATO"
+            ],
+            "montura": "",
+            "observaciones": "",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}
+
+
+
+
+
+
+
+{
+    "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
+    "datosConsulta": {
+        "motivo": [
+            "Consulta rutinaria"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": null,
+        "tipoLentesContacto": "",
+        "fechaUltimaGraduacion": null,
+        "medico": "8759927",
+        "medicoReferido": "",
+        "lugarConsultorio": "",
+        "formulaExterna": false,
+        "pagoPendiente": true
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.50",
+            "cil_od": "-0.25",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "3",
+            "dp_od": "3",
+            "esf_oi": "+0.25",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "3",
+            "dp_oi": "3"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "rsasd",
+        "tratamiento": "asdasdasda"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "CR39"
+            ],
+            "montura": "",
+            "observaciones": "test",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}

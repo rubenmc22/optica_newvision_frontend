@@ -30,6 +30,9 @@ export interface DatosConsulta {
     cargo: string;
   };
 
+  medicoReferido?: string;
+  lugarConsultorio?: string;
+
   nombre_asesor?: string;
   cedula_asesor?: string;
   cedulaAsesor?: string;
@@ -243,3 +246,11 @@ export interface OpcionSelect {
   value: string | number;
   label: string;
 }
+
+
+
+
+
+
+
+
