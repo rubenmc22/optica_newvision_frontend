@@ -579,27 +579,38 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private resetearEstadoModal(): void {
+        // Resetear forma de pago a contado
         this.venta.formaPago = 'contado';
+
+        // Resetear moneda
         this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
+
+        // Limpiar métodos de pago
         this.venta.metodosDePago = [];
+
+        // Resetear descuento
         this.venta.descuento = 0;
+
+        // Resetear observaciones
         this.venta.observaciones = '';
+
+        // Resetear abono
         this.venta.montoAbonado = 0;
         this.valorTemporal = '';
         this.montoExcedido = false;
+
+        // Resetear cashea
         this.venta.montoInicial = 0;
         this.valorInicialTemporal = '';
         this.cuotasCashea = [];
         this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
         this.nivelCashea = 'nivel3';
         this.cantidadCuotasCashea = 3;
-        this.montoConsulta = 0;
-        this.montoConsultaOriginal = 0;
-        this.pagoMedico = 0;
-        this.pagoOptica = 0;
-        this.consultaEnCarrito = false;
+
+        // Resetear moneda efectivo
         this.monedaEfectivo = this.monedaSistema;
 
+        // Actualizar cálculos
         this.actualizarProductosConDetalle();
     }
 
@@ -670,7 +681,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     tieneFormulaCompleta(historia: any): boolean {
         try {
             if (!historia || typeof historia !== 'object') {
-                console.log('❌ No hay historia');
                 return false;
             }
 
@@ -679,11 +689,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 historia?.data?.examenOcular?.refraccionFinal;
 
             if (!ref || typeof ref !== 'object') {
-                console.log('❌ No hay refraccionFinal');
                 return false;
             }
-
-            console.log('✅ refraccionFinal encontrada:', ref);
 
             // Verificar al menos un campo con valor en OD o OI
             const tieneValores =
@@ -692,7 +699,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 (ref.esf_oi && ref.esf_oi !== '') ||
                 (ref.cil_oi && ref.cil_oi !== '');
 
-            console.log('tieneValores:', tieneValores);
             return tieneValores;
 
         } catch (error) {
@@ -1994,13 +2000,44 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     getMontoRestanteParaMetodo(index: number): number {
+        // 1. DETERMINAR MONTO REQUERIDO SEGÚN FORMA DE PAGO
+        let montoRequerido = 0;
+
+        switch (this.venta.formaPago) {
+            case 'contado':
+                // De contado: debe pagar el TOTAL de la venta
+                montoRequerido = this.totalPagar;
+                break;
+
+            case 'abono':
+                // Abono: solo debe pagar el monto del abono
+                montoRequerido = this.venta.montoAbonado || 0;
+                break;
+
+            case 'cashea':
+                // Cashea: debe pagar la INICIAL (obligatorio) + cuotas adelantadas (opcional)
+                const inicial = this.venta.montoInicial || 0;
+                const cuotasAdelantadas = this.resumenCashea.total || 0;
+                montoRequerido = inicial + cuotasAdelantadas;
+                break;
+
+            case 'de_contado-pendiente':
+                // Pendiente por pago: NO requiere métodos de pago
+                montoRequerido = 0;
+                break;
+
+            default:
+                montoRequerido = this.totalPagar;
+        }
+
+        // 2. CALCULAR LO YA PAGADO POR OTROS MÉTODOS
         const otrosMontos = this.venta.metodosDePago
             .filter((_, i) => i !== index)
             .reduce((sum, metodo) => {
                 const montoMetodo = metodo.monto ?? 0;
                 const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
 
-                // Convertir cada monto a la moneda del sistema (euros)
+                // Convertir cada monto a la moneda del sistema
                 if (monedaMetodo !== this.venta.moneda) {
                     const conversionExacta = this.convertirMontoExacto(montoMetodo, monedaMetodo, this.venta.moneda);
                     return sum + conversionExacta;
@@ -2008,19 +2045,27 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 return sum + montoMetodo;
             }, 0);
 
-        // 2. El restante es la diferencia entre lo requerido y lo ya pagado (en euros)
-        const restanteEnEuros = Math.max(this.totalPagar - otrosMontos, 0);
+        // 3. CALCULAR RESTANTE
+        // Si es pendiente, no hay restante
+        if (this.venta.formaPago === 'de_contado-pendiente') {
+            return 0;
+        }
 
-        // 3. Si el método actual está en la misma moneda del sistema, devolver directamente
+        // El restante es la diferencia entre lo requerido y lo ya pagado
+        const restanteEnSistema = Math.max(montoRequerido - otrosMontos, 0);
+
+        // 4. CONVERTIR A LA MONEDA DEL MÉTODO ACTUAL
         const metodoActual = this.venta.metodosDePago[index];
         const monedaMetodoActual = this.getMonedaParaMetodo(metodoActual.tipo);
 
+        // Si está en la misma moneda, devolver directamente
         if (monedaMetodoActual === this.venta.moneda) {
-            return this.redondear(restanteEnEuros);
+            return this.redondear(restanteEnSistema);
         }
 
-        // 4. Si el método actual está en otra moneda, convertir el restante a esa moneda
-        const restanteEnMonedaMetodo = this.convertirMontoExacto(restanteEnEuros, this.venta.moneda, monedaMetodoActual);
+        // Convertir el restante a la moneda del método
+        const restanteEnMonedaMetodo = this.convertirMontoExacto(restanteEnSistema, this.venta.moneda, monedaMetodoActual);
+
         return this.redondear(restanteEnMonedaMetodo);
     }
 
@@ -2581,13 +2626,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     get mensajePagoCompleto(): string {
         switch (this.venta.formaPago) {
             case 'abono':
-                return '✅ El pago está completo y alineado con el monto abonado.';
+                return 'El pago está completo y alineado con el monto abonado.';
             case 'cashea':
-                return '✅ El pago inicial está completo y alineado con el monto requerido.';
+                return 'El pago inicial está completo y alineado con el monto requerido.';
             case 'contado':
-                return '✅ El pago está completo y alineado con el monto total.';
+                return 'El pago está completo y alineado con el monto total.';
             default:
-                return '✅ El pago está completo.';
+                return 'El pago está completo.';
         }
     }
 
@@ -2740,7 +2785,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         // Para otras formas, verificar métodos completos
         if (this.venta.metodosDePago.length === 0) {
-            console.log('❌ No hay métodos de pago');
             return false;
         }
 
@@ -2897,24 +2941,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
     }
 
-    /**
-     * Limpia la búsqueda de pacientes
-     */
     limpiarBusquedaPaciente(): void {
         this.textoBusquedaPaciente = '';
         this.mostrarResultadosPacientes = false;
         this.cdr.detectChanges();
     }
 
-
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
 
         // 1. PREPARAR PRODUCTOS
-        // Filtrar solo productos físicos (excluir consultas)
         const productosFisicos = this.venta.productos.filter(p => p.tipo !== 'CONSULTA');
-
-        // Mapear productos al formato esperado por el API
         const productosData = productosFisicos.map(p => ({
             id: p.id,
             nombre: p.nombre,
@@ -2941,16 +2978,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }));
 
         // 3. CALCULAR TOTALES
-        // Subtotal de productos (sin IVA)
         const subtotalProductos = productosFisicos.reduce((acc, p) => {
             return acc + ((p.precio || 0) * (p.cantidad || 1));
         }, 0);
 
-        // Calcular descuento (sobre subtotal sin IVA)
         const descuentoMonto = this.venta.descuento ? (subtotalProductos * (this.venta.descuento / 100)) : 0;
         const subtotalConDescuento = subtotalProductos - descuentoMonto;
 
-        // Calcular IVA sobre productos que aplican IVA
         let ivaCalculado = 0;
         productosFisicos.forEach(producto => {
             if (producto.aplicaIva) {
@@ -2961,13 +2995,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
         });
 
-        // Total productos (con descuento e IVA)
         const totalProductos = subtotalConDescuento + ivaCalculado;
+        let totalFinal = totalProductos;
 
-        // Total final (productos + consulta)
-        const totalFinal = totalProductos + (this.consultaEnCarrito ? this.montoConsulta : 0);
+        if (this.tipoVenta !== 'solo_productos' && this.consultaEnCarrito) {
+            totalFinal += this.montoConsulta;
+        }
 
-        // 4. DETERMINAR TOTAL PAGADO SEGÚN FORMA DE PAGO
+        // 4. DETERMINAR TOTAL PAGADO
         let totalPagado = 0;
         switch (this.venta.formaPago) {
             case 'contado':
@@ -2991,7 +3026,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         if (this.venta.formaPago === 'cashea') {
             formaPagoDetalle = {
-                tipo: 'cashea',
+                tipo: 'cashea',  // ← Solo aquí va el tipo
                 nivel: this.nivelCashea,
                 montoTotal: totalFinal,
                 montoInicial: this.venta.montoInicial || 0,
@@ -3010,12 +3045,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 }))
             };
         } else if (this.venta.formaPago === 'abono') {
-            const deudaPendiente = Math.max(totalFinal - totalPagado, 0);
-            const porcentajePagado = totalFinal > 0 ? (totalPagado / totalFinal) * 100 : 0;
+            const deudaPendiente = Math.max(totalFinal - (this.venta.montoAbonado || 0), 0);
+            const porcentajePagado = totalFinal > 0 ? ((this.venta.montoAbonado || 0) / totalFinal) * 100 : 0;
 
             formaPagoDetalle = {
                 tipo: 'abono',
-                montoAbonado: this.redondear(totalPagado),
+                montoAbonado: this.redondear(this.venta.montoAbonado || 0),
                 deudaPendiente: this.redondear(deudaPendiente),
                 porcentajePagado: this.redondear(porcentajePagado)
             };
@@ -3025,26 +3060,31 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 montoTotal: totalFinal,
                 totalPagado: totalPagado
             };
+        } else if (this.venta.formaPago === 'de_contado-pendiente') {
+            formaPagoDetalle = {
+                tipo: 'de_contado-pendiente',
+                montoTotal: totalFinal,
+                deudaPendiente: totalFinal
+            };
         }
 
         // ============================================
         // 6. PREPARAR INFORMACIÓN DEL CLIENTE
         // ============================================
         let clienteData: any;
+        let tipoCliente: string;
 
         if (this.tipoVenta === 'solo_productos') {
-            // Para solo productos: puede ser cliente general o cliente con datos
             if (this.clienteSinPaciente && this.clienteSinPaciente.nombreCompleto) {
-                // Cliente con datos ingresados manualmente
                 clienteData = {
-                    tipo: this.clienteSinPaciente.tipoPersona === 'juridica' ? 'juridico' : 'natural',
+                    tipoCliente: 'cliente_general',  // ← DENTRO del objeto cliente
+                    tipoPersona: this.clienteSinPaciente.tipoPersona === 'juridica' ? 'juridico' : 'natural',
                     nombre: this.clienteSinPaciente.nombreCompleto,
                     cedula: this.clienteSinPaciente.cedula,
                     telefono: this.clienteSinPaciente.telefono,
                     email: this.clienteSinPaciente.email || undefined
                 };
 
-                // Agregar información de empresa si aplica
                 if (this.usarEmpresaEnVenta && this.empresaReferidaInfo) {
                     clienteData.informacionEmpresa = {
                         referidoEmpresa: true,
@@ -3056,25 +3096,26 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     };
                 }
             } else {
-                // Cliente anónimo
                 clienteData = {
-                    tipo: 'anonimo',
-                    nombre: 'CLIENTE GENERAL'
+                    tipoCliente: 'cliente_general',  // ← DENTRO del objeto cliente
+                    tipoPersona: 'natural',
+                    nombre: 'CLIENTE GENERAL',
+                    cedula: '',
+                    telefono: ''
                 };
             }
         } else {
-            // Para consulta o consulta+productos: requiere paciente
             if (this.pacienteSeleccionado) {
                 clienteData = {
                     id: this.pacienteSeleccionado.id,
-                    tipo: 'paciente',
+                    tipoCliente: 'cliente_paciente',
+                    tipoPersona: 'natural',
                     nombre: this.pacienteSeleccionado.informacionPersonal?.nombreCompleto,
                     cedula: this.pacienteSeleccionado.informacionPersonal?.cedula,
                     telefono: this.pacienteSeleccionado.informacionPersonal?.telefono,
                     email: this.pacienteSeleccionado.informacionPersonal?.email
                 };
 
-                // Agregar información de empresa referida si existe
                 if (this.usarEmpresaEnVenta && this.empresaReferidaInfo) {
                     clienteData.informacionEmpresa = {
                         referidoEmpresa: true,
@@ -3088,22 +3129,39 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
         }
 
-        // 7. CONSTRUIR OBJETO BASE SEGÚN TIPO DE VENTA
+        // 7. PREPARAR INFORMACIÓN DEL ESPECIALISTA
+        let especialistaData: any = null;
+        if (this.historiaMedicaSeleccionada?.datosConsulta?.medico) {
+            const medico = this.historiaMedicaSeleccionada.datosConsulta.medico;
+
+            especialistaData = {
+                cedula: medico.cedula,
+            };
+        }
+
+        // 8. DETERMINAR ORDEN DE TRABAJO
+        let ordenTrabajo = false;
+
+        if (this.tipoVenta === 'solo_consulta') {
+            ordenTrabajo = false;
+        } else {
+            // Para productos o consulta+productos, depende de la selección del usuario
+            ordenTrabajo = this.generarOrdenTrabajo;
+        }
+
+        // 9. CONSTRUIR OBJETO BASE
         const ventaBase: any = {
+            tipoVenta: this.tipoVenta,
             moneda: this.venta.moneda,
-            formaPago: this.venta.formaPago,
-            impuesto: this.venta.impuesto || 16,
-            metodosDePago: metodosPagoData,
-            descuento: this.venta.descuento || 0,
-            observaciones: this.venta.observaciones || undefined,
             sede: this.sedeActiva || undefined,
             total: this.redondear(totalFinal),
-            montoInicial: this.venta.montoInicial || undefined,
-            numeroCuotas: this.venta.numeroCuotas || undefined,
-            montoAbonado: this.venta.montoAbonado || undefined,
-            formaPagoDetalle: formaPagoDetalle,
-            tipoVenta: this.tipoVenta,
+            descuento: this.venta.descuento || 0,
+            impuesto: this.venta.impuesto || 16,
+            observaciones: this.venta.observaciones || undefined,
+            metodosDePago: metodosPagoData,
             cliente: clienteData,
+            especialista: especialistaData,
+            ordenTrabajo: ordenTrabajo,
             asesor: {
                 id: this.asesorSeleccionado ? parseInt(this.asesorSeleccionado) :
                     (this.currentUser?.id ? parseInt(this.currentUser.id) : null)
@@ -3114,16 +3172,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
         };
 
-        // 8. AGREGAR PRODUCTOS SEGÚN TIPO DE VENTA
+        // Agregar formaPagoDetalle si existe
+        if (formaPagoDetalle) {
+            ventaBase.formaPagoDetalle = formaPagoDetalle;
+        }
+
+        // 10. AGREGAR PRODUCTOS SEGÚN TIPO DE VENTA
         if (this.tipoVenta === 'solo_productos') {
-            // Solo productos: solo productos físicos
             ventaBase.productos = productosData;
-
         } else if (this.tipoVenta === 'solo_consulta') {
-            // Solo consulta: no lleva productos físicos, solo información de consulta
-            ventaBase.productos = []; // Array vacío de productos
+            ventaBase.productos = [];
 
-            // Agregar información de consulta
             if (this.consultaEnCarrito && this.historiaMedicaSeleccionada) {
                 ventaBase.consulta = {
                     historiaId: this.historiaMedicaSeleccionada.id,
@@ -3136,18 +3195,15 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     montoOriginal: this.montoConsultaOriginal
                 };
             }
-
         } else if (this.tipoVenta === 'consulta_productos') {
-            // Consulta + productos: productos físicos + información de consulta
             ventaBase.productos = productosData;
 
-            // Agregar información de consulta
             if (this.consultaEnCarrito && this.historiaMedicaSeleccionada) {
                 ventaBase.consulta = {
                     historiaId: this.historiaMedicaSeleccionada.id,
-                    montoTotal: this.redondear(this.pagoMedico), // En consulta+productos solo se cobra el médico
+                    montoTotal: this.redondear(this.pagoMedico),
                     pagoMedico: this.redondear(this.pagoMedico),
-                    pagoOptica: 0, // La óptica no aplica en este tipo de venta
+                    pagoOptica: 0,
                     esFormulaExterna: this.historiaMedicaSeleccionada.datosConsulta?.formulaExterna || false,
                     tipoEspecialista: this.historiaMedicaSeleccionada.datosConsulta?.medico?.cargo || '',
                     tipoVentaConsulta: this.tipoVenta,
@@ -3161,11 +3217,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // Getter para el botón que ABRE el modal (validación básica)
     get puedeAbrirModal(): boolean {
-        console.log('=== Validando APERTURA de modal ===');
-        console.log('tipoVenta:', this.tipoVenta);
-        console.log('consultaEnCarrito:', this.consultaEnCarrito);
-        console.log('productos.length:', this.venta.productos.length);
-
         switch (this.tipoVenta) {
             case 'solo_productos':
                 return this.venta.productos.length > 0;
@@ -3180,9 +3231,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 const tieneProductos = this.venta.productos.length > 0;
                 const tieneConsulta = this.consultaEnCarrito;
 
-                console.log('tieneProductos:', tieneProductos);
-                console.log('tieneConsulta:', tieneConsulta);
-
                 return tieneProductos && tieneConsulta;
 
             default:
@@ -3193,31 +3241,33 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     get puedeGenerarVenta(): boolean {
         // 1. Validar que haya items según tipo de venta
         if (this.tipoVenta === 'solo_productos' && this.venta.productos.length === 0) {
-            console.log('❌ No hay productos');
             return false;
         }
 
         if (this.tipoVenta === 'solo_consulta' && !this.consultaEnCarrito) {
-            console.log('❌ No hay consulta');
             return false;
         }
 
         if (this.tipoVenta === 'consulta_productos' && !this.consultaEnCarrito && this.venta.productos.length === 0) {
-            console.log('❌ No hay items');
             return false;
         }
 
-        // 2. Validar métodos de pago (obligatorio para TODOS los tipos)
+        //VALIDACIÓN DE CLIENTE PARA SOLO PRODUCTOS
+        if (this.tipoVenta === 'solo_productos') {
+            const clienteValido = this.validarClienteSoloProductos();
+            if (!clienteValido) {
+                return false;
+            }
+        }
+
+        // 2. Validar métodos de pago
         if (this.venta.metodosDePago.length === 0 && this.venta.formaPago !== 'de_contado-pendiente') {
-            console.log('❌ No hay métodos de pago');
             return false;
         }
 
-        // Si no es pago pendiente, validar que los métodos estén completos
         if (this.venta.formaPago !== 'de_contado-pendiente') {
             for (let metodo of this.venta.metodosDePago) {
                 if (!this.metodoCompleto(metodo)) {
-                    console.log('❌ Método incompleto:', metodo);
                     return false;
                 }
             }
@@ -3227,24 +3277,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const totalRequerido = this.totalPagar;
         const totalPagado = this.totalPagadoPorMetodos;
 
-        console.log('Total requerido:', totalRequerido);
-        console.log('Total pagado:', totalPagado);
-
         switch (this.venta.formaPago) {
             case 'contado':
                 if (Math.abs(totalPagado - totalRequerido) > 0.01) {
-                    console.log('❌ Contado: montos no coinciden');
+                    console.log('Contado: montos no coinciden');
                     return false;
                 }
                 break;
 
             case 'abono':
                 if (this.venta.montoAbonado <= 0) {
-                    console.log('❌ Abono: monto inválido');
+                    console.log('Abono: monto inválido');
                     return false;
                 }
                 if (Math.abs(this.venta.montoAbonado - totalPagado) > 0.01) {
-                    console.log('❌ Abono: monto abonado no coincide con métodos');
+                    console.log('Abono: monto abonado no coincide con métodos');
                     return false;
                 }
                 break;
@@ -3252,22 +3299,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             case 'cashea':
                 const inicialMinima = this.calcularInicialCasheaPorNivel(totalRequerido, this.nivelCashea);
                 if ((this.venta.montoInicial || 0) < inicialMinima) {
-                    console.log('❌ Cashea: inicial insuficiente');
+                    console.log('Cashea: inicial insuficiente');
                     return false;
                 }
                 break;
 
             case 'de_contado-pendiente':
-                // Pago pendiente: no requiere métodos de pago
-                console.log('✅ Pago pendiente - válido sin métodos');
+                console.log('Pago pendiente - válido sin métodos');
                 break;
 
             default:
-                console.log('❌ Forma de pago no válida');
+                console.log('Forma de pago no válida');
                 return false;
         }
 
-        console.log('✅ Todo válido - se puede generar');
+        console.log('Todo válido - se puede generar');
         return true;
     }
 
@@ -3339,18 +3385,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // ============================================
         // 3. VALIDAR FÓRMULA PARA ORDEN DE TRABAJO
         // ============================================
-        // Verificar si la venta requiere orden de trabajo (tiene productos que necesitan fórmula)
         const requiereOrdenTrabajo = this.tipoVenta !== 'solo_consulta' &&
             this.venta.productos.some(p => this.productoGeneraOrden(p));
 
         if (requiereOrdenTrabajo && this.pacienteSeleccionado && this.historiaMedicaSeleccionada) {
-            console.log('=== VERIFICANDO FÓRMULA ===');
-            console.log('historiaMedicaSeleccionada completa:', this.historiaMedicaSeleccionada);
-            console.log('examenOcular:', this.historiaMedicaSeleccionada?.examenOcular);
-            console.log('refraccionFinal:', this.historiaMedicaSeleccionada?.examenOcular?.refraccionFinal);
-
             const tieneFormula = this.tieneFormulaCompleta(this.historiaMedicaSeleccionada);
-            console.log('tieneFormula:', tieneFormula);
 
             // Si no tiene fórmula Y no está forzada la orden
             if (!tieneFormula && !this.generarOrdenTrabajo) {
@@ -3370,7 +3409,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             // Si no tiene fórmula pero la orden está forzada, continuar sin advertencia
             if (!tieneFormula && this.generarOrdenTrabajo) {
-                console.log('ℹ️ Orden de trabajo forzada sin fórmula completa');
             }
         }
 
@@ -3400,7 +3438,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     if (resultado.message === 'ok' && resultado.venta) {
                         const numeroVenta = resultado.venta.venta.numero_venta
 
-                        this.loader.updateMessage('✅ Venta generada exitosamente');
+                        this.loader.updateMessage('Venta generada exitosamente');
                         await new Promise(resolve => setTimeout(resolve, 2000));
 
                         this.loader.updateMessage('📄 Generando recibo de pago...');
@@ -5122,7 +5160,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.swalService.closeLoading();
 
             if (copiado) {
-                this.swalService.showSuccess('✅ Información Copiada',
+                this.swalService.showSuccess('Información Copiada',
                     `Se ha copiado la información del recibo ${datos.numeroVenta}.\n\n` +
                     `El cliente puede recibir esta información por WhatsApp o Email.`
                 );
@@ -6269,10 +6307,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Mostrar mensaje informativo
             const nombreEmpresa = this.empresaReferidaInfo.nombre;
             if (nombreEmpresa) {
-                this.snackBar.open(`✅ Empresa referida encontrada: ${nombreEmpresa}`, 'Cerrar', {
-                    duration: 3000,
-                    panelClass: ['snackbar-success']
-                });
+                /* this.snackBar.open(`Empresa referida encontrada: ${nombreEmpresa}`, 'Cerrar', {
+                     duration: 3000,
+                     panelClass: ['snackbar-success']
+                 });*/
             }
 
         } else {
@@ -6286,7 +6324,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // 6. Actualizar estado - CLIENTE ENCONTRADO
         this.clienteEncontrado = true;
         this.validacionIntentada = true;
-        this.mensajeValidacionCliente = '✅ Cliente encontrado - Datos autocompletados';
+        this.mensajeValidacionCliente = 'Cliente encontrado - Datos autocompletados';
 
         // Forzar detección de cambios
         this.cdr.detectChanges();
@@ -6512,7 +6550,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             if (clienteExiste) {
                 this.clienteEncontrado = true;
-                this.mensajeValidacionCliente = '✅ Cliente encontrado';
+                this.mensajeValidacionCliente = 'Cliente encontrado';
 
                 // Autocompletar con la nueva estructura
                 this.autocompletarDatosCliente(respuesta);
@@ -7191,7 +7229,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     agregarConsultaAlCarrito(): void {
         if (!this.historiaMedicaSeleccionada) {
-            console.log('❌ No hay historia seleccionada');
+            console.log('No hay historia seleccionada');
             return;
         }
 
@@ -7205,16 +7243,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         // Si es optometrista, agregar sin costo
         if (cargo === 'Optometrista') {
-            console.log('👓 Consulta de optometrista - sin costo');
             this.pagoMedico = 0;
             this.pagoOptica = 0;
             this.montoConsulta = 0;
             this.consultaEnCarrito = true;
 
-            console.log('✅ consultaEnCarrito =', this.consultaEnCarrito);
             this.cdr.detectChanges();
 
-            this.snackBar.open('✅ Consulta de optometrista agregada (sin costo)', 'Cerrar', {
+            this.snackBar.open('Consulta de optometrista agregada (sin costo)', 'Cerrar', {
                 duration: 3000,
                 panelClass: ['snackbar-info']
             });
@@ -7244,7 +7280,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     this.cdr.detectChanges();
                 },
                 error: (error) => {
-                    console.error('❌ Error al obtener costos:', error);
+                    console.error('Error al obtener costos:', error);
                 }
             });
         }
@@ -7401,29 +7437,80 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     seleccionarTipoVenta(tipo: 'solo_consulta' | 'consulta_productos' | 'solo_productos'): void {
-        console.log('🔄 Cambiando tipo de venta a:', tipo);
-
-        // Guardar el paciente actual si existe
         const pacienteActual = this.pacienteSeleccionado;
+
+        // RESETEAR TODO EL ESTADO DEL MODAL
+        this.resetearEstadoModal();
 
         // Actualizar tipo
         this.tipoVenta = tipo;
         this.intentoGenerar = false;
 
-        // ============================================
         // LIMPIAR CARRITO Y SELECCIÓN DE HISTORIA
-        // ============================================
         this.limpiarCarritoCompleto();
 
         // Limpiar selección de historia
         this.historiaSeleccionadaId = null;
         this.historiaMedicaSeleccionada = null;
         this.historiaMedica = null;
+        this.montoConsulta = 0;
+        this.montoConsultaOriginal = 0;
+        this.pagoMedico = 0;
+        this.pagoOptica = 0;
+        this.consultaEnCarrito = false;
 
-        // Si es solo productos, limpiar también el paciente
+        // Limpiar métodos de pago
+        this.venta.metodosDePago = [];
+
+        // Resetear descuento
+        this.venta.descuento = 0;
+
+        // Resetear forma de pago a contado (valor por defecto)
+        this.venta.formaPago = 'contado';
+
+        // Resetear moneda
+        this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
+
+        // Resetear abono
+        this.venta.montoAbonado = 0;
+        this.valorTemporal = '';
+        this.montoExcedido = false;
+
+        // Resetear cashea
+        this.venta.montoInicial = 0;
+        this.valorInicialTemporal = '';
+        this.cuotasCashea = [];
+        this.resumenCashea = { cantidad: 0, total: 0, totalBs: 0 };
+        this.nivelCashea = 'nivel3';
+        this.cantidadCuotasCashea = 3;
+
+        // LIMPIAR DATOS DEL CLIENTE PARA SOLO PRODUCTOS
         if (tipo === 'solo_productos') {
             this.pacienteSeleccionado = null;
             this.historiasMedicas = [];
+
+            // Limpiar cliente sin paciente
+            this.clienteSinPaciente = {
+                tipoPersona: 'natural',
+                nombreCompleto: '',
+                cedula: '',
+                telefono: '',
+                email: ''
+            };
+
+            // Limpiar validación de cliente
+            this.validandoCliente = false;
+            this.clienteEncontrado = false;
+            this.mensajeValidacionCliente = '';
+            this.cedulaAnterior = '';
+            this.validacionIntentada = false;
+            this.editandoManual = false;
+
+            // Limpiar empresa referida
+            this.empresaReferidaInfo = null;
+            this.usarEmpresaEnVenta = false;
+            this.mostrarInfoEmpresa = false;
+            this.limpiarEmpresaReferidaCliente();
         } else {
             // Para otros tipos, restaurar el paciente si existía
             this.pacienteSeleccionado = pacienteActual;
@@ -7434,21 +7521,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
         }
 
-        // Mostrar mensaje contextual
-        let mensaje = '';
-        switch (tipo) {
-            case 'solo_consulta':
-                mensaje = '🩺 Venta solo de consulta - Solo contado o Cashea';
-                break;
-            case 'consulta_productos':
-                mensaje = '👓 Venta con consulta y productos - Todas las formas de pago';
-                break;
-            case 'solo_productos':
-                mensaje = '🛒 Venta solo de productos - Sin historia médica';
-                break;
-        }
+        // Actualizar cálculos
+        this.actualizarProductosConDetalle();
 
-        //this.snackBar.open(mensaje, 'Cerrar', { duration: 3000 });
+        // Forzar detección de cambios
         this.cdr.detectChanges();
     }
 
@@ -7667,7 +7743,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 this.todosLosPacientes = response.pacientes || [];
                 this.pacientesFiltradosPorSede = this.todosLosPacientes;
 
-                this.snackBar.open('✅ Lista de pacientes actualizada', 'Cerrar', {
+                this.snackBar.open('Lista de pacientes actualizada', 'Cerrar', {
                     duration: 2000,
                     panelClass: ['snackbar-success']
                 });
@@ -7681,7 +7757,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             },
             error: (error) => {
                 console.error('Error recargando pacientes:', error);
-                this.snackBar.open('❌ Error al actualizar pacientes', 'Cerrar', {
+                this.snackBar.open('Error al actualizar pacientes', 'Cerrar', {
                     duration: 3000,
                     panelClass: ['snackbar-error']
                 });
@@ -7692,40 +7768,31 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     esConsultaCobrable(historia?: any): boolean {
         const h = historia || this.historiaMedicaSeleccionada;
         if (!h) {
-            console.log('❌ No hay historia');
+            console.log('No hay historia');
             return false;
         }
-
-        console.log('🔍 Verificando cobrabilidad:', {
-            id: h.id,
-            nHistoria: h.nHistoria,
-            cargo: h.datosConsulta?.medico?.cargo,
-            pagoPendiente: h.datosConsulta?.pagoPendiente,
-            formulaExterna: h.datosConsulta?.formulaExterna
-        });
 
         // Verificar que sea oftalmólogo y no externa
         const esOftalmologo = h.datosConsulta?.medico?.cargo === 'Oftalmólogo';
         const esExterna = h.datosConsulta?.formulaExterna === true;
 
         if (esExterna) {
-            console.log('❌ Es fórmula externa');
+            console.log('Es fórmula externa');
             return false;
         }
 
         if (!esOftalmologo) {
-            console.log('❌ No es oftalmólogo');
+            console.log('No es oftalmólogo');
             return false;
         }
 
         // Verificar pago pendiente
         const pagoPendiente = h.datosConsulta?.pagoPendiente === true;
         if (!pagoPendiente) {
-            console.log('❌ No tiene pago pendiente');
+            console.log('No tiene pago pendiente');
             return false;
         }
 
-        console.log('✅ ES COBRABLE');
         return true;
     }
 
@@ -7845,10 +7912,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     seleccionarHistoria(historia: any): void {
-        console.log('📋 seleccionarHistoria llamado');
-        console.log('Historia:', historia);
-
-        // Guardar historia anterior
         const historiaAnterior = this.historiaMedicaSeleccionada;
 
         // Si ya estaba seleccionada, no hacer nada
@@ -7867,7 +7930,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             // Si hay productos en el carrito, NUNCA limpiar
             if (this.venta.productos.length > 0) {
-                console.log('🛒 Hay productos en carrito - se mantienen');
 
                 // Actualizar la historia seleccionada
                 this.actualizarHistoriaSeleccionada(historia);
@@ -7887,8 +7949,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             // Si NO hay productos en el carrito
             else {
-                console.log('📦 Sin productos');
-
                 // Actualizar historia
                 this.actualizarHistoriaSeleccionada(historia);
 
@@ -8081,6 +8141,20 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.montoConsultaOriginal = 0;
         this.pagoMedico = 0;
         this.pagoOptica = 0;
+    }
+
+    // Método para validar que los datos del cliente estén completos en solo productos
+    private validarClienteSoloProductos(): boolean {
+        if (this.tipoVenta !== 'solo_productos') return true;
+
+        const cliente = this.clienteSinPaciente;
+
+        // Validar que todos los campos requeridos estén llenos
+        const nombreValido = cliente.nombreCompleto && cliente.nombreCompleto.trim() !== '';
+        const cedulaValida = cliente.cedula && cliente.cedula.trim() !== '';
+        const telefonoValido = cliente.telefono && cliente.telefono.trim() !== '';
+
+        return nombreValido && cedulaValida && telefonoValido;
     }
 
 }

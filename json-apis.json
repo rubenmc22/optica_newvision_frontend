@@ -390,40 +390,42 @@
         },
     ]
 }
-//crear venta - solo productos (revisar cliente)
+//crear venta - solo productos 
 {
+    "tipoVenta": "solo_productos",
     "moneda": "dolar",
-    "formaPago": "contado",
+    "sede": "guatire",
+    "total": 55.67,
+    "descuento": 10,
     "impuesto": 16,
     "metodosDePago": [
         {
             "tipo": "efectivo",
-            "monto": 31.86,
+            "monto": 55.67,
             "moneda": "dolar"
         }
     ],
-    "descuento": 0,
-    "sede": "guatire",
-    "total": 31.86,
-    "formaPagoDetalle": {
-        "tipo": "contado",
-        "montoTotal": 31.86,
-        "totalPagado": 31.86
-    },
-    "tipoVenta": "solo_productos",
     "cliente": {
-        "tipo": "natural",
+        "tipoCliente": "cliente_general",
+        "tipoPersona": "natural",
         "nombre": "Ruben dario Martinez castro",
         "cedula": "24367965",
         "telefono": "04123920817",
         "email": "rubemm@gmail.com"
     },
+    "especialista": null,
+    "ordenTrabajo": false,
     "asesor": {
         "id": 5
     },
     "auditoria": {
         "usuarioCreacion": 5,
-        "fechaCreacion": "2026-03-12T23:59:04.904Z"
+        "fechaCreacion": "2026-03-15T17:11:32.398Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 55.67184,
+        "totalPagado": 55.67
     },
     "productos": [
         {
@@ -438,11 +440,26 @@
             "stock": 26,
             "tipo": "PRODUCTO",
             "descripcion": "Test"
+        },
+        {
+            "id": "28",
+            "nombre": "Montura",
+            "codigo": "PR-000028",
+            "precio": 25.86,
+            "precioConIva": 30,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": true,
+            "stock": 10,
+            "tipo": "PRODUCTO",
+            "descripcion": "Montura premium de marca Palazzo"
         }
     ]
 }
+
 //crear venta - solo consulta 
 {
+    "tipoCliente": "cliente_paciente",
     "moneda": "dolar",
     "formaPago": "contado",
     "impuesto": 16,
@@ -462,9 +479,10 @@
         "totalPagado": 60
     },
     "tipoVenta": "solo_consulta",
+    "ordenTrabajo": false,
     "cliente": {
         "id": 31,
-        "tipo": "paciente",
+        "tipoPersona": "natural",
         "nombre": "Francia Vela",
         "cedula": "21212365",
         "telefono": "04123920817",
@@ -478,16 +496,19 @@
             "empresaCorreo": null
         }
     },
+    "especialista": {
+        "cedula": "8759927"
+    },
     "asesor": {
         "id": 5
     },
     "auditoria": {
         "usuarioCreacion": 5,
-        "fechaCreacion": "2026-03-13T01:10:16.731Z"
+        "fechaCreacion": "2026-03-15T15:46:49.239Z"
     },
     "productos": [],
     "consulta": {
-        "historiaId": 60,
+        "historiaId": 67,
         "montoTotal": 60,
         "pagoMedico": 40,
         "pagoOptica": 20,
@@ -499,28 +520,23 @@
 }
 //crear venta - consulta + productos
 {
+    "tipoVenta": "consulta_productos",
     "moneda": "dolar",
-    "formaPago": "contado",
+    "sede": "guatire",
+    "total": 1155.18,
+    "descuento": 0,
     "impuesto": 16,
     "metodosDePago": [
         {
             "tipo": "efectivo",
-            "monto": 1187.04,
+            "monto": 1155.18,
             "moneda": "dolar"
         }
     ],
-    "descuento": 0,
-    "sede": "guatire",
-    "total": 1187.04,
-    "formaPagoDetalle": {
-        "tipo": "contado",
-        "montoTotal": 1187.0376,
-        "totalPagado": 1187.04
-    },
-    "tipoVenta": "consulta_productos",
     "cliente": {
         "id": 31,
-        "tipo": "paciente",
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
         "nombre": "Francia Vela",
         "cedula": "21212365",
         "telefono": "04123920817",
@@ -534,27 +550,23 @@
             "empresaCorreo": null
         }
     },
+    "especialista": {
+        "cedula": "8759927"
+    },
+    "ordenTrabajo": true,
     "asesor": {
         "id": 5
     },
     "auditoria": {
         "usuarioCreacion": 5,
-        "fechaCreacion": "2026-03-14T19:34:15.963Z"
+        "fechaCreacion": "2026-03-15T17:03:00.564Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 1155.1776,
+        "totalPagado": 1155.18
     },
     "productos": [
-        {
-            "id": "17",
-            "nombre": "Lentes de prueba",
-            "codigo": "PR-000017",
-            "precio": 31.86,
-            "precioConIva": 31.86,
-            "moneda": "dolar",
-            "cantidad": 1,
-            "aplicaIva": false,
-            "stock": 26,
-            "tipo": "PRODUCTO",
-            "descripcion": "Test"
-        },
         {
             "id": "27",
             "nombre": "Iphone",
@@ -570,7 +582,7 @@
         }
     ],
     "consulta": {
-        "historiaId": 60,
+        "historiaId": 67,
         "montoTotal": 40,
         "pagoMedico": 40,
         "pagoOptica": 0,
@@ -581,6 +593,330 @@
     }
 }
 
+//Crear venta - de contado
+{
+    "tipoVenta": "consulta_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 1155.18,
+    "descuento": 0,
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 1155.18,
+            "moneda": "dolar"
+        }
+    ],
+    "cliente": {
+        "id": 31,
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "cedula": "8759927"
+    },
+    "ordenTrabajo": true,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-15T17:03:00.564Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 1155.1776,
+        "totalPagado": 1155.18
+    },
+    "productos": [
+        {
+            "id": "27",
+            "nombre": "Iphone",
+            "codigo": "PR-000027",
+            "precio": 961.36,
+            "precioConIva": 1115.18,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": true,
+            "stock": 29,
+            "tipo": "PRODUCTO",
+            "descripcion": ""
+        }
+    ],
+    "consulta": {
+        "historiaId": 67,
+        "montoTotal": 40,
+        "pagoMedico": 40,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 60
+    }
+}
+
+//Crear venta - cashea
+{
+    "tipoVenta": "consulta_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 1043.66,
+    "descuento": 10,
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 626.19,
+            "moneda": "dolar"
+        }
+    ],
+    "cliente": {
+        "id": 31,
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "cedula": "8759927"
+    },
+    "ordenTrabajo": true,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-15T17:05:14.931Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "cashea",
+        "nivel": "nivel3",
+        "montoTotal": 1043.65984,
+        "montoInicial": 417.46,
+        "cantidadCuotas": "3",
+        "montoPorCuota": 208.73,
+        "cuotasAdelantadas": 1,
+        "montoAdelantado": 208.73,
+        "totalPagadoAhora": 626.19,
+        "deudaPendiente": 528.99,
+        "cuotas": [
+            {
+                "numero": 1,
+                "fecha": "dom, 29 de marzo de 2026",
+                "monto": 208.73,
+                "pagada": true,
+                "seleccionada": true
+            },
+            {
+                "numero": 2,
+                "fecha": "dom, 12 de abril de 2026",
+                "monto": 208.73,
+                "pagada": false,
+                "seleccionada": false
+            },
+            {
+                "numero": 3,
+                "fecha": "dom, 26 de abril de 2026",
+                "monto": 208.73,
+                "pagada": false,
+                "seleccionada": false
+            }
+        ]
+    },
+    "productos": [
+        {
+            "id": "27",
+            "nombre": "Iphone",
+            "codigo": "PR-000027",
+            "precio": 961.36,
+            "precioConIva": 1115.18,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": true,
+            "stock": 29,
+            "tipo": "PRODUCTO",
+            "descripcion": ""
+        }
+    ],
+    "consulta": {
+        "historiaId": 67,
+        "montoTotal": 40,
+        "pagoMedico": 40,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 60
+    }
+}
+
+//Crear venta - abono
+{
+    "tipoVenta": "consulta_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 1043.66,
+    "descuento": 10,
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 500,
+            "moneda": "dolar"
+        }
+    ],
+    "cliente": {
+        "id": 31,
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "cedula": "8759927"
+    },
+    "ordenTrabajo": false,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-15T17:07:12.870Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "abono",
+        "montoAbonado": 500,
+        "deudaPendiente": 543.66,
+        "porcentajePagado": 47.91
+    },
+    "productos": [
+        {
+            "id": "27",
+            "nombre": "Iphone",
+            "codigo": "PR-000027",
+            "precio": 961.36,
+            "precioConIva": 1115.18,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": true,
+            "stock": 29,
+            "tipo": "PRODUCTO",
+            "descripcion": ""
+        }
+    ],
+    "consulta": {
+        "historiaId": 67,
+        "montoTotal": 40,
+        "pagoMedico": 40,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 60
+    }
+}
+
+//Crear venta - de contado pendiente por pago
+{
+    "tipoVenta": "consulta_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 1043.66,
+    "descuento": 10,
+    "impuesto": 16,
+    "metodosDePago": [],
+    "cliente": {
+        "id": 31,
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
+        "nombre": "Francia Vela",
+        "cedula": "21212365",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Trading CA",
+            "empresaRif": "J-12345679",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "cedula": "8759927"
+    },
+    "ordenTrabajo": false,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-03-15T17:08:13.809Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "de_contado-pendiente",
+        "montoTotal": 1043.65984,
+        "deudaPendiente": 1043.65984
+    },
+    "productos": [
+        {
+            "id": "27",
+            "nombre": "Iphone",
+            "codigo": "PR-000027",
+            "precio": 961.36,
+            "precioConIva": 1115.18,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": true,
+            "stock": 29,
+            "tipo": "PRODUCTO",
+            "descripcion": ""
+        }
+    ],
+    "consulta": {
+        "historiaId": 67,
+        "montoTotal": 40,
+        "pagoMedico": 40,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 60
+    }
+}
 
 //PENDIENTES
 - Ajustar el api de "crear venta" de acuerdo al tipo de venta
@@ -588,3 +924,8 @@
 - El historial de venta debe retornar lo mismo que al crear la venta, es decir, el monto de la consulta y con la tasa del moment para poder calcular el monto pagado en bs
 - Quitar de las apis de "pacientes" patologiaOcular, solo dejar patologias
 - En el api de get historia medica no me esta retornando el tipo de lente de contacto (campo: tipoLentesContacto). Debe retornar lo mismo que se envia al crear la historia medica
+
+
+
+
+

@@ -409,16 +409,6 @@
                             <i class="bi bi-search"></i>
                             Buscar producto
                         </label>
-                        <div class="filtros-rapidos">
-                            <button class="filtro-chip" [class.active]="filtroCategoria === 'todos'"
-                                (click)="filtroCategoria = 'todos'">Todos</button>
-                            <button class="filtro-chip" [class.active]="filtroCategoria === 'lentes'"
-                                (click)="filtroCategoria = 'lentes'">Lentes</button>
-                            <button class="filtro-chip" [class.active]="filtroCategoria === 'monturas'"
-                                (click)="filtroCategoria = 'monturas'">Monturas</button>
-                            <button class="filtro-chip" [class.active]="filtroCategoria === 'accesorios'"
-                                (click)="filtroCategoria = 'accesorios'">Accesorios</button>
-                        </div>
                     </div>
 
                     <div class="search-wrapper">
@@ -676,7 +666,7 @@
                             </div>
 
                             <button class="btn-generar-moderno" (click)="abrirModalResumen()"
-                                [disabled]="!puedeGenerarVenta">
+                                [disabled]="!puedeAbrirModal">
                                 <i class="bi bi-check-lg"></i>
                                 <span>Generar Venta</span>
                                 <div class="btn-glow"></div>
@@ -849,9 +839,6 @@
         </section>
     </div>
 </div>
-
-
-
 
 <!-- Modal resumen de venta -->
 <div class="modal fade" id="resumenVentaModal"  tabindex="-1" aria-hidden="true"
