@@ -10,7 +10,7 @@ import { Subscription, Subject, debounceTime } from 'rxjs';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { UserStateService, SedeInfo } from '../../../core/services/userState/user-state-service';
-import { EstadisticasVentas, ResumenFiltros } from '../venta-interfaz';
+import { EstadisticasVentas, ResumenFiltros, FiltrosVentas } from '../venta-interfaz';
 import { ChartService } from '../../../core/services/chart-service/chart.service';
 import { Chart, ChartData, ChartOptions } from 'chart.js';
 
@@ -39,8 +39,13 @@ export class HistorialVentasComponent implements OnInit {
   ventasFiltradas: any[] = [];
   presetActivo: string = '';
 
+  private busquedaSubject = new Subject<string>();
+  buscando: boolean = false;
+  private ultimoTerminoBuscado: string = '';
+  filtrosMejorados: any = {};
+
   private modalInstance: any;
-  tipoOperacionPago: string = 'abono'; // 'abono' o 'pago'
+  tipoOperacionPago: string = 'abono';
   realizarPagoForm!: FormGroup;
 
   // Nuevas propiedades para el datepicker
@@ -144,14 +149,15 @@ export class HistorialVentasComponent implements OnInit {
   currentYear: number = new Date().getFullYear();
 
   // Filtros
-  filtros = {
+  filtros: FiltrosVentas = {
     busquedaGeneral: '',
-    asesor: '',
-    especialista: '',
     estado: '',
     formaPago: '',
-    fechaDesde: '',
-    fechaHasta: ''
+    asesor: '',
+    especialista: '',
+    fechaDesde: null,
+    fechaHasta: null,
+    tipoVenta: ''
   };
 
   bancosDisponibles: Array<{ codigo: string; nombre: string; displayText: string }> = [
@@ -215,6 +221,16 @@ export class HistorialVentasComponent implements OnInit {
     ).subscribe(() => {
       this.cargarEstadisticas();
     });
+
+    // Configurar búsqueda con debounce (300ms)
+    this.busquedaSubject.pipe(
+      debounceTime(400)
+    ).subscribe(termino => {
+      // Solo buscar si es diferente al último término buscado
+      if (termino !== this.ultimoTerminoBuscado) {
+        this.realizarBusquedaDinamica(termino);
+      }
+    });
   }
 
   ngOnInit() {
@@ -250,30 +266,86 @@ export class HistorialVentasComponent implements OnInit {
       this.configSubscription.unsubscribe();
     }
 
+    // Limpiar el subject
+    this.busquedaSubject.complete();
+
     // Destruir gráficos al cerrar
     this.destruirGraficos();
   }
 
-  onBusquedaBlur(): void {
-    if (this.filtros.busquedaGeneral.trim()) {
-      this.realizarBusqueda();
+  onBusquedaDinamica(termino: string): void {
+    this.filtros.busquedaGeneral = termino;
+
+    const debeBuscar = (termino.length >= 3 || termino.length === 0) &&
+      termino !== this.ultimoTerminoBuscado &&
+      !this.buscando;
+
+    if (debeBuscar) {
+      this.busquedaSubject.next(termino);
     }
   }
 
-  onBusquedaInput(searchTerm: string): void {
-    this.filtros.busquedaGeneral = searchTerm;
-  }
-
-  onBusquedaEnter(event: any): void {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      this.realizarBusqueda();
+  // Método mejorado para procesar el término de búsqueda
+  private procesarTerminoBusqueda(termino: string): any {
+    if (!termino || termino.trim() === '') {
+      return { texto: '', ultimosDigitos: '' };
     }
+
+    const terminoLimpio = termino.trim();
+    const soloNumeros = this.extraerNumeros(terminoLimpio);
+
+    let resultado: any = {
+      texto: terminoLimpio,
+      soloNumeros: soloNumeros,
+      ultimosDigitos: ''
+    };
+
+    // Si tiene números, extraer los últimos 3-4 dígitos para búsqueda flexible
+    if (soloNumeros) {
+      // Últimos 4 dígitos (o todos si tiene menos)
+      resultado.ultimosDigitos = soloNumeros.slice(-4);
+
+      // Detectar si es un número de venta
+      if (this.esNumeroVenta(terminoLimpio)) {
+        resultado.tipo = 'numero_venta';
+        resultado.valorNormalizado = this.normalizarNumeroVenta(terminoLimpio);
+      }
+      // Detectar si es un número de historia
+      else if (this.esNumeroHistoria(terminoLimpio)) {
+        resultado.tipo = 'numero_historia';
+        resultado.valorNormalizado = this.normalizarNumeroHistoria(terminoLimpio);
+      }
+      // Si son solo números, preparar para búsqueda flexible
+      else {
+        resultado.tipo = 'numeros';
+        // Guardar también los primeros dígitos si son significativos
+        if (soloNumeros.length >= 6) {
+          resultado.primerosDigitos = soloNumeros.substring(0, 4);
+        }
+      }
+    }
+
+    return resultado;
   }
 
-  private realizarBusqueda(): void {
+  private realizarBusquedaDinamica(termino: string): void {
+    this.ultimoTerminoBuscado = termino;
+    const terminoProcesado = this.procesarTerminoBusqueda(termino);
+    this.filtros.busquedaGeneral = termino;
+
+    this.filtrosMejorados = {
+      texto: termino,
+      soloNumeros: terminoProcesado.soloNumeros,
+      ultimosDigitos: terminoProcesado.ultimosDigitos,
+      tipo: terminoProcesado.tipo,
+      valorNormalizado: terminoProcesado.valorNormalizado
+    };
+
     this.paginacion.paginaActual = 1;
-    this.cargarVentasPagina(1, true);
+
+    this.buscando = true;
+
+    this.cargarVentasPagina(1, false, true);
   }
 
   private inicializarFormularioEdicion(): void {
@@ -2603,46 +2675,55 @@ export class HistorialVentasComponent implements OnInit {
     );
   }
 
-  // Modifica cargarVentasPagina para solo cargar la página actual
-  private cargarVentasPagina(pagina: number, esBusquedaConFiltros: boolean = false): void {
+  private cargarVentasPagina(pagina: number, esBusquedaConFiltros: boolean = false, esBusquedaDinamica: boolean = false): void {
     if (this.ventasCargando) return;
 
     this.ventasCargando = true;
 
-    if (esBusquedaConFiltros) {
-      this.loader.showWithMessage('🔍 Aplicando filtros...');
-    } else if (pagina === 1 && !this.hayFiltrosActivos()) {
-      this.loader.showWithMessage('📋 Cargando historial de ventas...');
-    } else {
-      this.loader.showWithMessage('📋 Cargando ventas...');
+    // Solo mostrar loader si NO es búsqueda dinámica
+    if (!esBusquedaDinamica) {
+      if (esBusquedaConFiltros) {
+        this.loader.showWithMessage('🔍 Aplicando filtros...');
+      } else if (pagina === 1 && !this.hayFiltrosActivos()) {
+        this.loader.showWithMessage('📋 Cargando historial de ventas...');
+      } else {
+        this.loader.showWithMessage('📋 Cargando ventas...');
+      }
     }
 
-    // Cargar solo la página actual
+    // Preparar filtros para el backend
+    const filtrosBackend = { ...this.filtros };
+
+    // Si hay búsqueda mejorada, agregar los campos adicionales
+    if (this.filtrosMejorados && this.filtrosMejorados.soloNumeros) {
+      filtrosBackend.busquedaNumerica = this.filtrosMejorados.soloNumeros;
+      filtrosBackend.ultimosDigitos = this.filtrosMejorados.ultimosDigitos;
+      filtrosBackend.tipoBusqueda = this.filtrosMejorados.tipo || 'texto';
+
+      if (this.filtrosMejorados.valorNormalizado) {
+        filtrosBackend.valorNormalizado = this.filtrosMejorados.valorNormalizado;
+      }
+    }
+
     this.historialVentaService.obtenerVentasPaginadas(
       pagina,
       this.paginacion.itemsPorPagina,
-      this.filtros
+      filtrosBackend
     ).subscribe({
       next: (response: any) => {
         this.ventasCargando = false;
+        this.buscando = false;
 
         if (response.message === 'ok' && response.ventas) {
-          // Procesar solo las ventas de la página actual
           const ventasPagina = response.ventas.map((ventaApi: any) =>
             this.adaptarVentaDelApi(ventaApi)
           );
 
-          // Actualizar propiedades de paginación
           this.paginacion.paginaActual = pagina;
           this.paginacion.totalItems = response.pagination?.total || 0;
           this.paginacion.totalPaginas = response.pagination?.pages || 1;
-
-          // Asignar ventas filtradas (solo las de la página actual)
           this.ventasFiltradas = ventasPagina;
-
-          // Generar rango de páginas
           this.generarRangoPaginas();
-
         } else {
           console.error('Respuesta inesperada del API de ventas:', response);
           this.ventasFiltradas = [];
@@ -2650,14 +2731,21 @@ export class HistorialVentasComponent implements OnInit {
           this.paginacion.totalPaginas = 1;
         }
 
-        setTimeout(() => {
-          this.loader.hide();
-        }, 500);
+        if (!esBusquedaDinamica) {
+          setTimeout(() => {
+            this.loader.hide();
+          }, 500);
+        }
       },
       error: (error) => {
         this.ventasCargando = false;
+        this.buscando = false;
         console.error('❌ ERROR al cargar ventas paginadas:', error);
-        this.loader.hide();
+
+        if (!esBusquedaDinamica) {
+          this.loader.hide();
+        }
+
         this.swalService.showError('Error', 'No se pudieron cargar las ventas. Verifique su conexión.');
       }
     });
@@ -2722,28 +2810,24 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  /**
-   * Maneja cambios en los filtros 
-   */
   onFiltroChange(): void {
     this.paginacion.paginaActual = 1;
     this.cargarVentasPagina(1, true);
-    // Disparar el subject para estadísticas con debounce
+
     this.filtrosChanged$.next();
   }
 
-  /**
-   * Limpia todos los filtros y vuelve a cargar
-   */
+
   limpiarFiltros(): void {
     this.filtros = {
       busquedaGeneral: '',
-      asesor: '',
-      especialista: '',
-      fechaDesde: '',
-      fechaHasta: '',
       estado: '',
       formaPago: '',
+      asesor: '',
+      especialista: '',
+      fechaDesde: null,
+      fechaHasta: null,
+      tipoVenta: ''
     };
     this.paginacion.paginaActual = 1;
     this.fechaUnica = '';
@@ -5814,7 +5898,65 @@ export class HistorialVentasComponent implements OnInit {
     }, 50);
   }
 
+  getTipoVentaDisplay(tipo: string): string {
+    const tipos: { [key: string]: string } = {
+      'solo_consulta': 'Solo Consultas',
+      'solo_productos': 'Solo Productos',
+      'consulta_productos': 'Consulta + Productos'
+    };
+    return tipos[tipo] || 'Todas las ventas';
+  }
 
+  esNumeroVenta(termino: string): boolean {
+    if (!termino) return false;
+    // Patrones de número de venta:
+    // - V-000098
+    // - 000098
+    // - 98
+    // - V000098
+    const patronVenta = /^(?:V-?)?\d+$/i;
+    return patronVenta.test(termino.trim());
+  }
+
+  esNumeroHistoria(termino: string): boolean {
+    if (!termino) return false;
+    // Patrones de número de historia:
+    // - H-20260216-001
+    // - 20260216-001
+    // - H20260216001
+    const patronHistoria = /^(?:H-?)?\d{8}-?\d{3}$/i;
+    return patronHistoria.test(termino.trim());
+  }
+
+  normalizarNumeroVenta(termino: string): string {
+    const numeros = termino.replace(/\D/g, '');
+
+    if (numeros.length < 3) {
+      return numeros;
+    }
+
+    return numeros.padStart(6, '0');
+  }
+
+  normalizarNumeroHistoria(termino: string): string {
+    const terminoLimpio = termino.replace(/^H-?/i, '');
+
+    if (/^\d{8}-\d{3}$/.test(terminoLimpio)) {
+      return terminoLimpio;
+    }
+
+    if (/^\d{11}$/.test(terminoLimpio)) {
+      return `${terminoLimpio.substring(0, 8)}-${terminoLimpio.substring(8)}`;
+    }
+
+    const soloNumeros = terminoLimpio.replace(/\D/g, '');
+    return soloNumeros;
+  }
+
+  private extraerNumeros(texto: string): string {
+    if (!texto) return '';
+    return texto.replace(/\D/g, '');
+}
 
 
 

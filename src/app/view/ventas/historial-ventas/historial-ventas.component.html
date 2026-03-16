@@ -34,847 +34,894 @@
 
   <div class="card-body">
     <!-- Tarjetas de Resumen -->
-    <div class="row mb-4">
-      <!-- Total Ventas -->
-      <div class="col-6 col-md-3 mb-3">
-        <div class="card summary-card h-100">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="summary-icon total me-3">
-                <i class="bi bi-cart-check"></i>
-              </div>
-              <div class="summary-content">
-                <div class="summary-number">{{ getTotalVentas() }}</div>
-                <div class="summary-label">Total Ventas</div>
-                <div class="summary-subtext">Período actual</div>
-              </div>
+    <div class="row g-3 mb-4 estadisticas-grid">
+        <!-- Total Ventas -->
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-primary">
+                <div class="stat-icon">
+                    <i class="bi bi-cart-check"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ getTotalVentas() | number }}</div>
+                    <div class="stat-label">Total Ventas</div>
+                </div>
+                <div class="stat-glow"></div>
             </div>
-          </div>
         </div>
-      </div>
 
-      <!-- Ventas Completadas -->
-      <div class="col-6 col-md-3 mb-3">
-        <div class="card summary-card h-100">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="summary-icon completed me-3">
-                <i class="bi bi-check-circle"></i>
-              </div>
-              <div class="summary-content">
-                <div class="summary-number text-success">{{ getVentasCompletadas() }}</div>
-                <div class="summary-label">Completadas</div>
-              </div>
+        <!-- Ventas Completadas -->
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-success">
+                <div class="stat-icon">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ getVentasCompletadas() }}</div>
+                    <div class="stat-label">Completadas</div>
+                    <div class="stat-percentage">{{ ((getVentasCompletadas() / (getTotalVentas() || 1)) * 100) | number:'1.0-0' }}% del total</div>
+                </div>
+                <div class="stat-progress">
+                    <div class="progress-bar" [style.width.%]="(getVentasCompletadas() / (getTotalVentas() || 1)) * 100"></div>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
 
-      <!-- Ventas Pendientes -->
-      <div class="col-6 col-md-3 mb-3">
-        <div class="card summary-card h-100">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="summary-icon pending me-3">
-                <i class="bi bi-clock-history"></i>
-              </div>
-              <div class="summary-content">
-                <div class="summary-number text-warning">{{ getVentasPendientes() }}</div>
-                <div class="summary-label">Pendientes</div>
-              </div>
+        <!-- Ventas Pendientes -->
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-warning">
+                <div class="stat-icon">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ getVentasPendientes() }}</div>
+                    <div class="stat-label">Pendientes</div>
+                    <div class="stat-badge" *ngIf="getVentasPendientes() > 0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Requieren atención
+                    </div>
+                </div>
+                <div class="stat-ring">
+                    <svg viewBox="0 0 36 36" class="circular-chart">
+                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path class="circle" [attr.stroke-dasharray]="((getVentasPendientes() / (getTotalVentas() || 1)) * 100) + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <text x="18" y="20.35" class="percentage">{{ ((getVentasPendientes() / (getTotalVentas() || 1)) * 100) | number:'1.0-0' }}%</text>
+                    </svg>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
 
-      <!-- Ventas Canceladas -->
-      <div class="col-6 col-md-3 mb-3">
-        <div class="card summary-card h-100">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="summary-icon cancelled me-3">
-                <i class="bi bi-x-circle"></i>
-              </div>
-              <div class="summary-content">
-                <div class="summary-number text-danger">{{ getVentasCanceladas() }}</div>
-                <div class="summary-label">Canceladas</div>
-                <div class="summary-subtext">Ventas anuladas</div>
-              </div>
+        <!-- Ventas Canceladas -->
+        <div class="col-6 col-md-3">
+            <div class="stat-card stat-danger">
+                <div class="stat-icon">
+                    <i class="bi bi-x-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ getVentasCanceladas() }}</div>
+                    <div class="stat-label">Canceladas</div>
+                    <div class="stat-subtext">{{ estadisticas?.montoCanceladas | currency:'':'':'1.0-0' }}</div>
+                </div>
+                <div class="stat-sparkline">
+                    <svg width="60" height="30" viewBox="0 0 60 30">
+                        <polyline points="0,15 10,10 20,25 30,5 40,20 50,8 60,12" 
+                            stroke="#ef4444" fill="none" stroke-width="1.5"/>
+                    </svg>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
     </div>
 
-    <!-- Filtros y búsquedas - Diseño Mejorado -->
-    <div class="card mb-4 border-0 shadow-sm" style="margin-top: -30px;">
-      <div class="card-header bg-light py-3">
-        <div class="d-flex align-items-center">
-          <i class="bi bi-funnel me-2 text-primary"></i>
-          <h6 class="mb-0 fw-semibold">Filtros de Búsqueda</h6>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="row g-3 filtros-responsive">
+    <!-- Filtros y búsquedas - Diseño Ultra Moderno -->
+    <div class="card filtros-modernos mb-4 border-0 shadow-sm" style="margin-top: -30px;">
+        <div class="card-header py-2 px-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-funnel text-primary"></i>
+                    <h6 class="mb-0 fw-semibold fs-7">Filtros</h6>
+                </div>
 
-          <!-- Fila 1: Buscador, Estado, Forma de Pago -->
-          <div class="col-12 col-md-6">
-            <div class="form-group-moderno">
-              <label class="form-label fw-semibold text-primary mb-2">
-                <i class="bi bi-search me-1"></i>Buscador General
-              </label>
-              <div class="input-group-moderno">
-                <input type="text" class="form-control-moderno" placeholder="Cédula, nombre, N° control..."
-                  [(ngModel)]="filtros.busquedaGeneral" (ngModelChange)="onBusquedaInput($event)"
-                  (blur)="onBusquedaBlur()" (keydown.enter)="onBusquedaEnter($event)">
-                <span class="input-icon">
-                  <i class="bi bi-search"></i>
+                <!-- Badge de filtros activos -->
+                <span class="badge bg-primary rounded-pill px-2 py-1 fs-8"
+                    *ngIf="contarFiltrosActivos() > 0">
+                    {{ contarFiltrosActivos() }} activos
                 </span>
-              </div>
-              <small class="form-text text-muted mt-1">
-                💡 Presiona Enter o haz clic fuera del campo para buscar
-              </small>
             </div>
-          </div>
-
-          <div class="col-12 col-md-3">
-            <div class="form-group-moderno">
-              <label class="form-label fw-semibold text-primary mb-2">
-                <i class="bi bi-clipboard-check me-1"></i>Estado de Venta
-              </label>
-              <select class="form-select-moderno" [(ngModel)]="filtros.estado" (change)="onFiltroChange()">
-                <option value="">Todos los estados</option>
-                <option value="completada">Completada</option>
-                <option value="pendiente">Pendiente por pago</option>
-                <option value="cancelada">Cancelada</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="col-12 col-md-3">
-            <div class="form-group-moderno">
-              <label class="form-label fw-semibold text-primary mb-2">
-                <i class="bi bi-credit-card me-1"></i>Forma de Pago
-              </label>
-              <select class="form-select-moderno" [(ngModel)]="filtros.formaPago" (change)="onFiltroChange()">
-                <option value="">Todas las formas</option>
-                <option value="contado">Contado</option>
-                <option value="contado-pendiente">Contado - Pendiente</option>
-                <option value="abono">Abono</option>
-                <option value="cashea">Cashea</option>
-                <option value="credito">Crédito</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Fila 2: Asesor, Especialista, Rango de Fechas -->
-          <div class="col-12 col-md-3">
-            <div class="form-group-moderno">
-              <label class="form-label fw-semibold text-primary mb-2">
-                <i class="bi bi-person-badge me-1"></i>Asesor Comercial
-              </label>
-              <select class="form-select-moderno" [(ngModel)]="filtros.asesor" (change)="onFiltroChange()">
-                <option value="">Todos los asesores ({{ asesores.length }})</option>
-                <option *ngFor="let asesor of asesores" [value]="asesor.id">
-                  {{ asesor.nombre }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="col-12 col-md-3">
-            <div class="form-group-moderno">
-              <label class="form-label fw-semibold text-primary mb-2">
-                <i class="bi bi-heart-pulse me-1"></i>Especialista Médico
-              </label>
-              <select class="form-select-moderno" [(ngModel)]="filtros.especialista" (change)="onFiltroChange()">
-                <option value="">Todos los especialistas ({{ especialistas.length }})</option>
-                <option *ngFor="let esp of especialistas" [value]="esp.id">
-                  {{ esp.nombre }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="col-12 col-md-3">
-            <div class="form-group-moderno">
-              <label class="form-label fw-semibold text-primary mb-2">
-                <i class="bi bi-calendar-range me-1"></i>Rango de Fechas
-              </label>
-              <div class="date-selector-moderno">
-                <button class="btn-datepicker-moderno" type="button" (click)="toggleDatepicker()">
-                  <i class="bi bi-calendar3 me-2"></i>
-                  <span class="fecha-display">{{ getFechaDisplay() }}</span>
-                  <i class="bi bi-chevron-down ms-2"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Fila 3: Acciones -->
-          <div class="col-md-3">
-            <div class="d-flex justify-content-between align-items-center">
-              <button class="btn-limpiar-filtros" type="button" (click)="limpiarFiltros()">
-                <i class="bi bi-arrow-counterclockwise me-2"></i>
-                Limpiar Filtros
-              </button>
-            </div>
-          </div>
-
         </div>
 
-        <!-- Filtros Activos -->
-        <div class="filtros-activos mt-3" *ngIf="hayFiltrosActivos()">
-          <div class="d-flex align-items-center flex-wrap gap-2">
-            <span class="filtros-label text-muted small">
-              <i class="bi bi-funnel me-1"></i>Filtros aplicados:
-            </span>
+        <div class="card-body p-3">
+            <!-- Tabs de Tipo de Venta -->
+            <div class="tipo-venta-mini mb-3">
+                <div class="tipo-venta-mini-tabs">
+                    <div class="mini-tab" [class.active]="filtros.tipoVenta === ''"
+                        (click)="filtros.tipoVenta = ''; onFiltroChange()" title="Todas las ventas">
+                        <i class="bi bi-grid-3x3-gap-fill"></i>
+                        <span class="tab-label">Todas</span>
+                    </div>
+                    <div class="mini-tab" [class.active]="filtros.tipoVenta === 'solo_consulta'"
+                        (click)="filtros.tipoVenta = 'solo_consulta'; onFiltroChange()" title="Solo Consultas">
+                        <i class="bi bi-person-badge"></i>
+                        <span class="tab-label">Consultas</span>
+                    </div>
+                    <div class="mini-tab" [class.active]="filtros.tipoVenta === 'solo_productos'"
+                        (click)="filtros.tipoVenta = 'solo_productos'; onFiltroChange()" title="Solo Productos">
+                        <i class="bi bi-box-seam"></i>
+                        <span class="tab-label">Productos</span>
+                    </div>
+                    <div class="mini-tab" [class.active]="filtros.tipoVenta === 'consulta_productos'"
+                        (click)="filtros.tipoVenta = 'consulta_productos'; onFiltroChange()"
+                        title="Consulta + Productos">
+                        <i class="bi bi-journal-medical"></i>
+                        <span class="tab-label">Consulta +</span>
+                    </div>
+                </div>
+            </div>
 
-            <span class="filtro-tag" *ngIf="filtros.busquedaGeneral">
-              <i class="bi bi-search me-1"></i>"{{filtros.busquedaGeneral}}"
-              <i class="bi bi-x ms-1" (click)="filtros.busquedaGeneral = ''; onFiltroChange()"></i>
-            </span>
+            <!-- Grid de filtros compacto -->
+            <div class="filtros-grid-compacto">
+                <!-- Buscador -->
+                <div class="filtro-item-compacto buscador-ampliado">
+                    <div class="filtro-icon" [class.searching]="buscando">
+                        <i class="bi" [ngClass]="{
+                            'bi-search': !buscando,
+                            'bi-arrow-repeat': buscando
+                        }"></i>
+                        <span class="searching-spinner" *ngIf="buscando"></span>
+                    </div>
+                    <input type="text" class="filtro-input"
+                        placeholder="Buscar por nombre, cédula o N° control..."
+                        [(ngModel)]="filtros.busquedaGeneral" 
+                        (ngModelChange)="onBusquedaDinamica($event)">
+                </div>
 
-            <span class="filtro-tag" *ngIf="filtros.estado">
-              <i class="bi bi-clipboard-check me-1"></i>{{ getEstadoDisplay(filtros.estado) }}
-              <i class="bi bi-x ms-1" (click)="filtros.estado = ''; onFiltroChange()"></i>
-            </span>
+                <!-- Estado -->
+                <div class="filtro-item-compacto">
+                    <div class="filtro-icon">
+                        <i class="bi bi-clipboard-check"></i>
+                    </div>
+                    <select class="filtro-select" [(ngModel)]="filtros.estado" (change)="onFiltroChange()">
+                        <option value="">Estado</option>
+                        <option value="completada">Completada</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="cancelada">Cancelada</option>
+                    </select>
+                </div>
 
-            <span class="filtro-tag" *ngIf="filtros.formaPago">
-              <i class="bi bi-credit-card me-1"></i>{{ getFormaPagoDisplay(filtros.formaPago) }}
-              <i class="bi bi-x ms-1" (click)="filtros.formaPago = ''; onFiltroChange()"></i>
-            </span>
+                <!-- Forma de Pago -->
+                <div class="filtro-item-compacto">
+                    <div class="filtro-icon">
+                        <i class="bi bi-credit-card"></i>
+                    </div>
+                    <select class="filtro-select" [(ngModel)]="filtros.formaPago" (change)="onFiltroChange()">
+                        <option value="">Forma Pago</option>
+                        <option value="contado">Contado</option>
+                        <option value="de_contado-pendiente">Pendiente</option>
+                        <option value="abono">Abono</option>
+                        <option value="cashea">Cashea</option>
+                    </select>
+                </div>
 
-            <span class="filtro-tag" *ngIf="filtros.asesor">
-              <i class="bi bi-person-badge me-1"></i>{{ getAsesorNombre(filtros.asesor) }}
-              <i class="bi bi-x ms-1" (click)="filtros.asesor = ''; onFiltroChange()"></i>
-            </span>
+                <!-- Asesor -->
+                <div class="filtro-item-compacto">
+                    <div class="filtro-icon">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <select class="filtro-select" [(ngModel)]="filtros.asesor" (change)="onFiltroChange()">
+                        <option value="">Asesor</option>
+                        <option *ngFor="let asesor of asesores" [value]="asesor.id">
+                            {{ asesor.nombre.split(' ')[0] }}
+                        </option>
+                    </select>
+                </div>
 
-            <span class="filtro-tag" *ngIf="filtros.especialista">
-              <i class="bi bi-heart-pulse me-1"></i>{{ getEspecialistaNombre(filtros.especialista) }}
-              <i class="bi bi-x ms-1" (click)="filtros.especialista = ''; onFiltroChange()"></i>
-            </span>
+                <!-- Especialista -->
+                <div class="filtro-item-compacto">
+                    <div class="filtro-icon">
+                        <i class="bi bi-heart-pulse"></i>
+                    </div>
+                    <select class="filtro-select" [(ngModel)]="filtros.especialista" (change)="onFiltroChange()">
+                        <option value="">Especialista</option>
+                        <option *ngFor="let esp of especialistas" [value]="esp.id">
+                            {{ esp.nombre.split(' ')[0] }}
+                        </option>
+                    </select>
+                </div>
 
-            <span class="filtro-tag" *ngIf="filtros.fechaDesde || filtros.fechaHasta">
-              <i class="bi bi-calendar3 me-1"></i>{{ getFechaDisplay() }}
-              <i class="bi bi-x ms-1" (click)="limpiarFechas(); onFiltroChange()"></i>
-            </span>
-          </div>
+                <!-- Fecha - Selector compacto -->
+                <div class="filtro-item-compacto date-selector" (click)="toggleDatepicker()">
+                    <div class="filtro-icon">
+                        <i class="bi bi-calendar3"></i>
+                    </div>
+                    <div class="filtro-date-display">
+                        {{ getFechaDisplay() }}
+                    </div>
+                </div>
+
+                <!-- Botón limpiar (ocupa toda la fila en móvil) -->
+                <div class="filtro-item-compacto btn-limpiar-wrapper">
+                    <button class="btn-limpiar-filtros-compacto" type="button" (click)="limpiarFiltros()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>
+                        Limpiar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtros Activos Chips -->
+            <div class="filtros-activos-chips mt-2" *ngIf="hayFiltrosActivos()">
+                <div class="d-flex flex-wrap gap-1">
+                    <span class="filtro-chip" *ngIf="filtros.tipoVenta">
+                        <i class="bi" [ngClass]="{
+                            'bi-grid-3x3-gap-fill': filtros.tipoVenta === '',
+                            'bi-person-badge': filtros.tipoVenta === 'solo_consulta',
+                            'bi-box-seam': filtros.tipoVenta === 'solo_productos',
+                            'bi-journal-medical': filtros.tipoVenta === 'consulta_productos'
+                        }"></i>
+                        {{ getTipoVentaDisplay(filtros.tipoVenta) }}
+                        <i class="bi bi-x ms-1" (click)="filtros.tipoVenta = ''; onFiltroChange()"></i>
+                    </span>
+
+                    <span class="filtro-chip" *ngIf="filtros.busquedaGeneral">
+                        <i class="bi bi-search me-1"></i>"{{filtros.busquedaGeneral}}"
+                        <i class="bi bi-x ms-1" (click)="filtros.busquedaGeneral = ''; onFiltroChange()"></i>
+                    </span>
+
+                    <span class="filtro-chip" *ngIf="filtros.estado">
+                        <i class="bi bi-clipboard-check me-1"></i>{{ getEstadoDisplay(filtros.estado) }}
+                        <i class="bi bi-x ms-1" (click)="filtros.estado = ''; onFiltroChange()"></i>
+                    </span>
+
+                    <span class="filtro-chip" *ngIf="filtros.formaPago">
+                        <i class="bi bi-credit-card me-1"></i>{{ getFormaPagoDisplay(filtros.formaPago) }}
+                        <i class="bi bi-x ms-1" (click)="filtros.formaPago = ''; onFiltroChange()"></i>
+                    </span>
+
+                    <span class="filtro-chip" *ngIf="filtros.asesor">
+                        <i class="bi bi-person-badge me-1"></i>{{ getAsesorNombre(filtros.asesor) }}
+                        <i class="bi bi-x ms-1" (click)="filtros.asesor = ''; onFiltroChange()"></i>
+                    </span>
+
+                    <span class="filtro-chip" *ngIf="filtros.especialista">
+                        <i class="bi bi-heart-pulse me-1"></i>{{ getEspecialistaNombre(filtros.especialista) }}
+                        <i class="bi bi-x ms-1" (click)="filtros.especialista = ''; onFiltroChange()"></i>
+                    </span>
+
+                    <span class="filtro-chip" *ngIf="filtros.fechaDesde || filtros.fechaHasta">
+                        <i class="bi bi-calendar3 me-1"></i>{{ getFechaDisplay() }}
+                        <i class="bi bi-x ms-1" (click)="limpiarFechas(); onFiltroChange()"></i>
+                    </span>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-
 
     <!-- Modal de Datepicker Flotante -->
     <div class="modal fade show" [class.d-block]="showDatepicker" tabindex="-1" *ngIf="showDatepicker">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Seleccionar rango de fechas</h5>
-            <button type="button" class="btn-close btn-close-white" (click)="closeDatepicker()"
-              style="color: white !important;"></button>
-          </div>
-          <div class="modal-body">
-            <div class="row g-3">
-              <!-- Selector de fecha única -->
-              <div class="col-12">
-                <label class="form-label fw-semibold">📌 Fecha única</label>
-                <input type="date" class="form-control" [(ngModel)]="fechaUnica" [max]="maxDate" [min]="minDate"
-                  (change)="onFechaUnicaChange()">
-                <div class="form-text">Selecciona una fecha específica</div>
-              </div>
-
-              <div class="col-12 text-center d-flex align-items-center justify-content-center">
-                <hr class="my-3">
-                <span class="text-muted">O selecciona un rango</span>
-              </div>
-
-              <!-- Rango de fechas -->
-              <div class="col-md-6">
-                <label class="form-label fw-semibold">Desde</label>
-                <input type="date" class="form-control" [max]="filtros.fechaHasta || maxDate" [min]="minDate"
-                  [(ngModel)]="filtros.fechaDesde" (change)="onRangoChange()">
-              </div>
-
-              <div class="col-md-6">
-                <label class="form-label fw-semibold">Hasta</label>
-                <input type="date" class="form-control" [min]="filtros.fechaDesde || minDate" [max]="maxDate"
-                  [(ngModel)]="filtros.fechaHasta" (change)="onRangoChange()">
-              </div>
-
-              <!-- Presets rápidos -->
-              <div class="col-12">
-                <label class="form-label fw-semibold">Rangos predefinidos</label>
-                <div class="d-flex flex-wrap gap-2">
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'hoy'"
-                    [class.btn-outline-secondary]="presetActivo !== 'hoy'" (click)="setRangoPreset('hoy')">
-                    Hoy
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'ayer'"
-                    [class.btn-outline-secondary]="presetActivo !== 'ayer'" (click)="setRangoPreset('ayer')">
-                    Ayer
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana'"
-                    [class.btn-outline-secondary]="presetActivo !== 'semana'" (click)="setRangoPreset('semana')">
-                    Esta semana
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana_pasada'"
-                    [class.btn-outline-secondary]="presetActivo !== 'semana_pasada'"
-                    (click)="setRangoPreset('semana_pasada')">
-                    Semana pasada
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes'"
-                    [class.btn-outline-secondary]="presetActivo !== 'mes'" (click)="setRangoPreset('mes')">
-                    Este mes
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes_pasado'"
-                    [class.btn-outline-secondary]="presetActivo !== 'mes_pasado'"
-                    (click)="setRangoPreset('mes_pasado')">
-                    Mes pasado
-                  </button>
-                  <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'trimestre'"
-                    [class.btn-outline-secondary]="presetActivo !== 'trimestre'" (click)="setRangoPreset('trimestre')">
-                    Este trimestre
-                  </button>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Seleccionar rango de fechas</h5>
+                    <button type="button" class="btn-close btn-close-white" (click)="closeDatepicker()"
+                        style="color: white !important;"></button>
                 </div>
-              </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Selector de fecha única -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">📌 Fecha única</label>
+                            <input type="date" class="form-control" [(ngModel)]="fechaUnica" [max]="maxDate"
+                                [min]="minDate" (change)="onFechaUnicaChange()">
+                            <div class="form-text">Selecciona una fecha específica</div>
+                        </div>
+
+                        <div class="col-12 text-center d-flex align-items-center justify-content-center">
+                            <hr class="my-3">
+                            <span class="text-muted">O selecciona un rango</span>
+                        </div>
+
+                        <!-- Rango de fechas -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Desde</label>
+                            <input type="date" class="form-control" [max]="filtros.fechaHasta || maxDate"
+                                [min]="minDate" [(ngModel)]="filtros.fechaDesde" (change)="onRangoChange()">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Hasta</label>
+                            <input type="date" class="form-control" [min]="filtros.fechaDesde || minDate"
+                                [max]="maxDate" [(ngModel)]="filtros.fechaHasta" (change)="onRangoChange()">
+                        </div>
+
+                        <!-- Presets rápidos -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Rangos predefinidos</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'hoy'"
+                                    [class.btn-outline-secondary]="presetActivo !== 'hoy'"
+                                    (click)="setRangoPreset('hoy')">
+                                    Hoy
+                                </button>
+                                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'ayer'"
+                                    [class.btn-outline-secondary]="presetActivo !== 'ayer'"
+                                    (click)="setRangoPreset('ayer')">
+                                    Ayer
+                                </button>
+                                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana'"
+                                    [class.btn-outline-secondary]="presetActivo !== 'semana'"
+                                    (click)="setRangoPreset('semana')">
+                                    Esta semana
+                                </button>
+                                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'semana_pasada'"
+                                    [class.btn-outline-secondary]="presetActivo !== 'semana_pasada'"
+                                    (click)="setRangoPreset('semana_pasada')">
+                                    Semana pasada
+                                </button>
+                                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes'"
+                                    [class.btn-outline-secondary]="presetActivo !== 'mes'"
+                                    (click)="setRangoPreset('mes')">
+                                    Este mes
+                                </button>
+                                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'mes_pasado'"
+                                    [class.btn-outline-secondary]="presetActivo !== 'mes_pasado'"
+                                    (click)="setRangoPreset('mes_pasado')">
+                                    Mes pasado
+                                </button>
+                                <button class="btn btn-sm" [class.btn-primary]="presetActivo === 'trimestre'"
+                                    [class.btn-outline-secondary]="presetActivo !== 'trimestre'"
+                                    (click)="setRangoPreset('trimestre')">
+                                    Este trimestre
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" (click)="limpiarFechas()">
+                        <i class="bi bi-x-circle me-1"></i> Limpiar
+                    </button>
+                    <button type="button" class="btn btn-primary" (click)="aplicarFechas()">
+                        <i class="bi bi-check-circle me-1"></i> Aplicar
+                    </button>
+                </div>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" (click)="limpiarFechas()">
-              <i class="bi bi-x-circle me-1"></i> Limpiar
-            </button>
-            <button type="button" class="btn btn-primary" (click)="aplicarFechas()">
-              <i class="bi bi-check-circle me-1"></i> Aplicar
-            </button>
-          </div>
         </div>
-      </div>
     </div>
 
     <!-- Overlay para cerrar al hacer click fuera -->
     <div class="modal-backdrop fade show" *ngIf="showDatepicker" (click)="closeDatepicker()"></div>
 
-    <!-- Controles de ordenamiento -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <div class="d-flex align-items-center gap-2">
-        <span class="text-muted">Ordenar por:</span>
-        <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="ordenamiento.campo">
-          <option value="fecha">Fecha</option>
-          <option value="numeroControl">N° Control</option>
-          <option value="montoTotal">Monto Total</option>
-          <option value="paciente">Paciente</option>
-        </select>
-        <button class="btn btn-outline-secondary btn-sm" (click)="cambiarOrden()">
-          <i class="bi" [class.bi-arrow-up]="ordenamiento.ascendente"
-            [class.bi-arrow-down]="!ordenamiento.ascendente"></i>
-        </button>
-      </div>
-
-      <div class="text-muted">
-        Mostrando {{ventasFiltradas.length}} de {{paginacion.totalItems}} ventas
-      </div>
-    </div>
+  
 
     <!-- Lista de ventas - Diseño Innovador -->
     <div class="card border-0 shadow-sm">
-      <div class="card-body p-0">
-        <!-- Mensaje cuando no hay resultados -->
-        <div *ngIf="ventasFiltradas.length === 0" class="text-center py-5">
-          <div class="empty-state">
-            <i class="bi bi-inbox display-1 text-muted"></i>
-            <h4 class="mt-3 text-muted">No se encontraron ventas</h4>
-            <p class="text-muted mb-4">
-              <span *ngIf="hayFiltrosActivos()">
-                No hay ventas que coincidan con los filtros aplicados.
-              </span>
-              <span *ngIf="!hayFiltrosActivos()">
-                No hay ventas registradas en el historial.
-              </span>
-            </p>
-            <button *ngIf="hayFiltrosActivos()" class="btn btn-primary" (click)="limpiarFiltros()">
-              <i class="bi bi-arrow-counterclockwise me-1"></i>
-              Limpiar filtros
-            </button>
-          </div>
-        </div>
+        <div class="card-body p-0">
 
-        <div class="ventas-grid" *ngIf="ventasFiltradas.length > 0">
-          <div *ngFor="let venta of ventasFiltradas" class="venta-card">
-            <!-- Tarjeta Principal -->
-            <div class="venta-header" (click)="toggleDetalleVenta(venta.key)">
-              <!-- Avatar y Info Principal -->
-              <div class="venta-avatar">
-                <div class="avatar-circle" [ngClass]="{
-                            'avatar-success': venta.estado === 'completada',
-                            'avatar-warning': venta.estado === 'pendiente',
-                            'avatar-danger': venta.estado === 'cancelada'
-                        }">
-                  <i class="bi" [class.bi-check-lg]="venta.estado === 'completada'"
-                    [class.bi-clock]="venta.estado === 'pendiente'" [class.bi-x-lg]="venta.estado === 'cancelada'"></i>
-                </div>
-              </div>
-
-              <!-- Información Central -->
-              <div class="venta-info">
-                <div class="venta-title">
-                  <h6 class="mb-1 fw-bold text-dark">
-                    {{venta.paciente.nombre}}
-                    <span class="estatus-pago-text" [ngClass]="getEstatusPagoClase(venta)">
-                      ({{getEstatusPago(venta)}})
-                    </span>
-                  </h6>
-                  <div class="venta-meta">
-                    <span class="meta-item">
-                      <i class="bi bi-person-badge text-muted"></i>
-                      CI. {{venta.paciente.cedula}}
-                    </span>
-                    <span class="meta-divider">•</span>
-                    <span class="meta-item">
-                      <i class="bi bi-calendar3 text-muted"></i>
-                      {{venta.fecha | date:'dd/MM/yyyy'}}
-                    </span>
-                    <span class="meta-divider">•</span>
-                    <span class="meta-item">
-                      <i class="bi bi-clock text-muted"></i>
-                      {{venta.fecha | date:'HH:mm'}}
-                    </span>
-                  </div>
+            <!-- Controles de ordenamiento -->
+            <div class="d-flex justify-content-between align-items-center control-ordenamiento mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted">Ordenar por:</span>
+                    <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="ordenamiento.campo">
+                        <option value="fecha">Fecha</option>
+                        <option value="numeroControl">N° Control</option>
+                        <option value="montoTotal">Monto Total</option>
+                        <option value="paciente">Paciente</option>
+                    </select>
+                    <button class="btn btn-outline-secondary btn-sm" (click)="cambiarOrden()">
+                        <i class="bi" [class.bi-arrow-up]="ordenamiento.ascendente"
+                            [class.bi-arrow-down]="!ordenamiento.ascendente"></i>
+                    </button>
                 </div>
 
-                <!-- Información Adicional -->
-                <div class="venta-details">
-                  <div class="detail-item">
-                    <small class="text-muted">Control</small>
-                    <strong class="text-primary">#{{venta.numeroControl}}</strong>
-                  </div>
-                  <div class="detail-item">
-                    <small class="text-muted">Asesor</small>
-                    <span class="text-dark">{{venta.asesor.nombre}}</span>
-                  </div>
-                  <div class="detail-item">
-                    <small class="text-muted">Forma Pago</small>
-               <span class="text-capitalize badge forma-pago-badge" 
-                      [ngClass]="{
-                        'forma-contado': venta.formaPago === 'contado',
-                        'forma-contado-pendiente': venta.formaPago === 'de_contado-pendiente',
-                        'forma-cashea': venta.formaPago === 'cashea',
-                        'forma-abono': venta.formaPago === 'abono'
-                      }">
-                  {{ getFormaPagoDisplay(venta.formaPago) }}
-               </span>
-                  </div>
+                <div class="text-muted">
+                    Mostrando {{ventasFiltradas.length}} de {{paginacion.totalItems}} ventas
                 </div>
-              </div>
-
-              <!-- Lado Derecho - Estado y Monto -->
-              <div class="venta-sidebar">
-                <!-- Estado -->
-                <div class="estado-badge" [ngClass]="{
-                            'estado-completada': venta.estado === 'completada',
-                            'estado-pendiente': venta.estado === 'pendiente',
-                            'estado-cancelada': venta.estado === 'cancelada'
-                        }">
-                  <div class="estado-dot"></div>
-                  <span class="estado-text">{{venta.estado | titlecase}}</span>
-                </div>
-
-                <!-- Monto -->
-                <div class="monto-display">
-                  <div class="monto-amount text-primary fw-bold">
-                    {{ getMontoParaMostrar(venta, venta.montoTotal) }}
-                  </div>
-                  <div class="monto-label text-muted small">Total</div>
-                </div>
-
-                <!-- Ícono Expandir -->
-                <div class="expand-icon">
-                  <i class="bi" [class.bi-chevron-down]="!venta.mostrarDetalle"
-                    [class.bi-chevron-up]="venta.mostrarDetalle"></i>
-                </div>
-              </div>
             </div>
 
-            <!-- Panel Expandible - Diseño Moderno -->
-            <div *ngIf="venta.mostrarDetalle" class="venta-expandible">
-              <div class="expandible-content">
-                <div class="resumen-rapido">
-                  <div class="resumen-item">
-                    <i class="bi bi-cart-check text-primary"></i>
-                    <div>
-                      <small class="text-muted">Productos</small>
-                      <div class="fw-semibold">{{venta.productos?.length || 0}} items</div>
-                    </div>
-                  </div>
-
-                  <div class="resumen-item">
-                    <i class="bi bi-currency-dollar text-success"></i>
-                    <div>
-                      <small class="text-muted">Subtotal</small>
-                      <div class="fw-semibold">{{ getMontoParaMostrar(venta, venta.subtotal) }}</div>
-                    </div>
-                  </div>
-
-                  <div class="resumen-item">
-                    <i class="bi bi-percent text-info"></i>
-                    <div>
-                      <small class="text-muted">IVA ({{venta.impuesto || 16}}%)</small>
-                      <div class="fw-semibold text-info">
-                        {{ getMontoParaMostrar(venta, venta.totalIva || 0) }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="resumen-item">
-                    <i class="bi bi-percent text-warning"></i>
-                    <div>
-                      <small class="text-muted">Descuento</small>
-                      <div class="fw-semibold text-danger">
-                        -{{ getMontoParaMostrar(venta, getTotalDescuentoMoneda(venta)) }}
-                      </div>
-                      <small class="text-muted" *ngIf="getPorcentajeDescuentoCalculado(venta) > 0">
-                        ({{ getPorcentajeDescuentoCalculado(venta) | number:'1.1-1' }}% sobre subtotal)
-                      </small>
-                    </div>
-                  </div>
-
-                  <div class="resumen-item">
-                    <i class="bi bi-cash-coin text-info"></i>
-                    <div>
-                      <small class="text-muted">Pagado</small>
-                      <div class="fw-semibold">{{ getMontoParaMostrar(venta, getTotalPagadoVenta(venta)) }}</div>
-                    </div>
-                  </div>
-
-                  <div class="resumen-item" *ngIf="getDeudaPendiente(venta) > 0">
-                    <i class="bi bi-clock-history text-danger"></i>
-                    <div>
-                      <small class="text-muted">Deuda Pendiente</small>
-                      <div class="fw-semibold text-danger">
-                        {{ getMontoParaMostrar(venta, getDeudaPendiente(venta)) }}
-                        <small *ngIf="venta.formaPago === 'cashea'" class="text-muted d-block">
-                          {{ venta.cantidadCuotas - venta.cuotasAdelantadas.length }} cuota pendiente
-                        </small>
-                      </div>
-                    </div>
-                  </div>
+            <!-- Mensaje cuando no hay resultados -->
+            <div *ngIf="ventasFiltradas.length === 0" class="text-center py-5">
+                <div class="empty-state">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <h4 class="mt-3 text-muted">No se encontraron ventas</h4>
+                    <p class="text-muted mb-4">
+                        <span *ngIf="hayFiltrosActivos()">
+                            No hay ventas que coincidan con los filtros aplicados.
+                        </span>
+                        <span *ngIf="!hayFiltrosActivos()">
+                            No hay ventas registradas en el historial.
+                        </span>
+                    </p>
+                    <button *ngIf="hayFiltrosActivos()" class="btn btn-primary" (click)="limpiarFiltros()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>
+                        Limpiar filtros
+                    </button>
                 </div>
-
-                <!-- Sección Media: Detalles Específicos -->
-                <!-- <div class="detalles-grid">
-                  <div class="detalle-seccion">
-                    <h6 class="seccion-titulo">
-                      <i class="bi bi-credit-card me-2"></i>
-                      Métodos de Pago
-                    </h6>
-                    <div class="metodos-pago">
-                      <div *ngFor="let metodo of venta.metodosPago" class="metodo-item-detallado">
-                       <div class="metodo-header">
-                          <div class="metodo-icono" [ngClass]="'metodo-' + metodo.tipo">
-                              <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
-                                  [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
-                                  [class.bi-phone]="metodo.tipo === 'pagomovil'"
-                                  [class.bi-bank]="metodo.tipo === 'transferencia'"
-                                  [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
-                          </div>
-                          <div class="metodo-info">
-                              <span class="metodo-tipo text-capitalize fw-semibold">{{getTipoPagoDisplay(metodo.tipo)}}</span>
-                              <span class="metodo-monto">
-                                  {{ getMontoDisplayMetodoPago(metodo, venta) }}
-                              </span>
-                          </div>
-                      </div>
-
-                        <div class="metodo-detalles">
-                          <div class="detalle-linea-combinada" *ngIf="getEquivalenteDisplay(metodo, venta)">
-                            <div class="detalle-item-combinado">
-                              <i class="bi bi-arrow-left-right text-muted"></i>
-                              <span class="detalle-texto">{{ getEquivalenteDisplay(metodo, venta) }}</span>
-                            </div>
-                            <div class="detalle-item-combinado">
-                              <i class="bi bi-graph-up text-muted"></i>
-                              <span class="detalle-texto">{{ getEquivalenteDisplay(metodo, venta) }}</span>
-                            </div>
-                          </div>
-
-                          <div class="detalle-linea-combinada" *ngIf="metodo.referencia || getBancoDisplay(metodo)">
-                            <div class="detalle-item-combinado" *ngIf="metodo.referencia">
-                              <i class="bi bi-receipt text-muted"></i>
-                              <span class="detalle-texto">
-                                Ref: <strong>{{metodo.referencia}}</strong>
-                              </span>
-                            </div>
-
-                            <div class="detalle-item-combinado" *ngIf="getBancoDisplay(metodo) && 
-                              (metodo.tipo === 'pagomovil' || metodo.tipo === 'transferencia')">
-                              <i class="bi bi-building text-muted"></i>
-                              <span class="detalle-texto">
-                                Banco: <strong>{{ getBancoDisplay(metodo) }}</strong>
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="detalle-seccion">
-                    <h6 class="seccion-titulo">
-                      <i class="bi bi-info-circle me-2"></i>
-                      Información Adicional
-                    </h6>
-                    <div class="info-adicional-grid">
-
-                      <div class="info-fila">
-                        <div class="info-item destacado">
-                          <div class="info-icono">
-                            <i class="bi bi-person-badge"></i>
-                          </div>
-                          <div class="info-contenido">
-                            <span class="info-label">Especialista</span>
-                            <span class="info-value" [ngClass]="{'text-muted': !venta.especialista?.nombre}">
-                              {{venta.especialista?.nombre || 'No asignado'}}
-                              <span *ngIf="venta.especialista?.tipo" class="info-subtext">
-                                - {{venta.especialista.tipo}}
-                              </span>
-                            </span>
-                          </div>
-                        </div>
-
-                        <div class="info-item">
-                          <div class="info-icono">
-                            <i class="bi bi-person-gear"></i>
-                          </div>
-                          <div class="info-contenido">
-                            <span class="info-label">Tipo Cliente</span>
-                            <span class="info-value">
-                              {{venta.paciente?.tipoPersona || 'Natural' | titlecase}}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="info-fila">
-                        <div class="info-item">
-                          <div class="info-icono">
-                            <i class="bi bi-box-seam"></i>
-                          </div>
-                          <div class="info-contenido">
-                            <span class="info-label">Productos</span>
-                            <span class="info-value">
-                              {{venta.productos?.length || 0}}
-                              <small class="text-muted d-block" *ngIf="venta.productos?.length === 1">
-                                {{venta.productos[0]?.nombre}}
-                              </small>
-                              <small class="text-muted d-block" *ngIf="venta.productos?.length > 1">
-                                {{venta.productos[0]?.nombre}} +{{venta.productos.length - 1}} más
-                              </small>
-                            </span>
-                          </div>
-                        </div>
-
-                        <div class="info-item" *ngIf="venta.formaPago === 'abono' || venta.formaPago === 'cashea'">
-                          <div class="info-icono">
-                            <i class="bi" [class.bi-piggy-bank]="venta.formaPago === 'abono'"
-                              [class.bi-calendar-check]="venta.formaPago === 'cashea'"></i>
-                          </div>
-                          <div class="info-contenido">
-                            <span class="info-label" *ngIf="venta.formaPago === 'abono'">Plan Abonos</span>
-                            <span class="info-label" *ngIf="venta.formaPago === 'cashea'">Plan Cashea</span>
-                            <span class="info-value">
-                              <span *ngIf="venta.formaPago === 'abono'">
-                                Abonado: {{getMontoParaMostrar(venta, venta.montoAbonado)}}
-                                <small class="text-muted d-block">
-                                  Pendiente: {{getMontoParaMostrar(venta, getDeudaPendiente(venta))}}
-                                </small>
-                              </span>
-                              <span *ngIf="venta.formaPago === 'cashea'">
-                                {{venta.cuotasAdelantadas?.length || 0}}/{{venta.cantidadCuotas}} cuotas
-                                <small class="text-muted d-block">
-                                  Nivel: {{venta.nivelCashea}} • Cuota: {{getMontoParaMostrar(venta,
-                                  venta.montoPorCuota)}}
-                                </small>
-                              </span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="info-fila" *ngIf="venta.observaciones">
-                        <div class="info-item observaciones" style="grid-column: 1 / -1;">
-                          <div class="info-icono">
-                            <i class="bi bi-chat-left-text"></i>
-                          </div>
-                          <div class="info-contenido">
-                            <span class="info-label">Observaciones</span>
-                            <span class="info-value observacion-texto">{{venta.observaciones}}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
-                </div>-->
-
-                <!-- Sección Inferior: Acciones -->
-                <div class="acciones-venta">
-                  <div class="acciones-left">
-                    <span class="text-muted small">
-                      <i class="bi bi-clock-history me-1"></i>
-                      Creado el {{venta.fecha | date:'dd/MM/yyyy'}}
-                    </span>
-                  </div>
-                  <div class="acciones-right">
-                    <button *ngIf="mostrarBotonRealizarPago(venta)" class="btn btn-outline-primary btn-sm accion-btn"
-                      (click)="abrirModalPagoCompleto(venta)">
-                      <i class="bi bi-cash-stack"></i>
-                      <span>Realizar Pago</span>
-                    </button>
-
-                    <button *ngIf="mostrarBotonAbonar(venta)" class="btn btn-outline-primary btn-sm accion-btn"
-                      (click)="editarVenta(venta)">
-                      <i class="bi-cash-coin"></i>
-                      <span>Abonar</span>
-                    </button>
-
-                    <button class="btn btn-outline-primary btn-sm accion-btn" (click)="verDetalleCompleto(venta)">
-                      <i class="bi bi-eye"></i>
-                      <span>Detalles</span>
-                    </button>
-
-                    <button class="btn btn-outline-primary btn-sm accion-btn" (click)="verRecibo(venta)">
-                      <i class="bi bi-receipt"></i>
-                      <span>Ver recibo</span>
-                    </button>
-                    <button *ngIf="venta.estado !== 'cancelada'" class="btn btn-outline-danger btn-sm accion-btn"
-                      (click)="cancelarVenta(venta)">
-                      <i class="bi bi-x-circle"></i>
-                      <span>Anular venta</span>
-                    </button>
-
-                  </div>
-                </div>
-              </div>
             </div>
-          </div>
+
+            <div class="ventas-grid" *ngIf="ventasFiltradas.length > 0">
+                <div *ngFor="let venta of ventasFiltradas" class="venta-card">
+                    <!-- Tarjeta Principal -->
+                    <div class="venta-header" (click)="toggleDetalleVenta(venta.key)">
+                        <!-- Avatar y Info Principal -->
+                        <div class="venta-avatar">
+                            <div class="avatar-circle" [ngClass]="{
+                                    'avatar-success': venta.estado === 'completada',
+                                    'avatar-warning': venta.estado === 'pendiente',
+                                    'avatar-danger': venta.estado === 'cancelada'
+                                }">
+                                <i class="bi" [class.bi-check-lg]="venta.estado === 'completada'"
+                                    [class.bi-clock]="venta.estado === 'pendiente'"
+                                    [class.bi-x-lg]="venta.estado === 'cancelada'"></i>
+                            </div>
+                        </div>
+
+                        <!-- Información Central -->
+                        <div class="venta-info">
+                            <div class="venta-title">
+                                <h6 class="mb-1 fw-bold text-dark">
+                                    {{venta.paciente.nombre}}
+                                    <span class="estatus-pago-text" [ngClass]="getEstatusPagoClase(venta)">
+                                        ({{getEstatusPago(venta)}})
+                                    </span>
+                                </h6>
+                                <div class="venta-meta">
+                                    <span class="meta-item">
+                                        <i class="bi bi-person-badge text-muted"></i>
+                                        CI. {{venta.paciente.cedula}}
+                                    </span>
+                                    <span class="meta-divider">•</span>
+                                    <span class="meta-item">
+                                        <i class="bi bi-calendar3 text-muted"></i>
+                                        {{venta.fecha | date:'dd/MM/yyyy'}}
+                                    </span>
+                                    <span class="meta-divider">•</span>
+                                    <span class="meta-item">
+                                        <i class="bi bi-clock text-muted"></i>
+                                        {{venta.fecha | date:'HH:mm'}}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Información Adicional -->
+                            <div class="venta-details">
+                                <div class="detail-item">
+                                    <small class="text-muted">Control</small>
+                                    <strong class="text-primary">#{{venta.numeroControl}}</strong>
+                                </div>
+                                <div class="detail-item">
+                                    <small class="text-muted">Asesor</small>
+                                    <span class="text-dark">{{venta.asesor.nombre}}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <small class="text-muted">Forma Pago</small>
+                                    <span class="text-capitalize badge forma-pago-badge" [ngClass]="{
+                                            'forma-contado': venta.formaPago === 'contado',
+                                            'forma-contado-pendiente': venta.formaPago === 'de_contado-pendiente',
+                                            'forma-cashea': venta.formaPago === 'cashea',
+                                            'forma-abono': venta.formaPago === 'abono'
+                                        }">
+                                        {{ getFormaPagoDisplay(venta.formaPago) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lado Derecho - Estado y Monto -->
+                        <div class="venta-sidebar">
+                            <!-- Estado -->
+                            <div class="estado-badge" [ngClass]="{
+                                    'estado-completada': venta.estado === 'completada',
+                                    'estado-pendiente': venta.estado === 'pendiente',
+                                    'estado-cancelada': venta.estado === 'cancelada'
+                                }">
+                                <div class="estado-dot"></div>
+                                <span class="estado-text">{{venta.estado | titlecase}}</span>
+                            </div>
+
+                            <!-- Monto -->
+                            <div class="monto-display">
+                                <div class="monto-amount text-primary fw-bold">
+                                    {{ getMontoParaMostrar(venta, venta.montoTotal) }}
+                                </div>
+                                <div class="monto-label text-muted small">Total</div>
+                            </div>
+
+                            <!-- Ícono Expandir -->
+                            <div class="expand-icon">
+                                <i class="bi" [class.bi-chevron-down]="!venta.mostrarDetalle"
+                                    [class.bi-chevron-up]="venta.mostrarDetalle"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel Expandible - Diseño Moderno -->
+                    <div *ngIf="venta.mostrarDetalle" class="venta-expandible">
+                        <div class="expandible-content">
+                            <div class="resumen-rapido">
+                                <div class="resumen-item">
+                                    <i class="bi bi-cart-check text-primary"></i>
+                                    <div>
+                                        <small class="text-muted">Productos</small>
+                                        <div class="fw-semibold">{{venta.productos?.length || 0}} items</div>
+                                    </div>
+                                </div>
+
+                                <div class="resumen-item">
+                                    <i class="bi bi-currency-dollar text-success"></i>
+                                    <div>
+                                        <small class="text-muted">Subtotal</small>
+                                        <div class="fw-semibold">{{ getMontoParaMostrar(venta, venta.subtotal) }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="resumen-item">
+                                    <i class="bi bi-percent text-info"></i>
+                                    <div>
+                                        <small class="text-muted">IVA ({{venta.impuesto || 16}}%)</small>
+                                        <div class="fw-semibold text-info">
+                                            {{ getMontoParaMostrar(venta, venta.totalIva || 0) }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="resumen-item">
+                                    <i class="bi bi-percent text-warning"></i>
+                                    <div>
+                                        <small class="text-muted">Descuento</small>
+                                        <div class="fw-semibold text-danger">
+                                            -{{ getMontoParaMostrar(venta, getTotalDescuentoMoneda(venta)) }}
+                                        </div>
+                                        <small class="text-muted" *ngIf="getPorcentajeDescuentoCalculado(venta) > 0">
+                                            ({{ getPorcentajeDescuentoCalculado(venta) | number:'1.1-1' }}% sobre
+                                            subtotal)
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="resumen-item">
+                                    <i class="bi bi-cash-coin text-info"></i>
+                                    <div>
+                                        <small class="text-muted">Pagado</small>
+                                        <div class="fw-semibold">{{ getMontoParaMostrar(venta,
+                                            getTotalPagadoVenta(venta)) }}</div>
+                                    </div>
+                                </div>
+
+                                <div class="resumen-item" *ngIf="getDeudaPendiente(venta) > 0">
+                                    <i class="bi bi-clock-history text-danger"></i>
+                                    <div>
+                                        <small class="text-muted">Deuda Pendiente</small>
+                                        <div class="fw-semibold text-danger">
+                                            {{ getMontoParaMostrar(venta, getDeudaPendiente(venta)) }}
+                                            <small *ngIf="venta.formaPago === 'cashea'" class="text-muted d-block">
+                                                {{ venta.cantidadCuotas - venta.cuotasAdelantadas.length }} cuota
+                                                pendiente
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección Media: Detalles Específicos -->
+                            <!-- <div class="detalles-grid">
+                                  <div class="detalle-seccion">
+                                    <h6 class="seccion-titulo">
+                                      <i class="bi bi-credit-card me-2"></i>
+                                      Métodos de Pago
+                                    </h6>
+                                    <div class="metodos-pago">
+                                      <div *ngFor="let metodo of venta.metodosPago" class="metodo-item-detallado">
+                                       <div class="metodo-header">
+                                          <div class="metodo-icono" [ngClass]="'metodo-' + metodo.tipo">
+                                              <i class="bi" [class.bi-cash]="metodo.tipo === 'efectivo'"
+                                                  [class.bi-credit-card]="metodo.tipo === 'debito' || metodo.tipo === 'credito'"
+                                                  [class.bi-phone]="metodo.tipo === 'pagomovil'"
+                                                  [class.bi-bank]="metodo.tipo === 'transferencia'"
+                                                  [class.bi-currency-dollar]="metodo.tipo === 'zelle'"></i>
+                                          </div>
+                                          <div class="metodo-info">
+                                              <span class="metodo-tipo text-capitalize fw-semibold">{{getTipoPagoDisplay(metodo.tipo)}}</span>
+                                              <span class="metodo-monto">
+                                                  {{ getMontoDisplayMetodoPago(metodo, venta) }}
+                                              </span>
+                                          </div>
+                                      </div>
+                    
+                                        <div class="metodo-detalles">
+                                          <div class="detalle-linea-combinada" *ngIf="getEquivalenteDisplay(metodo, venta)">
+                                            <div class="detalle-item-combinado">
+                                              <i class="bi bi-arrow-left-right text-muted"></i>
+                                              <span class="detalle-texto">{{ getEquivalenteDisplay(metodo, venta) }}</span>
+                                            </div>
+                                            <div class="detalle-item-combinado">
+                                              <i class="bi bi-graph-up text-muted"></i>
+                                              <span class="detalle-texto">{{ getEquivalenteDisplay(metodo, venta) }}</span>
+                                            </div>
+                                          </div>
+                    
+                                          <div class="detalle-linea-combinada" *ngIf="metodo.referencia || getBancoDisplay(metodo)">
+                                            <div class="detalle-item-combinado" *ngIf="metodo.referencia">
+                                              <i class="bi bi-receipt text-muted"></i>
+                                              <span class="detalle-texto">
+                                                Ref: <strong>{{metodo.referencia}}</strong>
+                                              </span>
+                                            </div>
+                    
+                                            <div class="detalle-item-combinado" *ngIf="getBancoDisplay(metodo) && 
+                                              (metodo.tipo === 'pagomovil' || metodo.tipo === 'transferencia')">
+                                              <i class="bi bi-building text-muted"></i>
+                                              <span class="detalle-texto">
+                                                Banco: <strong>{{ getBancoDisplay(metodo) }}</strong>
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                    
+                                  <div class="detalle-seccion">
+                                    <h6 class="seccion-titulo">
+                                      <i class="bi bi-info-circle me-2"></i>
+                                      Información Adicional
+                                    </h6>
+                                    <div class="info-adicional-grid">
+                    
+                                      <div class="info-fila">
+                                        <div class="info-item destacado">
+                                          <div class="info-icono">
+                                            <i class="bi bi-person-badge"></i>
+                                          </div>
+                                          <div class="info-contenido">
+                                            <span class="info-label">Especialista</span>
+                                            <span class="info-value" [ngClass]="{'text-muted': !venta.especialista?.nombre}">
+                                              {{venta.especialista?.nombre || 'No asignado'}}
+                                              <span *ngIf="venta.especialista?.tipo" class="info-subtext">
+                                                - {{venta.especialista.tipo}}
+                                              </span>
+                                            </span>
+                                          </div>
+                                        </div>
+                    
+                                        <div class="info-item">
+                                          <div class="info-icono">
+                                            <i class="bi bi-person-gear"></i>
+                                          </div>
+                                          <div class="info-contenido">
+                                            <span class="info-label">Tipo Cliente</span>
+                                            <span class="info-value">
+                                              {{venta.paciente?.tipoPersona || 'Natural' | titlecase}}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                    
+                                      <div class="info-fila">
+                                        <div class="info-item">
+                                          <div class="info-icono">
+                                            <i class="bi bi-box-seam"></i>
+                                          </div>
+                                          <div class="info-contenido">
+                                            <span class="info-label">Productos</span>
+                                            <span class="info-value">
+                                              {{venta.productos?.length || 0}}
+                                              <small class="text-muted d-block" *ngIf="venta.productos?.length === 1">
+                                                {{venta.productos[0]?.nombre}}
+                                              </small>
+                                              <small class="text-muted d-block" *ngIf="venta.productos?.length > 1">
+                                                {{venta.productos[0]?.nombre}} +{{venta.productos.length - 1}} más
+                                              </small>
+                                            </span>
+                                          </div>
+                                        </div>
+                    
+                                        <div class="info-item" *ngIf="venta.formaPago === 'abono' || venta.formaPago === 'cashea'">
+                                          <div class="info-icono">
+                                            <i class="bi" [class.bi-piggy-bank]="venta.formaPago === 'abono'"
+                                              [class.bi-calendar-check]="venta.formaPago === 'cashea'"></i>
+                                          </div>
+                                          <div class="info-contenido">
+                                            <span class="info-label" *ngIf="venta.formaPago === 'abono'">Plan Abonos</span>
+                                            <span class="info-label" *ngIf="venta.formaPago === 'cashea'">Plan Cashea</span>
+                                            <span class="info-value">
+                                              <span *ngIf="venta.formaPago === 'abono'">
+                                                Abonado: {{getMontoParaMostrar(venta, venta.montoAbonado)}}
+                                                <small class="text-muted d-block">
+                                                  Pendiente: {{getMontoParaMostrar(venta, getDeudaPendiente(venta))}}
+                                                </small>
+                                              </span>
+                                              <span *ngIf="venta.formaPago === 'cashea'">
+                                                {{venta.cuotasAdelantadas?.length || 0}}/{{venta.cantidadCuotas}} cuotas
+                                                <small class="text-muted d-block">
+                                                  Nivel: {{venta.nivelCashea}} • Cuota: {{getMontoParaMostrar(venta,
+                                                  venta.montoPorCuota)}}
+                                                </small>
+                                              </span>
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                    
+                                      <div class="info-fila" *ngIf="venta.observaciones">
+                                        <div class="info-item observaciones" style="grid-column: 1 / -1;">
+                                          <div class="info-icono">
+                                            <i class="bi bi-chat-left-text"></i>
+                                          </div>
+                                          <div class="info-contenido">
+                                            <span class="info-label">Observaciones</span>
+                                            <span class="info-value observacion-texto">{{venta.observaciones}}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                    
+                                    </div>
+                                  </div>
+                                </div>-->
+
+                            <!-- Sección Inferior: Acciones -->
+                            <div class="acciones-venta">
+                                <div class="acciones-left">
+                                    <span class="text-muted small">
+                                        <i class="bi bi-clock-history me-1"></i>
+                                        Creado el {{venta.fecha | date:'dd/MM/yyyy'}}
+                                    </span>
+                                </div>
+                                <div class="acciones-right">
+                                    <button *ngIf="mostrarBotonRealizarPago(venta)"
+                                        class="btn btn-outline-primary btn-sm accion-btn"
+                                        (click)="abrirModalPagoCompleto(venta)">
+                                        <i class="bi bi-cash-stack"></i>
+                                        <span>Realizar Pago</span>
+                                    </button>
+
+                                    <button *ngIf="mostrarBotonAbonar(venta)"
+                                        class="btn btn-outline-primary btn-sm accion-btn"
+                                        (click)="editarVenta(venta)">
+                                        <i class="bi-cash-coin"></i>
+                                        <span>Abonar</span>
+                                    </button>
+
+                                    <button class="btn btn-outline-primary btn-sm accion-btn"
+                                        (click)="verDetalleCompleto(venta)">
+                                        <i class="bi bi-eye"></i>
+                                        <span>Detalles</span>
+                                    </button>
+
+                                    <button class="btn btn-outline-primary btn-sm accion-btn"
+                                        (click)="verRecibo(venta)">
+                                        <i class="bi bi-receipt"></i>
+                                        <span>Ver recibo</span>
+                                    </button>
+                                    <button *ngIf="venta.estado !== 'cancelada'"
+                                        class="btn btn-outline-danger btn-sm accion-btn"
+                                        (click)="cancelarVenta(venta)">
+                                        <i class="bi bi-x-circle"></i>
+                                        <span>Anular venta</span>
+                                    </button>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
 
     <!-- Paginación Estilo Bancario -->
     <div class="card mt-4">
-      <div class="card-body">
-        <div class="row align-items-center">
-          <!-- Información de resultados -->
-          <div class="col-md-4">
-            <div class="d-flex align-items-center gap-3">
-              <span class="text-muted small">
-                Mostrando <strong>{{ ventasFiltradas.length }}</strong> de
-                <strong>{{ paginacion.totalItems }}</strong> registros
-              </span>
+        <div class="card-body">
+            <div class="row align-items-center">
+                <!-- Información de resultados -->
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="text-muted small">
+                            Mostrando <strong>{{ ventasFiltradas.length }}</strong> de
+                            <strong>{{ paginacion.totalItems }}</strong> registros
+                        </span>
 
-              <div class="vr"></div>
+                        <div class="vr"></div>
 
-              <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="paginacion.itemsPorPagina"
-                (change)="cambiarItemsPorPagina()">
-                <option *ngFor="let opcion of paginacion.itemsPorPaginaOpciones" [value]="opcion">
-                  {{ opcion }} por página
-                </option>
-              </select>
+                        <select class="form-select form-select-sm" style="width: auto;"
+                            [(ngModel)]="paginacion.itemsPorPagina" (change)="cambiarItemsPorPagina()">
+                            <option *ngFor="let opcion of paginacion.itemsPorPaginaOpciones" [value]="opcion">
+                                {{ opcion }} por página
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Controles de paginación centrados -->
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-center align-items-center gap-1">
+                        <!-- Navegación rápida -->
+                        <button class="btn btn-sm btn-outline-secondary" (click)="primeraPagina()"
+                            [disabled]="paginacion.paginaActual === 1" title="Primera página">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </button>
+
+                        <button class="btn btn-sm btn-outline-secondary" (click)="paginaAnterior()"
+                            [disabled]="paginacion.paginaActual === 1" title="Página anterior">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+
+                        <!-- Números de página -->
+                        <div class="btn-group mx-2" role="group">
+                            <button *ngFor="let pagina of paginacion.rangoPaginas" class="btn btn-sm"
+                                [class.btn-primary]="pagina === paginacion.paginaActual"
+                                [class.btn-outline-secondary]="pagina !== paginacion.paginaActual && pagina !== -1"
+                                [class.btn-light]="pagina === -1"
+                                (click)="pagina !== -1 && irAPagina(pagina)" [disabled]="pagina === -1">
+                                {{ pagina === -1 ? '...' : pagina }}
+                            </button>
+                        </div>
+
+                        <button class="btn btn-sm btn-outline-secondary" (click)="paginaSiguiente()"
+                            [disabled]="paginacion.paginaActual === paginacion.totalPaginas" title="Página siguiente">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+
+                        <button class="btn btn-sm btn-outline-secondary" (click)="ultimaPagina()"
+                            [disabled]="paginacion.paginaActual === paginacion.totalPaginas" title="Última página">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Información de página -->
+                <div class="col-md-4 text-end">
+                    <div class="d-flex align-items-center justify-content-end gap-3">
+                        <span class="text-muted small">
+                            Página <strong>{{ paginacion.paginaActual }}</strong> de
+                            <strong>{{ paginacion.totalPaginas }}</strong>
+                        </span>
+
+                        <div class="vr"></div>
+
+                        <!-- Salto rápido a página -->
+                        <div class="input-group input-group-sm" style="width: 120px;">
+                            <input type="number" class="form-control" #paginaInput [min]="1"
+                                [max]="paginacion.totalPaginas" placeholder="Ir a...">
+                            <button class="btn btn-outline-secondary" type="button"
+                                (click)="irAPagina(paginaInput.valueAsNumber)"
+                                [disabled]="!paginaInput.value || paginaInput.valueAsNumber < 1 || paginaInput.valueAsNumber > paginacion.totalPaginas">
+                                <i class="bi bi-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-
-          <!-- Controles de paginación centrados -->
-          <div class="col-md-4">
-            <div class="d-flex justify-content-center align-items-center gap-1">
-              <!-- Navegación rápida -->
-              <button class="btn btn-sm btn-outline-secondary" (click)="primeraPagina()"
-                [disabled]="paginacion.paginaActual === 1" title="Primera página">
-                <i class="bi bi-chevron-double-left"></i>
-              </button>
-
-              <button class="btn btn-sm btn-outline-secondary" (click)="paginaAnterior()"
-                [disabled]="paginacion.paginaActual === 1" title="Página anterior">
-                <i class="bi bi-chevron-left"></i>
-              </button>
-
-              <!-- Números de página -->
-              <div class="btn-group mx-2" role="group">
-                <button *ngFor="let pagina of paginacion.rangoPaginas" class="btn btn-sm"
-                  [class.btn-primary]="pagina === paginacion.paginaActual"
-                  [class.btn-outline-secondary]="pagina !== paginacion.paginaActual && pagina !== -1"
-                  [class.btn-light]="pagina === -1" (click)="pagina !== -1 && irAPagina(pagina)"
-                  [disabled]="pagina === -1">
-                  {{ pagina === -1 ? '...' : pagina }}
-                </button>
-              </div>
-
-              <button class="btn btn-sm btn-outline-secondary" (click)="paginaSiguiente()"
-                [disabled]="paginacion.paginaActual === paginacion.totalPaginas" title="Página siguiente">
-                <i class="bi bi-chevron-right"></i>
-              </button>
-
-              <button class="btn btn-sm btn-outline-secondary" (click)="ultimaPagina()"
-                [disabled]="paginacion.paginaActual === paginacion.totalPaginas" title="Última página">
-                <i class="bi bi-chevron-double-right"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Información de página -->
-          <div class="col-md-4 text-end">
-            <div class="d-flex align-items-center justify-content-end gap-3">
-              <span class="text-muted small">
-                Página <strong>{{ paginacion.paginaActual }}</strong> de
-                <strong>{{ paginacion.totalPaginas }}</strong>
-              </span>
-
-              <div class="vr"></div>
-
-              <!-- Salto rápido a página -->
-              <div class="input-group input-group-sm" style="width: 120px;">
-                <input type="number" class="form-control" #paginaInput [min]="1" [max]="paginacion.totalPaginas"
-                  placeholder="Ir a...">
-                <button class="btn btn-outline-secondary" type="button" (click)="irAPagina(paginaInput.valueAsNumber)"
-                  [disabled]="!paginaInput.value || paginaInput.valueAsNumber < 1 || paginaInput.valueAsNumber > paginacion.totalPaginas">
-                  <i class="bi bi-arrow-right"></i>
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
     </div>
 
     <!-- Paginación Móvil (solo se muestra en pantallas pequeñas) -->
     <div class="d-lg-none mt-3">
-      <div class="card">
-        <div class="card-body py-2">
-          <div class="row align-items-center">
-            <div class="col-4">
-              <button
-                class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
-                (click)="paginaAnterior()" [disabled]="paginacion.paginaActual === 1">
-                <i class="bi bi-chevron-left"></i>
-                <span>Ant</span>
-              </button>
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="row align-items-center">
+                    <div class="col-4">
+                        <button
+                            class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
+                            (click)="paginaAnterior()" [disabled]="paginacion.paginaActual === 1">
+                            <i class="bi bi-chevron-left"></i>
+                            <span>Ant</span>
+                        </button>
+                    </div>
+                    <div class="col-4 text-center">
+                        <span class="text-muted small">
+                            {{ paginacion.paginaActual }}/{{ paginacion.totalPaginas }}
+                        </span>
+                    </div>
+                    <div class="col-4">
+                        <button
+                            class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
+                            (click)="paginaSiguiente()"
+                            [disabled]="paginacion.paginaActual === paginacion.totalPaginas">
+                            <span>Sig</span>
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="col-4 text-center">
-              <span class="text-muted small">
-                {{ paginacion.paginaActual }}/{{ paginacion.totalPaginas }}
-              </span>
-            </div>
-            <div class="col-4">
-              <button
-                class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
-                (click)="paginaSiguiente()" [disabled]="paginacion.paginaActual === paginacion.totalPaginas">
-                <span>Sig</span>
-                <i class="bi bi-chevron-right"></i>
-              </button>
-            </div>
-          </div>
         </div>
-      </div>
     </div>
   </div>
 </div>

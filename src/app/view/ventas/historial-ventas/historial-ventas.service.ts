@@ -104,11 +104,30 @@ export class HistorialVentaService {
       .set('pagina', pagina.toString())
       .set('itemsPorPagina', itemsPorPagina.toString());
 
+    // IMPORTANTE: No filtrar, enviar TODOS los parámetros que vienen
     Object.keys(filtros).forEach(key => {
-      if (filtros[key] !== null && filtros[key] !== undefined && filtros[key] !== '') {
-        params = params.set(key, filtros[key].toString());
+      const valor = filtros[key];
+
+      // Enviar todos los valores que no sean null/undefined
+      if (valor !== null && valor !== undefined) {
+        // Para búsqueda general, enviar el texto original
+        if (key === 'busquedaGeneral') {
+          params = params.set('busquedaGeneral', valor.toString());
+        }
+        // Para campos numéricos, enviar siempre
+        else if (['busquedaNumerica', 'ultimosDigitos', 'tipoBusqueda', 'valorNormalizado'].includes(key)) {
+          if (valor && valor.toString().trim() !== '') {
+            params = params.set(key, valor.toString());
+          }
+        }
+        // Para otros filtros normales
+        else if (valor.toString().trim() !== '') {
+          params = params.set(key, valor.toString());
+        }
       }
     });
+
+    console.log('🔍 Parámetros enviados al backend:', params.toString());
 
     return this.http.get(`${this.apiUrl}/ventas-get`, { params });
   }

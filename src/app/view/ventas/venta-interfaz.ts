@@ -219,3 +219,18 @@ export interface ResumenFiltros {
     asesor: string;
     formaPago: string;
 }
+
+export interface FiltrosVentas {
+    busquedaGeneral: string;
+    estado: string;
+    formaPago: string;
+    asesor: string;
+    especialista: string;
+    fechaDesde: any;
+    fechaHasta: any;
+    tipoVenta: string;
+    busquedaNumerica?: string;
+    ultimosDigitos?: string;
+    tipoBusqueda?: string;
+    valorNormalizado?: string;
+}
