@@ -4245,6 +4245,10 @@ textarea.form-control-compact {
         &.pendiente {
             background: linear-gradient(135deg, #f59e0b, #d97706);
         }
+
+         &.optometrista {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
     }
 
     .mini-label {
@@ -9909,4 +9913,23 @@ form {
             grid-template-columns: 1fr;
         }
     }
+}
+
+.historia-note {
+    grid-column: 1 / -1;
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-left: 3px solid #2c5aa0;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #495057;
+}
+
+.historia-note i {
+    color: #2c5aa0;
+    font-size: 14px;
 }

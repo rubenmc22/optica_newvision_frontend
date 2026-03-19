@@ -458,9 +458,20 @@ export class HistoriasMedicasComponent implements OnInit {
       datosConsulta: {
         motivo: [],
         otroMotivo: '',
-        medico: { cedula: '', nombre: '', cargo: '' },
+        especialista: {
+          tipo: 'EXTERNO', // Valor por defecto, se actualizará al guardar
+          externo: {
+            nombre: '',
+            lugarConsultorio: ''
+          }
+        },
+        formulaExterna: false,
+        pagoPendiente: false,
         nombre_asesor: '',
         cedula_asesor: '',
+        tipoCristalActual: '',
+        tipoLentesContacto: '',
+        fechaUltimaGraduacion: ''
       },
 
       antecedentes: {
@@ -500,12 +511,10 @@ export class HistoriasMedicasComponent implements OnInit {
           avsc_cerca_od: '',
           avae_od: '',
           otros_od: '',
-
           avsc_lejos_oi: '',
           avsc_cerca_oi: '',
           avae_oi: '',
           otros_oi: ''
-
         }
       },
 
@@ -542,14 +551,43 @@ export class HistoriasMedicasComponent implements OnInit {
     this.pacienteParaNuevaHistoria = paciente!;
     this.pacienteSeleccionado = paciente!;
 
-    const cargarYPrecargar = () => {
+    // Determinar el médico a seleccionar basado en la nueva estructura
+    let medicoParaSeleccionar = null;
+    let esFormulaExterna = dc.formulaExterna || false;
+    let medicoReferido = '';
+    let lugarConsultorio = '';
 
+    if (dc.especialista) {
+      if (dc.especialista.tipo === 'EXTERNO' && dc.especialista.externo) {
+        // Médico externo
+        medicoParaSeleccionar = this.medicoTratante.find(m => m.id === 'EXTERNO');
+        medicoReferido = dc.especialista.externo.nombre || '';
+        lugarConsultorio = dc.especialista.externo.lugarConsultorio || '';
+      } else if (dc.especialista.tipo !== 'EXTERNO') {
+        // Médico interno
+        medicoParaSeleccionar = this.medicoTratante.find(m =>
+          m.cedula === dc.especialista.cedula
+        );
+
+        // Si hay fórmula original, esos son los datos del médico externo referido
+        if (dc.formulaOriginal?.medicoOrigen) {
+          const origen = dc.formulaOriginal.medicoOrigen;
+          medicoReferido = origen.nombre || '';
+          lugarConsultorio = origen.lugarConsultorio || '';
+          esFormulaExterna = true;
+        }
+      }
+    }
+
+    const cargarYPrecargar = () => {
       this.historiaForm.patchValue({
         paciente: paciente,
         motivo: Array.isArray(dc.motivo) ? dc.motivo : [dc.motivo],
         otroMotivo: dc.otroMotivo,
-        medico: dc.medico ?? null,
-        esFormulaExterna: h.datosConsulta?.formulaExterna || false,
+        medico: medicoParaSeleccionar,
+        esFormulaExterna: esFormulaExterna,
+        medicoReferido: medicoReferido,
+        lugarConsultorio: lugarConsultorio,
         tipoCristalActual: dc.tipoCristalActual,
         tipoLentesContacto: dc.tipoLentesContacto || '',
         ultimaGraduacion: dc.fechaUltimaGraduacion,
@@ -605,7 +643,6 @@ export class HistoriasMedicasComponent implements OnInit {
         avsc_cerca_od: eo.avsc_avae_otros.avsc_cerca_od,
         avae_od: eo.avsc_avae_otros.avae_od,
         otros_od: eo.avsc_avae_otros.otros_od,
-
         avsc_lejos_oi: eo.avsc_avae_otros.avsc_lejos_oi,
         avsc_cerca_oi: eo.avsc_avae_otros.avsc_cerca_oi,
         avae_oi: eo.avsc_avae_otros.avae_oi,
@@ -644,14 +681,15 @@ export class HistoriasMedicasComponent implements OnInit {
 
       this.formOriginalHistoria = this.historiaForm.value;
     }
-    //Solo carga empleados si no están disponibles
+
+    // Solo carga empleados si no están disponibles
     if (!this.medicoTratante || this.medicoTratante.length === 0) {
       this.loadEmployees(cargarYPrecargar);
     } else {
       cargarYPrecargar();
     }
-    this.cdr.detectChanges();
 
+    this.cdr.detectChanges();
   }
 
   private prepararNuevaHistoria(): void {
@@ -751,15 +789,51 @@ export class HistoriasMedicasComponent implements OnInit {
 
   private updateHistoria(): void {
     if (!this.historiaSeleccionada) return;
+
     this.cargando = true;
     const f = this.historiaForm.value;
+    const medicoSeleccionado = f.medico;
+    const esFormulaExterna = f.esFormulaExterna || false;
+    const esMedicoExterno = medicoSeleccionado?.id === 'EXTERNO';
 
-    const esOftalmologo = f.medico &&
-      f.medico.id !== 'EXTERNO' &&
-      (f.medico.cargoId?.toLowerCase() === 'oftalmologo' ||
-        f.medico.cargo?.toLowerCase() === 'oftalmologo');
+    // Construir objeto especialista
+    let especialista: any = {};
 
-    const historiaActualizada: HistoriaMedica = {
+    if (esMedicoExterno) {
+      especialista = {
+        tipo: 'EXTERNO',
+        externo: {
+          nombre: f.medicoReferido || '',
+          lugarConsultorio: f.lugarConsultorio || '',
+        }
+      };
+    } else if (medicoSeleccionado) {
+      const esOftalmologo = medicoSeleccionado.cargoId?.toLowerCase() === 'oftalmologo' ||
+        medicoSeleccionado.cargo?.toLowerCase() === 'oftalmologo';
+
+      especialista = {
+        tipo: esOftalmologo ? 'OFTALMOLOGO' : 'OPTOMETRISTA',
+        cedula: medicoSeleccionado.cedula,
+        // nombre: medicoSeleccionado.nombre,
+        // cargo: medicoSeleccionado.cargoNombre || medicoSeleccionado.cargo
+      };
+    }
+
+    // Construir fórmula original (mantener la existente o crear nueva si es rectificación)
+    let formulaOriginal = this.historiaSeleccionada.datosConsulta?.formulaOriginal || null;
+
+    if (esFormulaExterna && !esMedicoExterno && f.medicoReferido && !formulaOriginal) {
+      // Nueva rectificación (antes no había fórmula original)
+      formulaOriginal = {
+        medicoOrigen: {
+          tipo: 'EXTERNO',
+          nombre: f.medicoReferido || '',
+          lugarConsultorio: f.lugarConsultorio || '',
+        }
+      };
+    }
+
+    const historiaActualizada: any = {
       ...this.historiaSeleccionada,
       datosConsulta: {
         motivo: Array.isArray(f.motivo) ? f.motivo : [f.motivo],
@@ -767,76 +841,14 @@ export class HistoriasMedicasComponent implements OnInit {
         tipoCristalActual: f.tipoCristalActual || '',
         tipoLentesContacto: f.tipoLentesContacto || '',
         fechaUltimaGraduacion: this.formatearFechaParaBackend(f.ultimaGraduacion),
-        medico: typeof f.medico === 'object' && f.medico?.cedula
-          ? f.medico.cedula
-          : typeof f.medico === 'string'
-            ? f.medico
-            : '',
-        medicoReferido: f.medicoReferido || '',
-        lugarConsultorio: f.lugarConsultorio || '',
-        formulaExterna: f.esFormulaExterna || false,
-        pagoPendiente: esOftalmologo ? true : false
-      },
-      examenOcular: {
-        lensometria: {
-          esf_od: f.len_esf_od,
-          cil_od: f.len_cil_od,
-          eje_od: f.len_eje_od,
-          add_od: f.len_add_od,
-          av_lejos_od: f.len_av_lejos_od,
-          av_cerca_od: f.len_av_cerca_od,
-          av_lejos_bi: f.len_av_lejos_bi,
-          esf_oi: f.len_esf_oi,
-          cil_oi: f.len_cil_oi,
-          eje_oi: f.len_eje_oi,
-          add_oi: f.len_add_oi,
-          av_lejos_oi: f.len_av_lejos_oi,
-          av_cerca_oi: f.len_av_cerca_oi,
-          av_cerca_bi: f.len_av_cerca_bi
-        },
-        refraccion: {
-          esf_od: f.ref_esf_od,
-          cil_od: f.ref_cil_od,
-          eje_od: f.ref_eje_od,
-          add_od: f.ref_add_od,
-          avccl_od: f.ref_avccl_od,
-          avccc_od: f.ref_avccc_od,
-          avccl_bi: f.ref_avccl_bi,
-          avccc_bi: f.ref_avccc_bi,
-          esf_oi: f.ref_esf_oi,
-          cil_oi: f.ref_cil_oi,
-          eje_oi: f.ref_eje_oi,
-          add_oi: f.ref_add_oi,
-          avccl_oi: f.ref_avccl_oi,
-          avccc_oi: f.ref_avccc_oi
-        },
-        refraccionFinal: {
-          esf_od: f.ref_final_esf_od,
-          cil_od: f.ref_final_cil_od,
-          eje_od: f.ref_final_eje_od,
-          add_od: f.ref_final_add_od,
-          alt_od: f.ref_final_alt_od,
-          dp_od: f.ref_final_dp_od,
-          esf_oi: f.ref_final_esf_oi,
-          cil_oi: f.ref_final_cil_oi,
-          eje_oi: f.ref_final_eje_oi,
-          add_oi: f.ref_final_add_oi,
-          alt_oi: f.ref_final_alt_oi,
-          dp_oi: f.ref_final_dp_oi
-        },
-        avsc_avae_otros: {
-          avsc_lejos_od: f.avsc_lejos_od || '',
-          avsc_cerca_od: f.avsc_cerca_od || '',
-          avae_od: f.avae_od || '',
-          otros_od: f.otros_od || '',
 
-          // AVSC Lejos y Cerca para OI
-          avsc_lejos_oi: f.avsc_lejos_oi || '',
-          avsc_cerca_oi: f.avsc_cerca_oi || '',
-          avae_oi: f.avae_oi || '',
-          otros_oi: f.otros_oi || ''
-        }
+        // Nueva estructura
+        especialista: especialista,
+        formulaOriginal: formulaOriginal,
+        formulaExterna: esFormulaExterna,
+        pagoPendiente: this.determinarPagoPendiente(medicoSeleccionado, esFormulaExterna, esMedicoExterno)
       },
+      examenOcular: this.mapExamenOcular(),
       diagnosticoTratamiento: {
         diagnostico: f.diagnostico || '',
         tratamiento: f.tratamiento || ''
@@ -847,30 +859,19 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     };
 
-    // console.log('Payload enviado:', historiaActualizada);
-
     this.historiaService.updateHistoria(this.historiaSeleccionada.nHistoria, historiaActualizada).subscribe({
       next: (res: any) => {
         const historia = res.historial_medico;
 
-        const historiaAdaptada = {
-          ...historia,
-          datosConsulta: {
-            ...historia.datosConsulta,
-            medico: this.medicoSeleccionado?.cedula
-          }
-        };
+        const index = this.historial.findIndex(h => h.id === historia.id);
+        if (index !== -1) this.historial[index] = historia;
 
-        const index = this.historial.findIndex(h => h.id === historiaAdaptada.id);
-        if (index !== -1) this.historial[index] = historiaAdaptada;
-
-        this.historiaSeleccionada = historiaAdaptada;
+        this.historiaSeleccionada = historia;
         this.swalService.showSuccess('¡Historia Actualizada!', 'Cambios guardados correctamente');
         $('#historiaModal').modal('hide');
         this.refrescarHistoriaSeleccionada();
         this.cargando = false;
       },
-
       error: (err) => {
         this.cargando = false;
 
@@ -910,11 +911,49 @@ export class HistoriasMedicasComponent implements OnInit {
     }
 
     const formValue = this.historiaForm.value;
+    const medicoSeleccionado = formValue.medico;
+    const esFormulaExterna = formValue.esFormulaExterna || false;
 
-    const esOftalmologo = formValue.medico &&
-      formValue.medico.id !== 'EXTERNO' &&
-      (formValue.medico.cargoId?.toLowerCase() === 'oftalmologo' ||
-        formValue.medico.cargo?.toLowerCase() === 'oftalmologo');
+    // Determinar si el médico seleccionado es externo
+    const esMedicoExterno = medicoSeleccionado?.id === 'EXTERNO';
+
+    // Construir objeto especialista
+    let especialista: any = {};
+
+    if (esMedicoExterno) {
+      // Caso: Médico externo
+      especialista = {
+        tipo: 'EXTERNO',
+        externo: {
+          nombre: formValue.medicoReferido || '',
+          lugarConsultorio: formValue.lugarConsultorio || '',
+        }
+      };
+    } else if (medicoSeleccionado) {
+      // Caso: Médico interno (Oftalmólogo u Optometrista)
+      const esOftalmologo = medicoSeleccionado.cargoId?.toLowerCase() === 'oftalmologo' ||
+        medicoSeleccionado.cargo?.toLowerCase() === 'oftalmologo';
+
+      especialista = {
+        tipo: esOftalmologo ? 'OFTALMOLOGO' : 'OPTOMETRISTA',
+        cedula: medicoSeleccionado.cedula,
+        //  nombre: medicoSeleccionado.nombre,
+        // cargo: medicoSeleccionado.cargoNombre || medicoSeleccionado.cargo
+      };
+    }
+
+    // Construir fórmula original (solo si es externa y hay médico interno)
+    let formulaOriginal = null;
+    if (esFormulaExterna && !esMedicoExterno && formValue.medicoReferido) {
+      // Es rectificación de fórmula externa
+      formulaOriginal = {
+        medicoOrigen: {
+          tipo: 'EXTERNO',
+          nombre: formValue.medicoReferido || '',
+          lugarConsultorio: formValue.lugarConsultorio || '',
+        }
+      };
+    }
 
     const historia: any = {
       pacienteId: this.pacienteParaNuevaHistoria.key,
@@ -924,13 +963,13 @@ export class HistoriasMedicasComponent implements OnInit {
         tipoCristalActual: formValue.tipoCristalActual,
         tipoLentesContacto: formValue.tipoLentesContacto || '',
         fechaUltimaGraduacion: formValue.ultimaGraduacion,
-        medico: formValue.medico?.cedula,
-        medicoReferido: formValue.medicoReferido || '',
-        lugarConsultorio: formValue.lugarConsultorio || '',
-        formulaExterna: formValue.esFormulaExterna || false,
-        pagoPendiente: esOftalmologo ? true : false
-      },
 
+        // NUEVA ESTRUCTURA
+        especialista: especialista,
+        formulaOriginal: formulaOriginal,
+        formulaExterna: esFormulaExterna,
+        pagoPendiente: this.determinarPagoPendiente(medicoSeleccionado, esFormulaExterna, esMedicoExterno)
+      },
       examenOcular: this.mapExamenOcular(),
       diagnosticoTratamiento: {
         diagnostico: formValue.diagnostico || '',
@@ -960,6 +999,9 @@ export class HistoriasMedicasComponent implements OnInit {
 
         this.pacienteSeleccionado = paciente;
 
+        // ACTUALIZAR sedePacienteSeleccionado AQUÍ
+        this.sedePacienteSeleccionado = this.obtenerSedeDesdePaciente(paciente);
+
         // Recargar y seleccionar directamente la recién creada
         this.cargarHistoriasMedicas(
           paciente.key,
@@ -972,6 +1014,7 @@ export class HistoriasMedicasComponent implements OnInit {
               this.historiaSeleccionada = this.historial[0];
             }
 
+            // FORZAR DETECCIÓN DE CAMBIOS
             this.cdr.detectChanges();
           },
           historiaCreada.id
@@ -1165,7 +1208,10 @@ export class HistoriasMedicasComponent implements OnInit {
 
     this.pacienteSeleccionado = paciente;
     this.sedePacienteSeleccionado = this.obtenerSedeDesdePaciente(paciente);
-    this.cargarHistoriasMedicas(paciente.key); // espera a que se cargue
+
+    this.cargarHistoriasMedicas(paciente.key, () => {
+      this.cdr.detectChanges();
+    });
   }
 
   selesccionarPacientePorId(id: string | null): void {
@@ -1791,6 +1837,8 @@ export class HistoriasMedicasComponent implements OnInit {
       s.key?.toLowerCase() === sedeKey?.toLowerCase()
     );
 
+    console.log('sede', sede);
+
     if (sede) {
       // Usar los datos reales de la sede
       const direccion = sede.direccion_fiscal || 'Dirección no especificada';
@@ -1883,6 +1931,23 @@ export class HistoriasMedicasComponent implements OnInit {
   private generarContenidoImpresion(): string {
     const fechaActual = new Date().toLocaleDateString('es-ES');
     const horaActual = new Date().toLocaleTimeString('es-ES');
+
+    // Obtener información del especialista según el tipo
+    const especialista = this.historiaSeleccionada?.datosConsulta?.especialista;
+    let nombreEspecialista = 'No disponible';
+    let cedulaEspecialista = 'No disponible';
+    let cargoEspecialista = 'No disponible';
+
+    if (especialista) {
+      if (especialista.tipo === 'EXTERNO' && especialista.externo) {
+        nombreEspecialista = especialista.externo.nombre || 'No disponible';
+        cedulaEspecialista = 'EXTERNO';
+      } else if (especialista.tipo !== 'EXTERNO') {
+        nombreEspecialista = especialista.nombre || 'No disponible';
+        cedulaEspecialista = especialista.cedula || 'No disponible';
+        cargoEspecialista = especialista.cargo || especialista.tipo || 'No disponible';
+      }
+    }
 
     return `
     <div class="print-container">
@@ -2071,9 +2136,9 @@ export class HistoriasMedicasComponent implements OnInit {
             <div class="firma-label-print">Firma del Especialista</div>
             <div class="firma-space-print"></div>
             <div class="firma-info-print">
-              <div>${this.historiaSeleccionada?.datosConsulta?.medico?.nombre || 'No disponible'}</div>
-              <div>C.I: ${this.historiaSeleccionada?.datosConsulta?.medico?.cedula || 'No disponible'}</div>
-              <div>${this.historiaSeleccionada?.datosConsulta?.medico?.cargo || 'No disponible'}</div>
+              <div>${nombreEspecialista}</div>
+              <div>C.I: ${cedulaEspecialista}</div>
+              <div>${cargoEspecialista}</div>
             </div>
           </div>
         </div>
@@ -3599,17 +3664,6 @@ export class HistoriasMedicasComponent implements OnInit {
     return tiposConMedidas.some(tipo => valorUpper.includes(tipo));
   }
 
-  private obtenerTipoEspecialista(): 'oftalmologo' | 'optometrista' {
-    // Usar la propiedad 'cargo' que existe en la interfaz
-    const cargo = this.medicoSeleccionado.cargoId?.toLowerCase() || '';
-
-    if (cargo.includes('oftalmologo')) {
-      return 'oftalmologo';
-    }
-
-    return 'optometrista';
-  }
-
   getTipoCristalActualConModelo(): string {
     const tipoCristal = this.historiaSeleccionada?.datosConsulta?.tipoCristalActual;
     const modeloContacto = this.historiaSeleccionada?.datosConsulta?.tipoLentesContacto;
@@ -3731,6 +3785,80 @@ export class HistoriasMedicasComponent implements OnInit {
     };
 
     return [...medicos, medicoExterno];
+  }
+
+  private determinarPagoPendiente(medico: any, esFormulaExterna: boolean, esMedicoExterno: boolean): boolean {
+    // Si es fórmula externa pura (solo registro, sin consulta)
+    if (esFormulaExterna && esMedicoExterno) {
+      return false; // No genera pago
+    }
+
+    // Si es rectificación de fórmula externa por especialista interno
+    if (esFormulaExterna && !esMedicoExterno && medico) {
+      const esOftalmologo = medico.cargoId?.toLowerCase() === 'oftalmologo' ||
+        medico.cargo?.toLowerCase() === 'oftalmologo';
+      return esOftalmologo; // Solo paga si lo rectifica oftalmólogo
+    }
+
+    // Consulta interna sin fórmula externa
+    if (medico && !esMedicoExterno) {
+      const esOftalmologo = medico.cargoId?.toLowerCase() === 'oftalmologo' ||
+        medico.cargo?.toLowerCase() === 'oftalmologo';
+      return esOftalmologo; // Oftalmólogo paga, optometrista no
+    }
+
+    return false;
+  }
+
+  // Métodos para obtener información del especialista
+  obtenerNombreEspecialista(historia: any): string {
+    if (!historia?.datosConsulta?.especialista) return 'No disponible';
+
+    const esp = historia.datosConsulta.especialista;
+    if (esp.tipo === 'EXTERNO' && esp.externo) {
+      return esp.externo.nombre || 'Médico Externo';
+    } else if (esp.tipo !== 'EXTERNO') {
+      return esp.nombre || 'No disponible';
+    }
+    return 'No disponible';
+  }
+
+  obtenerCedulaEspecialista(historia: any): string {
+    if (!historia?.datosConsulta?.especialista) return 'No disponible';
+
+    const esp = historia.datosConsulta.especialista;
+    if (esp.tipo === 'EXTERNO') {
+      return 'EXTERNO';
+    } else if (esp.tipo !== 'EXTERNO') {
+      return esp.cedula || 'No disponible';
+    }
+    return 'No disponible';
+  }
+
+  obtenerCargoEspecialista(historia: any): string {
+    if (!historia?.datosConsulta?.especialista) return 'No disponible';
+
+    const esp = historia.datosConsulta.especialista;
+    if (esp.tipo === 'EXTERNO') {
+      return esp.externo?.lugarConsultorio || 'Médico Externo';
+    } else if (esp.tipo !== 'EXTERNO') {
+      return esp.cargo || esp.tipo || 'No disponible';
+    }
+    return 'No disponible';
+  }
+
+  // Método específico para el listado de historias
+  obtenerNombreMedicoEspecialista(historia: any): string {
+    if (!historia?.datosConsulta?.especialista) return 'Médico no registrado';
+
+    const esp = historia.datosConsulta.especialista;
+    if (esp.tipo === 'EXTERNO' && esp.externo) {
+      return `🔷 ${esp.externo.nombre || 'Externo'}`;
+    } else if (esp.tipo !== 'EXTERNO') {
+      const cargo = esp.cargo || esp.tipo || '';
+      return `${esp.nombre || 'Médico'} (${cargo})`;
+    }
+    return 'Médico no registrado';
   }
 
 }

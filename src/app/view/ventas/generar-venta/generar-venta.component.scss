@@ -1048,7 +1048,7 @@
     border: 1px solid #e2e8f0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
     transition: all 0.2s ease;
-    margin-bottom: 25px;
+    margin-bottom: 0px;
 
     &:hover {
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
@@ -1725,6 +1725,11 @@
 .status-badge.pagado {
     background: #d4edda;
     color: #155724;
+}
+
+.status-badge.optometrista {
+    background: #d4edda;
+    color: #626463;
 }
 
 
@@ -6665,6 +6670,10 @@
 
 .text-optometrista {
     color: #9f7aea;
+}
+
+.text-externo {
+    color: #6c757d;
 }
 
 .desglose-mini {

@@ -146,13 +146,31 @@
         "otroMotivo": "",
         "tipoCristalActual": "LENTES_CONTACTO",
         "fechaUltimaGraduacion": "2026-02-09",
-        "medico": {
+        // Información del especialista que realiza la consulta (siempre presente)
+        "especialista": {
+            "tipo": "OFTALMOLOGO" | "OPTOMETRISTA" | "EXTERNO",
+            // Si es interno (OFTALMOLOGO u OPTOMETRISTA)
+            "id": 5,
             "cedula": "8759927",
             "nombre": "Gerardo Martinez",
-            "cargo": "Oftalmólogo"
+            "cargo": "Oftalmólogo",
+            // Si es externo (tipo: "EXTERNO")
+            "externo": {
+                "nombre": "Dr. Carlos Rodríguez",
+                "lugarConsultorio": "Clínica Avila",
+            }
         },
-        "formulaExterna": false, //nuevo
-        "pagoPendiente": true //nuevo
+        // Información de la fórmula original (solo si formulaExterna = true)
+        "formulaOriginal": {
+            "medicoOrigen": {
+                "tipo": "EXTERNO", // Siempre EXTERNO para la fórmula original
+                "nombre": "Dr. Juan Perez",
+                "lugarConsultorio": "Centro Médico Caracas",
+            }
+        },
+        // Flags importantes
+        "formulaExterna": true, // Indica si la fórmula viene de fuera
+        "pagoPendiente": true
     },
     "examenOcular": {
         "lensometria": {
@@ -192,14 +210,14 @@
             "cil_od": "-0.50",
             "eje_od": 3,
             "add_od": "+1.25",
-            "alt_od": "02",
-            "dp_od": "21",
+            "alt_od": "2",
+            "dp_od": "2",
             "esf_oi": "+0.50",
-            "cil_oi": "-0.25",
+            "cil_oi": "-0.50",
             "eje_oi": 3,
             "add_oi": "+1.25",
-            "alt_oi": "12",
-            "dp_oi": "21"
+            "alt_oi": "2",
+            "dp_oi": "2"
         },
         "avsc_avae_otros": {
             "avsc_lejos_od": "",
@@ -218,26 +236,25 @@
     },
     "recomendaciones": [
         {
-            "cristal": "Progresivo convencional",
+            "cristal": "Bifocal",
             "material": [
                 "HI_INDEX_156"
             ],
             "montura": "test",
-            "cristalSugerido": "",
             "observaciones": "test",
             "tipoLentesContacto": "",
-            "medidaHorizontal": 2,
-            "medidaVertical": 1,
-            "medidaDiagonal": 2,
-            "medidaPuente": 3
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
         }
     ],
     "conformidad": {
         "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
     },
     "auditoria": {
-        "fechaCreacion": "2026-02-20T16:43:21.000Z",
-        "fechaActualizacion": "2026-02-20T16:43:21.000Z",
+        "fechaCreacion": "2026-03-19T00:33:48.000Z",
+        "fechaActualizacion": "2026-03-19T00:33:48.000Z",
         "creadoPor": {
             "cedula": "24367965",
             "nombre": "Ruben Dario Martinez Castro",
@@ -439,7 +456,6 @@
         }
     ]
 }
-
 //crear venta - solo consulta 
 {
     "tipoCliente": "cliente_paciente",
@@ -599,7 +615,6 @@
         "montoOriginal": 60
     }
 }
-
 //Crear venta - de contado
 {
     "tipoVenta": "consulta_productos",
@@ -674,7 +689,6 @@
         "montoOriginal": 60
     }
 }
-
 //Crear venta - cashea
 {
     "tipoVenta": "consulta_productos",
@@ -779,7 +793,6 @@
         "montoOriginal": 60
     }
 }
-
 //Crear venta - abono
 {
     "tipoVenta": "consulta_productos",
@@ -855,7 +868,6 @@
         "montoOriginal": 60
     }
 }
-
 //Crear venta - de contado pendiente por pago
 {
     "tipoVenta": "consulta_productos",
@@ -924,7 +936,6 @@
         "montoOriginal": 60
     }
 }
-
 //PENDIENTES
 - Ajustar el api de "crear venta" de acuerdo al tipo de venta
 - Los montos que se envian sobre las consultas, deben guardarse/actualizarse al generar la venta
@@ -936,9 +947,9 @@
 
 
 
-
+//tipo especialista - optometrista
 {
-    "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
+    "pacienteId": "28acbaf873ad2772e216895c44281940",
     "datosConsulta": {
         "motivo": [
             "Fatiga visual"
@@ -947,9 +958,216 @@
         "tipoCristalActual": "MONOFOCAL_DIGITAL",
         "tipoLentesContacto": "",
         "fechaUltimaGraduacion": null,
-        "medico": "8759927",
-        "medicoReferido": "Raul morales",
-        "lugarConsultorio": "Caracas",
+        "especialista": {
+            "tipo": "OPTOMETRISTA",
+            "cedula": "10092901"
+        },
+        "formulaOriginal": null,
+        "formulaExterna": false,
+        "pagoPendiente": false
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.50",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "2",
+            "dp_od": "2",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "2",
+            "dp_oi": "2"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "test",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "POLICARBONATO"
+            ],
+            "montura": "tesr",
+            "observaciones": "test",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}
+
+//tipo especialista - oftalmologo
+{
+    "pacienteId": "28acbaf873ad2772e216895c44281940",
+    "datosConsulta": {
+        "motivo": [
+            "Molestia ocular"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "MONOFOCAL",
+        "tipoLentesContacto": "",
+        "fechaUltimaGraduacion": "2026-03-01",
+        "especialista": {
+            "tipo": "OFTALMOLOGO",
+            "cedula": "8759927",
+        },
+        "formulaOriginal": null,
+        "formulaExterna": false,
+        "pagoPendiente": true
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.50",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "2",
+            "dp_od": "1",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "2",
+            "dp_oi": "2"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "tesr",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "POLICARBONATO"
+            ],
+            "montura": "test",
+            "observaciones": "test",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}
+
+//Tipo especialista - Medico externo
+{
+    "pacienteId": "28acbaf873ad2772e216895c44281940",
+    "datosConsulta": {
+        "motivo": [
+            "Fatiga visual"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "MONOFOCAL_DIGITAL",
+        "tipoLentesContacto": "",
+        "fechaUltimaGraduacion": null,
+        "especialista": {
+            "tipo": "EXTERNO",
+            "externo": {
+                "nombre": "carlos raul",
+                "lugarConsultorio": "caracas"
+            }
+        },
+        "formulaOriginal": null,
         "formulaExterna": true,
         "pagoPendiente": false
     },
@@ -991,13 +1209,13 @@
             "cil_od": "-0.50",
             "eje_od": 3,
             "add_od": "+1.25",
-            "alt_od": "1",
+            "alt_od": "2",
             "dp_od": "2",
             "esf_oi": "+0.50",
             "cil_oi": "-0.50",
             "eje_oi": 3,
             "add_oi": "+1.25",
-            "alt_oi": "1",
+            "alt_oi": "2",
             "dp_oi": "2"
         },
         "avsc_avae_otros": {
@@ -1012,8 +1230,8 @@
         }
     },
     "diagnosticoTratamiento": {
-        "diagnostico": "TEST",
-        "tratamiento": "TEST"
+        "diagnostico": "test",
+        "tratamiento": "test"
     },
     "recomendaciones": [
         {
@@ -1021,8 +1239,222 @@
             "material": [
                 "POLICARBONATO"
             ],
-            "montura": "",
-            "observaciones": "",
+            "montura": "tesr",
+            "observaciones": "test",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}
+
+//Tipo especialista - oftalmologo | rectificacion formula externa
+{
+    "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
+    "datosConsulta": {
+        "motivo": [
+            "Consulta rutinaria"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "BIFOCAL",
+        "tipoLentesContacto": "",
+        "fechaUltimaGraduacion": null,
+        "especialista": {
+            "tipo": "OFTALMOLOGO",
+            "cedula": "8759927"
+        },
+        "formulaOriginal": {
+            "medicoOrigen": {
+                "tipo": "EXTERNO",
+                "nombre": "carlos raul",
+                "lugarConsultorio": "caracas"
+            }
+        },
+        "formulaExterna": true,
+        "pagoPendiente": true
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.25",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "2",
+            "dp_od": "2",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "2",
+            "dp_oi": "2"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "test",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "POLICARBONATO"
+            ],
+            "montura": "testr",
+            "observaciones": "tsetas",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    }
+}
+
+//Tipo especialista - optometrista | rectificacion formula externa
+{
+    "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
+    "datosConsulta": {
+        "motivo": [
+            "Consulta rutinaria"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "BIFOCAL",
+        "tipoLentesContacto": "",
+        "fechaUltimaGraduacion": null,
+        "especialista": {
+            "tipo": "OPTOMETRISTA",
+            "cedula": "10092901"
+        },
+        "formulaOriginal": {
+            "medicoOrigen": {
+                "tipo": "EXTERNO",
+                "nombre": "carlos raul",
+                "lugarConsultorio": "caracas"
+            }
+        },
+        "formulaExterna": true,
+        "pagoPendiente": false
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.25",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "2",
+            "dp_od": "2",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "2",
+            "dp_oi": "2"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "test",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal visión sencilla",
+            "material": [
+                "POLICARBONATO"
+            ],
+            "montura": "testr",
+            "observaciones": "tsetas",
             "tipoLentesContacto": "",
             "medidaHorizontal": "",
             "medidaVertical": "",
@@ -1036,25 +1468,43 @@
 }
 
 
-
-
-
-
+//get
+getHistorial
 
 {
-    "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
+    "id": 61,
+    "nHistoria": "H-20260220-002",
+    "pacienteId": "28acbaf873ad2772e216895c44281940",
     "datosConsulta": {
         "motivo": [
-            "Consulta rutinaria"
+            "Molestia ocular"
         ],
         "otroMotivo": "",
-        "tipoCristalActual": null,
-        "tipoLentesContacto": "",
-        "fechaUltimaGraduacion": null,
-        "medico": "8759927",
-        "medicoReferido": "",
-        "lugarConsultorio": "",
-        "formulaExterna": false,
+        "tipoCristalActual": "LENTES_CONTACTO",
+        "fechaUltimaGraduacion": "2026-02-09",
+
+        "especialista": {
+            "tipo": "OFTALMOLOGO" | "OPTOMETRISTA" | "EXTERNO",
+            "cedula": "8759927",
+            "nombre": "Gerardo Martinez",
+            "cargo": "Oftalmólogo",
+
+            "externo": {
+                "nombre": "Dr. Carlos Rodríguez",
+                "lugarConsultorio": "Clínica Avila",
+            }
+        },
+        // Información de la fórmula original (solo si formulaExterna = true)
+        "formulaOriginal": {
+            "esExterna": true,
+            "medicoOrigen": {
+                "tipo": "EXTERNO", 
+                "nombre": "Dr. Juan Perez",
+                "lugarConsultorio": "Centro Médico Caracas",
+            }
+        },
+        // Flags importantes
+        "formulaExterna": true, // Indica si la fórmula viene de fuera
         "pagoPendiente": true
     },
     "examenOcular": {
@@ -1092,17 +1542,17 @@
         },
         "refraccionFinal": {
             "esf_od": "+0.50",
-            "cil_od": "-0.25",
+            "cil_od": "-0.50",
             "eje_od": 3,
             "add_od": "+1.25",
-            "alt_od": "3",
-            "dp_od": "3",
-            "esf_oi": "+0.25",
+            "alt_od": "2",
+            "dp_od": "2",
+            "esf_oi": "+0.50",
             "cil_oi": "-0.50",
             "eje_oi": 3,
             "add_oi": "+1.25",
-            "alt_oi": "3",
-            "dp_oi": "3"
+            "alt_oi": "2",
+            "dp_oi": "2"
         },
         "avsc_avae_otros": {
             "avsc_lejos_od": "",
@@ -1116,16 +1566,16 @@
         }
     },
     "diagnosticoTratamiento": {
-        "diagnostico": "rsasd",
-        "tratamiento": "asdasdasda"
+        "diagnostico": "test",
+        "tratamiento": "test"
     },
     "recomendaciones": [
         {
-            "cristal": "Monofocal visión sencilla",
+            "cristal": "Bifocal",
             "material": [
-                "CR39"
+                "HI_INDEX_156"
             ],
-            "montura": "",
+            "montura": "test",
             "observaciones": "test",
             "tipoLentesContacto": "",
             "medidaHorizontal": "",
@@ -1136,5 +1586,72 @@
     ],
     "conformidad": {
         "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    },
+    "auditoria": {
+        "fechaCreacion": "2026-03-19T00:33:48.000Z",
+        "fechaActualizacion": "2026-03-19T00:33:48.000Z",
+        "creadoPor": {
+            "cedula": "24367965",
+            "nombre": "Ruben Dario Martinez Castro",
+            "cargo": "Gerente"
+        },
+        "actualizadoPor": {
+            "cedula": "24367965",
+            "nombre": "Ruben Dario Martinez Castro",
+            "cargo": "Gerente"
+        }
     }
+}
+
+
+casos:
+
+Caso 1: Fórmula interna (solo especialista de la óptica)
+json
+"datosConsulta": {
+    "especialista": {
+        "tipo": "OFTALMOLOGO",
+        "cedula": "8759927",
+        "nombre": "Gerardo Martinez",
+        "cargo": "Oftalmólogo"
+    },
+    "formulaOriginal": null,
+    "formulaExterna": false,
+    "pagoPendiente": true
+}
+
+Caso 2: Fórmula externa sin rectificar (solo médico externo)
+json
+"datosConsulta": {
+    "especialista": {
+        "tipo": "EXTERNO",
+        "externo": {
+            "nombre": "Dr. Carlos Rodríguez",
+            "lugarConsultorio": "Clínica Avila",
+        }
+    },
+    "formulaOriginal": null,
+    "formulaExterna": true,
+    "pagoPendiente": false
+}
+
+Caso 3: Fórmula externa rectificada (ambos: externo original + especialista que rectifica)
+json
+"datosConsulta": {
+    "especialista": {
+        "tipo": "OFTALMOLOGO",  // Quien rectifica
+        "cedula": "8759927",
+        "nombre": "Gerardo Martinez",
+        "cargo": "Oftalmólogo"
+    },
+    "formulaOriginal": {
+        "medicoOrigen": {
+            "tipo": "EXTERNO",
+            "nombre": "Dr. Juan Perez",
+            "lugarConsultorio": "Centro Médico Caracas",
+
+        }
+    },
+    "formulaExterna": true,
+    "pagoPendiente": true  // La rectificación genera pago
 }

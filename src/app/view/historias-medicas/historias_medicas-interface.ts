@@ -24,29 +24,40 @@ export interface DatosConsulta {
   motivo: string[];
   otroMotivo?: string;
 
-  medico: {
-    nombre: string;
-    cedula: string;
-    cargo: string;
+  // Nueva estructura de especialista
+  especialista: {
+    tipo: 'OFTALMOLOGO' | 'OPTOMETRISTA' | 'EXTERNO';
+    // Para OFTALMOLOGO/OPTOMETRISTA (internos)
+    cedula?: string;
+    nombre?: string;
+    cargo?: string;
+
+    // Para EXTERNO
+    externo?: {
+      nombre: string;
+      lugarConsultorio: string;
+    };
   };
 
-  medicoReferido?: string;
-  lugarConsultorio?: string;
+  // Información de la fórmula original (solo si es externa)
+  formulaOriginal?: {
+    medicoOrigen: {
+      tipo: 'EXTERNO';
+      nombre: string;
+      lugarConsultorio: string;
+    };
+  };
 
+  // Flags
+  formulaExterna: boolean;
+  pagoPendiente: boolean;
+
+  // Campos que se mantienen (si son necesarios)
   nombre_asesor?: string;
   cedula_asesor?: string;
-  cedulaAsesor?: string;
   tipoCristalActual?: string;
   tipoLentesContacto?: string;
   fechaUltimaGraduacion?: string;
-
-  formulaExterna?: boolean;
-  pagoPendiente?: boolean;
-  datosFormulaExterna?: {
-    profesional?: string;
-    fechaFormula?: string;
-    observaciones?: string;
-  };
 }
 
 export interface Auditoria {
