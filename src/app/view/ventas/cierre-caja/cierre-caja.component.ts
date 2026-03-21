@@ -11,6 +11,7 @@ import { UserStateService, SedeInfo } from './../../../core/services/userState/u
 import { CierreDiario, Transaccion, ResumenMetodoPago, TasasCambio } from './cierre-caja.interfaz';
 import { User, Rol, AuthData, AuthResponse, Cargo } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
+import * as bootstrap from 'bootstrap';
 
 
 
@@ -45,6 +46,10 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     bolivar: 1
     // Otras propiedades se pueden agregar dinámicamente
   };
+
+  tabActivo: 'tipos' | 'metodos' | 'formas' | 'pendientes' = 'tipos';
+
+  historialCierres: CierreDiario[] = [];
 
   private destroy$ = new Subject<void>();
 
@@ -85,6 +90,9 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   cargandoDatos: boolean = false;
   guardandoCierre: boolean = false;
 
+  filtroHistorialDesde: string = '';
+  filtroHistorialHasta: string = '';
+
   constructor(
     private fb: FormBuilder,
     private decimalPipe: DecimalPipe,
@@ -98,6 +106,14 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   ) {
     this.inicializarForms();
     this.checkMobile();
+
+    // Inicializar fechas del historial AQUÍ en el constructor
+    const fechaFin = new Date();
+    const fechaInicio = new Date();
+    fechaInicio.setDate(fechaInicio.getDate() - 30);
+
+    this.filtroHistorialDesde = this.datePipe.transform(fechaInicio, 'yyyy-MM-dd') || '';
+    this.filtroHistorialHasta = this.datePipe.transform(fechaFin, 'yyyy-MM-dd') || '';
   }
 
   @HostListener('window:resize')
@@ -376,9 +392,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     if (!this.sedeActual || !this.currentUser) return;
 
     this.cierreActual = {
-      id: `CIERRE-${this.datePipe.transform(this.fechaSeleccionada, 'yyyy-MM-dd')}-${this.sedeActual.key}`,
+      id: `CIERRE-${this.datePipe.transform(new Date(), 'yyyy-MM-dd')}-${this.sedeActual.key}`,
       fecha: new Date(),
       efectivoInicial: 0,
+
+      // Ventas por método (originales)
       ventasEfectivo: 0,
       ventasTarjeta: 0,
       ventasTransferencia: 0,
@@ -386,6 +404,42 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       ventasCredito: 0,
       ventasPagomovil: 0,
       ventasZelle: 0,
+
+      // Nuevas propiedades
+      ventasPorTipo: {
+        soloConsulta: { cantidad: 0, total: 0, montoMedico: 0, montoOptica: 0 },
+        consultaProductos: { cantidad: 0, total: 0, montoMedico: 0, montoProductos: 0 },
+        soloProductos: { cantidad: 0, total: 0 }
+      },
+
+      metodosPago: {
+        efectivo: { total: 0, porMoneda: { dolar: 0, euro: 0, bolivar: 0 }, cantidad: 0 },
+        punto: { total: 0, porBanco: [], cantidad: 0 },
+        pagomovil: { total: 0, cantidad: 0, porBanco: [] },
+        transferencia: { total: 0, cantidad: 0, porBanco: [] },
+        zelle: { total: 0, cantidad: 0 },
+        mixto: { total: 0, cantidad: 0 }
+      },
+
+      formasPago: {
+        contado: { cantidad: 0, total: 0 },
+        abono: { cantidad: 0, total: 0, montoAbonado: 0, deudaPendiente: 0 },
+        cashea: { cantidad: 0, total: 0, montoInicial: 0, deudaPendiente: 0, cuotasPendientes: 0 },
+        deContadoPendiente: { cantidad: 0, total: 0, deudaPendiente: 0 }
+      },
+
+      ventasPendientes: [],
+
+      totales: {
+        ingresos: 0,
+        egresos: 0,
+        neto: 0,
+        ventasContado: 0,
+        ventasCredito: 0,
+        ventasPendientes: 0
+      },
+
+      // Propiedades existentes
       otrosIngresos: 0,
       egresos: 0,
       efectivoFinalTeorico: 0,
@@ -396,13 +450,13 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       usuarioApertura: this.currentUser.nombre,
       usuarioCierre: '',
       fechaApertura: new Date(),
-      transacciones: this.transacciones,
+      transacciones: [],
       notasCierre: '',
       archivosAdjuntos: [],
       sede: this.sedeActual.key,
       monedaPrincipal: this.monedaSistema,
       tasasCambio: this.tasasCambio,
-      metodosPagoDetallados: this.calcularMetodosPagoDetallados()
+      metodosPagoDetallados: []
     };
   }
 
@@ -531,20 +585,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       .filter(item => item.total > 0);
   }
 
-
-  // === MÉTODOS DE TRANSACCIONES ===
-
-  abrirModalTransaccion(): void {
-    this.transaccionEditando = null;
-    this.transaccionForm.reset({
-      tipo: 'venta',
-      metodoPago: 'efectivo',
-      categoria: 'venta_lentes',
-      monto: 0
-    });
-    this.mostrarModalTransaccion = true;
-  }
-
   filtrarTransacciones(): void {
     const filtros = this.filtroForm.value;
 
@@ -602,6 +642,139 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.mostrarModalTransaccion = true;
   }
 
+  eliminarTransaccion(transaccion: Transaccion): void {
+    if (transaccion.numeroVenta) {
+      this.swalService.showError(
+        'No se puede eliminar',
+        'Esta transacción proviene de una venta registrada. Para eliminarla, cancele la venta correspondiente.'
+      );
+      return;
+    }
+
+    this.swalService.showConfirm(
+      '¿Eliminar transacción?',
+      `¿Estás seguro de eliminar la transacción "${transaccion.descripcion}"?`,
+      'Sí, eliminar',
+      'Cancelar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.transacciones = this.transacciones.filter(t => t.id !== transaccion.id);
+        this.actualizarResumen();
+        this.filtrarTransacciones();
+        this.swalService.showSuccess('Eliminada', 'Transacción eliminada correctamente');
+      }
+    });
+  }
+
+
+  iniciarCaja(): void {
+    if (this.inicioCajaForm.invalid || !this.sedeActual || !this.currentUser) return;
+
+    const formValue = this.inicioCajaForm.value;
+
+    this.cierreActual = {
+      id: `CIERRE-${this.datePipe.transform(new Date(), 'yyyy-MM-dd')}-${this.sedeActual.key}`,
+      fecha: new Date(),
+      efectivoInicial: parseFloat(formValue.efectivoInicial),
+
+      // Ventas por método (originales)
+      ventasEfectivo: 0,
+      ventasTarjeta: 0,
+      ventasTransferencia: 0,
+      ventasDebito: 0,
+      ventasCredito: 0,
+      ventasPagomovil: 0,
+      ventasZelle: 0,
+
+      // NUEVAS PROPIEDADES
+      ventasPorTipo: {
+        soloConsulta: { cantidad: 0, total: 0, montoMedico: 0, montoOptica: 0 },
+        consultaProductos: { cantidad: 0, total: 0, montoMedico: 0, montoProductos: 0 },
+        soloProductos: { cantidad: 0, total: 0 }
+      },
+
+      metodosPago: {
+        efectivo: { total: 0, porMoneda: { dolar: 0, euro: 0, bolivar: 0 }, cantidad: 0 },
+        punto: { total: 0, porBanco: [], cantidad: 0 },
+        pagomovil: { total: 0, cantidad: 0, porBanco: [] },
+        transferencia: { total: 0, cantidad: 0, porBanco: [] },
+        zelle: { total: 0, cantidad: 0 },
+        mixto: { total: 0, cantidad: 0 }
+      },
+
+      formasPago: {
+        contado: { cantidad: 0, total: 0 },
+        abono: { cantidad: 0, total: 0, montoAbonado: 0, deudaPendiente: 0 },
+        cashea: { cantidad: 0, total: 0, montoInicial: 0, deudaPendiente: 0, cuotasPendientes: 0 },
+        deContadoPendiente: { cantidad: 0, total: 0, deudaPendiente: 0 }
+      },
+
+      ventasPendientes: [],
+
+      totales: {
+        ingresos: 0,
+        egresos: 0,
+        neto: 0,
+        ventasContado: 0,
+        ventasCredito: 0,
+        ventasPendientes: 0
+      },
+
+      // Propiedades existentes
+      otrosIngresos: 0,
+      egresos: 0,
+      efectivoFinalTeorico: parseFloat(formValue.efectivoInicial),
+      efectivoFinalReal: 0,
+      diferencia: 0,
+      observaciones: formValue.observaciones,
+      estado: 'abierto',
+      usuarioApertura: this.currentUser.nombre,
+      usuarioCierre: '',
+      fechaApertura: new Date(),
+      transacciones: [],
+      notasCierre: '',
+      archivosAdjuntos: [],
+      sede: this.sedeActual.key,
+      monedaPrincipal: formValue.moneda || this.monedaSistema,
+      tasasCambio: this.tasasCambio,
+      metodosPagoDetallados: []
+    };
+
+    this.transacciones = [];
+    this.actualizarResumen();
+
+    // Cerrar modal usando nuestro método
+    this.cerrarModal('inicioCajaModal');
+
+    this.swalService.showSuccess('Caja iniciada', `Caja iniciada con ${this.formatCurrency(this.cierreActual.efectivoInicial)}`);
+  }
+
+  realizarCierre(): void {
+    if (this.cierreForm.invalid || !this.cierreActual || !this.currentUser) return;
+
+    const formValue = this.cierreForm.value;
+
+    this.cierreActual.estado = 'cerrado';
+    this.cierreActual.efectivoFinalReal = parseFloat(formValue.efectivoFinalReal);
+    this.cierreActual.diferencia = this.getDiferencia();
+    this.cierreActual.notasCierre = formValue.notasCierre;
+    this.cierreActual.usuarioCierre = this.currentUser.nombre;
+    this.cierreActual.fechaCierre = new Date();
+
+    this.guardarCierreEnBackend().then(() => {
+      // Cerrar modal usando nuestro método
+      this.cerrarModal('cierreCajaModal');
+
+      this.swalService.showSuccess('Cierre realizado', 'El cierre de caja se ha guardado correctamente.');
+
+      if (formValue.imprimirResumen) {
+        this.imprimirResumen();
+      }
+    }).catch(error => {
+      this.swalService.showError('Error', 'No se pudo guardar el cierre. Por favor, intente nuevamente.');
+    });
+  }
+
   guardarTransaccion(): void {
     if (this.transaccionForm.invalid) return;
 
@@ -631,118 +804,12 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     this.actualizarResumen();
     this.filtrarTransacciones();
-    this.mostrarModalTransaccion = false;
+
+    // Cerrar modal usando nuestro método
+    this.cerrarModal('transaccionModal');
     this.transaccionEditando = null;
-  }
 
-  eliminarTransaccion(transaccion: Transaccion): void {
-    if (transaccion.numeroVenta) {
-      this.swalService.showError(
-        'No se puede eliminar',
-        'Esta transacción proviene de una venta registrada. Para eliminarla, cancele la venta correspondiente.'
-      );
-      return;
-    }
-
-    if (confirm(`¿Estás seguro de eliminar la transacción "${transaccion.descripcion}"?`)) {
-      this.transacciones = this.transacciones.filter(t => t.id !== transaccion.id);
-      this.actualizarResumen();
-      this.filtrarTransacciones();
-    }
-  }
-
-  // === MANEJO DE CIERRE ===
-
-  abrirModalInicioCaja(): void {
-    if (!this.sedeActual) {
-      this.swalService.showError('Sede requerida', 'Debes estar asignado a una sede para iniciar caja.');
-      return;
-    }
-
-    this.inicioCajaForm.patchValue({
-      efectivoInicial: 0,
-      observaciones: '',
-      moneda: this.monedaSistema
-    });
-    this.mostrarModalInicio = true;
-  }
-
-  iniciarCaja(): void {
-    if (this.inicioCajaForm.invalid || !this.sedeActual || !this.currentUser) return;
-
-    const formValue = this.inicioCajaForm.value;
-
-    this.cierreActual = {
-      id: `CIERRE-${this.datePipe.transform(new Date(), 'yyyy-MM-dd')}-${this.sedeActual.key}`,
-      fecha: new Date(),
-      efectivoInicial: parseFloat(formValue.efectivoInicial),
-      ventasEfectivo: 0,
-      ventasTarjeta: 0,
-      ventasTransferencia: 0,
-      ventasDebito: 0,
-      ventasCredito: 0,
-      ventasPagomovil: 0,
-      ventasZelle: 0,
-      otrosIngresos: 0,
-      egresos: 0,
-      efectivoFinalTeorico: parseFloat(formValue.efectivoInicial),
-      efectivoFinalReal: 0,
-      diferencia: 0,
-      observaciones: formValue.observaciones,
-      estado: 'abierto',
-      usuarioApertura: this.currentUser.nombre,
-      usuarioCierre: '',
-      fechaApertura: new Date(),
-      transacciones: [],
-      notasCierre: '',
-      archivosAdjuntos: [],
-      sede: this.sedeActual.key,
-      monedaPrincipal: formValue.moneda,
-      tasasCambio: this.tasasCambio,
-      metodosPagoDetallados: []
-    };
-
-    this.transacciones = [];
-    this.actualizarResumen();
-    this.mostrarModalInicio = false;
-
-    this.guardarCierreEnBackend();
-  }
-
-  abrirModalCierre(): void {
-    if (!this.cierreActual) return;
-
-    this.cierreForm.patchValue({
-      efectivoFinalReal: this.getEfectivoFinalTeorico(),
-      observaciones: this.cierreActual.observaciones,
-      notasCierre: ''
-    });
-
-    this.mostrarModalCierre = true;
-  }
-
-  realizarCierre(): void {
-    if (this.cierreForm.invalid || !this.cierreActual || !this.currentUser) return;
-
-    const formValue = this.cierreForm.value;
-
-    this.cierreActual.estado = 'cerrado';
-    this.cierreActual.efectivoFinalReal = parseFloat(formValue.efectivoFinalReal);
-    this.cierreActual.diferencia = this.getDiferencia();
-    this.cierreActual.notasCierre = formValue.notasCierre;
-    this.cierreActual.usuarioCierre = this.currentUser.nombre;
-    this.cierreActual.fechaCierre = new Date();
-
-    this.guardarCierreEnBackend().then(() => {
-      this.swalService.showSuccess('Cierre realizado', 'El cierre de caja se ha guardado correctamente.');
-      this.mostrarModalCierre = false;
-
-      if (formValue.imprimirResumen) {
-        this.imprimirResumen();
-      }
-    }).catch(error => {
-      this.swalService.showError('Error', 'No se pudo guardar el cierre. Por favor, intente nuevamente.');
-    });
+    this.swalService.showSuccess('Transacción guardada', 'La transacción se ha registrado correctamente.');
   }
 
   guardarCierre(): void {
@@ -1076,5 +1143,271 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     setInterval(() => {
       this.ultimaActualizacion = new Date();
     }, 60000); // Actualizar cada minuto
+  }
+
+  cargarHistorialCierres(): void {
+    const fechaDesde = new Date(this.filtroHistorialDesde);
+    const fechaHasta = new Date(this.filtroHistorialHasta);
+
+    this.cierreCajaService.obtenerHistorialCierres(fechaDesde, fechaHasta, this.sedeActual?.key || 'guatire')
+      .subscribe({
+        next: (cierres) => {
+          this.historialCierres = cierres;
+        },
+        error: (error) => {
+          console.error('Error al cargar historial:', error);
+          this.swalService.showError('Error', 'No se pudo cargar el historial de cierres');
+        }
+      });
+  }
+
+  getTotalVentasCierre(cierre: CierreDiario): number {
+    return cierre.ventasEfectivo + cierre.ventasTarjeta + cierre.ventasTransferencia +
+      cierre.ventasDebito + cierre.ventasCredito + cierre.ventasPagomovil + cierre.ventasZelle;
+  }
+
+  verDetalleCierre(cierre: CierreDiario): void {
+    this.cierreActual = cierre;
+    this.fechaSeleccionada = new Date(cierre.fecha);
+    this.cargarDatosFecha();
+
+    // Cerrar modal de historial
+    const modal = bootstrap.Modal.getInstance(document.getElementById('historialCierresModal')!);
+    modal?.hide();
+  }
+
+  anularCierre(cierre: CierreDiario): void {
+    this.swalService.showConfirm(
+      '¿Anular cierre?',
+      `¿Estás seguro de anular el cierre del ${this.datePipe.transform(cierre.fecha, 'dd/MM/yyyy')}?<br>
+     <small class="text-danger">Esta acción registrará el motivo de anulación y cambiará el estado a revisado.</small>`,
+      'Sí, anular',
+      'Cancelar'
+    ).then((result) => {
+      if (result.isConfirmed) {
+        this.swalService.showInputPrompt(
+          'Motivo de anulación',
+          'Por favor, indica el motivo de la anulación:',
+          'textarea'
+        ).then((motivo) => {
+          if (motivo) {
+            this.cierreCajaService.anularCierre(cierre.id, motivo).subscribe({
+              next: () => {
+                this.swalService.showSuccess('Cierre anulado', 'El cierre ha sido anulado correctamente');
+                this.cargarHistorialCierres();
+              },
+              error: (error) => {
+                this.swalService.showError('Error', 'No se pudo anular el cierre');
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  abrirModalInicioCaja(): void {
+    if (!this.sedeActual) {
+      this.swalService.showWarning('Sede requerida', 'Debes estar asignado a una sede para iniciar caja.');
+      return;
+    }
+
+    this.inicioCajaForm.patchValue({
+      efectivoInicial: 0,
+      observaciones: 'Caja abierta normalmente',
+      moneda: this.monedaSistema
+    });
+
+    const modalElement = document.getElementById('inicioCajaModal');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  abrirModalCierre(): void {
+    if (!this.cierreActual) {
+      this.swalService.showWarning('Sin cierre activo', 'No hay una caja abierta para cerrar.');
+      return;
+    }
+
+    this.cierreForm.patchValue({
+      efectivoFinalReal: this.getEfectivoFinalTeorico(),
+      observaciones: this.cierreActual.observaciones,
+      notasCierre: '',
+      imprimirResumen: true,
+      enviarEmail: false,
+      adjuntarComprobantes: true
+    });
+
+    const modalElement = document.getElementById('cierreCajaModal');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  abrirModalTransaccion(transaccion?: Transaccion): void {
+    if (transaccion && transaccion.numeroVenta) {
+      this.swalService.showInfo(
+        'Venta registrada',
+        `Esta transacción proviene de la venta #${transaccion.numeroVenta}. 
+            Para modificarla, edite la venta correspondiente.`
+      );
+      return;
+    }
+
+    this.transaccionEditando = transaccion || null;
+
+    if (transaccion) {
+      this.transaccionForm.patchValue({
+        tipo: transaccion.tipo,
+        descripcion: transaccion.descripcion,
+        monto: transaccion.monto,
+        metodoPago: transaccion.metodoPago,
+        categoria: transaccion.categoria || 'venta_lentes',
+        observaciones: transaccion.observaciones || '',
+        comprobante: transaccion.comprobante || ''
+      });
+    } else {
+      this.transaccionForm.reset({
+        tipo: 'venta',
+        metodoPago: 'efectivo',
+        categoria: 'venta_lentes',
+        monto: 0
+      });
+    }
+
+    const modalElement = document.getElementById('transaccionModal');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  abrirHistorial(): void {
+    // Cargar historial de los últimos 30 días por defecto
+    const fechaFin = new Date();
+    const fechaInicio = new Date();
+    fechaInicio.setDate(fechaInicio.getDate() - 30);
+
+    this.filtroHistorialDesde = this.datePipe.transform(fechaInicio, 'yyyy-MM-dd') || '';
+    this.filtroHistorialHasta = this.datePipe.transform(fechaFin, 'yyyy-MM-dd') || '';
+
+    this.cargarHistorialCierres();
+
+    const modalElement = document.getElementById('historialCierresModal');
+    if (modalElement) {
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  cerrarModal(modalId: string): void {
+    const modalElement = document.getElementById(modalId);
+    if (modalElement) {
+      const modal = bootstrap.Modal.getInstance(modalElement);
+      if (modal) {
+        modal.hide();
+      }
+
+      // Remover backdrop si queda
+      const backdrop = document.querySelector('.modal-backdrop');
+      if (backdrop) {
+        backdrop.remove();
+      }
+      document.body.classList.remove('modal-open');
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    }
+  }
+
+  // Métodos auxiliares
+  getColorMetodoPago(metodo: string): string {
+    const colores: { [key: string]: string } = {
+      'efectivo': '#22c55e',
+      'tarjeta': '#8b5cf6',
+      'punto': '#8b5cf6',
+      'transferencia': '#3b82f6',
+      'pagomovil': '#ec4899',
+      'zelle': '#8b5cf6',
+      'mixto': '#f59e0b'
+    };
+    return colores[metodo] || '#64748b';
+  }
+
+  getIconoMetodoPago(metodo: string): string {
+    const iconos: { [key: string]: string } = {
+      'efectivo': 'bi-cash',
+      'tarjeta': 'bi-credit-card',
+      'punto': 'bi-credit-card',
+      'transferencia': 'bi-bank',
+      'pagomovil': 'bi-phone',
+      'zelle': 'bi-globe2',
+      'mixto': 'bi-wallet2'
+    };
+    return iconos[metodo] || 'bi-receipt';
+  }
+
+  verDetalleVenta(numeroVenta: string): void {
+    // Aquí puedes navegar al detalle de la venta
+    console.log('Ver venta:', numeroVenta);
+  }
+
+  // Getters para las nuevas propiedades
+  get totalConsultas(): number {
+    return this.cierreActual?.ventasPorTipo?.soloConsulta?.total || 0;
+  }
+
+  get totalConsultaProductos(): number {
+    return this.cierreActual?.ventasPorTipo?.consultaProductos?.total || 0;
+  }
+
+  get totalSoloProductos(): number {
+    return this.cierreActual?.ventasPorTipo?.soloProductos?.total || 0;
+  }
+
+  get puntosPorBanco(): any[] {
+    return this.cierreActual?.metodosPago?.punto?.porBanco || [];
+  }
+
+  get pagosMovilPorBanco(): any[] {
+    return this.cierreActual?.metodosPago?.pagomovil?.porBanco || [];
+  }
+
+  get transferenciasPorBanco(): any[] {
+    return this.cierreActual?.metodosPago?.transferencia?.porBanco || [];
+  }
+
+  get efectivoDolar(): number {
+    return this.cierreActual?.metodosPago?.efectivo?.porMoneda?.dolar || 0;
+  }
+
+  get efectivoEuro(): number {
+    return this.cierreActual?.metodosPago?.efectivo?.porMoneda?.euro || 0;
+  }
+
+  get efectivoBolivar(): number {
+    return this.cierreActual?.metodosPago?.efectivo?.porMoneda?.bolivar || 0;
+  }
+
+  get totalContado(): number {
+    return this.cierreActual?.formasPago?.contado?.total || 0;
+  }
+
+  get totalAbonos(): number {
+    return this.cierreActual?.formasPago?.abono?.total || 0;
+  }
+
+  get totalCashea(): number {
+    return this.cierreActual?.formasPago?.cashea?.total || 0;
+  }
+
+  get totalPendientes(): number {
+    return this.cierreActual?.formasPago?.deContadoPendiente?.total || 0;
+  }
+
+  get ventasPendientesLista(): any[] {
+    return this.cierreActual?.ventasPendientes || [];
   }
 }

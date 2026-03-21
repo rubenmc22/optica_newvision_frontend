@@ -39,13 +39,12 @@ export interface Transaccion {
   sede?: string;
 }
 
-// cierre-caja.interfaz.ts
 export interface CierreDiario {
   id: string;
   fecha: Date;
   efectivoInicial: number;
 
-  // Ventas por método de pago
+  // Ventas por método de pago (original)
   ventasEfectivo: number;
   ventasTarjeta: number;
   ventasTransferencia: number;
@@ -54,16 +53,125 @@ export interface CierreDiario {
   ventasPagomovil: number;
   ventasZelle: number;
 
-  // Otros ingresos y egresos
+  // NUEVAS PROPIEDADES
+  ventasPorTipo: {
+    soloConsulta: {
+      cantidad: number;
+      total: number;
+      montoMedico: number;
+      montoOptica: number;
+    };
+    consultaProductos: {
+      cantidad: number;
+      total: number;
+      montoMedico: number;
+      montoProductos: number;
+    };
+    soloProductos: {
+      cantidad: number;
+      total: number;
+    };
+  };
+
+  metodosPago: {
+    efectivo: {
+      total: number;
+      porMoneda: {
+        dolar: number;
+        euro: number;
+        bolivar: number;
+      };
+      cantidad: number;
+    };
+    punto: {
+      total: number;
+      porBanco: Array<{
+        banco: string;
+        bancoCodigo: string;
+        total: number;
+        cantidad: number;
+      }>;
+      cantidad: number;
+    };
+    pagomovil: {
+      total: number;
+      cantidad: number;
+      porBanco?: Array<{
+        banco: string;
+        bancoCodigo: string;
+        total: number;
+        cantidad: number;
+      }>;
+    };
+    transferencia: {
+      total: number;
+      cantidad: number;
+      porBanco?: Array<{
+        banco: string;
+        bancoCodigo: string;
+        total: number;
+        cantidad: number;
+      }>;
+    };
+    zelle: {
+      total: number;
+      cantidad: number;
+    };
+    mixto: {
+      total: number;
+      cantidad: number;
+    };
+  };
+
+  formasPago: {
+    contado: {
+      cantidad: number;
+      total: number;
+    };
+    abono: {
+      cantidad: number;
+      total: number;
+      montoAbonado: number;
+      deudaPendiente: number;
+    };
+    cashea: {
+      cantidad: number;
+      total: number;
+      montoInicial: number;
+      deudaPendiente: number;
+      cuotasPendientes: number;
+    };
+    deContadoPendiente: {
+      cantidad: number;
+      total: number;
+      deudaPendiente: number;
+    };
+  };
+
+  ventasPendientes: Array<{
+    numeroVenta: string;
+    cliente: string;
+    total: number;
+    formaPago: string;
+    deuda: number;
+    fecha: Date;
+  }>;
+
+  totales: {
+    ingresos: number;
+    egresos: number;
+    neto: number;
+    ventasContado: number;
+    ventasCredito: number;
+    ventasPendientes: number;
+  };
+
+  // Propiedades existentes
   otrosIngresos: number;
   egresos: number;
-
-  // Cálculos
   efectivoFinalTeorico: number;
   efectivoFinalReal: number;
   diferencia: number;
-
-  // Información del cierre
   observaciones: string;
   estado: 'abierto' | 'cerrado' | 'revisado' | 'conciliado';
   usuarioApertura: string;
@@ -73,13 +181,9 @@ export interface CierreDiario {
   transacciones: Transaccion[];
   notasCierre: string;
   archivosAdjuntos: string[];
-
-  // Nuevas propiedades según el sistema de ventas
   sede: string;
   monedaPrincipal: string;
-
-  tasasCambio: TasasCambio;  // Usar el tipo definido
-
+  tasasCambio: TasasCambio;
   metodosPagoDetallados: Array<{
     metodo: string;
     total: number;

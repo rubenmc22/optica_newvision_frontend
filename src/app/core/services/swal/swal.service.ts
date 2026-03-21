@@ -9,9 +9,6 @@ export class SwalService {
 
   constructor() { }
 
-  /**
-   * Muestra una alerta de éxito moderna
-   */
   showSuccessHTML(title: string, html: string, timer: number = 3000): Promise<any> {
     return Swal.fire({
       icon: 'success',
@@ -38,7 +35,6 @@ export class SwalService {
     });
   }
 
-  // Método existente para texto plano
   showSuccess(title: string, text: string, timer: number = 3000): Promise<any> {
     return Swal.fire({
       icon: 'success',
@@ -65,9 +61,6 @@ export class SwalService {
     });
   }
 
-  /**
-   * Muestra una alerta de error moderna
-   */
   showError(title: string, text: string, timer: number = 5000): Promise<any> {
     return Swal.fire({
       icon: 'error',
@@ -94,9 +87,6 @@ export class SwalService {
     });
   }
 
-  /**
-   * Muestra una alerta de advertencia moderna
-   */
   showWarning(title: string, content: string, isHtml: boolean = false, timer: number = 4000): Promise<any> {
     const config: SweetAlertOptions = {
       icon: 'warning',
@@ -130,9 +120,6 @@ export class SwalService {
     return Swal.fire(config);
   }
 
-  /**
-   * Muestra una alerta de información moderna
-   */
   showInfo(title: string, text: string): Promise<any> {
     return Swal.fire({
       icon: 'info',
@@ -156,9 +143,6 @@ export class SwalService {
     });
   }
 
-  /**
-   * Muestra una alerta de confirmación moderna
-   */
   showConfirm(
     title: string,
     htmlContent: string,
@@ -190,9 +174,6 @@ export class SwalService {
     });
   }
 
-  /**
-   * Alerta de inactividad moderna
-   */
   showInactivityWarning(
     title: string,
     text: string,
@@ -262,9 +243,6 @@ export class SwalService {
     });
   }
 
-  /**
-   * Alerta de sesión cerrada
-   */
   private showSessionClosed(): void {
     Swal.fire({
       title: 'Sesión cerrada',
@@ -281,9 +259,6 @@ export class SwalService {
     });
   }
 
-  /**
-   * Loading moderno con diseño Apollo mejorado
-   */
   showApolloLoading(): void {
     Swal.fire({
       html: `
@@ -312,9 +287,6 @@ export class SwalService {
     });
   }
 
-  /**
-   * Loading básico moderno
-   */
   showLoadingAlert(title: string = 'Procesando...'): void {
     Swal.fire({
       title: title,
@@ -330,9 +302,40 @@ export class SwalService {
     });
   }
 
-  /**
-   * Cierra cualquier alerta activa
-   */
+  showInputPrompt(
+    title: string,
+    text: string,
+    inputType: 'text' | 'textarea' | 'email' | 'password' = 'text',
+    placeholder: string = ''
+  ): Promise<string | null> {
+    return Swal.fire({
+      title: title,
+      text: text,
+      input: inputType,
+      inputPlaceholder: placeholder,
+      showCancelButton: true,
+      confirmButtonText: 'Aceptar',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Este campo es requerido';
+        }
+        return null;
+      },
+      customClass: {
+        popup: 'swal-modern-popup',
+        title: 'swal-modern-title',
+        htmlContainer: 'swal-modern-content',
+        confirmButton: 'swal-modern-confirm primary-btn',
+        cancelButton: 'swal-modern-cancel',
+        input: 'swal-modern-input'
+      },
+      buttonsStyling: false
+    }).then((result) => {
+      return result.isConfirmed ? result.value : null;
+    });
+  }
+
   closeLoading(): void {
     Swal.close();
   }
