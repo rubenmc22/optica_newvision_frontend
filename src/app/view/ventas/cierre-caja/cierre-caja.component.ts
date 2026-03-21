@@ -1986,7 +1986,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     // Forzar detección de cambios
     this.cdr.detectChanges();
   }
-  
+
   private calcularDiferenciasPunto(): { total: number; porBanco: any[] } {
     let total = 0;
     const porBanco: any[] = [];
@@ -2136,5 +2136,130 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   getDiferenciaTotalFormateada(): string {
     const diff = this.getDiferenciaTotal();
     return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
+  }
+
+  // Métodos auxiliares para el modal
+  getDiferenciaPuntoPorBanco(bancoCodigo: string): number {
+    const controlName = `puntoReal_${bancoCodigo}`;
+    const montoReal = this.cierreForm.get(controlName)?.value || 0;
+    const bancoData = this.analisisMetodosPago.punto.porBanco.find(b => b.bancoCodigo === bancoCodigo);
+    const montoSistema = bancoData?.total || 0;
+    return montoReal - montoSistema;
+  }
+
+  getDiferenciaBadgeClass(diferencia: number): string {
+    if (Math.abs(diferencia) < 0.01) return 'bg-secondary';
+    return diferencia > 0 ? 'bg-success' : 'bg-danger';
+  }
+
+  getDiferenciaClass(diferencia: number): string {
+    if (Math.abs(diferencia) < 0.01) return 'diferencia-cero';
+    return diferencia > 0 ? 'diferencia-positiva' : 'diferencia-negativa';
+  }
+
+  getDiferenciaTotalClass(): string {
+    const diff = this.getDiferenciaTotal();
+    if (Math.abs(diff) < 0.01) return 'text-secondary';
+    return diff > 0 ? 'text-success' : 'text-danger';
+  }
+
+  getDiferenciaTotalClassValor(diff: number): string {
+    if (Math.abs(diff) < 0.01) return 'text-secondary';
+    return diff > 0 ? 'text-success' : 'text-danger';
+  }
+
+  getEfectivoTeoricoPorcentaje(): number {
+    const teorico = this.efectivoFinalTeorico;
+    const real = this.getEfectivoRealTotal();
+    if (teorico === 0) return 0;
+    const porcentaje = (real / teorico) * 100;
+    return Math.min(100, Math.max(0, porcentaje));
+  }
+
+  getMensajeAlertaClass(): string {
+    const diff = this.getDiferenciaTotal();
+    if (Math.abs(diff) < 0.01) return 'alert-success';
+    return diff > 0 ? 'alert-warning' : 'alert-danger';
+  }
+
+  getMensajeIcono(): string {
+    const diff = this.getDiferenciaTotal();
+    if (Math.abs(diff) < 0.01) return 'bi-check-circle-fill';
+    return diff > 0 ? 'bi-arrow-up-circle-fill' : 'bi-arrow-down-circle-fill';
+  }
+
+  getMensajeDiferencia(): string {
+    const diff = this.getDiferenciaTotal();
+    if (Math.abs(diff) < 0.01) {
+      return '¡Perfecto! Todos los montos coinciden con el sistema.';
+    }
+    return diff > 0
+      ? 'Sobrante en caja. Verifique si hubo ingresos no registrados.'
+      : 'Faltante en caja. Verifique egresos o errores en el conteo.';
+  }
+
+  // Métodos para la card de información dinámica
+  getInfoCardClass(): string {
+    const tipo = this.transaccionForm.get('tipo')?.value;
+    switch (tipo) {
+      case 'venta':
+        return 'bg-success bg-opacity-10';
+      case 'ingreso':
+        return 'bg-info bg-opacity-10';
+      case 'egreso':
+        return 'bg-danger bg-opacity-10';
+      case 'ajuste':
+        return 'bg-warning bg-opacity-10';
+      default:
+        return 'bg-light';
+    }
+  }
+
+  getInfoIcon(): string {
+    const tipo = this.transaccionForm.get('tipo')?.value;
+    switch (tipo) {
+      case 'venta':
+        return 'bi-cart-check-fill text-success';
+      case 'ingreso':
+        return 'bi-arrow-up-circle-fill text-info';
+      case 'egreso':
+        return 'bi-arrow-down-circle-fill text-danger';
+      case 'ajuste':
+        return 'bi-arrow-left-right text-warning';
+      default:
+        return 'bi-info-circle-fill text-secondary';
+    }
+  }
+
+  getInfoTitle(): string {
+    const tipo = this.transaccionForm.get('tipo')?.value;
+    switch (tipo) {
+      case 'venta':
+        return 'Venta registrada:';
+      case 'ingreso':
+        return 'Ingreso extra:';
+      case 'egreso':
+        return 'Egreso/Gasto:';
+      case 'ajuste':
+        return 'Ajuste de caja:';
+      default:
+        return 'Información:';
+    }
+  }
+
+  getInfoMessage(): string {
+    const tipo = this.transaccionForm.get('tipo')?.value;
+    switch (tipo) {
+      case 'venta':
+        return 'Esta transacción se registrará como una venta normal. Afecta el efectivo teórico.';
+      case 'ingreso':
+        return 'Este ingreso extra se suma al total del día. No afecta el cálculo de efectivo teórico.';
+      case 'egreso':
+        return 'Este egreso resta del efectivo. Asegúrese de registrar el comprobante correspondiente.';
+      case 'ajuste':
+        return 'Este ajuste modifica el saldo de caja. Debe incluir una justificación en observaciones.';
+      default:
+        return 'Complete los campos para registrar la transacción.';
+    }
   }
 }

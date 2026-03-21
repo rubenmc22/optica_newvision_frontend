@@ -566,7 +566,6 @@ $light: #f8fafc;
       overflow: hidden;
     }
 
-
     // Transacciones
     .transacciones-list {
       max-height: 880px;
@@ -1981,5 +1980,268 @@ $light: #f8fafc;
   .btn-moderno {
     width: 100%;
     justify-content: center;
+  }
+}
+
+
+/* Estilos adicionales para el modal de cierre */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-info {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.bg-gradient-success {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.bg-gradient-warning {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.nav-tabs .nav-link {
+  border: none;
+  color: #6c757d;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+}
+
+.nav-tabs .nav-link:hover {
+  background-color: #e9ecef;
+  transform: translateY(-2px);
+}
+
+.nav-tabs .nav-link.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.form-floating>.form-control {
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.form-floating>.form-control:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.1);
+}
+
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.progress {
+  background-color: #e9ecef;
+  border-radius: 2px;
+}
+
+.progress-bar {
+  transition: width 0.6s ease;
+}
+
+.diferencia-positiva {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.diferencia-negativa {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.diferencia-cero {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-content {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Estilos adicionales para el modal de inicio de caja */
+.bg-gradient-success {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.bg-gradient-info-soft {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdef5 100%);
+}
+
+/* Ajustes de espaciado para mejor proporción */
+.modal-body {
+  padding: 1.5rem !important;
+}
+
+.card-body {
+  padding: 0.75rem 1rem;
+}
+
+/* Input group mejorado */
+.input-group {
+  flex-wrap: nowrap;
+}
+
+.input-group-text {
+  background-color: #f8f9fa;
+  border: none;
+}
+
+.form-control {
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.form-control:focus {
+  border-color: #43e97b;
+  box-shadow: 0 0 0 0.2rem rgba(67, 233, 123, 0.1);
+}
+
+/* Textarea ajustado */
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Cards con altura consistente */
+.card.h-100 {
+  height: 100% !important;
+}
+
+/* Espaciado uniforme */
+.row.g-3 {
+  --bs-gutter-y: 1rem;
+}
+
+.row.g-4 {
+  --bs-gutter-y: 1.5rem;
+}
+
+/* Animación suave */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-content {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .modal-body {
+    padding: 1rem !important;
+  }
+
+  .row.g-3,
+  .row.g-4 {
+    --bs-gutter-y: 0.75rem;
+  }
+
+  .card-body {
+    padding: 0.5rem 0.75rem;
+  }
+
+  textarea.form-control {
+    min-height: 70px;
+  }
+}
+
+/* Estilos para el modal de transacción */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Estilos para los selects y inputs */
+.form-select,
+.form-control {
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.form-select:focus,
+.form-control:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.1);
+}
+
+/* Estilos para los cards de información dinámica */
+.bg-opacity-10 {
+  --bs-bg-opacity: 0.1;
+}
+
+/* Input group mejorado */
+.input-group-text {
+  background-color: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-right: none;
+}
+
+.input-group .form-control {
+  border-left: none;
+}
+
+.input-group .form-control:focus {
+  border-left: none;
+}
+
+/* Animación suave */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.modal-content {
+  animation: slideInRight 0.3s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .modal-body {
+    padding: 1rem !important;
+  }
+
+  .row.g-3 {
+    --bs-gutter-y: 0.75rem;
+  }
+
+  .form-select,
+  .form-control {
+    font-size: 0.9rem;
   }
 }
