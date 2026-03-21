@@ -89,46 +89,50 @@
 
   <!-- KPI GRID -->
   <div class="kpi-grid">
+    <!-- Tarjeta Efectivo Inicial - Solo visible si hay cierre -->
     <div class="kpi-card glass-card" *ngIf="cierreActual">
       <div class="kpi-icon" style="background: rgba(37, 99, 235, 0.15); color: #2563eb;">
         <i class="bi bi-cash"></i>
       </div>
       <div class="kpi-content">
         <span class="kpi-label">Efectivo Inicial</span>
-        <span class="kpi-value">{{ cierreActual.efectivoInicial | currency }}</span>
+        <span class="kpi-value">{{ efectivoInicial | currency }}</span>
       </div>
     </div>
 
+    <!-- Total Ventas - SIEMPRE visible -->
     <div class="kpi-card glass-card">
       <div class="kpi-icon" style="background: rgba(34, 197, 94, 0.15); color: #22c55e;">
         <i class="bi bi-cart-check"></i>
       </div>
       <div class="kpi-content">
         <span class="kpi-label">Total Ventas</span>
-        <span class="kpi-value">{{ getTotalVentas() | currency }}</span>
-        <span class="kpi-trend">{{ cierreActual?.transacciones.length }} transacciones</span>
+        <span class="kpi-value">{{ totalVentasKPI | currency }}</span>
+        <span class="kpi-trend">{{ transacciones.length }} transacciones</span>
       </div>
     </div>
 
+    <!-- Total Pendiente - SIEMPRE visible -->
     <div class="kpi-card glass-card">
       <div class="kpi-icon" style="background: rgba(234, 179, 8, 0.15); color: #eab308;">
-        <i class="bi bi-credit-card"></i>
+        <i class="bi bi-exclamation-triangle"></i>
       </div>
       <div class="kpi-content">
         <span class="kpi-label">Total Pendiente</span>
-        <span class="kpi-value">{{ totalPendientes | currency }}</span>
-        <span class="kpi-trend">{{ ventasPendientesLista.length }} ventas</span>
+        <span class="kpi-value">{{ totalPendientesKPI | currency }}</span>
+        <span class="kpi-trend">{{ analisisVentasPendientes.length }} ventas</span>
       </div>
     </div>
 
+    <!-- Neto del Día - SIEMPRE visible -->
     <div class="kpi-card glass-card">
       <div class="kpi-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
         <i class="bi bi-arrow-repeat"></i>
       </div>
       <div class="kpi-content">
         <span class="kpi-label">Neto del Día</span>
-        <span class="kpi-value">{{ getNetoDia() | currency }}</span>
-        <span class="kpi-trend">{{ getDiferencia() | currency }} diferencia</span>
+        <span class="kpi-value">{{ netoDiaKPI | currency }}</span>
+        <span class="kpi-trend">Ingresos - Egresos</span>
       </div>
     </div>
   </div>
@@ -138,7 +142,7 @@
 
     <!-- COLUMNA IZQUIERDA: TRANSACCIONES -->
     <div class="left-column">
-      <div class="panel glass-card">
+      <div class="panel glass-card panel-transacciones">
         <div class="panel-header">
           <div class="panel-title">
             <i class="bi bi-list-check"></i>
@@ -169,70 +173,179 @@
           </div>
         </div>
 
-        <!-- Lista de transacciones -->
-        <div class="transacciones-list">
-          <div *ngIf="transaccionesFiltradas.length === 0" class="empty-state">
-            <div class="empty-icon">
-              <i class="bi bi-receipt"></i>
-            </div>
-            <h4>No hay transacciones</h4>
-            <p>Las ventas del día aparecerán aquí automáticamente</p>
-          </div>
-
-          <div class="transaccion-item" *ngFor="let trans of transaccionesFiltradas"
-            [ngClass]="{'pendiente': trans.estado === 'pendiente', 'anulado': trans.estado === 'anulado'}">
-            <div class="transaccion-icon" [style.background]="getColorTipoTransaccion(trans.tipo) + '20'">
-              <i [class]="getIconoTipoTransaccion(trans.tipo)" [style.color]="getColorTipoTransaccion(trans.tipo)"></i>
+        <!-- Lista de transacciones con altura dinámica -->
+        <div class="transacciones-list-wrapper">
+          <div class="transacciones-list">
+            <div *ngIf="transaccionesFiltradas.length === 0" class="empty-state">
+              <div class="empty-icon">
+                <i class="bi bi-receipt"></i>
+              </div>
+              <h4>No hay transacciones</h4>
+              <p>Las ventas del día aparecerán aquí automáticamente</p>
             </div>
 
-            <div class="transaccion-info">
-              <div class="transaccion-header">
-                <span class="transaccion-desc" [title]="trans.descripcion">{{ trans.descripcion }}</span>
-                <span class="transaccion-monto" [ngClass]="{
-              'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
-              'text-danger': trans.tipo === 'egreso'
-            }">
-                  {{ (trans.tipo === 'egreso' ? '-' : '+') + (trans.monto | currency) }}
-                </span>
+            <div class="transaccion-item" *ngFor="let trans of transaccionesFiltradas"
+              [ngClass]="{'pendiente': trans.estado === 'pendiente', 'anulado': trans.estado === 'anulado'}">
+              <div class="transaccion-icon" [style.background]="getColorTipoTransaccion(trans.tipo) + '20'">
+                <i [class]="getIconoTipoTransaccion(trans.tipo)"
+                  [style.color]="getColorTipoTransaccion(trans.tipo)"></i>
               </div>
 
-              <div class="transaccion-meta">
-                <span class="badge-metodo" [style.background]="getColorMetodoPago(trans.metodoPago) + '20'"
-                  [style.color]="getColorMetodoPago(trans.metodoPago)">
-                  <i class="bi" [ngClass]="getIconoMetodoPago(trans.metodoPago)"></i>
-                  {{ formatearTipoPago(trans.metodoPago) }}
-                </span>
-                <span class="meta-item">
-                  <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
-                </span>
-                <span class="meta-item">
-                  <i class="bi bi-person"></i> {{ trans.usuario }}
-                </span>
+              <div class="transaccion-info">
+                <div class="transaccion-header">
+                  <span class="transaccion-desc" [title]="trans.descripcion">{{ trans.descripcion }}</span>
+                  <span class="transaccion-monto" [ngClass]="{
+                      'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
+                      'text-danger': trans.tipo === 'egreso'
+                    }">
+                    {{ (trans.tipo === 'egreso' ? '-' : '+') + (trans.monto | currency) }}
+                  </span>
+                </div>
+
+                <div class="transaccion-meta">
+                  <span class="badge-metodo" [style.background]="getColorMetodoPago(trans.metodoPago) + '20'"
+                    [style.color]="getColorMetodoPago(trans.metodoPago)">
+                    <i class="bi" [ngClass]="getIconoMetodoPago(trans.metodoPago)"></i>
+                    {{ formatearTipoPago(trans.metodoPago) }}
+                  </span>
+                  <span class="meta-item">
+                    <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
+                  </span>
+                  <span class="meta-item">
+                    <i class="bi bi-person"></i> {{ trans.usuario }}
+                  </span>
+                </div>
+
+                <div class="transaccion-detalle" *ngIf="trans.numeroVenta">
+                  <span class="venta-num">Venta #{{ trans.numeroVenta }}</span>
+                  <span class="cliente-nom" [title]="trans.cliente?.nombre">{{ trans.cliente?.nombre }}</span>
+                </div>
               </div>
 
-              <div class="transaccion-detalle" *ngIf="trans.numeroVenta">
-                <span class="venta-num">Venta #{{ trans.numeroVenta }}</span>
-                <span class="cliente-nom" [title]="trans.cliente?.nombre">{{ trans.cliente?.nombre }}</span>
+              <div class="transaccion-actions">
+                <button class="btn-action" (click)="abrirModalTransaccion(trans)" *ngIf="!trans.numeroVenta"
+                  title="Editar">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn-action" (click)="eliminarTransaccion(trans)" *ngIf="!trans.numeroVenta"
+                  title="Eliminar">
+                  <i class="bi bi-trash"></i>
+                </button>
               </div>
-            </div>
-
-            <div class="transaccion-actions">
-              <button class="btn-action" (click)="abrirModalTransaccion(trans)" *ngIf="!trans.numeroVenta"
-                title="Editar">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="btn-action" (click)="eliminarTransaccion(trans)" *ngIf="!trans.numeroVenta"
-                title="Eliminar">
-                <i class="bi bi-trash"></i>
-              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- COLUMNA DERECHA: RESUMEN DETALLADO -->
+    <!-- COLUMNA DERECHA: RESUMEN Y ESTADO DE CAJA -->
     <div class="right-column">
+
+      <!-- PANEL DE CIERRE - -->
+      <div class="cierre-panel glass-card" *ngIf="cierreActual; else sinCierre">
+        <div class="panel-header">
+          <div class="panel-title">
+            <i class="bi bi-safe"></i>
+            <h3>Estado de Caja</h3>
+            <span class="badge-estado" [ngClass]="getEstadoClass(cierreActual.estado)">
+              <i class="bi" [ngClass]="{
+                'bi-play-circle-fill': cierreActual.estado === 'abierto',
+                'bi-lock-fill': cierreActual.estado === 'cerrado',
+                'bi-check-circle-fill': cierreActual.estado === 'revisado'
+              }"></i>
+              {{ getEstadoTexto(cierreActual.estado) }}
+            </span>
+          </div>
+          <div class="panel-actions" *ngIf="cierreActual.estado === 'abierto'">
+            <button class="btn-sm btn-outline" (click)="abrirModalCierre()">
+              <i class="bi bi-lock"></i> Cerrar Caja
+            </button>
+          </div>
+        </div>
+
+        <div class="cierre-detalle">
+          <!-- Resumen rápido en 2 columnas -->
+          <div class="cierre-resumen-grid">
+            <div class="cierre-resumen-item">
+              <span class="label">Efectivo Inicial</span>
+              <span class="value">{{ cierreActual.efectivoInicial | currency }}</span>
+            </div>
+            <div class="cierre-resumen-item">
+              <span class="label">+ Ventas Efectivo</span>
+              <span class="value text-success">{{ cierreActual.ventasEfectivo | currency }}</span>
+            </div>
+            <div class="cierre-resumen-item">
+              <span class="label">- Egresos Efectivo</span>
+              <span class="value text-danger">{{ getEgresosEfectivo() | currency }}</span>
+            </div>
+            <div class="cierre-resumen-item highlight">
+              <span class="label">= Efectivo Teórico</span>
+              <span class="value fw-bold">{{ getEfectivoFinalTeorico() | currency }}</span>
+            </div>
+          </div>
+
+          <!-- Diferencia destacada -->
+          <div class="diferencia-destacada" [ngClass]="{
+            'positiva': getDiferencia() > 0,
+            'negativa': getDiferencia() < 0,
+            'cero': getDiferencia() === 0
+          }">
+            <div class="diferencia-icon">
+              <i class="bi" [ngClass]="{
+                'bi-arrow-up-circle': getDiferencia() > 0,
+                'bi-arrow-down-circle': getDiferencia() < 0,
+                'bi-check-circle': getDiferencia() === 0
+              }"></i>
+            </div>
+            <div class="diferencia-info">
+              <span class="diferencia-label">Diferencia</span>
+              <span class="diferencia-valor">{{ getDiferencia() | currency }}</span>
+            </div>
+          </div>
+
+          <!-- Información de apertura -->
+          <div class="fecha-info">
+            <div class="info-item">
+              <i class="bi bi-person"></i>
+              <span>Apertura: {{ cierreActual.usuarioApertura }} - {{ cierreActual.fechaApertura | date:'HH:mm'
+                }}</span>
+            </div>
+            <div class="info-item" *ngIf="cierreActual.fechaCierre">
+              <i class="bi bi-person-check"></i>
+              <span>Cierre: {{ cierreActual.usuarioCierre }} - {{ cierreActual.fechaCierre | date:'HH:mm' }}</span>
+            </div>
+          </div>
+
+          <!-- Observaciones si existen -->
+          <div class="observaciones" *ngIf="cierreActual.observaciones">
+            <i class="bi bi-chat-text"></i>
+            <span>{{ cierreActual.observaciones }}</span>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #sinCierre>
+        <div class="cierre-panel glass-card sin-cierre">
+          <div class="panel-header">
+            <div class="panel-title">
+              <i class="bi bi-exclamation-circle"></i>
+              <h3>Estado de Caja</h3>
+            </div>
+            <div class="panel-actions">
+              <button class="btn-sm btn-primary" (click)="abrirModalInicioCaja()">
+                <i class="bi bi-play-circle"></i> Iniciar Caja
+              </button>
+            </div>
+          </div>
+          <div class="cierre-detalle text-center">
+            <i class="bi bi-cash-stack" style="font-size: 3rem; color: #94a3b8;"></i>
+            <h4>Caja no iniciada</h4>
+            <p>Haz clic en "Iniciar Caja" para comenzar la jornada</p>
+          </div>
+        </div>
+      </ng-template>
+
+      <!-- PANEL DE ANÁLISIS DE VENTAS -->
       <div class="panel glass-card">
         <div class="panel-header">
           <div class="panel-title">
@@ -256,299 +369,214 @@
           </button>
         </div>
 
-        <!-- TAB: TIPOS DE VENTA - USANDO ANÁLISIS EN VIVO -->
-        <div class="tab-content" *ngIf="tabActivo === 'tipos'">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-icon bg-primary-light">
-                <i class="bi bi-person-badge"></i>
-              </div>
-              <div class="stat-info">
-                <span class="stat-label">Solo Consulta</span>
-                <span class="stat-value">{{ totalConsultas | currency }}</span>
-                <span class="stat-count">{{ analisisVentas.soloConsulta.cantidad }} ventas</span>
-              </div>
-            </div>
-
-            <div class="stat-card">
-              <div class="stat-icon bg-success-light">
-                <i class="bi bi-journal-medical"></i>
-              </div>
-              <div class="stat-info">
-                <span class="stat-label">Consulta + Productos</span>
-                <span class="stat-value">{{ totalConsultaProductos | currency }}</span>
-                <span class="stat-count">{{ analisisVentas.consultaProductos.cantidad }} ventas</span>
-              </div>
-            </div>
-
-            <div class="stat-card">
-              <div class="stat-icon bg-warning-light">
-                <i class="bi bi-cart"></i>
-              </div>
-              <div class="stat-info">
-                <span class="stat-label">Solo Productos</span>
-                <span class="stat-value">{{ totalSoloProductos | currency }}</span>
-                <span class="stat-count">{{ analisisVentas.soloProductos.cantidad }} ventas</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="chart-container">
-            <div class="progress-bars">
-              <div class="progress-item">
-                <div class="progress-bar-fill" [style.width.%]="(totalConsultas / getTotalVentas() * 100) || 0"
-                  style="background: #2563eb;"></div>
-              </div>
-              <div class="progress-item">
-                <div class="progress-bar-fill" [style.width.%]="(totalConsultaProductos / getTotalVentas() * 100) || 0"
-                  style="background: #22c55e;"></div>
-              </div>
-              <div class="progress-item">
-                <div class="progress-bar-fill" [style.width.%]="(totalSoloProductos / getTotalVentas() * 100) || 0"
-                  style="background: #eab308;"></div>
-              </div>
-            </div>
-            <div class="chart-legend">
-              <div class="legend-item"><span class="color-dot" style="background: #2563eb;"></span>Solo Consulta</div>
-              <div class="legend-item"><span class="color-dot" style="background: #22c55e;"></span>Consulta + Productos
-              </div>
-              <div class="legend-item"><span class="color-dot" style="background: #eab308;"></span>Solo Productos</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB: MÉTODOS DE PAGO - USANDO ANÁLISIS EN VIVO -->
-        <div class="tab-content" *ngIf="tabActivo === 'metodos'">
-          <div class="metodo-seccion">
-            <h4 class="seccion-titulo">
-              <i class="bi bi-cash"></i> Efectivo
-              <span class="seccion-total">{{ analisisMetodosPago.efectivo.total | currency }}</span>
-            </h4>
-            <div class="monedas-grid">
-              <div class="moneda-card"><span class="moneda-simbolo">$</span><span class="moneda-monto">{{
-                  analisisMetodosPago.efectivo.porMoneda.dolar
-                  | currency:'USD':'symbol':'1.2-2' }}</span><span class="moneda-label">Dólares</span></div>
-              <div class="moneda-card"><span class="moneda-simbolo">€</span><span class="moneda-monto">{{
-                  analisisMetodosPago.efectivo.porMoneda.euro |
-                  currency:'EUR':'symbol':'1.2-2' }}</span><span class="moneda-label">Euros</span></div>
-              <div class="moneda-card"><span class="moneda-simbolo">Bs.</span><span class="moneda-monto">{{
-                  analisisMetodosPago.efectivo.porMoneda.bolivar | currency:'VES':'symbol':'1.2-2' }}</span><span
-                  class="moneda-label">Bolívares</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="metodo-seccion" *ngIf="analisisMetodosPago.punto.porBanco.length > 0">
-            <h4 class="seccion-titulo"><i class="bi bi-credit-card"></i> Punto de Venta <span class="seccion-total">{{
-                analisisMetodosPago.punto.total | currency }}</span></h4>
-            <div class="bancos-grid">
-              <div class="banco-card" *ngFor="let banco of analisisMetodosPago.punto.porBanco">
-                <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco }}</span>
+        <!-- Contenedor con scroll vertical -->
+        <div class="analisis-scroll-container">
+          <!-- TAB: TIPOS DE VENTA -->
+          <div class="tab-content" *ngIf="tabActivo === 'tipos'">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-icon bg-primary-light">
+                  <i class="bi bi-person-badge"></i>
                 </div>
-                <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
-                    class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="metodo-seccion" *ngIf="analisisMetodosPago.pagomovil.porBanco.length > 0">
-            <h4 class="seccion-titulo"><i class="bi bi-phone"></i> Pago Móvil <span class="seccion-total">{{
-                analisisMetodosPago.pagomovil.total | currency }}</span></h4>
-            <div class="bancos-grid">
-              <div class="banco-card" *ngFor="let banco of analisisMetodosPago.pagomovil.porBanco">
-                <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco }}</span>
+                <div class="stat-info">
+                  <span class="stat-label">Solo Consulta</span>
+                  <span class="stat-value">{{ totalConsultas | currency }}</span>
+                  <span class="stat-count">{{ analisisVentas.soloConsulta.cantidad }} ventas</span>
                 </div>
-                <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
-                    class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
               </div>
-            </div>
-          </div>
 
-          <div class="metodo-seccion" *ngIf="analisisMetodosPago.transferencia.porBanco.length > 0">
-            <h4 class="seccion-titulo"><i class="bi bi-bank2"></i> Transferencias <span class="seccion-total">{{
-                analisisMetodosPago.transferencia.total | currency }}</span></h4>
-            <div class="bancos-grid">
-              <div class="banco-card" *ngFor="let banco of analisisMetodosPago.transferencia.porBanco">
-                <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco }}</span>
+              <div class="stat-card">
+                <div class="stat-icon bg-success-light">
+                  <i class="bi bi-journal-medical"></i>
                 </div>
-                <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
-                    class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
+                <div class="stat-info">
+                  <span class="stat-label">Consulta + Productos</span>
+                  <span class="stat-value">{{ totalConsultaProductos | currency }}</span>
+                  <span class="stat-count">{{ analisisVentas.consultaProductos.cantidad }} ventas</span>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div class="metodo-seccion" *ngIf="analisisMetodosPago.zelle.total > 0">
-            <h4 class="seccion-titulo"><i class="bi bi-globe2"></i> Zelle <span class="seccion-total">{{
-                analisisMetodosPago.zelle.total | currency }}</span></h4>
-          </div>
-
-          <div class="metodo-seccion" *ngIf="analisisMetodosPago.mixto.total > 0">
-            <h4 class="seccion-titulo"><i class="bi bi-wallet2"></i> Mixto <span class="seccion-total">{{
-                analisisMetodosPago.mixto.total | currency }}</span></h4>
-          </div>
-        </div>
-
-        <!-- TAB: FORMAS DE PAGO - USANDO ANÁLISIS EN VIVO -->
-        <div class="tab-content" *ngIf="tabActivo === 'formas'">
-          <div class="formas-grid">
-            <div class="forma-card contado">
-              <div class="forma-icon"><i class="bi bi-cash-stack"></i></div>
-              <div class="forma-content"><span class="forma-label">Contado</span><span class="forma-monto">{{
-                  analisisFormasPago.contado.total | currency }}</span><span class="forma-count">{{
-                  analisisFormasPago.contado.cantidad }} ventas</span></div>
-            </div>
-
-            <div class="forma-card abono">
-              <div class="forma-icon"><i class="bi bi-calendar-check"></i></div>
-              <div class="forma-content"><span class="forma-label">Abono</span><span class="forma-monto">{{
-                  analisisFormasPago.abono.total
-                  | currency }}</span>
-                <div class="forma-detalle"><span>Abonado: {{ analisisFormasPago.abono.montoAbonado | currency
-                    }}</span><span>Pendiente: {{ analisisFormasPago.abono.deudaPendiente | currency }}</span>
+              <div class="stat-card">
+                <div class="stat-icon bg-warning-light">
+                  <i class="bi bi-cart"></i>
+                </div>
+                <div class="stat-info">
+                  <span class="stat-label">Solo Productos</span>
+                  <span class="stat-value">{{ totalSoloProductos | currency }}</span>
+                  <span class="stat-count">{{ analisisVentas.soloProductos.cantidad }} ventas</span>
                 </div>
               </div>
             </div>
 
-            <div class="forma-card cashea">
-              <div class="forma-icon"><i class="bi bi-arrow-repeat"></i></div>
-              <div class="forma-content"><span class="forma-label">Cashea</span><span class="forma-monto">{{
-                  analisisFormasPago.cashea.total
-                  | currency }}</span>
-                <div class="forma-detalle"><span>Inicial: {{ analisisFormasPago.cashea.montoInicial | currency
-                    }}</span><span>Pendiente: {{ analisisFormasPago.cashea.deudaPendiente | currency }}</span>
+           <!-- <div class="chart-container">
+              <div class="progress-bars">
+                <div class="progress-item">
+                  <div class="progress-bar-fill" [style.width.%]="(totalConsultas / getTotalVentas() * 100) || 0"
+                    style="background: #2563eb;"></div>
+                </div>
+                <div class="progress-item">
+                  <div class="progress-bar-fill"
+                    [style.width.%]="(totalConsultaProductos / getTotalVentas() * 100) || 0"
+                    style="background: #22c55e;"></div>
+                </div>
+                <div class="progress-item">
+                  <div class="progress-bar-fill" [style.width.%]="(totalSoloProductos / getTotalVentas() * 100) || 0"
+                    style="background: #eab308;"></div>
+                </div>
+              </div>
+              <div class="chart-legend">
+                <div class="legend-item"><span class="color-dot" style="background: #2563eb;"></span>Solo Consulta
+                </div>
+                <div class="legend-item"><span class="color-dot" style="background: #22c55e;"></span>Consulta +
+                  Productos
+                </div>
+                <div class="legend-item"><span class="color-dot" style="background: #eab308;"></span>Solo Productos
+                </div>
+              </div>
+            </div>-->
+          </div>
+
+          <!-- TAB: MÉTODOS DE PAGO -->
+          <div class="tab-content" *ngIf="tabActivo === 'metodos'">
+            <div class="metodo-seccion">
+              <h4 class="seccion-titulo">
+                <i class="bi bi-cash"></i> Efectivo
+                <span class="seccion-total">{{ analisisMetodosPago.efectivo.total | currency }}</span>
+              </h4>
+              <div class="monedas-grid">
+                <div class="moneda-card"><span class="moneda-simbolo">$</span><span class="moneda-monto">{{
+                    analisisMetodosPago.efectivo.porMoneda.dolar
+                    | currency:'USD':'symbol':'1.2-2' }}</span><span class="moneda-label">Dólares</span></div>
+                <div class="moneda-card"><span class="moneda-simbolo">€</span><span class="moneda-monto">{{
+                    analisisMetodosPago.efectivo.porMoneda.euro |
+                    currency:'EUR':'symbol':'1.2-2' }}</span><span class="moneda-label">Euros</span></div>
+                <div class="moneda-card"><span class="moneda-simbolo">Bs.</span><span class="moneda-monto">{{
+                    analisisMetodosPago.efectivo.porMoneda.bolivar | currency:'VES':'symbol':'1.2-2' }}</span><span
+                    class="moneda-label">Bolívares</span>
                 </div>
               </div>
             </div>
 
-            <div class="forma-card pendiente" *ngIf="analisisFormasPago.deContadoPendiente.total > 0">
-              <div class="forma-icon"><i class="bi bi-hourglass-split"></i></div>
-              <div class="forma-content"><span class="forma-label">Pendiente por Pago</span><span
-                  class="forma-monto text-danger">{{ analisisFormasPago.deContadoPendiente.total | currency
-                  }}</span><span class="forma-count">{{
-                  analisisFormasPago.deContadoPendiente.cantidad }} ventas sin cobrar</span></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB: VENTAS PENDIENTES - USANDO ANÁLISIS EN VIVO -->
-        <div class="tab-content" *ngIf="tabActivo === 'pendientes'">
-          <div class="pendientes-list" *ngIf="analisisVentasPendientes.length > 0; else sinPendientes">
-            <div class="pendiente-card" *ngFor="let venta of analisisVentasPendientes">
-              <div class="pendiente-header"><span class="venta-num">#{{ venta.numeroVenta }}</span><span
-                  class="venta-cliente">{{ venta.cliente }}</span><span class="venta-fecha">{{ venta.fecha |
-                  date:'dd/MM/yyyy' }}</span></div>
-              <div class="pendiente-body">
-                <div class="pendiente-monto"><span class="label">Total:</span><span class="value">{{ venta.total |
-                    currency }}</span></div>
-                <div class="pendiente-deuda"><span class="label">Deuda:</span><span class="value text-danger">{{
-                    venta.deuda | currency }}</span></div>
-              </div>
-              <div class="pendiente-footer"><span class="badge-forma">{{ venta.formaPago }}</span><button
-                  class="btn-small" (click)="verDetalleVenta(venta.numeroVenta)"><i class="bi bi-eye"></i> Ver
-                  detalles</button></div>
-            </div>
-          </div>
-          <ng-template #sinPendientes>
-            <div class="empty-state small"><i class="bi bi-check-circle text-success"></i>
-              <p>No hay ventas pendientes de pago</p>
-            </div>
-          </ng-template>
-        </div>
-      </div>
-
-      <!-- PANEL DE CIERRE -->
-      <div class="cierre-panel glass-card" *ngIf="cierreActual">
-        <div class="panel-header">
-          <div class="panel-title">
-            <i class="bi bi-safe"></i>
-            <h3>Estado de Caja</h3>
-          </div>
-        </div>
-
-        <div class="cierre-detalle">
-          <div class="detalle-row">
-            <span>Efectivo Inicial</span>
-            <span class="valor">{{ cierreActual.efectivoInicial | currency }}</span>
-          </div>
-          <div class="detalle-row">
-            <span>+ Ventas Efectivo</span>
-            <span class="valor text-success">{{ cierreActual.ventasEfectivo | currency }}</span>
-          </div>
-          <div class="detalle-row">
-            <span>- Egresos Efectivo</span>
-            <span class="valor text-danger">{{ getEgresosEfectivo() | currency }}</span>
-          </div>
-          <div class="detalle-row total">
-            <span>= Efectivo Teórico</span>
-            <span class="valor">{{ getEfectivoFinalTeorico() | currency }}</span>
-          </div>
-
-          <div class="diferencia-row" [ngClass]="{
-            'positiva': getDiferencia() > 0,
-            'negativa': getDiferencia() < 0,
-            'cero': getDiferencia() === 0
-          }">
-            <span>Diferencia</span>
-            <span class="valor">{{ getDiferencia() | currency }}</span>
-          </div>
-
-          <!-- Estado actual -->
-          <div class="estado-cierre">
-            <span class="badge" [ngClass]="getEstadoClass(cierreActual.estado)">
-              <i class="bi" [ngClass]="{
-                'bi-play-circle-fill': cierreActual.estado === 'abierto',
-                'bi-lock-fill': cierreActual.estado === 'cerrado',
-                'bi-check-circle-fill': cierreActual.estado === 'revisado'
-              }"></i>
-              {{ getEstadoTexto(cierreActual.estado) }}
-            </span>
-          </div>
-
-          <!-- Información de apertura/cierre -->
-          <div class="fecha-info">
-            <div class="info-item">
-              <i class="bi bi-person"></i>
-              <span>Apertura: {{ cierreActual.usuarioApertura }}</span>
-            </div>
-            <div class="info-item">
-              <i class="bi bi-clock"></i>
-              <span>{{ cierreActual.fechaApertura | date:'dd/MM/yyyy HH:mm' }}</span>
-            </div>
-            <div class="info-item" *ngIf="cierreActual.fechaCierre">
-              <i class="bi bi-person-check"></i>
-              <span>Cierre: {{ cierreActual.usuarioCierre }}</span>
-            </div>
-            <div class="info-item" *ngIf="cierreActual.fechaCierre">
-              <i class="bi bi-clock-history"></i>
-              <span>{{ cierreActual.fechaCierre | date:'dd/MM/yyyy HH:mm' }}</span>
-            </div>
-          </div>
-
-          <!-- Observaciones si existen -->
-          <div class="observaciones" *ngIf="cierreActual.observaciones">
-            <div class="observaciones-header">
-              <i class="bi bi-chat-text"></i>
-              <span>Observaciones</span>
-            </div>
-            <p>{{ cierreActual.observaciones }}</p>
-          </div>
-        </div>
-
-        <ng-template #sinCierre>
-          <div class="cierre-panel glass-card sin-cierre">
-            <div class="panel-header">
-              <div class="panel-title">
-                <i class="bi bi-exclamation-circle"></i>
-                <h3>Estado de Caja</h3>
+            <div class="metodo-seccion" *ngIf="analisisMetodosPago.punto.porBanco.length > 0">
+              <h4 class="seccion-titulo"><i class="bi bi-credit-card"></i> Punto de Venta <span class="seccion-total">{{
+                  analisisMetodosPago.punto.total | currency }}</span></h4>
+              <div class="bancos-grid">
+                <div class="banco-card" *ngFor="let banco of analisisMetodosPago.punto.porBanco">
+                  <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco
+                      }}</span>
+                  </div>
+                  <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
+                      class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
+                </div>
               </div>
             </div>
-            <div class="cierre-detalle text-center py-4">
-              <i class="bi bi-cash-stack" style="font-size: 3rem; color: #64748b;"></i>
-              <h4 class="mt-3">Caja no iniciada</h4>
-              <p class="text-muted">Para comenzar, haz clic en el botón "Iniciar Caja"</p>
+
+            <div class="metodo-seccion" *ngIf="analisisMetodosPago.pagomovil.porBanco.length > 0">
+              <h4 class="seccion-titulo"><i class="bi bi-phone"></i> Pago Móvil <span class="seccion-total">{{
+                  analisisMetodosPago.pagomovil.total | currency }}</span></h4>
+              <div class="bancos-grid">
+                <div class="banco-card" *ngFor="let banco of analisisMetodosPago.pagomovil.porBanco">
+                  <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco
+                      }}</span>
+                  </div>
+                  <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
+                      class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="metodo-seccion" *ngIf="analisisMetodosPago.transferencia.porBanco.length > 0">
+              <h4 class="seccion-titulo"><i class="bi bi-bank2"></i> Transferencias <span class="seccion-total">{{
+                  analisisMetodosPago.transferencia.total | currency }}</span></h4>
+              <div class="bancos-grid">
+                <div class="banco-card" *ngFor="let banco of analisisMetodosPago.transferencia.porBanco">
+                  <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco
+                      }}</span>
+                  </div>
+                  <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
+                      class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="metodo-seccion" *ngIf="analisisMetodosPago.zelle.total > 0">
+              <h4 class="seccion-titulo"><i class="bi bi-globe2"></i> Zelle <span class="seccion-total">{{
+                  analisisMetodosPago.zelle.total | currency }}</span></h4>
+            </div>
+
+            <div class="metodo-seccion" *ngIf="analisisMetodosPago.mixto.total > 0">
+              <h4 class="seccion-titulo"><i class="bi bi-wallet2"></i> Mixto <span class="seccion-total">{{
+                  analisisMetodosPago.mixto.total | currency }}</span></h4>
             </div>
           </div>
-        </ng-template>
+
+          <!-- TAB: FORMAS DE PAGO -->
+          <div class="tab-content" *ngIf="tabActivo === 'formas'">
+            <div class="formas-grid">
+              <div class="forma-card contado">
+                <div class="forma-icon"><i class="bi bi-cash-stack"></i></div>
+                <div class="forma-content"><span class="forma-label">Contado</span><span class="forma-monto">{{
+                    analisisFormasPago.contado.total | currency }}</span><span class="forma-count">{{
+                    analisisFormasPago.contado.cantidad }} ventas</span></div>
+              </div>
+
+              <div class="forma-card abono">
+                <div class="forma-icon"><i class="bi bi-calendar-check"></i></div>
+                <div class="forma-content"><span class="forma-label">Abono</span><span class="forma-monto">{{
+                    analisisFormasPago.abono.total
+                    | currency }}</span>
+                  <div class="forma-detalle"><span>Abonado: {{ analisisFormasPago.abono.montoAbonado | currency
+                      }}</span><span>Pendiente: {{ analisisFormasPago.abono.deudaPendiente | currency }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="forma-card cashea">
+                <div class="forma-icon"><i class="bi bi-arrow-repeat"></i></div>
+                <div class="forma-content"><span class="forma-label">Cashea</span><span class="forma-monto">{{
+                    analisisFormasPago.cashea.total
+                    | currency }}</span>
+                  <div class="forma-detalle"><span>Inicial: {{ analisisFormasPago.cashea.montoInicial | currency
+                      }}</span><span>Pendiente: {{ analisisFormasPago.cashea.deudaPendiente | currency }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="forma-card pendiente" *ngIf="analisisFormasPago.deContadoPendiente.total > 0">
+                <div class="forma-icon"><i class="bi bi-hourglass-split"></i></div>
+                <div class="forma-content"><span class="forma-label">Pendiente por Pago</span><span
+                    class="forma-monto text-danger">{{ analisisFormasPago.deContadoPendiente.total | currency
+                    }}</span><span class="forma-count">{{
+                    analisisFormasPago.deContadoPendiente.cantidad }} ventas sin cobrar</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: VENTAS PENDIENTES -->
+          <div class="tab-content" *ngIf="tabActivo === 'pendientes'">
+            <div class="pendientes-list" *ngIf="analisisVentasPendientes.length > 0; else sinPendientes">
+              <div class="pendiente-card" *ngFor="let venta of analisisVentasPendientes">
+                <div class="pendiente-header"><span class="venta-num">#{{ venta.numeroVenta }}</span><span
+                    class="venta-cliente">{{ venta.cliente }}</span><span class="venta-fecha">{{ venta.fecha |
+                    date:'dd/MM/yyyy' }}</span></div>
+                <div class="pendiente-body">
+                  <div class="pendiente-monto"><span class="label">Total:</span><span class="value">{{ venta.total |
+                      currency }}</span></div>
+                  <div class="pendiente-deuda"><span class="label">Deuda:</span><span class="value text-danger">{{
+                      venta.deuda | currency }}</span></div>
+                </div>
+                <div class="pendiente-footer"><span class="badge-forma">{{ venta.formaPago }}</span><button
+        class="btn-small" (click)="verDetalleVenta(venta.numeroVenta)"><i class="bi bi-eye"></i> Ver
+        detalles</button></div>
+              </div>
+            </div>
+            <ng-template #sinPendientes>
+              <div class="empty-state small"><i class="bi bi-check-circle text-success"></i>
+                <p>No hay ventas pendientes de pago</p>
+              </div>
+            </ng-template>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -562,6 +590,15 @@
         *ngIf="cierreActual?.estado === 'abierto'"><i class="bi bi-save"></i> Guardar Cambios</button></div>
   </div>
 </div>
+
+
+
+
+
+
+
+
+
 
 <!-- Modal Inicio Caja -->
 <div class="modal fade" id="inicioCajaModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
@@ -642,18 +679,19 @@
 
 <!-- Modal Cierre Caja -->
 <div class="modal fade" id="cierreCajaModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title">
           <i class="bi bi-lock text-success me-2"></i>
-          Cerrar Caja
+          Cierre de Caja - Conciliación
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form [formGroup]="cierreForm" (ngSubmit)="realizarCierre()">
-        <div class="modal-body">
-          <!-- Información del cierre -->
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+          
+          <!-- Información del cierre (igual) -->
           <div class="bg-light p-3 rounded mb-3">
             <div class="row">
               <div class="col-md-4">
@@ -675,86 +713,253 @@
             </div>
           </div>
 
-          <!-- Resumen de ventas -->
-          <div class="bg-light p-3 rounded mb-3">
-            <h6 class="mb-3"><i class="bi bi-graph-up me-2"></i>Resumen de Ventas del Día</h6>
-            <div class="row">
-              <div class="col-md-4">
-                <small class="text-muted">Total Ventas</small>
-                <div class="fw-bold">{{ getTotalVentas() | currency }}</div>
-              </div>
-              <div class="col-md-4">
-                <small class="text-muted">Ventas Efectivo</small>
-                <div class="fw-bold text-success">{{ cierreActual?.ventasEfectivo | currency }}</div>
-              </div>
-              <div class="col-md-4">
-                <small class="text-muted">Ventas Otros Medios</small>
-                <div class="fw-bold text-info">{{ getTotalVentas() - (cierreActual?.ventasEfectivo || 0) | currency }}
+          <!-- SECCIÓN 1: EFECTIVO POR MONEDA (igual) -->
+          <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+              <i class="bi bi-cash-stack me-2"></i>
+              <strong>1. Conciliación de Efectivo</strong>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">
+                    <i class="bi bi-currency-dollar text-success"></i> Dólares (USD)
+                  </label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="efectivoRealUSD" 
+                           step="0.01" min="0" placeholder="0.00">
+                  </div>
+                  <small class="text-muted">Sistema: {{ analisisMetodosPago.efectivo.porMoneda.dolar | currency:'USD':'symbol':'1.2-2' }}</small>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">
+                    <i class="bi bi-currency-euro text-info"></i> Euros (EUR)
+                  </label>
+                  <div class="input-group">
+                    <span class="input-group-text">€</span>
+                    <input type="number" class="form-control" formControlName="efectivoRealEUR" 
+                           step="0.01" min="0" placeholder="0.00">
+                  </div>
+                  <small class="text-muted">Sistema: {{ analisisMetodosPago.efectivo.porMoneda.euro | currency:'EUR':'symbol':'1.2-2' }}</small>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label fw-bold">
+                    <i class="bi bi-currency-exchange text-warning"></i> Bolívares (Bs)
+                  </label>
+                  <div class="input-group">
+                    <span class="input-group-text">Bs.</span>
+                    <input type="number" class="form-control" formControlName="efectivoRealVES" 
+                           step="0.01" min="0" placeholder="0.00">
+                  </div>
+                  <small class="text-muted">Sistema: {{ analisisMetodosPago.efectivo.porMoneda.bolivar | currency:'VES':'symbol':'1.2-2' }}</small>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Cálculo de efectivo teórico -->
-          <div class="bg-light p-3 rounded mb-3">
-            <h6 class="mb-3"><i class="bi bi-calculator me-2"></i>Conciliación de Efectivo</h6>
-            <div class="row">
-              <div class="col-md-6">
-                <div class="d-flex justify-content-between mb-2">
-                  <span>Efectivo Inicial:</span>
-                  <span class="fw-bold">{{ cierreActual?.efectivoInicial | currency }}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                  <span>+ Ventas en Efectivo:</span>
-                  <span class="fw-bold text-success">{{ cierreActual?.ventasEfectivo | currency }}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2">
-                  <span>- Egresos en Efectivo:</span>
-                  <span class="fw-bold text-danger">{{ getEgresosEfectivo() | currency }}</span>
-                </div>
-                <div class="d-flex justify-content-between pt-2 border-top">
-                  <span class="fw-bold">= Efectivo Teórico:</span>
-                  <span class="fw-bold">{{ getEfectivoFinalTeorico() | currency }}</span>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">
-                  <i class="bi bi-cash-stack me-2"></i>Efectivo Real (contado físico)
-                  <span class="text-danger">*</span>
-                </label>
-                <div class="input-group">
-                  <span class="input-group-text">{{ simboloMonedaSistema }}</span>
-                  <input type="number" class="form-control" formControlName="efectivoFinalReal" step="0.01" min="0"
-                    placeholder="0.00" autofocus>
+          <!-- SECCIÓN 2: PUNTO DE VENTA POR BANCO (igual) -->
+          <div class="card mb-3" *ngIf="analisisMetodosPago.punto.porBanco.length > 0">
+            <div class="card-header bg-info text-white">
+              <i class="bi bi-credit-card me-2"></i>
+              <strong>2. Conciliación de Punto de Venta</strong>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6 mb-3" *ngFor="let banco of analisisMetodosPago.punto.porBanco">
+                  <label class="form-label fw-bold">
+                    <i class="bi bi-bank me-1"></i> {{ banco.banco }}
+                  </label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" 
+                           [formControlName]="'puntoReal_' + banco.bancoCodigo" 
+                           step="0.01" min="0" placeholder="0.00">
+                  </div>
+                  <small class="text-muted">Sistema: {{ banco.total | currency }}</small>
+                  <div *ngIf="banco.cantidad > 0" class="text-muted small">
+                    {{ banco.cantidad }} operaciones
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Diferencia -->
-          <div class="alert" [ngClass]="{
-            'alert-success': getDiferencia() === 0,
-            'alert-warning': getDiferencia() > 0,
-            'alert-danger': getDiferencia() < 0
-          }">
-            <div class="d-flex justify-content-between align-items-center">
-              <span><i class="bi bi-exclamation-triangle me-2"></i>Diferencia:</span>
-              <span class="fw-bold">{{ getDiferencia() | currency }}</span>
+          <!-- SECCIÓN 3: TRANSFERENCIAS - SIMPLIFICADO (SIN BANCO) -->
+          <div class="card mb-3">
+            <div class="card-header bg-secondary text-white">
+              <i class="bi bi-bank2 me-2"></i>
+              <strong>3. Conciliación de Transferencias</strong>
             </div>
-            <small *ngIf="getDiferencia() !== 0" class="text-muted">
-              {{ getDiferencia() > 0 ? 'Sobrante en caja. Verifique si hubo ingresos no registrados.' : 'Faltante en caja. Verifique egresos o errores en el conteo.' }}
-            </small>
-            <small *ngIf="getDiferencia() === 0" class="text-muted">
-              ¡Perfecto! El efectivo coincide con el sistema.
-            </small>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">
+                    <i class="bi bi-cash me-1"></i> Total Transferencias
+                  </label>
+                  <div class="input-group">
+                    <span class="input-group-text">Bs.</span>
+                    <input type="number" class="form-control" formControlName="transferenciaRealTotal" 
+                           step="0.01" min="0" placeholder="0.00">
+                  </div>
+                  <small class="text-muted">Sistema: {{ analisisMetodosPago.transferencia.total | currency:'VES':'symbol':'1.2-2' }}</small>
+                  <div class="text-muted small">
+                    {{ analisisMetodosPago.transferencia.cantidad }} operaciones
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
+          <!-- SECCIÓN 4: PAGO MÓVIL - SIMPLIFICADO (SIN BANCO) -->
+          <div class="card mb-3">
+            <div class="card-header bg-warning text-dark">
+              <i class="bi bi-phone me-2"></i>
+              <strong>4. Conciliación de Pago Móvil</strong>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">
+                    <i class="bi bi-cash me-1"></i> Total Pago Móvil
+                  </label>
+                  <div class="input-group">
+                    <span class="input-group-text">Bs.</span>
+                    <input type="number" class="form-control" formControlName="pagomovilRealTotal" 
+                           step="0.01" min="0" placeholder="0.00">
+                  </div>
+                  <small class="text-muted">Sistema: {{ analisisMetodosPago.pagomovil.total | currency:'VES':'symbol':'1.2-2' }}</small>
+                  <div class="text-muted small">
+                    {{ analisisMetodosPago.pagomovil.cantidad }} operaciones
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 5: ZELLE (igual) -->
+          <div class="card mb-3" *ngIf="analisisMetodosPago.zelle.total > 0">
+            <div class="card-header bg-success text-white">
+              <i class="bi bi-globe2 me-2"></i>
+              <strong>5. Conciliación de Zelle</strong>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold">
+                    <i class="bi bi-cash me-1"></i> Total Zelle
+                  </label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="zelleReal" 
+                           step="0.01" min="0" placeholder="0.00">
+                  </div>
+                  <small class="text-muted">Sistema: {{ analisisMetodosPago.zelle.total | currency }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 6: RESULTADO DE CONCILIACIÓN (actualizado) -->
+          <div class="card mb-3">
+            <div class="card-header bg-dark text-white">
+              <i class="bi bi-calculator me-2"></i>
+              <strong>6. Resultado de Conciliación</strong>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="bg-light p-3 rounded">
+                    <h6 class="mb-3">Efectivo</h6>
+                    <div class="d-flex justify-content-between mb-2">
+                      <span>Efectivo Inicial:</span>
+                      <span class="fw-bold">{{ cierreActual?.efectivoInicial | currency }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                      <span>+ Ventas en Efectivo (sistema):</span>
+                      <span class="fw-bold text-success">{{ analisisMetodosPago.efectivo.total | currency }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                      <span>- Egresos en Efectivo:</span>
+                      <span class="fw-bold text-danger">{{ getEgresosEfectivo() | currency }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2 border-top">
+                      <span class="fw-bold">= Efectivo Teórico:</span>
+                      <span class="fw-bold">{{ getEfectivoFinalTeorico() | currency }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                      <span>Efectivo Real (ingresado):</span>
+                      <span class="fw-bold">{{ getEfectivoRealTotal() | currency }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                      <span class="fw-bold">Diferencia en Efectivo:</span>
+                      <span class="fw-bold" [ngClass]="{
+                        'text-success': getDiferenciaEfectivo() > 0,
+                        'text-danger': getDiferenciaEfectivo() < 0,
+                        'text-muted': getDiferenciaEfectivo() === 0
+                      }">{{ getDiferenciaEfectivo() | currency }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="bg-light p-3 rounded">
+                    <h6 class="mb-3">Resumen de Diferencias</h6>
+                    <div class="d-flex justify-content-between mb-2" *ngIf="tieneDiferenciaPunto()">
+                      <span>Punto de Venta:</span>
+                      <span [ngClass]="{'text-danger': getDiferenciaPunto() < 0, 'text-success': getDiferenciaPunto() > 0}">
+                        {{ getDiferenciaPuntoFormateada() }}
+                      </span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" *ngIf="tieneDiferenciaTransferencia()">
+                      <span>Transferencias:</span>
+                      <span [ngClass]="{'text-danger': getDiferenciaTransferencia() < 0, 'text-success': getDiferenciaTransferencia() > 0}">
+                        {{ getDiferenciaTransferenciaFormateada() }}
+                      </span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" *ngIf="tieneDiferenciaPagomovil()">
+                      <span>Pago Móvil:</span>
+                      <span [ngClass]="{'text-danger': getDiferenciaPagomovil() < 0, 'text-success': getDiferenciaPagomovil() > 0}">
+                        {{ getDiferenciaPagomovilFormateada() }}
+                      </span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" *ngIf="tieneDiferenciaZelle()">
+                      <span>Zelle:</span>
+                      <span [ngClass]="{'text-danger': getDiferenciaZelle() < 0, 'text-success': getDiferenciaZelle() > 0}">
+                        {{ getDiferenciaZelleFormateada() }}
+                      </span>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2 border-top mt-2">
+                      <span class="fw-bold">Diferencia Total:</span>
+                      <span class="fw-bold" [ngClass]="{
+                        'text-success': getDiferenciaTotal() > 0,
+                        'text-danger': getDiferenciaTotal() < 0,
+                        'text-muted': getDiferenciaTotal() === 0
+                      }">{{ getDiferenciaTotalFormateada() }}</span>
+                    </div>
+                    <div class="mt-2 small" *ngIf="tieneDiferenciaTotal()">
+                      <i class="bi bi-info-circle"></i>
+                      <span class="text-muted">
+                        {{ getDiferenciaTotal() > 0 ? 'Sobrante en caja. Verifique si hubo ingresos no registrados.' : 
+                                                    'Faltante en caja. Verifique egresos o errores en el conteo.' }}
+                      </span>
+                    </div>
+                    <div class="mt-2 small" *ngIf="!tieneDiferenciaTotal()">
+                      <i class="bi bi-check-circle text-success"></i>
+                      <span class="text-success">¡Perfecto! Todos los montos coinciden con el sistema.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Observaciones Finales -->
           <div class="mb-3">
             <label class="form-label">
               <i class="bi bi-chat-text me-2"></i>Notas de Cierre
             </label>
-            <textarea class="form-control" formControlName="notasCierre" rows="2"
-              placeholder="Observaciones del cierre (ej: diferencia justificada, billetes deteriorados, etc.)"></textarea>
+            <textarea class="form-control" formControlName="notasCierre" rows="3"
+              placeholder="Observaciones del cierre (ej: diferencias justificadas, billetes deteriorados, etc.)"></textarea>
           </div>
 
           <div class="mb-3">

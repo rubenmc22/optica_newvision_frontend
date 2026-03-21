@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { Subject, forkJoin } from 'rxjs';
@@ -140,6 +140,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     private datePipe: DatePipe,
     private cierreCajaService: CierreCajaService,
     private historialVentaService: HistorialVentaService,
+    private cdr: ChangeDetectorRef,
     private systemConfigService: SystemConfigService,
     private tasaCambiariaService: TasaCambiariaService, // Nuevo
     private userStateService: UserStateService,
@@ -169,6 +170,18 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.cargarDatosFecha();
     this.iniciarActualizacionAutomatica();
     this.configurarSuscripciones();
+
+    setInterval(() => {
+      if (this.analisisMetodosPago?.transferencia?.porBanco) {
+        console.log('🏦 Transferencias en análisis:',
+          this.analisisMetodosPago.transferencia.porBanco.map(b => ({
+            banco: b.banco,
+            total: b.total,
+            codigo: b.bancoCodigo
+          }))
+        );
+      }
+    }, 5000);
   }
 
   ngOnDestroy(): void {
@@ -223,9 +236,13 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     });
 
     this.cierreForm = this.fb.group({
-      efectivoFinalReal: [0, [Validators.required, Validators.min(0)]],
-      observaciones: [''],
-      notasCierre: ['Cierre realizado satisfactoriamente'],
+      efectivoRealUSD: [0],
+      efectivoRealEUR: [0],
+      efectivoRealVES: [0],
+      transferenciaRealTotal: [0],
+      pagomovilRealTotal: [0],
+      zelleReal: [0],
+      notasCierre: [''],
       imprimirResumen: [true],
       enviarEmail: [false],
       adjuntarComprobantes: [true]
@@ -236,8 +253,8 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       metodoPago: ['todos'],
       usuario: ['todos'],
       categoria: ['todos'],
-      fechaDesde: [null],  // Cambiar a null
-      fechaHasta: [null],  // Cambiar a null
+      fechaDesde: [null],
+      fechaHasta: [null],
       montoMin: [null],
       montoMax: [null]
     });
@@ -573,41 +590,59 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       });
   }
 
-  private procesarResumenDiario(resumen: any): void {
-    console.log('🔄 Procesando resumen:', resumen);
+  realizarCierre(): void {
+    if (this.cierreForm.invalid || !this.cierreActual || !this.currentUser) return;
 
-    // 1. Procesar ventas como transacciones
-    if (resumen.ventas && Array.isArray(resumen.ventas)) {
-      console.log('📋 Ventas del día:', resumen.ventas.length);
-      this.procesarVentasParaTransacciones(resumen.ventas);
-    }
+    const formValue = this.cierreForm.value;
 
-    // 2. Cargar cierre existente si hay (SOLO para días pasados)
-    if (resumen.cierreExistente) {
-      this.cierreActual = resumen.cierreExistente;
-      console.log('📦 Cierre existente cargado para historial');
-    } else {
-      // Para el día actual SIN cierre, dejar cierreActual como null
-      // NO crear cierre automáticamente
-      this.cierreActual = null;
-      console.log('📭 No hay cierre para este día');
-    }
+    // Recolectar valores reales ingresados
+    const detalleReal: any = {
+      efectivo: {
+        usd: formValue.efectivoRealUSD || 0,
+        eur: formValue.efectivoRealEUR || 0,
+        ves: formValue.efectivoRealVES || 0
+      },
+      punto: [],
+      transferencia: formValue.transferenciaRealTotal || 0,
+      pagomovil: formValue.pagomovilRealTotal || 0,
+      zelle: formValue.zelleReal || 0,
+      notasCierre: formValue.notasCierre || '',
+      fechaCierre: new Date(),
+      usuarioCierre: this.currentUser.nombre
+    };
 
-    // 3. Sincronizar el cierre con los análisis en vivo (si hay cierre)
-    if (this.cierreActual) {
-      this.actualizarResumen();
-    }
+    // Recolectar punto de venta por banco
+    this.analisisMetodosPago.punto.porBanco.forEach(banco => {
+      const controlName = `puntoReal_${banco.bancoCodigo || banco.banco.replace(/\s/g, '_')}`;
+      const montoReal = formValue[controlName] || 0;
+      detalleReal.punto.push({
+        banco: banco.banco,
+        bancoCodigo: banco.bancoCodigo,
+        montoReal: montoReal,
+        montoSistema: banco.total,
+        diferencia: montoReal - banco.total
+      });
+    });
 
-    // 4. Filtrar transacciones para la vista
-    this.filtrarTransacciones();
+    // Guardar detalle en el cierre actual
+    this.cierreActual.detalleCierreReal = detalleReal;
+    this.cierreActual.estado = 'cerrado';
+    this.cierreActual.efectivoFinalReal = this.getEfectivoRealTotal();
+    this.cierreActual.diferencia = this.getDiferenciaTotal();
+    this.cierreActual.notasCierre = formValue.notasCierre;
+    this.cierreActual.usuarioCierre = this.currentUser.nombre;
+    this.cierreActual.fechaCierre = new Date();
 
-    this.ultimaActualizacion = new Date();
+    this.guardarCierreEnBackend().then(() => {
+      this.cerrarModal('cierreCajaModal');
+      this.swalService.showSuccess('Cierre realizado', 'El cierre de caja se ha guardado correctamente.');
 
-    console.log('✅ Estado final:', {
-      transacciones: this.transacciones.length,
-      analisisVentas: this.analisisVentas,
-      cierreActual: !!this.cierreActual,
-      esDiaActual: this.esDiaActual
+      if (formValue.imprimirResumen) {
+        this.imprimirResumen();
+      }
+    }).catch(error => {
+      console.error('Error al guardar cierre:', error);
+      this.swalService.showError('Error', 'No se pudo guardar el cierre. Por favor, intente nuevamente.');
     });
   }
 
@@ -691,6 +726,138 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       console.log('Fecha desde filtro:', filtros.fechaDesde);
       console.log('Fecha hasta filtro:', filtros.fechaHasta);
     }
+  }
+
+  private procesarResumenDiario(resumen: any): void {
+    console.log('🔄 Procesando resumen:', resumen);
+
+    // 1. Procesar ventas como transacciones
+    if (resumen.ventas && Array.isArray(resumen.ventas)) {
+      console.log('📋 Ventas del día:', resumen.ventas.length);
+      this.procesarVentasParaTransacciones(resumen.ventas);
+    } else {
+      console.warn('⚠️ No hay ventas en el resumen');
+      this.transacciones = [];
+    }
+
+    // 2. Cargar cierre existente si hay (SOLO para días pasados)
+    if (resumen.cierreExistente) {
+      this.cierreActual = resumen.cierreExistente;
+      console.log('📦 Cierre existente cargado para historial');
+    } else {
+      // Para el día actual SIN cierre, dejar cierreActual como null
+      // NO crear cierre automáticamente
+      this.cierreActual = null;
+      console.log('📭 No hay cierre para este día');
+    }
+
+    // 3. Limpiar y reconstruir controles dinámicos del formulario
+    this.limpiarControlesBancos();
+    this.agregarControlesBancos();
+
+    // 4. Si hay cierre, precargar los valores reales
+    if (this.cierreActual && this.cierreActual.detalleCierreReal) {
+      this.precargarValoresReales();
+    }
+
+    // 5. Actualizar el cierre con los análisis en vivo (si hay cierre)
+    if (this.cierreActual) {
+      this.actualizarResumen();
+    }
+
+    // 6. Filtrar transacciones para la vista
+    this.filtrarTransacciones();
+
+    this.ultimaActualizacion = new Date();
+
+    console.log('✅ Estado final:', {
+      transacciones: this.transacciones.length,
+      analisisVentas: this.analisisVentas,
+      analisisMetodosPago: this.analisisMetodosPago,
+      analisisFormasPago: this.analisisFormasPago,
+      analisisVentasPendientes: this.analisisVentasPendientes.length,
+      cierreActual: !!this.cierreActual,
+      esDiaActual: this.esDiaActual
+    });
+  }
+
+  private limpiarControlesBancos(): void {
+    const prefijos = ['puntoReal_'];
+
+    prefijos.forEach(prefijo => {
+      const keys = Object.keys(this.cierreForm.controls).filter(key => key.startsWith(prefijo));
+      keys.forEach(key => {
+        this.cierreForm.removeControl(key);
+      });
+    });
+  }
+
+  private agregarControlesBancos(): void {
+    if (this.analisisMetodosPago?.punto?.porBanco) {
+      this.analisisMetodosPago.punto.porBanco.forEach(banco => {
+        const controlName = `puntoReal_${banco.bancoCodigo || banco.banco.replace(/\s/g, '_')}`;
+        if (!this.cierreForm.contains(controlName)) {
+          this.cierreForm.addControl(controlName, this.fb.control(0));
+          console.log(`✅ Control agregado: ${controlName}`);
+        }
+      });
+    }
+  }
+  private precargarValoresReales(): void {
+    if (!this.cierreActual?.detalleCierreReal) return;
+
+    const real = this.cierreActual.detalleCierreReal;
+
+    // Cargar efectivo por moneda
+    if (real.efectivo) {
+      this.cierreForm.patchValue({
+        efectivoRealUSD: real.efectivo.usd || 0,
+        efectivoRealEUR: real.efectivo.eur || 0,
+        efectivoRealVES: real.efectivo.ves || 0
+      });
+    }
+
+    // Cargar punto de venta por banco
+    if (real.punto && Array.isArray(real.punto)) {
+      real.punto.forEach((item: any) => {
+        const controlName = `puntoReal_${item.bancoCodigo || item.banco.replace(/\s/g, '_')}`;
+        if (this.cierreForm.contains(controlName)) {
+          this.cierreForm.get(controlName)?.setValue(item.montoReal || 0);
+        }
+      });
+    }
+
+    // Cargar transferencias por banco
+    if (real.transferencia && Array.isArray(real.transferencia)) {
+      real.transferencia.forEach((item: any) => {
+        const controlName = `transferenciaReal_${item.bancoCodigo || item.banco.replace(/\s/g, '_')}`;
+        if (this.cierreForm.contains(controlName)) {
+          this.cierreForm.get(controlName)?.setValue(item.montoReal || 0);
+        }
+      });
+    }
+
+    // Cargar pago móvil por banco
+    if (real.pagomovil && Array.isArray(real.pagomovil)) {
+      real.pagomovil.forEach((item: any) => {
+        const controlName = `pagomovilReal_${item.bancoCodigo || item.banco.replace(/\s/g, '_')}`;
+        if (this.cierreForm.contains(controlName)) {
+          this.cierreForm.get(controlName)?.setValue(item.montoReal || 0);
+        }
+      });
+    }
+
+    // Cargar Zelle
+    if (real.zelle !== undefined) {
+      this.cierreForm.patchValue({ zelleReal: real.zelle });
+    }
+
+    // Cargar notas de cierre
+    if (real.notasCierre) {
+      this.cierreForm.patchValue({ notasCierre: real.notasCierre });
+    }
+
+    console.log('📝 Valores reales precargados desde cierre existente');
   }
 
   private procesarVentasParaTransacciones(ventas: any[]): void {
@@ -832,78 +999,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return total;
   }
 
-  private inicializarCierreNuevo(): void {
-    if (!this.sedeActual || !this.currentUser) return;
-
-    this.cierreActual = {
-      id: `CIERRE-${this.datePipe.transform(new Date(), 'yyyy-MM-dd')}-${this.sedeActual.key}`,
-      fecha: new Date(),
-      efectivoInicial: 0,
-
-      // Ventas por método (originales)
-      ventasEfectivo: 0,
-      ventasTarjeta: 0,
-      ventasTransferencia: 0,
-      ventasDebito: 0,
-      ventasCredito: 0,
-      ventasPagomovil: 0,
-      ventasZelle: 0,
-
-      // Nuevas propiedades
-      ventasPorTipo: {
-        soloConsulta: { cantidad: 0, total: 0, montoMedico: 0, montoOptica: 0 },
-        consultaProductos: { cantidad: 0, total: 0, montoMedico: 0, montoProductos: 0 },
-        soloProductos: { cantidad: 0, total: 0 }
-      },
-
-      metodosPago: {
-        efectivo: { total: 0, porMoneda: { dolar: 0, euro: 0, bolivar: 0 }, cantidad: 0 },
-        punto: { total: 0, porBanco: [], cantidad: 0 },
-        pagomovil: { total: 0, cantidad: 0, porBanco: [] },
-        transferencia: { total: 0, cantidad: 0, porBanco: [] },
-        zelle: { total: 0, cantidad: 0 },
-        mixto: { total: 0, cantidad: 0 }
-      },
-
-      formasPago: {
-        contado: { cantidad: 0, total: 0 },
-        abono: { cantidad: 0, total: 0, montoAbonado: 0, deudaPendiente: 0 },
-        cashea: { cantidad: 0, total: 0, montoInicial: 0, deudaPendiente: 0, cuotasPendientes: 0 },
-        deContadoPendiente: { cantidad: 0, total: 0, deudaPendiente: 0 }
-      },
-
-      ventasPendientes: [],
-
-      totales: {
-        ingresos: 0,
-        egresos: 0,
-        neto: 0,
-        ventasContado: 0,
-        ventasCredito: 0,
-        ventasPendientes: 0
-      },
-
-      // Propiedades existentes
-      otrosIngresos: 0,
-      egresos: 0,
-      efectivoFinalTeorico: 0,
-      efectivoFinalReal: 0,
-      diferencia: 0,
-      observaciones: '',
-      estado: 'abierto',
-      usuarioApertura: this.currentUser.nombre,
-      usuarioCierre: '',
-      fechaApertura: new Date(),
-      transacciones: [],
-      notasCierre: '',
-      archivosAdjuntos: [],
-      sede: this.sedeActual.key,
-      monedaPrincipal: this.monedaSistema,
-      tasasCambio: this.tasasCambio,
-      metodosPagoDetallados: []
-    };
-  }
-
   getTotalVentas(): number {
     if (!this.cierreActual) return 0;
 
@@ -918,12 +1013,13 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   getEfectivoFinalTeorico(): number {
     if (!this.cierreActual) return 0;
-
-    return this.cierreActual.efectivoInicial +
-      this.cierreActual.ventasEfectivo -
-      this.getEgresosEfectivo();
+    const inicial = this.cierreActual.efectivoInicial || 0;
+    const ventasEfectivo = this.analisisMetodosPago?.efectivo?.total || 0;
+    const egresosEfectivo = this.getEgresosEfectivo();
+    const teorico = inicial + ventasEfectivo - egresosEfectivo;
+    console.log('📈 Efectivo Teórico:', { inicial, ventasEfectivo, egresosEfectivo, teorico });
+    return teorico;
   }
-
   getEgresosEfectivo(): number {
     return this.transacciones
       .filter(t => t.tipo === 'egreso' && t.metodoPago === 'efectivo')
@@ -1115,32 +1211,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.cerrarModal('inicioCajaModal');
 
     this.swalService.showSuccess('Caja iniciada', `Caja iniciada con ${this.formatCurrency(this.cierreActual.efectivoInicial)}`);
-  }
-
-  realizarCierre(): void {
-    if (this.cierreForm.invalid || !this.cierreActual || !this.currentUser) return;
-
-    const formValue = this.cierreForm.value;
-
-    this.cierreActual.estado = 'cerrado';
-    this.cierreActual.efectivoFinalReal = parseFloat(formValue.efectivoFinalReal);
-    this.cierreActual.diferencia = this.getDiferencia();
-    this.cierreActual.notasCierre = formValue.notasCierre;
-    this.cierreActual.usuarioCierre = this.currentUser.nombre;
-    this.cierreActual.fechaCierre = new Date();
-
-    this.guardarCierreEnBackend().then(() => {
-      // Cerrar modal usando nuestro método
-      this.cerrarModal('cierreCajaModal');
-
-      this.swalService.showSuccess('Cierre realizado', 'El cierre de caja se ha guardado correctamente.');
-
-      if (formValue.imprimirResumen) {
-        this.imprimirResumen();
-      }
-    }).catch(error => {
-      this.swalService.showError('Error', 'No se pudo guardar el cierre. Por favor, intente nuevamente.');
-    });
   }
 
   guardarTransaccion(): void {
@@ -1582,14 +1652,32 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       return;
     }
 
+    console.log('🔓 Abriendo modal de cierre');
+    console.log('Análisis métodos pago:', this.analisisMetodosPago);
+
+    // Resetear valores del formulario
     this.cierreForm.patchValue({
-      efectivoFinalReal: this.getEfectivoFinalTeorico(),
-      observaciones: this.cierreActual.observaciones,
+      efectivoRealUSD: 0,
+      efectivoRealEUR: 0,
+      efectivoRealVES: 0,
+      zelleReal: 0,
       notasCierre: '',
       imprimirResumen: true,
       enviarEmail: false,
       adjuntarComprobantes: true
     });
+
+    // Limpiar y reconstruir controles de bancos
+    this.limpiarControlesBancos();
+    this.agregarControlesBancos();
+
+    // Forzar recalcular diferencias después de reconstruir controles
+    setTimeout(() => {
+      this.recalcularDiferencias();
+    }, 100);
+
+    // Suscribirse a cambios en el formulario
+    this.suscribirCambiosFormularioCierre();
 
     const modalElement = document.getElementById('cierreCajaModal');
     if (modalElement) {
@@ -1763,12 +1851,32 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return this.analisisVentasPendientes || [];
   }
 
-  // En el componente, después de los otros getters
   get esDiaActual(): boolean {
     return this.fechaSeleccionada.toDateString() === new Date().toDateString();
   }
 
-  // En el componente, agregar estos métodos:
+  get totalVentasKPI(): number {
+    return this.analisisVentas.soloConsulta.total +
+      this.analisisVentas.consultaProductos.total +
+      this.analisisVentas.soloProductos.total;
+  }
+
+  get totalPendientesKPI(): number {
+    return this.analisisFormasPago.deContadoPendiente.total;
+  }
+
+  get netoDiaKPI(): number {
+    return this.getTotalIngresos() - this.getTotalEgresos();
+  }
+
+  get efectivoInicial(): number {
+    return this.cierreActual?.efectivoInicial || 0;
+  }
+
+  get efectivoFinalTeorico(): number {
+    if (!this.cierreActual) return 0;
+    return this.cierreActual.efectivoInicial + this.analisisMetodosPago.efectivo.total - this.getEgresosEfectivo();
+  }
 
   getTotalVentasHistorial(): number {
     return this.historialCierres.reduce((sum, cierre) => sum + this.getTotalVentasCierre(cierre), 0);
@@ -1798,5 +1906,235 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     a.download = `historial-cierres-${this.datePipe.transform(new Date(), 'yyyy-MM-dd')}.json`;
     a.click();
     window.URL.revokeObjectURL(url);
+  }
+
+  private suscribirCambiosFormularioCierre(): void {
+    // Suscribirse a cambios en efectivo por moneda
+    this.cierreForm.get('efectivoRealUSD')?.valueChanges.subscribe(() => {
+      this.recalcularDiferencias();
+    });
+    this.cierreForm.get('efectivoRealEUR')?.valueChanges.subscribe(() => {
+      this.recalcularDiferencias();
+    });
+    this.cierreForm.get('efectivoRealVES')?.valueChanges.subscribe(() => {
+      this.recalcularDiferencias();
+    });
+
+    // Suscribirse a cambios en Zelle
+    this.cierreForm.get('zelleReal')?.valueChanges.subscribe(() => {
+      this.recalcularDiferencias();
+    });
+
+    // Suscribirse a cambios en notas de cierre
+    this.cierreForm.get('notasCierre')?.valueChanges.subscribe(() => {
+      this.recalcularDiferencias();
+    });
+  }
+
+  recalcularDiferencias(): void {
+    if (!this.cierreActual) return;
+
+    // 1. Calcular diferencia de efectivo
+    const efectivoReal = this.getEfectivoRealTotal();
+    const efectivoTeorico = this.getEfectivoFinalTeorico();
+    const diferenciaEfectivo = efectivoReal - efectivoTeorico;
+
+    // 2. Calcular diferencias por método de pago
+    const diferenciasPunto = this.calcularDiferenciasPunto();
+    const diferenciaTransferencia = this.getDiferenciaTransferencia();
+    const diferenciaPagomovil = this.getDiferenciaPagomovil();
+    const diferenciaZelle = this.getDiferenciaZelle();
+
+    // 3. Calcular diferencia total
+    const diferenciaTotal = diferenciaEfectivo +
+      diferenciasPunto.total +
+      diferenciaTransferencia +
+      diferenciaPagomovil +
+      diferenciaZelle;
+
+    // 4. Actualizar el cierre actual
+    this.cierreActual.diferencia = diferenciaTotal;
+    this.cierreActual.efectivoFinalReal = efectivoReal;
+
+    // 5. Actualizar el resumen de diferencias
+    this.cierreActual.resumenDiferencias = {
+      efectivo: {
+        diferencia: diferenciaEfectivo,
+        justificacion: ''
+      },
+      punto: {
+        diferencia: diferenciasPunto.total,
+        justificacion: '',
+        porBanco: diferenciasPunto.porBanco
+      },
+      transferencia: {
+        diferencia: diferenciaTransferencia,
+        justificacion: ''
+      },
+      pagomovil: {
+        diferencia: diferenciaPagomovil,
+        justificacion: ''
+      },
+      zelle: {
+        diferencia: diferenciaZelle,
+        justificacion: ''
+      },
+      total: diferenciaTotal,
+      requiereJustificacion: Math.abs(diferenciaTotal) > 0.01
+    };
+
+    // Forzar detección de cambios
+    this.cdr.detectChanges();
+  }
+  
+  private calcularDiferenciasPunto(): { total: number; porBanco: any[] } {
+    let total = 0;
+    const porBanco: any[] = [];
+
+    this.analisisMetodosPago.punto.porBanco.forEach(banco => {
+      const controlName = `puntoReal_${banco.bancoCodigo || banco.banco.replace(/\s/g, '_')}`;
+      const montoReal = this.cierreForm.get(controlName)?.value || 0;
+      const montoSistema = banco.total;
+      const diferencia = montoReal - montoSistema;
+
+      total += diferencia;
+
+      porBanco.push({
+        banco: banco.banco,
+        bancoCodigo: banco.bancoCodigo,
+        montoReal: montoReal,
+        montoSistema: montoSistema,
+        diferencia: diferencia,
+        cantidadReal: 0,
+        cantidadSistema: banco.cantidad
+      });
+    });
+
+    return { total, porBanco };
+  }
+
+  getEfectivoRealTotal(): number {
+    const usd = this.cierreForm.get('efectivoRealUSD')?.value || 0;
+    const eur = this.cierreForm.get('efectivoRealEUR')?.value || 0;
+    const ves = this.cierreForm.get('efectivoRealVES')?.value || 0;
+
+    // Convertir todo a USD
+    const eurToUsd = eur * (this.tasasCambio?.euro || 1.05);
+    const vesToUsd = ves / (this.tasasCambio?.bolivar || 60.5);
+
+    const total = usd + eurToUsd + vesToUsd;
+    console.log('💵 Efectivo Real:', { usd, eur, ves, total, tasas: this.tasasCambio });
+    return total;
+  }
+
+  // Diferencia de efectivo
+  getDiferenciaEfectivo(): number {
+    const real = this.getEfectivoRealTotal();
+    const teorico = this.getEfectivoFinalTeorico();
+    const diff = real - teorico;
+    console.log('💰 Diferencia Efectivo:', { real, teorico, diff });
+    return diff;
+  }
+
+  // Diferencia de punto de venta
+  getDiferenciaPunto(): number {
+    let realTotal = 0;
+    let sistemaTotal = 0;
+
+    if (this.analisisMetodosPago?.punto?.porBanco) {
+      this.analisisMetodosPago.punto.porBanco.forEach(banco => {
+        const controlName = `puntoReal_${banco.bancoCodigo || banco.banco.replace(/\s/g, '_')}`;
+        const montoReal = this.cierreForm.get(controlName)?.value || 0;
+        realTotal += montoReal;
+        sistemaTotal += banco.total;
+        console.log(`🏦 Punto ${banco.banco}: real=${montoReal}, sistema=${banco.total}, diff=${montoReal - banco.total}`);
+      });
+    }
+
+    const diff = realTotal - sistemaTotal;
+    console.log('💳 Diferencia Punto:', { realTotal, sistemaTotal, diff });
+    return diff;
+  }
+
+  getDiferenciaTransferencia(): number {
+    const real = this.cierreForm.get('transferenciaRealTotal')?.value || 0;
+    const sistema = this.analisisMetodosPago?.transferencia?.total || 0;
+    return real - sistema;
+  }
+
+  // Diferencia de pago móvil (ahora global)
+  getDiferenciaPagomovil(): number {
+    const real = this.cierreForm.get('pagomovilRealTotal')?.value || 0;
+    const sistema = this.analisisMetodosPago?.pagomovil?.total || 0;
+    return real - sistema;
+  }
+
+  // Diferencia de Zelle
+  getDiferenciaZelle(): number {
+    const real = this.cierreForm.get('zelleReal')?.value || 0;
+    const sistema = this.analisisMetodosPago?.zelle?.total || 0;
+    return real - sistema;
+  }
+
+  // Diferencia total
+  getDiferenciaTotal(): number {
+    const diff = this.getDiferenciaEfectivo() +
+      this.getDiferenciaPunto() +
+      this.getDiferenciaTransferencia() +
+      this.getDiferenciaPagomovil() +
+      this.getDiferenciaZelle();
+    console.log('📊 Diferencia Total:', diff);
+    return diff;
+  }
+
+  private redondear(valor: number, decimales: number = 2): number {
+    return Number(valor.toFixed(decimales));
+  }
+  // Métodos para verificar diferencias
+  tieneDiferenciaPunto(): boolean {
+    return Math.abs(this.getDiferenciaPunto()) > 0.01;
+  }
+
+  tieneDiferenciaTransferencia(): boolean {
+    return Math.abs(this.getDiferenciaTransferencia()) > 0.01;
+  }
+
+  // Verificar si hay diferencia en pago móvil
+  tieneDiferenciaPagomovil(): boolean {
+    return Math.abs(this.getDiferenciaPagomovil()) > 0.01;
+  }
+
+  tieneDiferenciaZelle(): boolean {
+    return Math.abs(this.getDiferenciaZelle()) > 0.01;
+  }
+
+  tieneDiferenciaTotal(): boolean {
+    return Math.abs(this.getDiferenciaTotal()) > 0.01;
+  }
+
+  getDiferenciaPuntoFormateada(): string {
+    const diff = this.getDiferenciaPunto();
+    return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
+  }
+
+  getDiferenciaTransferenciaFormateada(): string {
+    const diff = this.getDiferenciaTransferencia();
+    return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
+  }
+
+  // Formatear diferencia de pago móvil
+  getDiferenciaPagomovilFormateada(): string {
+    const diff = this.getDiferenciaPagomovil();
+    return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
+  }
+
+  getDiferenciaZelleFormateada(): string {
+    const diff = this.getDiferenciaZelle();
+    return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
+  }
+
+  getDiferenciaTotalFormateada(): string {
+    const diff = this.getDiferenciaTotal();
+    return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
   }
 }

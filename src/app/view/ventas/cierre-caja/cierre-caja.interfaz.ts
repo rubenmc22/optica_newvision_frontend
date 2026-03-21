@@ -23,9 +23,9 @@ export interface Transaccion {
     monto: number;
     moneda: string;
     referencia?: string;
-    banco?: string;           // ← Agregar banco
-    bancoNombre?: string;     // ← Agregar bancoNombre
-    bancoCodigo?: string;     // ← Agregar bancoCodigo
+    banco?: string;
+    bancoNombre?: string;
+    bancoCodigo?: string;
   }>;
   productos?: Array<{
     nombre: string;
@@ -46,7 +46,7 @@ export interface CierreDiario {
   fecha: Date;
   efectivoInicial: number;
 
-  // Ventas por método de pago (original)
+  // Ventas por método de pago 
   ventasEfectivo: number;
   ventasTarjeta: number;
   ventasTransferencia: number;
@@ -98,22 +98,10 @@ export interface CierreDiario {
     pagomovil: {
       total: number;
       cantidad: number;
-      porBanco?: Array<{
-        banco: string;
-        bancoCodigo: string;
-        total: number;
-        cantidad: number;
-      }>;
     };
     transferencia: {
       total: number;
       cantidad: number;
-      porBanco?: Array<{
-        banco: string;
-        bancoCodigo: string;
-        total: number;
-        cantidad: number;
-      }>;
     };
     zelle: {
       total: number;
@@ -166,6 +154,121 @@ export interface CierreDiario {
     ventasContado: number;
     ventasCredito: number;
     ventasPendientes: number;
+  };
+
+  detalleCierreReal?: {
+    efectivo: {
+      usd: number;
+      eur: number;
+      ves: number;
+    };
+    punto: Array<{
+      banco: string;
+      bancoCodigo: string;
+      montoReal: number;
+      montoSistema: number;
+      diferencia: number;
+      cantidadReal?: number;
+      cantidadSistema?: number;
+    }>;
+    transferencia: {
+      diferencia: number;
+      justificacion?: string;
+      porBanco: Array<{
+        banco: string;
+        diferencia: number;
+        justificacion?: string;
+      }>;
+    };
+    pagomovil: {
+      diferencia: number;
+      justificacion?: string;
+      porBanco: Array<{
+        banco: string;
+        diferencia: number;
+        justificacion?: string;
+      }>;
+    };
+    zelle: number;
+    notasCierre: string;
+    fechaCierre: Date;
+    usuarioCierre: string;
+    diferenciaTotal: number;
+    estadoConciliacion: 'conciliado' | 'pendiente' | 'diferencia';
+  };
+
+  /**
+   * Detalle de los valores del SISTEMA para comparación
+   * (lo que el sistema calculó automáticamente)
+   */
+  detalleCierreSistema?: {
+    efectivo: {
+      usd: number;
+      eur: number;
+      ves: number;
+    };
+    punto: Array<{
+      banco: string;
+      bancoCodigo: string;
+      montoSistema: number;
+      cantidad: number;
+    }>;
+    transferencia: Array<{
+      banco: string;
+      bancoCodigo: string;
+      montoSistema: number;
+      cantidad: number;
+    }>;
+    pagomovil: Array<{
+      banco: string;
+      bancoCodigo: string;
+      montoSistema: number;
+      cantidad: number;
+    }>;
+    zelle: number;
+    totalVentas: number;
+    totalEfectivo: number;
+    totalOtrosMedios: number;
+    fechaCalculo: Date;
+  };
+
+  resumenDiferencias?: {
+    efectivo: {
+      diferencia: number;
+      justificacion?: string;
+    };
+    punto: {
+      diferencia: number;
+      justificacion?: string;
+      porBanco: Array<{
+        banco: string;
+        diferencia: number;
+        justificacion?: string;
+      }>;
+    };
+    transferencia: {
+      diferencia: number;
+      justificacion?: string;
+      porBanco?: Array<{  // Hacer opcional si no siempre se usa
+        diferencia: number;
+        justificacion?: string;
+      }>;
+    };
+    pagomovil: {
+      diferencia: number;
+      justificacion?: string;
+      porBanco?: Array<{  // Hacer opcional si no siempre se usa
+        banco: string;
+        diferencia: number;
+        justificacion?: string;
+      }>;
+    };
+    zelle: {
+      diferencia: number;
+      justificacion?: string;
+    };
+    total: number;
+    requiereJustificacion: boolean;
   };
 
   // Propiedades existentes
