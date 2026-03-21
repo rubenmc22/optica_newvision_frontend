@@ -12,7 +12,7 @@
           <h1>Cierre de Caja Diario</h1>
           <p class="header-subtitle">{{ sedeActual?.nombre || 'Sede no seleccionada' }}</p>
         </div>
-        <span class="estado-badge" [ngClass]="getEstadoClass(cierreActual?.estado)">
+        <span class="estado-badge" [ngClass]="getEstadoClass(cierreActual?.estado)" *ngIf="cierreActual">
           <i class="bi" [ngClass]="{
             'bi-play-circle-fill': cierreActual?.estado === 'abierto',
             'bi-lock-fill': cierreActual?.estado === 'cerrado',
@@ -20,6 +20,16 @@
             'bi-arrow-repeat': cierreActual?.estado === 'conciliado'
           }"></i>
           {{ getEstadoTexto(cierreActual?.estado) }}
+        </span>
+
+        <span class="estado-badge estado-sin-iniciar" *ngIf="!cierreActual && esDiaActual">
+          <i class="bi bi-exclamation-circle"></i>
+          Caja sin iniciar
+        </span>
+
+        <span class="estado-badge estado-sin-cierre" *ngIf="!cierreActual && !esDiaActual">
+          <i class="bi bi-calendar-x"></i>
+          Sin cierre registrado
         </span>
       </div>
 
@@ -38,17 +48,30 @@
         </div>
 
         <div class="acciones-principales">
-          <button class="btn-moderno btn-primary" (click)="abrirModalInicioCaja()"
-            *ngIf="!cierreActual && !hayCierreAnterior">
+          <!-- Mostrar Iniciar Caja SOLO si NO hay cierre y es el día actual -->
+          <button class="btn-moderno btn-primary" (click)="abrirModalInicioCaja()" *ngIf="!cierreActual && esDiaActual">
             <i class="bi bi-play-circle"></i>
             <span>Iniciar Caja</span>
           </button>
 
+          <!-- Mostrar Cerrar Caja si hay cierre, está abierto y es el día actual -->
           <button class="btn-moderno btn-success" (click)="abrirModalCierre()"
-            *ngIf="cierreActual?.estado === 'abierto'">
+            *ngIf="cierreActual?.estado === 'abierto' && esDiaActual">
             <i class="bi bi-lock"></i>
             <span>Cerrar Caja</span>
           </button>
+
+          <!-- Mostrar mensaje si es un día pasado con cierre -->
+          <div class="cierre-pasado-info" *ngIf="cierreActual && !esDiaActual">
+            <i class="bi bi-info-circle"></i>
+            <span>Cierre del día {{ fechaSeleccionada | date:'dd/MM/yyyy' }}</span>
+          </div>
+
+          <!-- Mostrar mensaje si es un día pasado sin cierre (no debería pasar, pero por si acaso) -->
+          <div class="cierre-pasado-info" *ngIf="!cierreActual && !esDiaActual">
+            <i class="bi bi-exclamation-triangle text-warning"></i>
+            <span>Sin cierre registrado para este día</span>
+          </div>
 
           <button class="btn-moderno btn-info" (click)="abrirHistorial()">
             <i class="bi bi-clock-history"></i>
@@ -164,11 +187,11 @@
 
             <div class="transaccion-info">
               <div class="transaccion-header">
-                <span class="transaccion-desc">{{ trans.descripcion }}</span>
+                <span class="transaccion-desc" [title]="trans.descripcion">{{ trans.descripcion }}</span>
                 <span class="transaccion-monto" [ngClass]="{
-                  'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
-                  'text-danger': trans.tipo === 'egreso'
-                }">
+              'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
+              'text-danger': trans.tipo === 'egreso'
+            }">
                   {{ (trans.tipo === 'egreso' ? '-' : '+') + (trans.monto | currency) }}
                 </span>
               </div>
@@ -189,7 +212,7 @@
 
               <div class="transaccion-detalle" *ngIf="trans.numeroVenta">
                 <span class="venta-num">Venta #{{ trans.numeroVenta }}</span>
-                <span class="cliente-nom">{{ trans.cliente?.nombre }}</span>
+                <span class="cliente-nom" [title]="trans.cliente?.nombre">{{ trans.cliente?.nombre }}</span>
               </div>
             </div>
 
@@ -233,7 +256,7 @@
           </button>
         </div>
 
-        <!-- TAB: TIPOS DE VENTA -->
+        <!-- TAB: TIPOS DE VENTA - USANDO ANÁLISIS EN VIVO -->
         <div class="tab-content" *ngIf="tabActivo === 'tipos'">
           <div class="stats-grid">
             <div class="stat-card">
@@ -243,7 +266,7 @@
               <div class="stat-info">
                 <span class="stat-label">Solo Consulta</span>
                 <span class="stat-value">{{ totalConsultas | currency }}</span>
-                <span class="stat-count">{{ cierreActual?.ventasPorTipo.soloConsulta.cantidad }} ventas</span>
+                <span class="stat-count">{{ analisisVentas.soloConsulta.cantidad }} ventas</span>
               </div>
             </div>
 
@@ -254,7 +277,7 @@
               <div class="stat-info">
                 <span class="stat-label">Consulta + Productos</span>
                 <span class="stat-value">{{ totalConsultaProductos | currency }}</span>
-                <span class="stat-count">{{ cierreActual?.ventasPorTipo.consultaProductos.cantidad }} ventas</span>
+                <span class="stat-count">{{ analisisVentas.consultaProductos.cantidad }} ventas</span>
               </div>
             </div>
 
@@ -265,7 +288,7 @@
               <div class="stat-info">
                 <span class="stat-label">Solo Productos</span>
                 <span class="stat-value">{{ totalSoloProductos | currency }}</span>
-                <span class="stat-count">{{ cierreActual?.ventasPorTipo.soloProductos.cantidad }} ventas</span>
+                <span class="stat-count">{{ analisisVentas.soloProductos.cantidad }} ventas</span>
               </div>
             </div>
           </div>
@@ -294,29 +317,32 @@
           </div>
         </div>
 
-        <!-- TAB: MÉTODOS DE PAGO -->
+        <!-- TAB: MÉTODOS DE PAGO - USANDO ANÁLISIS EN VIVO -->
         <div class="tab-content" *ngIf="tabActivo === 'metodos'">
           <div class="metodo-seccion">
             <h4 class="seccion-titulo">
               <i class="bi bi-cash"></i> Efectivo
-              <span class="seccion-total">{{ cierreActual?.metodosPago.efectivo.total | currency }}</span>
+              <span class="seccion-total">{{ analisisMetodosPago.efectivo.total | currency }}</span>
             </h4>
             <div class="monedas-grid">
-              <div class="moneda-card"><span class="moneda-simbolo">$</span><span class="moneda-monto">{{ efectivoDolar
+              <div class="moneda-card"><span class="moneda-simbolo">$</span><span class="moneda-monto">{{
+                  analisisMetodosPago.efectivo.porMoneda.dolar
                   | currency:'USD':'symbol':'1.2-2' }}</span><span class="moneda-label">Dólares</span></div>
-              <div class="moneda-card"><span class="moneda-simbolo">€</span><span class="moneda-monto">{{ efectivoEuro |
+              <div class="moneda-card"><span class="moneda-simbolo">€</span><span class="moneda-monto">{{
+                  analisisMetodosPago.efectivo.porMoneda.euro |
                   currency:'EUR':'symbol':'1.2-2' }}</span><span class="moneda-label">Euros</span></div>
               <div class="moneda-card"><span class="moneda-simbolo">Bs.</span><span class="moneda-monto">{{
-                  efectivoBolivar | currency:'VES':'symbol':'1.2-2' }}</span><span class="moneda-label">Bolívares</span>
+                  analisisMetodosPago.efectivo.porMoneda.bolivar | currency:'VES':'symbol':'1.2-2' }}</span><span
+                  class="moneda-label">Bolívares</span>
               </div>
             </div>
           </div>
 
-          <div class="metodo-seccion" *ngIf="puntosPorBanco.length > 0">
+          <div class="metodo-seccion" *ngIf="analisisMetodosPago.punto.porBanco.length > 0">
             <h4 class="seccion-titulo"><i class="bi bi-credit-card"></i> Punto de Venta <span class="seccion-total">{{
-                cierreActual?.metodosPago.punto.total | currency }}</span></h4>
+                analisisMetodosPago.punto.total | currency }}</span></h4>
             <div class="bancos-grid">
-              <div class="banco-card" *ngFor="let banco of puntosPorBanco">
+              <div class="banco-card" *ngFor="let banco of analisisMetodosPago.punto.porBanco">
                 <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco }}</span>
                 </div>
                 <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
@@ -325,11 +351,11 @@
             </div>
           </div>
 
-          <div class="metodo-seccion" *ngIf="pagosMovilPorBanco.length > 0">
+          <div class="metodo-seccion" *ngIf="analisisMetodosPago.pagomovil.porBanco.length > 0">
             <h4 class="seccion-titulo"><i class="bi bi-phone"></i> Pago Móvil <span class="seccion-total">{{
-                cierreActual?.metodosPago.pagomovil.total | currency }}</span></h4>
+                analisisMetodosPago.pagomovil.total | currency }}</span></h4>
             <div class="bancos-grid">
-              <div class="banco-card" *ngFor="let banco of pagosMovilPorBanco">
+              <div class="banco-card" *ngFor="let banco of analisisMetodosPago.pagomovil.porBanco">
                 <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco }}</span>
                 </div>
                 <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
@@ -338,11 +364,11 @@
             </div>
           </div>
 
-          <div class="metodo-seccion" *ngIf="transferenciasPorBanco.length > 0">
+          <div class="metodo-seccion" *ngIf="analisisMetodosPago.transferencia.porBanco.length > 0">
             <h4 class="seccion-titulo"><i class="bi bi-bank2"></i> Transferencias <span class="seccion-total">{{
-                cierreActual?.metodosPago.transferencia.total | currency }}</span></h4>
+                analisisMetodosPago.transferencia.total | currency }}</span></h4>
             <div class="bancos-grid">
-              <div class="banco-card" *ngFor="let banco of transferenciasPorBanco">
+              <div class="banco-card" *ngFor="let banco of analisisMetodosPago.transferencia.porBanco">
                 <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco }}</span>
                 </div>
                 <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
@@ -351,55 +377,63 @@
             </div>
           </div>
 
-          <div class="metodo-seccion" *ngIf="cierreActual?.metodosPago.zelle.total > 0">
+          <div class="metodo-seccion" *ngIf="analisisMetodosPago.zelle.total > 0">
             <h4 class="seccion-titulo"><i class="bi bi-globe2"></i> Zelle <span class="seccion-total">{{
-                cierreActual?.metodosPago.zelle.total | currency }}</span></h4>
+                analisisMetodosPago.zelle.total | currency }}</span></h4>
+          </div>
+
+          <div class="metodo-seccion" *ngIf="analisisMetodosPago.mixto.total > 0">
+            <h4 class="seccion-titulo"><i class="bi bi-wallet2"></i> Mixto <span class="seccion-total">{{
+                analisisMetodosPago.mixto.total | currency }}</span></h4>
           </div>
         </div>
 
-        <!-- TAB: FORMAS DE PAGO -->
+        <!-- TAB: FORMAS DE PAGO - USANDO ANÁLISIS EN VIVO -->
         <div class="tab-content" *ngIf="tabActivo === 'formas'">
           <div class="formas-grid">
             <div class="forma-card contado">
               <div class="forma-icon"><i class="bi bi-cash-stack"></i></div>
               <div class="forma-content"><span class="forma-label">Contado</span><span class="forma-monto">{{
-                  totalContado | currency }}</span><span class="forma-count">{{
-                  cierreActual?.formasPago.contado.cantidad }} ventas</span></div>
+                  analisisFormasPago.contado.total | currency }}</span><span class="forma-count">{{
+                  analisisFormasPago.contado.cantidad }} ventas</span></div>
             </div>
 
             <div class="forma-card abono">
               <div class="forma-icon"><i class="bi bi-calendar-check"></i></div>
-              <div class="forma-content"><span class="forma-label">Abono</span><span class="forma-monto">{{ totalAbonos
+              <div class="forma-content"><span class="forma-label">Abono</span><span class="forma-monto">{{
+                  analisisFormasPago.abono.total
                   | currency }}</span>
-                <div class="forma-detalle"><span>Abonado: {{ cierreActual?.formasPago.abono.montoAbonado | currency
-                    }}</span><span>Pendiente: {{ cierreActual?.formasPago.abono.deudaPendiente | currency }}</span>
+                <div class="forma-detalle"><span>Abonado: {{ analisisFormasPago.abono.montoAbonado | currency
+                    }}</span><span>Pendiente: {{ analisisFormasPago.abono.deudaPendiente | currency }}</span>
                 </div>
               </div>
             </div>
 
             <div class="forma-card cashea">
               <div class="forma-icon"><i class="bi bi-arrow-repeat"></i></div>
-              <div class="forma-content"><span class="forma-label">Cashea</span><span class="forma-monto">{{ totalCashea
+              <div class="forma-content"><span class="forma-label">Cashea</span><span class="forma-monto">{{
+                  analisisFormasPago.cashea.total
                   | currency }}</span>
-                <div class="forma-detalle"><span>Inicial: {{ cierreActual?.formasPago.cashea.montoInicial | currency
-                    }}</span><span>Pendiente: {{ cierreActual?.formasPago.cashea.deudaPendiente | currency }}</span>
+                <div class="forma-detalle"><span>Inicial: {{ analisisFormasPago.cashea.montoInicial | currency
+                    }}</span><span>Pendiente: {{ analisisFormasPago.cashea.deudaPendiente | currency }}</span>
                 </div>
               </div>
             </div>
 
-            <div class="forma-card pendiente" *ngIf="totalPendientes > 0">
+            <div class="forma-card pendiente" *ngIf="analisisFormasPago.deContadoPendiente.total > 0">
               <div class="forma-icon"><i class="bi bi-hourglass-split"></i></div>
               <div class="forma-content"><span class="forma-label">Pendiente por Pago</span><span
-                  class="forma-monto text-danger">{{ totalPendientes | currency }}</span><span class="forma-count">{{
-                  cierreActual?.formasPago.deContadoPendiente.cantidad }} ventas sin cobrar</span></div>
+                  class="forma-monto text-danger">{{ analisisFormasPago.deContadoPendiente.total | currency
+                  }}</span><span class="forma-count">{{
+                  analisisFormasPago.deContadoPendiente.cantidad }} ventas sin cobrar</span></div>
             </div>
           </div>
         </div>
 
-        <!-- TAB: VENTAS PENDIENTES -->
+        <!-- TAB: VENTAS PENDIENTES - USANDO ANÁLISIS EN VIVO -->
         <div class="tab-content" *ngIf="tabActivo === 'pendientes'">
-          <div class="pendientes-list" *ngIf="ventasPendientesLista.length > 0; else sinPendientes">
-            <div class="pendiente-card" *ngFor="let venta of ventasPendientesLista">
+          <div class="pendientes-list" *ngIf="analisisVentasPendientes.length > 0; else sinPendientes">
+            <div class="pendiente-card" *ngFor="let venta of analisisVentasPendientes">
               <div class="pendiente-header"><span class="venta-num">#{{ venta.numeroVenta }}</span><span
                   class="venta-cliente">{{ venta.cliente }}</span><span class="venta-fecha">{{ venta.fecha |
                   date:'dd/MM/yyyy' }}</span></div>
@@ -448,7 +482,7 @@
             <span>= Efectivo Teórico</span>
             <span class="valor">{{ getEfectivoFinalTeorico() | currency }}</span>
           </div>
-          
+
           <div class="diferencia-row" [ngClass]="{
             'positiva': getDiferencia() > 0,
             'negativa': getDiferencia() < 0,
@@ -499,6 +533,22 @@
             <p>{{ cierreActual.observaciones }}</p>
           </div>
         </div>
+
+        <ng-template #sinCierre>
+          <div class="cierre-panel glass-card sin-cierre">
+            <div class="panel-header">
+              <div class="panel-title">
+                <i class="bi bi-exclamation-circle"></i>
+                <h3>Estado de Caja</h3>
+              </div>
+            </div>
+            <div class="cierre-detalle text-center py-4">
+              <i class="bi bi-cash-stack" style="font-size: 3rem; color: #64748b;"></i>
+              <h4 class="mt-3">Caja no iniciada</h4>
+              <p class="text-muted">Para comenzar, haz clic en el botón "Iniciar Caja"</p>
+            </div>
+          </div>
+        </ng-template>
       </div>
     </div>
   </div>
@@ -526,6 +576,26 @@
       </div>
       <form [formGroup]="inicioCajaForm" (ngSubmit)="iniciarCaja()">
         <div class="modal-body">
+          <!-- Información de contexto -->
+          <div class="bg-light p-3 rounded mb-3">
+            <div class="row">
+              <div class="col-md-6">
+                <small class="text-muted">Sede</small>
+                <div class="fw-bold">{{ sedeActual?.nombre || 'No seleccionada' }}</div>
+              </div>
+              <div class="col-md-6">
+                <small class="text-muted">Usuario</small>
+                <div class="fw-bold">{{ currentUser?.nombre || 'No identificado' }}</div>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-md-12">
+                <small class="text-muted">Fecha y hora de apertura</small>
+                <div class="fw-bold">{{ fechaSeleccionada | date:'dd/MM/yyyy HH:mm' }}</div>
+              </div>
+            </div>
+          </div>
+
           <div class="mb-3">
             <label class="form-label">
               <i class="bi bi-cash me-2"></i>Efectivo Inicial
@@ -534,19 +604,27 @@
             <div class="input-group">
               <span class="input-group-text">{{ simboloMonedaSistema }}</span>
               <input type="number" class="form-control" formControlName="efectivoInicial" step="0.01" min="0"
-                placeholder="0.00">
+                placeholder="0.00" autofocus>
             </div>
             <div class="text-danger small"
               *ngIf="inicioCajaForm.get('efectivoInicial')?.invalid && inicioCajaForm.get('efectivoInicial')?.touched">
               El monto inicial es requerido
             </div>
+            <small class="text-muted">Ingrese el dinero físico que hay en caja al empezar la jornada</small>
           </div>
+
           <div class="mb-3">
             <label class="form-label">
               <i class="bi bi-chat-text me-2"></i>Observaciones
             </label>
             <textarea class="form-control" formControlName="observaciones" rows="2"
               placeholder="Observaciones iniciales..."></textarea>
+          </div>
+
+          <!-- Advertencia -->
+          <div class="alert alert-info small">
+            <i class="bi bi-info-circle me-2"></i>
+            Una vez iniciada la caja, las ventas del día se irán registrando automáticamente.
           </div>
         </div>
         <div class="modal-footer">
@@ -575,33 +653,81 @@
       </div>
       <form [formGroup]="cierreForm" (ngSubmit)="realizarCierre()">
         <div class="modal-body">
-          <!-- Resumen rápido -->
+          <!-- Información del cierre -->
           <div class="bg-light p-3 rounded mb-3">
             <div class="row">
               <div class="col-md-4">
-                <small class="text-muted">Efectivo Inicial</small>
-                <div class="fw-bold">{{ cierreActual?.efectivoInicial | currency }}</div>
+                <small class="text-muted">Usuario que cierra</small>
+                <div class="fw-bold">{{ currentUser?.nombre || 'No identificado' }}</div>
+              </div>
+              <div class="col-md-4">
+                <small class="text-muted">Fecha y hora</small>
+                <div class="fw-bold">{{ fechaSeleccionada | date:'dd/MM/yyyy HH:mm' }}</div>
+              </div>
+              <div class="col-md-4">
+                <small class="text-muted">Estado actual</small>
+                <div class="fw-bold">
+                  <span class="badge" [ngClass]="getEstadoClass(cierreActual?.estado)">
+                    {{ getEstadoTexto(cierreActual?.estado) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resumen de ventas -->
+          <div class="bg-light p-3 rounded mb-3">
+            <h6 class="mb-3"><i class="bi bi-graph-up me-2"></i>Resumen de Ventas del Día</h6>
+            <div class="row">
+              <div class="col-md-4">
+                <small class="text-muted">Total Ventas</small>
+                <div class="fw-bold">{{ getTotalVentas() | currency }}</div>
               </div>
               <div class="col-md-4">
                 <small class="text-muted">Ventas Efectivo</small>
                 <div class="fw-bold text-success">{{ cierreActual?.ventasEfectivo | currency }}</div>
               </div>
               <div class="col-md-4">
-                <small class="text-muted">Efectivo Teórico</small>
-                <div class="fw-bold">{{ getEfectivoFinalTeorico() | currency }}</div>
+                <small class="text-muted">Ventas Otros Medios</small>
+                <div class="fw-bold text-info">{{ getTotalVentas() - (cierreActual?.ventasEfectivo || 0) | currency }}
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label">
-              <i class="bi bi-cash-stack me-2"></i>Efectivo Final Real
-              <span class="text-danger">*</span>
-            </label>
-            <div class="input-group">
-              <span class="input-group-text">{{ simboloMonedaSistema }}</span>
-              <input type="number" class="form-control" formControlName="efectivoFinalReal" step="0.01" min="0"
-                placeholder="0.00">
+          <!-- Cálculo de efectivo teórico -->
+          <div class="bg-light p-3 rounded mb-3">
+            <h6 class="mb-3"><i class="bi bi-calculator me-2"></i>Conciliación de Efectivo</h6>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="d-flex justify-content-between mb-2">
+                  <span>Efectivo Inicial:</span>
+                  <span class="fw-bold">{{ cierreActual?.efectivoInicial | currency }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                  <span>+ Ventas en Efectivo:</span>
+                  <span class="fw-bold text-success">{{ cierreActual?.ventasEfectivo | currency }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                  <span>- Egresos en Efectivo:</span>
+                  <span class="fw-bold text-danger">{{ getEgresosEfectivo() | currency }}</span>
+                </div>
+                <div class="d-flex justify-content-between pt-2 border-top">
+                  <span class="fw-bold">= Efectivo Teórico:</span>
+                  <span class="fw-bold">{{ getEfectivoFinalTeorico() | currency }}</span>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">
+                  <i class="bi bi-cash-stack me-2"></i>Efectivo Real (contado físico)
+                  <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text">{{ simboloMonedaSistema }}</span>
+                  <input type="number" class="form-control" formControlName="efectivoFinalReal" step="0.01" min="0"
+                    placeholder="0.00" autofocus>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -616,7 +742,10 @@
               <span class="fw-bold">{{ getDiferencia() | currency }}</span>
             </div>
             <small *ngIf="getDiferencia() !== 0" class="text-muted">
-              La diferencia será registrada y deberá ser justificada
+              {{ getDiferencia() > 0 ? 'Sobrante en caja. Verifique si hubo ingresos no registrados.' : 'Faltante en caja. Verifique egresos o errores en el conteo.' }}
+            </small>
+            <small *ngIf="getDiferencia() === 0" class="text-muted">
+              ¡Perfecto! El efectivo coincide con el sistema.
             </small>
           </div>
 
@@ -625,7 +754,7 @@
               <i class="bi bi-chat-text me-2"></i>Notas de Cierre
             </label>
             <textarea class="form-control" formControlName="notasCierre" rows="2"
-              placeholder="Observaciones del cierre..."></textarea>
+              placeholder="Observaciones del cierre (ej: diferencia justificada, billetes deteriorados, etc.)"></textarea>
           </div>
 
           <div class="mb-3">
@@ -635,6 +764,13 @@
                 <i class="bi bi-printer me-2"></i>Imprimir resumen después del cierre
               </label>
             </div>
+          </div>
+
+          <!-- Advertencia de cierre -->
+          <div class="alert alert-warning small">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Importante:</strong> Una vez cerrada la caja, no se podrán modificar las transacciones de este día.
+            Asegúrese de que todos los movimientos estén registrados correctamente.
           </div>
         </div>
         <div class="modal-footer">
@@ -663,19 +799,32 @@
       </div>
       <form [formGroup]="transaccionForm" (ngSubmit)="guardarTransaccion()">
         <div class="modal-body">
+          <!-- Información contextual -->
+          <div class="bg-light p-2 rounded mb-3 small">
+            <div class="row">
+              <div class="col-md-6">
+                <span class="text-muted">Usuario:</span> {{ currentUser?.nombre || 'No identificado' }}
+              </div>
+              <div class="col-md-6">
+                <span class="text-muted">Fecha:</span> {{ fechaSeleccionada | date:'dd/MM/yyyy HH:mm' }}
+              </div>
+            </div>
+          </div>
+
           <div class="mb-3">
             <label class="form-label">Tipo <span class="text-danger">*</span></label>
             <select class="form-select" formControlName="tipo">
-              <option value="venta">Venta</option>
-              <option value="ingreso">Ingreso</option>
-              <option value="egreso">Egreso</option>
-              <option value="ajuste">Ajuste</option>
+              <option value="venta">💵 Venta</option>
+              <option value="ingreso">📈 Ingreso Extra</option>
+              <option value="egreso">📉 Egreso/Gasto</option>
+              <option value="ajuste">🔄 Ajuste</option>
             </select>
           </div>
 
           <div class="mb-3">
             <label class="form-label">Descripción <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" formControlName="descripcion" placeholder="Ej: Pago a proveedor">
+            <input type="text" class="form-control" formControlName="descripcion"
+              placeholder="Ej: Pago a proveedor, Venta mostrador, etc.">
           </div>
 
           <div class="mb-3">
@@ -690,38 +839,42 @@
           <div class="mb-3">
             <label class="form-label">Método de Pago <span class="text-danger">*</span></label>
             <select class="form-select" formControlName="metodoPago">
-              <option value="efectivo">Efectivo</option>
-              <option value="tarjeta">Tarjeta</option>
-              <option value="transferencia">Transferencia</option>
-              <option value="debito">Débito</option>
-              <option value="credito">Crédito</option>
-              <option value="pagomovil">Pago Móvil</option>
-              <option value="zelle">Zelle</option>
+              <option value="efectivo">💵 Efectivo</option>
+              <option value="tarjeta">💳 Tarjeta</option>
+              <option value="transferencia">🏦 Transferencia</option>
+              <option value="debito">💳 Débito</option>
+              <option value="credito">💳 Crédito</option>
+              <option value="pagomovil">📱 Pago Móvil</option>
+              <option value="zelle">🌐 Zelle</option>
             </select>
           </div>
 
           <div class="mb-3">
             <label class="form-label">Categoría</label>
             <select class="form-select" formControlName="categoria">
-              <option value="venta_lentes">Venta de Lentes</option>
-              <option value="venta_accesorios">Venta de Accesorios</option>
-              <option value="consulta">Consulta</option>
-              <option value="proveedor">Pago a Proveedor</option>
-              <option value="gasto_operativo">Gasto Operativo</option>
-              <option value="retiro">Retiro de Caja</option>
-              <option value="otro">Otro</option>
+              <option value="venta_lentes">👓 Venta de Lentes</option>
+              <option value="venta_accesorios">🕶️ Venta de Accesorios</option>
+              <option value="consulta">🏥 Consulta</option>
+              <option value="proveedor">📦 Pago a Proveedor</option>
+              <option value="gasto_operativo">⚙️ Gasto Operativo</option>
+              <option value="retiro">🏧 Retiro de Caja</option>
+              <option value="otro">📝 Otro</option>
             </select>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label">Comprobante</label>
+          <div class="mb-3"
+            *ngIf="transaccionForm.get('metodoPago')?.value === 'transferencia' || transaccionForm.get('metodoPago')?.value === 'pagomovil'">
+            <label class="form-label">
+              <i class="bi bi-receipt me-2"></i>Número de Referencia
+            </label>
             <input type="text" class="form-control" formControlName="comprobante"
               placeholder="N° de comprobante o referencia">
           </div>
 
           <div class="mb-3">
             <label class="form-label">Observaciones</label>
-            <textarea class="form-control" formControlName="observaciones" rows="2"></textarea>
+            <textarea class="form-control" formControlName="observaciones" rows="2"
+              placeholder="Detalles adicionales..."></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -759,9 +912,12 @@
             <label class="form-label">Fecha Hasta</label>
             <input type="date" class="form-control" [(ngModel)]="filtroHistorialHasta">
           </div>
-          <div class="col-md-4 d-flex align-items-end">
+          <div class="col-md-4 d-flex align-items-end gap-2">
             <button class="btn btn-primary w-100" (click)="cargarHistorialCierres()">
               <i class="bi bi-search"></i> Buscar
+            </button>
+            <button class="btn btn-outline-secondary" (click)="exportarHistorial()">
+              <i class="bi bi-download"></i>
             </button>
           </div>
         </div>
@@ -774,7 +930,8 @@
                 <th>Fecha</th>
                 <th>Estado</th>
                 <th>Efectivo Inicial</th>
-                <th>Ventas</th>
+                <th>Ventas Efectivo</th>
+                <th>Total Ventas</th>
                 <th>Efectivo Final</th>
                 <th>Diferencia</th>
                 <th>Usuario</th>
@@ -786,34 +943,71 @@
                 <td>{{ cierre.fecha | date:'dd/MM/yyyy' }}</td>
                 <td>
                   <span class="badge" [ngClass]="getEstadoClass(cierre.estado)">
+                    <i class="bi" [ngClass]="{
+                      'bi-play-circle-fill': cierre.estado === 'abierto',
+                      'bi-lock-fill': cierre.estado === 'cerrado',
+                      'bi-check-circle-fill': cierre.estado === 'revisado',
+                      'bi-arrow-repeat': cierre.estado === 'conciliado'
+                    }"></i>
                     {{ getEstadoTexto(cierre.estado) }}
                   </span>
                 </td>
                 <td>{{ cierre.efectivoInicial | currency }}</td>
-                <td>{{ getTotalVentasCierre(cierre) | currency }}</td>
+                <td class="text-success">{{ cierre.ventasEfectivo | currency }}</td>
+                <td class="fw-bold">{{ getTotalVentasCierre(cierre) | currency }}</td>
                 <td>{{ cierre.efectivoFinalReal | currency }}</td>
                 <td [ngClass]="{
                   'text-success': cierre.diferencia > 0,
-                  'text-danger': cierre.diferencia < 0
-                }">{{ cierre.diferencia | currency }}</td>
+                  'text-danger': cierre.diferencia < 0,
+                  'text-muted': cierre.diferencia === 0
+                }">
+                  {{ cierre.diferencia | currency }}
+                </td>
                 <td>{{ cierre.usuarioCierre || cierre.usuarioApertura }}</td>
                 <td>
-                  <button class="btn btn-sm btn-outline-primary me-1" (click)="verDetalleCierre(cierre)">
+                  <button class="btn btn-sm btn-outline-primary me-1" (click)="verDetalleCierre(cierre)"
+                    title="Ver detalle">
                     <i class="bi bi-eye"></i>
                   </button>
-                  <button class="btn btn-sm btn-outline-warning" (click)="anularCierre(cierre)">
+                  <button class="btn btn-sm btn-outline-warning" (click)="anularCierre(cierre)" title="Anular cierre"
+                    *ngIf="cierre.estado === 'cerrado'">
                     <i class="bi bi-x-circle"></i>
                   </button>
                 </td>
               </tr>
               <tr *ngIf="historialCierres.length === 0">
-                <td colspan="8" class="text-center py-4">
+                <td colspan="9" class="text-center py-4">
                   <i class="bi bi-inbox fs-1 d-block text-muted"></i>
-                  <p class="text-muted">No hay cierres registrados</p>
+                  <p class="text-muted">No hay cierres registrados en el rango seleccionado</p>
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Resumen de totales -->
+        <div class="bg-light p-3 rounded mt-3" *ngIf="historialCierres.length > 0">
+          <div class="row">
+            <div class="col-md-3">
+              <small class="text-muted">Total Registros</small>
+              <div class="fw-bold">{{ historialCierres.length }}</div>
+            </div>
+            <div class="col-md-3">
+              <small class="text-muted">Total Ventas</small>
+              <div class="fw-bold">{{ getTotalVentasHistorial() | currency }}</div>
+            </div>
+            <div class="col-md-3">
+              <small class="text-muted">Promedio Diario</small>
+              <div class="fw-bold">{{ getTotalVentasHistorial() / historialCierres.length | currency }}</div>
+            </div>
+            <div class="col-md-3">
+              <small class="text-muted">Diferencia Total</small>
+              <div class="fw-bold" [ngClass]="{
+                'text-success': getDiferenciaTotalHistorial() > 0,
+                'text-danger': getDiferenciaTotalHistorial() < 0
+              }">{{ getDiferenciaTotalHistorial() | currency }}</div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">

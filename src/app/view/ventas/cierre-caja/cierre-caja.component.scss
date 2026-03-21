@@ -163,6 +163,26 @@ $light: #f8fafc;
           color: $primary;
         }
       }
+
+      &.estado-sin-iniciar {
+        background: rgba($warning, 0.12);
+        color: $warning;
+        border: 1px solid rgba($warning, 0.2);
+
+        i {
+          color: $warning;
+        }
+      }
+
+      &.estado-sin-cierre {
+        background: rgba($gray, 0.12);
+        color: $gray;
+        border: 1px solid rgba($gray, 0.2);
+
+        i {
+          color: $gray;
+        }
+      }
     }
   }
 
@@ -542,9 +562,11 @@ $light: #f8fafc;
 }
 
 // Transacciones
+// Transacciones - Ajustes para evitar scroll horizontal
 .transacciones-list {
   max-height: 550px;
   overflow-y: auto;
+  overflow-x: hidden; // ← Agregar esto para evitar scroll horizontal
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -567,13 +589,15 @@ $light: #f8fafc;
   .transaccion-item {
     display: flex;
     align-items: flex-start;
-    gap: 1rem;
-    padding: 1rem;
+    gap: 0.75rem; // Reducir gap
+    padding: 0.875rem;
     border-radius: 0.75rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     background: white;
     transition: all 0.2s;
     border: 1px solid transparent;
+    width: 100%; // Asegurar que ocupe todo el ancho
+    box-sizing: border-box; // Incluir padding en el ancho total
 
     &:hover {
       transform: translateX(4px);
@@ -581,18 +605,9 @@ $light: #f8fafc;
       border-color: #e2e8f0;
     }
 
-    &.pendiente {
-      border-left: 3px solid $warning;
-    }
-
-    &.anulado {
-      opacity: 0.6;
-      border-left: 3px solid $danger;
-    }
-
     .transaccion-icon {
-      width: 3rem;
-      height: 3rem;
+      width: 2.5rem; // Reducir de 3rem a 2.5rem
+      height: 2.5rem;
       border-radius: 0.75rem;
       display: flex;
       align-items: center;
@@ -600,12 +615,15 @@ $light: #f8fafc;
       flex-shrink: 0;
 
       i {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
       }
+
+      // Reducir tamaño de icono
     }
 
     .transaccion-info {
       flex: 1;
+      min-width: 0; // Permitir que el texto se recorte si es necesario
 
       .transaccion-header {
         display: flex;
@@ -618,11 +636,18 @@ $light: #f8fafc;
         .transaccion-desc {
           font-weight: 600;
           color: $dark;
+          font-size: 0.9rem;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 200px; // Limitar ancho del texto
         }
 
         .transaccion-monto {
           font-weight: 700;
-          font-size: 1.1rem;
+          font-size: 1rem;
+          white-space: nowrap;
+          flex-shrink: 0;
 
           &.text-success {
             color: $success;
@@ -638,34 +663,38 @@ $light: #f8fafc;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 0.5rem;
+        gap: 0.5rem;
+        margin-bottom: 0.25rem;
 
         .badge-metodo {
           display: inline-flex;
           align-items: center;
           gap: 0.25rem;
-          padding: 0.25rem 0.75rem;
+          padding: 0.25rem 0.6rem;
           border-radius: 2rem;
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           font-weight: 500;
+          white-space: nowrap;
+          flex-shrink: 0;
         }
 
         .meta-item {
           display: flex;
           align-items: center;
           gap: 0.25rem;
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           color: $gray;
+          white-space: nowrap;
+          flex-shrink: 0;
 
           i {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
           }
         }
       }
 
       .transaccion-detalle {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: $gray;
 
         .venta-num {
@@ -675,7 +704,11 @@ $light: #f8fafc;
         }
 
         .cliente-nom {
-          color: $gray;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: inline-block;
+          max-width: 150px;
         }
       }
     }
@@ -686,18 +719,52 @@ $light: #f8fafc;
       flex-shrink: 0;
 
       .btn-action {
-        width: 2rem;
-        height: 2rem;
+        width: 1.75rem; // Reducir de 2rem a 1.75rem
+        height: 1.75rem;
         border: none;
         background: transparent;
         border-radius: 0.5rem;
         color: $gray;
         transition: all 0.2s;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        i {
+          font-size: 0.9rem;
+        }
 
         &:hover {
           background: rgba($danger, 0.1);
           color: $danger;
+        }
+      }
+    }
+  }
+}
+
+// Responsive para móviles
+@media (max-width: 768px) {
+  .transacciones-list {
+    .transaccion-item {
+      flex-wrap: wrap;
+
+      .transaccion-icon {
+        width: 2rem;
+        height: 2rem;
+
+        i {
+          font-size: 1rem;
+        }
+      }
+
+      .transaccion-info {
+        .transaccion-header {
+          .transaccion-desc {
+            max-width: 150px;
+            font-size: 0.85rem;
+          }
         }
       }
     }
@@ -1200,7 +1267,6 @@ $light: #f8fafc;
 }
 
 // Cierre Panel
-// Cierre Panel - Versión mejorada
 .cierre-panel {
   margin-top: 1.5rem;
   background: linear-gradient(135deg, #ffffff, #f8fafc);
@@ -1212,6 +1278,14 @@ $light: #f8fafc;
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  }
+
+  &.sin-cierre {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+
+    .cierre-detalle {
+      opacity: 0.8;
+    }
   }
 
   .panel-header {

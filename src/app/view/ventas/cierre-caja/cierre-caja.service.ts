@@ -11,7 +11,7 @@ import { CierreDiario, Transaccion, TasasCambio } from './cierre-caja.interfaz';
 })
 export class CierreCajaService {
     private apiUrl = environment.apiUrl;
-    private usarDummy: boolean = true; // Cambiar a false cuando el backend esté listo
+    private usarDummy: boolean = true;
     private cierres: Map<string, CierreDiario> = new Map();
     private ventas: any[] = [];
 
@@ -26,124 +26,173 @@ export class CierreCajaService {
         return `${year}-${month}-${day}`;
     }
 
+    // En cierre-caja.service.ts - Asegúrate de que NO se crea cierre para hoy
     private inicializarDatosDummy(): void {
-        // Generar ventas para los últimos 30 días
         const hoy = new Date();
+        const ayer = new Date(hoy);
+        ayer.setDate(hoy.getDate() - 1);
+        const anteayer = new Date(hoy);
+        anteayer.setDate(hoy.getDate() - 2);
 
-        for (let i = 0; i < 30; i++) {
-            const fecha = new Date(hoy);
-            fecha.setDate(hoy.getDate() - i);
-            this.generarVentasDia(fecha);
-        }
+        // Generar ventas para todos los días
+        this.generarVentasDiaCompleto(hoy, 'Día Actual');
+        this.generarVentasDiaCompleto(ayer, 'Día Anterior');
+        this.generarVentasDiaCompleto(anteayer, 'Hace 2 Días');
+
+        // Crear cierres SOLO para días pasados
+        // NO crear cierre para el día actual
+        this.crearCierreDummy(ayer);
+        this.crearCierreDummy(anteayer);
+        // this.crearCierreDummy(hoy); ← COMENTADO
     }
 
-    private generarVentasDia(fecha: Date): void {
-        const dia = fecha.getDate();
-        const mes = fecha.getMonth() + 1;
+    private generarVentasDiaCompleto(fecha: Date, nombreDia: string): void {
+        const horaBase = new Date(fecha);
 
-        // Generar entre 3 y 10 ventas por día
-        const numVentas = Math.floor(Math.random() * 8) + 3;
+        // 1. Venta SOLO CONSULTA - Contado en Efectivo
+        this.crearVentaCompleta(horaBase, 'V-001', 'solo_consulta', 'contado', 'efectivo', 'Carlos Rodríguez', '12345678', 60, 60, { medico: 40, optica: 20 });
 
-        for (let i = 0; i < numVentas; i++) {
-            const hora = Math.floor(Math.random() * 12) + 8; // 8am a 8pm
-            const minuto = Math.floor(Math.random() * 60);
-            const fechaVenta = new Date(fecha);
-            fechaVenta.setHours(hora, minuto, 0);
+        // 2. Venta SOLO CONSULTA - Pago Móvil
+        this.crearVentaCompleta(horaBase, 'V-002', 'solo_consulta', 'contado', 'pagomovil', 'María Pérez', '87654321', 80, 80, { medico: 50, optica: 30 }, 'Banco de Venezuela', 'REF-001');
 
-            const tiposVenta = ['solo_consulta', 'consulta_productos', 'solo_productos'];
-            const formasPago = ['contado', 'abono', 'cashea', 'de_contado-pendiente'];
-            const metodosPago = ['efectivo', 'punto', 'transferencia', 'pagomovil', 'zelle'];
+        // 3. Venta SOLO PRODUCTOS - Contado en Efectivo
+        this.crearVentaCompleta(horaBase, 'V-003', 'solo_productos', 'contado', 'efectivo', 'Juan Gómez', '11223344', 250, 250);
 
-            const tipoVenta = tiposVenta[Math.floor(Math.random() * tiposVenta.length)];
-            const formaPago = formasPago[Math.floor(Math.random() * formasPago.length)];
-            const metodoPrincipal = metodosPago[Math.floor(Math.random() * metodosPago.length)];
+        // 4. Venta SOLO PRODUCTOS - Transferencia Bancaria
+        this.crearVentaCompleta(horaBase, 'V-004', 'solo_productos', 'contado', 'transferencia', 'Ana Martínez', '99887766', 180, 180, null, 'Banesco', 'TRF-001');
 
-            let total = 0;
-            let montoPagado = 0;
+        // 5. Venta CONSULTA + PRODUCTOS - Punto de Venta (BNC)
+        this.crearVentaCompleta(horaBase, 'V-005', 'consulta_productos', 'contado', 'punto', 'Luis Fernández', '55443322', 450, 450, { medico: 40, productos: 410 }, 'BNC');
 
-            // Calcular total según tipo de venta
-            if (tipoVenta === 'solo_consulta') {
-                total = Math.floor(Math.random() * 100) + 30;
-            } else if (tipoVenta === 'solo_productos') {
-                total = Math.floor(Math.random() * 500) + 50;
-            } else {
-                total = Math.floor(Math.random() * 600) + 80;
+        // 6. Venta CONSULTA + PRODUCTOS - Punto de Venta (Provincial)
+        this.crearVentaCompleta(horaBase, 'V-006', 'consulta_productos', 'contado', 'punto', 'Laura Díaz', '44455566', 320, 320, { medico: 40, productos: 280 }, 'Provincial');
+
+        // 7. Venta con ABONO - Efectivo
+        this.crearVentaCompleta(horaBase, 'V-007', 'consulta_productos', 'abono', 'efectivo', 'Roberto Castro', '77788899', 500, 200, { medico: 40, productos: 460 }, null, null, 200);
+
+        // 8. Venta con CASHEA - Efectivo
+        this.crearVentaCompleta(horaBase, 'V-008', 'consulta_productos', 'cashea', 'efectivo', 'Sofía López', '33344455', 600, 240, { medico: 40, productos: 560 }, null, null, 240, 2);
+
+        // 9. Venta con PAGO PENDIENTE
+        this.crearVentaCompleta(horaBase, 'V-009', 'consulta_productos', 'de_contado-pendiente', 'pendiente', 'Diego Ramírez', '99900011', 350, 0, { medico: 40, productos: 310 });
+
+        // 10. Venta con ZELLE
+        this.crearVentaCompleta(horaBase, 'V-010', 'solo_productos', 'contado', 'zelle', 'Valentina Torres', '22233344', 420, 420);
+
+        // 11. Venta con PAGO MIXTO (Efectivo + Transferencia)
+        this.crearVentaCompleta(horaBase, 'V-011', 'consulta_productos', 'contado', 'mixto', 'Andrés Mendoza', '55566677', 380, 380, { medico: 40, productos: 340 }, null, null, 380, 0, [
+            { tipo: 'efectivo', monto: 200, moneda: 'dolar' },
+            { tipo: 'transferencia', monto: 180, moneda: 'dolar', banco: 'Mercantil', referencia: 'MIX-001' }
+        ]);
+    }
+
+    private crearVentaCompleta(
+        fechaBase: Date,
+        numeroVenta: string,
+        tipoVenta: string,
+        formaPago: string,
+        metodoPago: string,
+        nombreCliente: string,
+        cedulaCliente: string,
+        total: number,
+        pagado: number,
+        desglose?: { medico?: number, optica?: number, productos?: number },
+        banco?: string | null,
+        referencia?: string | null,
+        montoInicial?: number,
+        cuotasAdelantadas?: number,
+        metodosMultiples?: any[]
+    ): void {
+        const hora = new Date(fechaBase);
+        const horaOffset = Math.floor(Math.random() * 10) + 8;
+        hora.setHours(horaOffset, Math.floor(Math.random() * 60), 0);
+
+        let metodosDePago: any[] = [];
+
+        if (metodosMultiples) {
+            metodosDePago = metodosMultiples;
+        } else if (metodoPago !== 'pendiente') {
+            const metodo: any = {
+                tipo: metodoPago,
+                monto: pagado,
+                moneda: metodoPago === 'transferencia' || metodoPago === 'pagomovil' ? 'bolivar' : 'dolar'
+            };
+
+            if (banco && (metodoPago === 'punto' || metodoPago === 'transferencia' || metodoPago === 'pagomovil')) {
+                metodo.bancoNombre = banco;
+                metodo.bancoCodigo = banco === 'BNC' ? '0114' : banco === 'Provincial' ? '0108' : '0102';
+            }
+            if (referencia && (metodoPago === 'transferencia' || metodoPago === 'pagomovil')) {
+                metodo.referencia = referencia;
+            }
+            if (metodoPago === 'punto') {
+                metodo.bancoPunto = banco === 'BNC' ? 'bnc' : 'provincial';
             }
 
-            // Calcular monto pagado según forma de pago
-            if (formaPago === 'contado') {
-                montoPagado = total;
-            } else if (formaPago === 'abono') {
-                montoPagado = Math.floor(total * 0.5);
-            } else if (formaPago === 'cashea') {
-                montoPagado = Math.floor(total * 0.4);
-            } else {
-                montoPagado = 0;
-            }
-
-            // Crear métodos de pago
-            let metodosDePago: any[] = [];
-            if (formaPago === 'contado' && montoPagado > 0) {
-                metodosDePago = [{ tipo: metodoPrincipal, monto: montoPagado, moneda: 'dolar' }];
-            } else if (formaPago === 'abono' && montoPagado > 0) {
-                metodosDePago = [{ tipo: 'efectivo', monto: montoPagado, moneda: 'dolar' }];
-            } else if (formaPago === 'cashea' && montoPagado > 0) {
-                metodosDePago = [{ tipo: 'efectivo', monto: montoPagado, moneda: 'dolar' }];
-            }
-
-            // Crear detalle de forma de pago
-            let formaPagoDetalle: any = { tipo: formaPago, montoTotal: total };
-            if (formaPago === 'contado') {
-                formaPagoDetalle.totalPagado = montoPagado;
-            } else if (formaPago === 'abono') {
-                formaPagoDetalle.montoAbonado = montoPagado;
-                formaPagoDetalle.deudaPendiente = total - montoPagado;
-                formaPagoDetalle.porcentajePagado = (montoPagado / total) * 100;
-            } else if (formaPago === 'cashea') {
-                const inicial = montoPagado;
-                const restante = total - inicial;
-                const montoPorCuota = restante / 3;
-                formaPagoDetalle.nivel = 'nivel3';
-                formaPagoDetalle.montoInicial = inicial;
-                formaPagoDetalle.cantidadCuotas = '3';
-                formaPagoDetalle.montoPorCuota = montoPorCuota;
-                formaPagoDetalle.deudaPendiente = restante;
-            } else if (formaPago === 'de_contado-pendiente') {
-                formaPagoDetalle.deudaPendiente = total;
-            }
-
-            this.ventas.push({
-                key: `VENTA-${i}-${fecha.getTime()}`,
-                numero_venta: `V-${String(dia).padStart(2, '0')}${String(mes).padStart(2, '0')}${String(i + 100).slice(-3)}`,
-                fecha: fechaVenta.toISOString(),
-                tipoVenta: tipoVenta,
-                moneda: 'dolar',
-                sede: 'guatire',
-                total_pagado: montoPagado,
-                total: total,
-                estatus_pago: formaPago === 'de_contado-pendiente' ? 'pendiente' : 'completado',
-                estado: 'completada',
-                formaPago: formaPago,
-                metodosDePago: metodosDePago,
-                cliente: {
-                    informacion: {
-                        nombreCompleto: `Cliente ${i + 1}`,
-                        cedula: String(Math.floor(Math.random() * 10000000))
-                    }
-                },
-                asesor: { nombre: 'Asesor Demo' },
-                auditoria: {
-                    usuarioCreacion: { nombre: 'Usuario Demo' },
-                    fechaCreacion: fechaVenta.toISOString()
-                },
-                formaPagoDetalle: formaPagoDetalle,
-                productos: [{ nombre: 'Producto Demo', cantidad: 1, precio: total * 0.8 }],
-                generarOrdenTrabajo: formaPago !== 'abono' && formaPago !== 'de_contado-pendiente'
-            });
+            metodosDePago = [metodo];
         }
 
-        // Crear cierre para este día
-        this.crearCierreDummy(fecha);
+        let formaPagoDetalle: any = { tipo: formaPago, montoTotal: total };
+
+        if (formaPago === 'contado') {
+            formaPagoDetalle.totalPagado = pagado;
+        } else if (formaPago === 'abono') {
+            formaPagoDetalle.montoAbonado = pagado;
+            formaPagoDetalle.deudaPendiente = total - pagado;
+            formaPagoDetalle.porcentajePagado = (pagado / total) * 100;
+        } else if (formaPago === 'cashea') {
+            const inicial = montoInicial || pagado;
+            const restante = total - inicial;
+            const montoPorCuota = restante / 3;
+            formaPagoDetalle.nivel = 'nivel3';
+            formaPagoDetalle.montoInicial = inicial;
+            formaPagoDetalle.cantidadCuotas = '3';
+            formaPagoDetalle.montoPorCuota = montoPorCuota;
+            formaPagoDetalle.cuotasAdelantadas = cuotasAdelantadas || 0;
+            formaPagoDetalle.montoAdelantado = (cuotasAdelantadas || 0) * montoPorCuota;
+            formaPagoDetalle.totalPagadoAhora = inicial + ((cuotasAdelantadas || 0) * montoPorCuota);
+            formaPagoDetalle.deudaPendiente = restante - ((cuotasAdelantadas || 0) * montoPorCuota);
+        } else if (formaPago === 'de_contado-pendiente') {
+            formaPagoDetalle.deudaPendiente = total;
+        }
+
+        let consulta = null;
+        if (tipoVenta !== 'solo_productos') {
+            consulta = {
+                pagoMedico: desglose?.medico || (tipoVenta === 'solo_consulta' ? total * 0.7 : 40),
+                pagoOptica: desglose?.optica || (tipoVenta === 'solo_consulta' ? total * 0.3 : 0)
+            };
+        }
+
+        this.ventas.push({
+            key: `VENTA-${numeroVenta}-${fechaBase.getTime()}-${Math.random()}`,
+            numero_venta: numeroVenta,
+            fecha: hora.toISOString(),
+            tipoVenta: tipoVenta,
+            moneda: 'dolar',
+            sede: 'guatire',
+            total_pagado: pagado,
+            total: total,
+            estatus_pago: formaPago === 'de_contado-pendiente' ? 'pendiente' : 'completado',
+            estado: 'completada',
+            formaPago: formaPago,
+            metodosDePago: metodosDePago,
+            cliente: {
+                informacion: {
+                    nombreCompleto: nombreCliente,
+                    cedula: cedulaCliente
+                }
+            },
+            asesor: { nombre: 'Asesor Demo' },
+            auditoria: {
+                usuarioCreacion: { nombre: 'Usuario Demo' },
+                fechaCreacion: hora.toISOString()
+            },
+            formaPagoDetalle: formaPagoDetalle,
+            productos: tipoVenta !== 'solo_consulta' ? [{ nombre: 'Producto Demo', cantidad: 1, precio: total - (desglose?.medico || 0) }] : [],
+            consulta: consulta,
+            generarOrdenTrabajo: formaPago !== 'abono' && formaPago !== 'de_contado-pendiente'
+        });
     }
 
     private crearCierreDummy(fecha: Date): void {
@@ -208,7 +257,7 @@ export class CierreCajaService {
         this.cierres.set(id, cierre);
     }
 
-    // Métodos de cálculo auxiliares
+    // Métodos auxiliares de cálculo (mantener los que ya tenías)
     private calcularVentasPorTipo(ventas: any[]): any {
         const resultado = {
             soloConsulta: { cantidad: 0, total: 0, montoMedico: 0, montoOptica: 0 },
@@ -220,13 +269,14 @@ export class CierreCajaService {
             if (v.tipoVenta === 'solo_consulta') {
                 resultado.soloConsulta.cantidad++;
                 resultado.soloConsulta.total += v.total;
-                resultado.soloConsulta.montoMedico += v.total * 0.7;
-                resultado.soloConsulta.montoOptica += v.total * 0.3;
+                resultado.soloConsulta.montoMedico += v.consulta?.pagoMedico || 0;
+                resultado.soloConsulta.montoOptica += v.consulta?.pagoOptica || 0;
             } else if (v.tipoVenta === 'consulta_productos') {
                 resultado.consultaProductos.cantidad++;
                 resultado.consultaProductos.total += v.total;
-                resultado.consultaProductos.montoMedico += v.total * 0.4;
-                resultado.consultaProductos.montoProductos += v.total * 0.6;
+                resultado.consultaProductos.montoMedico += v.consulta?.pagoMedico || 0;
+                const totalProductos = v.productos?.reduce((sum: number, p: any) => sum + (p.precio * p.cantidad), 0) || 0;
+                resultado.consultaProductos.montoProductos += totalProductos;
             } else if (v.tipoVenta === 'solo_productos') {
                 resultado.soloProductos.cantidad++;
                 resultado.soloProductos.total += v.total;
@@ -248,30 +298,54 @@ export class CierreCajaService {
 
         ventas.forEach(v => {
             if (v.metodosDePago && v.metodosDePago.length > 0) {
+                if (v.metodosDePago.length > 1) {
+                    metodos.mixto.total += v.total_pagado || v.total;
+                    metodos.mixto.cantidad++;
+                }
+
                 v.metodosDePago.forEach((m: any) => {
-                    const tipo = m.tipo;
                     const monto = m.monto || v.total_pagado || v.total;
 
-                    if (tipo === 'efectivo') {
+                    if (m.tipo === 'efectivo') {
                         metodos.efectivo.total += monto;
                         metodos.efectivo.cantidad++;
                         metodos.efectivo.porMoneda.dolar += monto;
-                    } else if (tipo === 'punto') {
+                    } else if (m.tipo === 'punto') {
                         metodos.punto.total += monto;
                         metodos.punto.cantidad++;
-                        metodos.punto.porBanco.push({
-                            banco: 'Banco ' + String.fromCharCode(65 + Math.floor(Math.random() * 5)),
-                            bancoCodigo: '01' + Math.floor(Math.random() * 20),
-                            total: monto,
-                            cantidad: 1
-                        });
-                    } else if (tipo === 'pagomovil') {
+                        const banco = m.bancoNombre || 'Otro';
+                        let bancoExistente = metodos.punto.porBanco.find(b => b.banco === banco);
+                        if (!bancoExistente) {
+                            bancoExistente = { banco, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
+                            metodos.punto.porBanco.push(bancoExistente);
+                        }
+                        bancoExistente.total += monto;
+                        bancoExistente.cantidad++;
+                    } else if (m.tipo === 'pagomovil') {
                         metodos.pagomovil.total += monto;
                         metodos.pagomovil.cantidad++;
-                    } else if (tipo === 'transferencia') {
+                        if (m.bancoNombre) {
+                            let bancoExistente = metodos.pagomovil.porBanco.find(b => b.banco === m.bancoNombre);
+                            if (!bancoExistente) {
+                                bancoExistente = { banco: m.bancoNombre, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
+                                metodos.pagomovil.porBanco.push(bancoExistente);
+                            }
+                            bancoExistente.total += monto;
+                            bancoExistente.cantidad++;
+                        }
+                    } else if (m.tipo === 'transferencia') {
                         metodos.transferencia.total += monto;
                         metodos.transferencia.cantidad++;
-                    } else if (tipo === 'zelle') {
+                        if (m.bancoNombre) {
+                            let bancoExistente = metodos.transferencia.porBanco.find(b => b.banco === m.bancoNombre);
+                            if (!bancoExistente) {
+                                bancoExistente = { banco: m.bancoNombre, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
+                                metodos.transferencia.porBanco.push(bancoExistente);
+                            }
+                            bancoExistente.total += monto;
+                            bancoExistente.cantidad++;
+                        }
+                    } else if (m.tipo === 'zelle') {
                         metodos.zelle.total += monto;
                         metodos.zelle.cantidad++;
                     }
@@ -306,9 +380,9 @@ export class CierreCajaService {
             } else if (fp === 'cashea') {
                 formas.cashea.cantidad++;
                 formas.cashea.total += total;
-                formas.cashea.montoInicial += pagado;
-                formas.cashea.deudaPendiente += total - pagado;
-                formas.cashea.cuotasPendientes += 3;
+                formas.cashea.montoInicial += v.formaPagoDetalle?.montoInicial || pagado;
+                formas.cashea.deudaPendiente += v.formaPagoDetalle?.deudaPendiente || (total - pagado);
+                formas.cashea.cuotasPendientes += 3 - (v.formaPagoDetalle?.cuotasAdelantadas || 0);
             } else if (fp === 'de_contado-pendiente') {
                 formas.deContadoPendiente.cantidad++;
                 formas.deContadoPendiente.total += total;
@@ -322,12 +396,14 @@ export class CierreCajaService {
     private calcularVentasPendientes(ventas: any[]): any[] {
         return ventas
             .filter(v => v.formaPago === 'de_contado-pendiente' ||
-                (v.formaPago === 'abono' && v.total > (v.total_pagado || 0)))
+                (v.formaPago === 'abono' && v.total > (v.total_pagado || 0)) ||
+                (v.formaPago === 'cashea' && v.total > (v.total_pagado || 0)))
             .map(v => ({
                 numeroVenta: v.numero_venta,
                 cliente: v.cliente?.informacion?.nombreCompleto || 'Cliente',
                 total: v.total,
-                formaPago: v.formaPago === 'de_contado-pendiente' ? 'Pendiente' : 'Abono',
+                formaPago: v.formaPago === 'de_contado-pendiente' ? 'Pendiente' :
+                    (v.formaPago === 'abono' ? 'Abono' : 'Cashea'),
                 deuda: v.total - (v.total_pagado || 0),
                 fecha: new Date(v.fecha)
             }));
@@ -335,13 +411,17 @@ export class CierreCajaService {
 
     private calcularTotales(ventas: any[]): any {
         const ingresos = ventas.reduce((sum, v) => sum + (v.total_pagado || v.total), 0);
+        const pendientes = ventas.filter(v => v.formaPago === 'de_contado-pendiente').reduce((sum, v) => sum + v.total, 0);
+        const credito = ventas.filter(v => v.formaPago === 'abono' || v.formaPago === 'cashea')
+            .reduce((sum, v) => sum + (v.total - (v.total_pagado || 0)), 0);
+
         return {
             ingresos: ingresos,
             egresos: 0,
             neto: ingresos,
-            ventasContado: ingresos,
-            ventasCredito: 0,
-            ventasPendientes: ventas.filter(v => v.formaPago === 'de_contado-pendiente').reduce((sum, v) => sum + v.total, 0)
+            ventasContado: ventas.filter(v => v.formaPago === 'contado').reduce((sum, v) => sum + (v.total_pagado || v.total), 0),
+            ventasCredito: credito,
+            ventasPendientes: pendientes
         };
     }
 
@@ -349,10 +429,10 @@ export class CierreCajaService {
         return ventas.map(v => ({
             id: v.key,
             tipo: 'venta',
-            descripcion: `Venta #${v.numero_venta}`,
+            descripcion: `Venta #${v.numero_venta} - ${v.cliente?.informacion?.nombreCompleto || 'Cliente'}`,
             monto: v.total_pagado || v.total,
             fecha: new Date(v.fecha),
-            metodoPago: v.metodosDePago?.[0]?.tipo || 'efectivo',
+            metodoPago: v.metodosDePago?.length === 1 ? v.metodosDePago[0].tipo : 'mixto',
             usuario: v.asesor?.nombre || 'Usuario',
             estado: 'confirmado',
             categoria: 'venta',
@@ -369,7 +449,6 @@ export class CierreCajaService {
         }));
     }
 
-    // Métodos públicos del servicio
     obtenerResumenDiario(fecha: Date, sede: string): Observable<any> {
         if (this.usarDummy) {
             const fechaStr = this.formatearFechaYYYYMMDD(fecha);
@@ -380,20 +459,25 @@ export class CierreCajaService {
                 return fechaVenta.toDateString() === fecha.toDateString();
             });
 
+            const esHoy = fecha.toDateString() === new Date().toDateString();
+
+            console.log('📅 Fecha consultada:', fecha);
+            console.log('¿Es hoy?', esHoy);
+            console.log('Cierre existente en mapa:', this.cierres.get(idCierre));
+
+            // Para hoy, NO devolver cierre existente
+            const cierreExistente = esHoy ? null : (this.cierres.get(idCierre) || null);
+
             return of({
                 ventas: ventasDelDia,
-                cierreExistente: this.cierres.get(idCierre) || null,
+                cierreExistente: cierreExistente,
                 estadisticas: {
                     totalVentas: ventasDelDia.reduce((sum, v) => sum + v.total, 0),
-                    totalEfectivo: ventasDelDia.filter(v => v.metodosDePago?.[0]?.tipo === 'efectivo').reduce((sum, v) => sum + (v.total_pagado || v.total), 0),
-                    totalTarjeta: 0,
-                    totalTransferencia: 0,
                     cantidadVentas: ventasDelDia.length
                 }
             }).pipe(delay(500));
         }
 
-        // Versión real (cuando el backend esté listo)
         return this.http.get(`${this.apiUrl}/cierre-caja/resumen`, {
             params: {
                 fecha: fecha.toISOString().split('T')[0],

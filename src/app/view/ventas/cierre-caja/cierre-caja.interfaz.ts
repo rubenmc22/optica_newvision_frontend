@@ -4,14 +4,12 @@ export interface Transaccion {
   descripcion: string;
   monto: number;
   fecha: Date;
-  // Permitir string en general para más flexibilidad
-  metodoPago: string; // Cambiado de tipo específico a string
+  metodoPago: string;
   usuario: string;
   estado: 'confirmado' | 'pendiente' | 'anulado' | 'en_proceso';
   categoria: string;
   observaciones?: string;
   comprobante?: string;
-  // Nuevas propiedades según el flujo de ventas
   numeroVenta?: string;
   cliente?: {
     nombre: string;
@@ -23,9 +21,11 @@ export interface Transaccion {
   detalleMetodosPago?: Array<{
     tipo: string;
     monto: number;
-    referencia?: string;
-    banco?: string;
     moneda: string;
+    referencia?: string;
+    banco?: string;           // ← Agregar banco
+    bancoNombre?: string;     // ← Agregar bancoNombre
+    bancoCodigo?: string;     // ← Agregar bancoCodigo
   }>;
   productos?: Array<{
     nombre: string;
@@ -37,6 +37,8 @@ export interface Transaccion {
   asesor?: string;
   ordenTrabajoGenerada?: boolean;
   sede?: string;
+  tieneConsulta?: boolean;
+  tieneProductos?: boolean;
 }
 
 export interface CierreDiario {
