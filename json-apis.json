@@ -1655,3 +1655,132 @@ json
     "formulaExterna": true,
     "pagoPendiente": true  // La rectificación genera pago
 }
+
+
+
+
+
+
+
+{
+    "message": "ok",
+    "ventas": [
+        {
+            "venta": {
+                "key": "1cc93777-f1a4-4084-9a04-309c2dbefdda",
+                "numero_venta": "V-000099",
+                "numero_recibo": "R-000099",
+                "fecha": "2026-02-20T19:27:28.000Z",
+                "estatus_venta": "completada",
+                "estatus_pago": "pendiente",
+                "formaPago": "de_contado-pendiente",
+                "moneda": "dolar",
+                "observaciones": null,
+                "impuesto": 16,
+                "motivo_cancelacion": null
+            },
+            "totales": {
+                "descuento": 68.13,
+                "subtotal": 681.26,
+                "iva": 93.51,
+                "total": 706.64,
+                "totalPagado": 0
+            },
+            "cliente": {
+                "historiaMedica": "H-20260216-005",
+                "tipo": "paciente",
+                "informacion": {
+                    "tipoPersona": "natural",
+                    "nombreCompleto": "Dario Castro",
+                    "cedula": "8759927",
+                    "telefono": "04123920817",
+                    "email": "rubemm18@gmail.com"
+                },
+                "especialista": {
+                    "id": 47,
+                    "cedula": "8759927",
+                    "nombre": "Gerardo Martinez"
+                },
+                "informacionEmpresa": {
+                    "referidoEmpresa": true,
+                    "empresaNombre": "Hebe  Shop CA",
+                    "empresaRif": "J-12345678",
+                    "empresaTelefono": "02123440533",
+                    "empresaDireccion": "Caracas, los ruices",
+                    "empresaCorreo": null
+                }
+            },
+            "asesor": {
+                "id": 5,
+                "cedula": "24367965",
+                "nombre": "Ruben Dario Martinez Castro"
+            },
+            "productos": [
+                {
+                    "cantidad": 1,
+                    "precio_unitario_sin_iva": 31.86,
+                    "tiene_iva": 0,
+                    "precio_unitario": 31.86,
+                    "total": 31.86,
+                    "datos": {
+                        "id": 17,
+                        "nombre": "Lentes de prueba",
+                        "marca": "Palazzo",
+                        "color": "Gris",
+                        "codigo": "PR-000017",
+                        "material": "Metal",
+                        "categoria": "Monturas",
+                        "modelo": "Premium"
+                    }
+                },
+                {
+                    "cantidad": 1,
+                    "precio_unitario_sin_iva": 649.4,
+                    "tiene_iva": 1,
+                    "precio_unitario": 753.3,
+                    "total": 753.3,
+                    "datos": {
+                        "id": 26,
+                        "nombre": "Laptop ",
+                        "marca": "HP",
+                        "color": null,
+                        "codigo": "PR-000026",
+                        "material": "Metal",
+                        "categoria": "Misceláneos",
+                        "modelo": "Intel"
+                    }
+                }
+            ],
+            "metodosPago": [
+                {
+                    "numero_pago": 1,
+                    "montoAbonado": 0,
+                    "metodosPago": [],
+                    "observaciones": null
+                }
+            ],
+            "formaPago": {
+                "tipo": "de_contado-pendiente",
+                "montoTotal": 706.64,
+                "cuotasAdelantadas": 0,
+                "montoAdelantado": 0,
+                "deudaPendiente": 0,
+                "nivel": null,
+                "montoInicial": 0,
+                "cantidadCuotas": 0,
+                "montoPorCuota": 0,
+                "totalPagadoAhora": 0,
+                "cuotas": []
+            },
+            "auditoria": {
+                "usuarioCreacion": {
+                    "id": 5,
+                    "cedula": "24367965",
+                    "nombre": "Ruben Dario Martinez Castro"
+                },
+                "fechaCreacion": "2026-02-20T15:27:28.000Z",
+                "fechaModificacion": "2026-02-20T15:27:28.000Z"
+            }
+        },
+    ]
+}

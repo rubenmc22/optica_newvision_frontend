@@ -31,6 +31,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   mostrarFiltros = false;
   ultimaActualizacion = new Date();
   isMobile = false;
+  mostrarMenuExport: boolean = false;
 
   // Información del usuario y sede
   sedeActual: SedeInfo | null = null;
@@ -171,17 +172,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.iniciarActualizacionAutomatica();
     this.configurarSuscripciones();
 
-    setInterval(() => {
-      if (this.analisisMetodosPago?.transferencia?.porBanco) {
-        console.log('🏦 Transferencias en análisis:',
-          this.analisisMetodosPago.transferencia.porBanco.map(b => ({
-            banco: b.banco,
-            total: b.total,
-            codigo: b.bancoCodigo
-          }))
-        );
-      }
-    }, 5000);
   }
 
   ngOnDestroy(): void {
@@ -268,12 +258,10 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         this.tasasCambio = {
           dolar: tasas?.tasa_usd || tasas?.dolar || this.systemConfigService.getTasaPorId('dolar') || 1,
           euro: tasas?.tasa_eur || tasas?.euro || this.systemConfigService.getTasaPorId('euro') || 1,
-          bolivar: 1, // Siempre 1 para bolívares
-          // Podemos agregar otras monedas si es necesario
-          ...tasas // Copiar otras propiedades que puedan venir
+          bolivar: 1,
+          ...tasas
         };
 
-        console.log('Tasas cargadas:', this.tasasCambio);
       },
       error: (error) => {
         console.error('Error al cargar tasas:', error);
@@ -288,8 +276,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   private calcularAnalisisDesdeTransacciones(): void {
-    console.log('📊 Calculando análisis desde transacciones...');
-
     // Resetear análisis
     this.analisisVentas = {
       soloConsulta: { cantidad: 0, total: 0, montoMedico: 0, montoOptica: 0 },
@@ -332,12 +318,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       this.procesarVentasPendientes(trans);
     });
 
-    console.log('✅ Análisis calculado:', {
-      tiposVenta: this.analisisVentas,
-      metodosPago: this.analisisMetodosPago,
-      formasPago: this.analisisFormasPago,
-      pendientes: this.analisisVentasPendientes.length
-    });
   }
 
   private procesarTipoVenta(trans: Transaccion): void {
@@ -578,7 +558,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (resumen) => {
-          console.log('📊 Resumen recibido:', resumen); // Para debug
           this.procesarResumenDiario(resumen);
           this.cargandoDatos = false;
         },
@@ -647,10 +626,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   filtrarTransacciones(): void {
-    console.log('🔍 Filtrando transacciones...');
-    console.log('Transacciones totales:', this.transacciones.length);
-    console.log('Valores de filtro:', this.filtroForm.value);
-
     // Si no hay transacciones, establecer array vacío
     if (!this.transacciones || this.transacciones.length === 0) {
       this.transaccionesFiltradas = [];
@@ -658,15 +633,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     }
 
     const filtros = this.filtroForm.value;
-
-    // Mostrar una transacción de ejemplo para debug
-    if (this.transacciones.length > 0) {
-      console.log('Ejemplo de transacción:', {
-        fecha: this.transacciones[0].fecha,
-        tipo: this.transacciones[0].tipo,
-        metodoPago: this.transacciones[0].metodoPago
-      });
-    }
 
     this.transaccionesFiltradas = this.transacciones.filter(trans => {
       // Filtrar por tipo
@@ -712,28 +678,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
       return true;
     });
-
-    console.log('✅ Transacciones filtradas:', this.transaccionesFiltradas.length);
-
-    // Si el filtro devuelve 0 pero hay transacciones, mostrar advertencia
-    if (this.transacciones.length > 0 && this.transaccionesFiltradas.length === 0) {
-      console.warn('⚠️ El filtro está excluyendo todas las transacciones. Verifica los valores del filtro.');
-      console.log('Valores posibles de tipo en transacciones:', [...new Set(this.transacciones.map(t => t.tipo))]);
-      console.log('Valores posibles de metodoPago:', [...new Set(this.transacciones.map(t => t.metodoPago))]);
-
-      // Mostrar fechas de las transacciones
-      console.log('Fechas de transacciones:', this.transacciones.map(t => t.fecha.toISOString().split('T')[0]));
-      console.log('Fecha desde filtro:', filtros.fechaDesde);
-      console.log('Fecha hasta filtro:', filtros.fechaHasta);
-    }
   }
 
   private procesarResumenDiario(resumen: any): void {
-    console.log('🔄 Procesando resumen:', resumen);
-
     // 1. Procesar ventas como transacciones
     if (resumen.ventas && Array.isArray(resumen.ventas)) {
-      console.log('📋 Ventas del día:', resumen.ventas.length);
       this.procesarVentasParaTransacciones(resumen.ventas);
     } else {
       console.warn('⚠️ No hay ventas en el resumen');
@@ -770,15 +719,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     this.ultimaActualizacion = new Date();
 
-    console.log('✅ Estado final:', {
-      transacciones: this.transacciones.length,
-      analisisVentas: this.analisisVentas,
-      analisisMetodosPago: this.analisisMetodosPago,
-      analisisFormasPago: this.analisisFormasPago,
-      analisisVentasPendientes: this.analisisVentasPendientes.length,
-      cierreActual: !!this.cierreActual,
-      esDiaActual: this.esDiaActual
-    });
   }
 
   private limpiarControlesBancos(): void {
@@ -798,7 +738,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         const controlName = `puntoReal_${banco.bancoCodigo || banco.banco.replace(/\s/g, '_')}`;
         if (!this.cierreForm.contains(controlName)) {
           this.cierreForm.addControl(controlName, this.fb.control(0));
-          console.log(`✅ Control agregado: ${controlName}`);
         }
       });
     }
@@ -857,7 +796,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       this.cierreForm.patchValue({ notasCierre: real.notasCierre });
     }
 
-    console.log('📝 Valores reales precargados desde cierre existente');
   }
 
   private procesarVentasParaTransacciones(ventas: any[]): void {
@@ -925,8 +863,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   actualizarResumen(): void {
     if (!this.cierreActual) return;
 
-    console.log('📊 Sincronizando cierre con análisis en vivo...');
-
     // Sincronizar el cierre con los análisis en vivo
     this.cierreActual.ventasPorTipo = { ...this.analisisVentas };
     this.cierreActual.metodosPago = JSON.parse(JSON.stringify(this.analisisMetodosPago));
@@ -962,7 +898,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       this.cierreActual.totales.ventasPendientes = this.analisisFormasPago.deContadoPendiente.total;
     }
 
-    console.log('✅ Cierre sincronizado con análisis en vivo');
     this.ultimaActualizacion = new Date();
   }
 
@@ -1017,7 +952,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     const ventasEfectivo = this.analisisMetodosPago?.efectivo?.total || 0;
     const egresosEfectivo = this.getEgresosEfectivo();
     const teorico = inicial + ventasEfectivo - egresosEfectivo;
-    console.log('📈 Efectivo Teórico:', { inicial, ventasEfectivo, egresosEfectivo, teorico });
+
     return teorico;
   }
   getEgresosEfectivo(): number {
@@ -1367,11 +1302,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return estados[estado] || 'Sin estado';
   }
 
-  // === EXPORTACIÓN E IMPRESIÓN ===
-
   exportarReporte(): void {
-    if (!this.cierreActual) {
-      this.swalService.showError('Error', 'No hay datos de cierre para exportar.');
+    this.mostrarMenuExport = false;
+
+    if (!this.cierreActual && this.transaccionesFiltradas.length === 0) {
+      this.swalService.showWarning('Sin datos', 'No hay datos para exportar');
       return;
     }
 
@@ -1383,7 +1318,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         totalIngresos: this.getTotalIngresos(),
         totalEgresos: this.getTotalEgresos(),
         netoDia: this.getNetoDia(),
-        diferencia: this.getDiferencia(),
+        diferencia: this.getDiferenciaTotal(),
         metodosPago: this.getResumenMetodosPago()
       },
       sede: this.sedeActual,
@@ -1396,7 +1331,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       }
     };
 
-    // Crear y descargar JSON
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1488,8 +1422,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       }, 500);
     }
   }
-
-  // === MANEJO DE FECHAS ===
 
   cambiarFecha(dias: number): void {
     const nuevaFecha = new Date(this.fechaSeleccionada);
@@ -1652,9 +1584,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('🔓 Abriendo modal de cierre');
-    console.log('Análisis métodos pago:', this.analisisMetodosPago);
-
     // Resetear valores del formulario
     this.cierreForm.patchValue({
       efectivoRealUSD: 0,
@@ -1790,11 +1719,8 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   verDetalleVenta(numeroVenta: string): void {
     // Aquí puedes navegar al detalle de la venta
-    console.log('Ver venta:', numeroVenta);
   }
 
-  // Getters para las nuevas propiedades
-  // Getters para las nuevas propiedades - USAR ANÁLISIS EN VIVO
   get totalConsultas(): number {
     return this.analisisVentas?.soloConsulta?.total || 0;
   }
@@ -2023,7 +1949,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     const vesToUsd = ves / (this.tasasCambio?.bolivar || 60.5);
 
     const total = usd + eurToUsd + vesToUsd;
-    console.log('💵 Efectivo Real:', { usd, eur, ves, total, tasas: this.tasasCambio });
     return total;
   }
 
@@ -2032,7 +1957,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     const real = this.getEfectivoRealTotal();
     const teorico = this.getEfectivoFinalTeorico();
     const diff = real - teorico;
-    console.log('💰 Diferencia Efectivo:', { real, teorico, diff });
     return diff;
   }
 
@@ -2047,12 +1971,10 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         const montoReal = this.cierreForm.get(controlName)?.value || 0;
         realTotal += montoReal;
         sistemaTotal += banco.total;
-        console.log(`🏦 Punto ${banco.banco}: real=${montoReal}, sistema=${banco.total}, diff=${montoReal - banco.total}`);
       });
     }
 
     const diff = realTotal - sistemaTotal;
-    console.log('💳 Diferencia Punto:', { realTotal, sistemaTotal, diff });
     return diff;
   }
 
@@ -2083,7 +2005,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       this.getDiferenciaTransferencia() +
       this.getDiferenciaPagomovil() +
       this.getDiferenciaZelle();
-    console.log('📊 Diferencia Total:', diff);
     return diff;
   }
 
@@ -2260,6 +2181,268 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         return 'Este ajuste modifica el saldo de caja. Debe incluir una justificación en observaciones.';
       default:
         return 'Complete los campos para registrar la transacción.';
+    }
+  }
+
+  toggleExportMenu(): void {
+    this.mostrarMenuExport = !this.mostrarMenuExport;
+
+    // Cerrar menú al hacer clic fuera
+    if (this.mostrarMenuExport) {
+      setTimeout(() => {
+        document.addEventListener('click', this.cerrarMenuClickExterno.bind(this));
+      }, 100);
+    }
+  }
+
+  cerrarMenuClickExterno(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const container = document.querySelector('.export-button-container');
+
+    if (container && !container.contains(target)) {
+      this.mostrarMenuExport = false;
+      document.removeEventListener('click', this.cerrarMenuClickExterno.bind(this));
+    }
+  }
+
+  exportarReportePDF(): void {
+    this.mostrarMenuExport = false;
+
+    // Reutilizar el método de impresión existente, pero con opción de guardar como PDF
+    const contenido = this.generarContenidoReporte();
+
+    // Crear una ventana para imprimir/guardar como PDF
+    const ventana = window.open('', '_blank');
+    if (ventana) {
+      ventana.document.write(contenido);
+      ventana.document.close();
+      setTimeout(() => {
+        ventana.print();
+        // No cerramos automáticamente para permitir guardar como PDF
+        // ventana.close();
+      }, 500);
+    }
+  }
+
+  // Método auxiliar para generar el contenido del reporte
+  private generarContenidoReporte(): string {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Cierre de Caja - ${this.datePipe.transform(this.fechaSeleccionada, 'dd/MM/yyyy')}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        .resumen { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        .total { font-weight: bold; }
+        .diferencia { color: ${this.getDiferenciaTotal() >= 0 ? 'green' : 'red'}; }
+        .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .kpi-card { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
+        .kpi-value { font-size: 24px; font-weight: bold; color: #667eea; }
+        .kpi-label { font-size: 12px; color: #666; }
+        @media print {
+          body { margin: 0; }
+          .no-print { display: none; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Cierre de Caja</h1>
+        <p>${this.sedeActual?.nombre || 'Óptica'} - ${this.datePipe.transform(this.fechaSeleccionada, 'dd/MM/yyyy')}</p>
+      </div>
+      
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-value">${this.formatCurrency(this.efectivoInicial)}</div>
+          <div class="kpi-label">Efectivo Inicial</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${this.formatCurrency(this.totalVentasKPI)}</div>
+          <div class="kpi-label">Total Ventas</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${this.formatCurrency(this.totalPendientesKPI)}</div>
+          <div class="kpi-label">Total Pendiente</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${this.formatCurrency(this.netoDiaKPI)}</div>
+          <div class="kpi-label">Neto del Día</div>
+        </div>
+      </div>
+      
+      <div class="resumen">
+        <h2>Resumen del Día</h2>
+        <p><strong>Estado:</strong> ${this.getEstadoTexto(this.cierreActual?.estado)}</p>
+        <p><strong>Efectivo Inicial:</strong> ${this.formatCurrency(this.cierreActual?.efectivoInicial)}</p>
+        <p><strong>Ventas Efectivo:</strong> ${this.formatCurrency(this.cierreActual?.ventasEfectivo)}</p>
+        <p><strong>Total Ventas:</strong> ${this.formatCurrency(this.getTotalVentas())}</p>
+        <p><strong>Egresos:</strong> ${this.formatCurrency(this.cierreActual?.egresos)}</p>
+        <p class="diferencia"><strong>Diferencia:</strong> ${this.formatCurrency(this.getDiferenciaTotal())}</p>
+      </div>
+      
+      <h2>Transacciones (${this.transaccionesFiltradas.length})</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Descripción</th>
+            <th>Tipo</th>
+            <th>Método Pago</th>
+            <th>Monto</th>
+            <th>Usuario</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${this.transaccionesFiltradas.map(t => `
+            <tr>
+              <td>${t.descripcion}</td>
+              <td>${t.tipo}</td>
+              <td>${t.metodoPago}</td>
+              <td>${this.formatCurrency(t.monto)}</td>
+              <td>${t.usuario}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      
+      <p class="no-print" style="margin-top: 30px; color: #666;">
+        Generado el: ${this.datePipe.transform(new Date(), 'dd/MM/yyyy HH:mm')}
+      </p>
+    </body>
+    </html>
+  `;
+  }
+
+  exportarReporteJSON(): void {
+    this.mostrarMenuExport = false;
+    this.exportarReporte(); // Reutiliza el método existente
+  }
+
+  // Método para exportar a Excel
+  exportarExcel(): void {
+    if (!this.cierreActual && this.transaccionesFiltradas.length === 0) {
+      this.swalService.showWarning('Sin datos', 'No hay datos para exportar a Excel');
+      return;
+    }
+
+    // Preparar datos para Excel
+    const datosExcel = {
+      resumen: {
+        fecha: this.fechaSeleccionada,
+        sede: this.sedeActual?.nombre,
+        estado: this.cierreActual?.estado || 'Sin cierre',
+        efectivoInicial: this.efectivoInicial,
+        totalVentas: this.totalVentasKPI,
+        totalPendiente: this.totalPendientesKPI,
+        netoDia: this.netoDiaKPI,
+        diferencia: this.getDiferenciaTotal()
+      },
+      ventasPorTipo: {
+        soloConsulta: {
+          cantidad: this.analisisVentas.soloConsulta.cantidad,
+          total: this.analisisVentas.soloConsulta.total
+        },
+        consultaProductos: {
+          cantidad: this.analisisVentas.consultaProductos.cantidad,
+          total: this.analisisVentas.consultaProductos.total
+        },
+        soloProductos: {
+          cantidad: this.analisisVentas.soloProductos.cantidad,
+          total: this.analisisVentas.soloProductos.total
+        }
+      },
+      metodosPago: this.analisisMetodosPago,
+      formasPago: this.analisisFormasPago,
+      transacciones: this.transaccionesFiltradas.map(t => ({
+        descripcion: t.descripcion,
+        tipo: t.tipo,
+        metodoPago: t.metodoPago,
+        monto: t.monto,
+        usuario: t.usuario,
+        fecha: t.fecha,
+        numeroVenta: t.numeroVenta || '',
+        cliente: t.cliente?.nombre || ''
+      }))
+    };
+
+    // Convertir a CSV para Excel
+    const convertToCSV = (data: any[]): string => {
+      const headers = Object.keys(data[0]);
+      const csvRows = [];
+      csvRows.push(headers.join(','));
+
+      for (const row of data) {
+        const values = headers.map(header => {
+          const value = row[header];
+          if (value === null || value === undefined) return '';
+          if (typeof value === 'string') return `"${value.replace(/"/g, '""')}"`;
+          if (value instanceof Date) return `"${value.toLocaleString()}"`;
+          return value;
+        });
+        csvRows.push(values.join(','));
+      }
+
+      return csvRows.join('\n');
+    };
+
+    // Crear archivo CSV
+    const transaccionesCSV = convertToCSV(datosExcel.transacciones);
+    const resumenCSV = `Resumen,Cierre de Caja\nFecha,${this.datePipe.transform(this.fechaSeleccionada, 'dd/MM/yyyy')}\nSede,${this.sedeActual?.nombre}\nEstado,${this.cierreActual?.estado || 'Sin cierre'}\nEfectivo Inicial,${this.efectivoInicial}\nTotal Ventas,${this.totalVentasKPI}\nTotal Pendiente,${this.totalPendientesKPI}\nNeto Día,${this.netoDiaKPI}\nDiferencia,${this.getDiferenciaTotal()}\n\n`;
+
+    const contenidoCompleto = resumenCSV + '\n\nTRANSACCIONES\n' + transaccionesCSV;
+
+    // Crear blob y descargar
+    const blob = new Blob(["\uFEFF" + contenidoCompleto], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `cierre-caja-${this.datePipe.transform(this.fechaSeleccionada, 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    this.swalService.showSuccess('Exportado', 'Reporte exportado a Excel correctamente');
+  }
+
+  importarRespaldo(): void {
+    this.mostrarMenuExport = false;
+
+    // Crear input file oculto
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (event: any) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e: any) => {
+          try {
+            const data = JSON.parse(e.target.result);
+            this.procesarImportacion(data);
+          } catch (error) {
+            this.swalService.showError('Error', 'El archivo no es un JSON válido');
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  }
+
+  procesarImportacion(data: any): void {
+    if (data.cierre) {
+      this.cierreActual = data.cierre;
+      this.actualizarResumen();
+      this.filtrarTransacciones();
+      this.swalService.showSuccess('Importación exitosa', 'Los datos se han cargado correctamente');
+    } else {
+      this.swalService.showWarning('Formato inválido', 'El archivo no contiene datos de cierre válidos');
     }
   }
 }
