@@ -3861,4 +3861,57 @@ export class HistoriasMedicasComponent implements OnInit {
     return 'Médico no registrado';
   }
 
+  esMedicoExternoSeleccionado(): boolean {
+    const medico = this.historiaForm.get('medico')?.value;
+    return medico?.id === 'EXTERNO' || medico?.cedula === 'EXTERNO';
+  }
+
+  // Actualizar el método que maneja cambios en el médico
+  onMedicoChange(medico: any): void {
+    const esExterno = this.esMedicoExternoSeleccionado();
+
+    if (esExterno) {
+      // Si es médico externo, activar fórmula externa automáticamente
+      this.historiaForm.patchValue({ esFormulaExterna: true });
+
+      // Habilitar validadores
+      const medicoReferidoControl = this.historiaForm.get('medicoReferido');
+      const lugarConsultorioControl = this.historiaForm.get('lugarConsultorio');
+      medicoReferidoControl?.setValidators([Validators.required]);
+      lugarConsultorioControl?.setValidators([Validators.required]);
+    } else {
+      // Si no es médico externo, desactivar fórmula externa
+      this.historiaForm.patchValue({ esFormulaExterna: false });
+
+      // Limpiar validaciones y valores
+      const medicoReferidoControl = this.historiaForm.get('medicoReferido');
+      const lugarConsultorioControl = this.historiaForm.get('lugarConsultorio');
+      medicoReferidoControl?.clearValidators();
+      lugarConsultorioControl?.clearValidators();
+      medicoReferidoControl?.setValue('');
+      lugarConsultorioControl?.setValue('');
+    }
+
+    // Actualizar validaciones
+    this.historiaForm.get('medicoReferido')?.updateValueAndValidity();
+    this.historiaForm.get('lugarConsultorio')?.updateValueAndValidity();
+    this.cdr.detectChanges();
+  }
+
+  // Método para prevenir que se deshabilite el toggle
+  prevenirCambio(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Mostrar mensaje informativo opcional
+    this.snackBar.open(
+      '⚠️ Al seleccionar "MÉDICO EXTERNO", la fórmula externa se activa automáticamente y no puede desactivarse. Si el paciente requiere rectificación, debe seleccionar un especialista interno.',
+      'Entendido',
+      {
+        duration: 5000,
+        panelClass: ['snackbar-info']
+      }
+    );
+  }
+
 }
