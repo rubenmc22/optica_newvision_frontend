@@ -39,12 +39,26 @@ export class ChangeInformationService {
         const isFullResponse = (res: any): res is AuthResponse => res.user !== undefined && res.token !== undefined;
 
         if (isFullResponse(response)) {
+          // Tipar sedeData como Partial<Sede> para que TypeScript reconozca las propiedades
+          const sedeData: Partial<Sede> = response.sede || {};
+
+          const sedeCompleta: Sede = {
+            key: sedeData.key || '',
+            nombre: sedeData.nombre || '',
+            nombre_optica: sedeData.nombre_optica,
+            rif: sedeData.rif,
+            direccion: sedeData.direccion || '',
+            direccion_fiscal: sedeData.direccion_fiscal,
+            telefono: sedeData.telefono || '',
+            email: sedeData.email || '',
+          };
+
           const authData: AuthData = {
             token: response.token || this.authService.getToken() || '',
             user: { ...response.user, email: response.user.correo },
             rol: response.rol || this.authService.currentUserValue?.rol as Rol,
             cargo: response.cargo || this.authService.currentUserValue?.cargo as Cargo,
-            sede: response.sede || this.authService.currentUserValue?.sede as Sede // 👈 aquí está la solución
+            sede: sedeCompleta
           };
           this.authService.setAuth(authData);
         }
@@ -57,7 +71,6 @@ export class ChangeInformationService {
       })
     );
   }
-
   getUsuarioPorCedula(cedula: string): Observable<ApiUser | null> {
     return this.http.get<{ message: string; usuarios: ApiUser[] }>(`${environment.apiUrl}/get-usuarios/${cedula}`).pipe(
       map(response => {

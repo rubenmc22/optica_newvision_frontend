@@ -161,7 +161,7 @@
               <div class="card-body-detalle">
                 <!-- TARJETA DE REFERENCIA DESTACADA (justo después del header) -->
                 <div class="referencia-destacada"
-                  *ngIf="historiaSeleccionada?.datosConsulta?.formulaExterna && historiaSeleccionada?.datosConsulta?.formulaOriginal?.medicoOrigen">
+                    *ngIf="historiaSeleccionada?.datosConsulta?.formulaExterna && obtenerMedicoReferido(historiaSeleccionada)">
                   <div class="referencia-contenido-destacado">
                     <div class="referencia-icono-destacado">
                       <i class="bi bi-prescription2"></i>
@@ -172,12 +172,10 @@
                       </div>
                       <div class="referencia-medico-destacado">
                         <i class="bi bi-person-badge"></i>
-                        <strong>{{ historiaSeleccionada?.datosConsulta?.formulaOriginal?.medicoOrigen?.nombre
-                          }}</strong>
+                        <strong>{{ obtenerNombreMedicoReferido(historiaSeleccionada) }}</strong>
                         <span class="separador-destacado">|</span>
                         <i class="bi bi-geo-alt"></i>
-                        <span>{{ historiaSeleccionada?.datosConsulta?.formulaOriginal?.medicoOrigen?.lugarConsultorio
-                          }}</span>
+                        <span>{{ obtenerLugarMedicoReferido(historiaSeleccionada) }}</span>
                       </div>
                     </div>
                   </div>

@@ -12,7 +12,7 @@ declare var $: any;
 import { Paciente, PacientesListState } from '../pacientes/paciente-interface';
 import { HistoriaMedica, Recomendaciones, TipoMaterial, Antecedentes, ExamenOcular, Medico, DatosConsulta } from './historias_medicas-interface';
 import { Empleado } from '../../Interfaces/models-interface';
-import { Sede } from '../../view/login/login-interface';
+import { Sede, SedeCompleta } from '../../view/login/login-interface';
 import { LoaderService } from './../../shared/loader/loader.service';
 
 // Constantes
@@ -341,6 +341,8 @@ export class HistoriasMedicasComponent implements OnInit {
         .map(s => ({
           key: s.key?.trim().toLowerCase() || '',
           nombre: s.nombre?.trim() || '',
+          nombre_optica: s.nombre_optica?.trim() || 'ÓPTICA NEW VISION LENS 2020',
+          rif: s.rif?.trim() || '',
           direccion: s.direccion || s.direccion_fiscal || '',
           direccion_fiscal: s.direccion_fiscal || '',
           telefono: s.telefono || s.telefono_contacto || '',
@@ -1829,61 +1831,78 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
+  private formatearRIF(rif: string | undefined): string {
+    if (!rif) return 'No disponible';
+
+    // Eliminar "rif" al inicio (case insensitive)
+    let rifLimpio = rif.replace(/^rif/i, '');
+
+    // Si ya tiene formato J-XXXXXXXX-X, devolverlo limpio
+    if (/^[JVE]-?\d{1,9}-\d{1,2}$/i.test(rifLimpio)) {
+      return rifLimpio.toUpperCase();
+    }
+
+    // Si solo tiene números, agregar J-
+    if (/^\d+$/.test(rifLimpio)) {
+      return `J-${rifLimpio}`;
+    }
+
+    // Si tiene formato con números y guiones pero sin letra
+    if (/^\d+-\d+$/.test(rifLimpio)) {
+      return `J-${rifLimpio}`;
+    }
+
+    return rifLimpio.toUpperCase();
+  }
+
   private generarInfoSede(): string {
     const sedeKey = this.sedePacienteSeleccionado || this.sedeActiva;
 
-    // Buscar la sede en las sedes disponibles que ya cargaste
-    const sede = this.sedesDisponibles.find(s =>
-      s.key?.toLowerCase() === sedeKey?.toLowerCase()
-    );
-
-    console.log('sede', sede);
+    // Buscar la sede completa en las sedes disponibles
+    const sede = this.sedesDisponibles.find(s => s.key === sedeKey);
 
     if (sede) {
-      // Usar los datos reales de la sede
-      const direccion = sede.direccion_fiscal || 'Dirección no especificada';
-      const telefono = sede.telefono || 'Teléfono no disponible';
-      const email = sede.email || 'Email no disponible';
-
       return `
       <div class="contacto-sede">
-        <div class="direccion-linea">${direccion}</div>
+        <div class="nombre-optica">${sede.nombre_optica || 'ÓPTICA NEW VISION LENS 2020'}</div>
+        <div class="direccion-linea">${sede.direccion}</div>
         <div class="contacto-linea">
-          <span class="telefono">${telefono}</span> | 
-          <span class="email">${email}</span>
+          <span class="telefono">📞 ${sede.telefono}</span> | 
+          <span class="email">✉️ ${sede.email}</span> | 
+          <span class="rif-linea">📄 RIF: ${this.formatearRIF(sede.rif)}</span>
         </div>
       </div>
     `;
     }
 
-    // Fallback si no encuentra la sede
+    // Fallback
     return `
     <div class="contacto-sede">
+      <div class="nombre-optica">ÓPTICA NEW VISION LENS 2020</div>
       <div class="direccion-linea">Sede no especificada</div>
     </div>
   `;
   }
 
-  private obtenerNombreSede(): string {
-    const sedeKey = this.sedePacienteSeleccionado || this.sedeActiva;
-
-    // Buscar la sede en las sedes disponibles
-    const sede = this.sedesDisponibles.find(s =>
-      s.key?.toLowerCase() === sedeKey?.toLowerCase()
-    );
-
-    // Usar el nombre de la sede del servicio
-    if (sede?.nombre) {
-      return sede.nombre.toUpperCase();
-    }
-
-    // Si no hay nombre, usar la key con formato
-    if (sedeKey) {
-      return `SEDE ${sedeKey.toUpperCase()}`;
-    }
-
-    return 'SEDE PRINCIPAL';
-  }
+  private formatearFechaHora(fechaIso: string | Date): string {
+  if (!fechaIso) return 'No registrada';
+  
+  const fecha = new Date(fechaIso);
+  if (isNaN(fecha.getTime())) return 'Fecha inválida';
+  
+  // Formatear fecha: dd/mm/yyyy
+  const dia = fecha.getDate().toString().padStart(2, '0');
+  const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+  const anio = fecha.getFullYear();
+  
+  // Formatear hora: HH:MM AM/PM
+  const hora = fecha.getHours();
+  const minutos = fecha.getMinutes().toString().padStart(2, '0');
+  const ampm = hora >= 12 ? 'PM' : 'AM';
+  const hora12 = hora % 12 || 12;
+  
+  return `${dia}/${mes}/${anio} ${hora12}:${minutos} ${ampm}`;
+}
 
   imprimirHistoriaMedica() {
     // Mostrar loading mientras se genera
@@ -1928,10 +1947,8 @@ export class HistoriasMedicasComponent implements OnInit {
     }, 500);
   }
 
+  // Método para formatear fecha y hora juntas
   private generarContenidoImpresion(): string {
-    const fechaActual = new Date().toLocaleDateString('es-ES');
-    const horaActual = new Date().toLocaleTimeString('es-ES');
-
     // Obtener información del especialista según el tipo
     const especialista = this.historiaSeleccionada?.datosConsulta?.especialista;
     let nombreEspecialista = 'No disponible';
@@ -1942,6 +1959,7 @@ export class HistoriasMedicasComponent implements OnInit {
       if (especialista.tipo === 'EXTERNO' && especialista.externo) {
         nombreEspecialista = especialista.externo.nombre || 'No disponible';
         cedulaEspecialista = 'EXTERNO';
+        cargoEspecialista = 'Médico Externo';
       } else if (especialista.tipo !== 'EXTERNO') {
         nombreEspecialista = especialista.nombre || 'No disponible';
         cedulaEspecialista = especialista.cedula || 'No disponible';
@@ -1949,24 +1967,23 @@ export class HistoriasMedicasComponent implements OnInit {
       }
     }
 
+    // Obtener datos del médico referido (para fórmula externa)
+    const medicoReferido = this.obtenerNombreMedicoReferido(this.historiaSeleccionada);
+    const lugarReferido = this.obtenerLugarMedicoReferido(this.historiaSeleccionada);
+    const tieneMedicoReferido = this.obtenerMedicoReferido(this.historiaSeleccionada);
+
     return `
     <div class="print-container">
       <!-- Encabezado de impresión -->
-      </br>
       <div class="print-header">
         <div class="header-institucion">
-          <h1>ÓPTICA NEW VISION LENS 2020</h1>
-          <div class="info-contacto">
-            ${this.generarInfoSede()}
-          </div>
-
-          </br>
+          ${this.generarInfoSede()}
           <p class="subtitle">Historia Médica</p>
         </div>
-        <div class="header-info">
-          <p><strong>Fecha de creación:</strong> ${this.formatearFecha(this.historiaSeleccionada?.auditoria?.fechaCreacion)}</p>
-          <p><strong>N° Historia:</strong> ${this.historiaSeleccionada?.nHistoria || 'N/A'}</p>
-        </div>
+         <div class="header-info">
+            <p><strong>Fecha/Hora:</strong> ${this.formatearFechaHora(this.historiaSeleccionada?.auditoria?.fechaCreacion)}</p>
+            <p><strong>N° Historia:</strong> ${this.historiaSeleccionada?.nHistoria || 'N/A'}</p>
+         </div>
       </div>
 
       <!-- Información del paciente -->
@@ -2006,6 +2023,31 @@ export class HistoriasMedicasComponent implements OnInit {
         </div>
       </div>
 
+      ${tieneMedicoReferido ? `
+      <!-- Médico Referido (Fórmula Externa) -->
+      <div class="seccion-print no-break">
+        <div class="seccion-header-print">
+          <h2>MÉDICO REFERIDO</h2>
+        </div>
+        <div class="medico-referido-print">
+          <div class="medico-ref-info">
+            <div class="medico-ref-nombre">
+              <i class="bi bi-person-badge"></i>
+              <strong>${medicoReferido}</strong>
+            </div>
+            <div class="medico-ref-lugar">
+              <i class="bi bi-geo-alt"></i>
+              ${lugarReferido}
+            </div>
+          </div>
+          <div class="medico-ref-nota">
+            <i class="bi bi-info-circle"></i>
+            Esta historia corresponde a una fórmula externa emitida por el médico referido.
+          </div>
+        </div>
+      </div>
+      ` : ''}
+
       <!-- Historia Clínica -->
       <div class="seccion-print no-break">
         <div class="seccion-header-print">
@@ -2018,7 +2060,7 @@ export class HistoriasMedicasComponent implements OnInit {
           </div>
           <div class="dato-item-print">
             <label>Cristal actual:</label>
-            <span>${this.historiaSeleccionada?.datosConsulta?.tipoCristalActual || 'No especificado'}</span>
+            <span>${this.getTipoCristalActualConModelo()}</span>
           </div>
           <div class="dato-item-print">
             <label>Última graduación:</label>
@@ -2050,7 +2092,7 @@ export class HistoriasMedicasComponent implements OnInit {
           </div>
         </div>
 
-          <!-- Antecedentes en filas -->
+        <!-- Antecedentes en filas -->
         <div class="antecedentes-filas">
           <div class="fila-antecedente">
             <label class="label-antecedente">Antecedentes Personales:</label>
@@ -2079,13 +2121,10 @@ export class HistoriasMedicasComponent implements OnInit {
           <div class="fila-antecedente">
             <label class="label-antecedente">Patologías Generales:</label>
             <div class="tags-fila">
-               ${this.procesarPatologias(this.pacienteSeleccionado?.historiaClinica?.patologias).map(pat =>
+              ${this.procesarPatologias(this.pacienteSeleccionado?.historiaClinica?.patologias).map(pat =>
         `<span class="tag-fila">${pat}</span>`
-      ).join('')}
-        '<span class="tag-fila empty">No reportados</span>'
-      }
+      ).join('') || '<span class="tag-fila empty">No reportados</span>'}
             </div>
-          </div>
           </div>
         </div>
       </div>
@@ -2155,7 +2194,8 @@ export class HistoriasMedicasComponent implements OnInit {
 
       <!-- Pie de página -->
       <div class="print-footer">
-        <p>Documento generado automáticamente por Optica New Vision Lens 2020</p>
+        <p>Documento generado automáticamente por Óptica New Vision Lens 2020</p>
+        <p class="print-date">Impreso el: ${new Date().toLocaleString('es-ES')}</p>
       </div>
     </div>
   `;
@@ -2411,8 +2451,8 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   private obtenerEstilosImpresion(): string {
-    return `
-    /* Reset para impresión */
+  return `
+    /* Reset y configuración base */
     * {
       margin: 0;
       padding: 0;
@@ -2420,288 +2460,363 @@ export class HistoriasMedicasComponent implements OnInit {
     }
     
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      font-size: 12pt;
-      line-height: 1.4;
-      color: #000;
-      margin: 0;
-      padding: 15px;
+      font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 10pt;
+      line-height: 1.5;
+      color: #1a1f2e;
       background: white;
+      padding: 0.4cm;
     }
     
     .print-container {
       max-width: 100%;
+      background: white;
     }
     
-    /* Encabezado */
+    /* ========== ENCABEZADO MODERNO ========== */
     .print-header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid #000;
+      align-items: center;
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 2px solid #e2e8f0;
+      position: relative;
     }
     
-    .header-institucion h1 {
-      font-size: 18pt;
-      margin-bottom: 5px;
-      color: #2c3e50;
+    .print-header::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
     }
     
-    .header-institucion .subtitle {
-      font-size: 11pt;
-      color: #666;
+    .header-institucion {
+      flex: 1;
+    }
+    
+    .header-institucion .nombre-optica {
+      font-size: 16pt;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.3px;
+      margin-bottom: 4px;
+    }
+    
+    .header-institucion .sede-nombre {
+      font-size: 10pt;
+      font-weight: 500;
+      color: #3b82f6;
+      margin-bottom: 6px;
     }
     
     .contacto-sede {
-      margin-top: 8px;
-      font-size: 9pt;
-      line-height: 1.3;
+      font-size: 7.5pt;
+      color: #475569;
+      line-height: 1.4;
     }
-
+    
     .direccion-linea {
-      font-weight: 600;
-      color: #2c3e50;
+      color: #334155;
       margin-bottom: 2px;
     }
-
+    
     .contacto-linea {
-      color: #666;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 3px;
     }
-
-    .contacto-linea .telefono {
-      color: #27ae60;
+    
+    .telefono, .email, .rif-linea {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
     }
-
-    .contacto-linea .email {
-      color: #e74c3c;
+    
+    .subtitle {
+      font-size: 9pt;
+      color: #64748b;
+      margin-top: 4px;
+      font-weight: 500;
     }
     
     .header-info {
       text-align: right;
-      font-size: 10pt;
+      background: #f8fafc;
+      padding: 8px 12px;
+      border-radius: 10px;
     }
     
-    /* Secciones */
+    .header-info p {
+      font-size: 8.5pt;
+      margin: 2px 0;
+      color: #1e293b;
+    }
+    
+    .header-info strong {
+      font-weight: 600;
+      color: #0f172a;
+    }
+    
+    /* ========== SECCIONES ========== */
     .seccion-print {
-      margin-bottom: 25px;
+      margin-bottom: 1.2rem;
       page-break-inside: avoid;
     }
     
     .seccion-header-print {
-      background: #f8f9fa;
-      color: #2c3e50;
-      padding: 10px 15px;
-      margin-bottom: 15px;
-      border-left: 4px solid #3498db;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #e2e8f0;
     }
     
     .seccion-header-print h2 {
-      font-size: 14pt;
+      font-size: 11pt;
+      font-weight: 600;
+      color: #0f172a;
+      letter-spacing: -0.2px;
       margin: 0;
-      font-weight: bold;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #1e293b, #334155);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
     
-    /* Información del paciente */
+    /* ========== GRID INFORMACIÓN PACIENTE ========== */
     .info-paciente-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 10px;
-      margin: 15px 0;
+      margin-bottom: 8px;
     }
     
     .info-item {
-      display: flex;
-      flex-direction: column;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 6px 10px;
+      border: 1px solid #eef2ff;
     }
     
     .info-item.full-width {
-      grid-column: 1 / -1;
+      grid-column: span 4;
     }
     
     .info-item label {
-      font-weight: bold;
-      font-size: 10pt;
-      margin-bottom: 3px;
-      color: #2c3e50;
+      display: block;
+      font-size: 7pt;
+      font-weight: 600;
+      color: #3b82f6;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 2px;
     }
     
     .info-item span {
-      background: #f8f9fa;
-      border: 1px solid #ddd;
-      padding: 8px;
-      min-height: auto;
-      font-size: 10pt;
+      font-size: 9pt;
+      font-weight: 500;
+      color: #1e293b;
+      display: block;
     }
     
-    /* Datos grid */
+    /* ========== DATOS GRID ========== */
     .datos-grid-print {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 10px;
-      margin: 15px 0;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
     }
     
     .dato-item-print {
-      display: flex;
-      flex-direction: column;
+      background: #fafcff;
+      border: 1px solid #eef2ff;
+      border-radius: 8px;
+      padding: 6px 10px;
     }
     
     .dato-item-print label {
-      font-weight: bold;
-      font-size: 10pt;
-      margin-bottom: 3px;
-      color: #2c3e50;
+      font-size: 7pt;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 2px;
     }
     
     .dato-item-print span {
-      background: #f8f9fa;
-      border: 1px solid #ddd;
-      padding: 8px;
-      min-height: auto;
-      font-size: 10pt;
+      font-size: 9pt;
+      font-weight: 500;
+      color: #0f172a;
+      display: block;
     }
     
-    /* Antecedentes en filas */
+    /* ========== ANTECEDENTES ========== */
     .antecedentes-filas {
-      margin: 15px 0;
+      margin: 8px 0;
     }
     
     .fila-antecedente {
       display: flex;
       align-items: flex-start;
-      margin-bottom: 10px;
-      page-break-inside: avoid;
+      margin-bottom: 8px;
+      padding: 6px 8px;
+      background: #f8fafc;
+      border-radius: 8px;
     }
     
     .label-antecedente {
-      font-weight: bold;
-      font-size: 10pt;
-      color: #2c3e50;
-      min-width: 180px;
-      margin-right: 15px;
-      margin-top: 3px;
-      flex-shrink: 0;
+      font-size: 8pt;
+      font-weight: 600;
+      color: #3b82f6;
+      min-width: 140px;
+      margin-right: 12px;
     }
     
     .tags-fila {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
-      flex: 1;
+      gap: 5px;
     }
     
     .tag-fila {
-      background: #e9ecef;
-      border: 1px solid #ced4da;
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 9pt;
-      white-space: nowrap;
+      background: white;
+      border: 1px solid #e2e8f0;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 7.5pt;
+      color: #1e293b;
     }
     
     .tag-fila.empty {
+      color: #94a3b8;
       font-style: italic;
-      color: #6c757d;
-      background: #f8f9fa;
+      background: #f1f5f9;
     }
     
-    /* Tablas */
+    /* ========== TABLAS MODERNAS ========== */
     .tabla-print {
       width: 100%;
       border-collapse: collapse;
-      margin: 10px 0;
-      font-size: 9pt;
-    }
-    
-    .tabla-print th,
-    .tabla-print td {
-      border: 1px solid #000;
-      padding: 6px;
-      text-align: center;
-      vertical-align: middle;
+      margin: 8px 0;
+      font-size: 7.5pt;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     
     .tabla-print th {
-      background: #f8f9fa;
-      font-weight: bold;
+      background: #f1f5f9;
+      color: #1e293b;
+      font-weight: 600;
+      padding: 8px 6px;
+      border: 1px solid #e2e8f0;
+      text-align: center;
+      font-size: 7pt;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
     }
     
-    .tabla-print .merged-cell-print {
-      background: #e9ecef;
-      font-weight: bold;
+    .tabla-print td {
+      padding: 6px;
+      border: 1px solid #eef2ff;
+      text-align: center;
+      background: white;
     }
     
     .tabla-print td:first-child {
-      font-weight: bold;
-      background: #f8f9fa;
+      font-weight: 600;
+      background: #fafcff;
     }
     
-    /* Exámenes */
+    .merged-cell-print {
+      background: #f8fafc;
+      font-weight: 500;
+    }
+    
+    /* ========== EXÁMENES ========== */
     .examen-subseccion-print {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
     
     .examen-subseccion-print h3 {
-      font-size: 12pt;
-      margin-bottom: 8px;
-      color: #2c3e50;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 5px;
+      font-size: 9pt;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+      padding-left: 8px;
+      border-left: 3px solid #3b82f6;
     }
     
     .hora-evaluacion-print {
-      background: #fff3cd;
-      border: 1px solid #ffeaa7;
-      padding: 8px 12px;
-      margin: 10px 0;
-      border-radius: 4px;
-      font-size: 10pt;
+      background: #fef9e6;
+      border-left: 3px solid #f59e0b;
+      padding: 6px 12px;
+      margin: 8px 0;
+      border-radius: 8px;
+      font-size: 8pt;
+      color: #92400e;
     }
     
-    /* Diagnóstico */
+    /* ========== DIAGNÓSTICO ========== */
     .diagnostico-grid-print {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin: 15px 0;
+      gap: 12px;
+      margin: 8px 0;
+    }
+    
+    .diagnostico-item-print {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 10px;
     }
     
     .diagnostico-item-print label {
-      font-weight: bold;
-      font-size: 10pt;
-      margin-bottom: 5px;
+      font-size: 8pt;
+      font-weight: 600;
+      color: #3b82f6;
       display: block;
-      color: #2c3e50;
+      margin-bottom: 6px;
+      text-transform: uppercase;
     }
     
     .diagnostico-content {
-      background: #f8f9fa;
-      border: 1px solid #ddd;
-      padding: 10px;
-      min-height: 60px;
-      font-size: 10pt;
+      font-size: 8.5pt;
+      color: #1e293b;
+      line-height: 1.4;
     }
     
-    /* Recomendaciones */
+    /* ========== RECOMENDACIONES ========== */
     .recomendacion-item-print {
-      border: 1px solid #ddd;
+      background: #fafcff;
+      border: 1px solid #eef2ff;
+      border-radius: 12px;
       padding: 12px;
       margin: 10px 0;
-      page-break-inside: avoid;
     }
     
     .recomendacion-header-print h4 {
-      font-size: 11pt;
+      font-size: 9pt;
+      font-weight: 600;
+      color: #3b82f6;
       margin-bottom: 8px;
-      color: #2c3e50;
+      display: inline-block;
+      background: #eff6ff;
+      padding: 2px 10px;
+      border-radius: 20px;
     }
     
     .recomendacion-content-print {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
     }
     
     .recomendacion-field {
@@ -2710,29 +2825,42 @@ export class HistoriasMedicasComponent implements OnInit {
     }
     
     .recomendacion-field.full-width {
-      grid-column: 1 / -1;
+      grid-column: span 2;
     }
     
     .recomendacion-field label {
-      font-weight: bold;
-      font-size: 9pt;
-      margin-bottom: 3px;
-      color: #2c3e50;
+      font-size: 6.5pt;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      margin-bottom: 2px;
     }
     
     .recomendacion-field span {
-      background: #f8f9fa;
-      border: 1px solid #ddd;
-      padding: 6px;
-      font-size: 9pt;
+      font-size: 8pt;
+      color: #1e293b;
     }
     
-    /* Firmas */
+    .medidas-detail {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 2px;
+    }
+    
+    .medidas-detail div {
+      font-size: 7.5pt;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 12px;
+    }
+    
+    /* ========== FIRMAS ========== */
     .firmas-grid-print {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 30px;
-      margin: 20px 0;
+      margin: 15px 0;
     }
     
     .firma-item-print {
@@ -2740,44 +2868,91 @@ export class HistoriasMedicasComponent implements OnInit {
     }
     
     .firma-label-print {
-      font-weight: bold;
-      margin-bottom: 10px;
-      font-size: 11pt;
+      font-size: 9pt;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 8px;
     }
     
     .firma-space-print {
-      height: 60px;
-      border-bottom: 1px solid #000;
-      margin-bottom: 10px;
+      height: 50px;
+      border-bottom: 1px solid #cbd5e1;
+      margin-bottom: 8px;
     }
     
     .firma-info-print {
-      font-size: 9pt;
-      color: #666;
-    }
-    
-    .firma-info-print div {
-      margin-bottom: 2px;
+      font-size: 7.5pt;
+      color: #64748b;
     }
     
     .asesor-responsable-print {
       text-align: center;
-      padding-top: 20px;
-      border-top: 1px solid #ddd;
-      margin-top: 20px;
+      margin-top: 15px;
+      padding-top: 12px;
+      border-top: 1px dashed #e2e8f0;
     }
     
-    /* Pie de página */
+    /* ========== MÉDICO REFERIDO ========== */
+    .medico-referido-print {
+      background: linear-gradient(135deg, #fef9e6, #fff7ed);
+      border-radius: 12px;
+      padding: 10px 14px;
+      border-left: 4px solid #f59e0b;
+    }
+    
+    .medico-ref-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .medico-ref-nombre {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9pt;
+    }
+    
+    .medico-ref-nombre strong {
+      color: #92400e;
+    }
+    
+    .medico-ref-lugar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 8pt;
+      color: #b45309;
+      padding-left: 22px;
+    }
+    
+    .medico-ref-nota {
+      background: white;
+      border-radius: 8px;
+      padding: 6px 10px;
+      margin-top: 8px;
+      font-size: 7pt;
+      color: #78716c;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    /* ========== PIE DE PÁGINA ========== */
     .print-footer {
       text-align: center;
-      margin-top: 30px;
+      margin-top: 20px;
       padding-top: 10px;
-      border-top: 1px solid #ddd;
-      font-size: 9pt;
-      color: #666;
+      border-top: 1px solid #e2e8f0;
+      font-size: 7pt;
+      color: #94a3b8;
     }
     
-    /* Control de saltos de página */
+    .print-date {
+      margin-top: 4px;
+    }
+    
+    /* ========== UTILIDADES ========== */
     .page-break {
       page-break-before: always;
     }
@@ -2786,9 +2961,10 @@ export class HistoriasMedicasComponent implements OnInit {
       page-break-inside: avoid;
     }
     
+    /* ========== MEDIA PRINT ========== */
     @media print {
       @page {
-        margin: 1cm;
+        margin: 0.8cm;
         size: A4;
       }
       
@@ -2797,26 +2973,13 @@ export class HistoriasMedicasComponent implements OnInit {
         padding: 0;
       }
       
-      .print-container {
-        padding: 0;
-      }
-      
-      /* Mejorar legibilidad en impresión */
       * {
         -webkit-print-color-adjust: exact;
-        color-adjust: exact;
-      }
-      
-      .page-break {
-        page-break-before: always;
-      }
-      
-      .no-break {
-        page-break-inside: avoid;
+        print-color-adjust: exact;
       }
     }
   `;
-  }
+}
 
   handleKeydown(event: KeyboardEvent): void {
     const isInsideDropdown = (event.target as HTMLElement).closest('.ng-dropdown-panel');
@@ -3912,6 +4075,64 @@ export class HistoriasMedicasComponent implements OnInit {
         panelClass: ['snackbar-info']
       }
     );
+  }
+
+  // Método para obtener el nombre del médico referido (de donde sea que esté)
+  obtenerNombreMedicoReferido(historia: any): string {
+    if (!historia?.datosConsulta) return 'No especificado';
+
+    const dc = historia.datosConsulta;
+
+    // Prioridad 1: Buscar en formulaOriginal.medicoOrigen
+    if (dc.formulaOriginal?.medicoOrigen?.nombre) {
+      return dc.formulaOriginal.medicoOrigen.nombre;
+    }
+
+    // Prioridad 2: Buscar en especialista.externo
+    if (dc.especialista?.tipo === 'EXTERNO' && dc.especialista?.externo?.nombre) {
+      return dc.especialista.externo.nombre;
+    }
+
+    return 'No especificado';
+  }
+
+  // Método para obtener el lugar del médico referido
+  obtenerLugarMedicoReferido(historia: any): string {
+    if (!historia?.datosConsulta) return 'No especificado';
+
+    const dc = historia.datosConsulta;
+
+    // Prioridad 1: Buscar en formulaOriginal.medicoOrigen
+    if (dc.formulaOriginal?.medicoOrigen?.lugarConsultorio) {
+      return dc.formulaOriginal.medicoOrigen.lugarConsultorio;
+    }
+
+    // Prioridad 2: Buscar en especialista.externo
+    if (dc.especialista?.tipo === 'EXTERNO' && dc.especialista?.externo?.lugarConsultorio) {
+      return dc.especialista.externo.lugarConsultorio;
+    }
+
+    return 'No especificado';
+  }
+
+  // Método para verificar si existe médico referido (para mostrar la tarjeta)
+  obtenerMedicoReferido(historia: any): boolean {
+    if (!historia?.datosConsulta) return false;
+
+    const dc = historia.datosConsulta;
+
+    // Verificar si hay datos en alguna de las ubicaciones
+    const tieneEnFormulaOriginal = dc.formulaOriginal?.medicoOrigen?.nombre &&
+      dc.formulaOriginal?.medicoOrigen?.lugarConsultorio;
+    const tieneEnEspecialista = dc.especialista?.tipo === 'EXTERNO' &&
+      dc.especialista?.externo?.nombre &&
+      dc.especialista?.externo?.lugarConsultorio;
+
+    return tieneEnFormulaOriginal || tieneEnEspecialista;
+  }
+
+  private obtenerSedeCompleta(sedeKey: string): SedeCompleta | undefined {
+    return this.sedesDisponibles.find(s => s.key === sedeKey);
   }
 
 }

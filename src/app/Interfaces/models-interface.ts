@@ -1,5 +1,5 @@
 //Modelos cambio de contrase;a
-import { Sede } from '../../app/view/login/login-interface';
+import { SedeLogin } from '../../app/view/login/login-interface';
 
 export interface Cargo {
   _id: string;
@@ -35,7 +35,7 @@ export interface AuthData {
   user: User;
   rol: Rol;
   cargo: Cargo;
-  sede: Sede; 
+  sede: SedeLogin; 
   message?: string;
 }
 

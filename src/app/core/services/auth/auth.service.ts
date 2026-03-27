@@ -6,7 +6,7 @@ import { environment } from '../../../../environments/environment';
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, tap, map } from 'rxjs/operators';
 import { User, Rol, AuthData, AuthResponse, Cargo } from '../../../Interfaces/models-interface';
-import { Sede } from './../../../view/login/login-interface';
+import { SedeLogin, SedeCompleta } from './../../../view/login/login-interface';
 import { UserStateService } from './../userState/user-state-service';
 
 
@@ -80,12 +80,19 @@ export class AuthService {
     this.currentUserSubject.next(newData);
   }
 
-  login(cedula: string, password: string, sede: string): Observable<AuthData> {
-    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/login`, { cedula, password, sede }).pipe(
+  login(cedula: string, password: string, sedeKey: string): Observable<AuthData> {
+    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/login`, { cedula, password, sede: sedeKey }).pipe(
       map((data: AuthResponse) => {
         if (!data.user?.correo) {
           throw new Error('El servidor no devolvió un correo de usuario');
         }
+
+        // data.sede solo tiene key y nombre del login
+        const sedeLogin: SedeLogin = {
+          key: data.sede?.key || sedeKey,
+          nombre: data.sede?.nombre || sedeKey
+        };
+
         const authData: AuthData = {
           token: data.token,
           user: {
@@ -94,26 +101,37 @@ export class AuthService {
           },
           rol: data.rol,
           cargo: data.cargo,
-          sede: data.sede 
+          sede: sedeLogin  // 👈 Usar SedeLogin
         };
 
         return authData;
       }),
       tap((authData: AuthData) => {
         this.setAuth(authData);
-        //console.log('authData', authData);
       }),
       catchError((error: HttpErrorResponse) => {
         const errorMsg = error.error?.message || 'Error en el inicio de sesión';
         console.error('Error en login:', errorMsg);
-        //this.swalService.showError('Error', errorMsg);
         return throwError(() => error);
       })
     );
   }
 
-  getSedes(): Observable<{ sedes: Sede[] }> {
-    return this.http.get<{ sedes: Sede[] }>(`${environment.apiUrl}/sedes-get`);
+  getSedes(): Observable<{ sedes: SedeCompleta[] }> {
+    return this.http.get<{ message: string; sedes: any[] }>(`${environment.apiUrl}/sedes-get`).pipe(
+      map(response => ({
+        sedes: (response.sedes || []).map(sede => ({
+          key: sede.key,
+          nombre: sede.nombre,
+          nombre_optica: sede.nombre_optica,
+          rif: sede.rif,
+          direccion: sede.direccion,
+          direccion_fiscal: sede.direccion_fiscal,
+          telefono: sede.telefono,
+          email: sede.email,
+        }))
+      }))
+    );
   }
 
   hasAcceptedTyC(): boolean {

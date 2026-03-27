@@ -936,6 +936,8 @@
         "montoOriginal": 60
     }
 }
+
+
 //PENDIENTES
 - Ajustar el api de "crear venta" de acuerdo al tipo de venta
 - Los montos que se envian sobre las consultas, deben guardarse/actualizarse al generar la venta
@@ -1783,4 +1785,24 @@ json
             }
         },
     ]
+}
+
+
+Transacciones{
+
+    ventas:{
+        api ventas
+
+    },
+
+    transacciones_adicionales:{
+        egresos:{
+            api 
+        }
+
+        ingresos{
+
+        }
+    },
+
 }

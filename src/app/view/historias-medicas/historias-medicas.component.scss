@@ -5369,3 +5369,94 @@ body:not(.using-mouse) .campo-activo {
     }
   }
 }
+
+/* Estilos para médico referido en impresión */
+.medico-referido-print {
+  background: #f8f9fa;
+  border: 1px solid #e0e7ff;
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  border-left: 4px solid #3b82f6;
+}
+
+.medico-ref-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.medico-ref-nombre {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+
+  i {
+    color: #3b82f6;
+    font-size: 1rem;
+  }
+
+  strong {
+    color: #1e293b;
+  }
+}
+
+.medico-ref-lugar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #5b6e8c;
+  padding-left: 1.5rem;
+
+  i {
+    color: #10b981;
+    font-size: 0.85rem;
+  }
+}
+
+.medico-ref-nota {
+  background: #fff3cd;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #856404;
+  margin-top: 0.5rem;
+
+  i {
+    font-size: 0.9rem;
+  }
+}
+
+/* Mejoras en el encabezado de impresión */
+.header-institucion .nombre-optica {
+  font-size: 18pt;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.header-institucion .sede-nombre {
+  font-size: 12pt;
+  font-weight: 500;
+  color: #3b82f6;
+  margin-bottom: 8px;
+}
+
+.header-institucion .rif-linea {
+  font-size: 9pt;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* Mejoras en el pie de página */
+.print-footer .print-date {
+  font-size: 8pt;
+  margin-top: 5px;
+  color: #999;
+}
