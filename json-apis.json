@@ -1806,3 +1806,150 @@ Transacciones{
     },
 
 }
+
+
+
+
+
+
+
+{
+    "id": 26,
+    "nHistoria": "H-20260328-001",
+    "pacienteId": "28acbaf873ad2772e216895c44281940",
+    "datosConsulta": {
+        "pagoPendiente": true,
+        "motivo": [
+            "Fatiga visual"
+        ],
+        "otroMotivo": "",
+        "tipoCristalActual": "LENTES_CONTACTO",
+        "tipoLentesContacto": "DESECHABLES_EVOLUTION",
+        "fechaUltimaGraduacion": null,
+        "especialista": {
+            "tipo": "OFTALMOLOGO",
+            "cedula": "8759927",
+            "nombre": "Gerardo Martinez",
+            "cargo": "Oftalmólogo",
+            "externo": {
+                "nombre": null,
+                "lugarConsultorio": null
+            }
+        },
+        "formulaOriginal": {
+            "medicoOrigen": {
+                "tipo": null,
+                "nombre": null,
+                "lugarConsultorio": null
+            }
+        },
+        "formulaExterna": false
+    },
+    "examenOcular": {
+        "lensometria": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "av_lejos_od": "",
+            "av_cerca_od": "",
+            "av_lejos_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "av_lejos_oi": "",
+            "av_cerca_oi": "",
+            "av_cerca_bi": ""
+        },
+        "refraccion": {
+            "esf_od": "",
+            "cil_od": "",
+            "eje_od": "",
+            "add_od": "",
+            "avccl_od": "",
+            "avccc_od": "",
+            "avccl_bi": "",
+            "avccc_bi": "",
+            "esf_oi": "",
+            "cil_oi": "",
+            "eje_oi": "",
+            "add_oi": "",
+            "avccl_oi": "",
+            "avccc_oi": ""
+        },
+        "refraccionFinal": {
+            "esf_od": "+0.50",
+            "cil_od": "-0.50",
+            "eje_od": 3,
+            "add_od": "+1.25",
+            "alt_od": "s",
+            "dp_od": "2",
+            "esf_oi": "+0.50",
+            "cil_oi": "-0.50",
+            "eje_oi": 3,
+            "add_oi": "+1.25",
+            "alt_oi": "2",
+            "dp_oi": "2"
+        },
+        "avsc_avae_otros": {
+            "avsc_lejos_od": "",
+            "avsc_cerca_od": "",
+            "avae_od": "",
+            "otros_od": "",
+            "avsc_lejos_oi": "",
+            "avsc_cerca_oi": "",
+            "avae_oi": "",
+            "otros_oi": ""
+        }
+    },
+    "diagnosticoTratamiento": {
+        "diagnostico": "test",
+        "tratamiento": "test"
+    },
+    "recomendaciones": [
+        {
+            "cristal": "Monofocal Visión sencilla digital",
+            "material": [
+                "CR39"
+            ],
+            "montura": "test",
+            "observaciones": "",
+            "tipoLentesContacto": "",
+            "medidaHorizontal": 2,
+            "medidaVertical": 2,
+            "medidaDiagonal": 2,
+            "medidaPuente": 2
+        },
+        {
+            "cristal": "Lentes de contacto",
+            "material": [
+                "HI_INDEX_156"
+            ],
+            "montura": "test",
+            "observaciones": "El paciente trajo formula, pero pidio ser rectificado por el oftalmologo. Genero una consulta completa",
+            "tipoLentesContacto": "Toricos",
+            "medidaHorizontal": "",
+            "medidaVertical": "",
+            "medidaDiagonal": "",
+            "medidaPuente": ""
+        }
+    ],
+    "conformidad": {
+        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
+    },
+    "auditoria": {
+        "fechaCreacion": "2026-03-28T15:20:53.342Z",
+        "fechaActualizacion": "2026-03-28T15:20:53.343Z",
+        "creadoPor": {
+            "cedula": "24367965",
+            "nombre": "Ruben Dario Martinez Castro",
+            "cargo": "Gerente"
+        },
+        "actualizadoPor": {
+            "cedula": "24367965",
+            "nombre": "Ruben Dario Martinez Castro",
+            "cargo": "Gerente"
+        }
+    }
+}

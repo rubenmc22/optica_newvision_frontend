@@ -9,7 +9,8 @@ import { forkJoin, map, Subject, Observable, of, lastValueFrom, debounceTime, di
 import { take } from 'rxjs/operators';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { UserStateService, SedeInfo } from '../../../core/services/userState/user-state-service';
+import { UserStateService } from '../../../core/services/userState/user-state-service';
+import { Sede, SedeCompleta } from '../../../view/login/login-interface';
 import { PacientesService } from '../../../core/services/pacientes/pacientes.service';
 import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
 import { Paciente } from '../../pacientes/paciente-interface';
@@ -141,7 +142,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     montoExcedido: boolean = false;
     maximoCuotasPermitidas = 6;
     cantidadCuotasCashea = 3;
-    sedeInfo: SedeInfo | null = null;
+    sedeInfo: SedeCompleta | null = null;
 
     productos: Producto[] = [];
     pacientes: any[] = [];
@@ -443,13 +444,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.historiaService.getHistoriasPorPaciente(pacienteKey).pipe(take(1)).subscribe({
             next: (historiales: any[]) => {
                 if (!historiales || historiales.length === 0) {
-                    if (this.tipoVenta !== 'solo_productos') {
-                        this.swalService.showWarning(
-                            'Sin historia médica',
-                            'Este paciente no tiene historia registrada. Solo puede realizar venta de productos.'
-                        );
-                    }
-                    this.completarTarea();
+                    // ... código existente ...
                     return;
                 }
 
@@ -463,27 +458,33 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     const tieneFormula = this.tieneFormulaCompleta(historia);
                     const pagoPendiente = historia.datosConsulta?.pagoPendiente === true;
 
-                    // Obtener información del especialista según la nueva estructura
+                    // 🔴 IMPORTANTE: Extraer correctamente la información del especialista
+                    const especialista = historia.datosConsulta?.especialista;
                     let tipoProfesional = 'optometrista';
                     let nombreMedico = '';
                     let cargoMedico = '';
 
-                    if (historia.datosConsulta?.especialista) {
-                        const esp = historia.datosConsulta.especialista;
-                        if (esp.tipo === 'EXTERNO' && esp.externo) {
+                    if (especialista) {
+                        if (especialista.tipo === 'EXTERNO' && especialista.externo) {
                             tipoProfesional = 'externo';
-                            nombreMedico = esp.externo.nombre || '';
-                            cargoMedico = esp.externo.especialidad || 'Médico Externo';
-                        } else if (esp.tipo !== 'EXTERNO') {
-                            tipoProfesional = esp.tipo === 'OFTALMOLOGO' ? 'oftalmologo' : 'optometrista';
-                            nombreMedico = esp.nombre || '';
-                            cargoMedico = esp.cargo || '';
+                            nombreMedico = especialista.externo.nombre || '';
+                            cargoMedico = especialista.externo.lugarConsultorio || 'Médico Externo';
+                        } else if (especialista.tipo === 'OFTALMOLOGO') {
+                            tipoProfesional = 'oftalmologo';
+                            nombreMedico = especialista.nombre || '';
+                            cargoMedico = especialista.cargo || 'Oftalmólogo';
+                        } else if (especialista.tipo === 'OPTOMETRISTA') {
+                            tipoProfesional = 'optometrista';
+                            nombreMedico = especialista.nombre || '';
+                            cargoMedico = especialista.cargo || 'Optometrista';
                         }
                     } else {
-                        // Fallback para datos antiguos (por si acaso)
+                        // Fallback para datos antiguos
                         tipoProfesional = historia.datosConsulta?.medico?.cargo === 'Oftalmólogo'
                             ? 'oftalmologo'
                             : 'optometrista';
+                        nombreMedico = historia.datosConsulta?.medico?.nombre || '';
+                        cargoMedico = historia.datosConsulta?.medico?.cargo || '';
                     }
 
                     return {
@@ -500,12 +501,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                         fechaCreacion: historia.auditoria.fechaCreacion,
                         datosConsulta: {
                             motivo: historia.datosConsulta?.motivo,
-                            medico: {  // Mantener para compatibilidad temporal
+                            medico: {  // Mantener para compatibilidad
                                 nombre: nombreMedico,
                                 cargo: cargoMedico
                             },
                             formulaExterna: historia.datosConsulta?.formulaExterna || false,
-                            pagoPendiente: pagoPendiente
+                            pagoPendiente: pagoPendiente,
+                            especialista: especialista
                         },
                         auditoria: historia.auditoria,
                         esReciente: index === 0,
@@ -7274,6 +7276,41 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.mostrarInfoEmpresa = false;
     }
 
+
+    private agregarConsultaSinCosto(historia: any): void {
+        const tipo = this.determinarTipoHistoria(historia);
+        const esOftalmologo = historia.tipoProfesional === 'oftalmologo';
+        const pagoPendiente = historia.datosConsulta?.pagoPendiente === true;
+
+        this.pagoMedico = 0;
+        this.pagoOptica = 0;
+        this.montoConsulta = 0;
+        this.montoConsultaOriginal = 0;
+        this.consultaEnCarrito = true;
+
+        this.cdr.detectChanges();
+
+        let mensaje = '';
+        if (esOftalmologo && !pagoPendiente) {
+            mensaje = '✅ Consulta agregada (ya pagada anteriormente)';
+        } else if (historia.formulaExterna && historia.tipoProfesional === 'oftalmologo' && !pagoPendiente) {
+            mensaje = '✅ Rectificación externa agregada (pagada anteriormente)';
+        } else if (historia.formulaExterna && !historia.tipoProfesional) {
+            mensaje = '✅ Fórmula externa agregada (sin costo)';
+        } else if (historia.tipoProfesional === 'optometrista') {
+            mensaje = '✅ Consulta de optometrista agregada (sin costo)';
+        } else if (tipo === 'externa_rectificada_oftalmologo' && !pagoPendiente) {
+            mensaje = '✅ Rectificación externa agregada (pagada)';
+        } else {
+            mensaje = '✅ Historia seleccionada (sin costo)';
+        }
+
+        this.snackBar.open(mensaje, 'Cerrar', {
+            duration: 2000,
+            panelClass: ['snackbar-info']
+        });
+    }
+
     agregarConsultaAlCarrito(): void {
         if (!this.historiaMedicaSeleccionada) {
             console.log('❌ No hay historia seleccionada');
@@ -7286,23 +7323,30 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return;
         }
 
-        const historia = this.historiaMedicaSeleccionada as any; // <-- Type assertion aquí
-        console.log('historia completa:', historia);
+        const historia = this.historiaMedicaSeleccionada;
+        const especialista = historia.datosConsulta?.especialista;
+        const esOftalmologo = especialista?.tipo === 'OFTALMOLOGO';
+        const pagoPendiente = historia.datosConsulta?.pagoPendiente === true;
+        const formulaExterna = historia.datosConsulta?.formulaExterna === true;
+        const tieneFormulaOriginal = !!historia.datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
 
-        const tipo = this.determinarTipoHistoria(historia);
-        const esOftalmologo = historia.tipoProfesional === 'oftalmologo';
-        const esExternaRectificadaOft = tipo === 'externa_rectificada_oftalmologo';
+        // Determinar si genera ingreso
+        let generaIngreso = false;
 
-        // Las consultas de oftalmólogo (propias o externas rectificadas) generan costo
-        const generaIngreso = esOftalmologo || esExternaRectificadaOft;
-
-        console.log('Agregando consulta:', {
-            tipo,
-            generaIngreso,
-            esOftalmologo,
-            esExternaRectificadaOft,
-            historiaId: historia.id
-        });
+        if (this.tipoVenta === 'solo_consulta') {
+            // Solo se genera ingreso si:
+            // 1. Es oftalmólogo interno con pago pendiente
+            // 2. Es externa rectificada por oftalmólogo con pago pendiente
+            generaIngreso = (esOftalmologo && pagoPendiente && !formulaExterna) ||
+                (formulaExterna && tieneFormulaOriginal && esOftalmologo && pagoPendiente);
+        } else {
+            // Para consulta + productos, solo genera ingreso si:
+            // 1. Es oftalmólogo interno con pago pendiente
+            // 2. Es externa rectificada por oftalmólogo con pago pendiente
+            // (solo el costo médico)
+            generaIngreso = (esOftalmologo && pagoPendiente && !formulaExterna) ||
+                (formulaExterna && tieneFormulaOriginal && esOftalmologo && pagoPendiente);
+        }
 
         if (generaIngreso) {
             // Obtener costos reales del backend
@@ -7344,44 +7388,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 },
                 error: (error) => {
                     console.error('❌ Error al obtener costos:', error);
-                    // Si hay error, agregar con costo 0
                     this.agregarConsultaSinCosto(historia);
                 }
             });
         } else {
-            // No genera ingreso (optometrista, externa sin rectificar, etc.)
+            // No genera ingreso
             this.agregarConsultaSinCosto(historia);
         }
-    }
-
-    // Nuevo método para agregar consulta sin costo
-    private agregarConsultaSinCosto(historia: any): void {
-        const tipoProfesional = historia.tipoProfesional === 'oftalmologo' ? 'Oftalmólogo' :
-            (historia.tipoProfesional === 'optometrista' ? 'Optometrista' : 'Consulta');
-
-        this.pagoMedico = 0;
-        this.pagoOptica = 0;
-        this.montoConsulta = 0;
-        this.montoConsultaOriginal = 0;
-        this.consultaEnCarrito = true;
-
-        this.cdr.detectChanges();
-
-        let mensaje = '';
-        if (historia.formulaExterna) {
-            mensaje = historia.tipoProfesional === 'oftalmologo' ?
-                '✅ Rectificación externa agregada' :
-                '✅ Fórmula externa agregada';
-        } else if (historia.tipoProfesional === 'optometrista') {
-            mensaje = '✅ Consulta de optometrista agregada';
-        } else {
-            mensaje = '✅ Historia seleccionada';
-        }
-
-        this.snackBar.open(mensaje, 'Cerrar', {
-            duration: 2000,
-            panelClass: ['snackbar-info']
-        });
     }
 
     // Para saber si mostrar el campo de monto de consulta
@@ -7859,27 +7872,49 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const h = historia || this.historiaMedicaSeleccionada;
         if (!h) return '';
 
-        const tipo = this.determinarTipoHistoria(h);
-        const pagoPendiente = h.datosConsulta?.pagoPendiente === true;
+        // 🔴 Acceder correctamente a la estructura
+        const datosConsulta = h.datosConsulta || h.data?.datosConsulta;
+        const especialista = datosConsulta?.especialista;
 
-        switch (tipo) {
-            case 'oftalmologo_pendiente':
-                return pagoPendiente ? 'Pendiente pago' : '';
-            case 'oftalmologo_pagado':
-                return 'Pagado';
-            case 'optometrista':
-                return 'No genera costo';  // Vacío porque es gratis, pero la historia existe
-            case 'externa_sin_rectificar':
-                return 'Externa';
-            case 'externa_rectificada_oftalmologo':
-                return 'Rectificado por Oftalmólogo (Pago pendiente)';
-            case 'externa_rectificada_optometrista':
-                return 'Rectificado por Optometrista';
-            default:
-                return '';
+        const esOftalmologo = especialista?.tipo === 'OFTALMOLOGO';
+        const esOptometrista = especialista?.tipo === 'OPTOMETRISTA';
+        const esExterno = especialista?.tipo === 'EXTERNO';
+        const pagoPendiente = datosConsulta?.pagoPendiente === true;
+        const formulaExterna = datosConsulta?.formulaExterna === true;
+        const tieneFormulaOriginal = !!datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
+
+        // Oftalmólogo interno
+        if (esOftalmologo && !formulaExterna) {
+            return pagoPendiente ? 'Pendiente de pago' : 'Pagada';
         }
-    }
 
+        // Optometrista interno
+        if (esOptometrista && !formulaExterna) {
+            return 'Sin costo';
+        }
+
+        // Fórmula externa sin rectificar
+        if (formulaExterna && !tieneFormulaOriginal && !esOftalmologo && !esOptometrista) {
+            return 'Sin costo';
+        }
+
+        // Externa rectificada por oftalmólogo
+        if (formulaExterna && tieneFormulaOriginal && esOftalmologo) {
+            return pagoPendiente ? 'Rectificación externa (pendiente)' : 'Rectificación externa (pagada)';
+        }
+
+        // Externa rectificada por optometrista
+        if (formulaExterna && tieneFormulaOriginal && esOptometrista) {
+            return 'Rectificación externa (sin costo)';
+        }
+
+        // Médico externo puro
+        if (esExterno) {
+            return 'Fórmula externa';
+        }
+
+        return '';
+    }
 
     onHistoriaSeleccionada(event: any): void {
         if (!event) {
@@ -7896,7 +7931,18 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     get totalHistoriasSegunTipo(): number {
         if (this.tipoVenta === 'solo_consulta') {
-            return this.historiasOftalmologoNoExternas.length;
+            // Solo contar historias de oftalmólogo (internas y externas rectificadas)
+            return this.historiasMedicas.filter(h => {
+                const datosConsulta = h.datosConsulta || h.data?.datosConsulta;
+                const especialista = datosConsulta?.especialista;
+                const esOftalmologo = especialista?.tipo === 'OFTALMOLOGO';
+                const formulaExterna = datosConsulta?.formulaExterna === true;
+                const tieneFormulaOriginal = !!datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
+
+                // Oftalmólogo interno o externa rectificada por oftalmólogo
+                return (esOftalmologo && !formulaExterna) ||
+                    (formulaExterna && tieneFormulaOriginal && esOftalmologo);
+            }).length;
         }
         return this.historiasMedicas.length;
     }
@@ -7907,16 +7953,19 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         return this.historiasMedicas.filter(h => {
-            // Caso 1: Oftalmólogo interno (no externa)
-            const esOftalmologoInterno = h.tipoProfesional === 'oftalmologo' && !h.formulaExterna;
+            const datosConsulta = h.datosConsulta || h.data?.datosConsulta;
+            const especialista = datosConsulta?.especialista;
+            const esOftalmologo = especialista?.tipo === 'OFTALMOLOGO';
+            const formulaExterna = datosConsulta?.formulaExterna === true;
+            const tieneFormulaOriginal = !!datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
 
-            // Caso 2: Externa rectificada por oftalmólogo
-            const esExternaRectificadaOft = h.formulaExterna && h.tipoProfesional === 'oftalmologo';
-
-            return esOftalmologoInterno || esExternaRectificadaOft;
+            // Incluye:
+            // 1. Oftalmólogo interno
+            // 2. Fórmula externa rectificada por oftalmólogo
+            return (esOftalmologo && !formulaExterna) ||
+                (formulaExterna && tieneFormulaOriginal && esOftalmologo);
         });
     }
-
 
     get historiasFiltradas(): any[] {
         if (!this.historiasMedicas || this.historiasMedicas.length === 0) {
@@ -7927,12 +7976,38 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         let historiasBase: any[];
 
         if (this.tipoVenta === 'solo_consulta') {
-            // Solo consulta: oftalmólogo interno + externa rectificada por oftalmólogo
+            // Solo consulta: SOLO historias que generan cobro
             historiasBase = this.historiasMedicas.filter(h => {
-                const esOftalmologoInterno = h.tipoProfesional === 'oftalmologo' && !h.formulaExterna;
-                const esExternaRectificadaOft = h.formulaExterna && h.tipoProfesional === 'oftalmologo';
-                return esOftalmologoInterno || esExternaRectificadaOft;
+                const datosConsulta = h.datosConsulta || h.data?.datosConsulta;
+                const especialista = datosConsulta?.especialista;
+                const esOftalmologo = especialista?.tipo === 'OFTALMOLOGO';
+                const formulaExterna = datosConsulta?.formulaExterna === true;
+                const tieneFormulaOriginal = !!datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
+                const pagoPendiente = datosConsulta?.pagoPendiente === true;
+
+                // CASO 1: Oftalmólogo interno (propia consulta)
+                if (esOftalmologo && !formulaExterna) {
+                    return true; // Mostrar siempre, tanto pendiente como pagada
+                }
+
+                // CASO 2: Fórmula externa rectificada por oftalmólogo
+                if (formulaExterna && tieneFormulaOriginal && esOftalmologo) {
+                    return true; // Mostrar siempre, tanto pendiente como pagada
+                }
+
+                // NO mostrar:
+                // - Optometristas
+                // - Fórmulas externas puras
+                // - Rectificaciones por optometrista
+                return false;
             });
+
+            console.log('Historias para solo consulta:', historiasBase.length);
+            historiasBase.forEach(h => {
+                const especialista = h.datosConsulta?.especialista;
+                console.log(`- ${h.nHistoria}: ${especialista?.tipo}, formulaExterna: ${h.formulaExterna}`);
+            });
+
         } else {
             // Consulta + productos: TODAS las historias
             historiasBase = this.historiasMedicas;
@@ -8136,67 +8211,120 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // Método para determinar el tipo de historia
     determinarTipoHistoria(historia: any): TipoHistoria {
-        if (!historia) return 'oftalmologo_pendiente'; // fallback
+        if (!historia) return 'oftalmologo_pendiente';
 
-        const esOftalmologo = historia.tipoProfesional === 'oftalmologo';
-        const esOptometrista = historia.tipoProfesional === 'optometrista';
-        const esExterna = historia.formulaExterna === true;
-        const pagoPendiente = historia.datosConsulta?.pagoPendiente === true;
+        // 🔴 Acceder correctamente a la estructura
+        const datosConsulta = historia.datosConsulta || historia.data?.datosConsulta;
+        const especialista = datosConsulta?.especialista;
 
-        // Caso 1: Fórmula externa
-        if (esExterna) {
-            // Si tiene tipoProfesional, fue rectificada por ese profesional
-            if (historia.tipoProfesional) {
-                if (esOftalmologo) {
-                    return pagoPendiente ? 'externa_rectificada_oftalmologo' : 'oftalmologo_pagado';
-                }
-                if (esOptometrista) {
-                    return 'externa_rectificada_optometrista';
-                }
-            }
-            // Si no tiene tipoProfesional, es externa sin rectificar
-            return 'externa_sin_rectificar';
-        }
+        const esOftalmologo = especialista?.tipo === 'OFTALMOLOGO';
+        const esOptometrista = especialista?.tipo === 'OPTOMETRISTA';
+        const esExterno = especialista?.tipo === 'EXTERNO';
+        const pagoPendiente = datosConsulta?.pagoPendiente === true;
+        const formulaExterna = datosConsulta?.formulaExterna === true;
+        const tieneFormulaOriginal = !!datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
 
-        // Caso 2: Fórmula interna (del consultorio)
-        if (esOftalmologo) {
+        console.log('Determinando tipo:', {
+            especialistaTipo: especialista?.tipo,
+            esOftalmologo,
+            esOptometrista,
+            esExterno,
+            pagoPendiente,
+            formulaExterna,
+            tieneFormulaOriginal
+        });
+
+        // Caso 1: Oftalmólogo interno (no externa)
+        if (esOftalmologo && !formulaExterna) {
             return pagoPendiente ? 'oftalmologo_pendiente' : 'oftalmologo_pagado';
         }
 
-        if (esOptometrista) {
+        // Caso 2: Optometrista interno (no externa)
+        if (esOptometrista && !formulaExterna) {
             return 'optometrista';
         }
 
-        return 'oftalmologo_pendiente'; // fallback
+        // Caso 3: Fórmula externa sin rectificar
+        if (formulaExterna && !tieneFormulaOriginal && !esOftalmologo && !esOptometrista) {
+            return 'externa_sin_rectificar';
+        }
+
+        // Caso 4: Fórmula externa rectificada por oftalmólogo
+        if (formulaExterna && tieneFormulaOriginal && esOftalmologo) {
+            return pagoPendiente ? 'externa_rectificada_oftalmologo' : 'oftalmologo_pagado';
+        }
+
+        // Caso 5: Fórmula externa rectificada por optometrista
+        if (formulaExterna && tieneFormulaOriginal && esOptometrista) {
+            return 'externa_rectificada_optometrista';
+        }
+
+        // Caso 6: Médico externo puro
+        if (esExterno) {
+            return 'externa_sin_rectificar';
+        }
+
+        return 'oftalmologo_pendiente';
     }
 
     seleccionarHistoria(historia: any): void {
         console.log('📋 seleccionarHistoria llamado');
         console.log('Historia:', historia);
 
-        // Si ya estaba seleccionada, no hacer nada
         if (this.historiaSeleccionadaId === historia.id) {
             return;
         }
 
+        const datosConsulta = historia.datosConsulta || historia.data?.datosConsulta;
+        const especialista = datosConsulta?.especialista;
+
+        const esOftalmologo = especialista?.tipo === 'OFTALMOLOGO';
+        const esOptometrista = especialista?.tipo === 'OPTOMETRISTA';
+        const esExterno = especialista?.tipo === 'EXTERNO';
+        const pagoPendiente = datosConsulta?.pagoPendiente === true;
+        const formulaExterna = datosConsulta?.formulaExterna === true;
+        const tieneFormulaOriginal = !!datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
+
         const tipo = this.determinarTipoHistoria(historia);
-        const esOftalmologo = historia.tipoProfesional === 'oftalmologo';
-        const esExternaSinRectificar = tipo === 'externa_sin_rectificar';
 
         console.log('Tipo determinado:', tipo);
+        console.log('¿Pago pendiente?:', pagoPendiente);
+        console.log('¿Es oftalmólogo?:', esOftalmologo);
+        console.log('¿Es externa?:', formulaExterna);
+        console.log('¿Tiene fórmula original?:', tieneFormulaOriginal);
 
         // ============================================
         // CASO: SOLO CONSULTA
         // ============================================
         if (this.tipoVenta === 'solo_consulta') {
-            // Solo oftalmólogo (interno o externa rectificada) puede venderse como consulta
-            const puedeVenderse = esOftalmologo || tipo === 'externa_rectificada_oftalmologo';
 
-            if (!puedeVenderse) {
-                this.swalService.showInfo(
-                    'Historia seleccionada',
-                    'Esta historia se agregará al carrito para poder asociarla a la venta.'
+            // Verificar si es una historia válida para solo consulta
+            const esValidaParaSoloConsulta = (esOftalmologo && !formulaExterna) || // Oftalmólogo interno
+                (formulaExterna && tieneFormulaOriginal && esOftalmologo); // Externa rectificada por oftalmólogo
+
+            if (!esValidaParaSoloConsulta) {
+                let mensaje = '';
+                if (esOptometrista) {
+                    mensaje = 'Las consultas de optometrista no generan costo y no se pueden vender como consulta.';
+                } else if (formulaExterna && !tieneFormulaOriginal) {
+                    mensaje = 'Las fórmulas externas puras no generan costo y no se pueden vender como consulta.';
+                } else if (formulaExterna && tieneFormulaOriginal && esOptometrista) {
+                    mensaje = 'Las rectificaciones por optometrista no generan costo.';
+                } else {
+                    mensaje = 'Esta historia no puede venderse como consulta.';
+                }
+
+                this.swalService.showInfo('No se puede vender', mensaje);
+                return;
+            }
+
+            // Si es válida pero ya está pagada
+            if (esOftalmologo && !pagoPendiente) {
+                this.swalService.showWarning(
+                    'Consulta ya pagada',
+                    'Esta consulta de oftalmólogo ya ha sido pagada anteriormente. No se puede volver a cobrar.'
                 );
+                return;
             }
 
             // Limpiar solo si hay otra consulta
@@ -8207,7 +8335,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Actualizar la historia seleccionada
             this.actualizarHistoriaSeleccionada(historia);
 
-            // Agregar al carrito (esto maneja internamente si tiene costo o no)
+            // Agregar al carrito
             setTimeout(() => {
                 this.agregarConsultaAlCarrito();
             }, 100);
@@ -8219,6 +8347,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // CASO: CONSULTA + PRODUCTOS
         // ============================================
         if (this.tipoVenta === 'consulta_productos') {
+
+            // Para consulta + productos, podemos seleccionar cualquier historia
+            // pero mostramos mensajes informativos según el caso
+            if (esOftalmologo && !pagoPendiente && !formulaExterna) {
+                this.swalService.showInfo(
+                    'Consulta pagada',
+                    'Esta consulta ya fue pagada anteriormente. Se agregará al carrito sin costo.'
+                );
+            } else if (formulaExterna && tieneFormulaOriginal && esOftalmologo && !pagoPendiente) {
+                this.swalService.showInfo(
+                    'Rectificación pagada',
+                    'Esta rectificación externa ya fue pagada anteriormente. Se agregará al carrito sin costo.'
+                );
+            }
+
             // Limpiar consulta anterior si existía
             if (this.consultaEnCarrito) {
                 this.limpiarConsulta();
@@ -8227,23 +8370,31 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Actualizar la historia seleccionada
             this.actualizarHistoriaSeleccionada(historia);
 
-            // Agregar al carrito (esto maneja internamente si tiene costo o no)
+            // Agregar al carrito
             setTimeout(() => {
                 this.agregarConsultaAlCarrito();
             }, 100);
 
-            // Mensaje informativo rápido (solo feedback visual)
+            // Mensaje informativo rápido
             let mensaje = '';
-            if (esOftalmologo) {
+            if (esOftalmologo && pagoPendiente && !formulaExterna) {
                 mensaje = '👁️ Consulta de oftalmólogo';
-            } else if (historia.tipoProfesional === 'optometrista') {
-                mensaje = '👓 Consulta de optometrista';
-            } else if (historia.formulaExterna) {
-                mensaje = '🔷 Fórmula externa';
+            } else if (esOftalmologo && !pagoPendiente && !formulaExterna) {
+                mensaje = '👁️ Consulta de oftalmólogo (pagada) - Sin costo';
+            } else if (esOptometrista) {
+                mensaje = '👓 Consulta de optometrista - Sin costo';
+            } else if (formulaExterna && !tieneFormulaOriginal) {
+                mensaje = '🔷 Fórmula externa - Sin costo';
+            } else if (formulaExterna && tieneFormulaOriginal && esOftalmologo && pagoPendiente) {
+                mensaje = '🔄 Rectificación por oftalmólogo (pendiente)';
+            } else if (formulaExterna && tieneFormulaOriginal && esOftalmologo && !pagoPendiente) {
+                mensaje = '🔄 Rectificación por oftalmólogo (pagada) - Sin costo';
+            } else if (formulaExterna && tieneFormulaOriginal && esOptometrista) {
+                mensaje = '🔄 Rectificación por optometrista - Sin costo';
             }
 
             if (mensaje) {
-                this.snackBar.open(mensaje, 'Cerrar', { duration: 1500 });
+                this.snackBar.open(mensaje, 'Cerrar', { duration: 2000 });
             }
 
             return;
@@ -8260,46 +8411,74 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     // Métodos para obtener información del especialista en ventas
-obtenerCargoEspecialista(historia: any): string {
-  if (!historia?.datosConsulta?.especialista) return 'Oftalmología';
-  
-  const esp = historia.datosConsulta.especialista;
-  if (esp.tipo === 'EXTERNO' && esp.externo) {
-    return esp.externo.nombre ? 'Médico Externo' : 'Externo';
-  } else if (esp.tipo === 'OFTALMOLOGO') {
-    return 'Oftalmólogo';
-  } else if (esp.tipo === 'OPTOMETRISTA') {
-    return 'Optometrista';
-  }
-  return 'Oftalmología';
-}
+    obtenerCargoEspecialista(historia: any): string {
+        if (!historia?.datosConsulta?.especialista) return 'Oftalmología';
 
-obtenerNombreEspecialista(historia: any): string {
-  if (!historia?.datosConsulta?.especialista) return '';
-  
-  const esp = historia.datosConsulta.especialista;
-  if (esp.tipo === 'EXTERNO' && esp.externo) {
-    return esp.externo.nombre || '';
-  } else if (esp.tipo !== 'EXTERNO') {
-    return esp.nombre || '';
-  }
-  return '';
-}
+        const esp = historia.datosConsulta.especialista;
+        if (esp.tipo === 'EXTERNO' && esp.externo) {
+            return esp.externo.nombre ? 'Médico Externo' : 'Externo';
+        } else if (esp.tipo === 'OFTALMOLOGO') {
+            return 'Oftalmólogo';
+        } else if (esp.tipo === 'OPTOMETRISTA') {
+            return 'Optometrista';
+        }
+        return 'Oftalmología';
+    }
 
-// Para determinar si es oftalmólogo (para el color del icono)
-esOftalmologo(historia: any): boolean {
-  if (!historia?.datosConsulta?.especialista) return false;
-  return historia.datosConsulta.especialista.tipo === 'OFTALMOLOGO';
-}
+    obtenerNombreEspecialista(historia: any): string {
+        if (!historia?.datosConsulta?.especialista) return '';
 
-esOptometrista(historia: any): boolean {
-  if (!historia?.datosConsulta?.especialista) return false;
-  return historia.datosConsulta.especialista.tipo === 'OPTOMETRISTA';
-}
+        const esp = historia.datosConsulta.especialista;
+        if (esp.tipo === 'EXTERNO' && esp.externo) {
+            return esp.externo.nombre || '';
+        } else if (esp.tipo !== 'EXTERNO') {
+            return esp.nombre || '';
+        }
+        return '';
+    }
 
-esExterno(historia: any): boolean {
-  if (!historia?.datosConsulta?.especialista) return false;
-  return historia.datosConsulta.especialista.tipo === 'EXTERNO';
-}
+    // Para determinar si es oftalmólogo (para el color del icono)
+    esOftalmologo(historia: any): boolean {
+        if (!historia?.datosConsulta?.especialista) return false;
+        return historia.datosConsulta.especialista.tipo === 'OFTALMOLOGO';
+    }
+
+    esOptometrista(historia: any): boolean {
+        if (!historia?.datosConsulta?.especialista) return false;
+        return historia.datosConsulta.especialista.tipo === 'OPTOMETRISTA';
+    }
+
+    esExterno(historia: any): boolean {
+        if (!historia?.datosConsulta?.especialista) return false;
+        return historia.datosConsulta.especialista.tipo === 'EXTERNO';
+    }
+
+    // Agrega este método en tu componente
+    private puedeVenderseComoConsulta(historia: any): boolean {
+        if (!historia) return false;
+
+        const tipo = this.determinarTipoHistoria(historia);
+        const pagoPendiente = historia.datosConsulta?.pagoPendiente === true;
+
+        // Para solo consulta, solo se puede vender:
+        // 1. Oftalmólogo con pago pendiente (no pagado)
+        // 2. Externa rectificada por oftalmólogo con pago pendiente
+        if (tipo === 'oftalmologo_pendiente') {
+            return true; // Oftalmólogo pendiente de pago
+        }
+
+        if (tipo === 'externa_rectificada_oftalmologo' && pagoPendiente) {
+            return true; // Externa rectificada con pago pendiente
+        }
+
+        // Los siguientes NO se pueden vender como consulta:
+        // - Oftalmólogo pagado
+        // - Optometrista (nunca genera costo)
+        // - Externa sin rectificar
+        // - Externa rectificada por optometrista
+        // - Externa rectificada por oftalmólogo pagada
+
+        return false;
+    }
 
 }

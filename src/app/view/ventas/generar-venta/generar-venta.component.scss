@@ -1732,6 +1732,11 @@
     color: #626463;
 }
 
+.status-badge.externa {
+    background: #d4edda;
+    color: #626463;
+}
+
 
 /* Overlay para no seleccionables */
 .no-selectable-overlay {
@@ -5775,7 +5780,7 @@
     border-radius: 0.5rem 0.5rem 0 0;
     position: relative;
     overflow: hidden;
-    height: 180px !important;
+    height: 110px !important;
 
     .header-content {
         display: flex;
@@ -7126,6 +7131,69 @@
 
         .search-hint {
             font-size: 0.6rem !important;
+        }
+    }
+}
+
+// historias-medicas.component.scss o el archivo de estilos correspondiente
+
+.historia-note {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+
+    i {
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    span {
+        line-height: 1.4;
+        flex: 1;
+    }
+
+    // Estilo por defecto (para consulta + productos)
+    &:not(.consulta-note) {
+        background: linear-gradient(135deg, #e8f0fe 0%, #d9e8fb 100%);
+        border-left: 4px solid #3b82f6;
+        color: #1e40af;
+
+        i {
+            color: #3b82f6;
+        }
+    }
+
+    // Estilo específico para solo consulta
+    &.consulta-note {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-left: 4px solid #f59e0b;
+        color: #92400e;
+
+        i {
+            color: #f59e0b;
+        }
+    }
+
+    // Hover effect
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .historia-note {
+        padding: 10px 12px;
+        font-size: 11px;
+
+        i {
+            font-size: 16px;
         }
     }
 }

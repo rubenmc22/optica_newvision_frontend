@@ -7,7 +7,8 @@ import { CierreCajaService } from './cierre-caja.service';
 import { HistorialVentaService } from '../../ventas/historial-ventas/historial-ventas.service';
 import { SystemConfigService } from './../../system-config/system-config.service';
 import { TasaCambiariaService } from './../../../core/services/tasaCambiaria/tasaCambiaria.service';
-import { UserStateService, SedeInfo } from './../../../core/services/userState/user-state-service';
+import { UserStateService } from './../../../core/services/userState/user-state-service';
+import { Sede, SedeCompleta } from '../../../view/login/login-interface';
 import { CierreDiario, Transaccion, ResumenMetodoPago, TasasCambio } from './cierre-caja.interfaz';
 import { User, Rol, AuthData, AuthResponse, Cargo } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
@@ -34,7 +35,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   mostrarMenuExport: boolean = false;
 
   // Información del usuario y sede
-  sedeActual: SedeInfo | null = null;
+  sedeActual: SedeCompleta | null = null;
   currentUser: User | null = null;
 
   // Configuración del sistema

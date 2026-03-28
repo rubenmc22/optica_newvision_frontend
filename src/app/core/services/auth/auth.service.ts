@@ -117,9 +117,10 @@ export class AuthService {
     );
   }
 
-  getSedes(): Observable<{ sedes: SedeCompleta[] }> {
+  getSedes(): Observable<{ message: string; sedes: SedeCompleta[] }> {
     return this.http.get<{ message: string; sedes: any[] }>(`${environment.apiUrl}/sedes-get`).pipe(
       map(response => ({
+        message: response.message,
         sedes: (response.sedes || []).map(sede => ({
           key: sede.key,
           nombre: sede.nombre,

@@ -2,27 +2,18 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { User, AuthData } from '../../../Interfaces/models-interface';
+import { Sede, SedeCompleta } from '../../../view/login/login-interface';
 
-export interface SedeInfo {
-  key: string;
-  nombre: string;
-  nombre_optica: string;
-  rif: string;
-  direccion: string;
-  telefono: string;
-  email: string;
-  direccion_fiscal: string | null;
-}
 
 @Injectable({ providedIn: 'root' })
 export class UserStateService {
   private userSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.userSubject.asObservable();
 
-  private sedesSubject = new BehaviorSubject<SedeInfo[]>([]);
+  private sedesSubject = new BehaviorSubject<SedeCompleta[]>([]);
   public sedes$ = this.sedesSubject.asObservable();
 
-  private sedeActualSubject = new BehaviorSubject<SedeInfo | null>(null);
+  private sedeActualSubject = new BehaviorSubject<SedeCompleta | null>(null);
   public sedeActual$ = this.sedeActualSubject.asObservable();
 
   constructor() {
@@ -45,7 +36,7 @@ export class UserStateService {
       try {
         const sedes = JSON.parse(sedesData);
         // Asegurar que los RIFs estén limpios
-        const sedesConRifLimpio = sedes.map((s: SedeInfo) => ({
+        const sedesConRifLimpio = sedes.map((s: SedeCompleta) => ({
           ...s,
           rif: this.limpiarRif(s.rif || '')
         }));
@@ -55,7 +46,7 @@ export class UserStateService {
         // Intentar cargar la sede actual del usuario
         const user = this.userSubject.value;
         if (user?.sede) {
-          const sedeActual = sedes.find((s: SedeInfo) => s.key === user.sede);
+          const sedeActual = sedes.find((s: SedeCompleta) => s.key === user.sede);
           if (sedeActual) {
             this.sedeActualSubject.next(sedeActual);
           }
@@ -95,7 +86,7 @@ export class UserStateService {
   }
 
   // ========== MÉTODOS PARA GESTIONAR SEDES ==========
-  setSedes(sedes: SedeInfo[]): void {
+  setSedes(sedes: SedeCompleta[]): void {
     // Normalizar keys
     const sedesNormalizadas = sedes.map(s => ({
       ...s,
@@ -139,21 +130,21 @@ export class UserStateService {
   /**
    * Obtiene la sede actual del usuario
    */
-  getSedeActual(): SedeInfo | null {
+  getSedeActual(): SedeCompleta | null {
     return this.sedeActualSubject.value;
   }
 
   /**
    * Obtiene todas las sedes
    */
-  getSedes(): SedeInfo[] {
+  getSedes(): SedeCompleta[] {
     return this.sedesSubject.value;
   }
 
   /**
    * Obtiene una sede específica por su key
    */
-  getSedePorKey(key: string): SedeInfo | null {
+  getSedePorKey(key: string): SedeCompleta | null {
     return this.sedesSubject.value.find(s => s.key === key) || null;
   }
 

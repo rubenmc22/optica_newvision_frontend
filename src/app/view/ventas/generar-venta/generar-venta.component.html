@@ -249,10 +249,6 @@
                                     {{ historiasOftalmologoNoExternas.length === 1 ? 'historia' : 'historias' }}
                                     <span class="badge-info ms-1">
                                         <i class="bi bi-eye"></i> Oftalmólogo
-                                        <span *ngIf="historiasExternasOftalmologoCount > 0" 
-                                            class="ms-1 badge-externa-mini">
-                                            (incl. externas)
-                                        </span>
                                     </span>
                                 </span>
                                 <span class="badge-warning"
@@ -343,13 +339,6 @@
                                         </span>
                                     </span>
                                 </div>
-
-                                <!-- Badge de fórmula externa -->
-                                <span class="badge-externa-mini"
-                                    *ngIf="tipoVenta === 'consulta_productos' && h.formulaExterna"
-                                    title="Fórmula externa">
-                                    <i class="bi bi-box-arrow-up-right"></i> Externa
-                                </span>
                             </div>
 
                             <!-- Cuerpo de la card -->
@@ -391,11 +380,11 @@
                 </div>
 
                 
-                    <!-- Overlay para no seleccionables -->
-                    <div class="historia-note" *ngIf="historiasMedicas.length > 0">
-                        <i class="bi bi-info-circle"></i>
-                        <span>Puede seleccionar cualquier historia para asociar a esta venta, incluso si ya está pagada.</span>
-                    </div>
+                <!-- Overlay para no seleccionables - SOLO para consulta + productos -->
+                <div class="historia-note" *ngIf="tipoVenta === 'consulta_productos' && historiasMedicas.length > 0">
+                    <i class="bi bi-info-circle"></i>
+                    <span>Puede seleccionar cualquier historia para asociar a esta venta, incluso si ya está pagada.</span>
+                </div>
             </div>
         </section>
 

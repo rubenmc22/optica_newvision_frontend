@@ -9,10 +9,11 @@ import { SystemConfigService } from '../../system-config/system-config.service';
 import { Subscription, Subject, debounceTime } from 'rxjs';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
-import { UserStateService, SedeInfo } from '../../../core/services/userState/user-state-service';
+import { UserStateService } from '../../../core/services/userState/user-state-service';
 import { EstadisticasVentas, ResumenFiltros, FiltrosVentas } from '../venta-interfaz';
 import { ChartService } from '../../../core/services/chart-service/chart.service';
 import { Chart, ChartData, ChartOptions } from 'chart.js';
+import { Sede, SedeCompleta } from '../../../view/login/login-interface';
 
 
 @Component({
@@ -123,8 +124,8 @@ export class HistorialVentasComponent implements OnInit {
   tasasPorId: { [key: string]: number } = {};
   tasasDisponibles: any[] = [];
   monedasDisponibles: any[] = [];
-  sedeInfo: SedeInfo | null = null;
-  sedesDisponibles: SedeInfo[] = [];
+  sedeInfo: SedeCompleta | null = null;
+  sedesDisponibles: SedeCompleta[] = [];
 
   // Propiedades para moneda del sistema
   monedaSistema: string = 'USD';

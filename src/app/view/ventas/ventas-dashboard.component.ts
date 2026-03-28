@@ -10,11 +10,12 @@ import { take, catchError } from 'rxjs/operators';
 import { LoaderService } from './../../shared/loader/loader.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AuthService } from '../../core/services/auth/auth.service';
-import { UserStateService, SedeInfo } from '../../core/services/userState/user-state-service';
+import { UserStateService } from '../../core/services/userState/user-state-service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { PacientesService } from '../../core/services/pacientes/pacientes.service';
 import { HistoriaMedicaService } from '../../core/services/historias-medicas/historias-medicas.service';
 import { HistoriaMedica } from './../historias-medicas/historias_medicas-interface';
+import { Sede, SedeCompleta } from '../../view/login/login-interface';
 
 @Component({
     selector: 'app-ventas-dashboard',
@@ -36,7 +37,7 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
     modoModal: 'agregar' | 'editar' | 'ver' = 'agregar';
     cargando: boolean = false;
     productosFiltradosPorSede: Producto[] = [];
-    sedesDisponibles: SedeInfo[] = [];
+    sedesDisponibles: SedeCompleta[] = [];
     tareasPendientes = 0;
     dataIsReady = false;
     venta: {
@@ -54,7 +55,7 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
     // FILTROS
     sedeActiva: string = '';
     sedeFiltro: string = this.sedeActiva;
-    sedeInfo: SedeInfo | null = null;
+    sedeInfo: SedeCompleta | null = null;
     sedesCargadas: boolean = false;
 
     // TASAS DE CAMBIO
@@ -137,12 +138,11 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
     // =========== MÉTODO: CARGAR SEDES ===========
     private async cargarSedesUnaVez(): Promise<void> {
         return new Promise((resolve, reject) => {
-
             this.authService.getSedes().subscribe({
-                next: (response: any) => {
-                    if (response.message === 'ok' && response.sedes) {
-                        const sedes = response.sedes;
-                        this.userStateService.setSedes(sedes);
+                next: (response: { message: string; sedes: SedeCompleta[] }) => {
+
+                    if (response.message === 'ok' && response.sedes && response.sedes.length > 0) {
+                        this.userStateService.setSedes(response.sedes);
                         resolve();
                     } else {
                         reject(new Error('Respuesta inválida del servidor'));
@@ -156,11 +156,13 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
                     if (sedesCache) {
                         try {
                             const sedes = JSON.parse(sedesCache);
-                            this.userStateService.setSedes(sedes);
-                            resolve();
-                            return;
+                            if (sedes && Array.isArray(sedes) && sedes.length > 0) {
+                                this.userStateService.setSedes(sedes);
+                                resolve();
+                                return;
+                            }
                         } catch (e) {
-                            console.error('Error al parsear caché de sedes:', e);
+                            console.error('Error al parsear caché:', e);
                         }
                     }
 
@@ -178,10 +180,10 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
 
     cambiarVista(v: typeof this.vista): void {
         // Corregir la condición - comparar v con cada valor por separado
-       /* if (v === 'cierre-de-caja' || v === 'presupuestos') {
-            alert('Funcionalidad en construccion..');
-            return;
-        }*/
+        /* if (v === 'cierre-de-caja' || v === 'presupuestos') {
+             alert('Funcionalidad en construccion..');
+             return;
+         }*/
         this.vista = v;
         this.actualizarEstadoVista(v);
         this.cdr.detectChanges();
