@@ -492,7 +492,7 @@
 
                     <!-- Monto y expandir -->
                     <div class="venta-monto-moderno">
-                        <div class="monto-valor">{{ getMontoParaMostrar(venta, venta.montoTotal) }}</div>
+                        <div class="monto-valor">{{ formatearMoneda(getTotalVentaSistema(venta), getMonedaSistema()) }}</div>
                         <div class="monto-label">Total</div>
                     </div>
 
@@ -506,50 +506,50 @@
                 <div *ngIf="venta.mostrarDetalle" class="venta-detalle-moderno">
                     
                     <!-- Resumen de totales -->
-<div class="detalle-resumen">
-    <div class="resumen-item">
-        <i class="bi bi-box-seam"></i>
-        <div>
-            <small>Productos</small>
-            <strong>{{ venta.productos?.length || 0 }} items</strong>
-        </div>
-    </div>
-    <div class="resumen-item">
-        <i class="bi bi-calculator"></i>
-        <div>
-            <small>Subtotal (sin IVA)</small>
-            <strong>{{ formatearMonedaVenta(venta, getSubtotalVenta(venta)) }}</strong>
-        </div>
-    </div>
-    <div class="resumen-item">
-        <i class="bi bi-percent"></i>
-        <div>
-            <small>IVA ({{ venta.impuesto || 16 }}%)</small>
-            <strong>{{ formatearMonedaVenta(venta, getIvaVenta(venta)) }}</strong>
-        </div>
-    </div>
-    <div class="resumen-item">
-        <i class="bi bi-cash-stack"></i>
-        <div>
-            <small>Total</small>
-            <strong class="text-primary">{{ formatearMonedaVenta(venta, getTotalVenta(venta)) }}</strong>
-        </div>
-    </div>
-    <div class="resumen-item">
-        <i class="bi bi-cash-coin"></i>
-        <div>
-            <small>Pagado</small>
-            <strong class="text-success">{{ formatearMonedaVenta(venta, getTotalPagadoVenta(venta)) }}</strong>
-        </div>
-    </div>
-    <div class="resumen-item" *ngIf="getDeudaPendiente(venta) > 0">
-        <i class="bi bi-clock-history"></i>
-        <div>
-            <small>Deuda pendiente</small>
-            <strong class="text-danger">{{ formatearMonedaVenta(venta, getDeudaPendiente(venta)) }}</strong>
-        </div>
-    </div>
-</div>
+                    <div class="detalle-resumen">
+                        <div class="resumen-item">
+                            <i class="bi bi-box-seam"></i>
+                            <div>
+                                <small>Productos</small>
+                                <strong>{{ venta.productos?.length || 0 }} items</strong>
+                            </div>
+                        </div>
+                        <div class="resumen-item">
+                            <i class="bi bi-calculator"></i>
+                            <div>
+                                <small>Subtotal (sin IVA)</small>
+                                <strong>{{ formatearMoneda(getSubtotalVentaSistema(venta), getMonedaSistema()) }}</strong>
+                            </div>
+                        </div>
+                        <div class="resumen-item">
+                            <i class="bi bi-percent"></i>
+                            <div>
+                                <small>IVA ({{ venta.impuesto || 16 }}%)</small>
+                                <strong>{{ formatearMoneda(getIvaVentaSistema(venta), getMonedaSistema()) }}</strong>
+                            </div>
+                        </div>
+                        <div class="resumen-item">
+                            <i class="bi bi-cash-stack"></i>
+                            <div>
+                                <small>Total</small>
+                                <strong class="text-primary">{{ formatearMoneda(getTotalVentaSistema(venta), getMonedaSistema()) }}</strong>
+                            </div>
+                        </div>
+                        <div class="resumen-item">
+                            <i class="bi bi-cash-coin"></i>
+                            <div>
+                                <small>Pagado</small>
+                                <strong class="text-success">{{ formatearMoneda(getTotalPagadoVentaSistema(venta), getMonedaSistema()) }}</strong>
+                            </div>
+                        </div>
+                        <div class="resumen-item" *ngIf="getDeudaPendienteVentaSistema(venta) > 0">
+                            <i class="bi bi-clock-history"></i>
+                            <div>
+                                <small>Deuda pendiente</small>
+                                <strong class="text-danger">{{ formatearMoneda(getDeudaPendienteVentaSistema(venta), getMonedaSistema()) }}</strong>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Observaciones -->
                     <div class="detalle-observaciones" *ngIf="venta.observaciones">

@@ -613,21 +613,22 @@ export class HistorialVentasComponent implements OnInit {
 
     const metodosPagoAdaptados = Array.isArray(metodosPagoApi) && metodosPagoApi.length > 0
       ? metodosPagoApi.map((metodo: any, index: number) => {
-        return {
-          numero_pago: index + 1,
-          montoAbonado: metodo.monto || 0,
-          observaciones: '',
-          metodosPago: [{
-            tipo: metodo.tipo || 'efectivo',
-            monto: metodo.monto || 0,
-            moneda_id: metodo.moneda || 'dolar',
-            monto_en_moneda_de_venta: metodo.monto || 0,
-            referencia: metodo.referencia,
-            bancoCodigo: metodo.bancoCodigo,
-            bancoNombre: metodo.bancoNombre,
-            fechaRegistro: venta.auditoria?.fechaCreacion
-          }]
-        };
+         const montoConvertido = index === 0 ? totalPagadoEnMonedaVenta : 0;
+           return {
+                numero_pago: index + 1,
+                montoAbonado: metodo.monto || 0,
+                observaciones: '',
+                metodosPago: [{
+                    tipo: metodo.tipo || 'efectivo',
+                    monto: metodo.monto || 0,
+                    moneda_id: metodo.moneda || 'dolar',
+                    monto_en_moneda_de_venta: montoConvertido, // ← Usar el valor correcto en dólares
+                    referencia: metodo.referencia,
+                    bancoCodigo: metodo.bancoCodigo,
+                    bancoNombre: metodo.bancoNombre,
+                    fechaRegistro: venta.auditoria?.fechaCreacion
+                }]
+            };
       })
       : [];
 
@@ -704,8 +705,8 @@ export class HistorialVentasComponent implements OnInit {
 
       // Configuración de la venta
       moneda: venta.moneda,
-      tipoVenta: venta.tipoVenta || 'solo_productos',   
-      formaPago: formaPagoReal,                           
+      tipoVenta: venta.tipoVenta || 'solo_productos',
+      formaPago: formaPagoReal,
       formaPagoCompleto: formaPagoDetalle,
       descuento: venta.descuento || 0,
       observaciones: venta.observaciones,
@@ -2242,9 +2243,9 @@ export class HistorialVentasComponent implements OnInit {
   // === MÉTODOS PARA MONEDA DEL SISTEMA ===
   private obtenerConfiguracionSistema(): void {
     this.monedaSistema = this.systemConfigService.getMonedaPrincipal();
-    console.log('MONEDA SISTEMA', this.monedaSistema );
+    console.log('MONEDA SISTEMA', this.monedaSistema);
     this.simboloMonedaSistema = this.systemConfigService.getSimboloMonedaPrincipal();
-    console.log('SIMBOLO SISTEMA', this.simboloMonedaSistema );
+    console.log('SIMBOLO SISTEMA', this.simboloMonedaSistema);
   }
 
   private suscribirCambiosConfiguracion(): void {
@@ -2273,17 +2274,6 @@ export class HistorialVentasComponent implements OnInit {
 
     // Para nombres completos
     return mapaMonedas[monedaSistema.toUpperCase()] || 'dolar';
-  }
-
-  getMontoParaMostrar(venta: any, monto: number): string {
-    if (!venta || monto === null || monto === undefined || isNaN(monto)) {
-      const moneda = venta?.moneda || 'dolar';
-      return this.formatearMoneda(0, moneda);
-    }
-
-    // Mostrar en la moneda de la venta
-    const moneda = venta.moneda || 'dolar';
-    return this.formatearMoneda(monto, moneda);
   }
 
   // Método para obtener la moneda según el tipo de pago
@@ -5764,10 +5754,95 @@ export class HistorialVentasComponent implements OnInit {
     return texto.replace(/\D/g, '');
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /**
+ * Obtiene la moneda del sistema (configuración global)
+ */
   getMonedaSistema(): string {
     return this.monedaSistema || 'dolar';
   }
 
+  /**
+   * Obtiene el símbolo de la moneda del sistema
+   */
+  getSimboloMonedaSistema(): string {
+    switch (this.getMonedaSistema()) {
+      case 'dolar': return '$';
+      case 'euro': return '€';
+      case 'bolivar': return 'Bs.';
+      default: return '$';
+    }
+  }
+
+  /**
+   * Obtiene la tasa de cambio de una moneda a la moneda del sistema
+   */
+  convertirAMonedaSistema(monto: number, monedaOrigen: string): number {
+    if (!monto || monto === 0) return 0;
+
+    const monedaOrigenNormalizada = this.normalizarMoneda(monedaOrigen);
+    const monedaDestino = this.getMonedaSistema();
+
+    // Si la moneda de origen es la misma que la del sistema, devolver el monto original
+    if (monedaOrigenNormalizada === monedaDestino) {
+      return monto;
+    }
+
+    // Convertir a bolívares primero, luego a la moneda destino
+    const tasaOrigen = this.obtenerTasaBolivar(monedaOrigenNormalizada);
+    const tasaDestino = this.obtenerTasaBolivar(monedaDestino);
+
+    console.log('tasaOrigen', tasaOrigen);
+    console.log('tasaDestino', tasaDestino);
+console.log('monto', monto);
+
+    if (tasaOrigen === 0 || tasaDestino === 0) return monto;
+
+    const montoEnBs = monto * tasaOrigen;
+    const montoConvertido = montoEnBs / tasaDestino;
+
+    console.log('montoEnBs', montoEnBs);
+    console.log('montoConvertido', montoConvertido);
+
+    return this.redondear(montoConvertido);
+  }
+
+  obtenerTasaBolivar(moneda: string): number {
+    const monedaNormalizada = this.normalizarMoneda(moneda);
+
+    switch (monedaNormalizada) {
+      case 'dolar':
+        return this.tasasPorId['dolar'];
+      case 'euro':
+        return this.tasasPorId['euro'];
+      case 'bolivar':
+        return 1;
+      default:
+        return 1;
+    }
+  }
+
+  /**
+   * Normaliza el nombre de la moneda
+   */
   normalizarMoneda(moneda: string): string {
     const monedaLower = moneda?.toLowerCase() || 'dolar';
     if (monedaLower === 'usd' || monedaLower === '$') return 'dolar';
@@ -5776,80 +5851,160 @@ export class HistorialVentasComponent implements OnInit {
     return monedaLower;
   }
 
-  getTotalPagadoVenta(venta: any): number {
+
+  /**
+   * Obtiene el total de la venta en la moneda del sistema
+   */
+  getTotalVentaSistema(venta: any): number {
     if (!venta) return 0;
 
-    if (venta.formaPagoCompleto?.totalPagado !== undefined && venta.formaPagoCompleto?.totalPagado !== null) {
-      return venta.formaPagoCompleto.totalPagado;
-    }
+    // Obtener el total en la moneda original de la venta
+    const totalOriginal = venta.formaPagoCompleto?.montoTotal || venta.total || 0;
+    const monedaOriginal = venta.moneda || 'dolar';
 
-    return 0;
+    // Convertir a la moneda del sistema
+    return this.convertirAMonedaSistema(totalOriginal, monedaOriginal);
   }
 
-  getDeudaPendiente(venta: any): number {
+  /**
+   * Obtiene el total pagado en la moneda del sistema
+   */
+  getTotalPagadoVentaSistema(venta: any): number {
     if (!venta) return 0;
 
-    // Si la venta está cancelada, no hay deuda
-    if (venta.estado === 'cancelada') {
-      return 0;
-    }
+    // Obtener el pagado en la moneda original de la venta
+    const pagadoOriginal = venta.formaPagoCompleto?.totalPagado || 0;
+    const monedaOriginal = venta.moneda || 'dolar';
 
-    if (venta.formaPagoCompleto?.deuda !== undefined && venta.formaPagoCompleto?.deuda !== null) {
-      return venta.formaPagoCompleto.deuda;
-    }
-
-    return 0;
+    // Convertir a la moneda del sistema
+    return this.convertirAMonedaSistema(pagadoOriginal, monedaOriginal);
   }
 
-  getTotalVenta(venta: any): number {
+  /**
+   * Obtiene la deuda pendiente en la moneda del sistema
+   */
+  getDeudaPendienteVentaSistema(venta: any): number {
     if (!venta) return 0;
 
-    if (venta.formaPagoCompleto?.montoTotal !== undefined && venta.formaPagoCompleto?.montoTotal !== null) {
-      return venta.formaPagoCompleto.montoTotal;
-    }
+    // Obtener la deuda en la moneda original de la venta
+    const deudaOriginal = venta.formaPagoCompleto?.deuda || 0;
+    const monedaOriginal = venta.moneda || 'dolar';
 
-    return venta.total || 0;
+    // Convertir a la moneda del sistema
+    return this.convertirAMonedaSistema(deudaOriginal, monedaOriginal);
   }
 
-  getSubtotalVenta(venta: any): number {
-    const total = this.getTotalVenta(venta);
+  /**
+   * Obtiene el subtotal en la moneda del sistema
+   */
+  getSubtotalVentaSistema(venta: any): number {
+    const total = this.getTotalVentaSistema(venta);
     const impuesto = venta.impuesto || 16;
 
-    // subtotal = total / (1 + impuesto/100)
     const subtotal = total / (1 + (impuesto / 100));
-
     return this.redondear(subtotal);
   }
 
-  getIvaVenta(venta: any): number {
-    const total = this.getTotalVenta(venta);
-    const subtotal = this.getSubtotalVenta(venta);
+  /**
+   * Obtiene el IVA en la moneda del sistema
+   */
+  getIvaVentaSistema(venta: any): number {
+    const total = this.getTotalVentaSistema(venta);
+    const subtotal = this.getSubtotalVentaSistema(venta);
 
     return this.redondear(total - subtotal);
   }
 
-  formatearMonedaVenta(venta: any, monto: number): string {
+  /**
+   * Obtiene el monto formateado en la moneda del sistema
+   */
+  getMontoParaMostrar(venta: any, monto: number, monedaOrigen?: string): string {
     if (!venta || monto === null || monto === undefined || isNaN(monto)) {
-      return this.obtenerSimboloMoneda(venta?.moneda || 'dolar') + '0,00';
+      return this.formatearMoneda(0, this.getMonedaSistema());
     }
 
+    // Determinar la moneda de origen
+    let monedaOrigenReal = monedaOrigen;
+    if (!monedaOrigenReal) {
+      monedaOrigenReal = venta.moneda || 'dolar';
+    }
+
+    // Convertir a la moneda del sistema
+    const montoConvertido = this.convertirAMonedaSistema(monto, monedaOrigenReal);
+
+    // Formatear en la moneda del sistema
+    return this.formatearMoneda(montoConvertido, this.getMonedaSistema());
+  }
+
+
+
+
+
+
+
+
+
+
+
+  // Estos métodos devuelven valores en la moneda original de la venta (dólares)
+getTotalVenta(venta: any): number {
+    if (!venta) return 0;
+    if (venta.formaPagoCompleto?.montoTotal !== undefined) {
+        return venta.formaPagoCompleto.montoTotal;
+    }
+    return venta.total || 0;
+}
+
+getTotalPagadoVenta(venta: any): number {
+    if (!venta) return 0;
+    if (venta.formaPagoCompleto?.totalPagado !== undefined) {
+        return venta.formaPagoCompleto.totalPagado;
+    }
+    return 0;
+}
+
+getDeudaPendiente(venta: any): number {
+    if (!venta) return 0;
+    if (venta.estado === 'cancelada') return 0;
+    if (venta.formaPagoCompleto?.deuda !== undefined) {
+        return venta.formaPagoCompleto.deuda;
+    }
+    return 0;
+}
+
+getSubtotalVenta(venta: any): number {
+    const total = this.getTotalVenta(venta);
+    const impuesto = venta.impuesto || 16;
+    return total / (1 + (impuesto / 100));
+}
+
+getIvaVenta(venta: any): number {
+    const total = this.getTotalVenta(venta);
+    const subtotal = this.getSubtotalVenta(venta);
+    return total - subtotal;
+}
+
+formatearMonedaVenta(venta: any, monto: number): string {
+    if (!venta || monto === null || monto === undefined || isNaN(monto)) {
+        const moneda = venta?.moneda || 'dolar';
+        return this.obtenerSimboloMoneda(moneda) + '0,00';
+    }
     const moneda = venta.moneda || 'dolar';
     const simbolo = this.obtenerSimboloMoneda(moneda);
-
-    // Formatear número al estilo venezolano
+    
     const valorRedondeado = Math.round(monto * 100) / 100;
     const partes = valorRedondeado.toString().split('.');
     let parteEntera = partes[0];
     let parteDecimal = partes[1] || '00';
     parteDecimal = parteDecimal.padEnd(2, '0');
     parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
+    
     if (simbolo === 'Bs.' || simbolo === 'Bs') {
-      return `${simbolo} ${parteEntera},${parteDecimal}`;
+        return `${simbolo} ${parteEntera},${parteDecimal}`;
     } else {
-      return `${simbolo}${parteEntera},${parteDecimal}`;
+        return `${simbolo}${parteEntera},${parteDecimal}`;
     }
-  }
+}
 
 
 
