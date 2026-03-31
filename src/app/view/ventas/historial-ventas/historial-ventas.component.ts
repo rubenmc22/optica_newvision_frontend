@@ -412,9 +412,6 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  /**
-  * Carga los empleados desde el API y los separa en asesores y especialistas
-  */
   private cargarEmpleados(): void {
     this.empleadosService.getAllEmpleados().subscribe({
       next: (response: any) => {
@@ -448,9 +445,6 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  /**
-   * Procesa la lista de empleados y los separa en asesores y especialistas
-   */
   private procesarEmpleados(usuarios: any[]): void {
     // Filtrar solo empleados activos (usando estatus en lugar de activo)
     const empleadosActivos = usuarios.filter(usuario =>
@@ -493,9 +487,7 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  /**
-   * Determina el tipo de especialista basado en el cargo
-   */
+
   private obtenerTipoEspecialista(usuario: any): string {
     const cargoId = usuario.cargoId?.toLowerCase();
     const cargoNombre = usuario.cargoNombre?.toLowerCase();
@@ -610,74 +602,78 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private adaptarVentaDelApi(ventaApi: any): any {
-    const venta = ventaApi.venta;
-    const totales = ventaApi.totales;
-    const cliente = ventaApi.cliente;
-    const asesor = ventaApi.asesor;
-    const especialista = ventaApi.cliente.especialista;
-    const productos = ventaApi.productos;
-    const metodosPagoApi = ventaApi.metodosPago;
-    const formaPago = ventaApi.formaPago;
+    const venta = ventaApi;
+    const metodosPagoApi = venta.metodosDePago || [];
+
+    const totalPagadoEnMonedaVenta = Array.isArray(metodosPagoApi)
+      ? metodosPagoApi.reduce((total: number, metodo: any) => {
+        return total + (metodo.monto || 0);
+      }, 0)
+      : 0;
+
+    const metodosPagoAdaptados = Array.isArray(metodosPagoApi) && metodosPagoApi.length > 0
+      ? metodosPagoApi.map((metodo: any, index: number) => {
+        return {
+          numero_pago: index + 1,
+          montoAbonado: metodo.monto || 0,
+          observaciones: '',
+          metodosPago: [{
+            tipo: metodo.tipo || 'efectivo',
+            monto: metodo.monto || 0,
+            moneda_id: metodo.moneda || 'dolar',
+            monto_en_moneda_de_venta: metodo.monto || 0,
+            referencia: metodo.referencia,
+            bancoCodigo: metodo.bancoCodigo,
+            bancoNombre: metodo.bancoNombre,
+            fechaRegistro: venta.auditoria?.fechaCreacion
+          }]
+        };
+      })
+      : [];
 
     // Determinar el estado para filtros
     const estadoVenta = this.determinarEstadoVenta(venta.estatus_venta);
 
-    // Calcular el total pagado en la moneda de la venta, necesitamos sumar todos los montoAbonado de cada grupo
-    const totalPagadoEnMonedaVenta = metodosPagoApi.reduce((total: number, grupo: any) => {
-      return total + (grupo.montoAbonado || 0);
-    }, 0);
-
     // Determinar si es Cashea
-    const esCashea = formaPago?.tipo === 'cashea';
-
-    // Preparar métodos de pago manteniendo la estructura de grupos
-    const metodosPagoAdaptados = metodosPagoApi.map((grupo: any) => {
-
-      return {
-        numero_pago: grupo.numero_pago || 1,
-        montoAbonado: grupo.montoAbonado || 0,
-        observaciones: grupo.observaciones,
-        metodosPago: (grupo.metodosPago || []).map((metodo: any) => {
-
-          return {
-            tipo: metodo.tipo || 'efectivo',
-            monto: metodo.monto || 0,
-            moneda_id: metodo.moneda_id || 'dolar',
-            monto_en_moneda_de_venta: metodo.monto_moneda_base || metodo.monto || 0,
-            referencia: metodo.referencia,
-            bancoCodigo: metodo.bancoCodigo,
-            bancoNombre: metodo.bancoNombre,
-            fechaRegistro: metodo.fechaRegistro,
-            tasa_moneda: metodo.tasa_moneda
-          };
-        })
-      };
-    });
+    const formaPagoDetalle = venta.formaPagoDetalle;
+    const esCashea = formaPagoDetalle?.tipo === 'cashea';
 
     // Preparar productos limpios
-    const productosLimpios = productos.map((prod: any) => {
-      // Calcular el subtotal correcto (precio unitario * cantidad)
-      const subtotal = (prod.precio_unitario || 0) * (prod.cantidad || 1);
+    const productos = venta.productos || [];
+    const productosLimpios = Array.isArray(productos)
+      ? productos.map((prod: any) => {
+        const precioUnitario = prod.precio || 0;
+        const cantidad = prod.cantidad || 1;
+        const subtotal = precioUnitario * cantidad;
+        const tieneIva = prod.aplicaIva === true;
+        const iva = tieneIva ? (subtotal * (venta.impuesto || 16) / 100) : 0;
 
-      // Calcular el total que viene del API
-      const totalProducto = prod.total || 0;
+        return {
+          id: prod.id?.toString(),
+          nombre: prod.nombre,
+          codigo: prod.codigo,
+          precio: prod.precio,
+          cantidad: cantidad,
+          aplicaIva: tieneIva,
+          iva: iva,
+          subtotal: subtotal,
+          total: subtotal + iva
+        };
+      })
+      : [];
 
-      // Calcular el IVA correctamente (total - subtotal)
-      const tieneIva = totalProducto > subtotal;
-      const iva = tieneIva ? totalProducto - subtotal : 0;
+    // Preparar información del cliente
+    const cliente = venta.cliente || {};
+    const asesor = venta.asesor || {};
+    const especialista = venta.especialista || {};
 
-      return {
-        id: prod.datos.id.toString(),
-        nombre: prod.datos.nombre,
-        codigo: prod.datos.codigo,
-        precio: prod.precio_unitario,
-        cantidad: prod.cantidad,
-        aplicaIva: tieneIva,
-        iva: iva,
-        subtotal: subtotal,
-        total: totalProducto
-      };
-    });
+    // Obtener la forma de pago real
+    let formaPagoReal = 'contado';
+    if (formaPagoDetalle?.tipo) {
+      formaPagoReal = formaPagoDetalle.tipo;
+    } else if (venta.formaPago) {
+      formaPagoReal = venta.formaPago;
+    }
 
     // Construir objeto final
     const ventaAdaptada: any = {
@@ -687,7 +683,7 @@ export class HistorialVentasComponent implements OnInit {
       numeroRecibo: venta.numero_recibo,
 
       // Información temporal
-      fecha: new Date(venta.fecha),
+      fecha: new Date(venta.auditoria?.fechaCreacion || venta.fecha),
 
       // Estados
       estado: estadoVenta,
@@ -695,103 +691,88 @@ export class HistorialVentasComponent implements OnInit {
       estadoParaFiltros: this.mapearEstadoParaFiltros(venta.estatus_venta),
 
       // Totales financieros
-      montoTotal: totales.total,
-      subtotal: totales.subtotal,
-      totalIva: totales.iva || 0,
-      totalDescuento: totales.descuento || 0,
-      total: totales.total,
+      montoTotal: venta.total || 0,
+      subtotal: venta.subtotal || 0,
+      totalIva: venta.impuesto ? (venta.total * venta.impuesto / 100) : 0,
+      totalDescuento: venta.descuento || 0,
+      total: venta.total || 0,
 
       // Información de pago
-      pagoCompleto: totalPagadoEnMonedaVenta >= totales.total,
-      montoAbonado: totalPagadoEnMonedaVenta, // Usar la suma calculada
-      deudaPendiente: formaPago?.deudaPendiente || Math.max(0, totales.total - totalPagadoEnMonedaVenta),
+      pagoCompleto: totalPagadoEnMonedaVenta >= (venta.total || 0),
+      montoAbonado: totalPagadoEnMonedaVenta,
+      deudaPendiente: formaPagoDetalle?.deuda || Math.max(0, (venta.total || 0) - totalPagadoEnMonedaVenta),
 
       // Configuración de la venta
       moneda: venta.moneda,
-      formaPago: venta.formaPago,
-      formaPagoCompleto: formaPago,
-      descuento: totales.descuento || 0,
+      tipoVenta: venta.tipoVenta || 'solo_productos',   
+      formaPago: formaPagoReal,                           
+      formaPagoCompleto: formaPagoDetalle,
+      descuento: venta.descuento || 0,
       observaciones: venta.observaciones,
 
       // Personas involucradas
-      paciente: {
-        nombre: cliente.informacion.nombreCompleto,
-        cedula: cliente.informacion.cedula,
-        telefono: cliente.informacion.telefono,
-        email: cliente.informacion.email
+      paciente: cliente ? {
+        nombre: cliente.nombre || 'CLIENTE GENERAL',
+        cedula: cliente.cedula || 'N/A',
+        telefono: cliente.telefono || 'N/A',
+        email: cliente.email || ''
+      } : {
+        nombre: 'CLIENTE GENERAL',
+        cedula: 'N/A',
+        telefono: 'N/A',
+        email: ''
       },
-      asesor: {
+      asesor: asesor ? {
         id: asesor.id,
-        nombre: asesor.nombre,
-        cedula: asesor.cedula
+        nombre: asesor.nombre || 'No asignado',
+        cedula: asesor.cedula || ''
+      } : {
+        id: null,
+        nombre: 'No asignado',
+        cedula: ''
       },
-      especialista: {
+      especialista: especialista ? {
         id: especialista.id,
         nombre: especialista.nombre,
-        cedula: especialista.cedula
-      },
+        cedula: especialista.cedula,
+        tipo: especialista.tipo
+      } : null,
 
       // Contenido de la venta
       productos: productosLimpios,
-      productosOriginales: ventaApi.productos,
+      productosOriginales: productos,
       servicios: [],
-      metodosPago: metodosPagoAdaptados, // ← Aquí usamos la estructura adaptada
+      metodosPago: metodosPagoAdaptados,
 
       // Configuración local
       mostrarDetalle: false,
-      sede: 'guatire',
+      sede: venta.sede,
 
       // Información de cancelación
       motivo_cancelacion: venta.motivo_cancelacion,
       fecha_cancelacion: venta.fecha_cancelacion ? new Date(venta.fecha_cancelacion) : null,
 
       // Historia médica
-      historiaMedica: ventaApi.ultima_historia_medica || null,
+      historiaMedica: venta.consulta || null,
 
       // Información del impuesto
       impuesto: venta.impuesto || 16
     };
 
     // Solo agregar información específica de Cashea si aplica
-    if (esCashea && formaPago) {
+    if (esCashea && formaPagoDetalle) {
       ventaAdaptada.financiado = true;
-      ventaAdaptada.nivelCashea = formaPago.nivel;
-      ventaAdaptada.montoInicial = formaPago.montoInicial;
-      ventaAdaptada.cantidadCuotas = formaPago.cantidadCuotas;
-      ventaAdaptada.montoPorCuota = formaPago.montoPorCuota;
-
-      // Solo agregar cuotas adelantadas si existen
-      if (formaPago.cuotas?.length > 0) {
-        const cuotasSeleccionadas = formaPago.cuotas.filter((c: any) => c.seleccionada);
-        if (cuotasSeleccionadas.length > 0) {
-          ventaAdaptada.cuotasAdelantadas = cuotasSeleccionadas.map((c: any) => ({
-            numero: c.numero,
-            monto: c.monto,
-            fechaVencimiento: c.fecha_vencimiento
-          }));
-          ventaAdaptada.totalAdelantado = formaPago.montoAdelantado || 0;
-        }
-      }
+      ventaAdaptada.nivelCashea = formaPagoDetalle.nivel;
+      ventaAdaptada.montoInicial = formaPagoDetalle.montoInicial;
+      ventaAdaptada.cantidadCuotas = formaPagoDetalle.cantidadCuotas;
+      ventaAdaptada.montoPorCuota = formaPagoDetalle.montoPorCuota;
+      ventaAdaptada.cuotasAdelantadas = formaPagoDetalle.cuotasAdelantadas || [];
+      ventaAdaptada.totalAdelantado = formaPagoDetalle.montoAdelantado || 0;
     } else {
       ventaAdaptada.financiado = false;
     }
 
     return ventaAdaptada;
-  }
-
-  private normalizarFormaPago(formaPagoApi: string): string {
-    const mapeo: { [key: string]: string } = {
-      'contado': 'contado',
-      'de_contado': 'contado',
-      'contado-pendiente': 'contado-pendiente',
-      'de_contado-pendiente': 'contado-pendiente',
-      'abono': 'abono',
-      'cashea': 'cashea',
-      'credito': 'credito'
-    };
-
-    const clave = formaPagoApi?.toLowerCase() || '';
-    return mapeo[clave] || formaPagoApi;
   }
 
   private determinarEstadoVenta(estatusVenta: string): string {
@@ -803,9 +784,6 @@ export class HistorialVentasComponent implements OnInit {
     return 'completada';
   }
 
-  /**
-   * Mapea el estado de pago del API al formato del componente
-   */
   private mapearEstadoPago(estatusPago: string): string {
     const mapeo: { [key: string]: string } = {
       'completada': 'completado',
@@ -1056,38 +1034,6 @@ export class HistorialVentasComponent implements OnInit {
   formatNumeroVenta(id: number): string {
     if (!id) return '#000';
     return `#${id.toString().padStart(3, '0')}`;
-  }
-
-  // Método para obtener el total pagado de una venta
-  getTotalPagadoVenta(venta: any): number {
-    if (!venta) return 0;
-
-    //Usar totalPagado del objeto formaPago (si existe y es válido)
-    if (venta?.formaPago?.totalPagadoAhora !== undefined &&
-      venta?.formaPago?.totalPagadoAhora !== null) {
-      return venta.formaPago.totalPagadoAhora;
-    }
-
-    //Usar montoAbonado directamente
-    if (venta?.montoAbonado !== undefined && venta?.montoAbonado !== null) {
-      return venta.montoAbonado;
-    }
-
-    //Calcular sumando métodos de pago (fallback)
-    if (venta?.metodosPago && venta.metodosPago.length > 0) {
-      let totalCalculado = 0;
-
-      // Sumar montos en la moneda de la venta
-      venta.metodosPago.forEach((pago: any) => {
-        const montoPagado = pago.monto_en_moneda_de_venta || 0;
-        totalCalculado += montoPagado;
-      });
-
-      return totalCalculado;
-    }
-
-    // Si no hay nada, devolver 0
-    return 0;
   }
 
   mostrarBotonEditar(venta: any): boolean {
@@ -1675,9 +1621,6 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  /**
-   * Calcular porcentaje abonado para el modal de edición
-   */
   calcularPorcentajeAbonadoEnModal(): number {
     if (!this.selectedVenta || !this.selectedVenta.total) return 0;
 
@@ -2259,46 +2202,6 @@ export class HistorialVentasComponent implements OnInit {
     return Math.max(0, deudaRestante);
   }
 
-  // Método MEJORADO para obtener la deuda pendiente
-  getDeudaPendiente(venta: any): number {
-    if (!venta) return 0;
-
-    // Si la venta está cancelada, no hay deuda
-    if (venta.estado === 'cancelada') {
-      return 0;
-    }
-
-    // Forma 1: deudaPendiente directo en formaPago
-    if (venta?.formaPago?.deudaPendiente !== undefined &&
-      venta?.formaPago?.deudaPendiente !== null) {
-      const deudaAPI = venta.formaPago.deudaPendiente;
-      return Math.max(0, deudaAPI);
-    }
-
-    // Forma 2: Buscar en formaPagoCompleto
-    if (venta?.formaPagoCompleto?.deudaPendiente !== undefined &&
-      venta?.formaPagoCompleto?.deudaPendiente !== null) {
-      const deudaAPI = venta.formaPagoCompleto.deudaPendiente;
-      return Math.max(0, deudaAPI);
-    }
-
-    // Forma 3: Buscar en propiedades mapeadas
-    const deudaPendienteMapeada = venta?.deudaPendiente;
-    if (deudaPendienteMapeada !== undefined && deudaPendienteMapeada !== null) {
-      return Math.max(0, deudaPendienteMapeada);
-    }
-
-    // PRIORIDAD 2: Calcular basado en total y pagado
-    const totalVenta = venta.total || 0;
-    const totalPagado = this.getTotalPagadoVenta(venta);
-
-    // Para evitar errores de precisión, redondear
-    const deudaCalculada = Math.max(0, totalVenta - totalPagado);
-    const deudaRedondeada = Math.round(deudaCalculada * 100) / 100;
-
-    return deudaRedondeada;
-  }
-
   // Método para obtener el estatus de pago
   getEstatusPago(venta: any): string {
     if (venta.estado === 'cancelada') {
@@ -2306,8 +2209,6 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     const deuda = this.getDeudaPendiente(venta);
-
-    console.log('Deuda', deuda);
 
     if (deuda === 0) {
       return 'Pago completado';
@@ -2341,7 +2242,9 @@ export class HistorialVentasComponent implements OnInit {
   // === MÉTODOS PARA MONEDA DEL SISTEMA ===
   private obtenerConfiguracionSistema(): void {
     this.monedaSistema = this.systemConfigService.getMonedaPrincipal();
+    console.log('MONEDA SISTEMA', this.monedaSistema );
     this.simboloMonedaSistema = this.systemConfigService.getSimboloMonedaPrincipal();
+    console.log('SIMBOLO SISTEMA', this.simboloMonedaSistema );
   }
 
   private suscribirCambiosConfiguracion(): void {
@@ -2372,21 +2275,15 @@ export class HistorialVentasComponent implements OnInit {
     return mapaMonedas[monedaSistema.toUpperCase()] || 'dolar';
   }
 
-
-
-  // Método mejorado para mostrar montos en métodos de pago
-  getMontoParaMostrarMetodoPago(metodo: any, venta: any): string {
-    const monedaPago = metodo.moneda_id || this.getMonedaParaMetodoPorTipo(metodo.tipo);
-    const monedaVenta = venta.moneda;
-
-    // Si el pago es en la misma moneda de la venta, mostrar directamente
-    if (monedaPago === monedaVenta) {
-      return this.formatearMontoConMoneda(metodo.monto, monedaPago);
+  getMontoParaMostrar(venta: any, monto: number): string {
+    if (!venta || monto === null || monto === undefined || isNaN(monto)) {
+      const moneda = venta?.moneda || 'dolar';
+      return this.formatearMoneda(0, moneda);
     }
 
-    // Si el pago es en diferente moneda, mostrar el monto en la moneda del pago
-    // y calcular el equivalente
-    return this.formatearMontoConMoneda(metodo.monto, monedaPago);
+    // Mostrar en la moneda de la venta
+    const moneda = venta.moneda || 'dolar';
+    return this.formatearMoneda(monto, moneda);
   }
 
   // Método para obtener la moneda según el tipo de pago
@@ -2676,35 +2573,17 @@ export class HistorialVentasComponent implements OnInit {
     );
   }
 
-  private cargarVentasPagina(pagina: number, esBusquedaConFiltros: boolean = false, esBusquedaDinamica: boolean = false): void {
+  cargarVentasPagina(pagina: number, esBusquedaConFiltros: boolean = false, esBusquedaDinamica: boolean = false): void {
     if (this.ventasCargando) return;
 
     this.ventasCargando = true;
 
-    // Solo mostrar loader si NO es búsqueda dinámica
     if (!esBusquedaDinamica) {
-      if (esBusquedaConFiltros) {
-        this.loader.showWithMessage('🔍 Aplicando filtros...');
-      } else if (pagina === 1 && !this.hayFiltrosActivos()) {
-        this.loader.showWithMessage('📋 Cargando historial de ventas...');
-      } else {
-        this.loader.showWithMessage('📋 Cargando ventas...');
-      }
+      this.loader.showWithMessage('📋 Cargando ventas...');
     }
 
     // Preparar filtros para el backend
     const filtrosBackend = { ...this.filtros };
-
-    // Si hay búsqueda mejorada, agregar los campos adicionales
-    if (this.filtrosMejorados && this.filtrosMejorados.soloNumeros) {
-      filtrosBackend.busquedaNumerica = this.filtrosMejorados.soloNumeros;
-      filtrosBackend.ultimosDigitos = this.filtrosMejorados.ultimosDigitos;
-      filtrosBackend.tipoBusqueda = this.filtrosMejorados.tipo || 'texto';
-
-      if (this.filtrosMejorados.valorNormalizado) {
-        filtrosBackend.valorNormalizado = this.filtrosMejorados.valorNormalizado;
-      }
-    }
 
     this.historialVentaService.obtenerVentasPaginadas(
       pagina,
@@ -2715,7 +2594,8 @@ export class HistorialVentasComponent implements OnInit {
         this.ventasCargando = false;
         this.buscando = false;
 
-        if (response.message === 'ok' && response.ventas) {
+        // ✅ Verificar que response y response.ventas existan
+        if (response && response.message === 'ok' && response.ventas && Array.isArray(response.ventas)) {
           const ventasPagina = response.ventas.map((ventaApi: any) =>
             this.adaptarVentaDelApi(ventaApi)
           );
@@ -2725,6 +2605,7 @@ export class HistorialVentasComponent implements OnInit {
           this.paginacion.totalPaginas = response.pagination?.pages || 1;
           this.ventasFiltradas = ventasPagina;
           this.generarRangoPaginas();
+
         } else {
           console.error('Respuesta inesperada del API de ventas:', response);
           this.ventasFiltradas = [];
@@ -2747,6 +2628,7 @@ export class HistorialVentasComponent implements OnInit {
           this.loader.hide();
         }
 
+        // Mostrar mensaje de error al usuario
         this.swalService.showError('Error', 'No se pudieron cargar las ventas. Verifique su conexión.');
       }
     });
@@ -2767,8 +2649,6 @@ export class HistorialVentasComponent implements OnInit {
       next: (response: any) => {
         this.estadisticasCargando = false;
 
-        console.log('📊 Respuesta de estadísticas:', response);
-
         if (response.message === 'ok') {
           // Usar los datos directamente del API
           this.estadisticas = {
@@ -2782,8 +2662,6 @@ export class HistorialVentasComponent implements OnInit {
             montoTotalGeneral: response.montoTotalGeneral || 0
           };
 
-
-          console.log('📊 Estadísticas actualizadas:', this.estadisticas);
         } else {
           console.warn('Formato de respuesta inesperado:', response);
           this.estadisticas = this.crearEstadisticasVacias();
@@ -2999,28 +2877,42 @@ export class HistorialVentasComponent implements OnInit {
   // Método mejorado para formatear con soporte de euro
   formatearMoneda(monto: number | null | undefined, moneda?: string): string {
     if (monto === null || monto === undefined || isNaN(monto)) {
-      const monedaDefault = moneda || this.selectedVenta?.moneda || this.monedaSistema;
-      return this.obtenerSimboloMoneda(monedaDefault) + '0,00';
+      const monedaFinal = moneda || this.getMonedaSistema();
+      return this.obtenerSimboloMoneda(monedaFinal) + '0,00';
     }
 
     const montoNumerico = Number(monto);
-
     if (isNaN(montoNumerico)) {
-      const monedaDefault = moneda || this.selectedVenta?.moneda || this.monedaSistema;
-      return this.obtenerSimboloMoneda(monedaDefault) + '0,00';
+      const monedaFinal = moneda || this.getMonedaSistema();
+      return this.obtenerSimboloMoneda(monedaFinal) + '0,00';
     }
 
-    // Determinar moneda
-    let monedaFinal = moneda;
-    if (!monedaFinal && this.ventaParaRecibo) {
-      monedaFinal = this.ventaParaRecibo.moneda || 'dolar';
-    }
-    if (!monedaFinal) {
-      monedaFinal = this.monedaSistema;
-    }
-
+    const monedaFinal = moneda || this.getMonedaSistema();
     const simbolo = this.obtenerSimboloMoneda(monedaFinal);
-    return this.formatearNumeroVenezolano(montoNumerico, simbolo);
+
+    // Formatear número al estilo venezolano
+    const valorRedondeado = Math.round(montoNumerico * 100) / 100;
+    const partes = valorRedondeado.toString().split('.');
+    let parteEntera = partes[0];
+    let parteDecimal = partes[1] || '00';
+    parteDecimal = parteDecimal.padEnd(2, '0');
+    parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+    if (simbolo === 'Bs.' || simbolo === 'Bs') {
+      return `${simbolo} ${parteEntera},${parteDecimal}`;
+    } else {
+      return `${simbolo}${parteEntera},${parteDecimal}`;
+    }
+  }
+
+  obtenerSimboloMoneda(moneda: string): string {
+    const monedaNormalizada = this.normalizarMoneda(moneda);
+    switch (monedaNormalizada) {
+      case 'dolar': return '$';
+      case 'euro': return '€';
+      case 'bolivar': return 'Bs.';
+      default: return '$';
+    }
   }
 
   // Función para formatear números al estilo venezolano
@@ -3048,44 +2940,6 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  // Función para obtener el símbolo de moneda
-  obtenerSimboloMoneda(moneda: string): string {
-    // Normalizar la moneda
-    const monedaNormalizada = moneda.toLowerCase();
-
-    if (monedaNormalizada === 'bs' || monedaNormalizada === 'ves' || monedaNormalizada === 'bolivar' || monedaNormalizada === 'bolívar') {
-      return 'Bs.';
-    } else if (monedaNormalizada === 'eur' || monedaNormalizada === 'euro' || monedaNormalizada === '€') {
-      return '€';
-    } else {
-      // Por defecto, dólares
-      return '$';
-    }
-  }
-
-  // Método para CONVERSIÓN A MONEDA DEL SISTEMA
-  getMontoParaMostrar(venta: any, monto: number): string {
-    if (!venta || monto === null || monto === undefined || isNaN(monto)) {
-      return this.formatearMoneda(0, this.monedaSistema);
-    }
-
-    // Obtener la moneda de la venta
-    const monedaVenta = venta.moneda || 'dolar';
-
-    const monedaSistemaNormalizada = this.normalizarMonedaParaVenta(this.monedaSistema);
-
-    // Si la moneda de la venta ya es la misma que la del sistema, mostrar directamente
-    if (monedaVenta === monedaSistemaNormalizada) {
-      return this.formatearMoneda(monto, this.monedaSistema);
-    }
-
-    // CONVERTIR a la moneda del sistema
-    const montoConvertido = this.convertirMonto(monto, monedaVenta, monedaSistemaNormalizada);
-
-    // Formatear en la moneda del sistema
-    return this.formatearMoneda(montoConvertido, this.monedaSistema);
-  }
-
   // Método para formatear montos del sistema
   formatearMontoSistema(monto: number): string {
     if (monto === null || monto === undefined || isNaN(monto)) {
@@ -3101,14 +2955,9 @@ export class HistorialVentasComponent implements OnInit {
     return this.formatearMoneda(montoNumerico, this.monedaSistema);
   }
 
+
   // ========== MÉTODOS PARA EL RECIBO ==========
-
-  /**
-  * Método para ver el recibo de una venta 
-  */
   verRecibo(venta: any): void {
-    console.log('📄 Abriendo recibo para venta:', venta);
-
     // 1. Cerrar modal anterior
     this.cerrarModalRecibo();
 
@@ -3134,7 +2983,6 @@ export class HistorialVentasComponent implements OnInit {
     [modalBody, reciboContainer, modalContent].forEach(element => {
       if (element) {
         (element as HTMLElement).scrollTop = 0;
-        console.log(`✅ Scroll reseteado para: ${element.className || element.id}`);
       }
     });
   }
@@ -3305,9 +3153,6 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  /**
-   * Calcular porcentaje pagado para el recibo
-   */
   private calcularPorcentajePagado(venta: any): number {
     const total = venta.total || 0;
     const pagado = this.getTotalPagadoVenta(venta);
@@ -3318,9 +3163,6 @@ export class HistorialVentasComponent implements OnInit {
     return 0;
   }
 
-  /**
-   * Obtener el título del recibo según tipo de venta
-   */
   getTituloRecibo(): string {
     if (!this.ventaParaRecibo) return 'Recibo de Venta';
 
@@ -3338,9 +3180,6 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  /**
-   * Obtener estado del recibo
-   */
   getEstadoTexto(): string {
     if (!this.ventaParaRecibo) return 'Completada';
 
@@ -3356,9 +3195,6 @@ export class HistorialVentasComponent implements OnInit {
     return 'Completada';
   }
 
-  /**
-   * Obtener clase CSS para el badge de estado
-   */
   getEstadoBadgeClass(): string {
     const estado = this.getEstadoTexto();
 
@@ -3369,9 +3205,6 @@ export class HistorialVentasComponent implements OnInit {
     return 'bg-secondary';
   }
 
-  /**
-   * Obtener productos seguros
-   */
   getProductosSeguros(): any[] {
     if (!this.ventaParaRecibo) {
       return [];
@@ -3421,9 +3254,6 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  /**
-   * Formatear tipo de pago
-   */
   formatearTipoPago(tipo: string): string {
     const tipos: { [key: string]: string } = {
       'efectivo': 'Efectivo',
@@ -3539,9 +3369,6 @@ export class HistorialVentasComponent implements OnInit {
     return this.ventaParaRecibo?.deudaPendiente || 0;
   }
 
-  /**
-   * Obtener nombre del nivel Cashea
-   */
   obtenerNombreNivelCashea(nivel: string): string {
     const niveles: { [key: string]: string } = {
       'inicial': 'Inicial',
@@ -3552,9 +3379,6 @@ export class HistorialVentasComponent implements OnInit {
     return niveles[nivel] || nivel.charAt(0).toUpperCase() + nivel.slice(1);
   }
 
-  /**
-   * Obtener mensaje final según estado
-   */
   getMensajeFinal(): string {
     if (!this.ventaParaRecibo) return 'Gracias por su compra';
 
@@ -3629,9 +3453,6 @@ export class HistorialVentasComponent implements OnInit {
     }, 0);
   }
 
-  /**
-   * Cerrar modal de recibo
-   */
   cerrarModalRecibo(): void {
     this.mostrarModalRecibo = false;
 
@@ -3645,16 +3466,10 @@ export class HistorialVentasComponent implements OnInit {
     this.porcentajeAbonadoDelTotal = 0;
   }
 
-  /**
-   * Descargar PDF (placeholder - necesitarías una librería como jsPDF)
-   */
   descargarPDF(): void {
     this.swalService.showInfo('Información', 'La descarga de PDF estará disponible próximamente');
   }
 
-  /**
-   * Compartir por WhatsApp
-   */
   compartirWhatsApp(): void {
     const numero = this.datosRecibo?.cliente?.telefono?.replace(/\D/g, '');
     const mensaje = `*NEW VISION LENS*%0A%0A` +
@@ -3672,9 +3487,6 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  /**
-   * Copiar enlace
-   */
   copiarEnlace(): void {
     const enlace = `${window.location.origin}/ventas/recibo/${this.ventaParaRecibo?.key}`;
 
@@ -3686,9 +3498,6 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  /**
-   * Scroll al top
-   */
   private scrollToTop(): void {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -5097,8 +4906,6 @@ export class HistorialVentasComponent implements OnInit {
       montoTotalGeneral
     };
 
-    console.log('📊 Estadísticas calculadas:', this.estadisticas);
-
     // Forzar actualización de la vista
     this.cdRef.detectChanges();
   }
@@ -5407,6 +5214,10 @@ export class HistorialVentasComponent implements OnInit {
     return formas[formaPago] || formaPago;
   }
 
+  trackByItem(index: number, item: any): any {
+    return item?.id || item?.key || index;
+  }
+
   getAsesorNombre(asesorId: string): string {
     const asesor = this.asesores.find(a => a.id.toString() === asesorId.toString());
     return asesor?.nombre || 'Asesor no encontrado';
@@ -5678,11 +5489,7 @@ export class HistorialVentasComponent implements OnInit {
     return this.chartService.obtenerDatosDePrueba();
   }
 
-
-  // Métodos para manejar cambios de período en gráficos
-
   cambiarTendenciaPeriodo(periodo: string): void {
-    console.log(`Cambiando período de tendencia a: ${periodo}`);
 
     // Actualizar el texto del período
     const elemento = document.getElementById('tendenciaPeriodo');
@@ -5707,8 +5514,6 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   cambiarPeriodoComparativa(periodo: string): void {
-    console.log(`Cambiando período de comparativa a: ${periodo}`);
-
     // Actualizar los datos de prueba según el período
     switch (periodo) {
       case 'mes':
@@ -5957,7 +5762,94 @@ export class HistorialVentasComponent implements OnInit {
   private extraerNumeros(texto: string): string {
     if (!texto) return '';
     return texto.replace(/\D/g, '');
-}
+  }
+
+  getMonedaSistema(): string {
+    return this.monedaSistema || 'dolar';
+  }
+
+  normalizarMoneda(moneda: string): string {
+    const monedaLower = moneda?.toLowerCase() || 'dolar';
+    if (monedaLower === 'usd' || monedaLower === '$') return 'dolar';
+    if (monedaLower === 'eur' || monedaLower === '€') return 'euro';
+    if (monedaLower === 'ves' || monedaLower === 'bs' || monedaLower === 'bs.') return 'bolivar';
+    return monedaLower;
+  }
+
+  getTotalPagadoVenta(venta: any): number {
+    if (!venta) return 0;
+
+    if (venta.formaPagoCompleto?.totalPagado !== undefined && venta.formaPagoCompleto?.totalPagado !== null) {
+      return venta.formaPagoCompleto.totalPagado;
+    }
+
+    return 0;
+  }
+
+  getDeudaPendiente(venta: any): number {
+    if (!venta) return 0;
+
+    // Si la venta está cancelada, no hay deuda
+    if (venta.estado === 'cancelada') {
+      return 0;
+    }
+
+    if (venta.formaPagoCompleto?.deuda !== undefined && venta.formaPagoCompleto?.deuda !== null) {
+      return venta.formaPagoCompleto.deuda;
+    }
+
+    return 0;
+  }
+
+  getTotalVenta(venta: any): number {
+    if (!venta) return 0;
+
+    if (venta.formaPagoCompleto?.montoTotal !== undefined && venta.formaPagoCompleto?.montoTotal !== null) {
+      return venta.formaPagoCompleto.montoTotal;
+    }
+
+    return venta.total || 0;
+  }
+
+  getSubtotalVenta(venta: any): number {
+    const total = this.getTotalVenta(venta);
+    const impuesto = venta.impuesto || 16;
+
+    // subtotal = total / (1 + impuesto/100)
+    const subtotal = total / (1 + (impuesto / 100));
+
+    return this.redondear(subtotal);
+  }
+
+  getIvaVenta(venta: any): number {
+    const total = this.getTotalVenta(venta);
+    const subtotal = this.getSubtotalVenta(venta);
+
+    return this.redondear(total - subtotal);
+  }
+
+  formatearMonedaVenta(venta: any, monto: number): string {
+    if (!venta || monto === null || monto === undefined || isNaN(monto)) {
+      return this.obtenerSimboloMoneda(venta?.moneda || 'dolar') + '0,00';
+    }
+
+    const moneda = venta.moneda || 'dolar';
+    const simbolo = this.obtenerSimboloMoneda(moneda);
+
+    // Formatear número al estilo venezolano
+    const valorRedondeado = Math.round(monto * 100) / 100;
+    const partes = valorRedondeado.toString().split('.');
+    let parteEntera = partes[0];
+    let parteDecimal = partes[1] || '00';
+    parteDecimal = parteDecimal.padEnd(2, '0');
+    parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+    if (simbolo === 'Bs.' || simbolo === 'Bs') {
+      return `${simbolo} ${parteEntera},${parteDecimal}`;
+    } else {
+      return `${simbolo}${parteEntera},${parteDecimal}`;
+    }
+  }
 
 
 

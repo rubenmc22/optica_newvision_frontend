@@ -2174,137 +2174,6 @@
     animation: fadeInUp 0.4s ease-out;
 }
 
-// Estilos para el diseño innovador de ventas
-.ventas-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-}
-
-.control-ordenamiento {
-    margin-bottom: 0px !important;
-    gap: 1rem;
-    padding: 1rem;
-}
-
-.venta-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e9ecef;
-    transition: all 0.3s ease;
-    overflow: hidden;
-
-    &:hover {
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-        transform: translateY(-2px);
-    }
-}
-
-.venta-header {
-    display: flex;
-    align-items: center;
-    padding: 1.25rem;
-    cursor: pointer;
-    gap: 1rem;
-    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-}
-
-.venta-avatar {
-    flex-shrink: 0;
-}
-
-.avatar-circle {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.2rem;
-
-    &.avatar-success {
-        background: linear-gradient(135deg, #28a745, #20c997);
-    }
-
-    &.avatar-warning {
-        background: linear-gradient(135deg, #ffc107, #fd7e14);
-    }
-
-    &.avatar-danger {
-        background: linear-gradient(135deg, #dc3545, #e83e8c);
-    }
-}
-
-.venta-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.venta-title {
-    margin-bottom: 0.75rem;
-}
-
-.venta-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.meta-item {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.875rem;
-    color: #6c757d;
-}
-
-.meta-divider {
-    color: #dee2e6;
-}
-
-.venta-details {
-    display: flex;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-}
-
-.detail-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.forma-pago-badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 500;
-
-    &.forma-contado {
-        background: #e3f2fd;
-        color: #1976d2;
-    }
-
-    &.forma-contado-pendiente {
-        background: #ffebee;
-        color: #c62828;
-    }
-
-    &.forma-cashea {
-        background: #fff3e0;
-        color: #f57c00;
-    }
-
-    &.forma-abono {
-        background: #e8f5e8;
-        color: #388e3c;
-    }
-}
-
 /* Sección compacta contenedora */
 .seccion-compacta {
 
@@ -4246,7 +4115,7 @@ textarea.form-control-compact {
             background: linear-gradient(135deg, #f59e0b, #d97706);
         }
 
-         &.optometrista {
+        &.optometrista {
             background: linear-gradient(135deg, #10b981, #059669);
         }
     }
@@ -8829,20 +8698,20 @@ form {
 
     &.buscador-ampliado {
         min-height: 42px;
-        
+
         .filtro-icon {
             width: 42px;
             font-size: 1rem;
             position: relative;
-            
+
             &.searching {
                 background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-                
+
                 i {
                     animation: pulse 1.5s infinite;
                 }
             }
-            
+
             .searching-spinner {
                 position: absolute;
                 top: 50%;
@@ -8857,18 +8726,18 @@ form {
                 pointer-events: none;
             }
         }
-        
+
         .filtro-input {
             font-size: 0.9rem;
             padding: 0 12px;
             padding-right: 100px; // Espacio para el hint
-            
+
             &::placeholder {
                 font-size: 0.85rem;
             }
         }
     }
-    
+
 
     &:hover {
         border-color: #cbd5e1;
@@ -9932,4 +9801,1180 @@ form {
 .historia-note i {
     color: #2c5aa0;
     font-size: 14px;
+}
+
+// Badge de tipo de venta
+.tipo-venta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 500;
+    background: #f0f2f5;
+    color: #5a626e;
+
+    i {
+        font-size: 10px;
+    }
+
+    &.tipo-solo-consulta {
+        background: #e8f0fe;
+        color: #1e40af;
+
+        i {
+            color: #3b82f6;
+        }
+    }
+
+    &.tipo-solo-productos {
+        background: #e6f7e6;
+        color: #166534;
+
+        i {
+            color: #22c55e;
+        }
+    }
+
+    &.tipo-consulta-productos {
+        background: #fef3c7;
+        color: #92400e;
+
+        i {
+            color: #f59e0b;
+        }
+    }
+}
+
+
+
+
+.ventas-modern-container {
+    padding: 0.5rem 0;
+}
+
+/* Barra de ordenamiento */
+.ordenamiento-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+
+    .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+
+        .sort-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+
+            i {
+                color: #64748b;
+                font-size: 0.875rem;
+            }
+
+            .sort-select {
+                border: none;
+                background: transparent;
+                font-size: 0.8rem;
+                font-weight: 500;
+                color: #1e293b;
+                outline: none;
+                cursor: pointer;
+            }
+
+            .sort-direction {
+                background: transparent;
+                border: none;
+                padding: 0 0.25rem;
+                color: #64748b;
+                cursor: pointer;
+
+                &:hover {
+                    color: #3b82f6;
+                }
+            }
+        }
+
+        .result-counter {
+            display: flex;
+            align-items: baseline;
+            gap: 0.125rem;
+
+            .counter-number {
+                font-weight: 700;
+                font-size: 1rem;
+                color: #1e293b;
+            }
+
+            .counter-total {
+                font-size: 0.75rem;
+                color: #94a3b8;
+            }
+        }
+    }
+
+    .toolbar-right {
+        .venta-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: 0.75rem;
+            color: #64748b;
+
+            i {
+                font-size: 0.875rem;
+            }
+        }
+    }
+}
+
+/* Estado vacío moderno */
+.empty-state-modern {
+    text-align: center;
+    padding: 3rem 1.5rem;
+
+    .empty-illustration {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1rem;
+        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        i {
+            font-size: 2rem;
+            color: #94a3b8;
+        }
+    }
+
+    h5 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+
+    p {
+        font-size: 0.875rem;
+        color: #94a3b8;
+        margin-bottom: 1rem;
+    }
+
+    .btn-clear-filters {
+        background: #3b82f6;
+        border: none;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+
+        &:hover {
+            background: #2563eb;
+        }
+    }
+}
+
+/* Lista de ventas */
+.ventas-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Tarjeta de venta */
+.venta-item {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #eef2ff;
+    transition: all 0.2s ease;
+    overflow: hidden;
+
+    &:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    &.expanded {
+        border-color: #3b82f6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+    }
+}
+
+/* Header de la tarjeta */
+.venta-item-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.875rem 1rem;
+    cursor: pointer;
+
+    .header-avatar {
+        flex-shrink: 0;
+
+        .avatar-status {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+
+            &.status-completed {
+                background: #22c55e20;
+                color: #16a34a;
+            }
+
+            &.status-pending {
+                background: #f59e0b20;
+                color: #d97706;
+            }
+
+            &.status-cancelled {
+                background: #ef444420;
+                color: #dc2626;
+            }
+        }
+    }
+
+    .header-info {
+        flex: 1;
+        min-width: 0;
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.25rem;
+
+            .paciente-name {
+                font-weight: 600;
+                font-size: 0.9rem;
+                color: #0f172a;
+            }
+
+            .estatus-badge {
+                font-size: 0.7rem;
+                padding: 0.125rem 0.5rem;
+                border-radius: 20px;
+                background: #e2e8f0;
+                color: #475569;
+            }
+
+            .tipo-badge {
+                font-size: 0.7rem;
+                padding: 0.125rem 0.5rem;
+                border-radius: 20px;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.25rem;
+
+                &.tipo-consulta {
+                    background: #e8f0fe;
+                    color: #1e40af;
+                }
+
+                &.tipo-productos {
+                    background: #e6f7e6;
+                    color: #166534;
+                }
+
+                &.tipo-mixto {
+                    background: #fef3c7;
+                    color: #92400e;
+                }
+
+                i {
+                    font-size: 0.65rem;
+                }
+            }
+        }
+
+        .meta-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+
+            span {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.25rem;
+                font-size: 0.7rem;
+                color: #64748b;
+
+                i {
+                    font-size: 0.7rem;
+                }
+            }
+        }
+    }
+
+    .header-details {
+        display: flex;
+        gap: 0.5rem;
+
+        .detail-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.625rem;
+            background: #f1f5f9;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            color: #475569;
+
+            i {
+                font-size: 0.7rem;
+            }
+
+            &.payment {
+                background: #eef2ff;
+                color: #3b82f6;
+            }
+        }
+    }
+
+    .header-amount {
+        text-align: right;
+        min-width: 85px;
+
+        .amount-value {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #0f172a;
+        }
+
+        .amount-label {
+            font-size: 0.65rem;
+            color: #94a3b8;
+        }
+    }
+
+    .header-expand {
+        color: #94a3b8;
+        transition: transform 0.2s;
+
+        i {
+            font-size: 1rem;
+        }
+    }
+}
+
+/* Panel expandido */
+.venta-item-detail {
+    padding: 1rem;
+    border-top: 1px solid #eef2ff;
+    background: #fafcff;
+
+    .detail-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+
+        .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+
+            i {
+                font-size: 1rem;
+                width: 24px;
+            }
+
+            div {
+                display: flex;
+                flex-direction: column;
+
+                small {
+                    font-size: 0.65rem;
+                    color: #94a3b8;
+                }
+
+                strong {
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    color: #1e293b;
+                }
+            }
+        }
+    }
+
+    .detail-products {
+        margin-bottom: 1rem;
+
+        .products-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 0.5rem;
+
+            i {
+                font-size: 0.85rem;
+            }
+        }
+
+        .products-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+
+            .product-chip {
+                background: white;
+                padding: 0.25rem 0.625rem;
+                border-radius: 20px;
+                border: 1px solid #e2e8f0;
+                font-size: 0.7rem;
+                display: flex;
+                align-items: center;
+                gap: 0.375rem;
+
+                .product-qty {
+                    color: #94a3b8;
+                    font-size: 0.65rem;
+                }
+            }
+
+            .product-more {
+                font-size: 0.7rem;
+                color: #3b82f6;
+                padding: 0.25rem 0.5rem;
+            }
+        }
+    }
+
+    .detail-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-end;
+
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.375rem 0.875rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.15s;
+
+            &:hover {
+                background: #f8fafc;
+                border-color: #cbd5e1;
+            }
+
+            &.success {
+                background: #22c55e10;
+                border-color: #22c55e30;
+                color: #16a34a;
+
+                &:hover {
+                    background: #22c55e20;
+                }
+            }
+
+            &.warning {
+                background: #f59e0b10;
+                border-color: #f59e0b30;
+                color: #d97706;
+
+                &:hover {
+                    background: #f59e0b20;
+                }
+            }
+
+            &.danger {
+                background: #ef444410;
+                border-color: #ef444430;
+                color: #dc2626;
+
+                &:hover {
+                    background: #ef444420;
+                }
+            }
+        }
+    }
+}
+
+/* Paginación moderna */
+.pagination-modern {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+
+    .page-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        background: white;
+        color: #475569;
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &:hover:not(.disabled) {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        &.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+    }
+
+    .page-numbers {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+
+        .page-number {
+            min-width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: #475569;
+            cursor: pointer;
+            font-size: 0.8rem;
+
+            &:hover {
+                background: #f8fafc;
+            }
+
+            &.active {
+                background: #3b82f6;
+                border-color: #3b82f6;
+                color: white;
+            }
+        }
+
+        .page-dots {
+            padding: 0 0.25rem;
+            color: #94a3b8;
+        }
+    }
+}
+
+.pagination-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    font-size: 0.7rem;
+    color: #94a3b8;
+
+    .per-page-select {
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        background: white;
+        font-size: 0.7rem;
+        cursor: pointer;
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .venta-item-header {
+        flex-wrap: wrap;
+
+        .header-details {
+            order: 3;
+            margin-left: 48px;
+        }
+
+        .header-amount {
+            order: 2;
+        }
+
+        .header-expand {
+            order: 4;
+        }
+    }
+
+    .detail-summary {
+        .summary-item {
+            flex: 1 1 auto;
+            min-width: 100px;
+        }
+    }
+}
+
+
+/* Controles de ordenamiento modernos */
+.control-ordenamiento-moderno {
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    
+    .ordenamiento-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        
+        .sort-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            
+            i {
+                color: #64748b;
+                font-size: 0.875rem;
+            }
+            
+            .sort-select {
+                border: none;
+                background: transparent;
+                font-size: 0.8rem;
+                font-weight: 500;
+                color: #1e293b;
+                outline: none;
+                cursor: pointer;
+            }
+            
+            .sort-direction {
+                background: transparent;
+                border: none;
+                padding: 0 0.25rem;
+                color: #64748b;
+                cursor: pointer;
+                
+                &:hover {
+                    color: #3b82f6;
+                }
+            }
+        }
+        
+        .result-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            color: #64748b;
+            
+            i {
+                font-size: 0.875rem;
+            }
+        }
+    }
+}
+
+/* Estado vacío moderno */
+.empty-state-modern {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    
+    .empty-icon-wrapper {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1rem;
+        background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        i {
+            font-size: 2rem;
+            color: #94a3b8;
+        }
+    }
+    
+    h5 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 0.5rem;
+    }
+    
+    p {
+        font-size: 0.875rem;
+        color: #94a3b8;
+        margin-bottom: 1rem;
+    }
+    
+    .btn-clear-filters {
+        background: #3b82f6;
+        border: none;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        
+        &:hover {
+            background: #2563eb;
+        }
+    }
+}
+
+/* Grid de ventas */
+.ventas-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Tarjeta de venta moderna */
+.venta-card-moderno {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #eef2ff;
+    transition: all 0.2s ease;
+    overflow: hidden;
+    
+    &:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+}
+
+/* Header de la tarjeta */
+.venta-header-moderno {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.875rem 1rem;
+    cursor: pointer;
+    
+    .venta-avatar-moderno {
+        flex-shrink: 0;
+        
+        .avatar-status {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            
+            &.status-completada {
+                background: #22c55e20;
+                color: #16a34a;
+            }
+            
+            &.status-pendiente {
+                background: #f59e0b20;
+                color: #d97706;
+            }
+            
+            &.status-cancelada {
+                background: #ef444420;
+                color: #dc2626;
+            }
+        }
+    }
+    
+    .venta-info-moderno {
+        flex: 1;
+        min-width: 0;
+        
+        .info-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.25rem;
+            
+            .paciente-nombre {
+                font-weight: 600;
+                font-size: 0.9rem;
+                color: #0f172a;
+            }
+            
+            .estatus-pago {
+                font-size: 0.7rem;
+                padding: 0.125rem 0.5rem;
+                border-radius: 20px;
+                background: #e2e8f0;
+                color: #475569;
+            }
+            
+            .tipo-venta-badge {
+                font-size: 0.7rem;
+                padding: 0.125rem 0.5rem;
+                border-radius: 20px;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.25rem;
+                
+                &.tipo-consulta {
+                    background: #e8f0fe;
+                    color: #1e40af;
+                }
+                
+                &.tipo-productos {
+                    background: #e6f7e6;
+                    color: #166534;
+                }
+                
+                &.tipo-mixto {
+                    background: #fef3c7;
+                    color: #92400e;
+                }
+                
+                i {
+                    font-size: 0.65rem;
+                }
+            }
+        }
+        
+        .info-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+            
+            span {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.25rem;
+                font-size: 0.7rem;
+                color: #64748b;
+                
+                i {
+                    font-size: 0.7rem;
+                }
+            }
+        }
+        
+        .info-details {
+            display: flex;
+            gap: 0.5rem;
+            
+            .detail-badge {
+                display: flex;
+                align-items: center;
+                gap: 0.375rem;
+                padding: 0.25rem 0.625rem;
+                background: #f1f5f9;
+                border-radius: 20px;
+                font-size: 0.7rem;
+                color: #475569;
+                
+                i {
+                    font-size: 0.7rem;
+                }
+                
+                &.payment {
+                    background: #eef2ff;
+                    color: #3b82f6;
+                }
+            }
+        }
+    }
+    
+    .venta-monto-moderno {
+        text-align: right;
+        min-width: 85px;
+        
+        .monto-valor {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #0f172a;
+        }
+        
+        .monto-label {
+            font-size: 0.65rem;
+            color: #94a3b8;
+        }
+    }
+    
+    .venta-expand-moderno {
+        color: #94a3b8;
+        
+        i {
+            font-size: 1rem;
+        }
+    }
+}
+
+/* Panel de detalles */
+.venta-detalle-moderno {
+    padding: 1rem;
+    border-top: 1px solid #eef2ff;
+    background: #fafcff;
+    
+    .detalle-resumen {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        
+        .resumen-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            
+            i {
+                font-size: 1rem;
+                width: 24px;
+                color: #3b82f6;
+            }
+            
+            div {
+                display: flex;
+                flex-direction: column;
+                
+                small {
+                    font-size: 0.65rem;
+                    color: #94a3b8;
+                }
+                
+                strong {
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    color: #1e293b;
+                }
+            }
+        }
+    }
+    
+    .detalle-productos {
+        margin-bottom: 1rem;
+        
+        .productos-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 0.5rem;
+            
+            i {
+                font-size: 0.85rem;
+            }
+        }
+        
+        .productos-lista {
+            .producto-item {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.375rem 0;
+                border-bottom: 1px solid #eef2ff;
+                font-size: 0.75rem;
+                
+                .producto-nombre {
+                    flex: 1;
+                    color: #334155;
+                }
+                
+                .producto-cantidad {
+                    color: #64748b;
+                    min-width: 40px;
+                    text-align: center;
+                }
+                
+                .producto-precio {
+                    font-weight: 500;
+                    color: #0f172a;
+                    min-width: 70px;
+                    text-align: right;
+                }
+            }
+            
+            .producto-mas {
+                font-size: 0.7rem;
+                color: #3b82f6;
+                padding: 0.375rem 0;
+                text-align: center;
+            }
+        }
+    }
+    
+    .detalle-pagos {
+        margin-bottom: 1rem;
+        
+        .pagos-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 0.5rem;
+            
+            i {
+                font-size: 0.85rem;
+            }
+        }
+        
+        .pagos-lista {
+            .pago-grupo {
+                .pago-item {
+                    display: flex;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    gap: 0.5rem;
+                    padding: 0.375rem 0;
+                    border-bottom: 1px solid #eef2ff;
+                    font-size: 0.75rem;
+                    
+                    i {
+                        width: 20px;
+                        color: #3b82f6;
+                    }
+                    
+                    .pago-monto {
+                        font-weight: 500;
+                        margin-left: auto;
+                    }
+                    
+                    .pago-ref, .pago-banco {
+                        font-size: 0.65rem;
+                        color: #64748b;
+                        background: #f1f5f9;
+                        padding: 0.125rem 0.375rem;
+                        border-radius: 12px;
+                    }
+                }
+            }
+        }
+    }
+    
+    .detalle-observaciones {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        background: #fff9eb;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-size: 0.75rem;
+        color: #92400e;
+        
+        i {
+            font-size: 0.85rem;
+            margin-top: 0.125rem;
+        }
+    }
+    
+    .detalle-acciones {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-end;
+        
+        .accion-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.375rem 0.875rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.15s;
+            
+            &:hover {
+                background: #f8fafc;
+                border-color: #cbd5e1;
+            }
+            
+            &.success {
+                background: #22c55e10;
+                border-color: #22c55e30;
+                color: #16a34a;
+                
+                &:hover {
+                    background: #22c55e20;
+                }
+            }
+            
+            &.warning {
+                background: #f59e0b10;
+                border-color: #f59e0b30;
+                color: #d97706;
+                
+                &:hover {
+                    background: #f59e0b20;
+                }
+            }
+            
+            &.danger {
+                background: #ef444410;
+                border-color: #ef444430;
+                color: #dc2626;
+                
+                &:hover {
+                    background: #ef444420;
+                }
+            }
+        }
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .venta-header-moderno {
+        flex-wrap: wrap;
+        
+        .venta-info-moderno {
+            order: 1;
+            width: calc(100% - 50px);
+        }
+        
+        .venta-monto-moderno {
+            order: 2;
+            margin-left: auto;
+        }
+        
+        .venta-expand-moderno {
+            order: 3;
+        }
+        
+        .venta-avatar-moderno {
+            order: 0;
+        }
+        
+        .info-details {
+            flex-wrap: wrap;
+        }
+    }
 }
