@@ -10978,3 +10978,226 @@ form {
         }
     }
 }
+
+.alert {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    margin: 0;
+    
+    .alert-icon {
+        font-size: 1.25rem;
+    }
+    
+    .alert-content {
+        flex: 1;
+        
+        strong {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 0.125rem;
+        }
+        
+        span {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+    }
+    
+    &.alert-success {
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        border: 1px solid #c3e6cb;
+        color: #155724;
+        
+        .alert-icon {
+            color: #28a745;
+        }
+    }
+    
+    &.alert-warning {
+        background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+        border: 1px solid #ffeaa7;
+        color: #856404;
+        
+        .alert-icon {
+            color: #ffc107;
+        }
+    }
+}
+
+.pago-detalle-contado,
+.pago-detalle-pendiente {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e9ecef;
+    
+    .pago-subitem {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+        
+        &:last-child {
+            margin-bottom: 0;
+        }
+        
+        span {
+            color: #6c757d;
+        }
+        
+        strong {
+            font-size: 1rem;
+            
+            &.text-success {
+                color: #28a745;
+            }
+            
+            &.text-warning {
+                color: #ffc107;
+            }
+        }
+    }
+}
+
+
+.consulta-item {
+    background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+    border-left: 3px solid #3b82f6;
+    margin-bottom: 1rem;
+    
+    .producto-header-compacto {
+        .producto-titulo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            
+            .consulta-badge {
+                font-size: 0.65rem;
+                padding: 0.125rem 0.5rem;
+                border-radius: 20px;
+                font-weight: 500;
+                
+                &.badge-costo {
+                    background: #dcfce7;
+                    color: #166534;
+                }
+                
+                &.badge-sin-costo {
+                    background: #e2e8f0;
+                    color: #475569;
+                }
+            }
+        }
+        
+        .consulta-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 0.25rem;
+            font-size: 0.7rem;
+            
+            .especialista-nombre {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.25rem;
+                color: #3b82f6;
+                
+                i {
+                    font-size: 0.7rem;
+                }
+            }
+            
+            .badge-externa {
+                background: #fef3c7;
+                color: #92400e;
+                padding: 0.125rem 0.5rem;
+                border-radius: 20px;
+                font-size: 0.65rem;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.25rem;
+                
+                i {
+                    font-size: 0.65rem;
+                }
+            }
+        }
+    }
+    
+    .consulta-detalle {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 0.5rem 0;
+        padding: 0.5rem;
+        background: white;
+        border-radius: 8px;
+        
+        .detalle-fila {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.7rem;
+            
+            .detalle-label {
+                color: #6c757d;
+                font-weight: 500;
+            }
+            
+            .detalle-valor {
+                color: #1e293b;
+                font-weight: 500;
+            }
+        }
+    }
+    
+    .consulta-calculo {
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px dashed #e2e8f0;
+    }
+    
+    .consulta-desglose {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background: #f8fafc;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        
+        .desglose-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            
+            .desglose-label {
+                color: #64748b;
+            }
+            
+            .desglose-valor {
+                font-weight: 600;
+                color: #3b82f6;
+            }
+        }
+    }
+}
+
+.empty-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    
+    i {
+        font-size: 1.25rem;
+    }
+}

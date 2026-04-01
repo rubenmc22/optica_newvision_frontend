@@ -604,31 +604,43 @@ export class HistorialVentasComponent implements OnInit {
   private adaptarVentaDelApi(ventaApi: any): any {
     const venta = ventaApi;
     const metodosPagoApi = venta.metodosDePago || [];
+    const formaPagoDetalle = venta.formaPagoDetalle;
 
-    const totalPagadoEnMonedaVenta = Array.isArray(metodosPagoApi)
-      ? metodosPagoApi.reduce((total: number, metodo: any) => {
-        return total + (metodo.monto || 0);
-      }, 0)
-      : 0;
+    // Obtener el total pagado en la moneda de la venta desde formaPagoDetalle
+    const totalPagadoEnMonedaVenta = formaPagoDetalle?.totalPagado || 0;
+
+    // Calcular la proporción de cada método de pago
+    let totalMontoOriginal = 0;
+    metodosPagoApi.forEach((metodo: any) => {
+      totalMontoOriginal += metodo.monto || 0;
+    });
 
     const metodosPagoAdaptados = Array.isArray(metodosPagoApi) && metodosPagoApi.length > 0
       ? metodosPagoApi.map((metodo: any, index: number) => {
-         const montoConvertido = index === 0 ? totalPagadoEnMonedaVenta : 0;
-           return {
-                numero_pago: index + 1,
-                montoAbonado: metodo.monto || 0,
-                observaciones: '',
-                metodosPago: [{
-                    tipo: metodo.tipo || 'efectivo',
-                    monto: metodo.monto || 0,
-                    moneda_id: metodo.moneda || 'dolar',
-                    monto_en_moneda_de_venta: montoConvertido, // ← Usar el valor correcto en dólares
-                    referencia: metodo.referencia,
-                    bancoCodigo: metodo.bancoCodigo,
-                    bancoNombre: metodo.bancoNombre,
-                    fechaRegistro: venta.auditoria?.fechaCreacion
-                }]
-            };
+        // Calcular el monto en la moneda de la venta basado en la proporción
+        let montoEnMonedaVenta = 0;
+        if (totalMontoOriginal > 0) {
+          const proporcion = (metodo.monto || 0) / totalMontoOriginal;
+          montoEnMonedaVenta = totalPagadoEnMonedaVenta * proporcion;
+        } else if (index === 0) {
+          montoEnMonedaVenta = totalPagadoEnMonedaVenta;
+        }
+
+        return {
+          numero_pago: index + 1,
+          montoAbonado: metodo.monto || 0,
+          observaciones: '',
+          metodosPago: [{
+            tipo: metodo.tipo || 'efectivo',
+            monto: metodo.monto || 0,
+            moneda_id: metodo.moneda || 'dolar',
+            monto_en_moneda_de_venta: montoEnMonedaVenta,
+            referencia: metodo.referencia,
+            bancoCodigo: metodo.bancoCodigo,
+            bancoNombre: metodo.bancoNombre,
+            fechaRegistro: venta.auditoria?.fechaCreacion
+          }]
+        };
       })
       : [];
 
@@ -636,7 +648,6 @@ export class HistorialVentasComponent implements OnInit {
     const estadoVenta = this.determinarEstadoVenta(venta.estatus_venta);
 
     // Determinar si es Cashea
-    const formaPagoDetalle = venta.formaPagoDetalle;
     const esCashea = formaPagoDetalle?.tipo === 'cashea';
 
     // Preparar productos limpios
@@ -676,6 +687,8 @@ export class HistorialVentasComponent implements OnInit {
       formaPagoReal = venta.formaPago;
     }
 
+    const consulta = venta.consulta || null;
+
     // Construir objeto final
     const ventaAdaptada: any = {
       // Identificadores únicos
@@ -710,6 +723,23 @@ export class HistorialVentasComponent implements OnInit {
       formaPagoCompleto: formaPagoDetalle,
       descuento: venta.descuento || 0,
       observaciones: venta.observaciones,
+
+      consulta: consulta ? {
+        historiaId: consulta.historiaId,
+        montoTotal: consulta.montoTotal || 0,
+        pagoMedico: consulta.pagoMedico || 0,
+        pagoOptica: consulta.pagoOptica || 0,
+        esFormulaExterna: consulta.esFormulaExterna || false,
+        tipoEspecialista: consulta.tipoEspecialista || '',
+        tipoVentaConsulta: consulta.tipoVentaConsulta || '',
+        montoOriginal: consulta.montoOriginal || 0,
+        // Información adicional del especialista
+        especialista: {
+          nombre: consulta.especialista?.nombre || '',
+          tipo: consulta.especialista?.tipo || '',
+          cedula: consulta.especialista?.cedula || ''
+        }
+      } : null,
 
       // Personas involucradas
       paciente: cliente ? {
@@ -1086,74 +1116,85 @@ export class HistorialVentasComponent implements OnInit {
 
     this.metodosPagoArray.controls.forEach((control, index) => {
       const metodo = control.value;
-      const monedaMetodo = this.getMonedaParaMetodo(index);
+      const tipoPago = metodo.tipo;
+      const montoIngresado = Number(metodo.monto) || 0;
 
+      if (!tipoPago || montoIngresado <= 0) return;
+
+      const monedaSistema = this.getMonedaSistema();
+      const monedaVenta = this.getMonedaVenta();
+
+      let monedaMetodo = '';
+      let montoEnMonedaMetodo = 0;
+      let montoEnMonedaVenta = 0;
+
+      switch (tipoPago) {
+        case 'efectivo':
+          const monedaEfectivo = metodo.monedaEfectivo || 'USD';
+          if (monedaEfectivo === 'USD') {
+            monedaMetodo = 'dolar';
+            montoEnMonedaMetodo = montoIngresado;
+            montoEnMonedaVenta = montoIngresado;
+          } else if (monedaEfectivo === 'EUR') {
+            monedaMetodo = 'euro';
+            montoEnMonedaMetodo = montoIngresado;
+            montoEnMonedaVenta = this.convertirMonto(montoIngresado, 'euro', monedaVenta);
+          } else if (monedaEfectivo === 'Bs') {
+            monedaMetodo = 'bolivar';
+            montoEnMonedaMetodo = montoIngresado;
+            montoEnMonedaVenta = this.convertirMonto(montoIngresado, 'bolivar', monedaVenta);
+          }
+          break;
+
+        case 'punto':
+        case 'pagomovil':
+        case 'transferencia':
+          monedaMetodo = 'bolivar';
+          montoEnMonedaVenta = montoIngresado;
+          // Usar la moneda del sistema normalizada
+          const monedaSistemaNormalizada = this.getMonedaSistema();
+          console.log(`💱 Convirtiendo: ${montoIngresado} ${monedaSistemaNormalizada} → bolivar`);
+          montoEnMonedaMetodo = this.convertirMonto(montoIngresado, monedaSistemaNormalizada, 'bolivar');
+          break;
+
+        case 'zelle':
+          monedaMetodo = 'dolar';
+          montoEnMonedaMetodo = montoIngresado;
+          montoEnMonedaVenta = montoIngresado;
+          break;
+
+        default:
+          return;
+      }
+
+      // Obtener datos del banco
       const bancoObject = metodo.bancoObject;
       let bancoCodigo = '';
       let bancoNombre = '';
 
-      // Si bancoObject es un objeto, extraer código y nombre
       if (bancoObject && typeof bancoObject === 'object') {
         bancoCodigo = bancoObject.codigo || '';
         bancoNombre = bancoObject.nombre || '';
       } else {
-        // Si ya vienen como strings separados
         bancoCodigo = metodo.bancoCodigo || '';
         bancoNombre = metodo.bancoNombre || '';
       }
 
-      if (this.necesitaReferencia(metodo.tipo) && (!metodo.referencia || metodo.referencia.trim() === '')) {
-        throw new Error(`El método ${metodo.tipo} requiere un número de referencia`);
-      }
-
-      if (this.necesitaBanco(metodo.tipo) && (!bancoCodigo || !bancoNombre)) {
-        throw new Error(`El método ${metodo.tipo} requiere seleccionar un banco`);
-      }
-
-      // Convertir moneda al formato exacto que espera el backend
-      const monedaFormatoBackend = this.convertirMonedaParaBackend(monedaMetodo);
-
-      // Calcular monto en moneda de venta para referencia
-      const montoEnMonedaVenta = this.convertirMonto(
-        Number(metodo.monto) || 0,
-        monedaFormatoBackend,
-        this.getMonedaVenta()
-      );
-
       const metodoFormateado = {
-        tipo: metodo.tipo || 'efectivo',
-        monto: Number(metodo.monto) || 0,
-        moneda: monedaFormatoBackend,
+        tipo: tipoPago,
+        monto: this.redondear(montoEnMonedaMetodo),  // ← Aquí va el valor CONVERTIDO
+        moneda: monedaMetodo,
         referencia: metodo.referencia?.trim() || null,
         bancoCodigo: bancoCodigo?.trim() || null,
         bancoNombre: bancoNombre?.trim() || null,
-
-        // Campos adicionales
-        montoEnMonedaVenta: montoEnMonedaVenta,
-        tasaConversion: this.obtenerTasaConversion(monedaFormatoBackend, this.getMonedaVenta()),
-        monedaOriginal: monedaFormatoBackend,
-        monedaVenta: this.getMonedaVenta()
+        montoEnMonedaVenta: this.redondear(montoEnMonedaVenta)
       };
 
+      console.log('Método preparado:', metodoFormateado);
       metodosPagoParaAPI.push(metodoFormateado);
     });
 
     return metodosPagoParaAPI;
-  }
-
-  private convertirMonedaParaBackend(monedaId: string): string {
-    const mapeo: { [key: string]: string } = {
-      'dolar': 'dolar',
-      'usd': 'dolar',
-      'euro': 'euro',
-      'eur': 'euro',
-      'bolivar': 'bolivar',
-      'ves': 'bolivar',
-      'bs': 'bolivar'
-    };
-
-    const clave = monedaId?.toLowerCase() || 'dolar';
-    return mapeo[clave] || 'dolar';
   }
 
   private actualizarVentaDespuesAbono(ventaActualizadaAPI: any): void {
@@ -1562,21 +1603,18 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  // Reemplaza este método:
   getMonedaParaMetodo(index: number): string {
     const metodoControl = this.metodosPagoArray.at(index);
     const tipoPago = metodoControl?.get('tipo')?.value;
 
     switch (tipoPago) {
       case 'efectivo':
-        // ✅ NUEVO: Usar la moneda específica de este método
         const monedaEfectivoMetodo = metodoControl?.get('monedaEfectivo')?.value || 'USD';
         return monedaEfectivoMetodo.toLowerCase() === 'bs' ? 'bolivar' :
           monedaEfectivoMetodo.toLowerCase() === 'eur' ? 'euro' : 'dolar';
+      case 'punto':
       case 'pagomovil':
       case 'transferencia':
-      case 'debito':
-      case 'credito':
         return 'bolivar';
       case 'zelle':
         return 'dolar';
@@ -1893,6 +1931,7 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     const tasa = this.tasasPorId[moneda] || 1;
+
     return this.redondear(monto * tasa, 2);
   }
 
@@ -1957,7 +1996,14 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   convertirMonto(monto: number, origen: string, destino: string): number {
-    if (origen === destino) return this.redondear(monto);
+    // Normalizar monedas
+    const origenNormalizado = this.normalizarMoneda(origen);
+    const destinoNormalizado = this.normalizarMoneda(destino);
+
+    console.log(`🔄 Convirtiendo: ${monto} ${origen} → ${destino}`);
+    console.log(`📝 Normalizado: ${origenNormalizado} → ${destinoNormalizado}`);
+
+    if (origenNormalizado === destinoNormalizado) return this.redondear(monto);
 
     const tasas = {
       bolivar: 1,
@@ -1965,9 +2011,11 @@ export class HistorialVentasComponent implements OnInit {
       euro: this.tasasPorId['euro'] ?? 0
     };
 
+    console.log(`📊 Tasas: dolar=${tasas.dolar}, euro=${tasas.euro}, bolivar=${tasas.bolivar}`);
+
     let montoEnBs: number;
 
-    switch (origen) {
+    switch (origenNormalizado) {
       case 'dolar':
         montoEnBs = monto * tasas.dolar;
         break;
@@ -1981,10 +2029,11 @@ export class HistorialVentasComponent implements OnInit {
         montoEnBs = monto;
     }
 
-    // Luego convertir de bolívares a la moneda destino
+    console.log(`📌 Monto en Bs: ${montoEnBs}`);
+
     let resultado: number;
 
-    switch (destino) {
+    switch (destinoNormalizado) {
       case 'dolar':
         resultado = montoEnBs / tasas.dolar;
         break;
@@ -1998,10 +2047,10 @@ export class HistorialVentasComponent implements OnInit {
         resultado = montoEnBs;
     }
 
+    console.log(`✅ Resultado: ${resultado}`);
     return this.redondear(resultado);
   }
 
-  // CORRECCIÓN: Obtener monto máximo en la moneda del método
   getMontoMaximoParaMetodo(index: number): number {
     const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value || 0;
     const monedaVenta = this.getMonedaVenta();
@@ -2027,17 +2076,54 @@ export class HistorialVentasComponent implements OnInit {
     return this.redondear(montoMaximoEnMonedaMetodo);
   }
 
-  // CORRECCIÓN: Validar monto del método de pago
+  getMontoMaximoParaMetodoEnSistema(index: number): number {
+    const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value || 0;
+
+    // Calcular total de otros métodos convertidos a moneda del sistema
+    const totalOtrosMetodos = this.metodosPagoArray.controls.reduce((total, control, i) => {
+      if (i !== index) {
+        const monto = control.get('monto')?.value || 0;
+        const tipoPago = control.get('tipo')?.value;
+        // Si el método es punto/pagomovil/transferencia, el monto está en moneda del sistema
+        return total + monto;
+      }
+      return total;
+    }, 0);
+
+    const restanteEnSistema = Math.max(0, montoAbonado - totalOtrosMetodos);
+    return this.redondear(restanteEnSistema);
+  }
+
+  mostrarConversionABolivares(): boolean {
+    return this.getMonedaSistema() !== 'bolivar';
+  }
+
   validarMontoMetodoPago(index: number): void {
     const metodoControl = this.metodosPagoArray.at(index);
-    const montoIngresado = metodoControl?.get('monto')?.value || 0;
-    const montoMaximo = this.getMontoMaximoParaMetodo(index);
+    const tipoPago = metodoControl?.get('tipo')?.value;
+    const montoIngresadoEnSistema = metodoControl?.get('monto')?.value || 0;
 
-    if (montoIngresado > montoMaximo) {
+    // Calcular el monto máximo disponible en la moneda del sistema
+    const montoMaximoEnSistema = this.getMontoMaximoParaMetodoEnSistema(index);
+
+    let montoFinalEnSistema = montoIngresadoEnSistema;
+    if (montoIngresadoEnSistema > montoMaximoEnSistema) {
+      montoFinalEnSistema = montoMaximoEnSistema;
       metodoControl.patchValue({
-        monto: montoMaximo
+        monto: montoMaximoEnSistema
       }, { emitEvent: false });
     }
+
+    // Para punto, pagomovil, transferencia, el valor que se guarda es en bolívares
+    if (tipoPago === 'punto' || tipoPago === 'pagomovil' || tipoPago === 'transferencia') {
+      const montoEnBolivares = this.getMontoEnMonedaMetodo(montoFinalEnSistema, tipoPago);
+      // Guardar el monto en bolívares en el control
+      metodoControl.patchValue({
+        montoEnBolivares: montoEnBolivares
+      });
+    }
+
+    this.cdRef.detectChanges();
   }
 
   obtenerTasaConversion(monedaOrigen: string, monedaDestino: string): number {
@@ -2055,30 +2141,26 @@ export class HistorialVentasComponent implements OnInit {
     return tasaOrigen / tasaDestino;
   }
 
-  // CORRECCIÓN: Calcular total de métodos de pago en moneda de venta
+  convertirAMonedaVenta(monto: number): number {
+    const monedaSistema = this.getMonedaSistema();
+    const monedaVenta = this.getMonedaVenta();
+
+    if (monedaSistema === monedaVenta) {
+      return monto;
+    }
+
+    return this.convertirMonto(monto, monedaSistema, monedaVenta);
+  }
+
   calcularTotalMetodosPagoEnMonedaVenta(): number {
     let total = 0;
 
-    this.metodosPagoArray.controls.forEach((control, index) => {
+    this.metodosPagoArray.controls.forEach((control) => {
       const monto = control.get('monto')?.value || 0;
-      const monedaMetodo = this.getMonedaParaMetodo(index);
-      const monedaVenta = this.getMonedaVenta();
-
-      const montoEnMonedaVenta = this.convertirMonto(monto, monedaMetodo, monedaVenta);
-      total += montoEnMonedaVenta;
+      total += monto;
     });
 
-    return total;
-  }
-
-  // CORRECCIÓN: Calcular conversión para método específico
-  getConversionParaMetodo(index: number): number {
-    const metodoControl = this.metodosPagoArray.at(index);
-    const monto = metodoControl?.get('monto')?.value || 0;
-    const monedaMetodo = this.getMonedaParaMetodo(index);
-    const monedaVenta = this.getMonedaVenta();
-
-    return this.convertirMonto(monto, monedaMetodo, monedaVenta);
+    return this.redondear(total);
   }
 
   mostrarConversionParaMetodo(index: number): boolean {
@@ -2125,7 +2207,6 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  // CORRECCIÓN: Calcular diferencia en moneda de venta
   calcularDiferenciaMetodos(): number {
     const totalMetodosEnMonedaVenta = this.calcularTotalMetodosPagoEnMonedaVenta();
     const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
@@ -2133,7 +2214,6 @@ export class HistorialVentasComponent implements OnInit {
     return Math.abs(totalMetodosEnMonedaVenta - montoAbonado);
   }
 
-  // CORRECCIÓN: Validar pago completo en moneda de venta
   validarPagoCompleto(): boolean {
     const totalMetodosEnMonedaVenta = this.calcularTotalMetodosPagoEnMonedaVenta();
     const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value || 0;
@@ -2141,31 +2221,72 @@ export class HistorialVentasComponent implements OnInit {
     return Math.abs(totalMetodosEnMonedaVenta - montoAbonado) < 0.01;
   }
 
-  //Obtener símbolo para método específico
   getSimboloParaMetodo(index: number): string {
     const metodoControl = this.metodosPagoArray.at(index);
     const tipoPago = metodoControl?.get('tipo')?.value;
 
     switch (tipoPago) {
       case 'efectivo':
-        // Usar símbolo de la moneda específica de este método
-        const monedaEfectivoMetodo = metodoControl?.get('monedaEfectivo')?.value || 'USD';
-        switch (monedaEfectivoMetodo) {
+        const moneda = metodoControl?.get('monedaEfectivo')?.value || 'USD';
+        switch (moneda) {
           case 'USD': return '$';
           case 'EUR': return '€';
-          case 'Bs': return 'Bs. ';
+          case 'Bs': return 'Bs.';
           default: return '$';
         }
+      case 'punto':
       case 'pagomovil':
       case 'transferencia':
-      case 'debito':
-      case 'credito':
-        return 'Bs. ';
+        return this.getSimboloMonedaSistema();  // Mostrar en moneda del sistema
       case 'zelle':
         return '$';
       default:
-        return this.simboloMonedaSistema;
+        return this.getSimboloMonedaVenta();
     }
+  }
+
+  /**
+ * Calcula el monto en la moneda del método a partir del monto ingresado en moneda del sistema
+ */
+  getMontoEnMonedaMetodo(montoEnSistema: number, tipoPago: string): number {
+    if (!montoEnSistema || montoEnSistema === 0) return 0;
+
+    const monedaSistema = this.getMonedaSistema();
+
+    // Para punto, pagomovil, transferencia, se paga en bolívares
+    if (tipoPago === 'punto' || tipoPago === 'pagomovil' || tipoPago === 'transferencia') {
+      // Si la moneda del sistema es bolívares, no hay conversión
+      if (monedaSistema === 'bolivar') {
+        return montoEnSistema;
+      }
+
+      // Obtener la tasa de la moneda del sistema a bolívares
+      const tasa = this.obtenerTasaBolivar(monedaSistema);
+
+      const montoEnBolivares = montoEnSistema * tasa;
+      return this.redondear(montoEnBolivares);
+    }
+
+    // Para efectivo, depende de la moneda seleccionada
+    if (tipoPago === 'efectivo') {
+      // Aquí se manejaría según la moneda seleccionada en el método
+      return montoEnSistema;
+    }
+
+    // Para zelle, se paga en dólares
+    if (tipoPago === 'zelle') {
+      if (monedaSistema === 'dolar') {
+        return montoEnSistema;
+      }
+      // Convertir de moneda del sistema a dólares
+      const tasaOrigen = this.obtenerTasaBolivar(monedaSistema);
+      const tasaDestino = this.obtenerTasaBolivar('dolar');
+      const montoEnBs = montoEnSistema * tasaOrigen;
+      const montoEnDolares = montoEnBs / tasaDestino;
+      return this.redondear(montoEnDolares);
+    }
+
+    return montoEnSistema;
   }
 
   getMontoRestanteParaMetodo(index: number): number {
@@ -2243,9 +2364,7 @@ export class HistorialVentasComponent implements OnInit {
   // === MÉTODOS PARA MONEDA DEL SISTEMA ===
   private obtenerConfiguracionSistema(): void {
     this.monedaSistema = this.systemConfigService.getMonedaPrincipal();
-    console.log('MONEDA SISTEMA', this.monedaSistema);
     this.simboloMonedaSistema = this.systemConfigService.getSimboloMonedaPrincipal();
-    console.log('SIMBOLO SISTEMA', this.simboloMonedaSistema);
   }
 
   private suscribirCambiosConfiguracion(): void {
@@ -2503,20 +2622,19 @@ export class HistorialVentasComponent implements OnInit {
     return monedas[moneda] || moneda.toUpperCase();
   }
 
-  // Método para calcular porcentaje abonado
   getPorcentajeAbonado(): number {
     if (!this.selectedVenta || this.selectedVenta.formaPago !== 'abono') return 0;
 
-    const total = this.selectedVenta.total || 0;
-    const abonado = this.selectedVenta.montoAbonado || 0;
+    // Usar los valores de formaPagoCompleto que están en la moneda original
+    const total = this.selectedVenta.formaPagoCompleto?.montoTotal || this.selectedVenta.total || 0;
+    const pagado = this.selectedVenta.formaPagoCompleto?.totalPagado || 0;
 
     if (total === 0) return 0;
 
-    return Math.round((abonado / total) * 100);
+    const porcentaje = (pagado / total) * 100;
+    return Math.round(porcentaje);
   }
 
-  /* Formatea una fecha para mostrar
-   */
   formatFecha(fecha: string | Date): string {
     if (!fecha) return '';
 
@@ -4443,83 +4561,40 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  // Método para obtener productos con información de precios base
   getProductosSegurosDetalle(): any[] {
-    if (!this.selectedVenta) {
+    if (!this.selectedVenta?.productos || this.selectedVenta.productos.length === 0) {
       return [];
     }
 
-    // Usar productos originales del API si están disponibles
-    if (this.selectedVenta.productosOriginales &&
-      this.selectedVenta.productosOriginales.length > 0) {
-
-      return this.selectedVenta.productosOriginales.map((prod: any) => {
-        const precioUnitarioSinIva = prod.precio_unitario_sin_iva || 0;
-        const cantidad = prod.cantidad || 1;
-        const tieneIva = prod.tiene_iva === 1;
-        const precioUnitarioConIva = prod.precio_unitario || 0;
-        const totalProducto = prod.total || 0;
-
-        // Calcular IVA aplicado POR UNIDAD
-        const ivaPorUnidad = tieneIva ? precioUnitarioConIva - precioUnitarioSinIva : 0;
-
-        // Calcular IVA TOTAL para el producto (ivaPorUnidad × cantidad)
-        const ivaTotalProducto = ivaPorUnidad * cantidad;
-
-        const porcentajeIva = this.selectedVenta?.impuesto || 16;
-
-        return {
-          id: prod.datos?.id,
-          nombre: prod.datos?.nombre || 'Producto sin nombre',
-          codigo: prod.datos?.codigo || 'N/A',
-          cantidad: cantidad,
-          precioUnitarioSinIva: precioUnitarioSinIva,
-          precioUnitarioConIva: precioUnitarioConIva,
-          tieneIva: tieneIva,
-          ivaPorUnidad: ivaPorUnidad,      // IVA por unidad
-          ivaTotalProducto: ivaTotalProducto,  // IVA total (cantidad × ivaPorUnidad)
-          porcentajeIva: porcentajeIva,
-          total: totalProducto,
-          // Para verificación
-          subtotalSinIva: precioUnitarioSinIva * cantidad,
-          subtotalConIva: precioUnitarioConIva * cantidad
-        };
-      });
-    }
-
-    // Fallback a productos procesados
-    return (this.selectedVenta.productos || []).map((prod: any, index: number) => {
-      const precioUnitario = prod.precio || 0;
+    return this.selectedVenta.productos.map((prod: any) => {
       const cantidad = prod.cantidad || 1;
-      const tieneIva = prod.aplicaIva || false;
-      const impuesto = this.selectedVenta.impuesto || 16;
-      const totalProducto = prod.total || precioUnitario * cantidad;
+      const aplicaIva = prod.aplicaIva === true;
+      const precioSinIva = prod.precio || 0;
+      const precioConIva = prod.precioConIva || precioSinIva;
 
-      // Calcular precio sin IVA
-      const precioSinIva = precioUnitario / (1 + (impuesto / 100));
-      const ivaPorUnidad = precioUnitario - precioSinIva;
-      const ivaTotalProducto = ivaPorUnidad * cantidad;
+      const ivaPorUnidad = aplicaIva ? (precioConIva - precioSinIva) : 0;
+      const subtotal = precioSinIva * cantidad;
+      const ivaTotal = ivaPorUnidad * cantidad;
+      const total = aplicaIva ? (precioConIva * cantidad) : (precioSinIva * cantidad);
 
       return {
-        id: prod.id || `prod-${index}`,
+        id: prod.id,
         nombre: prod.nombre || 'Producto sin nombre',
         codigo: prod.codigo || 'N/A',
         cantidad: cantidad,
         precioUnitarioSinIva: precioSinIva,
-        precioUnitarioConIva: precioUnitario,
-        tieneIva: tieneIva,
+        precioUnitarioConIva: precioConIva,
+        tieneIva: aplicaIva,
         ivaPorUnidad: ivaPorUnidad,
-        ivaTotalProducto: ivaTotalProducto,
-        porcentajeIva: impuesto,
-        total: totalProducto
+        ivaTotalProducto: ivaTotal,
+        porcentajeIva: this.selectedVenta.impuesto || 16,
+        total: total
       };
     });
   }
 
-
-  // Métodos auxiliares
   necesitaBanco(tipoPago: string): boolean {
-    return tipoPago === 'transferencia' || tipoPago === 'pagomovil';
+    return tipoPago === 'transferencia' || tipoPago === 'pagomovil' || tipoPago === 'punto';
   }
 
   necesitaReferencia(tipoPago: string): boolean {
@@ -5550,10 +5625,6 @@ export class HistorialVentasComponent implements OnInit {
     }, 300);
   }
 
-
-  /**
-   *  REALIZAR PAGO = FORMA DE PAGO DE CONTADO - PENDIENTE
-   */
   mostrarBotonRealizarPago(venta: any): boolean {
     if (!venta || venta.estado === 'cancelada') {
       return false;
@@ -5591,7 +5662,6 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  // Método para guardar pago completo (similar a guardarEdicionVenta pero con validación extra)
   guardarPagoCompleto(modal: any): void {
     // Validar que sea pago completo
     const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value;
@@ -5754,35 +5824,10 @@ export class HistorialVentasComponent implements OnInit {
     return texto.replace(/\D/g, '');
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  /**
- * Obtiene la moneda del sistema (configuración global)
- */
   getMonedaSistema(): string {
     return this.monedaSistema || 'dolar';
   }
 
-  /**
-   * Obtiene el símbolo de la moneda del sistema
-   */
   getSimboloMonedaSistema(): string {
     switch (this.getMonedaSistema()) {
       case 'dolar': return '$';
@@ -5792,9 +5837,6 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  /**
-   * Obtiene la tasa de cambio de una moneda a la moneda del sistema
-   */
   convertirAMonedaSistema(monto: number, monedaOrigen: string): number {
     if (!monto || monto === 0) return 0;
 
@@ -5810,17 +5852,10 @@ export class HistorialVentasComponent implements OnInit {
     const tasaOrigen = this.obtenerTasaBolivar(monedaOrigenNormalizada);
     const tasaDestino = this.obtenerTasaBolivar(monedaDestino);
 
-    console.log('tasaOrigen', tasaOrigen);
-    console.log('tasaDestino', tasaDestino);
-console.log('monto', monto);
-
     if (tasaOrigen === 0 || tasaDestino === 0) return monto;
 
     const montoEnBs = monto * tasaOrigen;
     const montoConvertido = montoEnBs / tasaDestino;
-
-    console.log('montoEnBs', montoEnBs);
-    console.log('montoConvertido', montoConvertido);
 
     return this.redondear(montoConvertido);
   }
@@ -5830,9 +5865,9 @@ console.log('monto', monto);
 
     switch (monedaNormalizada) {
       case 'dolar':
-        return this.tasasPorId['dolar'];
+        return this.tasasPorId['dolar'] || 473.87;
       case 'euro':
-        return this.tasasPorId['euro'];
+        return this.tasasPorId['euro'] || 542.64;
       case 'bolivar':
         return 1;
       default:
@@ -5840,9 +5875,6 @@ console.log('monto', monto);
     }
   }
 
-  /**
-   * Normaliza el nombre de la moneda
-   */
   normalizarMoneda(moneda: string): string {
     const monedaLower = moneda?.toLowerCase() || 'dolar';
     if (monedaLower === 'usd' || monedaLower === '$') return 'dolar';
@@ -5851,10 +5883,6 @@ console.log('monto', monto);
     return monedaLower;
   }
 
-
-  /**
-   * Obtiene el total de la venta en la moneda del sistema
-   */
   getTotalVentaSistema(venta: any): number {
     if (!venta) return 0;
 
@@ -5866,9 +5894,6 @@ console.log('monto', monto);
     return this.convertirAMonedaSistema(totalOriginal, monedaOriginal);
   }
 
-  /**
-   * Obtiene el total pagado en la moneda del sistema
-   */
   getTotalPagadoVentaSistema(venta: any): number {
     if (!venta) return 0;
 
@@ -5880,9 +5905,6 @@ console.log('monto', monto);
     return this.convertirAMonedaSistema(pagadoOriginal, monedaOriginal);
   }
 
-  /**
-   * Obtiene la deuda pendiente en la moneda del sistema
-   */
   getDeudaPendienteVentaSistema(venta: any): number {
     if (!venta) return 0;
 
@@ -5894,9 +5916,6 @@ console.log('monto', monto);
     return this.convertirAMonedaSistema(deudaOriginal, monedaOriginal);
   }
 
-  /**
-   * Obtiene el subtotal en la moneda del sistema
-   */
   getSubtotalVentaSistema(venta: any): number {
     const total = this.getTotalVentaSistema(venta);
     const impuesto = venta.impuesto || 16;
@@ -5905,9 +5924,6 @@ console.log('monto', monto);
     return this.redondear(subtotal);
   }
 
-  /**
-   * Obtiene el IVA en la moneda del sistema
-   */
   getIvaVentaSistema(venta: any): number {
     const total = this.getTotalVentaSistema(venta);
     const subtotal = this.getSubtotalVentaSistema(venta);
@@ -5915,9 +5931,6 @@ console.log('monto', monto);
     return this.redondear(total - subtotal);
   }
 
-  /**
-   * Obtiene el monto formateado en la moneda del sistema
-   */
   getMontoParaMostrar(venta: any, monto: number, monedaOrigen?: string): string {
     if (!venta || monto === null || monto === undefined || isNaN(monto)) {
       return this.formatearMoneda(0, this.getMonedaSistema());
@@ -5936,76 +5949,144 @@ console.log('monto', monto);
     return this.formatearMoneda(montoConvertido, this.getMonedaSistema());
   }
 
-
-
-
-
-
-
-
-
-
-
-  // Estos métodos devuelven valores en la moneda original de la venta (dólares)
-getTotalVenta(venta: any): number {
-    if (!venta) return 0;
-    if (venta.formaPagoCompleto?.montoTotal !== undefined) {
-        return venta.formaPagoCompleto.montoTotal;
-    }
-    return venta.total || 0;
-}
-
-getTotalPagadoVenta(venta: any): number {
+  getTotalPagadoVenta(venta: any): number {
     if (!venta) return 0;
     if (venta.formaPagoCompleto?.totalPagado !== undefined) {
-        return venta.formaPagoCompleto.totalPagado;
+      return venta.formaPagoCompleto.totalPagado;
     }
     return 0;
-}
+  }
 
-getDeudaPendiente(venta: any): number {
+  getDeudaPendiente(venta: any): number {
     if (!venta) return 0;
     if (venta.estado === 'cancelada') return 0;
     if (venta.formaPagoCompleto?.deuda !== undefined) {
-        return venta.formaPagoCompleto.deuda;
+      return venta.formaPagoCompleto.deuda;
     }
     return 0;
-}
+  }
 
-getSubtotalVenta(venta: any): number {
-    const total = this.getTotalVenta(venta);
-    const impuesto = venta.impuesto || 16;
-    return total / (1 + (impuesto / 100));
-}
+  getSubtotalVenta(venta: any): number {
+    if (!venta) return 0;
 
-getIvaVenta(venta: any): number {
-    const total = this.getTotalVenta(venta);
-    const subtotal = this.getSubtotalVenta(venta);
-    return total - subtotal;
-}
+    let subtotal = 0;
 
-formatearMonedaVenta(venta: any, monto: number): string {
+    if (venta.productos && venta.productos.length > 0) {
+      venta.productos.forEach((prod: any) => {
+        const cantidad = prod.cantidad || 1;
+        const precioBase = prod.precio || 0;  // precio sin IVA
+        subtotal += precioBase * cantidad;
+      });
+    }
+
+    return this.redondear(subtotal);
+  }
+
+  getIvaVenta(venta: any): number {
+    if (!venta) return 0;
+
+    let ivaTotal = 0;
+
+    if (venta.productos && venta.productos.length > 0) {
+      venta.productos.forEach((prod: any) => {
+        if (prod.aplicaIva === true) {
+          const cantidad = prod.cantidad || 1;
+          const precioSinIva = prod.precio || 0;
+          const precioConIva = prod.precioConIva || precioSinIva;
+          const ivaPorUnidad = precioConIva - precioSinIva;
+          ivaTotal += ivaPorUnidad * cantidad;
+        }
+      });
+    }
+
+    return this.redondear(ivaTotal);
+  }
+
+  getTotalVenta(venta: any): number {
+    if (!venta) return 0;
+
+    let total = 0;
+
+    if (venta.productos && venta.productos.length > 0) {
+      venta.productos.forEach((prod: any) => {
+        const cantidad = prod.cantidad || 1;
+        const precioConIva = prod.aplicaIva === true ? (prod.precioConIva || prod.precio) : (prod.precio || 0);
+        total += precioConIva * cantidad;
+      });
+    }
+
+    return this.redondear(total);
+  }
+
+  formatearMonedaVenta(venta: any, monto: number): string {
     if (!venta || monto === null || monto === undefined || isNaN(monto)) {
-        const moneda = venta?.moneda || 'dolar';
-        return this.obtenerSimboloMoneda(moneda) + '0,00';
+      const moneda = venta?.moneda || 'dolar';
+      return this.obtenerSimboloMoneda(moneda) + '0,00';
     }
     const moneda = venta.moneda || 'dolar';
     const simbolo = this.obtenerSimboloMoneda(moneda);
-    
+
     const valorRedondeado = Math.round(monto * 100) / 100;
     const partes = valorRedondeado.toString().split('.');
     let parteEntera = partes[0];
     let parteDecimal = partes[1] || '00';
     parteDecimal = parteDecimal.padEnd(2, '0');
     parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    
+
     if (simbolo === 'Bs.' || simbolo === 'Bs') {
-        return `${simbolo} ${parteEntera},${parteDecimal}`;
+      return `${simbolo} ${parteEntera},${parteDecimal}`;
     } else {
-        return `${simbolo}${parteEntera},${parteDecimal}`;
+      return `${simbolo}${parteEntera},${parteDecimal}`;
     }
-}
+  }
+
+  formatearMonedaSistema(monto: number): string {
+    return this.formatearMoneda(monto, this.getMonedaSistema());
+  }
 
 
+  getMontoMetodoPago(metodo: any): { monto: number, moneda: string, montoOriginal?: number, monedaOriginal?: string } {
+    // Si el backend ya envió el monto convertido a la moneda del sistema
+    if (metodo.montoEnMonedaSistema !== undefined && metodo.montoEnMonedaSistema !== null) {
+      const monedaSistema = metodo.monedaSistema || this.getMonedaSistema();
+      return {
+        monto: metodo.montoEnMonedaSistema,
+        moneda: monedaSistema,
+        montoOriginal: metodo.monto,
+        monedaOriginal: metodo.moneda
+      };
+    }
 
+    // Si el backend envió el monto en bolívares
+    if (metodo.montoEnBolivar !== undefined && metodo.montoEnBolivar !== null && this.getMonedaSistema() === 'bolivar') {
+      return {
+        monto: metodo.montoEnBolivar,
+        moneda: 'bolivar',
+        montoOriginal: metodo.monto,
+        monedaOriginal: metodo.moneda
+      };
+    }
+
+    // Fallback: mostrar el monto original con su moneda
+    return {
+      monto: metodo.monto,
+      moneda: metodo.moneda,
+      montoOriginal: undefined,
+      monedaOriginal: undefined
+    };
+  }
+
+  formatearMontoMetodoPago(metodo: any): string {
+    const { monto, moneda, montoOriginal, monedaOriginal } = this.getMontoMetodoPago(metodo);
+
+    const montoFormateado = this.formatearMoneda(monto, moneda);
+
+    // Si hay monto original y es diferente al convertido, mostrarlo entre paréntesis
+    if (montoOriginal !== undefined && montoOriginal !== monto) {
+      const montoOriginalFormateado = this.formatearMoneda(montoOriginal, monedaOriginal);
+      return `${montoFormateado} (${montoOriginalFormateado})`;
+    }
+
+    return montoFormateado;
+  }
 }
