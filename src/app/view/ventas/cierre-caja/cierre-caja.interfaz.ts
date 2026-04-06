@@ -46,6 +46,12 @@ export interface CierreDiario {
   fecha: Date;
   efectivoInicial: number;
 
+  efectivoInicialDetalle?: {
+    Bs: number;
+    USD: number;
+    EUR: number;
+  };
+
   // Ventas por método de pago 
   ventasEfectivo: number;
   ventasTarjeta: number;

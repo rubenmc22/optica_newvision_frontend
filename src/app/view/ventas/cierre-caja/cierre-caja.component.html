@@ -77,11 +77,6 @@
               <i class="bi bi-clock-history"></i>
               <span>Historial</span>
             </button>
-
-            <button class="btn-moderno btn-warning" (click)="exportarReporte()">
-              <i class="bi bi-file-earmark-pdf"></i>
-              <span>Exportar</span>
-            </button>
           </div>
         </div>
       </div>
@@ -97,7 +92,23 @@
       </div>
       <div class="kpi-content">
         <span class="kpi-label">Efectivo Inicial</span>
-        <span class="kpi-value">{{ efectivoInicial | currency }}</span>
+        <div class="kpi-monedas">
+          <div class="moneda-item" *ngIf="cierreActual.efectivoInicialDetalle?.USD > 0">
+            <span class="moneda-simbolo">$</span>
+            <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.USD | number:'1.2-2' }}</span>
+          </div>
+          <div class="moneda-item" *ngIf="cierreActual.efectivoInicialDetalle?.EUR > 0">
+            <span class="moneda-simbolo">€</span>
+            <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.EUR | number:'1.2-2' }}</span>
+          </div>
+          <div class="moneda-item" *ngIf="cierreActual.efectivoInicialDetalle?.Bs > 0">
+            <span class="moneda-simbolo">Bs.</span>
+            <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.Bs | number:'1.2-2' }}</span>
+          </div>
+          <div class="moneda-item" *ngIf="!cierreActual.efectivoInicialDetalle?.USD && !cierreActual.efectivoInicialDetalle?.EUR && !cierreActual.efectivoInicialDetalle?.Bs">
+            <span class="moneda-valor text-muted">0.00</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -265,51 +276,138 @@
         </div>
 
         <div class="cierre-detalle">
-          <!-- Resumen rápido en 2 columnas -->
-          <div class="cierre-resumen-grid">
-            <div class="cierre-resumen-item">
-              <span class="label">Efectivo Inicial</span>
-              <span class="value">{{ cierreActual.efectivoInicial | currency }}</span>
+          
+          <!-- ========== VISTA PARA CAJA ABIERTA ========== -->
+          <div *ngIf="cierreActual.estado === 'abierto'">
+            <!-- Resumen de ventas del día (solo informativo) -->
+            <div class="cierre-resumen-grid">
+              <div class="cierre-resumen-item">
+                <span class="label">Efectivo Inicial</span>
+                <div class="value-monedas-vertical">
+                  <div class="moneda-linea" *ngIf="cierreActual.efectivoInicialDetalle?.USD > 0">
+                    <span class="moneda-simbolo">$</span>
+                    <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.USD | number:'1.2-2' }}</span>
+                    <span class="moneda-nombre">USD</span>
+                  </div>
+                  <div class="moneda-linea" *ngIf="cierreActual.efectivoInicialDetalle?.EUR > 0">
+                    <span class="moneda-simbolo">€</span>
+                    <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.EUR | number:'1.2-2' }}</span>
+                    <span class="moneda-nombre">EUR</span>
+                  </div>
+                  <div class="moneda-linea" *ngIf="cierreActual.efectivoInicialDetalle?.Bs > 0">
+                    <span class="moneda-simbolo">Bs.</span>
+                    <span class="moneda-valor">{{ cierreActual.efectivoInicialDetalle.Bs | number:'1.2-2' }}</span>
+                    <span class="moneda-nombre">VES</span>
+                  </div>
+                  <div class="moneda-linea text-muted" *ngIf="!cierreActual.efectivoInicialDetalle?.USD && !cierreActual.efectivoInicialDetalle?.EUR && !cierreActual.efectivoInicialDetalle?.Bs">
+                    <span>0.00</span>
+                  </div>
+                </div>
+              </div>
+              <div class="cierre-resumen-item">
+                <span class="label">Total Ventas</span>
+                <span class="value text-success">{{ totalVentasKPI | currency }}</span>
+              </div>
+              <div class="cierre-resumen-item">
+                <span class="label">Total Egresos</span>
+                <span class="value text-danger">{{ getTotalEgresos() | currency }}</span>
+              </div>
+              <div class="cierre-resumen-item highlight">
+                <span class="label">Neto del Día</span>
+                <span class="value fw-bold">{{ getNetoDia() | currency }}</span>
+              </div>
             </div>
-            <div class="cierre-resumen-item">
-              <span class="label">+ Ventas Efectivo</span>
-              <span class="value text-success">{{ cierreActual.ventasEfectivo | currency }}</span>
-            </div>
-            <div class="cierre-resumen-item">
-              <span class="label">- Egresos Efectivo</span>
-              <span class="value text-danger">{{ getEgresosEfectivo() | currency }}</span>
-            </div>
-            <div class="cierre-resumen-item highlight">
-              <span class="label">= Efectivo Teórico</span>
-              <span class="value fw-bold">{{ getEfectivoFinalTeorico() | currency }}</span>
+
+            <!-- Desglose de ventas por método (informativo) -->
+            <div class="ventas-metodos-info">
+              <div class="info-row">
+                <span class="info-label">Ventas en Efectivo:</span>
+                <span class="info-value">{{ analisisMetodosPago.efectivo.total | currency }}</span>
+                <span class="info-note">(ingresa físicamente a caja)</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Otros métodos:</span>
+                <span class="info-value">{{ (totalVentasKPI - analisisMetodosPago.efectivo.total) | currency }}</span>
+                <span class="info-note">(punto, transferencia, pago móvil, zelle)</span>
+              </div>
             </div>
           </div>
 
-          <!-- Diferencia destacada -->
-          <div class="diferencia-destacada" [ngClass]="{
-            'positiva': getDiferencia() > 0,
-            'negativa': getDiferencia() < 0,
-            'cero': getDiferencia() === 0
-          }">
-            <div class="diferencia-icon">
-              <i class="bi" [ngClass]="{
-                'bi-arrow-up-circle': getDiferencia() > 0,
-                'bi-arrow-down-circle': getDiferencia() < 0,
-                'bi-check-circle': getDiferencia() === 0
-              }"></i>
+          <!-- ========== VISTA PARA CIERRE (cuando se ingresan valores reales) ========== -->
+          <div *ngIf="cierreActual.estado === 'cerrado' || cierreActual.estado === 'revisado'">
+            
+            <!-- Cálculo del EFECTIVO TEÓRICO (solo efectivo físico) -->
+            <div class="seccion-titulo-pequeno">
+              <i class="bi bi-cash"></i> Efectivo Físico en Caja
             </div>
-            <div class="diferencia-info">
-              <span class="diferencia-label">Diferencia</span>
-              <span class="diferencia-valor">{{ getDiferencia() | currency }}</span>
+            <div class="cierre-resumen-grid">
+              <div class="cierre-resumen-item">
+                <span class="label">Efectivo Inicial</span>
+                <div class="value-monedas">
+                  <span *ngIf="cierreActual.efectivoInicialDetalle?.USD > 0">$ {{ cierreActual.efectivoInicialDetalle.USD | number:'1.2-2' }}</span>
+                  <span *ngIf="cierreActual.efectivoInicialDetalle?.EUR > 0">€ {{ cierreActual.efectivoInicialDetalle.EUR | number:'1.2-2' }}</span>
+                  <span *ngIf="cierreActual.efectivoInicialDetalle?.Bs > 0">Bs. {{ cierreActual.efectivoInicialDetalle.Bs | number:'1.2-2' }}</span>
+                </div>
+              </div>
+              <div class="cierre-resumen-item">
+                <span class="label">+ Ventas Efectivo</span>
+                <span class="value text-success">{{ cierreActual.ventasEfectivo | currency }}</span>
+              </div>
+              <div class="cierre-resumen-item">
+                <span class="label">- Egresos Efectivo</span>
+                <span class="value text-danger">{{ getEgresosEfectivo() | currency }}</span>
+              </div>
+              <div class="cierre-resumen-item highlight">
+                <span class="label">= Efectivo Teórico</span>
+                <span class="value fw-bold">{{ getEfectivoFinalTeorico() | currency }}</span>
+              </div>
+            </div>
+
+            <!-- Comparación con lo REAL contado -->
+            <div class="diferencia-destacada" [ngClass]="{
+              'positiva': getDiferencia() > 0,
+              'negativa': getDiferencia() < 0,
+              'cero': getDiferencia() === 0
+            }">
+              <div class="diferencia-icon">
+                <i class="bi" [ngClass]="{
+                  'bi-arrow-up-circle': getDiferencia() > 0,
+                  'bi-arrow-down-circle': getDiferencia() < 0,
+                  'bi-check-circle': getDiferencia() === 0
+                }"></i>
+              </div>
+              <div class="diferencia-info">
+                <span class="diferencia-label">Diferencia en Efectivo</span>
+                <span class="diferencia-valor">{{ getDiferencia() | currency }}</span>
+                <span class="diferencia-nota">(Real contado - Teórico)</span>
+              </div>
+            </div>
+
+            <!-- Resumen general de todos los métodos -->
+            <div class="seccion-titulo-pequeno mt-3">
+              <i class="bi bi-graph-up"></i> Resumen General de Ventas
+            </div>
+            <div class="ventas-metodos-info">
+              <div class="info-row">
+                <span class="info-label">Total Ventas (todos los métodos):</span>
+                <span class="info-value">{{ totalVentasKPI | currency }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Total Egresos:</span>
+                <span class="info-value text-danger">{{ getTotalEgresos() | currency }}</span>
+              </div>
+              <div class="info-row total">
+                <span class="info-label">Neto del Día:</span>
+                <span class="info-value fw-bold">{{ getNetoDia() | currency }}</span>
+              </div>
             </div>
           </div>
 
-          <!-- Información de apertura -->
+          <!-- Información de apertura (siempre visible) -->
           <div class="fecha-info">
             <div class="info-item">
               <i class="bi bi-person"></i>
-              <span>Apertura: {{ cierreActual.usuarioApertura }} - {{ cierreActual.fechaApertura | date:'HH:mm'
-                }}</span>
+              <span>Apertura: {{ cierreActual.usuarioApertura }} - {{ cierreActual.fechaApertura | date:'HH:mm' }}</span>
             </div>
             <div class="info-item" *ngIf="cierreActual.fechaCierre">
               <i class="bi bi-person-check"></i>
@@ -317,11 +415,12 @@
             </div>
           </div>
 
-          <!-- Observaciones si existen -->
+          <!-- Observaciones -->
           <div class="observaciones" *ngIf="cierreActual.observaciones">
             <i class="bi bi-chat-text"></i>
             <span>{{ cierreActual.observaciones }}</span>
           </div>
+
         </div>
       </div>
 
@@ -657,153 +756,152 @@
   </div>
 </div>
 
-<!-- Modal Inicio Caja  -->
+<!-- Modal Inicio Caja Rediseñado -->
 <div class="modal fade" id="inicioCajaModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content border-0 shadow-lg">
-      <!-- Header con gradiente -->
-      <div class="modal-header bg-gradient-success text-white border-0 py-3">
-        <div class="d-flex align-items-center">
-          <div class="rounded-circle bg-white bg-opacity-25 p-2 me-3">
-            <i class="bi bi-play-circle-fill fs-4 text-white"></i>
+    <div class="modal-content border-0 shadow-xl">
+      
+      <!-- Header compacto con gradiente -->
+      <div class="modal-header-compact">
+        <div class="header-icon-wrapper">
+          <div class="header-icon">
+            <i class="bi bi-play-circle-fill"></i>
           </div>
           <div>
             <h5 class="modal-title fw-bold mb-0">Iniciar Caja</h5>
-            <small class="text-white-50">Apertura de jornada laboral</small>
+            <p class="modal-subtitle mb-0">Apertura de jornada laboral</p>
           </div>
         </div>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close-moderno" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
       
       <form [formGroup]="inicioCajaForm" (ngSubmit)="iniciarCaja()">
         <div class="modal-body p-4">
-          <!-- Información en cards horizontales -->
-          <div class="row g-3 mb-4">
-            <div class="col-md-4">
-              <div class="card border-0 bg-light shadow-sm h-100">
-                <div class="card-body py-3 px-3">
-                  <div class="d-flex align-items-center">
-                    <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-3">
-                      <i class="bi bi-building text-primary fs-5"></i>
-                    </div>
-                    <div>
-                      <small class="text-muted d-block">Sede</small>
-                      <span class="fw-semibold">{{ sedeActual?.nombre || 'No seleccionada' }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          
+          <!-- Info rápida en chips -->
+          <div class="info-chips mb-4">
+            <div class="chip">
+              <i class="bi bi-building"></i>
+              <span>{{ sedeActual?.nombre || 'Sin sede' }}</span>
             </div>
-            <div class="col-md-4">
-              <div class="card border-0 bg-light shadow-sm h-100">
-                <div class="card-body py-3 px-3">
-                  <div class="d-flex align-items-center">
-                    <div class="rounded-circle bg-info bg-opacity-10 p-2 me-3">
-                      <i class="bi bi-person-badge text-info fs-5"></i>
-                    </div>
-                    <div>
-                      <small class="text-muted d-block">Usuario</small>
-                      <span class="fw-semibold">{{ currentUser?.nombre || 'No identificado' }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div class="chip">
+              <i class="bi bi-person"></i>
+              <span>{{ currentUser?.nombre?.split(' ')[0] || 'Usuario' }}</span>
             </div>
-            <div class="col-md-4">
-              <div class="card border-0 bg-light shadow-sm h-100">
-                <div class="card-body py-3 px-3">
-                  <div class="d-flex align-items-center">
-                    <div class="rounded-circle bg-warning bg-opacity-10 p-2 me-3">
-                      <i class="bi bi-calendar-clock text-warning fs-5"></i>
-                    </div>
-                    <div>
-                      <small class="text-muted d-block">Apertura</small>
-                      <span class="fw-semibold">{{ fechaSeleccionada | date:'dd/MM/yyyy HH:mm' }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div class="chip">
+              <i class="bi bi-calendar3"></i>
+              <span>{{ fechaSeleccionada | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <div class="chip">
+              <i class="bi bi-clock"></i>
+              <span>{{ fechaSeleccionada | date:'HH:mm' }}</span>
             </div>
           </div>
 
-          <!-- Campos principales -->
-          <div class="row g-4 mb-4">
-            <div class="col-md-6">
-              <label class="form-label fw-semibold mb-2">
-                <i class="bi bi-cash-stack text-success me-2"></i>
-                Efectivo Inicial
-                <span class="text-danger">*</span>
-              </label>
-              <div class="input-group input-group-lg">
-                <span class="input-group-text bg-light border-0">
-                  <i class="bi bi-currency-dollar text-success"></i>
-                </span>
+          <!-- Título de sección -->
+          <div class="section-title">
+            <i class="bi bi-cash-stack"></i>
+            <span>Efectivo inicial</span>
+          </div>
+
+          <!-- Grid de monedas compacto -->
+          <div class="monedas-grid mb-4">
+            <!-- Bolívares -->
+            <div class="moneda-card">
+              <div class="moneda-header">
+                <div class="moneda-icon bg-success">
+                  <i class="bi bi-cash"></i>
+                </div>
+                <span class="moneda-nombre">Bolívares</span>
+                <span class="moneda-codigo">VES</span>
+              </div>
+              <div class="moneda-input">
+                <span class="moneda-simbolo">Bs.</span>
                 <input type="number" 
-                       class="form-control bg-light border-0" 
-                       formControlName="efectivoInicial" 
+                       class="form-control" 
+                       formControlName="efectivoInicialBs" 
                        step="0.01" 
                        min="0"
-                       placeholder="0.00" 
-                       autofocus>
-                <span class="input-group-text bg-light border-0">{{ simboloMonedaSistema }}</span>
+                       placeholder="0,00"
+                       (input)="calcularTotalEfectivoInicial()">
               </div>
-              <div class="text-danger small mt-2"
-                   *ngIf="inicioCajaForm.get('efectivoInicial')?.invalid && inicioCajaForm.get('efectivoInicial')?.touched">
-                <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                El monto inicial es requerido
-              </div>
-              <small class="text-muted mt-2 d-block">
-                <i class="bi bi-info-circle me-1"></i>
-                Ingrese el dinero físico que hay en caja al empezar la jornada
-              </small>
             </div>
 
-            <div class="col-md-6">
-              <label class="form-label fw-semibold mb-2">
-                <i class="bi bi-chat-text text-primary me-2"></i>
-                Observaciones
-              </label>
-              <textarea class="form-control" 
-                        formControlName="observaciones" 
-                        rows="3"
-                        placeholder="Ej: Billetes deteriorados, monedas extras, notas importantes..."></textarea>
+            <!-- Dólares -->
+            <div class="moneda-card">
+              <div class="moneda-header">
+                <div class="moneda-icon bg-primary">
+                  <i class="bi bi-currency-dollar"></i>
+                </div>
+                <span class="moneda-nombre">Dólares</span>
+                <span class="moneda-codigo">USD</span>
+              </div>
+              <div class="moneda-input">
+                <span class="moneda-simbolo">$</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="efectivoInicialUsd" 
+                       step="0.01" 
+                       min="0"
+                       placeholder="0,00"
+                       (input)="calcularTotalEfectivoInicial()">
+              </div>
+            </div>
+
+            <!-- Euros -->
+            <div class="moneda-card">
+              <div class="moneda-header">
+                <div class="moneda-icon bg-warning">
+                  <i class="bi bi-currency-euro"></i>
+                </div>
+                <span class="moneda-nombre">Euros</span>
+                <span class="moneda-codigo">EUR</span>
+              </div>
+              <div class="moneda-input">
+                <span class="moneda-simbolo">€</span>
+                <input type="number" 
+                       class="form-control" 
+                       formControlName="efectivoInicialEur" 
+                       step="0.01" 
+                       min="0"
+                       placeholder="0,00"
+                       (input)="calcularTotalEfectivoInicial()">
+              </div>
             </div>
           </div>
 
-          <!-- Grid de información adicional -->
-          <div class="row g-3">
-            <div class="col-md-7">
-              <div class="card border-0 bg-gradient-info-soft">
-                <div class="card-body py-2 px-3">
-                  <div class="d-flex align-items-center">
-                    <i class="bi bi-lightbulb fs-5 text-warning me-3"></i>
-                    <div>
-                      <span class="fw-semibold">Consejos para el inicio de caja:</span>
-                      <span class="small text-muted ms-2">Verifique el efectivo inicial y registre cualquier novedad importante</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <!-- Observaciones compactas -->
+          <div class="observaciones-field">
+            <div class="observaciones-header">
+              <i class="bi bi-chat-text"></i>
+              <span>Observaciones</span>
+              <span class="opcional">(opcional)</span>
             </div>
-            <div class="col-md-5">
-              <div class="card border-0 bg-success bg-opacity-10">
-                <div class="card-body py-2 px-3">
-                  <div class="d-flex align-items-center">
-                    <i class="bi bi-check-circle-fill text-success fs-5 me-3"></i>
-                    <span class="fw-semibold small">Las ventas se registrarán automáticamente</span>
-                  </div>
-                </div>
-              </div>
+            <textarea class="form-control" 
+                      formControlName="observaciones" 
+                      rows="2"
+                      placeholder="Ej: Billetes deteriorados, monedas extras..."></textarea>
+          </div>
+
+          <!-- Info adicional -->
+          <div class="info-footer">
+            <div class="info-item">
+              <i class="bi bi-info-circle"></i>
+              <span>Las ventas se registrarán automáticamente</span>
             </div>
           </div>
+
         </div>
         
-        <div class="modal-footer bg-light border-0 py-3">
-          <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
-            <i class="bi bi-x-circle me-2"></i>Cancelar
+        <div class="modal-footer-compact">
+          <button type="button" class="btn-cancelar" data-bs-dismiss="modal">
+            Cancelar
           </button>
-          <button type="submit" class="btn btn-success px-4" [disabled]="inicioCajaForm.invalid">
-            <i class="bi bi-play-fill me-2"></i>Iniciar Caja
+          <button type="submit" class="btn-iniciar" [disabled]="inicioCajaForm.invalid">
+            <i class="bi bi-play-fill"></i>
+            <span>Iniciar Caja</span>
           </button>
         </div>
       </form>

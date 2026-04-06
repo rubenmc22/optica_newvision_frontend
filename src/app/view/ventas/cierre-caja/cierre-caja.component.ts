@@ -55,6 +55,9 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
+  totalEfectivoInicialCalculado: number = 0;
+
+
   // En el componente, agrega estas propiedades para los análisis en vivo
   analisisVentas: {
     soloConsulta: { cantidad: number; total: number; montoMedico: number; montoOptica: number };
@@ -211,7 +214,9 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   private inicializarForms(): void {
     this.inicioCajaForm = this.fb.group({
-      efectivoInicial: [0, [Validators.required, Validators.min(0)]],
+      efectivoInicialBs: [0, [Validators.required, Validators.min(0)]],
+      efectivoInicialUsd: [0, [Validators.required, Validators.min(0)]],
+      efectivoInicialEur: [0, [Validators.required, Validators.min(0)]],
       observaciones: ['Caja abierta normalmente'],
       moneda: ['USD', Validators.required]
     });
@@ -1094,10 +1099,20 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     const formValue = this.inicioCajaForm.value;
 
+    // Calcular total en moneda del sistema
+    this.calcularTotalEfectivoInicial();
+
+    const efectivoInicialDetalle = {
+      Bs: formValue.efectivoInicialBs || 0,
+      USD: formValue.efectivoInicialUsd || 0,
+      EUR: formValue.efectivoInicialEur || 0
+    };
+
     this.cierreActual = {
       id: `CIERRE-${this.datePipe.transform(new Date(), 'yyyy-MM-dd')}-${this.sedeActual.key}`,
       fecha: new Date(),
-      efectivoInicial: parseFloat(formValue.efectivoInicial),
+      efectivoInicial: this.totalEfectivoInicialCalculado,
+      efectivoInicialDetalle: efectivoInicialDetalle,
 
       // Ventas por método (originales)
       ventasEfectivo: 0,
@@ -1146,7 +1161,8 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     // Cerrar modal
     this.cerrarModal('inicioCajaModal');
 
-    this.swalService.showSuccess('Caja iniciada', `Caja iniciada con ${this.formatCurrency(this.cierreActual.efectivoInicial)}`);
+    const mensajeDetalle = `Bs. ${efectivoInicialDetalle.Bs} | USD $${efectivoInicialDetalle.USD} | EUR €${efectivoInicialDetalle.EUR}`;
+    this.swalService.showSuccess('Caja iniciada', `Caja iniciada con: ${mensajeDetalle}`);
   }
 
   guardarTransaccion(): void {
@@ -2445,5 +2461,16 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     } else {
       this.swalService.showWarning('Formato inválido', 'El archivo no contiene datos de cierre válidos');
     }
+  }
+
+  calcularTotalEfectivoInicial(): void {
+    const bs = this.inicioCajaForm.get('efectivoInicialBs')?.value || 0;
+    const usd = this.inicioCajaForm.get('efectivoInicialUsd')?.value || 0;
+    const eur = this.inicioCajaForm.get('efectivoInicialEur')?.value || 0;
+
+    const tasaUsd = this.tasasCambio?.dolar || 473.87;
+    const tasaEur = this.tasasCambio?.euro || 542.64;
+
+    this.totalEfectivoInicialCalculado = bs + (usd * tasaUsd) + (eur * tasaEur);
   }
 }

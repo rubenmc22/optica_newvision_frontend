@@ -16,10 +16,10 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   border: 1px solid #e9ecef;
   background: #f8f9fa;
-  padding: 20px;
+  padding: 0px;
 
   @media (max-width: 768px) {
-    padding: 12px;
+    padding: 0px;
   }
 }
 
@@ -41,7 +41,6 @@
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-// Header - Estilo modernizado
 .cierre-header {
   background: var(--degradado-color) !important;
   color: white;
@@ -520,6 +519,7 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
   margin-bottom: 1.5rem;
+  padding: 0px 20px 0px;
 
   @media (max-width: 768px) {
     grid-template-columns: repeat(2, 1fr);
@@ -592,6 +592,7 @@
   grid-template-columns: 1.5fr 1fr;
   gap: 1.5rem;
   align-items: stretch;
+  padding: 20px;
 
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
@@ -2152,6 +2153,7 @@
 
 .modal-content {
   animation: fadeIn 0.3s ease-out;
+  border-radius: 16px 16px 0 0;
 }
 
 /* Ajustes de espaciado */
@@ -2277,4 +2279,521 @@ textarea.form-control {
   z-index: 99999 !important;
   width: 300px !important;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+// Modal de Inicio de Caja - Estilos Modernos
+.modal-header-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: var(--degradado-color) !important;
+  border-radius: 15px 15px 0 0;
+
+  .header-icon-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    .header-icon {
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      i {
+        font-size: 1.5rem;
+        color: white;
+      }
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      color: white;
+    }
+
+    .modal-subtitle {
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+  }
+
+  .btn-close-moderno {
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: scale(1.05);
+    }
+
+    i {
+      font-size: 1rem;
+    }
+  }
+}
+
+// Info chips
+.info-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    background: #f1f5f9;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: #334155;
+
+    i {
+      font-size: 0.7rem;
+      color: #64748b;
+    }
+  }
+}
+
+// Título de sección
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+
+  i {
+    font-size: 0.9rem;
+    color: #3b82f6;
+  }
+
+  span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+// Grid de monedas
+.monedas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+
+  .moneda-card {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 0.75rem;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #f1f5f9;
+      transform: translateY(-2px);
+    }
+
+    .moneda-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+
+      .moneda-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        i {
+          font-size: 0.8rem;
+          color: white;
+        }
+
+        &.bg-success {
+          background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        &.bg-primary {
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        &.bg-warning {
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+      }
+
+      .moneda-nombre {
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: #475569;
+        flex: 1;
+      }
+
+      .moneda-codigo {
+        font-size: 0.6rem;
+        font-weight: 600;
+        color: #94a3b8;
+      }
+    }
+
+    .moneda-input {
+      display: flex;
+      align-items: center;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+
+      .moneda-simbolo {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #64748b;
+        background: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+      }
+
+      .form-control {
+        flex: 1;
+        border: none;
+        padding: 0.375rem 0.5rem;
+        font-size: 0.8rem;
+        font-weight: 500;
+
+        &:focus {
+          outline: none;
+          box-shadow: none;
+        }
+      }
+    }
+  }
+}
+
+// Total resumen
+.total-resumen {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .total-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    i {
+      font-size: 1rem;
+      color: #3b82f6;
+    }
+
+    span {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #1e293b;
+    }
+  }
+
+  .total-valor {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #3b82f6;
+  }
+}
+
+// Observaciones field
+.observaciones-field {
+  margin-bottom: 1rem;
+
+  .observaciones-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+
+    i {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    span {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #475569;
+    }
+
+    .opcional {
+      font-size: 0.65rem;
+      font-weight: normal;
+      color: #94a3b8;
+    }
+  }
+
+  .form-control {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    resize: none;
+
+    &:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    }
+
+    &::placeholder {
+      color: #94a3b8;
+      font-size: 0.7rem;
+    }
+  }
+}
+
+// Info footer
+.info-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eef2ff;
+
+  .info-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    i {
+      font-size: 0.7rem;
+      color: #10b981;
+    }
+
+    span {
+      font-size: 0.65rem;
+      color: #64748b;
+    }
+  }
+}
+
+// Footer compacto
+.modal-footer-compact {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid #eef2ff;
+  border-radius: 0 0 16px 16px;
+
+  .btn-cancelar {
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #64748b;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+  }
+
+  .btn-iniciar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    background: var(--degradado-color) !important;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    transition: all 0.2s;
+
+    i {
+      font-size: 0.85rem;
+    }
+
+    &:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(43, 104, 236, 0.3);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 640px) {
+  .monedas-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .info-chips {
+    gap: 0.375rem;
+
+    .chip {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.65rem;
+    }
+  }
+
+  .total-resumen {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.25rem;
+  }
+}
+
+// Shadow mejorado
+.shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.kpi-monedas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+
+  .moneda-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 0.125rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+
+    .moneda-simbolo {
+      font-weight: 600;
+      color: #2563eb;
+    }
+
+    .moneda-valor {
+      font-weight: 500;
+      color: #1e293b;
+    }
+  }
+}
+
+.ventas-metodos-info {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.25rem 0;
+
+    &.total {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .info-label {
+      font-size: 0.75rem;
+      color: #475569;
+    }
+
+    .info-value {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .info-note {
+      font-size: 0.65rem;
+      color: #94a3b8;
+      margin-left: 0.5rem;
+    }
+  }
+}
+
+.seccion-titulo-pequeno {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.5rem 0;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  i {
+    font-size: 0.8rem;
+  }
+}
+
+.diferencia-nota {
+  font-size: 0.6rem;
+  color: #94a3b8;
+  margin-left: 0.5rem;
+}
+
+.value-monedas-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-top: 0.25rem;
+  
+  .moneda-linea {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: #f1f5f9;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    
+    .moneda-simbolo {
+      font-weight: 600;
+      min-width: 24px;
+      color: #3b82f6;
+    }
+    
+    .moneda-valor {
+      font-weight: 500;
+      color: #1e293b;
+      min-width: 70px;
+      text-align: right;
+    }
+    
+    .moneda-nombre {
+      font-size: 0.65rem;
+      color: #64748b;
+      margin-left: auto;
+    }
+  }
 }
