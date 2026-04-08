@@ -3420,18 +3420,18 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         switch (this.venta.formaPago) {
             case 'contado':
                 if (Math.abs(totalPagado - totalRequerido) > 0.01) {
-                    console.log('Contado: montos no coinciden');
+                    //console.log('Contado: montos no coinciden');
                     return false;
                 }
                 break;
 
             case 'abono':
                 if (this.venta.montoAbonado <= 0) {
-                    console.log('Abono: monto inválido');
+                   // console.log('Abono: monto inválido');
                     return false;
                 }
                 if (Math.abs(this.venta.montoAbonado - totalPagado) > 0.01) {
-                    console.log('Abono: monto abonado no coincide con métodos');
+                   // console.log('Abono: monto abonado no coincide con métodos');
                     return false;
                 }
                 break;
@@ -3439,21 +3439,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             case 'cashea':
                 const inicialMinima = this.calcularInicialCasheaPorNivel(totalRequerido, this.nivelCashea);
                 if ((this.venta.montoInicial || 0) < inicialMinima) {
-                    console.log('Cashea: inicial insuficiente');
+                    //console.log('Cashea: inicial insuficiente');
                     return false;
                 }
                 break;
 
             case 'de_contado-pendiente':
-                console.log('Pago pendiente - válido sin métodos');
+                //console.log('Pago pendiente - válido sin métodos');
                 break;
 
             default:
-                console.log('Forma de pago no válida');
+                //console.log('Forma de pago no válida');
                 return false;
         }
 
-        console.log('Todo válido - se puede generar');
+        //console.log('Todo válido - se puede generar');
         return true;
     }
 
@@ -7576,7 +7576,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Obtener costos reales del backend
             this.generarVentaService.getCostosConsulta(historia.id).pipe(take(1)).subscribe({
                 next: (costos) => {
-                    console.log('💰 Costos recibidos:', costos);
+                    //console.log('💰 Costos recibidos:', costos);
 
                     const totalConsulta = parseFloat(costos.totalConsulta) || 0;
                     const costoMedico = parseFloat(costos.costoMedico) || 0;
@@ -7597,11 +7597,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     this.montoConsultaOriginal = totalConsulta;
                     this.consultaEnCarrito = true;
 
-                    console.log('✅ Valores asignados:', {
+                   /* console.log('✅ Valores asignados:', {
                         pagoMedico: this.pagoMedico,
                         pagoOptica: this.pagoOptica,
                         montoConsulta: this.montoConsulta
-                    });
+                    });*/
 
                     this.cdr.detectChanges();
 
@@ -8226,7 +8226,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 return false;
             });
 
-            console.log('Historias para solo consulta:', historiasBase.length);
+            //console.log('Historias para solo consulta:', historiasBase.length);
             historiasBase.forEach(h => {
                 const especialista = h.datosConsulta?.especialista;
                 console.log(`- ${h.nHistoria}: ${especialista?.tipo}, formulaExterna: ${h.formulaExterna}`);
@@ -8448,7 +8448,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const formulaExterna = datosConsulta?.formulaExterna === true;
         const tieneFormulaOriginal = !!datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
 
-        console.log('Determinando tipo:', {
+        /*console.log('Determinando tipo:', {
             especialistaTipo: especialista?.tipo,
             esOftalmologo,
             esOptometrista,
@@ -8456,7 +8456,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             pagoPendiente,
             formulaExterna,
             tieneFormulaOriginal
-        });
+        });*/
 
         // Caso 1: Oftalmólogo interno (no externa)
         if (esOftalmologo && !formulaExterna) {
@@ -8492,8 +8492,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     seleccionarHistoria(historia: any): void {
-        console.log('📋 seleccionarHistoria llamado');
-        console.log('Historia:', historia);
+       // console.log('Historia:', historia);
 
         if (this.historiaSeleccionadaId === historia.id) {
             return;
@@ -8511,11 +8510,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         const tipo = this.determinarTipoHistoria(historia);
 
-        console.log('Tipo determinado:', tipo);
+            /*  console.log('Tipo determinado:', tipo);
         console.log('¿Pago pendiente?:', pagoPendiente);
         console.log('¿Es oftalmólogo?:', esOftalmologo);
         console.log('¿Es externa?:', formulaExterna);
-        console.log('¿Tiene fórmula original?:', tieneFormulaOriginal);
+                console.log('¿Tiene fórmula original?:', tieneFormulaOriginal);*/
 
         // ============================================
         // CASO: SOLO CONSULTA
