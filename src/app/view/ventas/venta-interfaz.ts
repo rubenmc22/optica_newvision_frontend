@@ -81,8 +81,13 @@ export interface MetodoPago {
     bancoNombre?: string;
     banco?: string;
     bancoObject?: { codigo: string; nombre: string };
+    bancoReceptorCodigo?: string;
+    bancoReceptorNombre?: string;
+    bancoReceptor?: string;
+    bancoReceptorObject?: { codigo: string; nombre: string };
     moneda?: string;
     bancoPunto?: string;
+    notaPago?: string;
 }
 
 export interface DatosRecibo {
@@ -117,13 +122,21 @@ export interface DatosRecibo {
         referencia?: string;
         banco?: string;
         moneda: string;
+        bancoEmisor?: string;
+        bancoReceptor?: string;
+        notaPago?: string;
+        montoEnSistema?: number;
+        monedaSistema?: string;
+        montoEnBolivar?: number;
     }>;
     totales: {
         subtotal: number;
         descuento: number;
         iva: number;
+        consulta?: number;
         total: number;
         totalPagado: number;
+        totalEnBolivar?: number;
     };
     vendedor: string;
     observaciones?: string;

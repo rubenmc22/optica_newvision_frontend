@@ -1497,48 +1497,6 @@
                             </div>
 
                             <!-- Selector de moneda para efectivo -->
-                            <div *ngIf="hayMetodoEfectivoSeleccionado()" class="moneda-selector-container">
-                                <div class="moneda-selector-header">
-                                    <i class="bi bi-currency-exchange"></i>
-                                    <span>Moneda para Pagos en Efectivo</span>
-                                </div>
-                                <div class="moneda-selector-buttons">
-                                    <button type="button" class="moneda-btn"
-                                        [class.moneda-active]="monedaEfectivo === 'USD'"
-                                        (click)="cambiarMonedaEfectivo('USD')">
-                                        <span class="moneda-symbol">$</span>
-                                        <span class="moneda-info">
-                                            <strong>USD</strong>
-                                            <small>Dólar Americano</small>
-                                        </span>
-                                    </button>
-
-                                    <button type="button" class="moneda-btn"
-                                        [class.moneda-active]="monedaEfectivo === 'EUR'"
-                                        (click)="cambiarMonedaEfectivo('EUR')">
-                                        <span class="moneda-symbol">€</span>
-                                        <span class="moneda-info">
-                                            <strong>EUR</strong>
-                                            <small>Euro</small>
-                                        </span>
-                                    </button>
-
-                                    <button type="button" class="moneda-btn"
-                                        [class.moneda-active]="monedaEfectivo === 'VES'"
-                                        (click)="cambiarMonedaEfectivo('VES')">
-                                        <span class="moneda-symbol">Bs</span>
-                                        <span class="moneda-info">
-                                            <strong>VES</strong>
-                                            <small>Bolívar</small>
-                                        </span>
-                                    </button>
-                                </div>
-                                <div class="moneda-hint">
-                                    <i class="bi bi-info-circle"></i>
-                                    <span>Esta selección aplica a todos los pagos en efectivo</span>
-                                </div>
-                            </div>
-
                             <!-- Contador de métodos -->
                             <div class="metodos-counter" *ngIf="venta.metodosDePago.length > 0">
                                 <i class="bi bi-list-check"></i>
@@ -1589,6 +1547,48 @@
 
                                         <!-- Campos condicionales -->
                                         <div class="campos-condicionales" *ngIf="metodo.tipo">
+                                            <div *ngIf="metodo.tipo === 'efectivo'" class="moneda-selector-container">
+                                                <div class="moneda-selector-header">
+                                                    <i class="bi bi-currency-exchange"></i>
+                                                    <span>Moneda del efectivo</span>
+                                                </div>
+                                                <div class="moneda-selector-buttons">
+                                                    <button type="button" class="moneda-btn"
+                                                        [class.moneda-active]="getMonedaParaMetodo(metodo.tipo, metodo) === 'dolar'"
+                                                        (click)="cambiarMonedaMetodo(i, 'USD')">
+                                                        <span class="moneda-symbol">$</span>
+                                                        <span class="moneda-info">
+                                                            <strong>USD</strong>
+                                                            <small>Dólar Americano</small>
+                                                        </span>
+                                                    </button>
+
+                                                    <button type="button" class="moneda-btn"
+                                                        [class.moneda-active]="getMonedaParaMetodo(metodo.tipo, metodo) === 'euro'"
+                                                        (click)="cambiarMonedaMetodo(i, 'EUR')">
+                                                        <span class="moneda-symbol">€</span>
+                                                        <span class="moneda-info">
+                                                            <strong>EUR</strong>
+                                                            <small>Euro</small>
+                                                        </span>
+                                                    </button>
+
+                                                    <button type="button" class="moneda-btn"
+                                                        [class.moneda-active]="getMonedaParaMetodo(metodo.tipo, metodo) === 'bolivar'"
+                                                        (click)="cambiarMonedaMetodo(i, 'VES')">
+                                                        <span class="moneda-symbol">Bs</span>
+                                                        <span class="moneda-info">
+                                                            <strong>VES</strong>
+                                                            <small>Bolívar</small>
+                                                        </span>
+                                                    </button>
+                                                </div>
+                                                <div class="moneda-hint">
+                                                    <i class="bi bi-info-circle"></i>
+                                                    <span>Esta selección solo aplica a este pago en efectivo</span>
+                                                </div>
+                                            </div>
+
                                             <!-- Banco para Punto de Venta -->
                                             <div *ngIf="metodo.tipo === 'punto'" class="campo-adicional">
                                                 <label class="form-label compact-label">
@@ -1615,13 +1615,13 @@
                                                 class="campo-adicional">
                                                 <label class="form-label compact-label">
                                                     <i class="bi bi-bank"></i>
-                                                    Banco
+                                                    {{ getEtiquetaBancoPrincipal(metodo.tipo) }}
                                                 </label>
-                                                <ng-select [items]="bancosDisponibles" bindLabel="nombre"
+                                                <ng-select [items]="getBancosDisponiblesPorMetodo(metodo.tipo)" bindLabel="nombre"
                                                     [(ngModel)]="metodo.bancoObject"
                                                     (ngModelChange)="onBancoChange($event, i)"
                                                     [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
-                                                    placeholder="Buscar banco por código o nombre..."
+                                                    [placeholder]="getPlaceholderBancoPrincipal(metodo.tipo)"
                                                     [ngClass]="{'campo-invalido': necesitaBanco(metodo.tipo) && !metodo.bancoObject}">
 
                                                     <ng-template ng-label-tmp let-item="item">
@@ -1643,6 +1643,36 @@
                                                 </small>
                                             </div>
 
+                                            <div *ngIf="necesitaBancoReceptor(metodo.tipo)" class="campo-adicional">
+                                                <label class="form-label compact-label">
+                                                    <i class="bi bi-bank2"></i>
+                                                    Banco receptor <span class="required">*</span>
+                                                </label>
+                                                <ng-select [items]="bancosDisponibles" bindLabel="nombre"
+                                                    [(ngModel)]="metodo.bancoReceptorObject"
+                                                    (ngModelChange)="onBancoReceptorChange($event, i)"
+                                                    [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
+                                                    placeholder="Buscar banco receptor..."
+                                                    [ngClass]="{'campo-invalido': necesitaBancoReceptor(metodo.tipo) && !metodo.bancoReceptorObject}">
+
+                                                    <ng-template ng-label-tmp let-item="item">
+                                                        <span *ngIf="item">{{ item?.codigo }} - {{ item?.nombre }}</span>
+                                                        <span *ngIf="!item">Seleccionar banco receptor...</span>
+                                                    </ng-template>
+
+                                                    <ng-template ng-option-tmp let-item="item">
+                                                        <div class="banco-option" *ngIf="item">
+                                                            <div class="banco-codigo">{{ item.codigo }}</div>
+                                                            <div class="banco-nombre">{{ item.nombre }}</div>
+                                                        </div>
+                                                    </ng-template>
+                                                </ng-select>
+                                                <small *ngIf="necesitaBancoReceptor(metodo.tipo) && !metodo.bancoReceptorObject"
+                                                    class="text-danger">
+                                                    <i class="bi bi-exclamation-triangle"></i> Selecciona el banco receptor
+                                                </small>
+                                            </div>
+
                                             <!-- Referencia -->
                                             <div *ngIf="necesitaReferencia(metodo.tipo)" class="campo-adicional">
                                                 <label class="form-label compact-label">
@@ -1661,6 +1691,17 @@
                                                 </small>
                                             </div>
 
+                                            <div *ngIf="mostrarNotaPago(metodo.tipo)" class="campo-adicional">
+                                                <label class="form-label compact-label">
+                                                    <i class="bi bi-journal-text"></i>
+                                                    Nota de pago
+                                                </label>
+                                                <input type="text" class="form-control modern-input"
+                                                    [(ngModel)]="metodo.notaPago"
+                                                    placeholder="Ej: titular, observación o detalle del pago"
+                                                    maxlength="120" />
+                                            </div>
+
                                             <!-- Monto -->
                                             <div class="campo-monto">
                                                 <label class="form-label compact-label">
@@ -1668,7 +1709,7 @@
                                                     Monto a Pagar
                                                 </label>
                                                 <input type="text" class="form-control modern-input"
-                                                    [placeholder]="getPlaceholderMonto(metodo.tipo)"
+                                                    [placeholder]="getPlaceholderMonto(metodo.tipo, metodo)"
                                                     [(ngModel)]="metodo.valorTemporal" (blur)="formatearMontoMetodo(i)"
                                                     (keypress)="validarEntrada($event)" [disabled]="!metodo.tipo"
                                                     [ngClass]="{'campo-invalido': !metodo.monto || metodo.monto <= 0}" />
@@ -1685,7 +1726,7 @@
                                             <span class="maximo-text">
                                                 <i class="bi bi-graph-up"></i>
                                                 Máx. disponible: {{ formatearMoneda(getMontoRestanteParaMetodo(i),
-                                                getMonedaParaMetodo(metodo.tipo)) }}
+                                                getMonedaParaMetodo(metodo.tipo, metodo)) }}
                                             </span>
 
                                             <!-- Mostrar banco seleccionado para punto de venta -->
@@ -1698,11 +1739,11 @@
                                             <!-- Mostrar conversión clara -->
                                             <span *ngIf="metodo.monto && metodo.monto > 0" class="conversion-text">
                                                 <i class="bi"></i>
-                                                {{ formatearMoneda(metodo.monto, getMonedaParaMetodo(metodo.tipo)) }}
+                                                {{ formatearMoneda(metodo.monto, getMonedaParaMetodo(metodo.tipo, metodo)) }}
                                                 = {{ getInfoConversionMetodo(metodo) }}
-                                                <span *ngIf="getMonedaParaMetodo(metodo.tipo) !== 'bolivar'"
+                                                <span *ngIf="getMonedaParaMetodo(metodo.tipo, metodo) !== 'bolivar'"
                                                     class="bs-conversion">
-                                                    ({{ formatearMoneda(calcularConversionBs(metodo.monto, metodo.tipo),
+                                                    ({{ formatearMoneda(calcularConversionBs(metodo.monto, metodo.tipo, metodo),
                                                     'bolivar') }})
                                                 </span>
                                             </span>
@@ -1926,7 +1967,7 @@
                                     </div>
                                     <div class="chip-info">
                                         <span class="chip-tipo">{{ metodo.tipo | titlecase }}</span>
-                                        <span class="chip-monto">{{ formatearMoneda(metodo.monto, getMonedaParaMetodo(metodo.tipo)) }}</span>
+                                        <span class="chip-monto">{{ formatearMoneda(metodo.monto, getMonedaParaMetodo(metodo.tipo, metodo)) }}</span>
                                     </div>
                                     <div class="chip-badge" *ngIf="metodo.referencia" title="Referencia: {{ metodo.referencia }}">
                                         <i class="bi bi-hash"></i>
@@ -2256,13 +2297,23 @@
                                 <div class="d-flex justify-content-between align-items-center py-1">
                                     <span class="metodo-pago-info">
                                         <span class="badge bg-primary me-1">{{ formatearTipoPago(metodo.tipo) }}</span>
-                                        <!-- Pasar la moneda específica del método -->
-                                        <span class="monto-text">{{ formatearMoneda(metodo.monto, metodo.moneda)
+                                                <span class="monto-text">{{ formatearMoneda(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || datosRecibo?.configuracion?.moneda)
                                             }}</span>
+                                                <span *ngIf="metodo.monedaSistema && metodo.moneda && metodo.monedaSistema !== metodo.moneda"
+                                                    class="text-muted ms-1 referencia-text">
+                                                    (Orig: {{ formatearMoneda(metodo.monto, metodo.moneda) }})
+                                                </span>
+                                                <span *ngIf="debeMostrarConversionBsPorMetodo(metodo)"
+                                                    class="text-muted ms-1 referencia-text">
+                                                    (~{{ formatearMoneda(metodo.montoEnBolivar ?? obtenerMontoReciboEnBolivar(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || metodo.moneda), 'bolivar') }})
+                                                </span>
                                         <span *ngIf="metodo.referencia" class="text-muted ms-1 referencia-text">(Ref: {{
                                             metodo.referencia }})</span>
-                                        <span *ngIf="metodo.banco" class="text-muted ms-1 banco-text">- {{ metodo.banco
+                                                <span *ngIf="metodo.bancoEmisor || metodo.banco" class="text-muted ms-1 banco-text">- Emisor: {{ metodo.bancoEmisor || metodo.banco
+                                                    }}</span>
+                                                <span *ngIf="metodo.bancoReceptor" class="text-muted ms-1 banco-text">- Receptor: {{ metodo.bancoReceptor
                                             }}</span>
+                                                <span *ngIf="metodo.notaPago" class="text-muted ms-1 banco-text">- Nota: {{ metodo.notaPago }}</span>
                                     </span>
                                 </div>
                             </div>
@@ -2285,6 +2336,9 @@
                                     <strong>Monto total:</strong><br>
                                     {{ formatearMoneda(datosRecibo?.totales?.total, datosRecibo?.configuracion?.moneda)
                                     }}
+                                    <small *ngIf="debeMostrarConversionBsEnRecibo(datosRecibo?.configuracion?.moneda)" class="d-block text-muted">
+                                        {{ formatearMoneda(datosRecibo?.totales?.totalEnBolivar ?? obtenerMontoReciboEnBolivar(datosRecibo?.totales?.total, datosRecibo?.configuracion?.moneda), 'bolivar') }}
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -2504,14 +2558,22 @@
                                     <tr>
                                         <td class="fw-bold">Subtotal (productos):</td>
                                         <td class="text-end">{{ formatearMoneda(datosRecibo?.totales?.subtotal,
-                                            datosRecibo?.configuracion?.moneda) }}</td>
+                                            datosRecibo?.configuracion?.moneda) }}
+                                            <small *ngIf="debeMostrarConversionBsEnRecibo(datosRecibo?.configuracion?.moneda)" class="d-block text-muted">
+                                                {{ formatearMoneda(obtenerMontoReciboEnBolivar(datosRecibo?.totales?.subtotal, datosRecibo?.configuracion?.moneda), 'bolivar') }}
+                                            </small>
+                                        </td>
                                     </tr>
 
                                     <!-- Consulta (si existe) -->
-                                    <tr *ngIf="consultaEnCarrito">
+                                    <tr *ngIf="(datosRecibo?.totales?.consulta || 0) > 0">
                                         <td class="fw-bold">Consulta:</td>
-                                        <td class="text-end">{{ formatearMoneda(montoConsulta,
-                                            datosRecibo?.configuracion?.moneda) }}</td>
+                                        <td class="text-end">{{ formatearMoneda(datosRecibo?.totales?.consulta,
+                                            datosRecibo?.configuracion?.moneda) }}
+                                            <small *ngIf="debeMostrarConversionBsEnRecibo(datosRecibo?.configuracion?.moneda)" class="d-block text-muted">
+                                                {{ formatearMoneda(obtenerMontoReciboEnBolivar(datosRecibo?.totales?.consulta, datosRecibo?.configuracion?.moneda), 'bolivar') }}
+                                            </small>
+                                        </td>
                                     </tr>
 
                                     <!-- Descuento - solo si existe -->
@@ -2519,7 +2581,11 @@
                                         <td class="fw-bold">Descuento ({{ datosRecibo?.configuracion?.descuento }}%):</td>
                                         <td class="text-end text-danger">- {{
                                             formatearMoneda(datosRecibo?.totales?.descuento,
-                                            datosRecibo?.configuracion?.moneda) }}</td>
+                                            datosRecibo?.configuracion?.moneda) }}
+                                            <small *ngIf="debeMostrarConversionBsEnRecibo(datosRecibo?.configuracion?.moneda)" class="d-block text-muted">
+                                                - {{ formatearMoneda(obtenerMontoReciboEnBolivar(datosRecibo?.totales?.descuento, datosRecibo?.configuracion?.moneda), 'bolivar') }}
+                                            </small>
+                                        </td>
                                     </tr>
 
                                     <!-- IVA -->
@@ -2527,7 +2593,11 @@
                                         <td class="fw-bold">IVA ({{ datosRecibo?.configuracion?.impuesto ||
                                             ivaPorcentaje }}%):</td>
                                         <td class="text-end">{{ formatearMoneda(datosRecibo?.totales?.iva,
-                                            datosRecibo?.configuracion?.moneda) }}</td>
+                                            datosRecibo?.configuracion?.moneda) }}
+                                            <small *ngIf="debeMostrarConversionBsEnRecibo(datosRecibo?.configuracion?.moneda)" class="d-block text-muted">
+                                                {{ formatearMoneda(obtenerMontoReciboEnBolivar(datosRecibo?.totales?.iva, datosRecibo?.configuracion?.moneda), 'bolivar') }}
+                                            </small>
+                                        </td>
                                     </tr>
 
                                     <!-- Línea separadora visual (opcional) -->
@@ -2539,20 +2609,32 @@
                                         <td class="fw-bold">TOTAL PAGADO:</td>
                                         <td class="text-end fw-bold">{{
                                             formatearMoneda(datosRecibo?.totales?.totalPagado,
-                                            datosRecibo?.configuracion?.moneda) }}</td>
+                                            datosRecibo?.configuracion?.moneda) }}
+                                            <small *ngIf="debeMostrarConversionBsEnRecibo(datosRecibo?.configuracion?.moneda)" class="d-block text-muted">
+                                                {{ formatearMoneda(obtenerMontoReciboEnBolivar(datosRecibo?.totales?.totalPagado, datosRecibo?.configuracion?.moneda), 'bolivar') }}
+                                            </small>
+                                        </td>
                                     </tr>
 
                                     <ng-container *ngIf="datosRecibo?.configuracion?.formaPago === 'cashea'">
                                         <tr class="table-info">
                                             <td class="fw-bold">Total a pagar:</td>
                                             <td class="text-end fw-bold">{{ formatearMoneda(datosRecibo?.totales?.total,
-                                                datosRecibo?.configuracion?.moneda) }}</td>
+                                                datosRecibo?.configuracion?.moneda) }}
+                                                <small *ngIf="debeMostrarConversionBsEnRecibo(datosRecibo?.configuracion?.moneda)" class="d-block text-muted">
+                                                    {{ formatearMoneda(datosRecibo?.totales?.totalEnBolivar ?? obtenerMontoReciboEnBolivar(datosRecibo?.totales?.total, datosRecibo?.configuracion?.moneda), 'bolivar') }}
+                                                </small>
+                                            </td>
                                         </tr>
                                         <tr class="table-warning">
                                             <td class="fw-bold">Total pagado ahora:</td>
                                             <td class="text-end fw-bold">{{
                                                 formatearMoneda(datosRecibo?.totales?.totalPagado,
-                                                datosRecibo?.configuracion?.moneda) }}</td>
+                                                datosRecibo?.configuracion?.moneda) }}
+                                                <small *ngIf="debeMostrarConversionBsEnRecibo(datosRecibo?.configuracion?.moneda)" class="d-block text-muted">
+                                                    {{ formatearMoneda(obtenerMontoReciboEnBolivar(datosRecibo?.totales?.totalPagado, datosRecibo?.configuracion?.moneda), 'bolivar') }}
+                                                </small>
+                                            </td>
                                         </tr>
                                     </ng-container>
 
@@ -2560,13 +2642,21 @@
                                         <tr class="table-info">
                                             <td class="fw-bold">Total a pagar:</td>
                                             <td class="text-end fw-bold">{{ formatearMoneda(datosRecibo?.totales?.total,
-                                                datosRecibo?.configuracion?.moneda) }}</td>
+                                                datosRecibo?.configuracion?.moneda) }}
+                                                <small *ngIf="debeMostrarConversionBsEnRecibo(datosRecibo?.configuracion?.moneda)" class="d-block text-muted">
+                                                    {{ formatearMoneda(datosRecibo?.totales?.totalEnBolivar ?? obtenerMontoReciboEnBolivar(datosRecibo?.totales?.total, datosRecibo?.configuracion?.moneda), 'bolivar') }}
+                                                </small>
+                                            </td>
                                         </tr>
                                         <tr class="table-warning">
                                             <td class="fw-bold">Total abonado:</td>
                                             <td class="text-end fw-bold">{{
                                                 formatearMoneda(datosRecibo?.totales?.totalPagado,
-                                                datosRecibo?.configuracion?.moneda) }}</td>
+                                                datosRecibo?.configuracion?.moneda) }}
+                                                <small *ngIf="debeMostrarConversionBsEnRecibo(datosRecibo?.configuracion?.moneda)" class="d-block text-muted">
+                                                    {{ formatearMoneda(obtenerMontoReciboEnBolivar(datosRecibo?.totales?.totalPagado, datosRecibo?.configuracion?.moneda), 'bolivar') }}
+                                                </small>
+                                            </td>
                                         </tr>
                                     </ng-container>
                                 </table>

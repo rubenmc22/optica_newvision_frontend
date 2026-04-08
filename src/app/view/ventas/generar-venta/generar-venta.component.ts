@@ -126,7 +126,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     monedaSistema: string = 'USD';
     simboloMonedaSistema: string = '$';
     private configSubscription!: Subscription;
-    monedaEfectivo: string = 'USD';
     filterInput = new Subject<string>();
     textoBusquedaPaciente: string = '';
     intentoGenerar: boolean = false;
@@ -610,9 +609,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.nivelCashea = 'nivel3';
         this.cantidadCuotasCashea = 3;
 
-        // Resetear moneda efectivo
-        this.monedaEfectivo = this.monedaSistema;
-
         // Actualizar cálculos
         this.actualizarProductosConDetalle();
     }
@@ -982,11 +978,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         // Asegurar que la moneda esté sincronizada con el tipo
         if (metodo.tipo && !metodo.moneda) {
-            metodo.moneda = this.getMonedaParaMetodo(metodo.tipo);
+            metodo.moneda = this.getMonedaParaMetodo(metodo.tipo, metodo);
         }
 
         if (metodo.monto && metodo.monto > 0) {
-            const monedaMetodo = metodo.moneda || this.getMonedaParaMetodo(metodo.tipo);
+            const monedaMetodo = metodo.moneda || this.getMonedaParaMetodo(metodo.tipo, metodo);
             metodo.valorTemporal = `${metodo.monto.toFixed(2)} ${this.obtenerSimboloMoneda(monedaMetodo)}`;
         } else {
             metodo.valorTemporal = '';
@@ -999,7 +995,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const metodo = this.venta.metodosDePago[index];
 
         // Usar la moneda del método si existe, sino calcularla
-        const monedaMetodo = metodo.moneda || this.getMonedaParaMetodo(metodo.tipo);
+        const monedaMetodo = metodo.moneda || this.getMonedaParaMetodo(metodo.tipo, metodo);
 
         if (!metodo.tipo) {
             metodo.valorTemporal = '';
@@ -1149,7 +1145,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         this.venta.metodosDePago.forEach(metodo => {
             const montoMetodo = metodo.monto ?? 0;
-            const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
+            const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo, metodo);
 
             // Convertir cada monto a la moneda del sistema SIN REDONDEAR
             if (monedaMetodo !== this.venta.moneda) {
@@ -1234,7 +1230,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         this.venta.metodosDePago.forEach(metodo => {
             const montoMetodo = metodo.monto ?? 0;
-            const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
+            const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo, metodo);
 
             // Convertir cada monto a bolívares SIN REDONDEAR
             if (monedaMetodo === 'dolar') {
@@ -1981,11 +1977,28 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return moneda?.simbolo ?? '';
     }
 
-    getMonedaParaMetodo(tipoMetodo: string): string {
+    private normalizarMonedaMetodo(moneda?: string): string {
+        const monedaNormalizada = moneda?.toLowerCase();
+
+        switch (monedaNormalizada) {
+            case 'usd':
+            case 'dolar':
+                return 'dolar';
+            case 'eur':
+            case 'euro':
+                return 'euro';
+            case 'ves':
+            case 'bs':
+            case 'bolivar':
+                return 'bolivar';
+            default:
+                return '';
+        }
+    }
+
+    private getMonedaDefectoParaMetodo(tipoMetodo: string): string {
         const monedasPorMetodo: { [key: string]: string } = {
-            'efectivo': this.monedaEfectivo.toLowerCase() === 'eur' ? 'euro' :
-                this.monedaEfectivo.toLowerCase() === 'ves' ? 'bolivar' :
-                    this.monedaEfectivo.toLowerCase() === 'bs' ? 'bolivar' : 'dolar',
+            'efectivo': 'dolar',
             'punto': 'bolivar',
             'zelle': 'dolar',
             'pagomovil': 'bolivar',
@@ -1993,6 +2006,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         };
 
         return monedasPorMetodo[tipoMetodo] || 'dolar';
+    }
+
+    getMonedaParaMetodo(tipoMetodo: string, metodo?: MetodoPago): string {
+        if (tipoMetodo === 'efectivo') {
+            return this.normalizarMonedaMetodo(metodo?.moneda) || this.getMonedaDefectoParaMetodo(tipoMetodo);
+        }
+
+        return this.getMonedaDefectoParaMetodo(tipoMetodo);
     }
 
     esMetodoEnBolivares(tipoMetodo: string): boolean {
@@ -2036,7 +2057,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             .filter((_, i) => i !== index)
             .reduce((sum, metodo) => {
                 const montoMetodo = metodo.monto ?? 0;
-                const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
+                const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo, metodo);
 
                 // Convertir cada monto a la moneda del sistema
                 if (monedaMetodo !== this.venta.moneda) {
@@ -2057,7 +2078,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         // 4. CONVERTIR A LA MONEDA DEL MÉTODO ACTUAL
         const metodoActual = this.venta.metodosDePago[index];
-        const monedaMetodoActual = this.getMonedaParaMetodo(metodoActual.tipo);
+        const monedaMetodoActual = this.getMonedaParaMetodo(metodoActual.tipo, metodoActual);
 
         // Si está en la misma moneda, devolver directamente
         if (monedaMetodoActual === this.venta.moneda) {
@@ -2088,7 +2109,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         // Validación en tiempo real - prevenir que exceda el máximo
-        const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
+        const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo, metodo);
         const maximoEnMonedaSistema = this.getMontoRestanteParaMetodo(index);
         const maximoEnMonedaMetodo = monedaMetodo === this.venta.moneda
             ? maximoEnMonedaSistema
@@ -2121,14 +2142,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.productoConversionService.getPrecioEnBs(producto);
     }
 
-    getPlaceholderMonto(tipoMetodo: string): string {
+    getPlaceholderMonto(tipoMetodo: string, metodo?: MetodoPago): string {
         if (!tipoMetodo) return 'Ingrese un monto';
 
         if (this.esMetodoEnBolivares(tipoMetodo)) {
             return 'Monto en Bs';
         }
 
-        const monedaMetodo = this.getMonedaParaMetodo(tipoMetodo);
+        const monedaMetodo = this.getMonedaParaMetodo(tipoMetodo, metodo);
         const simbolo = this.obtenerSimboloMoneda(monedaMetodo);
         return `Monto en ${simbolo}`;
     }
@@ -2358,12 +2379,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.montoExcedido = false;
 
         // ============================================
-        // 6. RESTABLECER MONEDA EFECTIVO
-        // ============================================
-        this.monedaEfectivo = this.monedaSistema;
-
-        // ============================================
-        // 7. LIMPIAR SELECCIONES
+        // 6. LIMPIAR SELECCIONES
         // ============================================
         this.pacienteSeleccionado = null;
         this.productoSeleccionado = null;
@@ -2489,18 +2505,18 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     // === MÉTODOS DE MONEDA EFECTIVO ===
-    cambiarMonedaEfectivo(nuevaMoneda: string): void {
-        this.monedaEfectivo = nuevaMoneda;
+    cambiarMonedaMetodo(index: number, nuevaMoneda: string): void {
+        const metodo = this.venta.metodosDePago[index];
 
-        this.venta.metodosDePago.forEach(metodo => {
-            if (metodo.tipo === 'efectivo') {
-                metodo.moneda = this.getMonedaParaMetodo('efectivo');
+        if (!metodo) {
+            return;
+        }
 
-                if (metodo.monto && metodo.monto > 0) {
-                    metodo.valorTemporal = this.formatearMoneda(metodo.monto, metodo.moneda);
-                }
-            }
-        });
+        metodo.moneda = this.normalizarMonedaMetodo(nuevaMoneda) || this.getMonedaDefectoParaMetodo(metodo.tipo);
+
+        if (metodo.monto && metodo.monto > 0) {
+            metodo.valorTemporal = this.formatearMoneda(metodo.monto, metodo.moneda);
+        }
 
         this.cdr.detectChanges();
     }
@@ -2508,7 +2524,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     onTipoMetodoChange(index: number): void {
         const metodo = this.venta.metodosDePago[index];
 
-        metodo.moneda = this.getMonedaParaMetodo(metodo.tipo);
+        metodo.moneda = this.getMonedaParaMetodo(metodo.tipo, metodo);
         metodo.monto = 0;
         metodo.valorTemporal = '';
         metodo.referencia = '';
@@ -2516,6 +2532,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         metodo.bancoNombre = '';
         metodo.banco = '';
         metodo.bancoObject = null;
+        metodo.bancoReceptorCodigo = '';
+        metodo.bancoReceptorNombre = '';
+        metodo.bancoReceptor = '';
+        metodo.bancoReceptorObject = null;
+        metodo.notaPago = '';
 
         // Limpiar banco de punto si existe
         if (metodo.bancoPunto) {
@@ -2549,27 +2570,23 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             bancoNombre: '',
             banco: '',
             bancoObject: null,
+            bancoReceptorCodigo: '',
+            bancoReceptorNombre: '',
+            bancoReceptor: '',
+            bancoReceptorObject: null,
             bancoPunto: '', // ← Nuevo campo para punto de venta
-            moneda: ''
+            moneda: '',
+            notaPago: ''
         });
 
         this.actualizarEstadoOrdenTrabajo();
-    }
-
-    hayMetodoEfectivoSeleccionado(): boolean {
-        return this.venta.metodosDePago.some(metodo => metodo.tipo === 'efectivo');
-    }
-
-    mostrarConversionBs(tipoMetodo: string): boolean {
-        const monedaMetodo = this.getMonedaParaMetodo(tipoMetodo);
-        return monedaMetodo !== 'bolivar' && this.venta.moneda !== 'bolivar';
     }
 
 
     getInfoConversionMetodo(metodo: any): string {
         if (!metodo.monto || metodo.monto <= 0) return '';
 
-        const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
+        const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo, metodo);
         const montoEnSistema = this.convertirMontoExacto(metodo.monto, monedaMetodo, this.venta.moneda);
 
         if (monedaMetodo === this.venta.moneda) {
@@ -2579,10 +2596,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return `⇄${this.formatearMoneda(montoEnSistema, this.venta.moneda)}`;
     }
 
-    calcularConversionBs(monto: number, tipoMetodo: string): number {
+    calcularConversionBs(monto: number, tipoMetodo: string, metodo?: MetodoPago): number {
         if (!monto || monto <= 0) return 0;
 
-        const monedaMetodo = this.getMonedaParaMetodo(tipoMetodo);
+        const monedaMetodo = this.getMonedaParaMetodo(tipoMetodo, metodo);
 
         // Si ya está en bolívares, retornar directamente
         if (monedaMetodo === 'bolivar') {
@@ -2603,8 +2620,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     getInfoConversionBs(metodo: any): string {
         if (!metodo.monto || metodo.monto <= 0) return '';
 
-        const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo);
-        const montoEnBs = this.calcularConversionBs(metodo.monto, metodo.tipo);
+        const monedaMetodo = this.getMonedaParaMetodo(metodo.tipo, metodo);
+        const montoEnBs = this.calcularConversionBs(metodo.monto, metodo.tipo, metodo);
 
         if (monedaMetodo === 'bolivar') {
             return ''; // No mostrar conversión si ya está en bolívares
@@ -2741,12 +2758,53 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         { codigo: '0000', nombre: 'Otro' }
     ];
 
+    bancosUsaDisponibles: Array<{ codigo: string; nombre: string }> = [
+        { codigo: 'BOFA', nombre: 'Bank of America' },
+        { codigo: 'CHASE', nombre: 'Chase' },
+        { codigo: 'WF', nombre: 'Wells Fargo' },
+        { codigo: 'CITI', nombre: 'Citibank' },
+        { codigo: 'CAP1', nombre: 'Capital One' },
+        { codigo: 'PNC', nombre: 'PNC Bank' },
+        { codigo: 'TD', nombre: 'TD Bank' },
+        { codigo: 'US', nombre: 'U.S. Bank' },
+        { codigo: 'NAVY', nombre: 'Navy Federal' },
+        { codigo: 'OTRO', nombre: 'Otro banco USA' }
+    ];
+
     compararBanco = (a: any, b: any): boolean => {
         if (!a || !b) return a === b;
         return a.codigo === b.codigo;
     };
 
-    onBancoChange(banco: { codigo: string; nombre: string } | null, index: number): void {
+    getBancosDisponiblesPorMetodo(tipoMetodo: string): Array<{ codigo: string; nombre: string }> {
+        return tipoMetodo === 'zelle' ? this.bancosUsaDisponibles : this.bancosDisponibles;
+    }
+
+    getEtiquetaBancoPrincipal(tipoMetodo: string): string {
+        if (tipoMetodo === 'zelle') {
+            return 'Banco en USA';
+        }
+
+        if (tipoMetodo === 'pagomovil' || tipoMetodo === 'transferencia') {
+            return 'Banco emisor';
+        }
+
+        return 'Banco';
+    }
+
+    getPlaceholderBancoPrincipal(tipoMetodo: string): string {
+        if (tipoMetodo === 'zelle') {
+            return 'Buscar banco de USA...';
+        }
+
+        if (tipoMetodo === 'pagomovil' || tipoMetodo === 'transferencia') {
+            return 'Buscar banco emisor...';
+        }
+
+        return 'Buscar banco por código o nombre...';
+    }
+
+    onBancoChange(banco: any, index: number): void {
         const metodo = this.venta.metodosDePago[index];
 
         if (!banco) {
@@ -2763,10 +2821,27 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         metodo.bancoObject = banco;
     }
 
+    onBancoReceptorChange(banco: any, index: number): void {
+        const metodo = this.venta.metodosDePago[index];
+
+        if (!banco) {
+            metodo.bancoReceptorCodigo = '';
+            metodo.bancoReceptorNombre = '';
+            metodo.bancoReceptor = '';
+            metodo.bancoReceptorObject = null;
+            return;
+        }
+
+        metodo.bancoReceptorCodigo = banco.codigo;
+        metodo.bancoReceptorNombre = banco.nombre;
+        metodo.bancoReceptor = `${banco.codigo} - ${banco.nombre}`;
+        metodo.bancoReceptorObject = banco;
+    }
+
 
     // Métodos auxiliares para determinar qué campos mostrar
     necesitaReferencia(tipoMetodo: string): boolean {
-        const metodosConReferencia = ['pagomovil', 'transferencia'];
+        const metodosConReferencia = ['pagomovil', 'transferencia', 'zelle'];
         return metodosConReferencia.includes(tipoMetodo);
     }
 
@@ -2776,6 +2851,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         const metodosConBanco = ['pagomovil', 'transferencia', 'zelle'];
         return metodosConBanco.includes(tipoMetodo);
+    }
+
+    necesitaBancoReceptor(tipoMetodo: string): boolean {
+        return tipoMetodo === 'pagomovil' || tipoMetodo === 'transferencia';
+    }
+
+    mostrarNotaPago(tipoMetodo: string): boolean {
+        return tipoMetodo === 'pagomovil' || tipoMetodo === 'transferencia';
     }
 
     private validarMetodosPago(): boolean {
@@ -2812,6 +2895,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return false;
         }
 
+        if (this.necesitaBancoReceptor(metodo.tipo) && (!metodo.bancoReceptor || !metodo.bancoReceptorObject)) {
+            return false;
+        }
+
         if (this.necesitaReferencia(metodo.tipo) && (!metodo.referencia || metodo.referencia.trim() === '')) {
             return false;
         }
@@ -2831,6 +2918,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         if (this.necesitaBanco(metodo.tipo) && (!metodo.banco || !metodo.bancoObject)) {
             return { valido: false, mensaje: 'Selecciona un banco' };
+        }
+
+        if (this.necesitaBancoReceptor(metodo.tipo) && (!metodo.bancoReceptor || !metodo.bancoReceptorObject)) {
+            return { valido: false, mensaje: 'Selecciona el banco receptor' };
         }
 
         if (this.necesitaReferencia(metodo.tipo) && (!metodo.referencia || metodo.referencia.trim() === '')) {
@@ -2928,6 +3019,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     prepararDatosParaAPI(): any {
         const fechaActual = new Date();
+        const montoConsultaAplicado = this.obtenerMontoConsultaAplicado();
 
         // 1. PREPARAR PRODUCTOS
         const productosFisicos = this.venta.productos.filter(p => p.tipo !== 'CONSULTA');
@@ -2952,8 +3044,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             referencia: metodo.referencia || undefined,
             bancoCodigo: metodo.bancoCodigo || undefined,
             bancoNombre: metodo.bancoNombre || undefined,
-            moneda: metodo.moneda || this.getMonedaParaMetodo(metodo.tipo),
-            bancoPunto: metodo.bancoPunto || undefined
+            bancoReceptorCodigo: metodo.bancoReceptorCodigo || undefined,
+            bancoReceptorNombre: metodo.bancoReceptorNombre || undefined,
+            bancoReceptor: metodo.bancoReceptor || undefined,
+            moneda: metodo.moneda || this.getMonedaParaMetodo(metodo.tipo, metodo),
+            bancoPunto: metodo.bancoPunto || undefined,
+            notaPago: metodo.notaPago?.trim() || undefined
         }));
 
         // 3. CALCULAR TOTALES
@@ -2977,8 +3073,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const totalProductos = subtotalConDescuento + ivaCalculado;
         let totalFinal = totalProductos;
 
-        if (this.tipoVenta !== 'solo_productos' && this.consultaEnCarrito) {
-            totalFinal += this.montoConsulta;
+        if (montoConsultaAplicado > 0) {
+            totalFinal += montoConsultaAplicado;
         }
 
         // 4. DETERMINAR TOTAL PAGADO
@@ -3634,6 +3730,40 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             }
         };
 
+        const formatearMontoConBolivar = (monto: number | null | undefined, moneda?: string) => {
+            const monedaBase = moneda || datos.configuracion?.moneda || 'dolar';
+            const montoPrincipal = formatearMonedaLocal(monto, monedaBase);
+
+            if (monedaBase === 'bolivar') {
+                return montoPrincipal;
+            }
+
+            const montoEnBolivar = this.obtenerMontoReciboEnBolivar(Number(monto || 0), monedaBase);
+            return `${montoPrincipal}<br><span style="font-size: 10px; color: #6c757d;">${formatearMonedaLocal(montoEnBolivar, 'bolivar')}</span>`;
+        };
+
+        const construirDetalleMetodo = (metodo: any) => {
+            const detalles: string[] = [];
+
+            if (metodo.referencia) {
+                detalles.push(`Ref: ${metodo.referencia}`);
+            }
+
+            if (metodo.bancoEmisor || metodo.banco) {
+                detalles.push(`Emisor: ${metodo.bancoEmisor || metodo.banco}`);
+            }
+
+            if (metodo.bancoReceptor) {
+                detalles.push(`Receptor: ${metodo.bancoReceptor}`);
+            }
+
+            if (metodo.notaPago) {
+                detalles.push(`Nota: ${metodo.notaPago}`);
+            }
+
+            return detalles.join(' - ');
+        };
+
         // GENERAR ENCABEZADO DINÁMICO
         const generarEncabezadoSede = () => {
             if (sedeInfo) {
@@ -3748,7 +3878,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                                                 <strong style="font-size: 11px;">Pago Inicial</strong>
                                             </div>
                                             <div style="text-align: center; width: 50%;">
-                                                <strong style="font-size: 11px;">${formatearMonedaLocal(datos.cashea.inicial)}</strong>
+                                                <strong style="font-size: 11px;">${formatearMontoConBolivar(datos.cashea.inicial, datos.configuracion?.moneda)}</strong>
                                             </div>
                                         </div>
 
@@ -3759,7 +3889,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                                                     <strong style="font-size: 11px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong>
                                                 </div>
                                                 <div style="text-align: center; width: 50%;">
-                                                    <strong style="font-size: 11px;">${formatearMonedaLocal(datos.cashea.montoAdelantado)}</strong>
+                                                    <strong style="font-size: 11px;">${formatearMontoConBolivar(datos.cashea.montoAdelantado, datos.configuracion?.moneda)}</strong>
                                                 </div>
                                             </div>
                                         ` : ''}
@@ -3770,7 +3900,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                                                 <strong style="font-size: 11px;">TOTAL PAGADO AHORA:</strong>
                                             </div>
                                             <div style="text-align: center; width: 50%;">
-                                                <strong class="text-success" style="font-size: 11px;">${formatearMonedaLocal(datos.totales.totalPagado)}</strong>
+                                                <strong class="text-success" style="font-size: 11px;">${formatearMontoConBolivar(datos.totales.totalPagado, datos.configuracion?.moneda)}</strong>
                                             </div>
                                         </div>
                                     </div>
@@ -3780,11 +3910,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                                         <div class="cuota-info">
                                             <small class="text-muted" style="font-size: 10px;">CUOTAS PENDIENTES</small>
                                             <div class="fw-bold text-warning" style="font-size: 12px;">${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}</div>
-                                            <div class="monto-cuota">${formatearMonedaLocal(datos.cashea.montoPorCuota)} c/u</div>
+                                            <div class="monto-cuota">${formatearMontoConBolivar(datos.cashea.montoPorCuota, datos.configuracion?.moneda)} c/u</div>
                                         </div>
                                         <div class="cuota-info">
                                             <small class="text-muted" style="font-size: 10px;">DEUDA PENDIENTE</small>
-                                            <div class="fw-bold text-danger" style="font-size: 12px;">${formatearMonedaLocal(datos.cashea.deudaPendiente)}</div>
+                                            <div class="fw-bold text-danger" style="font-size: 12px;">${formatearMontoConBolivar(datos.cashea.deudaPendiente, datos.configuracion?.moneda)}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -3811,7 +3941,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                                                     <strong style="font-size: 11px;">${datos.fecha}</strong>
                                                 </div>
                                                 <div style="text-align: center; width: 50%;">
-                                                    <strong style="font-size: 11px;">${formatearMonedaLocal(datos.abono.montoAbonado)}</strong>
+                                                    <strong style="font-size: 11px;">${formatearMontoConBolivar(datos.abono.montoAbonado, datos.configuracion?.moneda)}</strong>
                                                 </div>
                                             </div>
                                             
@@ -3821,7 +3951,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                                                     <strong style="font-size: 11px;">TOTAL ABONADO:</strong>
                                                 </div>
                                                 <div style="text-align: center; width: 50%;">
-                                                    <strong class="text-success" style="font-size: 11px;">${formatearMonedaLocal(datos.abono.montoAbonado)}</strong>
+                                                    <strong class="text-success" style="font-size: 11px;">${formatearMontoConBolivar(datos.abono.montoAbonado, datos.configuracion?.moneda)}</strong>
                                                 </div>
                                             </div>
                                         </div>
@@ -3831,7 +3961,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                                     <div class="resumen-financiero">
                                         <div class="deuda-section">
                                             <div class="deuda-label">DEUDA PENDIENTE</div>
-                                            <div class="deuda-monto text-danger">${formatearMonedaLocal(datos.abono.deudaPendiente)}</div>
+                                            <div class="deuda-monto text-danger">${formatearMontoConBolivar(datos.abono.deudaPendiente, datos.configuracion?.moneda)}</div>
                                         </div>
 
                                         <div class="progreso-section">
@@ -3857,7 +3987,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                                     </div>
                                     <div>
                                         <strong style="font-size: 12px;">Monto total:</strong><br>
-                                        ${formatearMonedaLocal(datos.totales.totalPagado)}
+                                        ${formatearMontoConBolivar(datos.totales.total, datos.configuracion?.moneda)}
                                     </div>
                                     <div style="margin-top: 8px; font-size: 11px; color: #666;">
                                         El pago ha sido realizado en su totalidad
@@ -3883,10 +4013,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                                 <div class="metodo-item">
                                     <span>
                                         <span class="badge bg-primary">${this.formatearTipoPago(metodo.tipo)}</span>
-                                        ${metodo.referencia ? '- Ref: ' + metodo.referencia : ''}
-                                        ${metodo.banco ? '- ' + metodo.banco : ''}
+                                        ${construirDetalleMetodo(metodo) ? '- ' + construirDetalleMetodo(metodo) : ''}
                                     </span>
-                                    <span>${formatearMonedaLocal(metodo.monto, metodo.moneda)}</span>
+                                    <span style="text-align: right;">
+                                        ${formatearMonedaLocal(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || datos.configuracion?.moneda)}
+                                        ${metodo.monedaSistema && metodo.moneda && metodo.monedaSistema !== metodo.moneda ? `<br><span style="font-size: 10px; color: #6c757d;">Orig: ${formatearMonedaLocal(metodo.monto, metodo.moneda)}</span>` : ''}
+                                        ${this.debeMostrarConversionBsPorMetodo(metodo) ? `<br><span style="font-size: 10px; color: #6c757d;">${formatearMonedaLocal(metodo.montoEnBolivar ?? this.obtenerMontoReciboEnBolivar(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || metodo.moneda), 'bolivar')}</span>` : ''}
+                                    </span>
                                 </div>
                             `).join('')}
                         </div>
@@ -3906,16 +4039,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             filasTotales += `
         <tr>
             <td class="fw-bold" style="font-size: 12px;">Subtotal (productos):</td>
-            <td class="text-end" style="font-size: 12px;">${formatearMonedaLocal(datos.totales.subtotal)}</td>
+            <td class="text-end" style="font-size: 12px;">${formatearMontoConBolivar(datos.totales.subtotal, datos.configuracion?.moneda)}</td>
         </tr>
     `;
 
             // Consulta (si existe)
-            if (this.consultaEnCarrito) {
+            if ((datos.totales.consulta || 0) > 0) {
                 filasTotales += `
             <tr>
                 <td class="fw-bold" style="font-size: 12px;">Consulta:</td>
-                <td class="text-end" style="font-size: 12px;">${formatearMonedaLocal(this.montoConsulta)}</td>
+                <td class="text-end" style="font-size: 12px;">${formatearMontoConBolivar(datos.totales.consulta, datos.configuracion?.moneda)}</td>
             </tr>
         `;
             }
@@ -3925,7 +4058,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 filasTotales += `
             <tr>
                 <td class="fw-bold" style="font-size: 12px;">Descuento:</td>
-                <td class="text-end text-danger" style="font-size: 12px;">- ${formatearMonedaLocal(datos.totales.descuento)}</td>
+                <td class="text-end text-danger" style="font-size: 12px;">- ${formatearMontoConBolivar(datos.totales.descuento, datos.configuracion?.moneda)}</td>
             </tr>
         `;
             }
@@ -3934,7 +4067,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             filasTotales += `
         <tr>
             <td class="fw-bold" style="font-size: 12px;">IVA:</td>
-            <td class="text-end" style="font-size: 12px;">${formatearMonedaLocal(datos.totales.iva)}</td>
+            <td class="text-end" style="font-size: 12px;">${formatearMontoConBolivar(datos.totales.iva, datos.configuracion?.moneda)}</td>
         </tr>
     `;
 
@@ -3943,7 +4076,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 filasTotales += `
             <tr class="table-info">
                 <td class="fw-bold" style="font-size: 13px;">${textoTotalAPagar}:</td>
-                <td class="text-end fw-bold" style="font-size: 13px;">${formatearMonedaLocal(datos.totales.total)}</td>
+                <td class="text-end fw-bold" style="font-size: 13px;">${formatearMontoConBolivar(datos.totales.total, datos.configuracion?.moneda)}</td>
             </tr>
         `;
             }
@@ -3952,7 +4085,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             filasTotales += `
         <tr class="table-success">
             <td class="fw-bold" style="font-size: 13px;">${textoTotalPagado}:</td>
-            <td class="text-end fw-bold" style="font-size: 13px;">${formatearMonedaLocal(datos.totales.totalPagado)}</td>
+            <td class="text-end fw-bold" style="font-size: 13px;">${formatearMontoConBolivar(datos.totales.totalPagado, datos.configuracion?.moneda)}</td>
         </tr>
     `;
 
@@ -4826,21 +4959,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // En la tabla de productos, antes de mapear los datos
             let tableData = [];
 
-            // Agregar consulta primero si existe
-            if (this.consultaEnCarrito) {
-                tableData.push([
-                    '1',
-                    `CONSULTA: ${this.obtenerNombreMedico(this.historiaMedicaSeleccionada)}`,
-                    '1',
-                    this.formatearMonedaParaPDF(this.montoConsulta),
-                    this.formatearMonedaParaPDF(this.montoConsulta)
-                ]);
-            }
-
-            // Agregar productos después
             if (datos.productos && datos.productos.length > 0) {
                 const productosData = datos.productos.map((producto: any, index: number) => [
-                    (this.consultaEnCarrito ? index + 2 : index + 1).toString(),
+                    (index + 1).toString(),
                     producto.nombre,
                     producto.cantidad.toString(),
                     this.formatearMonedaParaPDF(producto.precioUnitario),
@@ -4943,20 +5064,31 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     pdf.setTextColor(51, 51, 51);
                     pdf.setFont('helvetica', 'normal');
 
-                    let metodoText = '';
+                    const metodoDetalles: string[] = [];
                     if (metodo.referencia) {
-                        metodoText += ` - Ref: ${metodo.referencia}`;
+                        metodoDetalles.push(`Ref: ${metodo.referencia}`);
                     }
-                    if (metodo.banco) {
-                        metodoText += ` - ${metodo.banco}`;
+                    if (metodo.bancoEmisor || metodo.banco) {
+                        metodoDetalles.push(`Emisor: ${metodo.bancoEmisor || metodo.banco}`);
                     }
+                    if (metodo.bancoReceptor) {
+                        metodoDetalles.push(`Receptor: ${metodo.bancoReceptor}`);
+                    }
+                    if (metodo.notaPago) {
+                        metodoDetalles.push(`Nota: ${metodo.notaPago}`);
+                    }
+                    const metodoText = metodoDetalles.join(' - ');
 
                     if (metodoText) {
                         pdf.text(metodoText, metodoX + 18, currentY + 1);
                     }
 
                     // Monto
-                    pdf.text(this.formatearMonedaParaPDF(metodo.monto, metodo.moneda),
+                    const montoMetodoPdf = this.formatearMonedaParaPDF(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || datos.configuracion?.moneda);
+                    const montoMetodoBsPdf = this.debeMostrarConversionBsPorMetodo(metodo)
+                        ? ` / ${this.formatearMonedaParaPDF(metodo.montoEnBolivar ?? this.obtenerMontoReciboEnBolivar(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || metodo.moneda), 'bolivar')}`
+                        : '';
+                    pdf.text(`${montoMetodoPdf}${montoMetodoBsPdf}`,
                         metodoX + metodoWidth - 2, currentY + 1, { align: 'right' });
 
                     currentY += 6;
@@ -5014,23 +5146,55 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             let totalesData = [];
 
             // Subtotal de productos
-            totalesData.push(['Subtotal (productos):', this.formatearMonedaParaPDF(datos.totales.subtotal)]);
+            const subtotalPdf = this.formatearMonedaParaPDF(datos.totales.subtotal, datos.configuracion?.moneda);
+            const subtotalBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
+                ? ` / ${this.formatearMonedaParaPDF(this.obtenerMontoReciboEnBolivar(datos.totales.subtotal, datos.configuracion?.moneda), 'bolivar')}`
+                : '';
+            totalesData.push(['Subtotal (productos):', `${subtotalPdf}${subtotalBsPdf}`]);
 
             // Consulta (si existe)
-            if (this.consultaEnCarrito) {
-                totalesData.push(['Consulta:', this.formatearMonedaParaPDF(this.montoConsulta)]);
+            if ((datos.totales.consulta || 0) > 0) {
+                const montoConsultaPdf = this.formatearMonedaParaPDF(datos.totales.consulta, datos.configuracion?.moneda);
+                const montoConsultaBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
+                    ? ` / ${this.formatearMonedaParaPDF(this.obtenerMontoReciboEnBolivar(datos.totales.consulta, datos.configuracion?.moneda), 'bolivar')}`
+                    : '';
+                totalesData.push(['Consulta:', `${montoConsultaPdf}${montoConsultaBsPdf}`]);
             }
 
             // Descuento (si existe)
             if (datos.totales.descuento > 0) {
-                totalesData.push(['Descuento:', `- ${this.formatearMonedaParaPDF(datos.totales.descuento)}`]);
+                const descuentoPdf = this.formatearMonedaParaPDF(datos.totales.descuento, datos.configuracion?.moneda);
+                const descuentoBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
+                    ? ` / ${this.formatearMonedaParaPDF(this.obtenerMontoReciboEnBolivar(datos.totales.descuento, datos.configuracion?.moneda), 'bolivar')}`
+                    : '';
+                totalesData.push(['Descuento:', `- ${descuentoPdf}${descuentoBsPdf}`]);
             }
 
             // IVA
-            totalesData.push(['IVA:', this.formatearMonedaParaPDF(datos.totales.iva)]);
+            const ivaPdf = this.formatearMonedaParaPDF(datos.totales.iva, datos.configuracion?.moneda);
+            const ivaBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
+                ? ` / ${this.formatearMonedaParaPDF(this.obtenerMontoReciboEnBolivar(datos.totales.iva, datos.configuracion?.moneda), 'bolivar')}`
+                : '';
+            totalesData.push(['IVA:', `${ivaPdf}${ivaBsPdf}`]);
 
-            // TOTAL (siempre al final)
-            totalesData.push(['TOTAL:', this.formatearMonedaParaPDF(datos.totales.totalPagado)]);
+            if (formaPago === 'abono' || formaPago === 'cashea') {
+                const totalVentaPdf = this.formatearMonedaParaPDF(datos.totales.total, datos.configuracion?.moneda);
+                const totalVentaBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
+                    ? ` / ${this.formatearMonedaParaPDF(datos.totales.totalEnBolivar ?? this.obtenerMontoReciboEnBolivar(datos.totales.total, datos.configuracion?.moneda), 'bolivar')}`
+                    : '';
+                totalesData.push(['Total venta:', `${totalVentaPdf}${totalVentaBsPdf}`]);
+            }
+
+            const etiquetaTotalPagado = formaPago === 'abono'
+                ? 'TOTAL ABONADO:'
+                : formaPago === 'cashea'
+                    ? 'TOTAL PAGADO AHORA:'
+                    : 'TOTAL PAGADO:';
+            const totalPagadoPdf = this.formatearMonedaParaPDF(datos.totales.totalPagado, datos.configuracion?.moneda);
+            const totalPagadoBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
+                ? ` / ${this.formatearMonedaParaPDF(this.obtenerMontoReciboEnBolivar(datos.totales.totalPagado, datos.configuracion?.moneda), 'bolivar')}`
+                : '';
+            totalesData.push([etiquetaTotalPagado, `${totalPagadoPdf}${totalPagadoBsPdf}`]);
 
             // Dibujar tabla de totales
             let totalY = currentY;
@@ -5180,7 +5344,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 `Cliente: ${datos.cliente.nombre}\n` +
                 `Cédula: ${datos.cliente.cedula}\n` +
                 `Teléfono: ${datos.cliente.telefono}\n` +
-                `Total: ${this.formatearMoneda(datos.totales.totalPagado)}\n` +
+                `Total venta: ${this.formatearMoneda(datos.totales.total, datos.configuracion?.moneda)}\n` +
+                `${this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda) ? `Total en Bs: ${this.formatearMoneda(datos.totales.totalEnBolivar ?? this.obtenerMontoReciboEnBolivar(datos.totales.total, datos.configuracion?.moneda), 'bolivar')}\n` : ''}` +
                 `Forma de pago: ${this.venta.formaPago.toUpperCase()}\n\n`;
 
             // Agregar productos
@@ -5267,7 +5432,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             tipo: m.tipo,
             monto: m.monto,
             referencia: m.referencia,
-            banco: m.banco
+            banco: m.banco,
+            bancoEmisor: m.banco,
+            bancoReceptor: m.bancoReceptor,
+            notaPago: m.notaPago,
+            moneda: m.moneda || this.getMonedaParaMetodo(m.tipo, m),
+            montoEnSistema: this.redondear(this.convertirMontoExacto(m.monto || 0, m.moneda || this.getMonedaParaMetodo(m.tipo, m), this.venta.moneda)),
+            monedaSistema: this.venta.moneda,
+            montoEnBolivar: this.redondear(this.convertirMontoExacto(m.monto || 0, m.moneda || this.getMonedaParaMetodo(m.tipo, m), 'bolivar'))
         }));
     }
 
@@ -5375,10 +5547,47 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return total;
     }
 
+    private obtenerMontoConsultaAplicado(): number {
+        if (!this.consultaEnCarrito) {
+            return 0;
+        }
+
+        if (this.tipoVenta === 'consulta_productos') {
+            return this.redondear(this.pagoMedico || 0);
+        }
+
+        return this.redondear(this.montoConsulta || 0);
+    }
+
+    obtenerMontoReciboEnBolivar(monto: number, moneda?: string): number {
+        const monedaOrigen = moneda || this.datosRecibo?.configuracion?.moneda || this.venta.moneda;
+
+        if (monedaOrigen === 'bolivar') {
+            return this.redondear(monto || 0);
+        }
+
+        return this.redondear(this.convertirMontoExacto(monto || 0, monedaOrigen, 'bolivar'));
+    }
+
+    debeMostrarConversionBsEnRecibo(moneda?: string): boolean {
+        const monedaOrigen = moneda || this.datosRecibo?.configuracion?.moneda || this.venta.moneda;
+        return monedaOrigen !== 'bolivar';
+    }
+
+    debeMostrarConversionBsPorMetodo(metodo: any): boolean {
+        const monedaSistema = this.normalizarMonedaMetodo(metodo?.monedaSistema)
+            || this.normalizarMonedaMetodo(this.datosRecibo?.configuracion?.moneda)
+            || this.normalizarMonedaMetodo(this.venta.moneda);
+        const monedaOriginal = this.normalizarMonedaMetodo(metodo?.moneda) || 'dolar';
+
+        return monedaSistema !== 'bolivar' && monedaOriginal !== 'bolivar';
+    }
+
     private crearDatosReciboReal(): any {
         const fechaActual = new Date();
         const sedeInfo = this.obtenerInfoSede();
         const vendedorInfo = this.getResumenAsesor();
+        const montoConsultaAplicado = this.obtenerMontoConsultaAplicado();
 
         // 1. Calcular SUBTOTAL SIN IVA (productos)
         const subtotalSinIvaProductos = this.calcularSubtotalSinIvaGlobal();
@@ -5399,7 +5608,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const totalProductosConDescuentoSinIva = baseImponibleConDescuento;
 
         // 7. Calcular total de productos con IVA
-        const totalProductosConIva = subtotalConIvaProductos - descuentoMonto;
+        const totalProductosConIva = this.redondear(totalProductosConDescuentoSinIva + ivaReal);
 
         // Determinar el total pagado según la forma de pago REAL
         let totalPagado = 0;
@@ -5420,16 +5629,16 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // Productos con detalles (incluyendo consulta)
         const productosConDetalles = this.obtenerProductosConDetalles();
 
-        if (this.consultaEnCarrito) {
+        if (montoConsultaAplicado > 0) {
             const cargo = this.obtenerCargoEspecialista(this.historiaMedicaSeleccionada);
             const consultaItem = {
                 nombre: `Consulta de ${cargo}`,
                 codigo: `CONS-${this.historiaMedicaSeleccionada?.nHistoria}`,
                 cantidad: 1,
-                precioUnitario: this.montoConsulta,
-                subtotal: this.montoConsulta,
+                precioUnitario: montoConsultaAplicado,
+                subtotal: montoConsultaAplicado,
                 iva: 0,
-                total: this.montoConsulta,
+                total: montoConsultaAplicado,
                 aplicaIva: false,
                 esConsulta: true,
                 medico: this.obtenerNombreMedico(this.historiaMedicaSeleccionada)
@@ -5438,10 +5647,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         // Calcular total final (productos + consulta)
-        let totalFinal = totalProductosConIva;
-        if (this.consultaEnCarrito) {
-            totalFinal += this.montoConsulta;
-        }
+        const totalFinal = this.redondear(totalProductosConIva + montoConsultaAplicado);
 
         let clienteInfo = {
             nombre: 'CLIENTE GENERAL',
@@ -5468,13 +5674,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         // Métodos de pago
         const metodosPagoParaRecibo = this.venta.metodosDePago.map(m => {
-            const monedaMetodo = m.moneda || this.getMonedaParaMetodo(m.tipo);
+            const monedaMetodo = m.moneda || this.getMonedaParaMetodo(m.tipo, m);
+            const montoEnSistema = this.redondear(this.convertirMontoExacto(m.monto || 0, monedaMetodo, this.venta.moneda));
+            const montoEnBolivar = this.redondear(this.convertirMontoExacto(m.monto || 0, monedaMetodo, 'bolivar'));
             return {
                 tipo: m.tipo || 'efectivo',
                 monto: m.monto || 0,
                 referencia: m.referencia || '',
                 banco: m.banco || '',
-                moneda: monedaMetodo
+                bancoEmisor: m.banco || '',
+                bancoReceptor: m.bancoReceptor || '',
+                notaPago: m.notaPago || '',
+                moneda: monedaMetodo,
+                montoEnSistema: montoEnSistema,
+                monedaSistema: this.venta.moneda,
+                montoEnBolivar: montoEnBolivar
             };
         });
 
@@ -5492,8 +5706,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 subtotalConIva: subtotalConIvaProductos,     // ← NUEVO: subtotal con IVA
                 descuento: descuentoMonto,
                 iva: ivaReal,
+                consulta: montoConsultaAplicado,
                 total: totalFinal,
-                totalPagado: totalPagado
+                totalPagado: totalPagado,
+                totalEnBolivar: this.obtenerMontoReciboEnBolivar(totalFinal, this.venta.moneda)
             },
             configuracion: {
                 formaPago: this.venta.formaPago,
@@ -5696,7 +5912,25 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             mensaje += `\n*Métodos de pago utilizados:*\n`;
             datos.metodosPago.forEach((metodo: any) => {
                 const emoji = this.obtenerEmojiMetodoPago(metodo.tipo);
-                mensaje += `• ${emoji} ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.monto, metodo.moneda)}\n`;
+                mensaje += `• ${emoji} ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || datos.configuracion?.moneda)}\n`;
+                if (metodo.monedaSistema && metodo.moneda && metodo.monedaSistema !== metodo.moneda) {
+                    mensaje += `  Original: ${this.formatearMoneda(metodo.monto, metodo.moneda)}\n`;
+                }
+                if (this.debeMostrarConversionBsPorMetodo(metodo)) {
+                    mensaje += `  Bs: ${this.formatearMoneda(metodo.montoEnBolivar ?? this.obtenerMontoReciboEnBolivar(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || metodo.moneda), 'bolivar')}\n`;
+                }
+                if (metodo.referencia) {
+                    mensaje += `  Ref: ${metodo.referencia}\n`;
+                }
+                if (metodo.bancoEmisor || metodo.banco) {
+                    mensaje += `  Banco emisor: ${metodo.bancoEmisor || metodo.banco}\n`;
+                }
+                if (metodo.bancoReceptor) {
+                    mensaje += `  Banco receptor: ${metodo.bancoReceptor}\n`;
+                }
+                if (metodo.notaPago) {
+                    mensaje += `  Nota: ${metodo.notaPago}\n`;
+                }
             });
         }
 

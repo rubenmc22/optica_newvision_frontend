@@ -1615,3 +1615,119 @@ Transacciones{
 
 }
 
+
+nuevo crear venta
+{
+    "tipoVenta": "consulta_productos",
+    "moneda": "dolar",
+    "sede": "guatire",
+    "total": 70,
+    "descuento": 0,
+    "impuesto": 16,
+    "metodosDePago": [
+        {
+            "tipo": "efectivo",
+            "monto": 10,
+            "moneda": "dolar"
+        },
+        {
+            "tipo": "efectivo",
+            "monto": 10,
+            "moneda": "euro"
+        },
+        {
+            "tipo": "pagomovil",
+            "monto": 10000,
+            "referencia": "1212121",
+            "bancoCodigo": "0102",
+            "bancoNombre": "Banco de Venezuela",
+            "bancoReceptorCodigo": "0134",
+            "bancoReceptorNombre": "Banesco",
+            "bancoReceptor": "0134 - Banesco",
+            "moneda": "bolivar",
+            "notaPago": "pago a cuenta de ender"
+        },
+        {
+            "tipo": "zelle",
+            "monto": 10,
+            "referencia": "1212112",
+            "bancoCodigo": "BOFA",
+            "bancoNombre": "Bank of America",
+            "moneda": "dolar"
+        },
+        {
+            "tipo": "transferencia",
+            "monto": 8241.46,
+            "referencia": "45545454",
+            "bancoCodigo": "0102",
+            "bancoNombre": "Banco de Venezuela",
+            "bancoReceptorCodigo": "0114",
+            "bancoReceptorNombre": "Bancaribe",
+            "bancoReceptor": "0114 - Bancaribe",
+            "moneda": "bolivar",
+            "notaPago": "cuenta de rommy"
+        }
+    ],
+    "cliente": {
+        "id": 25,
+        "tipoCliente": "cliente_paciente",
+        "tipoPersona": "natural",
+        "nombre": "Dario Castro",
+        "cedula": "8759927",
+        "telefono": "04123920817",
+        "email": "rubemm18@gmail.com",
+        "informacionEmpresa": {
+            "referidoEmpresa": true,
+            "empresaNombre": "Hebe  Shop CA",
+            "empresaRif": "J-12345678",
+            "empresaTelefono": "02123440533",
+            "empresaDireccion": "Caracas, los ruices",
+            "empresaCorreo": null
+        }
+    },
+    "especialista": {
+        "tipo": "OFTALMOLOGO",
+        "cedula": "8759927",
+        "nombre": "Gerardo Martinez",
+        "cargo": "Oftalmólogo"
+    },
+    "ordenTrabajo": true,
+    "asesor": {
+        "id": 5
+    },
+    "auditoria": {
+        "usuarioCreacion": 5,
+        "fechaCreacion": "2026-04-08T20:02:04.428Z"
+    },
+    "formaPagoDetalle": {
+        "tipo": "contado",
+        "montoTotal": 70,
+        "totalPagado": 70
+    },
+    "productos": [
+        {
+            "id": "17",
+            "nombre": "Lentes de prueba",
+            "codigo": "PR-000017",
+            "precio": 40,
+            "precioConIva": 40,
+            "moneda": "dolar",
+            "cantidad": 1,
+            "aplicaIva": false,
+            "stock": 20,
+            "tipo": "PRODUCTO",
+            "descripcion": "Test"
+        }
+    ],
+    "consulta": {
+        "historiaId": 28,
+        "montoTotal": 30,
+        "pagoMedico": 30,
+        "pagoOptica": 0,
+        "esFormulaExterna": false,
+        "tipoEspecialista": "Oftalmólogo",
+        "tipoVentaConsulta": "consulta_productos",
+        "montoOriginal": 30
+    }
+}
+
