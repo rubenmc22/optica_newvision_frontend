@@ -5,6 +5,7 @@ export interface Transaccion {
   monto: number;
   fecha: Date;
   metodoPago: string;
+  moneda?: string;
   usuario: string;
   estado: 'confirmado' | 'pendiente' | 'anulado' | 'en_proceso';
   categoria: string;

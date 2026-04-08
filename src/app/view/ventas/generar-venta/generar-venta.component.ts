@@ -3594,10 +3594,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const tituloRecibo = this.getTituloReciboParaHTML(formaPago);
         const mensajeFinal = this.getMensajeFinalParaHTML(formaPago);
 
-        // Determinar si mostrar "Total a pagar" según la forma de pago
-        const mostrarTotalAPagar = this.debeMostrarTotalAPagar(formaPago, datos);
-        const textoTotalAPagar = this.getTextoTotalAPagarParaHTML(formaPago);
-
         // OBTENER INFORMACIÓN DE LA SEDE DESDE EL COMPONENTE
         const sedeInfo = this.sedeInfo || this.userStateService.getSedeActual();
 
@@ -5381,21 +5377,29 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     private crearDatosReciboReal(): any {
         const fechaActual = new Date();
-
         const sedeInfo = this.obtenerInfoSede();
         const vendedorInfo = this.getResumenAsesor();
 
-        // 1. Calcular SUBTOTAL REAL con IVA
-        const subtotalConIva = this.calcularTotalProductos(); // Total con IVA
+        // 1. Calcular SUBTOTAL SIN IVA (productos)
+        const subtotalSinIvaProductos = this.calcularSubtotalSinIvaGlobal();
 
-        // 2. Calcular IVA REAL (ya está en productosConDetalle)
-        const ivaReal = this.productosConDetalle?.reduce((sum, p) => {
-            return sum + (p.iva || 0);
-        }, 0) || 0;
+        // 2. Calcular SUBTOTAL CON IVA (productos)
+        const subtotalConIvaProductos = this.subtotalConIvaCorregido;
 
-        // 3. Calcular descuento sobre el subtotal con IVA
-        const baseParaDescuento = subtotalConIva;
-        const descuento = this.venta?.descuento ? (baseParaDescuento * (this.venta.descuento / 100)) : 0;
+        // 3. Calcular IVA REAL
+        const ivaReal = this.calcularTotalIvaDespuesDescuento();
+
+        // 4. Calcular descuento sobre el subtotal SIN IVA
+        const descuentoMonto = this.calcularDescuento();
+
+        // 5. Calcular base imponible con descuento (SIN IVA)
+        const baseImponibleConDescuento = this.baseImponibleConDescuento;
+
+        // 6. Calcular total de productos con descuento (SIN IVA)
+        const totalProductosConDescuentoSinIva = baseImponibleConDescuento;
+
+        // 7. Calcular total de productos con IVA
+        const totalProductosConIva = subtotalConIvaProductos - descuentoMonto;
 
         // Determinar el total pagado según la forma de pago REAL
         let totalPagado = 0;
@@ -5413,12 +5417,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 totalPagado = this.totalPagadoPorMetodos;
         }
 
+        // Productos con detalles (incluyendo consulta)
         const productosConDetalles = this.obtenerProductosConDetalles();
 
         if (this.consultaEnCarrito) {
-            // Obtener el cargo usando el nuevo método
             const cargo = this.obtenerCargoEspecialista(this.historiaMedicaSeleccionada);
-
             const consultaItem = {
                 nombre: `Consulta de ${cargo}`,
                 codigo: `CONS-${this.historiaMedicaSeleccionada?.nHistoria}`,
@@ -5431,13 +5434,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 esConsulta: true,
                 medico: this.obtenerNombreMedico(this.historiaMedicaSeleccionada)
             };
-
-            // Insertar al inicio del array de productos
             productosConDetalles.unshift(consultaItem);
         }
 
-        // Calcular totales incluyendo consulta
-        const totalReal = productosConDetalles.reduce((sum, item) => sum + (item.total || 0), 0);
+        // Calcular total final (productos + consulta)
+        let totalFinal = totalProductosConIva;
+        if (this.consultaEnCarrito) {
+            totalFinal += this.montoConsulta;
+        }
 
         let clienteInfo = {
             nombre: 'CLIENTE GENERAL',
@@ -5462,10 +5466,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             };
         }
 
-        // MÉTODOS DE PAGO 
+        // Métodos de pago
         const metodosPagoParaRecibo = this.venta.metodosDePago.map(m => {
             const monedaMetodo = m.moneda || this.getMonedaParaMetodo(m.tipo);
-
             return {
                 tipo: m.tipo || 'efectivo',
                 monto: m.monto || 0,
@@ -5476,38 +5479,27 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         });
 
         const datosRecibo: any = {
-            // Información general
             numeroVenta: 'V-' + Date.now().toString().slice(-6),
             fecha: fechaActual.toLocaleDateString('es-VE'),
             hora: fechaActual.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
             vendedor: vendedorInfo,
-
-            // Información de la sede
             sede: sedeInfo,
-
-            // INFORMACIÓN CLIENTE - ahora incluye esPaciente
             cliente: clienteInfo,
-
-            // Productos
             productos: productosConDetalles,
-
-            // Métodos de pago 
             metodosPago: metodosPagoParaRecibo,
-
-            // Totales reales
             totales: {
-                subtotal: subtotalConIva,
-                descuento: descuento,
+                subtotal: subtotalSinIvaProductos,           // ← AHORA ES SIN IVA
+                subtotalConIva: subtotalConIvaProductos,     // ← NUEVO: subtotal con IVA
+                descuento: descuentoMonto,
                 iva: ivaReal,
-                total: totalReal,
+                total: totalFinal,
                 totalPagado: totalPagado
             },
-
-            // Configuración de la venta
             configuracion: {
                 formaPago: this.venta.formaPago,
                 moneda: this.venta.moneda,
                 descuento: this.venta.descuento,
+                impuesto: this.ivaPorcentaje,
                 observaciones: this.venta.observaciones
             }
         };
@@ -5531,13 +5523,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 montoAbonado: this.venta.montoAbonado || 0,
                 deudaPendiente: this.getDeudaPendienteAbono(),
                 porcentajePagado: this.porcentajeAbonadoDelTotal,
-                abonos: [
-                    {
-                        fecha: fechaActual.toLocaleDateString('es-VE'),
-                        monto: this.venta.montoAbonado || 0,
-                        numero: 1
-                    }
-                ]
+                abonos: [{
+                    fecha: fechaActual.toLocaleDateString('es-VE'),
+                    monto: this.venta.montoAbonado || 0,
+                    numero: 1
+                }]
             };
         }
 

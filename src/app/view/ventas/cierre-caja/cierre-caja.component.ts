@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef } from '@
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DecimalPipe, DatePipe } from '@angular/common';
 import { Subject, forkJoin } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, debounceTime } from 'rxjs/operators';
 import { CierreCajaService } from './cierre-caja.service';
 import { HistorialVentaService } from '../../ventas/historial-ventas/historial-ventas.service';
 import { SystemConfigService } from './../../system-config/system-config.service';
@@ -25,6 +25,8 @@ import * as bootstrap from 'bootstrap';
 })
 
 export class CierreCajaComponent implements OnInit, OnDestroy {
+
+
   fechaSeleccionada: Date = new Date();
   cierreActual: CierreDiario | null = null;
   transacciones: Transaccion[] = [];
@@ -51,9 +53,17 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   tabActivo: 'tipos' | 'metodos' | 'formas' | 'pendientes' = 'tipos';
 
+  tabActivoCierre: 'efectivo' | 'punto' | 'transferencias' | 'pagomovil' | 'zelle' = 'efectivo';
+  hayDiferencia: boolean = false;
+  comentarioRequerido: boolean = false;
   historialCierres: CierreDiario[] = [];
-
+  private actualizandoValidaciones: boolean = false;
+  private recalculando: boolean = false;
   private destroy$ = new Subject<void>();
+  // En las propiedades de la clase
+  private _diferenciaTotal: number = 0;
+  private _efectivoTeorico: number = 0;
+  private _efectivoReal: number = 0;
 
   totalEfectivoInicialCalculado: number = 0;
 
@@ -171,7 +181,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.obtenerConfiguracionSistema();
     this.obtenerUsuarioYSede();
-    this.inicializarTasasCambio();
     this.cargarDatosFecha();
     this.iniciarActualizacionAutomatica();
     this.configurarSuscripciones();
@@ -188,26 +197,84 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.monedaSistema = this.systemConfigService.getMonedaPrincipal();
     this.simboloMonedaSistema = this.systemConfigService.getSimboloMonedaPrincipal();
 
+    console.log('Configuración del sistema:', {
+      monedaSistema: this.monedaSistema,
+      simbolo: this.simboloMonedaSistema
+    });
+
     this.inicioCajaForm.patchValue({
       moneda: this.monedaSistema
     });
 
     // Obtener tasas de cambio
     this.tasaCambiariaService.getTasaActual().subscribe({
-      next: (tasas: any) => {
-        this.tasasCambio = {
-          dolar: tasas?.tasa_usd || tasas?.dolar || 1,
-          euro: tasas?.tasa_eur || tasas?.euro || 1,
-          bolivar: 1
-        };
+      next: (response: any) => {
+        console.log('Respuesta completa del API:', response);
+
+        // Extraer las tasas del array
+        const tasasArray = response?.tasas || [];
+
+        // Buscar cada tasa por su id
+        const tasaDolar = tasasArray.find((t: any) => t.id === 'dolar')?.valor || 474.0598;
+        const tasaEuro = tasasArray.find((t: any) => t.id === 'euro')?.valor || 542.6382;
+        const tasaBolivar = tasasArray.find((t: any) => t.id === 'bolivar')?.valor || 1;
+
+        console.log('Tasas obtenidas:', { tasaDolar, tasaEuro, tasaBolivar });
+
+        // Configurar tasas según la moneda del sistema
+        if (this.monedaSistema === 'USD') {
+          // Convertir todo a USD
+          // 1 USD = 1 USD
+          // 1 EUR = tasaEuro / tasaDolar USD
+          // 1 VES = 1 / tasaDolar USD
+          this.tasasCambio = {
+            dolar: 1,
+            euro: tasaEuro / tasaDolar,  // Ej: 542.64 / 474.06 = 1.1447
+            bolivar: 1 / tasaDolar       // Ej: 1 / 474.06 = 0.00211
+          };
+        }
+        else if (this.monedaSistema === 'EUR') {
+          // Convertir todo a EUR
+          this.tasasCambio = {
+            dolar: tasaDolar / tasaEuro,  // Ej: 474.06 / 542.64 = 0.8737
+            euro: 1,
+            bolivar: 1 / tasaEuro         // Ej: 1 / 542.64 = 0.00184
+          };
+        }
+        else { // VES o Bs.
+          // Convertir todo a VES
+          this.tasasCambio = {
+            dolar: tasaDolar,   // Ej: 474.06
+            euro: tasaEuro,     // Ej: 542.64
+            bolivar: 1
+          };
+        }
+
+        console.log('Tasas configuradas para moneda sistema:', this.monedaSistema, this.tasasCambio);
       },
       error: (error) => {
         console.error('Error al cargar tasas:', error);
-        this.tasasCambio = {
-          dolar: this.systemConfigService.getTasaPorId('dolar') || 1,
-          euro: this.systemConfigService.getTasaPorId('euro') || 1,
-          bolivar: 1
-        };
+        // Valores por defecto según moneda del sistema
+        if (this.monedaSistema === 'USD') {
+          this.tasasCambio = {
+            dolar: 1,
+            euro: 1.1447,  // 542.64 / 474.06
+            bolivar: 0.00211  // 1 / 474.06
+          };
+        } else if (this.monedaSistema === 'EUR') {
+          this.tasasCambio = {
+            dolar: 0.8737,  // 474.06 / 542.64
+            euro: 1,
+            bolivar: 0.00184  // 1 / 542.64
+          };
+        } else {
+          this.tasasCambio = {
+            dolar: 474.0598,
+            euro: 542.6382,
+            bolivar: 1
+          };
+        }
+        console.log('Tasas por defecto:', this.tasasCambio);
       }
     });
   }
@@ -253,31 +320,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       fechaHasta: [null],
       montoMin: [null],
       montoMax: [null]
-    });
-  }
-
-  private inicializarTasasCambio(): void {
-    // Obtener tasas del servicio
-    this.tasaCambiariaService.getTasaActual().subscribe({
-      next: (tasas: any) => {
-        // Asegurar que siempre tengamos los 3 valores requeridos
-        this.tasasCambio = {
-          dolar: tasas?.tasa_usd || tasas?.dolar || this.systemConfigService.getTasaPorId('dolar') || 1,
-          euro: tasas?.tasa_eur || tasas?.euro || this.systemConfigService.getTasaPorId('euro') || 1,
-          bolivar: 1,
-          ...tasas
-        };
-
-      },
-      error: (error) => {
-        console.error('Error al cargar tasas:', error);
-        // Valores por defecto
-        this.tasasCambio = {
-          dolar: this.systemConfigService.getTasaPorId('dolar') || 1,
-          euro: this.systemConfigService.getTasaPorId('euro') || 1,
-          bolivar: 1
-        };
-      }
     });
   }
 
@@ -362,17 +404,47 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       const monto = metodo.monto || trans.monto;
       const moneda = metodo.moneda || 'dolar';
 
+      // Determinar la moneda real del método de pago
+      let monedaOrigen = moneda;
+
+      // Para punto, pagomovil y transferencia, están en VES
+      if (tipo === 'punto' || tipo === 'pagomovil' || tipo === 'transferencia') {
+        monedaOrigen = 'VES';
+      }
+      // Para zelle, está en USD
+      else if (tipo === 'zelle') {
+        monedaOrigen = 'USD';
+      }
+      // Para efectivo, usar la moneda que viene
+      else if (tipo === 'efectivo') {
+        monedaOrigen = moneda;
+      }
+
+      // Convertir el monto a moneda del sistema (USD)
+      const montoEnMonedaSistema = this.convertirAMonedaSistema(monto, monedaOrigen);
+
+      console.log(`Procesando ${tipo}: ${monto} ${monedaOrigen} = ${montoEnMonedaSistema} USD`);
+
       if (tipo === 'efectivo') {
-        this.analisisMetodosPago.efectivo.total += monto;
+        // Sumar el monto YA CONVERTIDO a USD
+        this.analisisMetodosPago.efectivo.total += montoEnMonedaSistema;
         this.analisisMetodosPago.efectivo.cantidad++;
-        if (moneda === 'dolar') this.analisisMetodosPago.efectivo.porMoneda.dolar += monto;
-        else if (moneda === 'euro') this.analisisMetodosPago.efectivo.porMoneda.euro += monto;
-        else if (moneda === 'bolivar') this.analisisMetodosPago.efectivo.porMoneda.bolivar += monto;
+
+        // Guardar por moneda original para mostrar en la UI
+        if (moneda === 'dolar' || moneda === 'USD') {
+          this.analisisMetodosPago.efectivo.porMoneda.dolar += monto;
+        } else if (moneda === 'euro' || moneda === 'EUR') {
+          this.analisisMetodosPago.efectivo.porMoneda.euro += monto;
+        } else if (moneda === 'bolivar' || moneda === 'VES') {
+          this.analisisMetodosPago.efectivo.porMoneda.bolivar += monto;
+        }
       }
       else if (tipo === 'punto') {
-        this.analisisMetodosPago.punto.total += monto;
+        // Punto - convertir a USD para total
+        this.analisisMetodosPago.punto.total += montoEnMonedaSistema;
         this.analisisMetodosPago.punto.cantidad++;
-        const banco = metodo.bancoNombre || metodo.banco || 'Otro';  // ← Usar bancoNombre
+
+        const banco = metodo.bancoNombre || metodo.banco || 'Otro';
         let bancoExistente = this.analisisMetodosPago.punto.porBanco.find(b => b.banco === banco);
         if (!bancoExistente) {
           bancoExistente = {
@@ -383,12 +455,14 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
           };
           this.analisisMetodosPago.punto.porBanco.push(bancoExistente);
         }
+        // Guardar en VES para el desglose por banco
         bancoExistente.total += monto;
         bancoExistente.cantidad++;
       }
       else if (tipo === 'pagomovil') {
-        this.analisisMetodosPago.pagomovil.total += monto;
+        this.analisisMetodosPago.pagomovil.total += montoEnMonedaSistema;
         this.analisisMetodosPago.pagomovil.cantidad++;
+
         const banco = metodo.bancoNombre || metodo.banco || 'Otro';
         if (banco !== 'Otro') {
           let bancoExistente = this.analisisMetodosPago.pagomovil.porBanco.find(b => b.banco === banco);
@@ -406,8 +480,9 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         }
       }
       else if (tipo === 'transferencia') {
-        this.analisisMetodosPago.transferencia.total += monto;
+        this.analisisMetodosPago.transferencia.total += montoEnMonedaSistema;
         this.analisisMetodosPago.transferencia.cantidad++;
+
         const banco = metodo.bancoNombre || metodo.banco || 'Otro';
         if (banco !== 'Otro') {
           let bancoExistente = this.analisisMetodosPago.transferencia.porBanco.find(b => b.banco === banco);
@@ -425,14 +500,20 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         }
       }
       else if (tipo === 'zelle') {
-        this.analisisMetodosPago.zelle.total += monto;
+        this.analisisMetodosPago.zelle.total += montoEnMonedaSistema;
         this.analisisMetodosPago.zelle.cantidad++;
       }
+
+      console.log('=== PROCESANDO TRANSACCIÓN ===');
+      console.log('Métodos de pago:', trans.detalleMetodosPago);
+      console.log('Tasas cambio:', this.tasasCambio);
+      console.log('Moneda sistema:', this.monedaSistema);
     });
 
     // Si tiene múltiples métodos, marcar como mixto
     if (trans.detalleMetodosPago.length > 1) {
-      this.analisisMetodosPago.mixto.total += trans.monto;
+      const montoTotalEnMonedaSistema = this.convertirAMonedaSistema(trans.monto, 'USD');
+      this.analisisMetodosPago.mixto.total += montoTotalEnMonedaSistema;
       this.analisisMetodosPago.mixto.cantidad++;
     }
   }
@@ -573,62 +654,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
           this.cargandoDatos = false;
         }
       });
-  }
-
-  realizarCierre(): void {
-    if (this.cierreForm.invalid || !this.cierreActual || !this.currentUser) return;
-
-    const formValue = this.cierreForm.value;
-
-    // Recolectar valores reales ingresados
-    const detalleReal: any = {
-      efectivo: {
-        usd: formValue.efectivoRealUSD || 0,
-        eur: formValue.efectivoRealEUR || 0,
-        ves: formValue.efectivoRealVES || 0
-      },
-      punto: [],
-      transferencia: formValue.transferenciaRealTotal || 0,
-      pagomovil: formValue.pagomovilRealTotal || 0,
-      zelle: formValue.zelleReal || 0,
-      notasCierre: formValue.notasCierre || '',
-      fechaCierre: new Date(),
-      usuarioCierre: this.currentUser.nombre
-    };
-
-    // Recolectar punto de venta por banco
-    this.analisisMetodosPago.punto.porBanco.forEach(banco => {
-      const controlName = `puntoReal_${banco.bancoCodigo || banco.banco.replace(/\s/g, '_')}`;
-      const montoReal = formValue[controlName] || 0;
-      detalleReal.punto.push({
-        banco: banco.banco,
-        bancoCodigo: banco.bancoCodigo,
-        montoReal: montoReal,
-        montoSistema: banco.total,
-        diferencia: montoReal - banco.total
-      });
-    });
-
-    // Guardar detalle en el cierre actual
-    this.cierreActual.detalleCierreReal = detalleReal;
-    this.cierreActual.estado = 'cerrado';
-    this.cierreActual.efectivoFinalReal = this.getEfectivoRealTotal();
-    this.cierreActual.diferencia = this.getDiferenciaTotal();
-    this.cierreActual.notasCierre = formValue.notasCierre;
-    this.cierreActual.usuarioCierre = this.currentUser.nombre;
-    this.cierreActual.fechaCierre = new Date();
-
-    this.guardarCierreEnBackend().then(() => {
-      this.cerrarModal('cierreCajaModal');
-      this.swalService.showSuccess('Cierre realizado', 'El cierre de caja se ha guardado correctamente.');
-
-      if (formValue.imprimirResumen) {
-        this.imprimirResumen();
-      }
-    }).catch(error => {
-      console.error('Error al guardar cierre:', error);
-      this.swalService.showError('Error', 'No se pudo guardar el cierre. Por favor, intente nuevamente.');
-    });
   }
 
   filtrarTransacciones(): void {
@@ -952,15 +977,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       this.cierreActual.ventasZelle;
   }
 
-  getEfectivoFinalTeorico(): number {
-    if (!this.cierreActual) return 0;
-    const inicial = this.cierreActual.efectivoInicial || 0;
-    const ventasEfectivo = this.analisisMetodosPago?.efectivo?.total || 0;
-    const egresosEfectivo = this.getEgresosEfectivo();
-    const teorico = inicial + ventasEfectivo - egresosEfectivo;
-
-    return teorico;
-  }
   getEgresosEfectivo(): number {
     return this.transacciones
       .filter(t => t.tipo === 'egreso' && t.metodoPago === 'efectivo')
@@ -1099,22 +1115,42 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     const formValue = this.inicioCajaForm.value;
 
-    // Calcular total en moneda del sistema
-    this.calcularTotalEfectivoInicial();
+    // Obtener valores del formulario
+    const bs = Number(formValue.efectivoInicialBs) || 0;
+    const usd = Number(formValue.efectivoInicialUsd) || 0;
+    const eur = Number(formValue.efectivoInicialEur) || 0;
+
+    console.log('Valores ingresados:', { usd, eur, bs });
+    console.log('Tasas de cambio:', this.tasasCambio);
+    console.log('Moneda del sistema:', this.monedaSistema);
+
+    let totalEfectivoInicial = 0;
+
+    // Convertir todo a la moneda del sistema   
+    if (this.monedaSistema === 'USD') {
+      totalEfectivoInicial = usd + (eur * (this.tasasCambio?.euro || 1.1447)) + (bs * (this.tasasCambio?.bolivar || 0.00211));
+    }
+    else if (this.monedaSistema === 'EUR') {
+      totalEfectivoInicial = (usd * (this.tasasCambio?.dolar || 0.8737)) + eur + (bs * (this.tasasCambio?.bolivar || 0.00184));
+    }
+    else {
+      totalEfectivoInicial = (usd * (this.tasasCambio?.dolar || 474.06)) + (eur * (this.tasasCambio?.euro || 542.64)) + bs;
+    }
+
+    console.log('Total efectivo inicial calculado:', totalEfectivoInicial);
 
     const efectivoInicialDetalle = {
-      Bs: formValue.efectivoInicialBs || 0,
-      USD: formValue.efectivoInicialUsd || 0,
-      EUR: formValue.efectivoInicialEur || 0
+      Bs: bs,
+      USD: usd,
+      EUR: eur
     };
 
     this.cierreActual = {
       id: `CIERRE-${this.datePipe.transform(new Date(), 'yyyy-MM-dd')}-${this.sedeActual.key}`,
       fecha: new Date(),
-      efectivoInicial: this.totalEfectivoInicialCalculado,
+      efectivoInicial: totalEfectivoInicial, // Este es el valor CORRECTO en moneda del sistema
       efectivoInicialDetalle: efectivoInicialDetalle,
 
-      // Ventas por método (originales)
       ventasEfectivo: 0,
       ventasTarjeta: 0,
       ventasTransferencia: 0,
@@ -1123,7 +1159,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       ventasPagomovil: 0,
       ventasZelle: 0,
 
-      // NUEVAS PROPIEDADES - Inicializar con los análisis actuales
       ventasPorTipo: { ...this.analisisVentas },
       metodosPago: JSON.parse(JSON.stringify(this.analisisMetodosPago)),
       formasPago: JSON.parse(JSON.stringify(this.analisisFormasPago)),
@@ -1138,10 +1173,9 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         ventasPendientes: this.analisisFormasPago.deContadoPendiente.total
       },
 
-      // Propiedades existentes
       otrosIngresos: this.transacciones.filter(t => t.tipo === 'ingreso').reduce((sum, t) => sum + t.monto, 0),
       egresos: this.getTotalEgresos(),
-      efectivoFinalTeorico: parseFloat(formValue.efectivoInicial) + this.analisisMetodosPago.efectivo.total,
+      efectivoFinalTeorico: totalEfectivoInicial + this.analisisMetodosPago.efectivo.total,
       efectivoFinalReal: 0,
       diferencia: 0,
       observaciones: formValue.observaciones,
@@ -1161,7 +1195,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     // Cerrar modal
     this.cerrarModal('inicioCajaModal');
 
-    const mensajeDetalle = `Bs. ${efectivoInicialDetalle.Bs} | USD $${efectivoInicialDetalle.USD} | EUR €${efectivoInicialDetalle.EUR}`;
+    const mensajeDetalle = `Total en ${this.simboloMonedaSistema}: ${totalEfectivoInicial.toFixed(2)} | Bs. ${bs} | USD $${usd} | EUR €${eur}`;
     this.swalService.showSuccess('Caja iniciada', `Caja iniciada con: ${mensajeDetalle}`);
   }
 
@@ -1601,29 +1635,32 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Resetear valores del formulario
+    // Resetear valores del formulario (sin emitir eventos)
     this.cierreForm.patchValue({
       efectivoRealUSD: 0,
       efectivoRealEUR: 0,
       efectivoRealVES: 0,
+      transferenciaRealTotal: 0,
+      pagomovilRealTotal: 0,
       zelleReal: 0,
       notasCierre: '',
-      imprimirResumen: true,
-      enviarEmail: false,
-      adjuntarComprobantes: true
-    });
+      imprimirResumen: true
+    }, { emitEvent: false });
 
     // Limpiar y reconstruir controles de bancos
     this.limpiarControlesBancos();
     this.agregarControlesBancos();
 
+    // Suscribirse a cambios en el formulario (solo una vez)
+    if (!this._suscripcionFormulario) {
+      this.suscribirCambiosFormularioCierre();
+      this._suscripcionFormulario = true;
+    }
+
     // Forzar recalcular diferencias después de reconstruir controles
     setTimeout(() => {
       this.recalcularDiferencias();
     }, 100);
-
-    // Suscribirse a cambios en el formulario
-    this.suscribirCambiosFormularioCierre();
 
     const modalElement = document.getElementById('cierreCajaModal');
     if (modalElement) {
@@ -1631,6 +1668,8 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       modal.show();
     }
   }
+
+  private _suscripcionFormulario: boolean = false;
 
   abrirModalTransaccion(transaccion?: Transaccion): void {
     if (transaccion && transaccion.numeroVenta) {
@@ -1852,101 +1891,67 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   private suscribirCambiosFormularioCierre(): void {
-    // Suscribirse a cambios en efectivo por moneda
-    this.cierreForm.get('efectivoRealUSD')?.valueChanges.subscribe(() => {
-      this.recalcularDiferencias();
-    });
-    this.cierreForm.get('efectivoRealEUR')?.valueChanges.subscribe(() => {
-      this.recalcularDiferencias();
-    });
-    this.cierreForm.get('efectivoRealVES')?.valueChanges.subscribe(() => {
-      this.recalcularDiferencias();
-    });
+    // Usar debounceTime para evitar demasiadas actualizaciones
+    const cambiosEfectivo = this.cierreForm.get('efectivoRealUSD')?.valueChanges.pipe(
+      debounceTime(300)
+    );
+    const cambiosEfectivoEUR = this.cierreForm.get('efectivoRealEUR')?.valueChanges.pipe(
+      debounceTime(300)
+    );
+    const cambiosEfectivoVES = this.cierreForm.get('efectivoRealVES')?.valueChanges.pipe(
+      debounceTime(300)
+    );
+    const cambiosZelle = this.cierreForm.get('zelleReal')?.valueChanges.pipe(
+      debounceTime(300)
+    );
+    const cambiosTransferencia = this.cierreForm.get('transferenciaRealTotal')?.valueChanges.pipe(
+      debounceTime(300)
+    );
+    const cambiosPagomovil = this.cierreForm.get('pagomovilRealTotal')?.valueChanges.pipe(
+      debounceTime(300)
+    );
 
-    // Suscribirse a cambios en Zelle
-    this.cierreForm.get('zelleReal')?.valueChanges.subscribe(() => {
-      this.recalcularDiferencias();
-    });
-
-    // Suscribirse a cambios en notas de cierre
-    this.cierreForm.get('notasCierre')?.valueChanges.subscribe(() => {
-      this.recalcularDiferencias();
-    });
-  }
-
-  recalcularDiferencias(): void {
-    if (!this.cierreActual) return;
-
-    // 1. Calcular diferencia de efectivo
-    const efectivoReal = this.getEfectivoRealTotal();
-    const efectivoTeorico = this.getEfectivoFinalTeorico();
-    const diferenciaEfectivo = efectivoReal - efectivoTeorico;
-
-    // 2. Calcular diferencias por método de pago
-    const diferenciasPunto = this.calcularDiferenciasPunto();
-    const diferenciaTransferencia = this.getDiferenciaTransferencia();
-    const diferenciaPagomovil = this.getDiferenciaPagomovil();
-    const diferenciaZelle = this.getDiferenciaZelle();
-
-    // 3. Calcular diferencia total
-    const diferenciaTotal = diferenciaEfectivo +
-      diferenciasPunto.total +
-      diferenciaTransferencia +
-      diferenciaPagomovil +
-      diferenciaZelle;
-
-    // 4. Actualizar el cierre actual
-    this.cierreActual.diferencia = diferenciaTotal;
-    this.cierreActual.efectivoFinalReal = efectivoReal;
-
-    // 5. Actualizar el resumen de diferencias
-    this.cierreActual.resumenDiferencias = {
-      efectivo: {
-        diferencia: diferenciaEfectivo,
-        justificacion: ''
-      },
-      punto: {
-        diferencia: diferenciasPunto.total,
-        justificacion: '',
-        porBanco: diferenciasPunto.porBanco
-      },
-      transferencia: {
-        diferencia: diferenciaTransferencia,
-        justificacion: ''
-      },
-      pagomovil: {
-        diferencia: diferenciaPagomovil,
-        justificacion: ''
-      },
-      zelle: {
-        diferencia: diferenciaZelle,
-        justificacion: ''
-      },
-      total: diferenciaTotal,
-      requiereJustificacion: Math.abs(diferenciaTotal) > 0.01
-    };
-
-    // Forzar detección de cambios
-    this.cdr.detectChanges();
+    // Suscribirse a todos los cambios
+    if (cambiosEfectivo) {
+      cambiosEfectivo.subscribe(() => this.recalcularDiferencias());
+    }
+    if (cambiosEfectivoEUR) {
+      cambiosEfectivoEUR.subscribe(() => this.recalcularDiferencias());
+    }
+    if (cambiosEfectivoVES) {
+      cambiosEfectivoVES.subscribe(() => this.recalcularDiferencias());
+    }
+    if (cambiosZelle) {
+      cambiosZelle.subscribe(() => this.recalcularDiferencias());
+    }
+    if (cambiosTransferencia) {
+      cambiosTransferencia.subscribe(() => this.recalcularDiferencias());
+    }
+    if (cambiosPagomovil) {
+      cambiosPagomovil.subscribe(() => this.recalcularDiferencias());
+    }
   }
 
   private calcularDiferenciasPunto(): { total: number; porBanco: any[] } {
     let total = 0;
     const porBanco: any[] = [];
+    const tasaVESaUSD = this.tasasCambio?.bolivar || 0.00211;
 
     this.analisisMetodosPago.punto.porBanco.forEach(banco => {
       const controlName = `puntoReal_${banco.bancoCodigo || banco.banco.replace(/\s/g, '_')}`;
-      const montoReal = this.cierreForm.get(controlName)?.value || 0;
-      const montoSistema = banco.total;
-      const diferencia = montoReal - montoSistema;
+      const montoRealUSD = this.cierreForm.get(controlName)?.value || 0;
+      const montoSistemaVES = banco.total;
+      const montoSistemaUSD = montoSistemaVES * tasaVESaUSD;
+      const diferencia = montoRealUSD - montoSistemaUSD;
 
       total += diferencia;
 
       porBanco.push({
         banco: banco.banco,
         bancoCodigo: banco.bancoCodigo,
-        montoReal: montoReal,
-        montoSistema: montoSistema,
+        montoRealUSD: montoRealUSD,
+        montoSistemaVES: montoSistemaVES,
+        montoSistemaUSD: montoSistemaUSD,
         diferencia: diferencia,
         cantidadReal: 0,
         cantidadSistema: banco.cantidad
@@ -1956,78 +1961,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return { total, porBanco };
   }
 
-  getEfectivoRealTotal(): number {
-    const usd = this.cierreForm.get('efectivoRealUSD')?.value || 0;
-    const eur = this.cierreForm.get('efectivoRealEUR')?.value || 0;
-    const ves = this.cierreForm.get('efectivoRealVES')?.value || 0;
-
-    // Convertir todo a USD
-    const eurToUsd = eur * (this.tasasCambio?.euro || 1.05);
-    const vesToUsd = ves / (this.tasasCambio?.bolivar || 60.5);
-
-    const total = usd + eurToUsd + vesToUsd;
-    return total;
-  }
-
-  // Diferencia de efectivo
-  getDiferenciaEfectivo(): number {
-    const real = this.getEfectivoRealTotal();
-    const teorico = this.getEfectivoFinalTeorico();
-    const diff = real - teorico;
-    return diff;
-  }
-
-  // Diferencia de punto de venta
-  getDiferenciaPunto(): number {
-    let realTotal = 0;
-    let sistemaTotal = 0;
-
-    if (this.analisisMetodosPago?.punto?.porBanco) {
-      this.analisisMetodosPago.punto.porBanco.forEach(banco => {
-        const controlName = `puntoReal_${banco.bancoCodigo || banco.banco.replace(/\s/g, '_')}`;
-        const montoReal = this.cierreForm.get(controlName)?.value || 0;
-        realTotal += montoReal;
-        sistemaTotal += banco.total;
-      });
-    }
-
-    const diff = realTotal - sistemaTotal;
-    return diff;
-  }
-
-  getDiferenciaTransferencia(): number {
-    const real = this.cierreForm.get('transferenciaRealTotal')?.value || 0;
-    const sistema = this.analisisMetodosPago?.transferencia?.total || 0;
-    return real - sistema;
-  }
-
-  // Diferencia de pago móvil (ahora global)
-  getDiferenciaPagomovil(): number {
-    const real = this.cierreForm.get('pagomovilRealTotal')?.value || 0;
-    const sistema = this.analisisMetodosPago?.pagomovil?.total || 0;
-    return real - sistema;
-  }
-
-  // Diferencia de Zelle
-  getDiferenciaZelle(): number {
-    const real = this.cierreForm.get('zelleReal')?.value || 0;
-    const sistema = this.analisisMetodosPago?.zelle?.total || 0;
-    return real - sistema;
-  }
-
-  // Diferencia total
-  getDiferenciaTotal(): number {
-    const diff = this.getDiferenciaEfectivo() +
-      this.getDiferenciaPunto() +
-      this.getDiferenciaTransferencia() +
-      this.getDiferenciaPagomovil() +
-      this.getDiferenciaZelle();
-    return diff;
-  }
-
-  private redondear(valor: number, decimales: number = 2): number {
-    return Number(valor.toFixed(decimales));
-  }
   // Métodos para verificar diferencias
   tieneDiferenciaPunto(): boolean {
     return Math.abs(this.getDiferenciaPunto()) > 0.01;
@@ -2050,55 +1983,20 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return Math.abs(this.getDiferenciaTotal()) > 0.01;
   }
 
-  getDiferenciaPuntoFormateada(): string {
-    const diff = this.getDiferenciaPunto();
-    return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
-  }
-
-  getDiferenciaTransferenciaFormateada(): string {
-    const diff = this.getDiferenciaTransferencia();
-    return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
-  }
-
-  // Formatear diferencia de pago móvil
-  getDiferenciaPagomovilFormateada(): string {
-    const diff = this.getDiferenciaPagomovil();
-    return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
-  }
-
-  getDiferenciaZelleFormateada(): string {
-    const diff = this.getDiferenciaZelle();
-    return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
-  }
-
-  getDiferenciaTotalFormateada(): string {
-    const diff = this.getDiferenciaTotal();
-    return diff > 0 ? `+${diff.toFixed(2)}` : diff.toFixed(2);
-  }
-
-  // Métodos auxiliares para el modal
   getDiferenciaPuntoPorBanco(bancoCodigo: string): number {
     const controlName = `puntoReal_${bancoCodigo}`;
-    const montoReal = this.cierreForm.get(controlName)?.value || 0;
+    const montoRealUSD = this.cierreForm.get(controlName)?.value || 0;
     const bancoData = this.analisisMetodosPago.punto.porBanco.find(b => b.bancoCodigo === bancoCodigo);
-    const montoSistema = bancoData?.total || 0;
-    return montoReal - montoSistema;
-  }
+    const montoSistemaVES = bancoData?.total || 0;
+    const tasaVESaUSD = this.tasasCambio?.bolivar || 0.00211;
+    const montoSistemaUSD = montoSistemaVES * tasaVESaUSD;
 
-  getDiferenciaBadgeClass(diferencia: number): string {
-    if (Math.abs(diferencia) < 0.01) return 'bg-secondary';
-    return diferencia > 0 ? 'bg-success' : 'bg-danger';
+    return montoRealUSD - montoSistemaUSD;
   }
 
   getDiferenciaClass(diferencia: number): string {
     if (Math.abs(diferencia) < 0.01) return 'diferencia-cero';
     return diferencia > 0 ? 'diferencia-positiva' : 'diferencia-negativa';
-  }
-
-  getDiferenciaTotalClass(): string {
-    const diff = this.getDiferenciaTotal();
-    if (Math.abs(diff) < 0.01) return 'text-secondary';
-    return diff > 0 ? 'text-success' : 'text-danger';
   }
 
   getDiferenciaTotalClassValor(diff: number): string {
@@ -2468,9 +2366,747 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     const usd = this.inicioCajaForm.get('efectivoInicialUsd')?.value || 0;
     const eur = this.inicioCajaForm.get('efectivoInicialEur')?.value || 0;
 
-    const tasaUsd = this.tasasCambio?.dolar || 473.87;
-    const tasaEur = this.tasasCambio?.euro || 542.64;
+    console.log('Calculando total inicial:', { usd, eur, bs });
+    console.log('Tasas:', this.tasasCambio);
 
-    this.totalEfectivoInicialCalculado = bs + (usd * tasaUsd) + (eur * tasaEur);
+    if (this.monedaSistema === 'USD') {
+      // Convertir todo a USD
+      this.totalEfectivoInicialCalculado = usd + (eur * (this.tasasCambio?.euro || 1.1447)) + (bs * (this.tasasCambio?.bolivar || 0.00211));
+    }
+    else if (this.monedaSistema === 'EUR') {
+      // Convertir todo a EUR
+      this.totalEfectivoInicialCalculado = (usd * (this.tasasCambio?.dolar || 0.8737)) + eur + (bs * (this.tasasCambio?.bolivar || 0.00184));
+    }
+    else {
+      // Convertir todo a VES
+      this.totalEfectivoInicialCalculado = (usd * (this.tasasCambio?.dolar || 474.06)) + (eur * (this.tasasCambio?.euro || 542.64)) + bs;
+    }
+
+    console.log('Total inicial calculado:', this.totalEfectivoInicialCalculado);
   }
+
+  // Auto completar montos
+  autoCompletar(campo: string, montoSistema: number): void {
+    this.cierreForm.get(campo)?.setValue(montoSistema);
+  }
+
+  autoCompletarBanco(campo: string, montoSistema: number): void {
+    this.cierreForm.get(campo)?.setValue(montoSistema);
+  }
+
+  // Eventos para inputs (focus que limpia el 0)
+  onInputFocus(event: FocusEvent): void {
+    const input = event.target as HTMLInputElement;
+    if (input.value === '0' || input.value === '0.00') {
+      input.value = '';
+    }
+  }
+
+  onInputBlur(event: FocusEvent): void {
+    const input = event.target as HTMLInputElement;
+    if (input.value === '' || input.value === null) {
+      input.value = '0';
+      // También actualizar el FormControl
+      const controlName = input.getAttribute('formControlName');
+      if (controlName && this.cierreForm.get(controlName)) {
+        this.cierreForm.get(controlName)?.setValue(0);
+      }
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+  verificarDiferenciaYComentario(): void {
+    // Evitar recursión
+    if (this.actualizandoValidaciones) return;
+
+    this.actualizandoValidaciones = true;
+
+    try {
+      const diferenciaTotal = Math.abs(this.getDiferenciaTotal());
+      const hayDiferenciaNueva = diferenciaTotal > 0.01;
+
+      // Solo actualizar si cambió el estado
+      if (this.hayDiferencia !== hayDiferenciaNueva) {
+        this.hayDiferencia = hayDiferenciaNueva;
+        this.comentarioRequerido = this.hayDiferencia;
+
+        const notasControl = this.cierreForm.get('notasCierre');
+
+        if (this.comentarioRequerido) {
+          notasControl?.setValidators([Validators.required, Validators.minLength(10)]);
+        } else {
+          notasControl?.clearValidators();
+        }
+
+        notasControl?.updateValueAndValidity({ emitEvent: false }); // No emitir evento
+      }
+    } finally {
+      this.actualizandoValidaciones = false;
+    }
+  }
+
+  // Método para actualizar si el botón de cierre debe estar habilitado
+  actualizarBotonCierre(): void {
+    const tieneComentarioValido = this.comentarioRequerido
+      ? (this.cierreForm.get('notasCierre')?.value?.trim().length >= 10)
+      : true;
+
+    const tieneValoresValidos = this.cierreForm.valid;
+    const botonHabilitado = tieneValoresValidos && tieneComentarioValido;
+
+    // Puedes usar esto en el template o guardarlo en una propiedad
+    // Por ahora, solo actualizamos el estado del formulario
+    if (!botonHabilitado) {
+      this.cierreForm.markAsPending();
+    }
+  }
+
+  // Método para obtener la clase del botón de cierre
+  getBotonCierreClass(): string {
+    const diferenciaTotal = Math.abs(this.getDiferenciaTotal());
+    if (diferenciaTotal > 0.01) {
+      return 'btn-cerrar-con-diferencia';
+    }
+    return 'btn-cerrar-sin-diferencia';
+  }
+
+  // Método para obtener el texto del botón de cierre
+  getBotonCierreTexto(): string {
+    const diferenciaTotal = Math.abs(this.getDiferenciaTotal());
+    if (diferenciaTotal > 0.01) {
+      return '⚠️ Cerrar con Diferencia';
+    }
+    return '✓ Cerrar Caja';
+  }
+
+
+  recalcularDiferencias(): void {
+    if (this.recalculando || !this.cierreActual) return;
+
+    this.recalculando = true;
+
+    try {
+      // 1. Calcular diferencia de efectivo
+      const efectivoReal = this.getEfectivoRealTotal();
+      const efectivoTeorico = this.getEfectivoFinalTeorico();
+      const diferenciaEfectivo = efectivoReal - efectivoTeorico;
+
+      // 2. Calcular diferencias por método de pago (YA CONVERTIDAS A USD)
+      const diferenciasPunto = this.calcularDiferenciasPunto();
+      const diferenciaTransferencia = this.getDiferenciaTransferencia();
+      const diferenciaPagomovil = this.getDiferenciaPagomovil();
+      const diferenciaZelle = this.getDiferenciaZelle();
+
+      // 3. Calcular diferencia total
+      const diferenciaTotal = diferenciaEfectivo +
+        diferenciasPunto.total +
+        diferenciaTransferencia +
+        diferenciaPagomovil +
+        diferenciaZelle;
+
+      console.log('=== RECALCULANDO DIFERENCIAS ===');
+      console.log('Diferencia Efectivo:', diferenciaEfectivo);
+      console.log('Diferencia Punto:', diferenciasPunto.total);
+      console.log('Diferencia Transferencia:', diferenciaTransferencia);
+      console.log('Diferencia Pago Móvil:', diferenciaPagomovil);
+      console.log('Diferencia Zelle:', diferenciaZelle);
+      console.log('Diferencia Total:', diferenciaTotal);
+
+      // 4. Actualizar el cierre actual
+      this.cierreActual.diferencia = diferenciaTotal;
+      this.cierreActual.efectivoFinalReal = efectivoReal;
+
+      // 5. Actualizar propiedades calculadas
+      this._diferenciaTotal = diferenciaTotal;
+      this._efectivoTeorico = efectivoTeorico;
+      this._efectivoReal = efectivoReal;
+
+      // 6. Verificar si hay diferencia
+      this.verificarDiferenciaYComentario();
+
+      // 7. Forzar detección de cambios
+      this.cdr.detectChanges();
+
+    } finally {
+      this.recalculando = false;
+    }
+  }
+
+  // Modificar el método realizarCierre existente
+  realizarCierre(): void {
+    // Validar comentario si hay diferencia
+    const diferenciaTotal = Math.abs(this.getDiferenciaTotal());
+    const comentario = this.cierreForm.get('notasCierre')?.value?.trim();
+
+    if (diferenciaTotal > 0.01 && (!comentario || comentario.length < 10)) {
+      this.swalService.showWarning(
+        'Comentario requerido',
+        'Debes explicar la diferencia en el campo "Notas de Cierre" (mínimo 10 caracteres)'
+      );
+      return;
+    }
+
+    if (this.cierreForm.invalid) {
+      this.swalService.showWarning('Formulario inválido', 'Por favor, completa todos los campos requeridos.');
+      return;
+    }
+
+    if (!this.cierreActual || !this.currentUser) return;
+
+    const formValue = this.cierreForm.value;
+
+    // Recolectar valores reales ingresados
+    const detalleReal: any = {
+      efectivo: {
+        usd: formValue.efectivoRealUSD || 0,
+        eur: formValue.efectivoRealEUR || 0,
+        ves: formValue.efectivoRealVES || 0
+      },
+      punto: [],
+      transferencia: formValue.transferenciaRealTotal || 0,
+      pagomovil: formValue.pagomovilRealTotal || 0,
+      zelle: formValue.zelleReal || 0,
+      notasCierre: formValue.notasCierre || '',
+      fechaCierre: new Date(),
+      usuarioCierre: this.currentUser.nombre
+    };
+
+    // Recolectar punto de venta por banco
+    this.analisisMetodosPago.punto.porBanco.forEach(banco => {
+      const controlName = `puntoReal_${banco.bancoCodigo || banco.banco.replace(/\s/g, '_')}`;
+      const montoReal = formValue[controlName] || 0;
+      detalleReal.punto.push({
+        banco: banco.banco,
+        bancoCodigo: banco.bancoCodigo,
+        montoReal: montoReal,
+        montoSistema: banco.total,
+        diferencia: montoReal - banco.total
+      });
+    });
+
+    // Guardar detalle en el cierre actual
+    this.cierreActual.detalleCierreReal = detalleReal;
+    this.cierreActual.estado = 'cerrado';
+    this.cierreActual.efectivoFinalReal = this.getEfectivoRealTotal();
+    this.cierreActual.diferencia = this.getDiferenciaTotal();
+    this.cierreActual.notasCierre = formValue.notasCierre;
+    this.cierreActual.usuarioCierre = this.currentUser.nombre;
+    this.cierreActual.fechaCierre = new Date();
+
+    // Mostrar confirmación si hay diferencia
+    if (diferenciaTotal > 0.01) {
+      this.swalService.showConfirm(
+        '¿Cerrar caja con diferencia?',
+        `La caja presenta una diferencia de ${this.getDiferenciaTotalFormateada()}.<br>
+         <strong>Comentario:</strong> "${comentario}"<br><br>
+         ¿Estás seguro de cerrar la caja?`,
+        'Sí, cerrar con diferencia',
+        'Cancelar'
+      ).then((result) => {
+        if (result.isConfirmed) {
+          this.guardarYCerrarCaja(formValue);
+        }
+      });
+    } else {
+      this.guardarYCerrarCaja(formValue);
+    }
+  }
+
+  // Método auxiliar para guardar y cerrar caja
+  private guardarYCerrarCaja(formValue: any): void {
+    this.guardarCierreEnBackend().then(() => {
+      this.cerrarModal('cierreCajaModal');
+      this.swalService.showSuccess('Cierre realizado', 'El cierre de caja se ha guardado correctamente.');
+
+      if (formValue.imprimirResumen) {
+        this.imprimirResumen();
+      }
+    }).catch(error => {
+      console.error('Error al guardar cierre:', error);
+      this.swalService.showError('Error', 'No se pudo guardar el cierre. Por favor, intente nuevamente.');
+    });
+  }
+
+  convertirAMonedaSistema(monto: number, monedaOrigen: string): number {
+    if (!monto || monto === 0) return 0;
+
+    const moneda = monedaOrigen.toLowerCase();
+
+    console.log(`Convirtiendo: ${monto} ${moneda} a ${this.monedaSistema}`);
+
+    // Si la moneda del sistema es USD
+    if (this.monedaSistema === 'USD') {
+      if (moneda === 'usd' || moneda === 'dolar') return monto;
+      if (moneda === 'eur' || moneda === 'euro') return monto * (this.tasasCambio?.euro || 1.1447);
+      if (moneda === 'ves' || moneda === 'bolivar') return monto * (this.tasasCambio?.bolivar || 0.00211);
+    }
+    // Si la moneda del sistema es EUR
+    else if (this.monedaSistema === 'EUR') {
+      if (moneda === 'eur' || moneda === 'euro') return monto;
+      if (moneda === 'usd' || moneda === 'dolar') return monto / (this.tasasCambio?.euro || 1.1447);
+      if (moneda === 'ves' || moneda === 'bolivar') return monto * (this.tasasCambio?.bolivar || 0.00184);
+    }
+    // Si la moneda del sistema es VES
+    else if (this.monedaSistema === 'VES') {
+      if (moneda === 'ves' || moneda === 'bolivar') return monto;
+      if (moneda === 'usd' || moneda === 'dolar') return monto * (1 / (this.tasasCambio?.bolivar || 0.00211));
+      if (moneda === 'eur' || moneda === 'euro') return monto * (this.tasasCambio?.euro || 1.1447) * (1 / (this.tasasCambio?.bolivar || 0.00211));
+    }
+
+    return monto;
+  }
+
+  // Obtener tasa de conversión hacia la moneda del sistema
+  private getTasaHaciaSistema(monedaOrigen: string): number {
+    const tasaOrigen = this.tasasCambio?.[monedaOrigen.toLowerCase()];
+
+    if (!tasaOrigen) return 1;
+
+    if (this.monedaSistema === 'USD') {
+      if (monedaOrigen === 'USD') return 1;
+      if (monedaOrigen === 'EUR') return tasaOrigen;
+      if (monedaOrigen === 'VES') return 1 / tasaOrigen;
+    }
+
+    if (this.monedaSistema === 'EUR') {
+      if (monedaOrigen === 'EUR') return 1;
+      if (monedaOrigen === 'USD') return 1 / tasaOrigen;
+      if (monedaOrigen === 'VES') return (1 / this.tasasCambio.bolivar) * (1 / tasaOrigen);
+    }
+
+    if (this.monedaSistema === 'VES') {
+      if (monedaOrigen === 'VES') return 1;
+      if (monedaOrigen === 'USD') return tasaOrigen;
+      if (monedaOrigen === 'EUR') return tasaOrigen;
+    }
+
+    return 1;
+  }
+
+  // Obtener el total real de efectivo en moneda del sistema
+  getEfectivoRealTotal(): number {
+    const usd = this.cierreForm.get('efectivoRealUSD')?.value || 0;
+    const eur = this.cierreForm.get('efectivoRealEUR')?.value || 0;
+    const ves = this.cierreForm.get('efectivoRealVES')?.value || 0;
+
+    let total = 0;
+
+    if (this.monedaSistema === 'USD') {
+      total = usd + (eur * this.tasasCambio.euro) + (ves / this.tasasCambio.bolivar);
+    } else if (this.monedaSistema === 'EUR') {
+      total = (usd / this.tasasCambio.euro) + eur + (ves / (this.tasasCambio.bolivar * this.tasasCambio.euro));
+    } else { // VES
+      total = (usd * this.tasasCambio.bolivar) + (eur * this.tasasCambio.euro * this.tasasCambio.bolivar) + ves;
+    }
+
+    return total;
+  }
+
+  getEfectivoFinalTeorico(): number {
+    if (!this.cierreActual) return 0;
+
+    // El efectivo inicial YA DEBE ESTAR en moneda del sistema
+    const inicial = this.cierreActual.efectivoInicial || 0;
+
+    // Las ventas en efectivo YA DEBEN ESTAR en moneda del sistema
+    const ventasEfectivo = this.analisisMetodosPago?.efectivo?.total || 0;
+
+    const egresosEfectivo = this.getEgresosEfectivoEnMonedaSistema();
+
+    const teorico = inicial + ventasEfectivo - egresosEfectivo;
+
+    console.log('Cálculo efectivo teórico:', {
+      inicial,
+      ventasEfectivo,
+      egresosEfectivo,
+      teorico,
+      monedaSistema: this.monedaSistema
+    });
+
+    return teorico;
+  }
+
+  getEgresosEfectivoEnMonedaSistema(): number {
+    let totalEgresos = 0;
+
+    this.transacciones
+      .filter(t => t.tipo === 'egreso' && t.metodoPago === 'efectivo')
+      .forEach(transaccion => {
+        let montoEnMonedaSistema = transaccion.monto;
+
+        // Si el egreso tiene moneda específica, convertir
+        if (transaccion.moneda && transaccion.moneda !== this.monedaSistema) {
+          montoEnMonedaSistema = this.convertirAMonedaSistema(transaccion.monto, transaccion.moneda);
+        }
+
+        totalEgresos += montoEnMonedaSistema;
+      });
+
+    return totalEgresos;
+  }
+
+  getDiferenciaTotalFormateada(): string {
+    const diff = this.getDiferenciaTotal();
+    const signo = diff > 0 ? '+' : '';
+    return `${signo}${diff.toFixed(2)} ${this.simboloMonedaSistema}`;
+  }
+
+  getDiferenciaPorMoneda(moneda: string): number {
+    const real = this.getMontoRealPorMoneda(moneda);
+    const sistema = this.getMontoSistemaPorMoneda(moneda);
+    const diferencia = real - sistema;
+
+    // Mostrar la diferencia en la moneda original, no convertir
+    return diferencia;
+  }
+
+  getDiferenciaBadgeClass(diferencia: number): string {
+    if (Math.abs(diferencia) < 0.01) return 'bg-secondary';
+    return diferencia > 0 ? 'bg-success' : 'bg-danger';
+  }
+
+  getDiferenciaTotalClass(): string {
+    const diff = this.getDiferenciaTotal();
+    if (Math.abs(diff) < 0.01) return 'text-secondary';
+    return diff > 0 ? 'text-success' : 'text-danger';
+  }
+
+  getMontoRealPorMoneda(moneda: string): number {
+    switch (moneda) {
+      case 'USD':
+        return this.cierreForm.get('efectivoRealUSD')?.value || 0;
+      case 'EUR':
+        return this.cierreForm.get('efectivoRealEUR')?.value || 0;
+      case 'VES':
+        return this.cierreForm.get('efectivoRealVES')?.value || 0;
+      default:
+        return 0;
+    }
+  }
+
+  getMontoSistemaPorMoneda(moneda: string): number {
+    switch (moneda) {
+      case 'USD':
+        return this.analisisMetodosPago?.efectivo?.porMoneda?.dolar || 0;
+      case 'EUR':
+        return this.analisisMetodosPago?.efectivo?.porMoneda?.euro || 0;
+      case 'VES':
+        return this.analisisMetodosPago?.efectivo?.porMoneda?.bolivar || 0;
+      default:
+        return 0;
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // Agrega estos métodos al final de tu componente, antes de la última llave }
+
+  // Obtener el total esperado de efectivo por moneda específica
+  getTotalEfectivoEsperadoPorMoneda(moneda: string): number {
+    if (!this.cierreActual) return 0;
+
+    const inicial = this.getEfectivoInicialPorMoneda(moneda);
+    const ventas = this.getVentasEfectivoPorMoneda(moneda);
+
+    return inicial + ventas;
+  }
+
+  // Obtener efectivo inicial por moneda
+  getEfectivoInicialPorMoneda(moneda: string): number {
+    if (!this.cierreActual?.efectivoInicialDetalle) return 0;
+
+    switch (moneda) {
+      case 'USD':
+        return this.cierreActual.efectivoInicialDetalle.USD || 0;
+      case 'EUR':
+        return this.cierreActual.efectivoInicialDetalle.EUR || 0;
+      case 'VES':
+        return this.cierreActual.efectivoInicialDetalle.Bs || 0;
+      default:
+        return 0;
+    }
+  }
+
+  // Obtener ventas en efectivo por moneda
+  getVentasEfectivoPorMoneda(moneda: string): number {
+    switch (moneda) {
+      case 'USD':
+        return this.analisisMetodosPago?.efectivo?.porMoneda?.dolar || 0;
+      case 'EUR':
+        return this.analisisMetodosPago?.efectivo?.porMoneda?.euro || 0;
+      case 'VES':
+        return this.analisisMetodosPago?.efectivo?.porMoneda?.bolivar || 0;
+      default:
+        return 0;
+    }
+  }
+
+
+  // Auto completar por moneda específica
+  autoCompletarEfectivoTotalPorMoneda(moneda: string): void {
+    const totalEsperado = this.getTotalEfectivoEsperadoPorMoneda(moneda);
+
+    switch (moneda) {
+      case 'USD':
+        this.cierreForm.patchValue({ efectivoRealUSD: totalEsperado });
+        break;
+      case 'EUR':
+        this.cierreForm.patchValue({ efectivoRealEUR: totalEsperado });
+        break;
+      case 'VES':
+        this.cierreForm.patchValue({ efectivoRealVES: totalEsperado });
+        break;
+    }
+
+    this.swalService.showInfo('Auto completado', `Total esperado para ${moneda}: ${totalEsperado.toFixed(2)}`);
+  }
+
+  autoCompletarEfectivoTotal(): void {
+    const totalEsperadoUSD = this.getTotalEfectivoEsperadoPorMoneda('USD');
+    const totalEsperadoEUR = this.getTotalEfectivoEsperadoPorMoneda('EUR');
+    const totalEsperadoVES = this.getTotalEfectivoEsperadoPorMoneda('VES');
+
+    this.cierreForm.patchValue({
+      efectivoRealUSD: totalEsperadoUSD,
+      efectivoRealEUR: totalEsperadoEUR,
+      efectivoRealVES: totalEsperadoVES
+    });
+
+    this.swalService.showInfo(
+      'Auto completado',
+      `Se ha completado con los totales esperados:
+    USD: ${totalEsperadoUSD.toFixed(2)}
+    EUR: ${totalEsperadoEUR.toFixed(2)}
+    VES: ${totalEsperadoVES.toFixed(2)}`
+    );
+  }
+
+  // Auto completar efectivo por moneda específica
+  autoCompletarEfectivoPorMoneda(moneda: string): void {
+    const totalEsperado = this.getTotalEfectivoEsperadoPorMoneda(moneda);
+
+    switch (moneda) {
+      case 'USD':
+        this.cierreForm.patchValue({ efectivoRealUSD: totalEsperado });
+        this.swalService.showInfo('Auto completado', `Total esperado para USD: ${totalEsperado.toFixed(2)}`);
+        break;
+      case 'EUR':
+        this.cierreForm.patchValue({ efectivoRealEUR: totalEsperado });
+        this.swalService.showInfo('Auto completado', `Total esperado para EUR: ${totalEsperado.toFixed(2)}`);
+        break;
+      case 'VES':
+        this.cierreForm.patchValue({ efectivoRealVES: totalEsperado });
+        this.swalService.showInfo('Auto completado', `Total esperado para VES: ${totalEsperado.toFixed(2)}`);
+        break;
+    }
+  }
+
+  // Auto completar Transferencia
+  autoCompletarTransferencia(): void {
+    const montoSistemaVES = this.analisisMetodosPago?.transferencia?.total || 0;
+    const tasaVESaUSD = this.tasasCambio?.bolivar || 0.00211;
+    const montoSistemaUSD = montoSistemaVES * tasaVESaUSD;
+
+    this.cierreForm.patchValue({ transferenciaRealTotal: montoSistemaUSD });
+    this.swalService.showInfo('Auto completado', `Monto del sistema: ${montoSistemaUSD.toFixed(2)} USD`);
+  }
+
+  // Auto completar Pago Móvil
+  autoCompletarPagomovil(): void {
+    const montoSistemaVES = this.analisisMetodosPago?.pagomovil?.total || 0;
+    const tasaVESaUSD = this.tasasCambio?.bolivar || 0.00211;
+    const montoSistemaUSD = montoSistemaVES * tasaVESaUSD;
+
+    this.cierreForm.patchValue({ pagomovilRealTotal: montoSistemaUSD });
+    this.swalService.showInfo('Auto completado', `Monto del sistema: ${montoSistemaUSD.toFixed(2)} USD`);
+  }
+
+  // Auto completar Zelle
+  autoCompletarZelle(): void {
+    const montoSistema = this.analisisMetodosPago?.zelle?.total || 0;
+    this.cierreForm.patchValue({ zelleReal: montoSistema });
+    this.swalService.showInfo('Auto completado', `Monto del sistema: ${montoSistema.toFixed(2)} USD`);
+  }
+
+  // Auto completar Punto por banco
+  autoCompletarPuntoPorBanco(bancoCodigo: string, montoSistemaVES: number): void {
+    const tasaVESaUSD = this.tasasCambio?.bolivar || 0.00211;
+    const montoSistemaUSD = montoSistemaVES * tasaVESaUSD;
+    const controlName = `puntoReal_${bancoCodigo}`;
+
+    this.cierreForm.patchValue({ [controlName]: montoSistemaUSD });
+    this.swalService.showInfo('Auto completado', `Monto del sistema para ${bancoCodigo}: ${montoSistemaUSD.toFixed(2)} USD`);
+  }
+
+  // Convertir USD a VES para mostrar
+  convertirUSDaVES(montoUSD: number): number {
+    const tasaUSDaVES = 1 / (this.tasasCambio?.bolivar || 0.00211);
+    return montoUSD * tasaUSDaVES;
+  }
+
+  // Formatear diferencia de punto
+  getDiferenciaPuntoFormateada(): string {
+    const diff = this.getDiferenciaPunto();
+    return diff > 0 ? `+${diff.toFixed(2)} USD` : `${diff.toFixed(2)} USD`;
+  }
+
+  // Formatear diferencia de transferencia
+  getDiferenciaTransferenciaFormateada(): string {
+    const diff = this.getDiferenciaTransferencia();
+    return diff > 0 ? `+${diff.toFixed(2)} USD` : `${diff.toFixed(2)} USD`;
+  }
+
+  // Formatear diferencia de pago móvil
+  getDiferenciaPagomovilFormateada(): string {
+    const diff = this.getDiferenciaPagomovil();
+    return diff > 0 ? `+${diff.toFixed(2)} USD` : `${diff.toFixed(2)} USD`;
+  }
+
+  // Formatear diferencia de zelle
+  getDiferenciaZelleFormateada(): string {
+    const diff = this.getDiferenciaZelle();
+    return diff > 0 ? `+${diff.toFixed(2)} USD` : `${diff.toFixed(2)} USD`;
+  }
+
+  // Getters para usar en el template
+  get diferenciaTotal(): number {
+    return this._diferenciaTotal;
+  }
+
+  get efectivoTeorico(): number {
+    return this._efectivoTeorico;
+  }
+
+  get efectivoReal(): number {
+    return this._efectivoReal;
+  }
+
+  get diferenciaTotalFormateada(): string {
+    const signo = this._diferenciaTotal > 0 ? '+' : '';
+    return `${signo}${this._diferenciaTotal.toFixed(2)} ${this.simboloMonedaSistema}`;
+  }
+
+  // Método para obtener la diferencia de efectivo formateada
+  getDiferenciaEfectivoFormateada(): string {
+    const diff = this.getDiferenciaEfectivo();
+    const signo = diff > 0 ? '+' : '';
+    return `${signo}${diff.toFixed(2)} ${this.simboloMonedaSistema}`;
+  }
+
+  // Formatear el total real de efectivo
+  getEfectivoRealTotalFormateado(): string {
+    return `${this.getEfectivoRealTotal().toFixed(2)} ${this.simboloMonedaSistema}`;
+  }
+
+  // Formatear el total teórico de efectivo
+  getEfectivoTeoricoFormateado(): string {
+    return `${this.getEfectivoFinalTeorico().toFixed(2)} ${this.simboloMonedaSistema}`;
+  }
+
+  // Diferencia de punto (convertir sistema de VES a USD correctamente)
+  getDiferenciaPunto(): number {
+    let realTotalUSD = 0;
+    let sistemaTotalUSD = 0;
+
+    if (this.analisisMetodosPago?.punto?.porBanco) {
+      this.analisisMetodosPago.punto.porBanco.forEach(banco => {
+        const controlName = `puntoReal_${banco.bancoCodigo || banco.banco.replace(/\s/g, '_')}`;
+        const montoRealUSD = this.cierreForm.get(controlName)?.value || 0;
+        realTotalUSD += montoRealUSD;
+
+        // Convertir sistema de VES a USD
+        const tasaVESaUSD = this.tasasCambio?.bolivar || 0.00211;
+        const montoSistemaUSD = banco.total * tasaVESaUSD;
+        sistemaTotalUSD += montoSistemaUSD;
+
+        console.log(`Punto ${banco.banco}: Real: ${montoRealUSD} USD, Sistema: ${banco.total} VES = ${montoSistemaUSD} USD`);
+      });
+    }
+
+    const diferencia = realTotalUSD - sistemaTotalUSD;
+    console.log(`Diferencia Punto total: ${diferencia} USD`);
+    return diferencia;
+  }
+
+  // Diferencia de transferencia
+  getDiferenciaTransferencia(): number {
+    const realUSD = this.cierreForm.get('transferenciaRealTotal')?.value || 0;
+    const tasaVESaUSD = this.tasasCambio?.bolivar || 0.00211;
+    const sistemaVES = this.analisisMetodosPago?.transferencia?.total || 0;
+    const sistemaUSD = sistemaVES * tasaVESaUSD;
+
+    const diferencia = realUSD - sistemaUSD;
+    console.log(`Transferencia: Real: ${realUSD} USD, Sistema: ${sistemaVES} VES = ${sistemaUSD} USD, Diferencia: ${diferencia} USD`);
+    return diferencia;
+  }
+
+  // Diferencia de pago móvil
+  getDiferenciaPagomovil(): number {
+    const realUSD = this.cierreForm.get('pagomovilRealTotal')?.value || 0;
+    const tasaVESaUSD = this.tasasCambio?.bolivar || 0.00211;
+    const sistemaVES = this.analisisMetodosPago?.pagomovil?.total || 0;
+    const sistemaUSD = sistemaVES * tasaVESaUSD;
+
+    const diferencia = realUSD - sistemaUSD;
+    console.log(`Pago Móvil: Real: ${realUSD} USD, Sistema: ${sistemaVES} VES = ${sistemaUSD} USD, Diferencia: ${diferencia} USD`);
+    return diferencia;
+  }
+
+  // Diferencia de Zelle (ya está en USD)
+  getDiferenciaZelle(): number {
+    const realUSD = this.cierreForm.get('zelleReal')?.value || 0;
+    const sistemaUSD = this.analisisMetodosPago?.zelle?.total || 0;
+
+    const diferencia = realUSD - sistemaUSD;
+    console.log(`Zelle: Real: ${realUSD} USD, Sistema: ${sistemaUSD} USD, Diferencia: ${diferencia} USD`);
+    return diferencia;
+  }
+
+  // Diferencia de efectivo
+  getDiferenciaEfectivo(): number {
+    const real = this.getEfectivoRealTotal();
+    const teorico = this.getEfectivoFinalTeorico();
+    const diferencia = real - teorico;
+    console.log(`Efectivo: Real: ${real} USD, Teórico: ${teorico} USD, Diferencia: ${diferencia} USD`);
+    return diferencia;
+  }
+
+  // Diferencia total
+  getDiferenciaTotal(): number {
+    const diffEfectivo = this.getDiferenciaEfectivo();
+    const diffPunto = this.getDiferenciaPunto();
+    const diffTransferencia = this.getDiferenciaTransferencia();
+    const diffPagomovil = this.getDiferenciaPagomovil();
+    const diffZelle = this.getDiferenciaZelle();
+
+    const total = diffEfectivo + diffPunto + diffTransferencia + diffPagomovil + diffZelle;
+    console.log(`DIFERENCIA TOTAL: ${total} USD`);
+    return total;
+  }
+
+
+
+
 }

@@ -15,6 +15,11 @@ export class CierreCajaService {
     private cierres: Map<string, CierreDiario> = new Map();
     private ventas: any[] = [];
 
+    // Tasas de cambio reales
+    private readonly TASA_USD_A_VES = 474.0598;  // 1 USD = 474.06 Bs
+    private readonly TASA_EUR_A_VES = 542.6382; // 1 EUR = 542.64 Bs
+    private readonly TASA_EUR_A_USD = 1.1447;   // 1 EUR = 1.1447 USD
+
     constructor(private http: HttpClient) {
         this.inicializarDatosDummy();
     }
@@ -26,7 +31,6 @@ export class CierreCajaService {
         return `${year}-${month}-${day}`;
     }
 
-    // En cierre-caja.service.ts - Asegúrate de que NO se crea cierre para hoy
     private inicializarDatosDummy(): void {
         const hoy = new Date();
         const ayer = new Date(hoy);
@@ -40,50 +44,57 @@ export class CierreCajaService {
         this.generarVentasDiaCompleto(anteayer, 'Hace 2 Días');
 
         // Crear cierres SOLO para días pasados
-        // NO crear cierre para el día actual
         this.crearCierreDummy(ayer);
         this.crearCierreDummy(anteayer);
-        // this.crearCierreDummy(hoy); ← COMENTADO
     }
 
     private generarVentasDiaCompleto(fecha: Date, nombreDia: string): void {
         const horaBase = new Date(fecha);
 
-        // 1. Venta SOLO CONSULTA - Contado en Efectivo
-        this.crearVentaCompleta(horaBase, 'V-001', 'solo_consulta', 'contado', 'efectivo', 'Carlos Rodríguez', '12345678', 60, 60, { medico: 40, optica: 20 });
+        // VENTAS EN EFECTIVO USD - Estas deben sumar un monto razonable
+        // 1. Venta SOLO CONSULTA - Efectivo USD: 100 USD
+        this.crearVentaCompleta(horaBase, 'V-001', 'solo_consulta', 'contado', 'efectivo', 'Carlos Rodríguez', '12345678', 100, 100, 'USD', { medico: 70, optica: 30 });
 
-        // 2. Venta SOLO CONSULTA - Pago Móvil
-        this.crearVentaCompleta(horaBase, 'V-002', 'solo_consulta', 'contado', 'pagomovil', 'María Pérez', '87654321', 80, 80, { medico: 50, optica: 30 }, 'Banco de Venezuela', 'REF-001');
+        // 2. Venta SOLO PRODUCTOS - Efectivo USD: 150 USD
+        this.crearVentaCompleta(horaBase, 'V-003', 'solo_productos', 'contado', 'efectivo', 'Juan Gómez', '11223344', 150, 150, 'USD');
 
-        // 3. Venta SOLO PRODUCTOS - Contado en Efectivo
-        this.crearVentaCompleta(horaBase, 'V-003', 'solo_productos', 'contado', 'efectivo', 'Juan Gómez', '11223344', 250, 250);
+        // 3. Venta SOLO CONSULTA - Efectivo USD: 80 USD
+        this.crearVentaCompleta(horaBase, 'V-008', 'solo_consulta', 'contado', 'efectivo', 'Pedro Sánchez', '55667788', 80, 80, 'USD', { medico: 56, optica: 24 });
 
-        // 4. Venta SOLO PRODUCTOS - Transferencia Bancaria
-        this.crearVentaCompleta(horaBase, 'V-004', 'solo_productos', 'contado', 'transferencia', 'Ana Martínez', '99887766', 180, 180, null, 'Banesco', 'TRF-001');
+        // 4. Venta SOLO PRODUCTOS - Efectivo USD: 120 USD
+        this.crearVentaCompleta(horaBase, 'V-009', 'solo_productos', 'contado', 'efectivo', 'Mónica López', '99887733', 120, 120, 'USD');
 
-        // 5. Venta CONSULTA + PRODUCTOS - Punto de Venta (BNC)
-        this.crearVentaCompleta(horaBase, 'V-005', 'consulta_productos', 'contado', 'punto', 'Luis Fernández', '55443322', 450, 450, { medico: 40, productos: 410 }, 'BNC');
+        // TOTAL VENTAS EFECTIVO USD = 100 + 150 + 80 + 120 = 450 USD
 
-        // 6. Venta CONSULTA + PRODUCTOS - Punto de Venta (Provincial)
-        this.crearVentaCompleta(horaBase, 'V-006', 'consulta_productos', 'contado', 'punto', 'Laura Díaz', '44455566', 320, 320, { medico: 40, productos: 280 }, 'Provincial');
+        // VENTAS EN EFECTIVO VES (se convertirán a USD automáticamente)
+        // 5. Venta SOLO CONSULTA - Efectivo VES: 47406 Bs = 100 USD
+        this.crearVentaCompleta(horaBase, 'V-010', 'solo_consulta', 'contado', 'efectivo', 'Ana Gómez', '11223445', 47406, 47406, 'VES', { medico: 33184, optica: 14222 });
 
-        // 7. Venta con ABONO - Efectivo
-        this.crearVentaCompleta(horaBase, 'V-007', 'consulta_productos', 'abono', 'efectivo', 'Roberto Castro', '77788899', 500, 200, { medico: 40, productos: 460 }, null, null, 200);
+        // TOTAL VENTAS EFECTIVO VES = 47406 Bs = 100 USD
 
-        // 8. Venta con CASHEA - Efectivo
-        this.crearVentaCompleta(horaBase, 'V-008', 'consulta_productos', 'cashea', 'efectivo', 'Sofía López', '33344455', 600, 240, { medico: 40, productos: 560 }, null, null, 240, 2);
+        // TOTAL GENERAL VENTAS EFECTIVO = 450 USD + 100 USD = 550 USD
 
-        // 9. Venta con PAGO PENDIENTE
-        this.crearVentaCompleta(horaBase, 'V-009', 'consulta_productos', 'de_contado-pendiente', 'pendiente', 'Diego Ramírez', '99900011', 350, 0, { medico: 40, productos: 310 });
+        // VENTAS EN EFECTIVO EUR (se convertirán a USD automáticamente)
+        // 6. Venta SOLO CONSULTA - Efectivo EUR: 100 EUR = 114.47 USD
+        this.crearVentaCompleta(horaBase, 'V-011', 'solo_consulta', 'contado', 'efectivo', 'Marco Pérez', '33445566', 100, 100, 'EUR', { medico: 70, optica: 30 });
 
-        // 10. Venta con ZELLE
-        this.crearVentaCompleta(horaBase, 'V-010', 'solo_productos', 'contado', 'zelle', 'Valentina Torres', '22233344', 420, 420);
+        // TOTAL VENTAS EFECTIVO = 450 + 100 + 114.47 = 664.47 USD
 
-        // 11. Venta con PAGO MIXTO (Efectivo + Transferencia)
-        this.crearVentaCompleta(horaBase, 'V-011', 'consulta_productos', 'contado', 'mixto', 'Andrés Mendoza', '55566677', 380, 380, { medico: 40, productos: 340 }, null, null, 380, 0, [
-            { tipo: 'efectivo', monto: 200, moneda: 'dolar' },
-            { tipo: 'transferencia', monto: 180, moneda: 'dolar', banco: 'Mercantil', referencia: 'MIX-001' }
-        ]);
+        // OTROS MÉTODOS DE PAGO (No afectan el efectivo teórico)
+        // Pago Móvil (VES)
+        this.crearVentaCompleta(horaBase, 'V-002', 'solo_consulta', 'contado', 'pagomovil', 'María Pérez', '87654321', 47406, 47406, 'VES', { medico: 29629, optica: 17777 }, 'Banco de Venezuela', 'REF-001');
+
+        // Transferencia (VES)
+        this.crearVentaCompleta(horaBase, 'V-004', 'solo_productos', 'contado', 'transferencia', 'Ana Martínez', '99887766', 85331, 85331, 'VES', null, 'Banesco', 'TRF-001');
+
+        // Punto de Venta (VES) - BNC
+        this.crearVentaCompleta(horaBase, 'V-005', 'consulta_productos', 'contado', 'punto', 'Luis Fernández', '55443322', 213327, 213327, 'VES', { medico: 18962, productos: 194365 }, 'BNC');
+
+        // Punto de Venta (VES) - Provincial
+        this.crearVentaCompleta(horaBase, 'V-006', 'consulta_productos', 'contado', 'punto', 'Laura Díaz', '44455566', 151699, 151699, 'VES', { medico: 18962, productos: 132737 }, 'Provincial');
+
+        // Zelle (USD)
+        this.crearVentaCompleta(horaBase, 'V-007', 'solo_productos', 'contado', 'zelle', 'Valentina Torres', '22233344', 200, 200, 'USD');
     }
 
     private crearVentaCompleta(
@@ -96,6 +107,7 @@ export class CierreCajaService {
         cedulaCliente: string,
         total: number,
         pagado: number,
+        moneda: string = 'USD',
         desglose?: { medico?: number, optica?: number, productos?: number },
         banco?: string | null,
         referencia?: string | null,
@@ -115,7 +127,7 @@ export class CierreCajaService {
             const metodo: any = {
                 tipo: metodoPago,
                 monto: pagado,
-                moneda: metodoPago === 'transferencia' || metodoPago === 'pagomovil' ? 'bolivar' : 'dolar'
+                moneda: moneda.toLowerCase()
             };
 
             if (banco && (metodoPago === 'punto' || metodoPago === 'transferencia' || metodoPago === 'pagomovil')) {
@@ -124,9 +136,6 @@ export class CierreCajaService {
             }
             if (referencia && (metodoPago === 'transferencia' || metodoPago === 'pagomovil')) {
                 metodo.referencia = referencia;
-            }
-            if (metodoPago === 'punto') {
-                metodo.bancoPunto = banco === 'BNC' ? 'bnc' : 'provincial';
             }
 
             metodosDePago = [metodo];
@@ -169,7 +178,7 @@ export class CierreCajaService {
             numero_venta: numeroVenta,
             fecha: hora.toISOString(),
             tipoVenta: tipoVenta,
-            moneda: 'dolar',
+            moneda: moneda,
             sede: 'guatire',
             total_pagado: pagado,
             total: total,
@@ -212,15 +221,20 @@ export class CierreCajaService {
         const ventasPendientes = this.calcularVentasPendientes(ventasDelDia);
         const totales = this.calcularTotales(ventasDelDia);
 
-        const efectivoInicial = Math.floor(Math.random() * 500) + 100;
-        const ventasEfectivo = metodosPago.efectivo.total;
-        const efectivoFinalTeorico = efectivoInicial + ventasEfectivo;
+        // Efectivo inicial en USD (100 USD + 200 EUR convertidos + 1000 Bs convertidos)
+        const efectivoInicialUSD = 100 + (200 * this.TASA_EUR_A_USD) + (1000 / this.TASA_USD_A_VES);
+        // = 100 + 228.94 + 2.11 = 331.05 USD
 
         const cierre: CierreDiario = {
             id: id,
             fecha: fecha,
-            efectivoInicial: efectivoInicial,
-            ventasEfectivo: ventasEfectivo,
+            efectivoInicial: efectivoInicialUSD,
+            efectivoInicialDetalle: {
+                USD: 100,
+                EUR: 200,
+                Bs: 1000
+            },
+            ventasEfectivo: metodosPago.efectivo.total,
             ventasTarjeta: metodosPago.punto.total,
             ventasTransferencia: metodosPago.transferencia.total,
             ventasDebito: 0,
@@ -229,8 +243,8 @@ export class CierreCajaService {
             ventasZelle: metodosPago.zelle.total,
             otrosIngresos: 0,
             egresos: 0,
-            efectivoFinalTeorico: efectivoFinalTeorico,
-            efectivoFinalReal: efectivoFinalTeorico + (Math.random() * 20 - 10),
+            efectivoFinalTeorico: efectivoInicialUSD + metodosPago.efectivo.total,
+            efectivoFinalReal: 0,
             diferencia: 0,
             observaciones: '',
             estado: fecha.toDateString() === new Date().toDateString() ? 'abierto' : 'cerrado',
@@ -243,7 +257,7 @@ export class CierreCajaService {
             archivosAdjuntos: [],
             sede: sedeKey,
             monedaPrincipal: 'USD',
-            tasasCambio: { dolar: 1, euro: 1.05, bolivar: 60.5 },
+            tasasCambio: { dolar: 1, euro: this.TASA_EUR_A_USD, bolivar: 1 / this.TASA_USD_A_VES },
             metodosPagoDetallados: [],
             ventasPorTipo: ventasPorTipo,
             metodosPago: metodosPago,
@@ -257,7 +271,93 @@ export class CierreCajaService {
         this.cierres.set(id, cierre);
     }
 
-    // Métodos auxiliares de cálculo (mantener los que ya tenías)
+    private calcularMetodosPagoCompleto(ventas: any[]): any {
+        const metodos = {
+            efectivo: { total: 0, porMoneda: { dolar: 0, euro: 0, bolivar: 0 }, cantidad: 0 },
+            punto: { total: 0, porBanco: [] as any[], cantidad: 0 },
+            pagomovil: { total: 0, cantidad: 0, porBanco: [] as any[] },
+            transferencia: { total: 0, cantidad: 0, porBanco: [] as any[] },
+            zelle: { total: 0, cantidad: 0 },
+            mixto: { total: 0, cantidad: 0 }
+        };
+
+        ventas.forEach(v => {
+            if (v.metodosDePago && v.metodosDePago.length > 0) {
+                v.metodosDePago.forEach((m: any) => {
+                    let monto = m.monto || v.total_pagado || v.total;
+                    const moneda = m.moneda || v.moneda || 'USD';
+
+                    // Convertir a USD para almacenar en el total
+                    let montoEnUSD = monto;
+                    if (moneda === 'VES') {
+                        montoEnUSD = monto / this.TASA_USD_A_VES;
+                    } else if (moneda === 'EUR') {
+                        montoEnUSD = monto / this.TASA_EUR_A_USD;
+                    }
+
+                    if (m.tipo === 'efectivo') {
+                        metodos.efectivo.total += montoEnUSD;
+                        metodos.efectivo.cantidad++;
+                        if (moneda === 'USD') metodos.efectivo.porMoneda.dolar += monto;
+                        else if (moneda === 'EUR') metodos.efectivo.porMoneda.euro += monto;
+                        else if (moneda === 'VES') metodos.efectivo.porMoneda.bolivar += monto;
+
+                        console.log(`Venta efectivo: ${monto} ${moneda} = ${montoEnUSD} USD`);
+                    }
+                    else if (m.tipo === 'punto') {
+                        const montoEnUSD = monto / this.TASA_USD_A_VES;
+                        metodos.punto.total += montoEnUSD;
+                        metodos.punto.cantidad++;
+                        const banco = m.bancoNombre || 'Otro';
+                        let bancoExistente = metodos.punto.porBanco.find(b => b.banco === banco);
+                        if (!bancoExistente) {
+                            bancoExistente = { banco, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
+                            metodos.punto.porBanco.push(bancoExistente);
+                        }
+                        bancoExistente.total += monto;
+                        bancoExistente.cantidad++;
+                    }
+                    else if (m.tipo === 'pagomovil') {
+                        const montoEnUSD = monto / this.TASA_USD_A_VES;
+                        metodos.pagomovil.total += montoEnUSD;
+                        metodos.pagomovil.cantidad++;
+                        if (m.bancoNombre) {
+                            let bancoExistente = metodos.pagomovil.porBanco.find(b => b.banco === m.bancoNombre);
+                            if (!bancoExistente) {
+                                bancoExistente = { banco: m.bancoNombre, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
+                                metodos.pagomovil.porBanco.push(bancoExistente);
+                            }
+                            bancoExistente.total += monto;
+                            bancoExistente.cantidad++;
+                        }
+                    }
+                    else if (m.tipo === 'transferencia') {
+                        const montoEnUSD = monto / this.TASA_USD_A_VES;
+                        metodos.transferencia.total += montoEnUSD;
+                        metodos.transferencia.cantidad++;
+                        if (m.bancoNombre) {
+                            let bancoExistente = metodos.transferencia.porBanco.find(b => b.banco === m.bancoNombre);
+                            if (!bancoExistente) {
+                                bancoExistente = { banco: m.bancoNombre, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
+                                metodos.transferencia.porBanco.push(bancoExistente);
+                            }
+                            bancoExistente.total += monto;
+                            bancoExistente.cantidad++;
+                        }
+                    }
+                    else if (m.tipo === 'zelle') {
+                        metodos.zelle.total += monto;
+                        metodos.zelle.cantidad++;
+                    }
+                });
+            }
+        });
+
+        console.log('Total ventas efectivo en USD:', metodos.efectivo.total);
+
+        return metodos;
+    }
+    
     private calcularVentasPorTipo(ventas: any[]): any {
         const resultado = {
             soloConsulta: { cantidad: 0, total: 0, montoMedico: 0, montoOptica: 0 },
@@ -284,76 +384,6 @@ export class CierreCajaService {
         });
 
         return resultado;
-    }
-
-    private calcularMetodosPagoCompleto(ventas: any[]): any {
-        const metodos = {
-            efectivo: { total: 0, porMoneda: { dolar: 0, euro: 0, bolivar: 0 }, cantidad: 0 },
-            punto: { total: 0, porBanco: [] as any[], cantidad: 0 },
-            pagomovil: { total: 0, cantidad: 0, porBanco: [] as any[] },
-            transferencia: { total: 0, cantidad: 0, porBanco: [] as any[] },
-            zelle: { total: 0, cantidad: 0 },
-            mixto: { total: 0, cantidad: 0 }
-        };
-
-        ventas.forEach(v => {
-            if (v.metodosDePago && v.metodosDePago.length > 0) {
-                if (v.metodosDePago.length > 1) {
-                    metodos.mixto.total += v.total_pagado || v.total;
-                    metodos.mixto.cantidad++;
-                }
-
-                v.metodosDePago.forEach((m: any) => {
-                    const monto = m.monto || v.total_pagado || v.total;
-
-                    if (m.tipo === 'efectivo') {
-                        metodos.efectivo.total += monto;
-                        metodos.efectivo.cantidad++;
-                        metodos.efectivo.porMoneda.dolar += monto;
-                    } else if (m.tipo === 'punto') {
-                        metodos.punto.total += monto;
-                        metodos.punto.cantidad++;
-                        const banco = m.bancoNombre || 'Otro';
-                        let bancoExistente = metodos.punto.porBanco.find(b => b.banco === banco);
-                        if (!bancoExistente) {
-                            bancoExistente = { banco, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
-                            metodos.punto.porBanco.push(bancoExistente);
-                        }
-                        bancoExistente.total += monto;
-                        bancoExistente.cantidad++;
-                    } else if (m.tipo === 'pagomovil') {
-                        metodos.pagomovil.total += monto;
-                        metodos.pagomovil.cantidad++;
-                        if (m.bancoNombre) {
-                            let bancoExistente = metodos.pagomovil.porBanco.find(b => b.banco === m.bancoNombre);
-                            if (!bancoExistente) {
-                                bancoExistente = { banco: m.bancoNombre, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
-                                metodos.pagomovil.porBanco.push(bancoExistente);
-                            }
-                            bancoExistente.total += monto;
-                            bancoExistente.cantidad++;
-                        }
-                    } else if (m.tipo === 'transferencia') {
-                        metodos.transferencia.total += monto;
-                        metodos.transferencia.cantidad++;
-                        if (m.bancoNombre) {
-                            let bancoExistente = metodos.transferencia.porBanco.find(b => b.banco === m.bancoNombre);
-                            if (!bancoExistente) {
-                                bancoExistente = { banco: m.bancoNombre, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
-                                metodos.transferencia.porBanco.push(bancoExistente);
-                            }
-                            bancoExistente.total += monto;
-                            bancoExistente.cantidad++;
-                        }
-                    } else if (m.tipo === 'zelle') {
-                        metodos.zelle.total += monto;
-                        metodos.zelle.cantidad++;
-                    }
-                });
-            }
-        });
-
-        return metodos;
     }
 
     private calcularFormasPago(ventas: any[]): any {
@@ -460,12 +490,6 @@ export class CierreCajaService {
             });
 
             const esHoy = fecha.toDateString() === new Date().toDateString();
-
-            console.log('📅 Fecha consultada:', fecha);
-            console.log('¿Es hoy?', esHoy);
-            console.log('Cierre existente en mapa:', this.cierres.get(idCierre));
-
-            // Para hoy, NO devolver cierre existente
             const cierreExistente = esHoy ? null : (this.cierres.get(idCierre) || null);
 
             return of({
@@ -477,7 +501,6 @@ export class CierreCajaService {
                 }
             }).pipe(delay(500));
         }
-
         return this.http.get(`${this.apiUrl}/cierre-caja/resumen`, {
             params: {
                 fecha: fecha.toISOString().split('T')[0],
@@ -529,7 +552,11 @@ export class CierreCajaService {
 
     obtenerTasasCambio(): Observable<TasasCambio> {
         if (this.usarDummy) {
-            return of({ dolar: 1, euro: 1.05, bolivar: 60.5 }).pipe(delay(300));
+            return of({
+                dolar: 1,
+                euro: this.TASA_EUR_A_USD,
+                bolivar: 1 / this.TASA_USD_A_VES
+            }).pipe(delay(300));
         }
         return this.http.get<TasasCambio>(`${this.apiUrl}/tasas-cambio`);
     }
