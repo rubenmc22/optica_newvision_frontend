@@ -1,10 +1,11 @@
 import { Component, OnInit, Input, OnDestroy, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { AuthService } from '../../core/services/auth/auth.service';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { SwalService } from '../../core/services/swal/swal.service';
 import { SharedUserService } from '../../core/services/sharedUser/shared-user.service';
 import { User } from '../../Interfaces/models-interface';
 import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import { UserStateService } from '../../core/services/userState/user-state-service';
 import { TasaCambiariaService } from '../../core/services/tasaCambiaria/tasaCambiaria.service';
 import { Tasa } from '../../Interfaces/models-interface';
@@ -112,10 +113,6 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       this.selectedSubmenuLabel = null;
     }
 
-    //Marcar activo según URL actual
-    const currentUrl = this.router.url;
-    this.markActiveFromUrl(currentUrl);
-
     //Obtener tasas de cambio
     this.subsTasaCambio = this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
       this.tasaDolar = usd;
@@ -125,6 +122,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
 
     //Inicializar menú y datos
     this.initializeMenu();
+    this.markActiveFromUrl(this.router.url);
     this.initializeUserData();
     this.setupSubscriptions();
     this.obtenerSedeActual();
@@ -203,22 +201,48 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
 
+  private normalizeUrl(url: string): string {
+    return (url || '').split('?')[0].split('#')[0].trim().toLowerCase();
+  }
+
+  private routeMatches(currentUrl: string, route: string): boolean {
+    const current = this.normalizeUrl(currentUrl);
+    const target = this.normalizeUrl(route);
+
+    return current === target || current.startsWith(`${target}/`);
+  }
+
+  isNavbarRouteActive(route: string): boolean {
+    return this.routeMatches(this.router.url, route);
+  }
+
+
   markActiveFromUrl(url: string): void {
+    this.selectedMenuLabel = '';
+    this.selectedSubmenuLabel = null;
+
     for (const menu of this.filteredMenu) {
-      if (menu.routerLink === url) {
+      if (menu.routerLink && this.routeMatches(url, menu.routerLink)) {
         this.selectedMenuLabel = menu.label;
+        localStorage.setItem('selectedMenuLabel', this.selectedMenuLabel);
+        localStorage.setItem('selectedSubmenuLabel', '');
         return;
       }
 
       if (menu.submenu) {
-        const sub = menu.submenu.find((s: { routerLink: string }) => s.routerLink === url);
+        const sub = menu.submenu.find((s: { routerLink: string }) => this.routeMatches(url, s.routerLink));
         if (sub) {
           this.selectedMenuLabel = menu.label;
           this.selectedSubmenuLabel = sub.label;
+          localStorage.setItem('selectedMenuLabel', this.selectedMenuLabel);
+          localStorage.setItem('selectedSubmenuLabel', this.selectedSubmenuLabel);
           return;
         }
       }
     }
+
+    localStorage.setItem('selectedMenuLabel', '');
+    localStorage.setItem('selectedSubmenuLabel', '');
   }
 
   buildSubmenuItem(sub: any, parentLabel: string): any {
@@ -256,7 +280,14 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     });
 
-    this.userSubscriptions.push(userProfileSub, authUserSub);
+    const routerSub = this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd)
+    ).subscribe(event => {
+      this.markActiveFromUrl(event.urlAfterRedirects);
+      this.cdRef.detectChanges();
+    });
+
+    this.userSubscriptions.push(userProfileSub, authUserSub, routerSub);
   }
 
   private initializeUserData(): void {
@@ -282,12 +313,6 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       if (currentUser.ruta_imagen) {
         this.profileImage = this.sharedUserService.getFullImageUrl(currentUser.ruta_imagen);
       }
-    }
-
-    // Establecer valores por defecto si no existen
-    if (!localStorage.getItem('selectedMenuLabel')) {
-      localStorage.setItem('selectedMenuLabel', 'Dashboard');
-      localStorage.setItem('selectedSubmenuLabel', '');
     }
 
     this.cdRef.detectChanges();

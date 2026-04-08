@@ -8,7 +8,7 @@ describe('GraficoComparativaSedesComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [GraficoComparativaSedesComponent]
+      declarations: [GraficoComparativaSedesComponent]
     })
     .compileComponents();
 

@@ -8,7 +8,7 @@ describe('GraficoTotalSedeComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [GraficoTotalSedeComponent]
+      declarations: [GraficoTotalSedeComponent]
     })
     .compileComponents();
 

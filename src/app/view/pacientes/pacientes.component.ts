@@ -774,6 +774,7 @@ export class VerPacientesComponent implements OnInit {
             if (result && result.isConfirmed) {
               try {
                 // Guardar temporalmente el paciente para que historias lo precargue
+                sessionStorage.removeItem('pacienteParaHistoriaProcesado');
                 sessionStorage.setItem('pacienteParaHistoria', JSON.stringify(pacienteTransformado));
                 sessionStorage.setItem('desdePacientes', '1');
               } catch (e) {
@@ -796,29 +797,19 @@ export class VerPacientesComponent implements OnInit {
         this.cargando = false;
         const msg = error.error?.message ?? '';
 
-        // Caso específico: cédula duplicada
-        if (msg.includes('Ya esta registrada la cedula')) {
-          const coincidencias = [...msg.matchAll(/'([^']+)'/g)];
-          const cedula = coincidencias?.[0]?.[1] ?? 'Cédula desconocida';
-          const sedeRaw = coincidencias?.[1]?.[1] ?? 'Sede desconocida';
-          const sede = sedeRaw.replace(/^Sede\s+/i, '').trim();
+        // Caso específico: paciente/cédula duplicada en la sede actual
+        const esCedulaDuplicada =
+          error.status === 409 ||
+          (/cedula/i.test(msg) && /sede/i.test(msg) && /registrad/i.test(msg));
 
-          const mensajeHTML = `
-          <br>
-          <div class="swal-custom-content">
-            <h5 class="text-danger mb-2">
-              <i class="fas fa-id-card me-2"></i> Cédula ya registrada
-            </h5>
-            <ul class="list-unstyled mb-3">
-              <li><strong>Cédula:</strong> ${cedula}</li>
-              <li><strong>Sede:</strong> ${sede}</li>
-            </ul><br>
-            <div class="text-muted small">
-              <i class="fas fa-info-circle me-1"></i> Cada cédula debe ser única por sede. Revisa los datos ingresados.
-            </div>
-          </div>
-        `;
-          this.swalService.showWarning('', mensajeHTML, true);
+        if (esCedulaDuplicada) {
+          const coincidencias = [...msg.matchAll(/'([^']+)'/g)];
+          const cedula = coincidencias?.[0]?.[1] ?? '';
+          const mensaje = cedula
+            ? `Ya existe un paciente registrado con la cédula '${cedula}' en esta sede. Verifica si ya fue creado antes de intentar registrarlo nuevamente.`
+            : 'Ya existe un paciente registrado con esa cédula en esta sede. Verifica si ya fue creado antes de intentar registrarlo nuevamente.';
+
+          this.swalService.showWarning('Paciente ya registrado', mensaje);
           return;
         }
 

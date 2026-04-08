@@ -199,6 +199,16 @@
   transform: translateX(5px);
 }
 
+.user-dropdown-menu .dropdown-item.active {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
+  font-weight: 600;
+}
+
+.user-dropdown-menu .dropdown-item.active i {
+  color: white;
+}
+
 .user-dropdown-menu .dropdown-item i {
   width: 16px;
   text-align: center;

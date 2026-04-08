@@ -98,6 +98,13 @@ export class HistoriasMedicasComponent implements OnInit {
   // Constantes
   opcionesRef = OPCIONES_REF;
   opcionesAV = OPCIONES_AV;
+  ultimaGraduacionOpciones = [
+    { key: '3m', label: 'Hace 3 meses' },
+    { key: '6m', label: 'Hace 6 meses' },
+    { key: '9m', label: 'Hace 9 meses' },
+    { key: '1y', label: 'Hace 1 año' },
+    { key: '2y+', label: 'Más de 2 años' }
+  ];
   motivosConsulta = MOTIVOS_CONSULTA;
   tiposCristales = TIPOS_CRISTALES;
   tiposLentesContacto = TIPOS_LENTES_CONTACTO;
@@ -109,6 +116,22 @@ export class HistoriasMedicasComponent implements OnInit {
   mostrarMedidasProgresivo: boolean[] = [];
   mostrarTipoLentesContacto: boolean[] = [];
   mostrarMaterialPersonalizado: boolean[] = [];
+  private readonly controlesNgSelectHistoria: string[] = [
+    'medico',
+    'tipoCristalActual',
+    'tipoLentesContacto',
+    'ultimaGraduacion',
+    'len_esf_od', 'len_cil_od', 'len_eje_od', 'len_add_od', 'len_av_lejos_od', 'len_av_cerca_od',
+    'len_esf_oi', 'len_cil_oi', 'len_eje_oi', 'len_add_oi', 'len_av_lejos_oi', 'len_av_cerca_oi',
+    'len_av_lejos_bi', 'len_av_cerca_bi',
+    'avsc_lejos_od', 'avsc_cerca_od', 'avae_od',
+    'avsc_lejos_oi', 'avsc_cerca_oi', 'avae_oi',
+    'ref_esf_od', 'ref_cil_od', 'ref_eje_od', 'ref_add_od', 'ref_avccl_od', 'ref_avccc_od',
+    'ref_esf_oi', 'ref_cil_oi', 'ref_eje_oi', 'ref_add_oi', 'ref_avccl_oi', 'ref_avccc_oi',
+    'ref_avccl_bi', 'ref_avccc_bi',
+    'ref_final_esf_od', 'ref_final_cil_od', 'ref_final_eje_od', 'ref_final_add_od',
+    'ref_final_esf_oi', 'ref_final_cil_oi', 'ref_final_eje_oi', 'ref_final_add_oi'
+  ];
 
   readonly materialesValidos = new Set<TipoMaterial>([
     'CR39',
@@ -229,15 +252,15 @@ export class HistoriasMedicasComponent implements OnInit {
     this.historiaForm = this.fb.group({
       // Sección Paciente
       paciente: [null, Validators.required],
-      medico: ['', Validators.required],
+      medico: [null, Validators.required],
       esFormulaExterna: [false],
       medicoReferido: [''],
       lugarConsultorio: [''],
       motivo: [[], Validators.required],
       otroMotivo: [''],
-      tipoCristalActual: [''],
-      tipoLentesContacto: [''],
-      ultimaGraduacion: [''],
+      tipoCristalActual: [null],
+      tipoLentesContacto: [null],
+      ultimaGraduacion: [null],
 
       // Lensometría
       len_esf_od: [''],
@@ -303,9 +326,35 @@ export class HistoriasMedicasComponent implements OnInit {
       recomendaciones: this.fb.array([this.crearRecomendacion()])
     });
 
+    this.normalizarControlesNgSelectVacios();
+
     this.mostrarMedidasProgresivo = [false];
     this.mostrarTipoLentesContacto = [false];
     this.mostrarMaterialPersonalizado = [false];
+  }
+
+  private normalizarControlesNgSelectVacios(): void {
+    this.controlesNgSelectHistoria.forEach((controlName) => {
+      const control = this.historiaForm.get(controlName);
+      if (!control) return;
+
+      const valor = control.value;
+      if (valor === '' || valor === undefined) {
+        control.setValue(null, { emitEvent: false });
+      }
+    });
+  }
+
+  private resetearCamposSelectDeHistoria(): void {
+    const valores: Record<string, null> = this.controlesNgSelectHistoria.reduce((acc, controlName) => {
+      acc[controlName] = null;
+      return acc;
+    }, {} as Record<string, null>);
+
+    this.historiaForm.patchValue({
+      ...valores,
+      motivo: []
+    }, { emitEvent: false });
   }
 
   private inicializarDatosIniciales(): void {
@@ -590,9 +639,10 @@ export class HistoriasMedicasComponent implements OnInit {
         esFormulaExterna: esFormulaExterna,
         medicoReferido: medicoReferido,
         lugarConsultorio: lugarConsultorio,
-        tipoCristalActual: dc.tipoCristalActual,
-        tipoLentesContacto: dc.tipoLentesContacto || '',
-        ultimaGraduacion: dc.fechaUltimaGraduacion,
+        tipoCristalActual: dc.tipoCristalActual || null,
+        tipoLentesContacto: dc.tipoLentesContacto || null,
+        // Al precargar convertimos la fecha absoluta a la opción de rango
+        ultimaGraduacion: this.obtenerOpcionRangoDesdeFecha(dc.fechaUltimaGraduacion) || null,
 
         // Lensometría
         len_esf_od: eo.lensometria.esf_od,
@@ -681,6 +731,7 @@ export class HistoriasMedicasComponent implements OnInit {
         this.mostrarMaterialPersonalizado[index] = r.material?.includes('OTRO') || false;
       });
 
+      this.normalizarControlesNgSelectVacios();
       this.formOriginalHistoria = this.historiaForm.value;
     }
 
@@ -694,10 +745,130 @@ export class HistoriasMedicasComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
+  // Convierte la opción seleccionada del select a una fecha ISO para el backend
+  private mapUltimaGraduacionToDate(optionKey: string | null | undefined): string {
+    if (!optionKey) return '';
+    const ahora = new Date();
+    let fecha: Date | null = null;
+
+    switch (optionKey) {
+      case '3m':
+        fecha = new Date(ahora.getFullYear(), ahora.getMonth() - 3, ahora.getDate());
+        break;
+      case '6m':
+        fecha = new Date(ahora.getFullYear(), ahora.getMonth() - 6, ahora.getDate());
+        break;
+      case '9m':
+        fecha = new Date(ahora.getFullYear(), ahora.getMonth() - 9, ahora.getDate());
+        break;
+      case '1y':
+        fecha = new Date(ahora.getFullYear() - 1, ahora.getMonth(), ahora.getDate());
+        break;
+      case '2y+':
+        // Representamos "más de 2 años" como fecha hace 2 años
+        fecha = new Date(ahora.getFullYear() - 2, ahora.getMonth(), ahora.getDate());
+        break;
+      default:
+        fecha = null;
+    }
+
+    return fecha ? fecha.toISOString().split('T')[0] : '';
+  }
+
+  // Dada una fecha ISO, devuelve la opción de rango más cercana
+  private obtenerOpcionRangoDesdeFecha(fechaIso: string | undefined | null): string {
+    if (!fechaIso) return '';
+    const fecha = new Date(fechaIso);
+    if (isNaN(fecha.getTime())) return '';
+
+    const ahora = new Date();
+    const diffMs = ahora.getTime() - fecha.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    const diffMonths = diffDays / 30;
+    const diffYears = diffDays / 365;
+
+    if (diffMonths <= 3) return '3m';
+    if (diffMonths <= 6) return '6m';
+    if (diffMonths <= 9) return '9m';
+    if (diffYears <= 1.5) return '1y';
+    return '2y+';
+  }
+
+  // Fuerza una pequeña restauración de placeholders en el modal (soluciona casos donde no se renderizan)
+  private restaurarPlaceholdersDelModal(): void {
+    try {
+      const modal = document.getElementById('historiaModal');
+      if (!modal) return;
+      // Inputs, textareas y selects nativos
+      const inputs = Array.from(modal.querySelectorAll('input, textarea, select')) as HTMLElement[];
+      inputs.forEach((el) => {
+        const placeholder = el.getAttribute('placeholder');
+        if (placeholder !== null) {
+          el.removeAttribute('placeholder');
+          void el.offsetWidth;
+          el.setAttribute('placeholder', placeholder);
+        }
+        // Forzar que el valor nativo sea cadena vacía para que el placeholder aparezca
+        try {
+          if ((el as HTMLInputElement).tagName === 'INPUT' || (el as HTMLInputElement).tagName === 'TEXTAREA') {
+            const inputEl = el as HTMLInputElement;
+            if (inputEl.value === null || inputEl.value === undefined) inputEl.value = '';
+            // reasignar para forzar repintado
+            const tmp = inputEl.value;
+            inputEl.value = '';
+            void inputEl.offsetWidth;
+            inputEl.value = tmp;
+            if (tmp === '') { inputEl.value = ''; }
+          }
+          if ((el as HTMLSelectElement).tagName === 'SELECT') {
+            const sel = el as HTMLSelectElement;
+            if (sel.selectedIndex < 0) sel.selectedIndex = 0;
+            void sel.offsetWidth;
+          }
+        } catch (e) { /* ignore */ }
+      });
+
+      // ng-select (componente) — forzar re-render del placeholder
+      const ngSelects = Array.from(modal.querySelectorAll('ng-select')) as HTMLElement[];
+      ngSelects.forEach((ng) => {
+        const ph = ng.getAttribute('placeholder');
+        if (ph !== null) {
+          ng.removeAttribute('placeholder');
+          void ng.offsetWidth;
+          ng.setAttribute('placeholder', ph);
+        }
+        // Si existe un container interno, también forzar reflow
+        const container = ng.querySelector('.ng-select-container') as HTMLElement | null;
+        if (container) {
+          void container.offsetWidth;
+          // Asegurar que el elemento placeholder interno tenga el texto correcto
+          const innerPlaceholder = container.querySelector('.ng-placeholder') as HTMLElement | null;
+          if (innerPlaceholder) {
+            if ((!innerPlaceholder.textContent || innerPlaceholder.textContent.trim() === '') && ph) {
+              innerPlaceholder.textContent = ph;
+            }
+            void innerPlaceholder.offsetWidth;
+          }
+        }
+      });
+
+      // Elementos con clase .ng-select-container sueltos
+      const ngContainers = Array.from(modal.querySelectorAll('.ng-select-container')) as HTMLElement[];
+      ngContainers.forEach((c) => { void c.offsetWidth; });
+
+      // Forzar detección de cambios para que Angular re-renderice correctamente
+      try { this.cdr.detectChanges(); } catch (e) { /* ignore */ }
+    } catch (e) {
+      // ignore
+    }
+  }
+
   private prepararNuevaHistoria(): void {
     if (this.modoEdicion) return;
 
     this.historiaForm.reset();
+    this.resetearCamposSelectDeHistoria();
+    this.historiaForm.patchValue({ paciente: null }, { emitEvent: false });
     this.recomendaciones.clear();
 
     // Agregar una recomendación vacía
@@ -842,7 +1013,7 @@ export class HistoriasMedicasComponent implements OnInit {
         otroMotivo: f.otroMotivo || '',
         tipoCristalActual: f.tipoCristalActual || '',
         tipoLentesContacto: f.tipoLentesContacto || '',
-        fechaUltimaGraduacion: this.formatearFechaParaBackend(f.ultimaGraduacion),
+        fechaUltimaGraduacion: this.mapUltimaGraduacionToDate(f.ultimaGraduacion),
 
         // Nueva estructura
         especialista: especialista,
@@ -964,7 +1135,7 @@ export class HistoriasMedicasComponent implements OnInit {
         otroMotivo: formValue.otroMotivo || '',
         tipoCristalActual: formValue.tipoCristalActual,
         tipoLentesContacto: formValue.tipoLentesContacto || '',
-        fechaUltimaGraduacion: formValue.ultimaGraduacion,
+        fechaUltimaGraduacion: this.mapUltimaGraduacionToDate(formValue.ultimaGraduacion),
 
         // NUEVA ESTRUCTURA
         especialista: especialista,
@@ -1000,6 +1171,7 @@ export class HistoriasMedicasComponent implements OnInit {
             try {
               sessionStorage.removeItem('desdePacientes');
               sessionStorage.removeItem('pacienteParaHistoria');
+              sessionStorage.removeItem('pacienteParaHistoriaProcesado');
             } catch (e) { /* ignore */ }
             this.router.navigate(['/pacientes']);
           }
@@ -1032,6 +1204,7 @@ export class HistoriasMedicasComponent implements OnInit {
         );
 
         this.historiaForm.reset();
+        this.resetearCamposSelectDeHistoria();
         this.modoEdicion = false;
       },
       error: (err) => {
@@ -1130,10 +1303,19 @@ export class HistoriasMedicasComponent implements OnInit {
         }
         // Si se abrió desde el módulo de pacientes con un paciente recién creado,
         // precargarlo desde sessionStorage y abrir el modal para crear la historia.
+        const vieneDesdePacientes = sessionStorage.getItem('desdePacientes') === '1';
         const pacienteParaHistoriaRaw = sessionStorage.getItem('pacienteParaHistoria');
-        if (pacienteParaHistoriaRaw) {
+        const pacienteParaHistoriaProcesado = sessionStorage.getItem('pacienteParaHistoriaProcesado');
+
+        if (vieneDesdePacientes && pacienteParaHistoriaRaw) {
           try {
             const pacienteParsed = JSON.parse(pacienteParaHistoriaRaw);
+            const marcadorPaciente = pacienteParsed.key || pacienteParsed.id || pacienteParsed.informacionPersonal?.cedula;
+
+            if (marcadorPaciente && pacienteParaHistoriaProcesado === marcadorPaciente) {
+              this.tareaFinalizada();
+              return;
+            }
 
             // Buscar por key en la lista cargada
             const encontrado = this.pacientes.find(p => p.key === (pacienteParsed.key || pacienteParsed.id));
@@ -1143,12 +1325,21 @@ export class HistoriasMedicasComponent implements OnInit {
               this.pacienteParaNuevaHistoria = encontrado;
               // Asegurar que el formulario tenga al paciente seleccionado
               try {
-                this.historiaForm.patchValue({ paciente: encontrado });
+                this.historiaForm.patchValue({
+                  paciente: encontrado,
+                  medico: null
+                });
+                this.resetearCamposSelectDeHistoria();
+                this.historiaForm.patchValue({ paciente: encontrado }, { emitEvent: false });
+              } catch (e) { /* ignore */ }
+
+              try {
+                sessionStorage.setItem('pacienteParaHistoriaProcesado', encontrado.key || encontrado.id);
               } catch (e) { /* ignore */ }
 
               // Abrir modal para crear historia
               setTimeout(() => {
-                this.abrirModalConFocus(true);
+                this.abrirModalConFocus(false);
                 this.cdr.detectChanges();
               }, 300);
             } else {
@@ -1157,13 +1348,28 @@ export class HistoriasMedicasComponent implements OnInit {
               if (porCedula) {
                 this.pacienteSeleccionado = porCedula;
                 this.pacienteParaNuevaHistoria = porCedula;
-                try { this.historiaForm.patchValue({ paciente: porCedula }); } catch (e) {}
-                setTimeout(() => { this.abrirModalConFocus(true); this.cdr.detectChanges(); }, 300);
+                try {
+                  this.historiaForm.patchValue({
+                    paciente: porCedula,
+                    medico: null
+                  });
+                  this.resetearCamposSelectDeHistoria();
+                  this.historiaForm.patchValue({ paciente: porCedula }, { emitEvent: false });
+                } catch (e) {}
+                try {
+                  sessionStorage.setItem('pacienteParaHistoriaProcesado', porCedula.key || porCedula.id);
+                } catch (e) { /* ignore */ }
+                setTimeout(() => { this.abrirModalConFocus(false); this.cdr.detectChanges(); }, 300);
               }
             }
           } catch (err) {
             console.warn('Error parseando pacienteParaHistoria:', err);
           }
+        } else if (!vieneDesdePacientes && pacienteParaHistoriaRaw) {
+          try {
+            sessionStorage.removeItem('pacienteParaHistoria');
+            sessionStorage.removeItem('pacienteParaHistoriaProcesado');
+          } catch (e) { /* ignore */ }
         }
 
         this.tareaFinalizada();
@@ -1742,6 +1948,8 @@ export class HistoriasMedicasComponent implements OnInit {
 
     // Resetear el formulario completo
     this.historiaForm.reset();
+    this.resetearCamposSelectDeHistoria();
+    this.historiaForm.patchValue({ paciente: null }, { emitEvent: false });
 
     // Limpiar el FormArray de recomendaciones
     this.recomendaciones.clear();
@@ -3264,6 +3472,8 @@ export class HistoriasMedicasComponent implements OnInit {
           this.focusOnField('len_esf_od');
         }, 300);
       }
+      // Restaurar placeholders en caso de que no se muestren correctamente
+      setTimeout(() => this.restaurarPlaceholdersDelModal(), 350);
     }, 300);
   }
 

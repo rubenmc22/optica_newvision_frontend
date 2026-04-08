@@ -8,7 +8,7 @@ describe('PostloginTemplateComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [PostloginTemplateComponent]
+      declarations: [PostloginTemplateComponent]
     })
     .compileComponents();
 

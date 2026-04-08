@@ -8,7 +8,7 @@ describe('GraficoPacientesPorMesComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [GraficoPacientesPorMesComponent]
+      declarations: [GraficoPacientesPorMesComponent]
     })
     .compileComponents();
 

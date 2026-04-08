@@ -60,18 +60,21 @@
           </a>
           <ul class="dropdown-menu dropdown-menu-end user-dropdown-menu" aria-labelledby="userDropdown">
             <li>
-              <a class="dropdown-item" (click)="goToMyProfile()">
+              <a class="dropdown-item" [ngClass]="{ 'active': isNavbarRouteActive('/my-account') }"
+                (click)="goToMyProfile()">
                 <i class="bi bi-person me-2"></i>Mi Perfil
               </a>
             </li>
             <li>
-              <a class="dropdown-item" (click)="goToExchangeRate()">
+              <a class="dropdown-item" [ngClass]="{ 'active': isNavbarRouteActive('/Tipo-de-cambio') }"
+                (click)="goToExchangeRate()">
                 <i class="bi bi-currency-exchange me-2"></i>Tipo de cambio
               </a>
             </li>
 
             <li>
-              <a class="dropdown-item" (click)="goToSystemConfig()">
+              <a class="dropdown-item" [ngClass]="{ 'active': isNavbarRouteActive('/configuracion-sistema') }"
+                (click)="goToSystemConfig()">
                 <i class="bi bi-gear me-2"></i>Configuración del sistema
               </a>
             </li>

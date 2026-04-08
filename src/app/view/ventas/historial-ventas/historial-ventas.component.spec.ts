@@ -8,7 +8,7 @@ describe('HistorialVentasComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [HistorialVentasComponent]
+      declarations: [HistorialVentasComponent]
     })
     .compileComponents();
 

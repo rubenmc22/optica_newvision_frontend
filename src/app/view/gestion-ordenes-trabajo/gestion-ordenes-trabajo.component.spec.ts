@@ -8,7 +8,7 @@ describe('GestionOrdenesTrabajoComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [GestionOrdenesTrabajoComponent]
+      declarations: [GestionOrdenesTrabajoComponent]
     })
     .compileComponents();
 

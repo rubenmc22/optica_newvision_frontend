@@ -7,7 +7,7 @@ describe('TasaComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TasaComponent]
+      declarations: [TasaComponent]
     })
     .compileComponents();
 

@@ -861,7 +861,10 @@
                       <i class="bi bi-calendar3 me-2"></i>
                       Fecha última graduación
                     </label>
-                    <input type="date" class="form-control-moderno" formControlName="ultimaGraduacion" [max]="maxDate">
+                    <ng-select [items]="ultimaGraduacionOpciones" bindLabel="label" bindValue="key"
+                      formControlName="ultimaGraduacion" [searchable]="false" [clearable]="false"
+                      placeholder="Seleccione un rango..." class="ng-select-moderno">
+                    </ng-select>
                   </div>
                 </div>
 
