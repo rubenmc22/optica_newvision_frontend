@@ -994,7 +994,16 @@ export class HistoriasMedicasComponent implements OnInit {
         this.swalService.showSuccess(
           '¡Historia creada!',
           `Historia médica #${historiaCreada.nHistoria ?? 'sin número'} registrada correctamente`
-        );
+        ).then(() => {
+          // Si venimos desde el módulo de pacientes, regresar automáticamente
+          if (sessionStorage.getItem('desdePacientes')) {
+            try {
+              sessionStorage.removeItem('desdePacientes');
+              sessionStorage.removeItem('pacienteParaHistoria');
+            } catch (e) { /* ignore */ }
+            this.router.navigate(['/pacientes']);
+          }
+        }).catch(() => {});
 
         const paciente = this.pacienteParaNuevaHistoria;
         if (!paciente) return;
@@ -1119,6 +1128,44 @@ export class HistoriasMedicasComponent implements OnInit {
             console.warn('Paciente no encontrado para precarga con ID:', id);
           }
         }
+        // Si se abrió desde el módulo de pacientes con un paciente recién creado,
+        // precargarlo desde sessionStorage y abrir el modal para crear la historia.
+        const pacienteParaHistoriaRaw = sessionStorage.getItem('pacienteParaHistoria');
+        if (pacienteParaHistoriaRaw) {
+          try {
+            const pacienteParsed = JSON.parse(pacienteParaHistoriaRaw);
+
+            // Buscar por key en la lista cargada
+            const encontrado = this.pacientes.find(p => p.key === (pacienteParsed.key || pacienteParsed.id));
+
+            if (encontrado) {
+              this.pacienteSeleccionado = encontrado;
+              this.pacienteParaNuevaHistoria = encontrado;
+              // Asegurar que el formulario tenga al paciente seleccionado
+              try {
+                this.historiaForm.patchValue({ paciente: encontrado });
+              } catch (e) { /* ignore */ }
+
+              // Abrir modal para crear historia
+              setTimeout(() => {
+                this.abrirModalConFocus(true);
+                this.cdr.detectChanges();
+              }, 300);
+            } else {
+              // Si no se encuentra por key, intentar emparejar por cédula
+              const porCedula = this.pacientes.find(p => p.informacionPersonal?.cedula === pacienteParsed.informacionPersonal?.cedula);
+              if (porCedula) {
+                this.pacienteSeleccionado = porCedula;
+                this.pacienteParaNuevaHistoria = porCedula;
+                try { this.historiaForm.patchValue({ paciente: porCedula }); } catch (e) {}
+                setTimeout(() => { this.abrirModalConFocus(true); this.cdr.detectChanges(); }, 300);
+              }
+            }
+          } catch (err) {
+            console.warn('Error parseando pacienteParaHistoria:', err);
+          }
+        }
+
         this.tareaFinalizada();
 
       },

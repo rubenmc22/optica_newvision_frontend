@@ -339,4 +339,35 @@ export class SwalService {
   closeLoading(): void {
     Swal.close();
   }
+
+  showSuccessWithAction(
+    title: string,
+    text: string,
+    confirmButtonText: string = 'Crear historia médica',
+    cancelButtonText: string = 'Salir'
+  ): Promise<SweetAlertResult> {
+    return Swal.fire({
+      icon: 'success',
+      title: title,
+      text: text,
+      showCancelButton: true,
+      confirmButtonText: confirmButtonText,
+      cancelButtonText: cancelButtonText,
+      customClass: {
+        popup: 'swal-modern-popup success-popup',
+        title: 'swal-modern-title',
+        htmlContainer: 'swal-modern-content',
+        confirmButton: 'swal-modern-confirm success-btn',
+        cancelButton: 'swal-modern-cancel',
+        closeButton: 'swal-modern-close'
+      },
+      buttonsStyling: false,
+      showClass: {
+        popup: 'animate__animated animate__fadeInDown animate__faster'
+      },
+      hideClass: {
+        popup: 'animate__animated animate__fadeOutUp animate__faster'
+      }
+    });
+  }
 }

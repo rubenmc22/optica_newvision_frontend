@@ -766,7 +766,27 @@ export class VerPacientesComponent implements OnInit {
         this.pacientes.splice(posicionInsercion, 0, pacienteTransformado);
 
         this.cerrarModal('modalAgregarPaciente');
-        this.swalService.showSuccess('¡Registro exitoso!', 'Paciente registrado correctamente.');
+
+        // Mostrar Swal con acción para crear historia al vuelo
+        this.swalService.showSuccessWithAction('¡Registro exitoso!', 'Paciente registrado correctamente.')
+          .then((result) => {
+            // Si el usuario decide crear la historia, navegar al módulo de historias
+            if (result && result.isConfirmed) {
+              try {
+                // Guardar temporalmente el paciente para que historias lo precargue
+                sessionStorage.setItem('pacienteParaHistoria', JSON.stringify(pacienteTransformado));
+                sessionStorage.setItem('desdePacientes', '1');
+              } catch (e) {
+                console.warn('No se pudo persistir paciente en sessionStorage', e);
+              }
+
+              // Navegar al módulo de historias
+              this.router.navigate(['/pacientes-historias']);
+            }
+          })
+          .catch(() => {
+            // Ignorar errores del modal
+          });
 
         // Actualizar la vista
         this.actualizarPacientesPorSede();
