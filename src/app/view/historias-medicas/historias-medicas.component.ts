@@ -1069,7 +1069,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
   // Agrega este método en el componente
   getPatologiasProcesadas(): string[] {
-    return this.procesarPatologias(this.pacienteSeleccionado?.historiaClinica?.patologias);
+    return this.obtenerPatologiasHistoriaActual();
   }
 
   private crearHistoria(): void {
@@ -1970,10 +1970,6 @@ export class HistoriasMedicasComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  get patologias(): string[] {
-    return this.procesarPatologias(this.historiaSeleccionada?.antecedentes?.patologias);
-  }
-
   compareStrings(a: string, b: string): boolean {
     return a === b;
   }
@@ -2204,28 +2200,18 @@ export class HistoriasMedicasComponent implements OnInit {
 
   // Método para formatear fecha y hora juntas
   private generarContenidoImpresion(): string {
-    // Obtener información del especialista según el tipo
-    const especialista = this.historiaSeleccionada?.datosConsulta?.especialista;
-    let nombreEspecialista = 'No disponible';
-    let cedulaEspecialista = 'No disponible';
-    let cargoEspecialista = 'No disponible';
-
-    if (especialista) {
-      if (especialista.tipo === 'EXTERNO' && especialista.externo) {
-        nombreEspecialista = especialista.externo.nombre || 'No disponible';
-        cedulaEspecialista = 'EXTERNO';
-        cargoEspecialista = 'Médico Externo';
-      } else if (especialista.tipo !== 'EXTERNO') {
-        nombreEspecialista = especialista.nombre || 'No disponible';
-        cedulaEspecialista = especialista.cedula || 'No disponible';
-        cargoEspecialista = especialista.cargo || especialista.tipo || 'No disponible';
-      }
-    }
+    const nombreEspecialista = this.obtenerNombreEspecialista(this.historiaSeleccionada);
+    const cedulaEspecialista = this.obtenerCedulaEspecialista(this.historiaSeleccionada);
+    const cargoEspecialista = this.obtenerCargoEspecialista(this.historiaSeleccionada);
 
     // Obtener datos del médico referido (para fórmula externa)
     const medicoReferido = this.obtenerNombreMedicoReferido(this.historiaSeleccionada);
     const lugarReferido = this.obtenerLugarMedicoReferido(this.historiaSeleccionada);
     const tieneMedicoReferido = this.obtenerMedicoReferido(this.historiaSeleccionada);
+    const antecedentesPersonales = this.obtenerListadoHistoriaClinica('antecedentesPersonales');
+    const antecedentesFamiliares = this.obtenerListadoHistoriaClinica('antecedentesFamiliares');
+    const patologiasGenerales = this.obtenerPatologiasHistoriaActual();
+    const notaConformidadImpresion = this.historiaSeleccionada?.conformidad?.notaConformidad || this.notaConformidad || 'No especificada';
 
     return `
     <div class="print-container">
@@ -2311,7 +2297,7 @@ export class HistoriasMedicasComponent implements OnInit {
         <div class="datos-grid-print">
           <div class="dato-item-print">
             <label>Usa lentes:</label>
-            <span>${this.pacienteSeleccionado?.historiaClinica?.usuarioLentes || 'No especificado'}</span>
+            <span>${this.formatearValorHistoriaClinica(this.obtenerValorHistoriaClinica('usuarioLentes'))}</span>
           </div>
           <div class="dato-item-print">
             <label>Cristal actual:</label>
@@ -2323,27 +2309,27 @@ export class HistoriasMedicasComponent implements OnInit {
           </div>
           <div class="dato-item-print">
             <label>Fotofobia:</label>
-            <span>${this.pacienteSeleccionado?.historiaClinica?.fotofobia || 'No especificado'}</span>
+            <span>${this.formatearValorHistoriaClinica(this.obtenerValorHistoriaClinica('fotofobia'))}</span>
           </div>
           <div class="dato-item-print">
             <label>Alergias:</label>
-            <span>${this.pacienteSeleccionado?.historiaClinica?.alergicoA || 'No especificado'}</span>
+            <span>${this.formatearValorHistoriaClinica(this.obtenerValorHistoriaClinica('alergicoA'))}</span>
           </div>
           <div class="dato-item-print">
             <label>Cirugía ocular:</label>
-            <span>${this.pacienteSeleccionado?.historiaClinica?.cirugiaOcular || 'No especificado'}</span>
+            <span>${this.formatearValorHistoriaClinica(this.obtenerValorHistoriaClinica('cirugiaOcular'))}</span>
           </div>
           <div class="dato-item-print">
             <label>Tipo de cirugía:</label>
-            <span>${this.pacienteSeleccionado?.historiaClinica?.cirugiaOcularDescripcion || 'No especificada'}</span>
+            <span>${this.formatearValorHistoriaClinica(this.obtenerValorHistoriaClinica('cirugiaOcularDescripcion'), 'No especificada')}</span>
           </div>
           <div class="dato-item-print">
             <label>Traumatismo ocular:</label>
-            <span>${this.pacienteSeleccionado?.historiaClinica?.traumatismoOcular || 'No especificado'}</span>
+            <span>${this.formatearValorHistoriaClinica(this.obtenerValorHistoriaClinica('traumatismoOcular'))}</span>
           </div>
           <div class="dato-item-print">
             <label>Uso de dispositivos:</label>
-            <span>${this.pacienteSeleccionado?.historiaClinica?.usoDispositivo || 'No especificado'}</span>
+            <span>${this.formatearValorHistoriaClinica(this.obtenerValorHistoriaClinica('usoDispositivo'))}</span>
           </div>
         </div>
 
@@ -2352,8 +2338,8 @@ export class HistoriasMedicasComponent implements OnInit {
           <div class="fila-antecedente">
             <label class="label-antecedente">Antecedentes Personales:</label>
             <div class="tags-fila">
-              ${(this.pacienteSeleccionado?.historiaClinica?.antecedentesPersonales ?? []).length > 0 ?
-        this.pacienteSeleccionado.historiaClinica.antecedentesPersonales.map(ant =>
+              ${antecedentesPersonales.length > 0 ?
+        antecedentesPersonales.map(ant =>
           `<span class="tag-fila">${ant}</span>`
         ).join('') :
         '<span class="tag-fila empty">No reportados</span>'
@@ -2364,8 +2350,8 @@ export class HistoriasMedicasComponent implements OnInit {
           <div class="fila-antecedente">
             <label class="label-antecedente">Antecedentes Familiares:</label>
             <div class="tags-fila">
-              ${(this.pacienteSeleccionado?.historiaClinica?.antecedentesFamiliares ?? []).length > 0 ?
-        this.pacienteSeleccionado.historiaClinica.antecedentesFamiliares.map(ant =>
+              ${antecedentesFamiliares.length > 0 ?
+        antecedentesFamiliares.map(ant =>
           `<span class="tag-fila">${ant}</span>`
         ).join('') :
         '<span class="tag-fila empty">No reportados</span>'
@@ -2376,7 +2362,7 @@ export class HistoriasMedicasComponent implements OnInit {
           <div class="fila-antecedente">
             <label class="label-antecedente">Patologías Generales:</label>
             <div class="tags-fila">
-              ${this.procesarPatologias(this.pacienteSeleccionado?.historiaClinica?.patologias).map(pat =>
+              ${patologiasGenerales.map(pat =>
         `<span class="tag-fila">${pat}</span>`
       ).join('') || '<span class="tag-fila empty">No reportados</span>'}
             </div>
@@ -2410,6 +2396,20 @@ export class HistoriasMedicasComponent implements OnInit {
 
       <!-- Recomendaciones -->
       ${this.generarRecomendacionesImpresion()}
+
+      <!-- Declaración de Conformidad -->
+      <div class="seccion-print no-break">
+        <div class="seccion-header-print">
+          <h2>DECLARACIÓN DE CONFORMIDAD</h2>
+        </div>
+        <div class="diagnostico-grid-print">
+          <div class="diagnostico-item-print full-width-print">
+            <div class="diagnostico-content">
+              ${notaConformidadImpresion}
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Firmas -->
       <div class="seccion-print no-break">
@@ -2662,7 +2662,7 @@ export class HistoriasMedicasComponent implements OnInit {
       const lentesContactoHTML = rec.tipoLentesContacto ? `
         <div class="recomendacion-field">
           <label>Tipo de lentes de contacto:</label>
-          <span>${rec.tipoLentesContacto}</span>
+          <span>${this.getTipoLenteContactoLabel(rec.tipoLentesContacto)}</span>
         </div>
       ` : '';
 
@@ -2674,7 +2674,7 @@ export class HistoriasMedicasComponent implements OnInit {
         <div class="recomendacion-content-print">
           <div class="recomendacion-field">
             <label>Tipo de cristal:</label>
-            <span>${rec.cristal?.label || 'No especificado'}</span>
+            <span>${this.getTipoCristalRecomendado(rec.cristal)}</span>
           </div>
           ${lentesContactoHTML}
           <div class="recomendacion-field">
@@ -3031,6 +3031,10 @@ export class HistoriasMedicasComponent implements OnInit {
       background: #f8fafc;
       border-radius: 10px;
       padding: 10px;
+    }
+
+    .diagnostico-item-print.full-width-print {
+      grid-column: 1 / -1;
     }
     
     .diagnostico-item-print label {
@@ -3870,13 +3874,51 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   // En tu componente
-  get patologiasArray(): string[] {
+  private obtenerValorHistoriaClinica(campo: keyof Antecedentes): any {
+    const valorAntecedente = this.historiaSeleccionada?.antecedentes?.[campo];
+    if (this.tieneValorHistoriaClinica(valorAntecedente)) {
+      return valorAntecedente;
+    }
+
+    return this.pacienteSeleccionado?.historiaClinica?.[campo];
+  }
+
+  private obtenerListadoHistoriaClinica(campo: 'antecedentesPersonales' | 'antecedentesFamiliares'): string[] {
+    const listaAntecedente = this.procesarCampoArray(this.historiaSeleccionada?.antecedentes?.[campo]);
+    if (listaAntecedente.length > 0) {
+      return listaAntecedente;
+    }
+
+    return this.procesarCampoArray(this.pacienteSeleccionado?.historiaClinica?.[campo]);
+  }
+
+  private obtenerPatologiasHistoriaActual(): string[] {
+    const patologiasAntecedente = this.procesarPatologias(this.historiaSeleccionada?.antecedentes?.patologias);
+    if (patologiasAntecedente.length > 0) {
+      return patologiasAntecedente;
+    }
+
     return this.procesarPatologias(this.pacienteSeleccionado?.historiaClinica?.patologias);
   }
 
-  get patologiasTexto(): string {
-    const array = this.procesarPatologias(this.pacienteSeleccionado?.historiaClinica?.patologias);
-    return array.length > 0 ? array.join(', ') : 'No reportados';
+  private formatearValorHistoriaClinica(valor: any, valorVacio: string = 'No especificado'): string {
+    if (valor === undefined || valor === null || valor === '') {
+      return valorVacio;
+    }
+
+    if (typeof valor === 'boolean') {
+      return valor ? 'Sí' : 'No';
+    }
+
+    return String(valor);
+  }
+
+  private tieneValorHistoriaClinica(valor: any): boolean {
+    if (Array.isArray(valor)) {
+      return valor.length > 0;
+    }
+
+    return valor !== undefined && valor !== null && valor !== '';
   }
 
   // Método genérico para procesar cualquier campo que pueda venir en diferentes formatos
