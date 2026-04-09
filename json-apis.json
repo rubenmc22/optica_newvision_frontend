@@ -1731,3 +1731,38 @@ nuevo crear venta
     }
 }
 
+nuevo realice abono
+{
+    "montoAbonado": 100,
+    "ordenTrabajo": true,
+    "metodosPago": [
+        {
+            "tipo": "pagomovil",
+            "monto": 19995.97,
+            "moneda": "bolivar",
+            "referencia": "1212121",
+            "bancoCodigo": "0134",
+            "bancoNombre": "Banesco",
+            "bancoReceptorCodigo": "0104",
+            "bancoReceptorNombre": "Venezolano de Crédito",
+            "bancoReceptor": "0104 - Venezolano de Crédito",
+            "notaPago": "pago cuenta de jeffe",
+            "montoEnMonedaVenta": 42.01
+        },
+        {
+            "tipo": "efectivo",
+            "monto": 50.1,
+            "moneda": "euro",
+            "referencia": null,
+            "bancoCodigo": null,
+            "bancoNombre": null,
+            "bancoReceptorCodigo": null,
+            "bancoReceptorNombre": null,
+            "bancoReceptor": null,
+            "notaPago": null,
+            "montoEnMonedaVenta": 57.99
+        }
+    ],
+    "observaciones": ""
+}
+

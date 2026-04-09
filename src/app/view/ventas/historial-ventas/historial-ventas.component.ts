@@ -261,7 +261,7 @@ export class HistorialVentasComponent implements OnInit {
 
     // Suscribirse a cambios en el monto abonado
     this.editarVentaForm.get('montoAbonado')?.valueChanges.subscribe(value => {
-      this.validarMontoAbono();
+      this.validarMontoAbono(false);
     });
 
     // Obtener sede actual
@@ -1126,7 +1126,7 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  validarMontoAbono(): void {
+  validarMontoAbono(mostrarAdvertencia: boolean = true): void {
     const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value;
     const deudaPendiente = this.calcularMontoDeuda();
 
@@ -1136,15 +1136,17 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     if (montoAbonado > deudaPendiente) {
-      this.swalService.showWarning(
-        'Monto excedido',
-        `El monto a abonar (${this.formatearMoneda(montoAbonado, this.getMonedaVenta())}) excede la deuda pendiente (${this.formatearMoneda(deudaPendiente, this.getMonedaVenta())}). Se establecerá el monto máximo permitido.`
-      );
+      if (mostrarAdvertencia) {
+        this.swalService.showWarning(
+          'Monto excedido',
+          `El monto a abonar (${this.formatearMoneda(montoAbonado, this.getMonedaVenta())}) excede la deuda pendiente (${this.formatearMoneda(deudaPendiente, this.getMonedaVenta())}). Se establecerá el monto máximo permitido.`
+        );
+      }
 
       // Establecer el monto máximo como valor por defecto
       this.editarVentaForm.patchValue({
         montoAbonado: deudaPendiente
-      });
+      }, { emitEvent: false });
     }
   }
 
@@ -1199,6 +1201,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   editarVenta(venta: any): void {
+    this.tipoOperacionPago = 'abono';
     this.selectedVenta = venta;
 
     this.reinicializarFormularioConDeuda();
@@ -1672,7 +1675,7 @@ export class HistorialVentasComponent implements OnInit {
 
   onMontoAbonadoChange() {
     // Validar el monto ingresado
-    this.validarMontoAbono();
+    this.validarMontoAbono(true);
 
     // Ajustar montos de métodos de pago si hay un valor válido
     const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value;
@@ -1681,6 +1684,17 @@ export class HistorialVentasComponent implements OnInit {
         this.ajustarMontosMetodosPago();
       });
     }
+  }
+
+  aplicarMontoCompletoAbono(): void {
+    const montoMaximo = this.getMontoMaximoPermitido();
+
+    this.editarVentaForm.patchValue({
+      montoAbonado: montoMaximo
+    }, { emitEvent: false });
+
+    this.ajustarMontosMetodosPago();
+    this.cdRef.detectChanges();
   }
 
   getConversionDisplay(): string {
@@ -1833,10 +1847,10 @@ export class HistorialVentasComponent implements OnInit {
     const montoDeuda = this.calcularMontoDeuda();
 
     this.editarVentaForm = this.fb.group({
-      montoAbonado: [montoDeuda, [
+      montoAbonado: [0, [
         Validators.required,
         Validators.min(0),
-        Validators.max(this.selectedVenta?.total || 0)
+        Validators.max(montoDeuda)
       ]],
       metodosPago: this.fb.array([]),
       observaciones: ['']
@@ -2122,12 +2136,14 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   reinicializarFormularioConDeuda() {
+    const montoDeuda = this.calcularMontoDeuda();
+    const montoInicial = this.tipoOperacionPago === 'pago-completo' ? montoDeuda : 0;
+
     if (this.editarVentaForm) {
-      // NO establecer montoAbonado aquí si vas a hacerlo después
       this.editarVentaForm.patchValue({
-        // montoAbonado: null, // <- Comenta esta línea si existe
+        montoAbonado: montoInicial,
         observaciones: this.selectedVenta.observaciones || ''
-      });
+      }, { emitEvent: false });
 
       // Limpiar métodos de pago
       this.metodosPagoArray.clear();
@@ -2141,12 +2157,12 @@ export class HistorialVentasComponent implements OnInit {
       this.inicializarFormulario();
     }
 
-    // Actualizar validadores para permitir valores vacíos inicialmente
+    // Actualizar validadores según la deuda real de la venta seleccionada
     this.editarVentaForm.get('montoAbonado')?.setValidators([
       Validators.min(0),
-      Validators.max(this.selectedVenta.total)
+      Validators.max(montoDeuda)
     ]);
-    this.editarVentaForm.get('montoAbonado')?.updateValueAndValidity();
+    this.editarVentaForm.get('montoAbonado')?.updateValueAndValidity({ emitEvent: false });
   }
 
   validarMontoMaximo(value: number) {
@@ -3940,12 +3956,17 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private obtenerReciboHTMLParaSalida(vista: 'print' | 'pdf' = 'print'): string | null {
+    void vista;
+    return this.obtenerReciboHTMLUnificado();
+  }
+
+  private obtenerReciboHTMLUnificado(): string | null {
     const datos = this.prepararDatosReciboParaSalida();
     if (!datos) {
       return null;
     }
 
-    return this.generarReciboHTML(datos, vista);
+    return this.generarReciboHTML(datos, 'preview');
   }
 
   private async renderizarReciboHTMLACanvas(htmlContent: string): Promise<HTMLCanvasElement> {
@@ -4308,25 +4329,7 @@ export class HistorialVentasComponent implements OnInit {
     const generarContadoHTML = () => {
       if (formaPago !== 'contado') return '';
 
-      return `
-        <div class="section-card payment-overview ${configModoPago.theme} compact-card page-break-avoid">
-          <div class="section-head">
-            <div>
-              <span class="section-kicker">Resumen de pago</span>
-              <h3 class="section-title">${configModoPago.resumenTitulo}</h3>
-              <p class="section-copy">${configModoPago.resumenTexto}</p>
-            </div>
-            <span class="mode-badge ${configModoPago.theme}">${configModoPago.badge}</span>
-          </div>
-          <div class="metric-grid metric-grid-3 compact-metrics">
-            ${crearMetricaHTML('Total', formatearMonedaLocal(totalVenta), '', 'info')}
-            ${crearMetricaHTML('Pagado', formatearMonedaLocal(totalPagado), '', 'success')}
-            ${crearMetricaHTML('Estado', escaparHTML(configModoPago.estado), '', 'neutral')}
-          </div>
-        </div>
-
-        ${generarMetodosPagoHTML()}
-      `;
+      return generarMetodosPagoHTML();
     };
 
     const generarContadoPendienteHTML = () => {
@@ -4406,15 +4409,20 @@ export class HistorialVentasComponent implements OnInit {
             </div>
             <span class="mode-badge ${configModoPago.theme}">${configModoPago.badge}</span>
           </div>
-          <div class="metric-grid metric-grid-4">
+          <div class="metric-grid-abono compact-metrics">
             ${crearMetricaHTML('Total', formatearMonedaLocal(totalVenta), '', 'info')}
             ${crearMetricaHTML('Abonado', formatearMonedaLocal(totalPagado), '', 'success')}
             ${crearMetricaHTML('Deuda', formatearMonedaLocal(deudaPendiente), '', 'warning')}
-            ${crearMetricaHTML('Progreso', `${Number(datos.abono.porcentajePagado || porcentajePagado)}%`, '', 'neutral')}
-          </div>
-          <div class="progress-shell">
-            <div class="progress-track">
-              <span class="progress-fill" style="width: ${Math.max(0, Math.min(100, Number(datos.abono.porcentajePagado || porcentajePagado)))}%;"></span>
+            <div class="metric-card progress-wide neutral">
+              <div class="progress-card-head">
+                <span class="metric-label">Progreso</span>
+                <strong class="metric-value">${Number(datos.abono.porcentajePagado || porcentajePagado)}%</strong>
+              </div>
+              <div class="progress-shell compact-progress-shell">
+                <div class="progress-track">
+                  <span class="progress-fill" style="width: ${Math.max(0, Math.min(100, Number(datos.abono.porcentajePagado || porcentajePagado)))}%;"></span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -4501,16 +4509,45 @@ export class HistorialVentasComponent implements OnInit {
             box-sizing: border-box;
         }
 
+        html {
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        scrollbar-color: #7eaed2 #eef4f8;
+        }
+
         body {
         font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
         color: #17324d;
         background: ${esVistaPrevia ? 'transparent' : esExportacion ? '#ffffff' : '#eef3f8'};
         padding: ${esVistaPrevia || esExportacion ? '0' : '16px'};
+        scrollbar-width: thin;
+        scrollbar-color: #7eaed2 #eef4f8;
+        }
+
+        body::-webkit-scrollbar {
+        width: 10px;
+        }
+
+        body::-webkit-scrollbar-track {
+        background: linear-gradient(180deg, #f4f8fb 0%, #ecf2f7 100%);
+        border-radius: 999px;
+        }
+
+        body::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #9fc3de 0%, #4e83ae 100%);
+        border-radius: 999px;
+        border: 2px solid #eef4f8;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+        }
+
+        body::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #8bb5d5 0%, #3f729c 100%);
         }
 
       .recibo-page {
-        max-width: ${esVistaPrevia || esExportacion ? 'none' : '820px'};
-        margin: ${esVistaPrevia || esExportacion ? '0' : '0 auto'};
+        width: 100%;
+        max-width: 820px;
+        margin: 0 auto;
       }
 
         .recibo-container {
@@ -4621,7 +4658,7 @@ export class HistorialVentasComponent implements OnInit {
         display: flex;
         justify-content: space-between;
         gap: 12px;
-        margin-top: 10px;
+        margin-top: 8px;
         flex-wrap: wrap;
         }
 
@@ -4634,12 +4671,12 @@ export class HistorialVentasComponent implements OnInit {
         }
 
       .meta-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         margin-bottom: 10px;
       }
 
       .client-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
       }
 
       .metric-grid {
@@ -4658,6 +4695,67 @@ export class HistorialVentasComponent implements OnInit {
         border: 1px solid #dbe7f0;
         border-radius: 14px;
         padding: 10px 12px;
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+      }
+
+      .meta-card::before,
+      .metric-card::before,
+      .client-item::before,
+      .plan-inline-item::before,
+      .payment-item::before,
+      .totals-breakdown::before,
+      .section-card::before,
+      .history-table-wrap::before {
+        content: '';
+        position: absolute;
+        inset: 1px;
+        border-radius: inherit;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(246, 250, 253, 0.78) 100%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+        z-index: 0;
+      }
+
+      .meta-card > *,
+      .metric-card > *,
+      .client-item > *,
+      .plan-inline-item > *,
+      .payment-item > *,
+      .totals-breakdown > *,
+      .section-card > *,
+      .history-table-wrap > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .meta-card.compact-pair {
+        padding: 9px 12px;
+      }
+
+      .client-item.compact-pair {
+        padding: 9px 12px;
+      }
+
+      .meta-pair {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      .meta-pair-item {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 46px;
+      }
+
+      .meta-pair-divider {
+        width: 1px;
+        align-self: stretch;
+        background: linear-gradient(180deg, rgba(210, 223, 235, 0) 0%, rgba(210, 223, 235, 0.95) 22%, rgba(210, 223, 235, 0.95) 78%, rgba(210, 223, 235, 0) 100%);
       }
 
       .meta-label,
@@ -4682,6 +4780,22 @@ export class HistorialVentasComponent implements OnInit {
         font-weight: 700;
         color: #17324d;
         line-height: 1.25;
+      }
+
+      .meta-card.compact-pair .meta-label {
+        margin-bottom: 3px;
+      }
+
+      .meta-card.compact-pair .meta-value {
+        font-size: 12px;
+      }
+
+      .client-item.compact-pair .client-label {
+        margin-bottom: 3px;
+      }
+
+      .client-item.compact-pair .client-value {
+        font-size: 12px;
       }
 
       .metric-value {
@@ -4720,12 +4834,16 @@ export class HistorialVentasComponent implements OnInit {
         background: #ffffff;
         border: 1px solid #dde7f1;
         border-radius: 18px;
-        padding: 14px 16px;
-        margin-bottom: 10px;
+        padding: 12px 14px;
+        margin-bottom: 9px;
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+        box-shadow: 0 10px 22px rgba(18, 37, 58, 0.04);
       }
 
       .compact-card {
-        padding: 12px 14px;
+        padding: 11px 13px;
       }
 
       .subtle-card {
@@ -4753,7 +4871,7 @@ export class HistorialVentasComponent implements OnInit {
         justify-content: space-between;
         align-items: flex-start;
         gap: 12px;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
       }
 
       .section-head.compact {
@@ -4771,7 +4889,7 @@ export class HistorialVentasComponent implements OnInit {
       }
 
       .section-title {
-        font-size: 16px;
+        font-size: 15px;
         line-height: 1.2;
         font-weight: 800;
         color: #17324d;
@@ -4806,6 +4924,29 @@ export class HistorialVentasComponent implements OnInit {
 
       .compact-metrics {
         gap: 8px;
+      }
+
+      .metric-grid-abono {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .metric-card.progress-wide {
+        grid-column: 1 / -1;
+        padding: 9px 12px;
+      }
+
+      .progress-card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .compact-progress-shell {
+        margin-top: 0;
       }
 
       .mode-badge.theme-contado {
@@ -4910,10 +5051,13 @@ export class HistorialVentasComponent implements OnInit {
       }
 
       .payment-item {
-        padding: 10px 12px;
+        padding: 9px 11px;
         border: 1px solid #dde7f1;
         border-radius: 14px;
         background: #ffffff;
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
         }
 
       .payment-topline,
@@ -5004,6 +5148,8 @@ export class HistorialVentasComponent implements OnInit {
         overflow: hidden;
         border-radius: 14px;
         border: 1px solid #dde7f1;
+        position: relative;
+        isolation: isolate;
       }
 
       .history-table thead,
@@ -5030,8 +5176,11 @@ export class HistorialVentasComponent implements OnInit {
       .totals-breakdown {
         border: 1px solid #dde7f1;
         border-radius: 14px;
-        padding: 8px 12px;
+        padding: 7px 11px;
         background: #fbfdff;
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
       }
 
       .total-row {
@@ -5067,11 +5216,11 @@ export class HistorialVentasComponent implements OnInit {
 
       .highlight-card {
         border-radius: 16px;
-        padding: 14px 16px;
+        padding: 12px 14px;
         border: 1px solid #dce6f1;
         background: linear-gradient(135deg, #173c63 0%, #2d658f 55%, #75afd0 100%);
         color: #ffffff;
-        min-height: 96px;
+        min-height: 88px;
       }
 
       .highlight-card .metric-label,
@@ -5125,16 +5274,16 @@ export class HistorialVentasComponent implements OnInit {
           padding: 10px;
         }
 
+        .recibo-page {
+          max-width: none;
+        }
+
         .recibo-container {
           border-radius: 18px;
           padding: 12px;
         }
 
         .recibo-header,
-        .meta-grid,
-        .client-grid,
-        .metric-grid-3,
-        .metric-grid-4,
         .plan-inline-grid,
         .totals-layout {
           grid-template-columns: 1fr;
@@ -5151,6 +5300,42 @@ export class HistorialVentasComponent implements OnInit {
 
         .section-head {
           flex-direction: column;
+        }
+
+        .metric-grid-3 {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .metric-grid-4 {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .metric-grid-abono {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .meta-grid,
+        .client-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .meta-pair {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+
+        .meta-pair-divider {
+          display: none;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .metric-grid-3,
+        .metric-grid-4,
+        .metric-grid-abono {
+          grid-template-columns: 1fr;
         }
       }
 
@@ -5202,23 +5387,33 @@ export class HistorialVentasComponent implements OnInit {
         </div>
 
       <div class="meta-grid page-break-avoid">
-        <div class="meta-card">
-          <span class="meta-label">Fecha</span>
-          <span class="meta-value">${escaparHTML(datos.fecha)}</span>
-        </div>
-        <div class="meta-card">
-          <span class="meta-label">Hora</span>
-          <span class="meta-value">${escaparHTML(datos.hora)}</span>
-        </div>
-        <div class="meta-card">
-          <span class="meta-label">Asesor</span>
-          <span class="meta-value">${escaparHTML(datos.vendedor)}</span>
-        </div>
-        <div class="meta-card">
-          <span class="meta-label">Estado</span>
-          <span class="meta-value">${escaparHTML(configModoPago.estado)}</span>
+        <div class="meta-card compact-pair">
+          <div class="meta-pair">
+            <div class="meta-pair-item">
+              <span class="meta-label">Fecha</span>
+              <span class="meta-value">${escaparHTML(datos.fecha)}</span>
             </div>
+            <span class="meta-pair-divider"></span>
+            <div class="meta-pair-item">
+              <span class="meta-label">Hora</span>
+              <span class="meta-value">${escaparHTML(datos.hora)}</span>
+            </div>
+          </div>
         </div>
+        <div class="meta-card compact-pair">
+          <div class="meta-pair">
+            <div class="meta-pair-item">
+              <span class="meta-label">Asesor</span>
+              <span class="meta-value">${escaparHTML(datos.vendedor)}</span>
+            </div>
+            <span class="meta-pair-divider"></span>
+            <div class="meta-pair-item">
+              <span class="meta-label">Estado</span>
+              <span class="meta-value">${escaparHTML(configModoPago.estado)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="section-card page-break-avoid">
         <div class="section-head compact">
@@ -5232,13 +5427,18 @@ export class HistorialVentasComponent implements OnInit {
             <span class="client-label">Nombre</span>
             <span class="client-value">${escaparHTML(datos.cliente.nombre)}</span>
           </div>
-          <div class="client-item">
-            <span class="client-label">Cedula</span>
-            <span class="client-value">${escaparHTML(datos.cliente.cedula)}</span>
-          </div>
-          <div class="client-item">
-            <span class="client-label">Telefono</span>
-            <span class="client-value">${escaparHTML(datos.cliente.telefono)}</span>
+          <div class="client-item compact-pair">
+            <div class="meta-pair">
+              <div class="meta-pair-item">
+                <span class="client-label">Cedula</span>
+                <span class="client-value">${escaparHTML(datos.cliente.cedula)}</span>
+              </div>
+              <span class="meta-pair-divider"></span>
+              <div class="meta-pair-item">
+                <span class="client-label">Telefono</span>
+                <span class="client-value">${escaparHTML(datos.cliente.telefono)}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -5317,10 +5517,6 @@ export class HistorialVentasComponent implements OnInit {
                 <strong>${formatearMonedaLocal(datos.totales.total)}</strong>
                 </div>
               ` : ''}
-              <div class="total-row">
-                <span>${escaparHTML(this.getTextoTotalPagadoParaHTML(formaPago))}</span>
-                <strong>${formatearMonedaLocal(datos.totales.totalPagado)}</strong>
-              </div>
             </div>
             <div class="totals-highlight">
               <div class="highlight-card">
@@ -5360,12 +5556,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   obtenerVistaPreviaReciboHTML(): string {
-    if (!this.ventaParaRecibo) {
-      return '';
-    }
-
-    const datos = this.datosRecibo?.totales ? this.datosRecibo : this.crearDatosReciboReal();
-    return this.generarReciboHTML(datos, 'preview');
+    return this.obtenerReciboHTMLUnificado() || '';
   }
 
   private actualizarVistaPreviaRecibo(): void {
@@ -6632,6 +6823,7 @@ export class HistorialVentasComponent implements OnInit {
 
   // Método para abrir modal de pago
   abrirModalPagoCompleto(venta: any): void {
+    this.tipoOperacionPago = 'pago-completo';
     this.selectedVenta = venta;
 
     // Reinicializar formulario

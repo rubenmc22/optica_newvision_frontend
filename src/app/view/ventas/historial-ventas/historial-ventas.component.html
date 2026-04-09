@@ -1333,7 +1333,7 @@
 
   <!-- Modal de Realizar Abono -->
   <ng-template #editarVentaModal let-modal>
-    <div class="modal-content">
+    <div class="modal-content modal-abono-completo">
       <!-- Header compacto -->
       <div class="modal-header-compact">
         <div class="header-content">
@@ -1352,7 +1352,8 @@
         <button type="button" class="btn-close" (click)="modal.dismiss()" aria-label="Cerrar"></button>
       </div>
 
-      <div class="modal-body-compact">
+      <form [formGroup]="editarVentaForm" (ngSubmit)="guardarEdicionVenta(modal)" class="modal-abono-layout">
+      <div class="modal-body-compact modal-body-scrollable">
         <!-- Resumen rápido -->
         <div class="resumen-mini">
           <!-- Total Venta -->
@@ -1415,7 +1416,6 @@
           </div>
         </div>
 
-        <form [formGroup]="editarVentaForm" (ngSubmit)="guardarEdicionVenta(modal)">
           <!-- Sección inngrese monto -->
           <div class="seccion-compacta">
             <!-- Header principal con botón -->
@@ -1434,10 +1434,17 @@
             <div class="form-grid-compact">
               <!-- Monto abonado - MONEDA DE VENTA -->
               <div class="form-group-compact">
-                <label class="form-label-compact">
-                  <i class="bi bi-currency-dollar"></i>
-                  Nuevo monto a abonar
-                </label>
+                <div class="form-label-compact form-label-compact-split">
+                  <label class="mb-0">
+                    <i class="bi bi-currency-dollar"></i>
+                    Nuevo monto a abonar
+                  </label>
+                  <button type="button" class="btn btn-abono-total"
+                    [disabled]="getMontoMaximoPermitido() <= 0" (click)="aplicarMontoCompletoAbono()">
+                    <i class="bi bi-magic me-1"></i>
+                    Abonar todo
+                  </button>
+                </div>
                 <div class="input-group-compact">
                   <input type="number" class="form-control form-control-compact" formControlName="montoAbonado"
                     step="0.01" min="0" [max]="getMontoMaximoPermitido()" placeholder="0.00"
@@ -1814,23 +1821,23 @@
               </div>
             </div>
           </div>
-
-          <!-- Footer modal -->
-          <div class="modal-footer-detalle">
-            <div class="footer-actions">
-              <button type="button" class="btn btn-secondary btn-detalle" (click)="modal.dismiss()">
-                <i class="bi bi-x-circle me-2"></i>
-                Cancelar
-              </button>
-              <button type="button" class="btn btn-success btn-detalle"
-                [disabled]="editarVentaForm.invalid || !validarPagoCompleto()" (click)="guardarEdicionVenta(modal)">
-                <i class="bi bi-check-circle me-2"></i>
-                Guardar Abono
-              </button>
-            </div>
-          </div>
-        </form>
       </div>
+
+        <!-- Footer modal -->
+        <div class="modal-footer-detalle modal-footer-fixed-abono">
+          <div class="footer-actions">
+            <button type="button" class="btn btn-secondary btn-detalle" (click)="modal.dismiss()">
+              <i class="bi bi-x-circle me-2"></i>
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-success btn-detalle"
+              [disabled]="editarVentaForm.invalid || !validarPagoCompleto()" (click)="guardarEdicionVenta(modal)">
+              <i class="bi bi-check-circle me-2"></i>
+              Guardar Abono
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   </ng-template>
 
@@ -2148,7 +2155,7 @@
           <i class="bi bi-x-lg"></i>
         </button>
 
-        <div class="modal-body recibo-preview-body p-0">
+        <div class="recibo-preview-shell">
           <iframe *ngIf="previewReciboUrl" class="recibo-preview-frame" [src]="previewReciboUrl"
             title="Vista previa del recibo" id="contenidoRecibo"></iframe>
           <div *ngIf="!previewReciboUrl" class="recibo-preview-empty">
