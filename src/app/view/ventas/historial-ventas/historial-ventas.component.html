@@ -590,7 +590,7 @@
 
   <!-- Modal de Confirmación para Cancelar Venta -->
   <ng-template #cancelarVentaModal let-modal>
-    <div class="modal-header bg-primary text-white">
+    <div class="modal-header bg-primary text-white cancelar-venta-header">
       <h5 class="modal-title">
         <i class="bi bi-exclamation-triangle me-2"></i>
         Confirmar Cancelación
@@ -598,9 +598,9 @@
       <button type="button" class="btn-close btn-close-white" (click)="modal.dismiss()"></button>
     </div>
 
-    <div class="modal-body">
+    <div class="modal-body cancelar-venta-body">
       <!-- Cambiamos alert-warning por alert-info con fondo azul claro -->
-      <div class="alert alert-info" role="alert">
+      <div class="alert alert-info cancelar-venta-alert" role="alert">
         <h6 class="alert-heading fw-bold">¿Está seguro de que desea cancelar esta venta?</h6>
         <p class="mb-0 mt-2">
           <strong>Venta {{ formatNumeroVenta(selectedVenta?.id) }}</strong><br>
@@ -609,7 +609,7 @@
         </p>
       </div>
 
-      <div class="form-group mt-3">
+      <div class="form-group mt-3 cancelar-venta-form">
         <label for="motivoCancelacion" class="form-label">
           <strong>Motivo de cancelación:</strong>
         </label>
@@ -620,7 +620,7 @@
       </div>
     </div>
 
-    <div class="modal-footer">
+    <div class="modal-footer cancelar-venta-footer">
       <button type="button" class="btn btn-secondary" (click)="modal.dismiss()">
         <i class="bi bi-x-circle me-1"></i> Cancelar
       </button>
@@ -1835,17 +1835,9 @@
   </ng-template>
 
 
-
-
-
-
-
-
-  
-
   <!-- Modal de Realizar Pago para contado-pendiente -->
   <ng-template #realizarPagoModal let-modal>
-    <div class="modal-content">
+    <div class="modal-content modal-pago-completo">
       <!-- Header simple y claro -->
       <div class="modal-header-compact">
         <div class="header-content">
@@ -2128,20 +2120,6 @@
       <!-- Footer simple -->
       <div class="modal-footer-fixed">
         <div class="footer-content">
-          <div class="footer-info" *ngIf="metodosPagoArray.length > 0">
-            <div class="footer-summary">
-              <span class="summary-label">Total a pagar:</span>
-              <span class="summary-value">{{ calcularMontoDeuda() | number:'1.2-2' }} {{ getSimboloMonedaVenta()
-                }}</span>
-            </div>
-            <div class="footer-status" [class.status-valid]="validarPagoCompleto()"
-              [class.status-invalid]="!validarPagoCompleto()">
-              <i class="bi" [class.bi-check-circle]="validarPagoCompleto()"
-                [class.bi-exclamation-circle]="!validarPagoCompleto()"></i>
-              <span>{{ validarPagoCompleto() ? 'Listo para registrar' : 'Ajustar montos' }}</span>
-            </div>
-          </div>
-
           <div class="footer-actions">
             <button type="button" class="btn btn-outline-secondary btn-footer" (click)="modal.dismiss()">
               <i class="bi bi-x-circle me-1"></i>

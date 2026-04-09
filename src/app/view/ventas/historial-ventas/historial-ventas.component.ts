@@ -3313,16 +3313,6 @@ export class HistorialVentasComponent implements OnInit {
       this.prepararDatosRecibo(this.ventaParaRecibo);
       this.actualizarVistaPreviaRecibo();
 
-      // Mostrar el modal después de preparar los datos
-      setTimeout(() => {
-        this.mostrarModalRecibo = true;
-
-        // Forzar detección de cambios
-        setTimeout(() => {
-          this.scrollToTop();
-        }, 50);
-      }, 50);
-
     } catch (error) {
       console.error('Error crítico al preparar recibo:', error);
       this.swalService.showError('Error',
@@ -3867,10 +3857,6 @@ export class HistorialVentasComponent implements OnInit {
       console.error('Error al copiar:', err);
       this.swalService.showError('Error', 'No se pudo copiar el enlace');
     });
-  }
-
-  private scrollToTop(): void {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   getTituloReciboParaHTML(formaPago: string): string {
