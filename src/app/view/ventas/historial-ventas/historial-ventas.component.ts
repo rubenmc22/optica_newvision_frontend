@@ -190,6 +190,19 @@ export class HistorialVentasComponent implements OnInit {
     { codigo: '0000', nombre: 'Otro', displayText: '0000 - Otro' }
   ];
 
+  bancosUsaDisponibles: Array<{ codigo: string; nombre: string; displayText: string }> = [
+    { codigo: 'BOFA', nombre: 'Bank of America', displayText: 'BOFA - Bank of America' },
+    { codigo: 'CHASE', nombre: 'Chase', displayText: 'CHASE - Chase' },
+    { codigo: 'WF', nombre: 'Wells Fargo', displayText: 'WF - Wells Fargo' },
+    { codigo: 'CITI', nombre: 'Citibank', displayText: 'CITI - Citibank' },
+    { codigo: 'CAP1', nombre: 'Capital One', displayText: 'CAP1 - Capital One' },
+    { codigo: 'PNC', nombre: 'PNC Bank', displayText: 'PNC - PNC Bank' },
+    { codigo: 'TD', nombre: 'TD Bank', displayText: 'TD - TD Bank' },
+    { codigo: 'US', nombre: 'U.S. Bank', displayText: 'US - U.S. Bank' },
+    { codigo: 'NAVY', nombre: 'Navy Federal', displayText: 'NAVY - Navy Federal' },
+    { codigo: 'OTRO', nombre: 'Otro banco USA', displayText: 'OTRO - Otro banco USA' }
+  ];
+
   // Paginación
   paginacion = {
     paginaActual: 1,
@@ -605,44 +618,17 @@ export class HistorialVentasComponent implements OnInit {
     const venta = ventaApi;
     const metodosPagoApi = venta.metodosDePago || [];
     const formaPagoDetalle = venta.formaPagoDetalle;
+    const formaPagoApi = venta.formaPago || {};
+    const abonosApi = formaPagoDetalle?.abonos || formaPagoApi?.abonos || [];
 
     // Obtener el total pagado en la moneda de la venta desde formaPagoDetalle
     const totalPagadoEnMonedaVenta = formaPagoDetalle?.totalPagado || 0;
-
-    // Calcular la proporción de cada método de pago
-    let totalMontoOriginal = 0;
-    metodosPagoApi.forEach((metodo: any) => {
-      totalMontoOriginal += metodo.monto || 0;
-    });
-
-    const metodosPagoAdaptados = Array.isArray(metodosPagoApi) && metodosPagoApi.length > 0
-      ? metodosPagoApi.map((metodo: any, index: number) => {
-        // Calcular el monto en la moneda de la venta basado en la proporción
-        let montoEnMonedaVenta = 0;
-        if (totalMontoOriginal > 0) {
-          const proporcion = (metodo.monto || 0) / totalMontoOriginal;
-          montoEnMonedaVenta = totalPagadoEnMonedaVenta * proporcion;
-        } else if (index === 0) {
-          montoEnMonedaVenta = totalPagadoEnMonedaVenta;
-        }
-
-        return {
-          numero_pago: index + 1,
-          montoAbonado: metodo.monto || 0,
-          observaciones: '',
-          metodosPago: [{
-            tipo: metodo.tipo || 'efectivo',
-            monto: metodo.monto || 0,
-            moneda_id: metodo.moneda || 'dolar',
-            monto_en_moneda_de_venta: montoEnMonedaVenta,
-            referencia: metodo.referencia,
-            bancoCodigo: metodo.bancoCodigo,
-            bancoNombre: metodo.bancoNombre,
-            fechaRegistro: venta.auditoria?.fechaCreacion
-          }]
-        };
-      })
-      : [];
+    const metodosPagoAdaptados = this.construirHistorialPagosVenta(
+      venta,
+      metodosPagoApi,
+      abonosApi,
+      totalPagadoEnMonedaVenta
+    );
 
     // Determinar el estado para filtros
     const estadoVenta = this.determinarEstadoVenta(venta.estatus_venta);
@@ -720,6 +706,7 @@ export class HistorialVentasComponent implements OnInit {
       moneda: venta.moneda,
       tipoVenta: venta.tipoVenta || 'solo_productos',
       formaPago: formaPagoReal,
+      formaPagoApi: formaPagoApi,
       formaPagoCompleto: formaPagoDetalle,
       descuento: venta.descuento || 0,
       observaciones: venta.observaciones,
@@ -804,6 +791,133 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     return ventaAdaptada;
+  }
+
+  private construirHistorialPagosVenta(
+    venta: any,
+    metodosPagoApi: any[],
+    abonosApi: any[],
+    totalPagadoEnMonedaVenta: number
+  ): any[] {
+    const historialPagos: any[] = [];
+    const formaPagoTipo = venta?.formaPagoDetalle?.tipo || venta?.formaPago?.tipo || 'contado';
+    const fechaVenta = venta?.auditoria?.fechaCreacion || venta?.fecha;
+
+    const metodosIniciales = (metodosPagoApi || []).map((metodo: any) =>
+      this.normalizarMetodoPagoApi(metodo, venta, fechaVenta)
+    );
+
+    const totalAbonosRegistrados = (abonosApi || []).reduce((acumulado: number, abono: any) => {
+      const montoAbono = Number(abono?.montoAbonado || 0);
+      if (montoAbono > 0) {
+        return acumulado + montoAbono;
+      }
+
+      const metodosAbono = Array.isArray(abono?.metodosDePago)
+        ? abono.metodosDePago.map((metodo: any) => this.normalizarMetodoPagoApi(metodo, venta, abono?.fecha))
+        : [];
+      return acumulado + this.sumarMontoEnVenta(metodosAbono);
+    }, 0);
+
+    const totalInicialEnVenta = this.redondear(Math.max(0, totalPagadoEnMonedaVenta - totalAbonosRegistrados));
+
+    if (metodosIniciales.length > 0) {
+      historialPagos.push({
+        numero_pago: 0,
+        titulo: this.getTituloGrupoPagoInicial(formaPagoTipo),
+        tipoRegistro: formaPagoTipo === 'abono' ? 'inicial' : 'pago',
+        fecha: fechaVenta,
+        fechaRegistro: fechaVenta,
+        montoAbonado: totalInicialEnVenta > 0 ? totalInicialEnVenta : this.sumarMontoEnVenta(metodosIniciales),
+        deudaPendiente: venta?.formaPagoDetalle?.deuda ?? venta?.formaPago?.deudaPendiente ?? 0,
+        observaciones: venta?.observaciones || '',
+        metodosPago: metodosIniciales
+      });
+    }
+
+    (abonosApi || []).forEach((abono: any, index: number) => {
+      const metodosAbono = Array.isArray(abono?.metodosDePago)
+        ? abono.metodosDePago.map((metodo: any) => this.normalizarMetodoPagoApi(metodo, venta, abono?.fecha))
+        : [];
+
+      historialPagos.push({
+        numero_pago: abono?.numero || index + 1,
+        titulo: `Abono #${abono?.numero || index + 1}`,
+        tipoRegistro: 'abono',
+        fecha: abono?.fecha,
+        fechaRegistro: abono?.fecha,
+        montoAbonado: Number(abono?.montoAbonado || this.sumarMontoEnVenta(metodosAbono)),
+        deudaPendiente: Number(abono?.deudaPendiente ?? 0),
+        observaciones: abono?.observaciones || '',
+        metodosPago: metodosAbono
+      });
+    });
+
+    return historialPagos;
+  }
+
+  private normalizarMetodoPagoApi(metodo: any, venta: any, fechaRegistro?: string): any {
+    const monedaMetodo = this.normalizarMoneda(metodo?.moneda || metodo?.moneda_id || 'dolar');
+    const monedaVenta = this.normalizarMoneda(venta?.moneda || 'dolar');
+    const monedaSistema = this.normalizarMoneda(metodo?.monedaSistema || this.getMonedaSistema());
+    const montoOriginal = Number(metodo?.monto || 0);
+
+    const montoEnMonedaVenta = Number(
+      metodo?.montoEnMonedaVenta ??
+      metodo?.monto_en_moneda_de_venta ??
+      metodo?.montoEnMonedaSistema ??
+      (monedaMetodo === monedaVenta ? montoOriginal : this.convertirMonto(montoOriginal, monedaMetodo, monedaVenta))
+    );
+
+    const montoEnMonedaSistema = Number(
+      metodo?.montoEnMonedaSistema ??
+      (monedaMetodo === monedaSistema ? montoOriginal : this.convertirMonto(montoOriginal, monedaMetodo, monedaSistema))
+    );
+
+    const montoEnBolivar = Number(
+      metodo?.montoEnBolivar ??
+      (monedaMetodo === 'bolivar' ? montoOriginal : this.convertirMonto(montoOriginal, monedaMetodo, 'bolivar'))
+    );
+
+    return {
+      tipo: metodo?.tipo || 'efectivo',
+      monto: montoOriginal,
+      moneda: monedaMetodo,
+      monto_en_moneda_de_venta: this.redondear(montoEnMonedaVenta),
+      montoEnMonedaSistema: this.redondear(montoEnMonedaSistema),
+      monedaSistema,
+      montoEnBolivar: this.redondear(montoEnBolivar),
+      referencia: metodo?.referencia || null,
+      bancoCodigo: metodo?.bancoCodigo || null,
+      bancoNombre: metodo?.bancoNombre || null,
+      banco: metodo?.banco || metodo?.bancoNombre || null,
+      bancoReceptorCodigo: metodo?.bancoReceptorCodigo || null,
+      bancoReceptorNombre: metodo?.bancoReceptorNombre || null,
+      bancoReceptor: metodo?.bancoReceptor || metodo?.bancoReceptorNombre || null,
+      notaPago: metodo?.notaPago || null,
+      fechaRegistro: fechaRegistro || metodo?.fechaRegistro || venta?.auditoria?.fechaCreacion || venta?.fecha || null
+    };
+  }
+
+  private sumarMontoEnVenta(metodos: any[]): number {
+    return this.redondear(
+      (metodos || []).reduce((total: number, metodo: any) => {
+        return total + Number(metodo?.monto_en_moneda_de_venta || 0);
+      }, 0)
+    );
+  }
+
+  private getTituloGrupoPagoInicial(tipoFormaPago: string): string {
+    switch (tipoFormaPago) {
+      case 'abono':
+        return 'Pago inicial';
+      case 'cashea':
+        return 'Inicial y cuotas adelantadas';
+      case 'de_contado-pendiente':
+        return 'Pago aplicado';
+      default:
+        return 'Pago registrado';
+    }
   }
 
   private determinarEstadoVenta(estatusVenta: string): string {
@@ -1114,14 +1228,13 @@ export class HistorialVentasComponent implements OnInit {
   private prepararMetodosPagoParaAPI(): any[] {
     const metodosPagoParaAPI = [];
 
-    this.metodosPagoArray.controls.forEach((control, index) => {
+    this.metodosPagoArray.controls.forEach((control) => {
       const metodo = control.value;
       const tipoPago = metodo.tipo;
       const montoIngresado = Number(metodo.monto) || 0;
 
       if (!tipoPago || montoIngresado <= 0) return;
 
-      const monedaSistema = this.getMonedaSistema();
       const monedaVenta = this.getMonedaVenta();
 
       let monedaMetodo = '';
@@ -1134,7 +1247,7 @@ export class HistorialVentasComponent implements OnInit {
           if (monedaEfectivo === 'USD') {
             monedaMetodo = 'dolar';
             montoEnMonedaMetodo = montoIngresado;
-            montoEnMonedaVenta = montoIngresado;
+            montoEnMonedaVenta = this.convertirMonto(montoIngresado, 'dolar', monedaVenta);
           } else if (monedaEfectivo === 'EUR') {
             monedaMetodo = 'euro';
             montoEnMonedaMetodo = montoIngresado;
@@ -1150,17 +1263,14 @@ export class HistorialVentasComponent implements OnInit {
         case 'pagomovil':
         case 'transferencia':
           monedaMetodo = 'bolivar';
-          montoEnMonedaVenta = montoIngresado;
-          // Usar la moneda del sistema normalizada
-          const monedaSistemaNormalizada = this.getMonedaSistema();
-          console.log(`💱 Convirtiendo: ${montoIngresado} ${monedaSistemaNormalizada} → bolivar`);
-          montoEnMonedaMetodo = this.convertirMonto(montoIngresado, monedaSistemaNormalizada, 'bolivar');
+          montoEnMonedaMetodo = montoIngresado;
+          montoEnMonedaVenta = this.convertirMonto(montoIngresado, 'bolivar', monedaVenta);
           break;
 
         case 'zelle':
           monedaMetodo = 'dolar';
           montoEnMonedaMetodo = montoIngresado;
-          montoEnMonedaVenta = montoIngresado;
+          montoEnMonedaVenta = this.convertirMonto(montoIngresado, 'dolar', monedaVenta);
           break;
 
         default:
@@ -1182,11 +1292,15 @@ export class HistorialVentasComponent implements OnInit {
 
       const metodoFormateado = {
         tipo: tipoPago,
-        monto: this.redondear(montoEnMonedaMetodo),  // ← Aquí va el valor CONVERTIDO
+        monto: this.redondear(montoEnMonedaMetodo),
         moneda: monedaMetodo,
         referencia: metodo.referencia?.trim() || null,
         bancoCodigo: bancoCodigo?.trim() || null,
         bancoNombre: bancoNombre?.trim() || null,
+        bancoReceptorCodigo: metodo.bancoReceptorCodigo?.trim() || null,
+        bancoReceptorNombre: metodo.bancoReceptorNombre?.trim() || null,
+        bancoReceptor: metodo.bancoReceptor?.trim() || null,
+        notaPago: metodo.notaPago?.trim() || null,
         montoEnMonedaVenta: this.redondear(montoEnMonedaVenta)
       };
 
@@ -1199,6 +1313,17 @@ export class HistorialVentasComponent implements OnInit {
 
   private actualizarVentaDespuesAbono(ventaActualizadaAPI: any): void {
     if (!ventaActualizadaAPI || !this.selectedVenta) return;
+
+    if (ventaActualizadaAPI.key || ventaActualizadaAPI.numero_venta) {
+      const ventaNormalizada = this.adaptarVentaDelApi(ventaActualizadaAPI);
+      this.selectedVenta = ventaNormalizada;
+
+      const indiceVenta = this.ventasFiltradas.findIndex(v => v.key === ventaNormalizada.key);
+      if (indiceVenta !== -1) {
+        this.ventasFiltradas[indiceVenta] = ventaNormalizada;
+      }
+      return;
+    }
 
     // Obtener los nuevos métodos de pago del backend
     const nuevosMetodosPago = ventaActualizadaAPI.metodosPago || [];
@@ -1215,6 +1340,7 @@ export class HistorialVentasComponent implements OnInit {
       metodosPago: [...(this.selectedVenta.metodosPago || []), ...nuevosMetodosPago],
       observaciones: this.editarVentaForm?.get('observaciones')?.value || this.selectedVenta.observaciones,
       deudaPendiente: ventaActualizadaAPI.formaPago?.deudaPendiente ||
+        ventaActualizadaAPI.formaPagoDetalle?.deuda ||
         Math.max(0, this.selectedVenta.total - nuevoMontoAbonado)
     };
 
@@ -1352,16 +1478,23 @@ export class HistorialVentasComponent implements OnInit {
     const monto = control.get('monto')?.value;
     const referencia = control.get('referencia')?.value;
     const banco = control.get('bancoObject')?.value;
+    const bancoReceptor = control.get('bancoReceptorObject')?.value;
+    const notaPago = control.get('notaPago')?.value;
 
     // Si tiene algún valor, se considera que tiene datos
-    return !!(tipo || monto || referencia || banco);
+    return !!(tipo || monto || referencia || banco || bancoReceptor || notaPago);
   }
 
   private prepararRequestParaBackend(metodosPago: any[], montoAbonado: number): any {
+    const totalPagadoPrevio = Number(this.selectedVenta?.formaPagoCompleto?.totalPagado || this.selectedVenta?.montoAbonado || 0);
+    const totalVenta = Number(this.selectedVenta?.total || 0);
+    const totalPagadoAcumulado = totalPagadoPrevio + Number(montoAbonado || 0);
+
     // Estructura base del request
     const request: any = {
       // Información del abono
       montoAbonado: montoAbonado,
+      ordenTrabajo: totalVenta > 0 ? (totalPagadoAcumulado / totalVenta) > 0.5 : false,
 
       // Lista completa de métodos de pago
       metodosPago: metodosPago.map(metodo => ({
@@ -1371,6 +1504,10 @@ export class HistorialVentasComponent implements OnInit {
         referencia: metodo.referencia || null,
         bancoCodigo: metodo.bancoCodigo || null,
         bancoNombre: metodo.bancoNombre || null,
+        bancoReceptorCodigo: metodo.bancoReceptorCodigo || null,
+        bancoReceptorNombre: metodo.bancoReceptorNombre || null,
+        bancoReceptor: metodo.bancoReceptor || null,
+        notaPago: metodo.notaPago || null,
 
         // Información adicional para el backend (opcional)
         montoEnMonedaVenta: this.convertirMonto(
@@ -1725,8 +1862,14 @@ export class HistorialVentasComponent implements OnInit {
       monedaEfectivo: ['USD'],
       bancoCodigo: [''],
       bancoNombre: [''],
+      banco: [''],
       referencia: [''],
-      bancoObject: [null]
+      bancoObject: [null],
+      bancoReceptorCodigo: [''],
+      bancoReceptorNombre: [''],
+      bancoReceptor: [''],
+      bancoReceptorObject: [null],
+      notaPago: ['']
     });
 
     this.metodosPagoArray.push(metodoGroup);
@@ -1752,6 +1895,16 @@ export class HistorialVentasComponent implements OnInit {
           metodoGroup.get('bancoNombre')?.clearValidators();
         }
 
+        if (this.necesitaBancoReceptor(tipo)) {
+          metodoGroup.get('bancoReceptorObject')?.setValidators([Validators.required]);
+          metodoGroup.get('bancoReceptorCodigo')?.setValidators([Validators.required]);
+          metodoGroup.get('bancoReceptorNombre')?.setValidators([Validators.required]);
+        } else {
+          metodoGroup.get('bancoReceptorObject')?.clearValidators();
+          metodoGroup.get('bancoReceptorCodigo')?.clearValidators();
+          metodoGroup.get('bancoReceptorNombre')?.clearValidators();
+        }
+
         if (this.necesitaReferencia(tipo)) {
           metodoGroup.get('referencia')?.setValidators([Validators.required]);
         } else {
@@ -1763,6 +1916,9 @@ export class HistorialVentasComponent implements OnInit {
         metodoGroup.get('bancoObject')?.clearValidators();
         metodoGroup.get('bancoCodigo')?.clearValidators();
         metodoGroup.get('bancoNombre')?.clearValidators();
+        metodoGroup.get('bancoReceptorObject')?.clearValidators();
+        metodoGroup.get('bancoReceptorCodigo')?.clearValidators();
+        metodoGroup.get('bancoReceptorNombre')?.clearValidators();
         metodoGroup.get('referencia')?.clearValidators();
       }
 
@@ -1772,6 +1928,9 @@ export class HistorialVentasComponent implements OnInit {
       metodoGroup.get('bancoObject')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
       metodoGroup.get('bancoCodigo')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
       metodoGroup.get('bancoNombre')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+      metodoGroup.get('bancoReceptorObject')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+      metodoGroup.get('bancoReceptorCodigo')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
+      metodoGroup.get('bancoReceptorNombre')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
       metodoGroup.get('referencia')?.updateValueAndValidity({ onlySelf: true, emitEvent: false });
     });
 
@@ -1818,6 +1977,10 @@ export class HistorialVentasComponent implements OnInit {
           control.get('bancoObject')?.markAsTouched();
         }
 
+        if (this.necesitaBancoReceptor(tipo)) {
+          control.get('bancoReceptorObject')?.markAsTouched();
+        }
+
         if (this.necesitaReferencia(tipo)) {
           control.get('referencia')?.markAsTouched();
         }
@@ -1832,7 +1995,9 @@ export class HistorialVentasComponent implements OnInit {
         // Si no tiene tipo pero tiene otros datos, marcar como error
         const tieneOtrosDatos = control.get('monto')?.value ||
           control.get('referencia')?.value ||
-          control.get('bancoObject')?.value;
+          control.get('bancoObject')?.value ||
+          control.get('bancoReceptorObject')?.value ||
+          control.get('notaPago')?.value;
 
         if (tieneOtrosDatos) {
           errores.push(`Método ${index + 1}: Selecciona un tipo de pago`);
@@ -1851,6 +2016,10 @@ export class HistorialVentasComponent implements OnInit {
       // Validar banco si es requerido
       if (this.necesitaBanco(tipo) && !control.get('bancoObject')?.value) {
         errores.push(`Método ${numeroMetodo} (${tipo}): Selecciona un banco`);
+      }
+
+      if (this.necesitaBancoReceptor(tipo) && !control.get('bancoReceptorObject')?.value) {
+        errores.push(`Método ${numeroMetodo} (${tipo}): Selecciona el banco receptor`);
       }
 
       // Validar referencia si es requerida
@@ -1896,9 +2065,13 @@ export class HistorialVentasComponent implements OnInit {
     if (!this.selectedVenta) return 0;
 
     //Intentar usar la deuda del API si está disponible
-    if (this.selectedVenta?.formaPago?.deudaPendiente !== undefined &&
-      this.selectedVenta?.formaPago?.deudaPendiente !== null) {
-      return Math.max(0, this.selectedVenta.formaPago.deudaPendiente);
+    const deudaApi = this.selectedVenta?.formaPagoCompleto?.deuda ??
+      this.selectedVenta?.formaPagoApi?.deudaPendiente ??
+      this.selectedVenta?.formaPagoApi?.deuda ??
+      this.selectedVenta?.formaPagoDetalle?.deuda;
+
+    if (deudaApi !== undefined && deudaApi !== null) {
+      return Math.max(0, Number(deudaApi));
     }
 
     //Intentar usar la propiedad mapeada
@@ -1909,7 +2082,8 @@ export class HistorialVentasComponent implements OnInit {
 
     //Calcular manualmente usando totalPagado del API
     const totalVenta = this.selectedVenta.total || 0;
-    const totalPagado = this.selectedVenta?.formaPago?.totalPagadoAhora ||
+    const totalPagado = this.selectedVenta?.formaPagoCompleto?.totalPagado ||
+      this.selectedVenta?.formaPagoApi?.totalPagadoAhora ||
       this.selectedVenta?.montoAbonado || 0;
 
     return Math.max(0, totalVenta - totalPagado);
@@ -2078,19 +2252,22 @@ export class HistorialVentasComponent implements OnInit {
 
   getMontoMaximoParaMetodoEnSistema(index: number): number {
     const montoAbonado = this.editarVentaForm.get('montoAbonado')?.value || 0;
+    const monedaVenta = this.getMonedaVenta();
+    const monedaSistema = this.getMonedaSistema();
 
     // Calcular total de otros métodos convertidos a moneda del sistema
     const totalOtrosMetodos = this.metodosPagoArray.controls.reduce((total, control, i) => {
       if (i !== index) {
-        const monto = control.get('monto')?.value || 0;
-        const tipoPago = control.get('tipo')?.value;
-        // Si el método es punto/pagomovil/transferencia, el monto está en moneda del sistema
-        return total + monto;
+        const monto = Number(control.get('monto')?.value || 0);
+        const monedaMetodo = this.getMonedaParaMetodo(i);
+        const montoConvertido = this.convertirMonto(monto, monedaMetodo, monedaSistema);
+        return total + montoConvertido;
       }
       return total;
     }, 0);
 
-    const restanteEnSistema = Math.max(0, montoAbonado - totalOtrosMetodos);
+    const montoAbonadoEnSistema = this.convertirMonto(montoAbonado, monedaVenta, monedaSistema);
+    const restanteEnSistema = Math.max(0, montoAbonadoEnSistema - totalOtrosMetodos);
     return this.redondear(restanteEnSistema);
   }
 
@@ -2101,26 +2278,23 @@ export class HistorialVentasComponent implements OnInit {
   validarMontoMetodoPago(index: number): void {
     const metodoControl = this.metodosPagoArray.at(index);
     const tipoPago = metodoControl?.get('tipo')?.value;
-    const montoIngresadoEnSistema = metodoControl?.get('monto')?.value || 0;
+    const montoIngresado = Number(metodoControl?.get('monto')?.value || 0);
 
-    // Calcular el monto máximo disponible en la moneda del sistema
-    const montoMaximoEnSistema = this.getMontoMaximoParaMetodoEnSistema(index);
+    const montoMaximoEnMetodo = this.getMontoMaximoParaMetodo(index);
 
-    let montoFinalEnSistema = montoIngresadoEnSistema;
-    if (montoIngresadoEnSistema > montoMaximoEnSistema) {
-      montoFinalEnSistema = montoMaximoEnSistema;
+    let montoFinal = montoIngresado;
+    if (montoIngresado > montoMaximoEnMetodo) {
+      montoFinal = montoMaximoEnMetodo;
       metodoControl.patchValue({
-        monto: montoMaximoEnSistema
+        monto: montoMaximoEnMetodo
       }, { emitEvent: false });
     }
 
     // Para punto, pagomovil, transferencia, el valor que se guarda es en bolívares
     if (tipoPago === 'punto' || tipoPago === 'pagomovil' || tipoPago === 'transferencia') {
-      const montoEnBolivares = this.getMontoEnMonedaMetodo(montoFinalEnSistema, tipoPago);
-      // Guardar el monto en bolívares en el control
       metodoControl.patchValue({
-        montoEnBolivares: montoEnBolivares
-      });
+        montoEnBolivares: this.redondear(montoFinal)
+      }, { emitEvent: false });
     }
 
     this.cdRef.detectChanges();
@@ -2155,9 +2329,10 @@ export class HistorialVentasComponent implements OnInit {
   calcularTotalMetodosPagoEnMonedaVenta(): number {
     let total = 0;
 
-    this.metodosPagoArray.controls.forEach((control) => {
-      const monto = control.get('monto')?.value || 0;
-      total += monto;
+    this.metodosPagoArray.controls.forEach((control, index) => {
+      const monto = Number(control.get('monto')?.value || 0);
+      const monedaMetodo = this.getMonedaParaMetodo(index);
+      total += this.convertirMonto(monto, monedaMetodo, this.getMonedaVenta());
     });
 
     return this.redondear(total);
@@ -2181,23 +2356,31 @@ export class HistorialVentasComponent implements OnInit {
 
   onMetodoPagoChange(index: number) {
     const metodoControl = this.metodosPagoArray.at(index);
-    const tipoAnterior = metodoControl.get('tipo')?.value;
     const tipoNuevo = metodoControl.get('tipo')?.value;
 
     // Resetear monto si el tipo de pago cambia
     metodoControl.patchValue({
-      monto: 0
+      monto: 0,
+      referencia: '',
+      bancoCodigo: '',
+      bancoNombre: '',
+      bancoObject: null,
+      bancoReceptorCodigo: '',
+      bancoReceptorNombre: '',
+      bancoReceptor: '',
+      bancoReceptorObject: null,
+      notaPago: ''
     });
 
     // Si se cambia a efectivo, establecer moneda por defecto
     if (tipoNuevo === 'efectivo') {
-      // Establecer moneda por defecto basada en la moneda del sistema o venta
-      if (this.monedaSistema === 'BS' || this.monedaSistema === 'VES') {
-        this.monedaEfectivo = 'Bs';
-      } else if (this.monedaSistema === 'EUR') {
-        this.monedaEfectivo = 'EUR';
+      const monedaVenta = this.getMonedaVenta();
+      if (monedaVenta === 'bolivar') {
+        metodoControl.patchValue({ monedaEfectivo: 'Bs' }, { emitEvent: false });
+      } else if (monedaVenta === 'euro') {
+        metodoControl.patchValue({ monedaEfectivo: 'EUR' }, { emitEvent: false });
       } else {
-        this.monedaEfectivo = 'USD';
+        metodoControl.patchValue({ monedaEfectivo: 'USD' }, { emitEvent: false });
       }
     }
 
@@ -2237,7 +2420,7 @@ export class HistorialVentasComponent implements OnInit {
       case 'punto':
       case 'pagomovil':
       case 'transferencia':
-        return this.getSimboloMonedaSistema();  // Mostrar en moneda del sistema
+        return 'Bs.';
       case 'zelle':
         return '$';
       default:
@@ -2309,6 +2492,13 @@ export class HistorialVentasComponent implements OnInit {
     // Convertir a la moneda del método específico
     const monedaMetodo = this.getMonedaParaMetodo(index);
     return this.convertirMonto(restanteEnMonedaVenta, monedaVenta, monedaMetodo);
+  }
+
+  getMontoMetodoEnMonedaVenta(index: number): number {
+    const metodoControl = this.metodosPagoArray.at(index);
+    const monto = Number(metodoControl?.get('monto')?.value || 0);
+    const monedaMetodo = this.getMonedaParaMetodo(index);
+    return this.convertirMonto(monto, monedaMetodo, this.getMonedaVenta());
   }
 
   // Método para calcular la deuda restante después del nuevo abono
@@ -3313,53 +3503,133 @@ export class HistorialVentasComponent implements OnInit {
     return 'bg-secondary';
   }
 
+  private obtenerNombreProductoRecibo(producto: any, index: number): string {
+    const candidatos = [
+      producto?.nombre,
+      producto?.datos?.nombre,
+      producto?.producto?.nombre,
+      producto?.descripcion,
+      producto?.productoNombre,
+      producto?.montura?.nombre,
+      producto?.categoria?.nombre
+    ];
+
+    const nombreValido = candidatos.find((valor: any) => typeof valor === 'string' && valor.trim().length > 0);
+
+    if (nombreValido) {
+      return nombreValido.trim();
+    }
+
+    if (producto?.codigo) {
+      return `Item ${producto.codigo}`;
+    }
+
+    return `Item ${index + 1}`;
+  }
+
+  private normalizarProductoParaRecibo(producto: any, index: number): any {
+    const cantidad = Math.max(1, Number(producto?.cantidad || 1));
+    const impuesto = Number(this.ventaParaRecibo?.impuesto || 16);
+    const tieneIva = producto?.tiene_iva === 1 || producto?.tieneIva === true || producto?.aplicaIva === true;
+
+    const totalUnitarioConIva = Number(
+      producto?.precio_unitario ??
+      producto?.precioUnitarioConIva ??
+      producto?.precioConIva ??
+      ((producto?.total && cantidad) ? Number(producto.total) / cantidad : 0)
+    );
+
+    const precioBase = producto?.precio_unitario_sin_iva ??
+      producto?.precioUnitarioSinIva ??
+      ((producto?.precio !== undefined && producto?.precio !== null) ? producto.precio : undefined);
+
+    const precioUnitarioSinIva = Number(
+      precioBase ??
+      (tieneIva && totalUnitarioConIva > 0 ? totalUnitarioConIva / (1 + (impuesto / 100)) : totalUnitarioConIva)
+    );
+
+    const precioUnitarioConIva = Number(
+      totalUnitarioConIva > 0
+        ? totalUnitarioConIva
+        : (tieneIva ? precioUnitarioSinIva * (1 + (impuesto / 100)) : precioUnitarioSinIva)
+    );
+
+    const subtotal = this.redondear(precioUnitarioSinIva * cantidad);
+    const total = this.redondear(Number(producto?.total ?? (precioUnitarioConIva * cantidad)));
+
+    return {
+      nombre: this.obtenerNombreProductoRecibo(producto, index),
+      cantidad,
+      precio_unitario_sin_iva: this.redondear(precioUnitarioSinIva),
+      precio_unitario: this.redondear(precioUnitarioConIva),
+      subtotal,
+      total,
+      tiene_iva: tieneIva,
+      esServicio: false
+    };
+  }
+
+  private construirServicioConsultaRecibo(): any | null {
+    const consulta = this.ventaParaRecibo?.consulta;
+    if (!consulta) {
+      return null;
+    }
+
+    const monto = Number(consulta.montoOriginal || consulta.montoTotal || 0);
+    if (monto <= 0) {
+      return null;
+    }
+
+    const tipo = consulta.tipoEspecialista || consulta.especialista?.tipo || 'especializada';
+
+    return {
+      nombre: `Consulta ${tipo}`.trim(),
+      cantidad: 1,
+      precio_unitario_sin_iva: this.redondear(monto),
+      precio_unitario: this.redondear(monto),
+      subtotal: this.redondear(monto),
+      total: this.redondear(monto),
+      tiene_iva: false,
+      esServicio: true
+    };
+  }
+
+  private construirItemsRecibo(): any[] {
+    if (!this.ventaParaRecibo) {
+      return [];
+    }
+
+    const productosFuente = this.ventaParaRecibo.productosOriginales?.length
+      ? this.ventaParaRecibo.productosOriginales
+      : (this.ventaParaRecibo.productos || []);
+
+    const items = Array.isArray(productosFuente)
+      ? productosFuente.map((producto: any, index: number) => this.normalizarProductoParaRecibo(producto, index))
+      : [];
+
+    const servicioConsulta = this.construirServicioConsultaRecibo();
+    if (servicioConsulta) {
+      items.unshift(servicioConsulta);
+    }
+
+    return items;
+  }
+
   getProductosSeguros(): any[] {
     if (!this.ventaParaRecibo) {
       return [];
     }
 
-    // PRIORIDAD 1: Usar productosOriginales si están disponibles
-    if (this.ventaParaRecibo.productosOriginales &&
-      this.ventaParaRecibo.productosOriginales.length > 0) {
-
-      return this.ventaParaRecibo.productosOriginales.map((prod: any) => {
-        // Precio unitario sin IVA del API original
-        const precioUnitarioSinIva = prod.precio_unitario_sin_iva || 0;
-        const cantidad = prod.cantidad || 1;
-
-        // Calcular subtotal: precio sin IVA × cantidad
-        const subtotalCalculado = precioUnitarioSinIva * cantidad;
-
-        return {
-          nombre: prod.datos?.nombre || 'Producto sin nombre',
-          cantidad: cantidad,
-          precioUnitarioSinIva: precioUnitarioSinIva,
-          precioUnitarioConIva: prod.precio_unitario || 0,
-          subtotalCalculado: subtotalCalculado,
-          totalOriginal: prod.total,
-          tieneIva: prod.tiene_iva === 1
-        };
-      });
-    }
-
-    // PRIORIDAD 2: Usar productos procesados como fallback
-    return (this.ventaParaRecibo.productos || []).map((prod: any) => {
-      // Calcular precio sin IVA basado en el impuesto
-      const impuesto = this.ventaParaRecibo.impuesto || 16;
-      const precioConIVA = prod.precio || 0;
-      const cantidad = prod.cantidad || 1;
-
-      // Fórmula: precioSinIVA = precioConIVA / (1 + impuesto/100)
-      const precioSinIVA = precioConIVA / (1 + (impuesto / 100));
-
-      return {
-        nombre: prod.nombre || 'Producto sin nombre',
-        cantidad: cantidad,
-        precioUnitarioSinIva: precioSinIVA,
-        precioUnitarioConIva: precioConIVA,
-        subtotalCalculado: precioSinIVA * cantidad
-      };
-    });
+    return this.construirItemsRecibo().map((item: any) => ({
+      nombre: item.nombre,
+      cantidad: item.cantidad,
+      precioUnitarioSinIva: item.precio_unitario_sin_iva,
+      precioUnitarioConIva: item.precio_unitario,
+      subtotalCalculado: item.subtotal,
+      totalOriginal: item.total,
+      tieneIva: item.tiene_iva,
+      esServicio: item.esServicio === true
+    }));
   }
 
   formatearTipoPago(tipo: string): string {
@@ -3376,39 +3646,30 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   getDescuentoSeguro(): number {
-    return this.ventaParaRecibo?.descuento || 0;
+    return this.ventaParaRecibo ? this.getTotalDescuentoMoneda(this.ventaParaRecibo) : 0;
   }
 
 
   getMontoTotalSeguro(): number {
     if (!this.ventaParaRecibo) return 0;
 
-    // Intentar obtener el total de múltiples fuentes
-    const totalDelApi = this.ventaParaRecibo?.total ||
-      this.ventaParaRecibo?.montoTotal ||
-      this.datosRecibo?.totalVenta ||
-      0;
+    const totalDelApi = Number(this.getTotalVenta(this.ventaParaRecibo) || this.datosRecibo?.totales?.total || 0);
+    const subtotal = Number(this.getSubtotalSeguro() || 0);
+    const descuento = Number(this.getDescuentoSeguro() || 0);
+    const iva = Number(this.getIvaSeguro() || 0);
+    const totalCalculado = this.redondear(Math.max(0, subtotal - descuento + iva));
 
-    // Si el total parece incorrecto (menor que subtotal + IVA), calcularlo
-    const subtotal = this.getSubtotalSeguro();
-    const iva = this.getIvaSeguro();
-    const totalCalculado = subtotal + iva;
-
-    // Usar el mayor de los dos valores para evitar errores
-    return Math.max(totalDelApi, totalCalculado);
+    return totalDelApi > 0 ? this.redondear(totalDelApi) : totalCalculado;
   }
 
   getSubtotalSeguro(): number {
-    return this.ventaParaRecibo?.subtotal ||
-      this.datosRecibo?.subtotal ||
-      0;
+    if (!this.ventaParaRecibo) return 0;
+    return this.redondear(Number(this.getSubtotalVenta(this.ventaParaRecibo) || this.datosRecibo?.totales?.subtotal || 0));
   }
 
   getIvaSeguro(): number {
-    return this.ventaParaRecibo?.totalIva ||
-      this.ventaParaRecibo?.iva ||
-      this.datosRecibo?.iva ||
-      0;
+    if (!this.ventaParaRecibo) return 0;
+    return this.redondear(Number(this.getIvaVenta(this.ventaParaRecibo) || this.datosRecibo?.totales?.iva || 0));
   }
 
   // Método para obtener la deuda pendiente específica para abono
@@ -3660,49 +3921,7 @@ export class HistorialVentasComponent implements OnInit {
       return [];
     }
 
-    // Prioridad 1: Usar productosOriginales si están disponibles
-    if (this.ventaParaRecibo.productosOriginales &&
-      this.ventaParaRecibo.productosOriginales.length > 0) {
-
-      return this.ventaParaRecibo.productosOriginales.map((prod: any) => {
-        // Precio unitario sin IVA del API
-        const precioUnitarioSinIva = prod.precio_unitario_sin_iva || 0;
-        const cantidad = prod.cantidad || 1;
-
-        // Calcular subtotal: precio sin IVA × cantidad
-        const subtotal = precioUnitarioSinIva * cantidad;
-
-        return {
-          nombre: prod.datos?.nombre || 'Producto sin nombre',
-          cantidad: cantidad,
-          precio_unitario_sin_iva: precioUnitarioSinIva,
-          precio_unitario: prod.precio_unitario || 0,
-          subtotal: subtotal,
-          total: prod.total || 0,
-          tiene_iva: prod.tiene_iva === 1
-        };
-      });
-    }
-
-    return (this.ventaParaRecibo.productos || []).map((prod: any) => {
-      const impuesto = this.ventaParaRecibo.impuesto || 16;
-      const precioConIVA = prod.precio || 0;
-      const cantidad = prod.cantidad || 1;
-
-      // Calcular precio sin IVA
-      const precioSinIVA = precioConIVA / (1 + (impuesto / 100));
-      const subtotal = precioSinIVA * cantidad;
-
-      return {
-        nombre: prod.nombre || 'Producto sin nombre',
-        cantidad: cantidad,
-        precio_unitario_sin_iva: precioSinIVA,
-        precio_unitario: precioConIVA,
-        subtotal: subtotal,
-        total: prod.total || 0,
-        tiene_iva: prod.aplicaIva || false
-      };
-    });
+    return this.construirItemsRecibo();
   }
 
   crearDatosReciboReal(): any {
@@ -3719,6 +3938,7 @@ export class HistorialVentasComponent implements OnInit {
       : 0;
 
     const productosParaImprimir = this.prepararProductosParaImpresion();
+    const metodosPagoRecibo = this.getMetodosPagoParaTipo(this.ventaParaRecibo.formaPago || 'contado');
 
     return {
       // Información básica
@@ -3741,21 +3961,24 @@ export class HistorialVentasComponent implements OnInit {
       productos: productosParaImprimir,
 
       // Métodos de pago
-      metodosPago: (this.ventaParaRecibo.metodosPago || []).map((metodo: any) => ({
+      metodosPago: (metodosPagoRecibo || []).map((metodo: any) => ({
         tipo: metodo.tipo || 'efectivo',
         monto: metodo.monto || 0,
-        moneda: metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+        monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.monto || 0,
+        moneda: metodo.moneda || metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
         referencia: metodo.referencia,
-        banco: metodo.banco || metodo.bancoNombre
+        banco: metodo.banco || metodo.bancoNombre,
+        bancoReceptor: metodo.bancoReceptor || metodo.bancoReceptorNombre,
+        notaPago: metodo.notaPago
       })),
 
       // Totales
       totales: {
-        subtotal: this.ventaParaRecibo.subtotal || 0,
-        descuento: this.ventaParaRecibo.descuento || 0,
-        iva: this.ventaParaRecibo.totalIva || 0,
-        total: this.ventaParaRecibo.total || 0,
-        totalPagado: totalPagado
+        subtotal: this.getSubtotalSeguro(),
+        descuento: this.getDescuentoSeguro(),
+        iva: this.getIvaSeguro(),
+        total: this.getMontoTotalSeguro(),
+        totalPagado: this.getTotalPagadoSeguro()
       },
 
       // Configuración
@@ -3831,10 +4054,12 @@ export class HistorialVentasComponent implements OnInit {
               metodos.push({
                 tipo: metodo.tipo || 'efectivo',
                 monto: metodo.monto || 0,
-                monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.monto,
-                moneda: metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+                monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.monto,
+                moneda: metodo.moneda || metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
                 referencia: metodo.referencia,
                 banco: metodo.bancoNombre || metodo.banco,
+                bancoReceptor: metodo.bancoReceptorNombre || metodo.bancoReceptor,
+                notaPago: metodo.notaPago,
                 fechaRegistro: metodo.fechaRegistro
               });
             }
@@ -3886,6 +4111,8 @@ export class HistorialVentasComponent implements OnInit {
               ${formatearMonedaLocal(metodo.monto_en_moneda_de_venta || metodo.monto, metodo.moneda)}
               ${metodo.referencia ? `<span style="color: #666; margin-left: 3px;">(Ref: ${metodo.referencia})</span>` : ''}
               ${metodo.banco ? `<span style="color: #666; margin-left: 3px;">- ${metodo.banco}</span>` : ''}
+              ${metodo.bancoReceptor ? `<span style="color: #666; margin-left: 3px;">→ ${metodo.bancoReceptor}</span>` : ''}
+              ${metodo.notaPago ? `<span style="color: #666; margin-left: 3px;">• ${metodo.notaPago}</span>` : ''}
             </span>
             <small style="color: #666;">#${index + 1}</small>
           </div>
@@ -4594,11 +4821,59 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   necesitaBanco(tipoPago: string): boolean {
-    return tipoPago === 'transferencia' || tipoPago === 'pagomovil' || tipoPago === 'punto';
+    return ['transferencia', 'pagomovil', 'punto', 'zelle'].includes(tipoPago);
   }
 
   necesitaReferencia(tipoPago: string): boolean {
     return tipoPago === 'transferencia' || tipoPago === 'pagomovil' || tipoPago === 'zelle';
+  }
+
+  necesitaBancoReceptor(tipoPago: string): boolean {
+    return tipoPago === 'pagomovil' || tipoPago === 'transferencia';
+  }
+
+  necesitaNotaPago(tipoPago: string): boolean {
+    return tipoPago === 'pagomovil' || tipoPago === 'transferencia';
+  }
+
+  mostrarNotaPago(tipoPago: string): boolean {
+    return this.necesitaNotaPago(tipoPago);
+  }
+
+  getBancosDisponiblesPorMetodo(tipoMetodo: string): Array<{ codigo: string; nombre: string; displayText?: string }> {
+    return tipoMetodo === 'zelle' ? this.bancosUsaDisponibles : this.bancosDisponibles;
+  }
+
+  getEtiquetaBancoPrincipal(tipoMetodo: string): string {
+    if (tipoMetodo === 'zelle') {
+      return 'Banco en USA';
+    }
+
+    if (tipoMetodo === 'pagomovil' || tipoMetodo === 'transferencia') {
+      return 'Banco emisor';
+    }
+
+    if (tipoMetodo === 'punto') {
+      return 'Banco del punto';
+    }
+
+    return 'Banco';
+  }
+
+  getPlaceholderBancoPrincipal(tipoMetodo: string): string {
+    if (tipoMetodo === 'zelle') {
+      return 'Buscar banco en USA...';
+    }
+
+    if (tipoMetodo === 'pagomovil' || tipoMetodo === 'transferencia') {
+      return 'Buscar banco emisor...';
+    }
+
+    if (tipoMetodo === 'punto') {
+      return 'Buscar banco del punto...';
+    }
+
+    return 'Buscar banco por código o nombre...';
   }
 
   // Método para verificar si hay método efectivo seleccionado
@@ -4637,14 +4912,39 @@ export class HistorialVentasComponent implements OnInit {
     if (bancoObject) {
       metodoControl.patchValue({
         bancoCodigo: bancoObject.codigo,
-        bancoNombre: bancoObject.nombre
+        bancoNombre: bancoObject.nombre,
+        banco: `${bancoObject.codigo} - ${bancoObject.nombre}`,
+        bancoObject
       });
     } else {
       metodoControl.patchValue({
-        bancoCodigo: null,
-        bancoNombre: null
+        bancoCodigo: '',
+        bancoNombre: '',
+        banco: '',
+        bancoObject: null
       });
     }
+  }
+
+  onBancoReceptorChange(bancoObject: any, index: number): void {
+    const metodoControl = this.metodosPagoArray.at(index);
+
+    if (bancoObject) {
+      metodoControl.patchValue({
+        bancoReceptorCodigo: bancoObject.codigo,
+        bancoReceptorNombre: bancoObject.nombre,
+        bancoReceptor: `${bancoObject.codigo} - ${bancoObject.nombre}`,
+        bancoReceptorObject: bancoObject
+      });
+      return;
+    }
+
+    metodoControl.patchValue({
+      bancoReceptorCodigo: '',
+      bancoReceptorNombre: '',
+      bancoReceptor: '',
+      bancoReceptorObject: null
+    });
   }
 
   // Función para marcar todos los controles como tocados
@@ -4670,6 +4970,10 @@ export class HistorialVentasComponent implements OnInit {
       case 'bancoCodigo':
       case 'bancoNombre':
         return this.necesitaBanco(tipoPago);
+      case 'bancoReceptorObject':
+      case 'bancoReceptorCodigo':
+      case 'bancoReceptorNombre':
+        return this.necesitaBancoReceptor(tipoPago);
       case 'monto':
         return true;
       default:
@@ -4728,6 +5032,11 @@ export class HistorialVentasComponent implements OnInit {
       if (!bancoObject) return false;
     }
 
+    if (this.necesitaBancoReceptor(tipo)) {
+      const bancoReceptorObject = metodoControl.get('bancoReceptorObject')?.value;
+      if (!bancoReceptorObject) return false;
+    }
+
     if (this.necesitaReferencia(tipo)) {
       const referencia = metodoControl.get('referencia')?.value;
       if (!referencia || referencia.trim() === '') return false;
@@ -4742,9 +5051,11 @@ export class HistorialVentasComponent implements OnInit {
     const monto = metodoControl.get('monto')?.value;
     const referencia = metodoControl.get('referencia')?.value;
     const banco = metodoControl.get('bancoObject')?.value;
+    const bancoReceptor = metodoControl.get('bancoReceptorObject')?.value;
+    const notaPago = metodoControl.get('notaPago')?.value;
 
     // Si no tiene ningún valor, está vacío
-    return !tipo && !monto && !referencia && !banco;
+    return !tipo && !monto && !referencia && !banco && !bancoReceptor && !notaPago;
   }
 
   // Método para determinar si un método tiene datos parciales
@@ -4753,9 +5064,11 @@ export class HistorialVentasComponent implements OnInit {
     const monto = metodoControl.get('monto')?.value;
     const referencia = metodoControl.get('referencia')?.value;
     const banco = metodoControl.get('bancoObject')?.value;
+    const bancoReceptor = metodoControl.get('bancoReceptorObject')?.value;
+    const notaPago = metodoControl.get('notaPago')?.value;
 
     // Si tiene al menos un dato pero no está completo
-    return (tipo || monto || referencia || banco) && !this.metodoEstaCompleto(metodoControl);
+    return (tipo || monto || referencia || banco || bancoReceptor || notaPago) && !this.metodoEstaCompleto(metodoControl);
   }
 
 
@@ -4804,7 +5117,7 @@ export class HistorialVentasComponent implements OnInit {
 
   // Método específico para ventas de contado
   getMetodosPagoContado(): any[] {
-    if (!this.ventaParaRecibo || this.ventaParaRecibo.formaPago !== 'contado') {
+    if (!this.ventaParaRecibo || !['contado', 'de_contado-pendiente'].includes(this.ventaParaRecibo.formaPago)) {
       return [];
     }
 
@@ -4822,10 +5135,12 @@ export class HistorialVentasComponent implements OnInit {
               metodos.push({
                 tipo: metodo.tipo || 'efectivo',
                 monto: metodo.monto || 0,
-                monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.monto,
-                moneda: metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+                monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.monto,
+                moneda: metodo.moneda || metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
                 referencia: metodo.referencia,
                 banco: metodo.bancoNombre || metodo.banco,
+                bancoReceptor: metodo.bancoReceptorNombre || metodo.bancoReceptor,
+                notaPago: metodo.notaPago,
                 fechaRegistro: metodo.fechaRegistro
               });
             }
@@ -4860,10 +5175,12 @@ export class HistorialVentasComponent implements OnInit {
                 todosLosMetodos.push({
                   tipo: metodo.tipo || 'efectivo',
                   monto: metodo.monto || 0,
-                  monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.monto,
-                  moneda: metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+                  monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.monto,
+                  moneda: metodo.moneda || metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
                   referencia: metodo.referencia,
                   banco: metodo.bancoNombre || metodo.banco,
+                  bancoReceptor: metodo.bancoReceptorNombre || metodo.bancoReceptor,
+                  notaPago: metodo.notaPago,
                   fechaRegistro: metodo.fechaRegistro
                 });
               }
@@ -4882,6 +5199,7 @@ export class HistorialVentasComponent implements OnInit {
   getMetodosPagoParaTipo(tipo: string): any[] {
     switch (tipo) {
       case 'contado':
+      case 'de_contado-pendiente':
         return this.getMetodosPagoContado();
       case 'cashea':
         return this.getMetodosPagoCashea();
@@ -5301,8 +5619,6 @@ export class HistorialVentasComponent implements OnInit {
   // Método para abrir el modal (actualizado)
   abrirModalResumenFinanciero(): void {
     // Inicializar años disponibles
-    alert('Funcionalidad en construccion..');
-    return;
     this.inicializarAnosDisponibles();
 
     // Establecer valores por defecto
@@ -5324,6 +5640,8 @@ export class HistorialVentasComponent implements OnInit {
     if (this.asesores.length === 0) {
       this.cargarEmpleados();
     }
+
+    this.cargarDatosResumen();
 
     console.log('📊 Abriendo modal de resumen financiero');
 
@@ -5957,17 +6275,72 @@ export class HistorialVentasComponent implements OnInit {
     return 0;
   }
 
+  getFormaPagoResumen(venta: any): string {
+    if (!venta) return '';
+
+    return venta.formaPagoCompleto?.tipo ||
+      venta.formaPagoApi?.tipo ||
+      venta.formaPagoDetalle?.tipo ||
+      venta.formaPago ||
+      '';
+  }
+
+  debeMostrarResumenDeSaldo(venta: any): boolean {
+    const formaPago = this.getFormaPagoResumen(venta);
+    return formaPago === 'abono' || formaPago === 'cashea' || formaPago === 'de_contado-pendiente';
+  }
+
+  getEtiquetaPagadoResumen(venta: any): string {
+    const formaPago = this.getFormaPagoResumen(venta);
+
+    switch (formaPago) {
+      case 'cashea':
+        return 'Pagado ahora';
+      case 'abono':
+        return 'Abonado';
+      default:
+        return 'Pagado';
+    }
+  }
+
+  getEtiquetaPendienteResumen(venta: any): string {
+    const formaPago = this.getFormaPagoResumen(venta);
+
+    switch (formaPago) {
+      case 'cashea':
+        return 'Restante';
+      case 'de_contado-pendiente':
+        return 'Deuda pendiente';
+      case 'abono':
+        return 'Pendiente';
+      default:
+        return 'Pendiente';
+    }
+  }
+
   getDeudaPendiente(venta: any): number {
     if (!venta) return 0;
     if (venta.estado === 'cancelada') return 0;
-    if (venta.formaPagoCompleto?.deuda !== undefined) {
-      return venta.formaPagoCompleto.deuda;
+    const deuda = venta.formaPagoCompleto?.deuda ??
+      venta.formaPagoApi?.deudaPendiente ??
+      venta.formaPagoDetalle?.deuda ??
+      venta.deudaPendiente;
+
+    if (deuda !== undefined && deuda !== null) {
+      return Number(deuda);
     }
-    return 0;
+
+    const totalVenta = Number(venta.total || 0);
+    const totalPagado = Number(venta.formaPagoCompleto?.totalPagado || venta.montoAbonado || 0);
+    return Math.max(0, totalVenta - totalPagado);
   }
 
   getSubtotalVenta(venta: any): number {
     if (!venta) return 0;
+
+    if (venta.subtotal !== undefined && venta.subtotal !== null && Number(venta.subtotal) > 0) {
+      return this.redondear(Number(venta.subtotal));
+    }
 
     let subtotal = 0;
 
@@ -5979,11 +6352,19 @@ export class HistorialVentasComponent implements OnInit {
       });
     }
 
+    if (venta.consulta) {
+      subtotal += Number(venta.consulta.montoOriginal || venta.consulta.montoTotal || 0);
+    }
+
     return this.redondear(subtotal);
   }
 
   getIvaVenta(venta: any): number {
     if (!venta) return 0;
+
+    if (venta.totalIva !== undefined && venta.totalIva !== null) {
+      return this.redondear(Number(venta.totalIva));
+    }
 
     let ivaTotal = 0;
 
@@ -6005,6 +6386,10 @@ export class HistorialVentasComponent implements OnInit {
   getTotalVenta(venta: any): number {
     if (!venta) return 0;
 
+    if (venta.total !== undefined && venta.total !== null && Number(venta.total) > 0) {
+      return this.redondear(Number(venta.total));
+    }
+
     let total = 0;
 
     if (venta.productos && venta.productos.length > 0) {
@@ -6016,6 +6401,67 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     return this.redondear(total);
+  }
+
+  getHistorialPagosDetalle(venta: any): any[] {
+    return Array.isArray(venta?.metodosPago) ? venta.metodosPago : [];
+  }
+
+  getCuotasCasheaDetalle(venta: any): any[] {
+    const cuotasApi = venta?.formaPagoCompleto?.cuotas;
+
+    if (Array.isArray(cuotasApi) && cuotasApi.length > 0) {
+      return cuotasApi.map((cuota: any, index: number) => ({
+        numero: cuota?.numero ?? index + 1,
+        fecha: cuota?.fecha || cuota?.fechaPago || null,
+        monto: Number(cuota?.monto || cuota?.montoPorCuota || venta?.montoPorCuota || 0),
+        pagada: cuota?.pagada === true || cuota?.estatus === 'pagada' || cuota?.estado === 'pagada',
+        adelantada: cuota?.adelantada === true || cuota?.estatus === 'adelantada' || cuota?.estado === 'adelantada'
+      }));
+    }
+
+    const totalCuotas = Number(venta?.cantidadCuotas || 0);
+    if (!totalCuotas) {
+      return [];
+    }
+
+    const cuotasAdelantadas = Array.isArray(venta?.cuotasAdelantadas) ? venta.cuotasAdelantadas : [];
+    const cuotasAdelantadasIds = cuotasAdelantadas.map((cuota: any) => cuota?.numero);
+
+    return Array.from({ length: totalCuotas }, (_, index) => {
+      const numero = index + 1;
+      const pagada = cuotasAdelantadasIds.includes(numero);
+
+      return {
+        numero,
+        fecha: null,
+        monto: Number(venta?.montoPorCuota || 0),
+        pagada,
+        adelantada: pagada
+      };
+    });
+  }
+
+  getCuotasCasheaPendientes(venta: any): any[] {
+    return this.getCuotasCasheaDetalle(venta).filter((cuota: any) => !cuota.pagada);
+  }
+
+  getCuotasCasheaAdelantadas(venta: any): any[] {
+    return this.getCuotasCasheaDetalle(venta).filter((cuota: any) => cuota.adelantada || cuota.pagada);
+  }
+
+  debeMostrarReferenciaBolivar(venta: any): boolean {
+    const monedaVenta = this.normalizarMoneda(venta?.moneda || this.getMonedaSistema());
+    return monedaVenta !== 'bolivar' && this.getMonedaSistema() !== 'bolivar';
+  }
+
+  getMontoReferenciaBolivar(venta: any, monto: number): number {
+    if (!venta || monto === null || monto === undefined) {
+      return 0;
+    }
+
+    const monedaVenta = this.normalizarMoneda(venta?.moneda || this.getMonedaSistema());
+    return this.redondear(this.convertirMonto(Number(monto || 0), monedaVenta, 'bolivar'));
   }
 
   formatearMonedaVenta(venta: any, monto: number): string {

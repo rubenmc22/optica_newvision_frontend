@@ -997,6 +997,36 @@
               </div>
             </div>
 
+            <div *ngIf="selectedVenta?.formaPago === 'de_contado-pendiente'" class="pago-especifico">
+              <div class="pago-row">
+                <div class="pago-item-compact full-width">
+                  <div class="alert" [ngClass]="getDeudaPendiente(selectedVenta) > 0 ? 'alert-warning' : 'alert-success'">
+                    <div class="alert-icon">
+                      <i class="bi" [class.bi-hourglass-split]="getDeudaPendiente(selectedVenta) > 0"
+                        [class.bi-check-circle-fill]="getDeudaPendiente(selectedVenta) <= 0"></i>
+                    </div>
+                    <div class="alert-content">
+                      <strong>{{ getDeudaPendiente(selectedVenta) > 0 ? 'Pago contado pendiente' : 'Pago contado registrado' }}</strong>
+                      <span>
+                        {{ getDeudaPendiente(selectedVenta) > 0 ? 'La venta espera un único pago de contado.' : 'El pago único ya fue registrado en la venta.' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pago-detalle-pendiente">
+                <div class="pago-subitem">
+                  <span>Pendiente:</span>
+                  <strong class="text-warning">{{ formatearMoneda(getDeudaPendiente(selectedVenta), selectedVenta?.moneda) }}</strong>
+                </div>
+                <div class="pago-subitem" *ngIf="getTotalPagadoVenta(selectedVenta) > 0">
+                  <span>Registrado:</span>
+                  <strong>{{ formatearMoneda(getTotalPagadoVenta(selectedVenta), selectedVenta?.moneda) }}</strong>
+                </div>
+              </div>
+            </div>
+
             <!-- CASHEA: Plan de pagos -->
             <div *ngIf="selectedVenta?.formaPago === 'cashea'" class="pago-especifico">
               <div class="pago-row">
@@ -1041,6 +1071,22 @@
                     selectedVenta?.moneda)}}</strong>
                 </div>
               </div>
+
+              <div class="pago-row mt-2" *ngIf="getCuotasCasheaDetalle(selectedVenta).length > 0">
+                <div class="pago-item-compact full-width">
+                  <label><i class="bi bi-calendar2-week"></i> Cuotas Cashea</label>
+                  <div class="d-flex flex-wrap gap-2 mb-2">
+                    <span class="badge text-bg-success">Adelantadas: {{ getCuotasCasheaAdelantadas(selectedVenta).length }}</span>
+                    <span class="badge text-bg-warning">Pendientes: {{ getCuotasCasheaPendientes(selectedVenta).length }}</span>
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <span *ngFor="let cuota of getCuotasCasheaDetalle(selectedVenta)" class="badge"
+                      [ngClass]="cuota.pagada ? 'text-bg-success' : 'text-bg-light border text-dark'">
+                      Cuota {{ cuota.numero }} · {{ formatearMoneda(cuota.monto, selectedVenta?.moneda) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- ========== ABONO: Pago parcial ========== -->
@@ -1078,14 +1124,29 @@
       </div>
 
       <!-- Tarjeta de Métodos de Pago -->
-      <div class="info-card metodos-pago-detalle" *ngIf="selectedVenta?.metodosPago?.length">
+      <div class="info-card metodos-pago-detalle" *ngIf="getHistorialPagosDetalle(selectedVenta).length">
         <div class="card-header-detalle">
           <i class="bi bi-wallet2"></i>
           <span>Métodos de Pago</span>
         </div>
         <div class="card-body-detalle">
           <div class="metodos-grid">
-            <div *ngFor="let pagoGroup of selectedVenta?.metodosPago" class="pago-group">
+            <div *ngFor="let pagoGroup of getHistorialPagosDetalle(selectedVenta)" class="pago-group">
+              <div class="pago-group-header justify-content-between flex-wrap gap-2">
+                <div>
+                  <strong>{{ pagoGroup.titulo || ('Pago #' + (pagoGroup.numero_pago || 0)) }}</strong>
+                  <div class="small text-muted" *ngIf="pagoGroup.fechaRegistro || pagoGroup.fecha">
+                    {{ (pagoGroup.fechaRegistro || pagoGroup.fecha) | date:'dd/MM/yyyy HH:mm' }}
+                  </div>
+                </div>
+                <div class="text-end">
+                  <div class="fw-semibold">{{ formatearMoneda(pagoGroup.montoAbonado || 0, selectedVenta?.moneda) }}</div>
+                  <div class="small text-muted">
+                    {{ formatearMonedaSistema(convertirAMonedaSistema(pagoGroup.montoAbonado || 0, selectedVenta?.moneda)) }}
+                  </div>
+                </div>
+              </div>
+
               <div *ngFor="let metodo of pagoGroup.metodosPago" class="metodo-item-detalle">
                 <div class="metodo-icono">
                   <i [class]="'bi ' + getIconoMetodoPago(metodo.tipo)"></i>
@@ -1103,6 +1164,9 @@
                             }">
                       {{ formatearMoneda(metodo.monto, metodo.moneda) }}
                     </div>
+                    <div class="monto-convertido text-muted small" *ngIf="metodo.moneda !== getMonedaSistema()">
+                      {{ formatearMonedaSistema(metodo.montoEnMonedaSistema || convertirAMonedaSistema(metodo.monto, metodo.moneda)) }}
+                    </div>
                   </div>
 
                   <!-- INFORMACIÓN ADICIONAL -->
@@ -1115,12 +1179,25 @@
                       <i class="bi bi-building"></i>
                       <span>Banco: {{metodo.bancoNombre}}</span>
                     </div>
+                    <div class="detalle-adicional" *ngIf="metodo.bancoReceptorNombre">
+                      <i class="bi bi-arrow-left-right"></i>
+                      <span>Receptor: {{metodo.bancoReceptorNombre}}</span>
+                    </div>
+                    <div class="detalle-adicional" *ngIf="metodo.notaPago">
+                      <i class="bi bi-chat-left-text"></i>
+                      <span>{{metodo.notaPago}}</span>
+                    </div>
                     <div class="detalle-adicional">
                       <i class="bi bi-calendar"></i>
                       <span>{{metodo.fechaRegistro | date:'dd/MM/yyyy HH:mm'}}</span>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div *ngIf="pagoGroup.observaciones" class="pago-group-observaciones">
+                <i class="bi bi-info-circle"></i>
+                <span>{{ pagoGroup.observaciones }}</span>
               </div>
             </div>
           </div>
@@ -1134,29 +1211,97 @@
           <span>Resumen Financiero</span>
         </div>
         <div class="card-body-detalle">
-          <div class="resumen-grid">
-            <div class="resumen-item">
-              <span class="resumen-label">Subtotal</span>
-              <span class="resumen-value">{{
-                formatearMonedaSistema(convertirAMonedaSistema(getSubtotalVenta(selectedVenta), selectedVenta?.moneda))
-                }}</span>
+          <div class="resumen-financiero-premium">
+            <div class="resumen-hero-total">
+              <div class="hero-copy">
+                <span class="hero-kicker">Total de la venta</span>
+                <div class="hero-amount">{{
+                  formatearMonedaSistema(convertirAMonedaSistema(getTotalVenta(selectedVenta), selectedVenta?.moneda))
+                  }}</div>
+                <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="hero-reference">≈ {{
+                  formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getTotalVenta(selectedVenta)), 'bolivar') }}</small>
+              </div>
+              <div class="hero-icon-shell">
+                <i class="bi bi-cash-stack"></i>
+              </div>
             </div>
-            <div class="resumen-item">
-              <span class="resumen-label">IVA Total</span>
-              <span class="resumen-value">{{ formatearMonedaSistema(convertirAMonedaSistema(getIvaVenta(selectedVenta),
-                selectedVenta?.moneda)) }}</span>
+
+            <div class="resumen-balance-strip" *ngIf="debeMostrarResumenDeSaldo(selectedVenta)">
+              <div class="balance-chip success">
+                <span class="chip-label">{{ getEtiquetaPagadoResumen(selectedVenta) }}</span>
+                <strong>{{
+                  formatearMonedaSistema(convertirAMonedaSistema(getTotalPagadoVenta(selectedVenta), selectedVenta?.moneda))
+                  }}</strong>
+              </div>
+
+              <div class="balance-chip warning">
+                <span class="chip-label">{{ getEtiquetaPendienteResumen(selectedVenta) }}</span>
+                <strong>{{
+                  formatearMonedaSistema(convertirAMonedaSistema(getDeudaPendiente(selectedVenta), selectedVenta?.moneda))
+                  }}</strong>
+              </div>
             </div>
-            <div class="resumen-item" *ngIf="selectedVenta?.totalDescuento">
-              <span class="resumen-label">Descuento</span>
-              <span class="resumen-value">-{{
-                formatearMonedaSistema(convertirAMonedaSistema(selectedVenta?.totalDescuento, selectedVenta?.moneda))
-                }}</span>
+
+            <div class="resumen-grid detalle-financiero-grid">
+              <div class="resumen-item subtotal-card">
+                <div class="resumen-label-wrap">
+                  <span class="resumen-label">Subtotal</span>
+                  <small class="resumen-caption">Base sin impuesto</small>
+                </div>
+                <div class="resumen-values-wrap">
+                  <span class="resumen-value">{{
+                    formatearMonedaSistema(convertirAMonedaSistema(getSubtotalVenta(selectedVenta), selectedVenta?.moneda))
+                    }}</span>
+                  <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ {{
+                    formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getSubtotalVenta(selectedVenta)), 'bolivar') }}</small>
+                </div>
+              </div>
+
+              <div class="resumen-item iva-card">
+                <div class="resumen-label-wrap">
+                  <span class="resumen-label">IVA Total</span>
+                  <small class="resumen-caption">Impuesto aplicado</small>
+                </div>
+                <div class="resumen-values-wrap">
+                  <span class="resumen-value">{{ formatearMonedaSistema(convertirAMonedaSistema(getIvaVenta(selectedVenta),
+                    selectedVenta?.moneda)) }}</span>
+                  <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ {{
+                    formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getIvaVenta(selectedVenta)), 'bolivar') }}</small>
+                </div>
+              </div>
+
+              <div class="resumen-item descuento-card" *ngIf="selectedVenta?.totalDescuento">
+                <div class="resumen-label-wrap">
+                  <span class="resumen-label">Descuento</span>
+                  <small class="resumen-caption">Monto rebajado</small>
+                </div>
+                <div class="resumen-values-wrap">
+                  <span class="resumen-value">-{{
+                    formatearMonedaSistema(convertirAMonedaSistema(selectedVenta?.totalDescuento, selectedVenta?.moneda))
+                    }}</span>
+                  <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ -{{
+                    formatearMoneda(getMontoReferenciaBolivar(selectedVenta, selectedVenta?.totalDescuento), 'bolivar') }}</small>
+                </div>
+              </div>
+
+              <div class="resumen-item total total-card">
+                <div class="resumen-label-wrap">
+                  <span class="resumen-label">Total Final</span>
+                  <small class="resumen-caption">Monto consolidado</small>
+                </div>
+                <div class="resumen-values-wrap">
+                  <span class="resumen-value">{{
+                    formatearMonedaSistema(convertirAMonedaSistema(getTotalVenta(selectedVenta), selectedVenta?.moneda))
+                    }}</span>
+                  <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ {{
+                    formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getTotalVenta(selectedVenta)), 'bolivar') }}</small>
+                </div>
+              </div>
             </div>
-            <div class="resumen-item total">
-              <span class="resumen-label">Total</span>
-              <span class="resumen-value">{{
-                formatearMonedaSistema(convertirAMonedaSistema(getTotalVenta(selectedVenta), selectedVenta?.moneda))
-                }}</span>
+
+            <div class="resumen-footnote">
+              <i class="bi bi-info-circle"></i>
+              <span>Los importes se muestran en moneda del sistema y solo se agrega referencia en bolívares cuando aporta contexto.</span>
             </div>
           </div>
         </div>
@@ -1366,7 +1511,7 @@
               </div>
               <div class="header-actions">
                 <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()" title="Agregar método"
-                  [disabled]="metodosPagoArray.length >= 10">
+                  [disabled]="metodosPagoArray.length >= 5">
                   <i class="bi bi-plus-circle"></i>
                   Agregar Método
                   <span *ngIf="metodosPagoArray.length > 0" class="ms-1">
@@ -1476,12 +1621,12 @@
                                 <div *ngIf="necesitaBanco(metodoControl.get('tipo')?.value)" class="campo-adicional">
                                     <label class="form-label compact-label">
                                         <i class="bi bi-bank"></i>
-                                        Banco
+                                    {{ getEtiquetaBancoPrincipal(metodoControl.get('tipo')?.value) }}
                                     </label>
-                                    <ng-select [items]="bancosDisponibles" bindLabel="displayText" bindValue="codigo"
+                                  <ng-select [items]="getBancosDisponiblesPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText" bindValue="codigo"
                                         formControlName="bancoObject" (change)="onBancoChange($event, i)"
                                         [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
-                                        placeholder="Buscar banco por código o nombre..."
+                                    [placeholder]="getPlaceholderBancoPrincipal(metodoControl.get('tipo')?.value)"
                                         [class.ng-select-invalid]="metodoControl.get('bancoObject')?.invalid && metodoControl.get('bancoObject')?.touched">
                                     </ng-select>
                                     <small
@@ -1489,6 +1634,24 @@
                                         class="text-danger">
                                         <i class="bi bi-exclamation-triangle"></i> Selecciona un banco
                                     </small>
+                                </div>
+
+                                <div *ngIf="necesitaBancoReceptor(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                  <label class="form-label compact-label">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    Banco receptor
+                                  </label>
+                                  <ng-select [items]="bancosDisponibles" bindLabel="displayText" bindValue="codigo"
+                                    formControlName="bancoReceptorObject" (change)="onBancoReceptorChange($event, i)"
+                                    [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
+                                    placeholder="Buscar banco receptor..."
+                                    [class.ng-select-invalid]="metodoControl.get('bancoReceptorObject')?.invalid && metodoControl.get('bancoReceptorObject')?.touched">
+                                  </ng-select>
+                                  <small
+                                    *ngIf="metodoControl.get('bancoReceptorObject')?.invalid && metodoControl.get('bancoReceptorObject')?.touched"
+                                    class="text-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> Selecciona el banco receptor
+                                  </small>
                                 </div>
 
                                 <!-- Campo Referencia -->
@@ -1507,16 +1670,25 @@
                                     </small>
                                 </div>
 
+                                    <div *ngIf="mostrarNotaPago(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                      <label class="form-label compact-label">
+                                        <i class="bi bi-journal-text"></i>
+                                        Nota del pago
+                                      </label>
+                                      <input type="text" class="form-control modern-input" formControlName="notaPago"
+                                        placeholder="Ej: Pago desde otra cuenta o detalle adicional" maxlength="120" />
+                                    </div>
+
                                 <!-- Campo Monto -->
                                 <div class="campo-monto">
                                     <label class="form-label compact-label">
                                         <i class="bi bi-cash-stack"></i>
-                                        Monto a Pagar ({{ getSimboloMonedaSistema() }})
+                                        Monto recibido ({{ getSimboloParaMetodo(i) }})
                                     </label>
                                     <div class="input-group">
-                                        <span class="input-group-text">{{ getSimboloMonedaSistema() }}</span>
+                                        <span class="input-group-text">{{ getSimboloParaMetodo(i) }}</span>
                                         <input type="number" class="form-control modern-input" formControlName="monto" step="0.01"
-                                            min="0.01" [max]="getMontoMaximoParaMetodoEnSistema(i)" placeholder="0.00"
+                                          min="0.01" [max]="getMontoMaximoParaMetodo(i)" placeholder="0.00"
                                             (input)="validarMontoMetodoPago(i)"
                                             [class.campo-invalido]="metodoControl.get('monto')?.invalid && metodoControl.get('monto')?.touched" />
                                     </div>
@@ -1536,22 +1708,16 @@
                             <div class="footer-info">
                                 <span class="maximo-text">
                                     <i class="bi bi-graph-up text-info"></i>
-                                    Máx. disponible: {{ getMontoMaximoParaMetodoEnSistema(i) | number:'1.2-2' }} {{ getSimboloMonedaSistema() }}
+                              Máx. disponible: {{ getMontoMaximoParaMetodo(i) | number:'1.2-2' }} {{ getSimboloParaMetodo(i) }}
                                 </span>
 
-                                <!-- Mostrar conversión en el footer SOLO si la moneda del sistema NO es bolívar -->
                                 <span *ngIf="mostrarConversionABolivares() && metodoControl.get('monto')?.value && metodoControl.get('monto')?.value > 0"
                                     class="conversion-text">
                                     <i class="bi bi-calculator text-primary"></i>
-                                    {{ metodoControl.get('monto')?.value | number:'1.2-2' }} {{ getSimboloMonedaSistema() }}
-                                    <span *ngIf="metodoControl.get('tipo')?.value === 'punto' || metodoControl.get('tipo')?.value === 'pagomovil' || metodoControl.get('tipo')?.value === 'transferencia'" 
-                                          class="conversion-moneda-venta">
-                                        = {{ getMontoEnMonedaMetodo(metodoControl.get('monto')?.value, metodoControl.get('tipo')?.value) | number:'1.2-2' }} Bs
-                                    </span>
-                                    <span *ngIf="metodoControl.get('tipo')?.value === 'efectivo' && metodoControl.get('monedaEfectivo')?.value !== 'Bs'" 
-                                          class="conversion-moneda-venta">
-                                        = {{ getConversionBs(metodoControl.get('monto')?.value, getMonedaParaMetodo(i)) | number:'1.2-2' }} Bs
-                                    </span>
+                              Equivale a {{ getMontoMetodoEnMonedaVenta(i) | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                              <span *ngIf="getMonedaParaMetodo(i) !== 'bolivar'" class="conversion-moneda-venta">
+                                · {{ getConversionBs(metodoControl.get('monto')?.value, getMonedaParaMetodo(i)) | number:'1.2-2' }} Bs
+                              </span>
                                 </span>
                             </div>
                         </div>
@@ -1798,8 +1964,7 @@
                       <select class="form-select-compact" formControlName="tipo" (change)="onMetodoPagoChange(i)">
                         <option value="" disabled selected>Tipo de pago</option>
                         <option value="efectivo">💵 Efectivo</option>
-                        <option value="debito">💳 Débito</option>
-                        <option value="credito">🔄 Crédito</option>
+                        <option value="punto">💳 Punto de Venta</option>
                         <option value="pagomovil">📱 Pago Móvil</option>
                         <option value="transferencia">🏦 Transferencia</option>
                         <option value="zelle">🌐 Zelle</option>
@@ -1835,17 +2000,30 @@
 
                       <!-- Banco (si aplica) -->
                       <div *ngIf="necesitaBanco(metodoControl.get('tipo')?.value)" class="campo-compact">
-                        <input type="text" class="form-control-compact" formControlName="bancoCodigo"
-                          placeholder="Banco" list="bancos-list">
-                        <datalist id="bancos-list">
-                          <option *ngFor="let banco of bancosDisponibles" [value]="banco.nombre">
-                        </datalist>
+                        <ng-select [items]="getBancosDisponiblesPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText"
+                          bindValue="codigo" formControlName="bancoObject" (change)="onBancoChange($event, i)"
+                          [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
+                          [placeholder]="getPlaceholderBancoPrincipal(metodoControl.get('tipo')?.value)">
+                        </ng-select>
+                      </div>
+
+                      <div *ngIf="necesitaBancoReceptor(metodoControl.get('tipo')?.value)" class="campo-compact">
+                        <ng-select [items]="bancosDisponibles" bindLabel="displayText" bindValue="codigo"
+                          formControlName="bancoReceptorObject" (change)="onBancoReceptorChange($event, i)"
+                          [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
+                          placeholder="Banco receptor">
+                        </ng-select>
                       </div>
 
                       <!-- Referencia (si aplica) -->
                       <div *ngIf="necesitaReferencia(metodoControl.get('tipo')?.value)" class="campo-compact">
                         <input type="text" class="form-control-compact" formControlName="referencia"
                           [placeholder]="getPlaceholderReferencia(metodoControl.get('tipo')?.value)">
+                      </div>
+
+                      <div *ngIf="mostrarNotaPago(metodoControl.get('tipo')?.value)" class="campo-compact">
+                        <input type="text" class="form-control-compact" formControlName="notaPago"
+                          placeholder="Nota del pago">
                       </div>
 
                       <!-- Monto (siempre visible) -->
@@ -1859,7 +2037,10 @@
                         <small class="monto-conversion" *ngIf="metodoControl.get('monto')?.value">
                           {{ metodoControl.get('monto')?.value | number:'1.2-2' }} {{ getSimboloParaMetodo(i) }}
                           <span *ngIf="mostrarConversionParaMetodo(i)" class="conversion-venta">
-                            ≈ {{ getConversionBs(i) | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                            ≈ {{ getMontoMetodoEnMonedaVenta(i) | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                          </span>
+                          <span *ngIf="getMonedaParaMetodo(i) !== 'bolivar'" class="conversion-venta">
+                            · {{ getConversionBs(metodoControl.get('monto')?.value, getMonedaParaMetodo(i)) | number:'1.2-2' }} Bs
                           </span>
                         </small>
                       </div>
@@ -2053,7 +2234,7 @@
 
             <!-- Productos compactos -->
             <div class="productos-compactos mb-3">
-              <h6 class="fw-bold mb-2 text-primary border-bottom pb-1">PRODUCTOS</h6>
+              <h6 class="fw-bold mb-2 text-primary border-bottom pb-1">PRODUCTOS Y SERVICIOS</h6>
               <div class="table-responsive">
                 <table class="table table-sm table-bordered mb-1">
                   <thead class="table-light">
@@ -2068,10 +2249,16 @@
                   <tbody>
                     <tr *ngFor="let producto of getProductosSeguros(); let i = index">
                       <td class="text-center">{{ i + 1 }}</td>
-                      <td class="small">{{ producto.nombre }}</td>
+                      <td class="small">
+                        {{ producto.nombre }}
+                        <span *ngIf="producto.esServicio" class="badge bg-light text-dark border ms-1">Servicio</span>
+                      </td>
                       <td class="text-center">{{ producto.cantidad }}</td>
                       <td class="text-end">{{ formatearMoneda(producto.precioUnitarioSinIva) }}</td>
                       <td class="text-end">{{ formatearMoneda(producto.subtotalCalculado) }}</td>
+                    </tr>
+                    <tr *ngIf="getProductosSeguros().length === 0">
+                      <td colspan="5" class="text-center text-muted py-3">No hay productos o servicios registrados en esta venta.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -2100,9 +2287,11 @@
                       <div class="d-flex justify-content-between align-items-center small py-1">
                         <span>
                           <span class="badge bg-primary me-1">{{ formatearTipoPago(metodo.tipo) }}</span>
-                          {{ formatearMoneda(metodo.monto_en_moneda_de_venta || metodo.monto, metodo.moneda) }}
+                          {{ formatearMoneda(metodo.monto, metodo.moneda) }}
                           <span *ngIf="metodo.referencia" class="text-muted ms-1">(Ref: {{ metodo.referencia }})</span>
                           <span *ngIf="metodo.banco" class="text-muted ms-1">- {{ metodo.banco }}</span>
+                          <span *ngIf="metodo.bancoReceptor" class="text-muted ms-1">→ {{ metodo.bancoReceptor }}</span>
+                          <span *ngIf="metodo.notaPago" class="text-muted ms-1">• {{ metodo.notaPago }}</span>
                         </span>
                         <small class="text-muted">#{{ i + 1 }}</small>
                       </div>
@@ -2156,9 +2345,11 @@
                       <div class="d-flex justify-content-between align-items-center small py-1">
                         <span>
                           <span class="badge bg-primary me-1">{{ formatearTipoPago(metodo.tipo) }}</span>
-                          {{ formatearMoneda(metodo.monto_en_moneda_de_venta || metodo.monto, metodo.moneda) }}
+                          {{ formatearMoneda(metodo.monto, metodo.moneda) }}
                           <span *ngIf="metodo.referencia" class="text-muted ms-1">(Ref: {{ metodo.referencia }})</span>
                           <span *ngIf="metodo.banco" class="text-muted ms-1">- {{ metodo.banco }}</span>
+                          <span *ngIf="metodo.bancoReceptor" class="text-muted ms-1">→ {{ metodo.bancoReceptor }}</span>
+                          <span *ngIf="metodo.notaPago" class="text-muted ms-1">• {{ metodo.notaPago }}</span>
                         </span>
                       </div>
                     </div>
@@ -2302,6 +2493,8 @@
                               {{ formatearMoneda(metodo.monto, metodo.moneda) }}
                               <span *ngIf="metodo.referencia" class="text-muted">(Ref: {{ metodo.referencia }})</span>
                               <span *ngIf="metodo.banco" class="text-muted">- {{ metodo.banco }}</span>
+                              <span *ngIf="metodo.bancoReceptor" class="text-muted">→ {{ metodo.bancoReceptor }}</span>
+                              <span *ngIf="metodo.notaPago" class="text-muted">• {{ metodo.notaPago }}</span>
                             </div>
                           </td>
                           <td class="text-end fw-bold">
