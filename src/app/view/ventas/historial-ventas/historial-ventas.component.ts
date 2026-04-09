@@ -1,5 +1,8 @@
 import { Component, OnInit, HostListener, ViewChild, TemplateRef, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormBuilder, FormGroup, FormArray, Validators, AbstractControl } from '@angular/forms';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { SwalService } from '../../../core/services/swal/swal.service';
 import { HistorialVentaService } from './../historial-ventas/historial-ventas.service';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -138,6 +141,8 @@ export class HistorialVentasComponent implements OnInit {
   mostrarModalRecibo: boolean = false;
   datosRecibo: any = null;
   ventaParaRecibo: any = null;
+  previewReciboUrl: SafeResourceUrl | null = null;
+  private previewReciboObjectUrl: string | null = null;
 
   // Propiedades para Cashea y Abono
   nivelCashea: string = '';
@@ -224,7 +229,8 @@ export class HistorialVentasComponent implements OnInit {
     private loader: LoaderService,
     private userStateService: UserStateService,
     private cdRef: ChangeDetectorRef,
-    private chartService: ChartService
+    private chartService: ChartService,
+    private sanitizer: DomSanitizer
   ) {
     this.inicializarFormularioEdicion();
     //  this.inicializarFormularioPago();
@@ -3305,6 +3311,7 @@ export class HistorialVentasComponent implements OnInit {
 
       // Preparar datos para el recibo
       this.prepararDatosRecibo(this.ventaParaRecibo);
+      this.actualizarVistaPreviaRecibo();
 
       // Mostrar el modal después de preparar los datos
       setTimeout(() => {
@@ -3330,54 +3337,7 @@ export class HistorialVentasComponent implements OnInit {
    * Preparar los datos del recibo
    */
   private prepararDatosRecibo(venta: any): void {
-    const fecha = new Date(venta.fecha);
-
-    this.datosRecibo = {
-      // Información básica
-      numeroVenta: venta.numeroControl || `V-${venta.key.substring(0, 8)}`,
-      fecha: this.formatFecha(fecha),
-      hora: fecha.toLocaleTimeString('es-VE', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      vendedor: venta.asesorNombre || venta.asesor?.nombre || 'No asignado',
-
-      // Cliente
-      cliente: {
-        nombre: venta.paciente?.nombre || 'CLIENTE GENERAL',
-        cedula: venta.paciente?.cedula || 'N/A',
-        telefono: venta.paciente?.telefono || 'N/A'
-      },
-
-      // Configuración
-      configuracion: {
-        formaPago: venta.formaPago || 'contado'
-      },
-
-      // Totales
-      totalVenta: venta.total || 0,
-      totalPagado: this.getTotalPagadoVenta(venta),
-
-      // Información específica
-      abono: {
-        montoAbonado: venta.formaPago?.montoInicial || venta.montoAbonado || 0,
-        deudaPendiente: venta.formaPago?.deudaPendiente || this.getDeudaPendiente(venta),
-        porcentajePagado: this.calcularPorcentajePagado(venta)
-      },
-
-      // Cashea (si aplica)
-      cashea: {
-        nivel: venta.nivelCashea,
-        inicial: venta.montoInicial || 0,
-        cantidadCuotas: venta.cantidadCuotas || 0,
-        cuotasAdelantadas: venta.cuotasAdelantadas?.length || 0,
-        montoAdelantado: venta.totalAdelantado || 0,
-        deudaPendiente: venta.deudaPendiente || 0
-      },
-
-      // Observaciones
-      observaciones: venta.observaciones
-    };
+    this.datosRecibo = this.crearDatosReciboReal();
 
     // Preparar datos específicos según forma de pago
     if (venta.formaPago === 'cashea') {
@@ -3770,12 +3730,12 @@ export class HistorialVentasComponent implements OnInit {
       return [];
     }
 
-    return venta.metodosPago.map((grupo: any) => {
+    return venta.metodosPago.map((grupo: any, index: number) => {
       const primerMetodo = grupo.metodosPago?.[0];
       const fechaAbono = primerMetodo?.fechaRegistro || venta.fecha;
 
       return {
-        numeroPago: grupo.numero_pago || 1,
+        numeroPago: index + 1,
         fecha: fechaAbono,
         fechaFormateada: this.formatFechaAbono(fechaAbono),
         montoAbonado: grupo.montoAbonado || 0,
@@ -3824,6 +3784,7 @@ export class HistorialVentasComponent implements OnInit {
 
   cerrarModalRecibo(): void {
     this.mostrarModalRecibo = false;
+    this.limpiarVistaPreviaRecibo();
 
     // Limpiar primero la referencia
     this.ventaParaRecibo = null;
@@ -3835,8 +3796,49 @@ export class HistorialVentasComponent implements OnInit {
     this.porcentajeAbonadoDelTotal = 0;
   }
 
-  descargarPDF(): void {
-    this.swalService.showInfo('Información', 'La descarga de PDF estará disponible próximamente');
+  async descargarPDF(): Promise<void> {
+    const htmlContent = this.obtenerReciboHTMLParaSalida('pdf');
+    if (!htmlContent) {
+      return;
+    }
+
+    this.swalService.showLoadingAlert('Generando PDF del recibo...');
+
+    try {
+      const canvas = await this.renderizarReciboHTMLACanvas(htmlContent);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let remainingHeight = imgHeight;
+      let offsetY = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, offsetY, imgWidth, imgHeight, undefined, 'FAST');
+      remainingHeight -= pageHeight;
+
+      while (remainingHeight > 0.1) {
+        offsetY = remainingHeight - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, offsetY, imgWidth, imgHeight, undefined, 'FAST');
+        remainingHeight -= pageHeight;
+      }
+
+      pdf.save(`recibo-${this.datosRecibo?.numeroVenta || 'venta'}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF del recibo:', error);
+      this.swalService.showError('Error', 'No se pudo generar el PDF del recibo.');
+    } finally {
+      this.swalService.closeLoading();
+    }
   }
 
   compartirWhatsApp(): void {
@@ -3916,6 +3918,102 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
+  private prepararDatosReciboParaSalida(): any | null {
+    if (!this.ventaParaRecibo) {
+      console.error('Error: No hay venta seleccionada para generar recibo');
+      this.swalService.showError('Error', 'No hay venta seleccionada. Primero seleccione una venta.');
+      return null;
+    }
+
+    if (!this.datosRecibo) {
+      this.datosRecibo = this.crearDatosReciboReal();
+    }
+
+    if (!this.datosRecibo || !this.datosRecibo.productos || !Array.isArray(this.datosRecibo.productos)) {
+      console.error('Error: Datos del recibo incompletos o inválidos:', this.datosRecibo);
+
+      try {
+        this.datosRecibo = this.crearDatosReciboReal();
+
+        if (!this.datosRecibo || !this.datosRecibo.productos || !Array.isArray(this.datosRecibo.productos)) {
+          this.swalService.showError('Error', 'No se pudieron generar los datos del recibo.');
+          return null;
+        }
+      } catch (error) {
+        console.error('Error al recrear datos del recibo:', error);
+        this.swalService.showError('Error', 'Error interno al preparar el recibo.');
+        return null;
+      }
+    }
+
+    if (this.ventaParaRecibo?.formaPago === 'cashea' && (!this.cuotasCashea || this.cuotasCashea.length === 0)) {
+      this.generarCuotasCashea();
+    }
+
+    return this.datosRecibo;
+  }
+
+  private obtenerReciboHTMLParaSalida(vista: 'print' | 'pdf' = 'print'): string | null {
+    const datos = this.prepararDatosReciboParaSalida();
+    if (!datos) {
+      return null;
+    }
+
+    return this.generarReciboHTML(datos, vista);
+  }
+
+  private async renderizarReciboHTMLACanvas(htmlContent: string): Promise<HTMLCanvasElement> {
+    const iframe = document.createElement('iframe');
+    const objectUrl = URL.createObjectURL(new Blob([htmlContent], { type: 'text/html;charset=utf-8' }));
+
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-10000px';
+    iframe.style.top = '0';
+    iframe.style.width = '840px';
+    iframe.style.height = '1188px';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+    iframe.style.border = '0';
+
+    document.body.appendChild(iframe);
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        iframe.onload = () => resolve();
+        iframe.onerror = () => reject(new Error('No se pudo cargar el documento temporal del recibo.'));
+        iframe.src = objectUrl;
+      });
+
+      const iframeWindow = iframe.contentWindow;
+      const iframeDocument = iframe.contentDocument;
+
+      if (!iframeWindow || !iframeDocument) {
+        throw new Error('No se pudo acceder al documento temporal del recibo.');
+      }
+
+      await new Promise<void>((resolve) => {
+        iframeWindow.requestAnimationFrame(() => {
+          iframeWindow.setTimeout(() => resolve(), 180);
+        });
+      });
+
+      const target = (iframeDocument.querySelector('.recibo-page') as HTMLElement) || iframeDocument.body;
+
+      return await html2canvas(target, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: Math.ceil(target.scrollWidth),
+        height: Math.ceil(target.scrollHeight),
+        windowWidth: Math.ceil(target.scrollWidth),
+        windowHeight: Math.ceil(target.scrollHeight)
+      });
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+      iframe.remove();
+    }
+  }
+
   private prepararProductosParaImpresion(): any[] {
     if (!this.ventaParaRecibo) {
       return [];
@@ -3973,6 +4071,8 @@ export class HistorialVentasComponent implements OnInit {
       })),
 
       // Totales
+      totalVenta: this.getMontoTotalSeguro(),
+      totalPagado: this.getTotalPagadoSeguro(),
       totales: {
         subtotal: this.getSubtotalSeguro(),
         descuento: this.getDescuentoSeguro(),
@@ -3987,6 +4087,8 @@ export class HistorialVentasComponent implements OnInit {
         moneda: this.ventaParaRecibo.moneda || 'dolar',
         observaciones: this.ventaParaRecibo.observaciones
       },
+
+      observaciones: this.ventaParaRecibo.observaciones,
 
       // Cashea (si aplica)
       cashea: this.ventaParaRecibo.formaPago === 'cashea' ? {
@@ -4071,23 +4173,35 @@ export class HistorialVentasComponent implements OnInit {
     return metodos;
   }
 
-  generarReciboHTML(datos: any): string {
+  generarReciboHTML(datos: any, vista: 'preview' | 'print' | 'pdf' = 'print'): string {
     if (!datos) {
       datos = this.crearDatosReciboReal();
     }
 
+    const esVistaPrevia = vista === 'preview';
+    const esExportacion = vista === 'print' || vista === 'pdf';
+
     const formaPago = datos.configuracion?.formaPago || 'contado';
     const tituloRecibo = this.getTituloReciboParaHTML(formaPago);
     const mensajeFinal = this.getMensajeFinalParaHTML(formaPago);
-
-    // Obtener métodos de pago según tipo
     const metodosPago = this.getMetodosPagoParaTipo(formaPago);
-
-    // Determinar si mostrar "Total a pagar" según la forma de pago
     const mostrarTotalAPagar = this.debeMostrarTotalAPagar(formaPago, datos);
     const textoTotalAPagar = this.getTextoTotalAPagarParaHTML(formaPago);
 
-    // CREAR FUNCIONES LOCALES
+    const totalVenta = Number(datos.totales?.total || 0);
+    const totalPagado = Number(datos.totales?.totalPagado || 0);
+    const deudaPendiente = formaPago === 'cashea'
+      ? Number(datos.cashea?.deudaPendiente || this.getDeudaPendiente(this.ventaParaRecibo))
+      : formaPago === 'abono'
+        ? Number(datos.abono?.deudaPendiente || this.getDeudaPendiente(this.ventaParaRecibo))
+        : Number(this.getDeudaPendiente(this.ventaParaRecibo) || Math.max(0, totalVenta - totalPagado));
+    const porcentajePagado = totalVenta > 0
+      ? Math.max(0, Math.min(100, Math.round((totalPagado / totalVenta) * 100)))
+      : 0;
+    const cuotasPendientesCashea = formaPago === 'cashea' && datos.cashea
+      ? Math.max(0, Number(datos.cashea.cantidadCuotas || 0) - Number(datos.cashea.cuotasAdelantadas || 0))
+      : 0;
+
     const formatearMonedaLocal = (monto: number | null | undefined, moneda?: string) => {
       return this.formatearMoneda(monto, moneda);
     };
@@ -4096,252 +4210,289 @@ export class HistorialVentasComponent implements OnInit {
       return this.formatearTipoPago(tipo);
     };
 
-    // GENERAR SECCIÓN DE MÉTODOS DE PAGO
-    const generarMetodosPagoHTML = () => {
-      if (!metodosPago || metodosPago.length === 0) return '';
-      return `
-      <div style="margin-bottom: 12px;">
-        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">MÉTODOS DE PAGO</h6>
-        ${metodosPago.map((metodo: any, index: number) => `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; padding: 2px 0; border-bottom: 1px dashed #dee2e6; font-size: 12px;">
-            <span>
-              <span style="background: #2c5aa0; color: white; padding: 1px 3px; border-radius: 2px; font-size: 7px; margin-right: 3px;">
-                ${formatearTipoPagoLocal(metodo.tipo)}
-              </span>
-              ${formatearMonedaLocal(metodo.monto_en_moneda_de_venta || metodo.monto, metodo.moneda)}
-              ${metodo.referencia ? `<span style="color: #666; margin-left: 3px;">(Ref: ${metodo.referencia})</span>` : ''}
-              ${metodo.banco ? `<span style="color: #666; margin-left: 3px;">- ${metodo.banco}</span>` : ''}
-              ${metodo.bancoReceptor ? `<span style="color: #666; margin-left: 3px;">→ ${metodo.bancoReceptor}</span>` : ''}
-              ${metodo.notaPago ? `<span style="color: #666; margin-left: 3px;">• ${metodo.notaPago}</span>` : ''}
-            </span>
-            <small style="color: #666;">#${index + 1}</small>
-          </div>
-        `).join('')}
-      </div>
-    `;
+    const escaparHTML = (valor: any): string => {
+      return String(valor ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     };
 
-    // GENERAR SECCIÓN DE CONTADO
+    const formatearFechaMetodoLocal = (fecha: any): string => {
+      if (!fecha) return '';
+      const fechaObj = new Date(fecha);
+      if (Number.isNaN(fechaObj.getTime())) return '';
+
+      return fechaObj.toLocaleString('es-VE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    const configModoPago = (() => {
+      switch (formaPago) {
+        case 'abono':
+          return {
+            badge: 'Abono parcial',
+            theme: 'theme-abono',
+            resumenTitulo: 'Control de abonos',
+            resumenTexto: 'Saldo parcial pendiente.',
+            estado: deudaPendiente > 0 ? 'Saldo abierto' : 'Liquidado'
+          };
+        case 'cashea':
+          return {
+            badge: 'Plan Cashea',
+            theme: 'theme-cashea',
+            resumenTitulo: 'Resumen del plan',
+            resumenTexto: 'Plan activo con cuotas pendientes.',
+            estado: deudaPendiente > 0 ? 'Plan activo' : 'Plan solvente'
+          };
+        case 'de_contado-pendiente':
+          return {
+            badge: 'Contado pendiente',
+            theme: 'theme-pendiente',
+            resumenTitulo: 'Venta por cobrar',
+            resumenTexto: 'Venta registrada sin pago inicial.',
+            estado: deudaPendiente > 0 ? 'Por cobrar' : 'Liquidado'
+          };
+        default:
+          return {
+            badge: 'Contado',
+            theme: 'theme-contado',
+            resumenTitulo: 'Pago completado',
+            resumenTexto: 'Pago completo confirmado.',
+            estado: 'Liquidado'
+          };
+      }
+    })();
+
+    const crearMetricaHTML = (label: string, valor: string, caption = '', tone = 'neutral') => `
+      <div class="metric-card ${tone}">
+        <span class="metric-label">${escaparHTML(label)}</span>
+        <strong class="metric-value">${valor}</strong>
+        ${caption ? `<small class="metric-caption">${escaparHTML(caption)}</small>` : ''}
+      </div>
+    `;
+
+    const generarMetodosPagoHTML = () => {
+      if (!metodosPago || metodosPago.length === 0) {
+        return '';
+      }
+
+      return `
+        <div class="section-card subtle-card compact-card page-break-avoid">
+          <div class="section-head compact">
+            <div>
+              <span class="section-kicker">Cobro</span>
+              <h3 class="section-title">Metodos registrados</h3>
+            </div>
+          </div>
+          <div class="payment-list compact-list">
+            ${metodosPago.map((metodo: any, index: number) => {
+              const detalles = [
+                metodo.referencia ? `Ref. ${escaparHTML(metodo.referencia)}` : '',
+                metodo.banco ? escaparHTML(metodo.banco) : '',
+                metodo.bancoReceptor ? `Receptor: ${escaparHTML(metodo.bancoReceptor)}` : '',
+                metodo.notaPago ? escaparHTML(metodo.notaPago) : '',
+                formatearFechaMetodoLocal(metodo.fechaRegistro)
+              ].filter(Boolean);
+
+              return `
+                <div class="payment-item">
+                  <div class="payment-topline">
+                    <div class="payment-main">
+                      <span class="payment-pill">${escaparHTML(formatearTipoPagoLocal(metodo.tipo))}</span>
+                      <strong class="payment-amount">${formatearMonedaLocal(metodo.monto_en_moneda_de_venta || metodo.monto, metodo.moneda)}</strong>
+                    </div>
+                    <span class="payment-index">#${index + 1}</span>
+                  </div>
+                  ${detalles.length > 0 ? `<div class="payment-meta">${detalles.join(' <span class="meta-dot">&#8226;</span> ')}</div>` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    };
+
     const generarContadoHTML = () => {
       if (formaPago !== 'contado') return '';
 
       return `
-      <div class="resumen-venta page-break-avoid">
-        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
-        
-        <div style="background: #f8f9fa; padding: 8px; border-radius: 3px; margin: 6px 0; border-left: 2px solid #198754;">
-          <!-- Forma de pago -->
-          <div style="text-align: center; margin-bottom: 8px;">
-            <span style="background: #198754; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">CONTADO</span>
-          </div>
-
-          <!-- Métodos de pago -->
-          ${generarMetodosPagoHTML()}
-
-          <!-- Total pagado -->
-          <div style="text-align: center; margin-top: 8px;">
-            <strong style="display: block; margin-bottom: 2px; font-size: 9px;">TOTAL PAGADO</strong>
-            <div style="font-size: 12px; font-weight: bold; color: #198754;">
-              ${formatearMonedaLocal(datos.totales.totalPagado)}
+        <div class="section-card payment-overview ${configModoPago.theme} compact-card page-break-avoid">
+          <div class="section-head">
+            <div>
+              <span class="section-kicker">Resumen de pago</span>
+              <h3 class="section-title">${configModoPago.resumenTitulo}</h3>
+              <p class="section-copy">${configModoPago.resumenTexto}</p>
             </div>
-            <small style="color: #666; font-size: 7px;">El pago ha sido realizado en su totalidad</small>
+            <span class="mode-badge ${configModoPago.theme}">${configModoPago.badge}</span>
+          </div>
+          <div class="metric-grid metric-grid-3 compact-metrics">
+            ${crearMetricaHTML('Total', formatearMonedaLocal(totalVenta), '', 'info')}
+            ${crearMetricaHTML('Pagado', formatearMonedaLocal(totalPagado), '', 'success')}
+            ${crearMetricaHTML('Estado', escaparHTML(configModoPago.estado), '', 'neutral')}
           </div>
         </div>
-      </div>
-    `;
+
+        ${generarMetodosPagoHTML()}
+      `;
     };
 
-    // GENERAR SECCIÓN DE CASHEA
+    const generarContadoPendienteHTML = () => {
+      if (formaPago !== 'de_contado-pendiente') return '';
+
+      return `
+        <div class="section-card payment-overview ${configModoPago.theme} compact-card page-break-avoid">
+          <div class="section-head">
+            <div>
+              <span class="section-kicker">Resumen de cobro</span>
+              <h3 class="section-title">${configModoPago.resumenTitulo}</h3>
+              <p class="section-copy">${configModoPago.resumenTexto}</p>
+            </div>
+            <span class="mode-badge ${configModoPago.theme}">${configModoPago.badge}</span>
+          </div>
+          <div class="metric-grid metric-grid-3 compact-metrics">
+            ${crearMetricaHTML('Total', formatearMonedaLocal(totalVenta), '', 'info')}
+            ${crearMetricaHTML('Pagado', formatearMonedaLocal(totalPagado), '', 'neutral')}
+            ${crearMetricaHTML('Deuda', formatearMonedaLocal(deudaPendiente), '', 'warning')}
+          </div>
+        </div>
+
+        ${generarMetodosPagoHTML()}
+      `;
+    };
+
     const generarCasheaHTML = () => {
       if (formaPago !== 'cashea' || !datos.cashea) return '';
 
       return `
-      <div class="resumen-venta page-break-avoid">
-        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">RESUMEN DE VENTA</h6>
-        
-        <div style="background: #f8f9fa; padding: 8px; border-radius: 3px; margin: 6px 0; border-left: 2px solid #0dcaf0;">
-          <!-- Forma de pago -->
-          <div style="text-align: center; margin-bottom: 8px;">
-            <span style="background: #0dcaf0; color: black; padding: 2px 6px; border-radius: 3px; font-size: 10px;">PLAN CASHEA</span>
-          </div>
-
-          <!-- Información del plan Cashea -->
-          <div style="text-align: center; margin-bottom: 8px;">
+        <div class="section-card payment-overview ${configModoPago.theme} compact-card page-break-avoid">
+          <div class="section-head">
             <div>
-              <div style="margin-bottom: 4px;">
-                <small style="color: #666; font-size: 7px;">NIVEL</small>
-                <div style="font-weight: bold; color: #2c5aa0; font-size: 10px;">
-                  ${this.obtenerNombreNivelCashea(datos.cashea.nivel)}
-                </div>
-              </div>
+              <span class="section-kicker">Resumen de pago</span>
+              <h3 class="section-title">${configModoPago.resumenTitulo}</h3>
+              <p class="section-copy">${configModoPago.resumenTexto}</p>
             </div>
+            <span class="mode-badge ${configModoPago.theme}">${configModoPago.badge}</span>
           </div>
-
-          <!-- Métodos de pago -->
-          ${generarMetodosPagoHTML()}
-
-          <!-- Desglose de pagos -->
-          <div>
-            <h6 style="text-align: center; margin-bottom: 8px; font-weight: bold; color: #2c5aa0; font-size: 9px;">DESGLOSE DE PAGOS</h6>
-
-            <!-- Pago inicial -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding: 4px 0; border-bottom: 1px dashed #dee2e6;">
-              <div style="text-align: center; width: 50%;">
-                <strong style="font-size: 12px;">Pago Inicial</strong>
-              </div>
-              <div style="text-align: center; width: 50%;">
-                <strong style="font-size: 12px;">${formatearMonedaLocal(datos.cashea.inicial)}</strong>
-              </div>
-            </div>
-
-            <!-- Cuotas adelantadas -->
-            ${datos.cashea.cuotasAdelantadas > 0 ? `
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding: 4px 0; border-bottom: 1px dashed #dee2e6;">
-                <div style="text-align: center; width: 50%;">
-                  <strong style="font-size: 12px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong>
-                </div>
-                <div style="text-align: center; width: 50%;">
-                  <strong style="font-size: 12px;">${formatearMonedaLocal(datos.cashea.montoAdelantado)}</strong>
-                </div>
-              </div>
-            ` : ''}
-
-            <!-- Total pagado ahora -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; padding-top: 6px; border-top: 1px solid #ccc;">
-              <div style="text-align: center; width: 50%;">
-                <strong style="font-size: 9px;">TOTAL PAGADO AHORA:</strong>
-              </div>
-              <div style="text-align: center; width: 50%;">
-                <strong style="font-size: 9px; color: #198754;">
-                  ${formatearMonedaLocal(datos.totales.totalPagado)}
-                </strong>
-              </div>
-            </div>
+          <div class="metric-grid metric-grid-4">
+            ${crearMetricaHTML('Nivel', escaparHTML(this.obtenerNombreNivelCashea(datos.cashea.nivel)), '', 'info')}
+            ${crearMetricaHTML('Pagado ahora', formatearMonedaLocal(totalPagado), '', 'success')}
+            ${crearMetricaHTML('Cuotas pendientes', String(cuotasPendientesCashea), `${formatearMonedaLocal(datos.cashea.montoPorCuota)} c/u`, 'neutral')}
+            ${crearMetricaHTML('Deuda', formatearMonedaLocal(deudaPendiente), '', 'warning')}
           </div>
-
-          <!-- Resumen de cuotas -->
-          <div style="display: flex; justify-content: center; gap: 15px; margin-top: 8px; text-align: center;">
-            <div>
-              <small style="color: #666; font-size: 7px;">CUOTAS PENDIENTES</small>
-              <div style="font-weight: bold; color: #ffc107; font-size: 10px;">
-                ${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}
-              </div>
-              <div style="font-size: 7px; color: #666; margin-top: 1px;">
-                ${formatearMonedaLocal(datos.cashea.montoPorCuota)} c/u
-              </div>
+          <div class="plan-inline-grid compact-inline-grid">
+            <div class="plan-inline-item">
+              <span class="plan-inline-label">Pago inicial</span>
+              <strong class="plan-inline-value">${formatearMonedaLocal(datos.cashea.inicial)}</strong>
             </div>
-            <div>
-              <small style="color: #666; font-size: 7px;">DEUDA PENDIENTE</small>
-              <div style="font-weight: bold; color: #dc3545; font-size: 10px;">
-                ${formatearMonedaLocal(datos.cashea.deudaPendiente)}
-              </div>
+            <div class="plan-inline-item">
+              <span class="plan-inline-label">Cuotas adelantadas</span>
+              <strong class="plan-inline-value">${Number(datos.cashea.cuotasAdelantadas || 0)} por ${formatearMonedaLocal(datos.cashea.montoAdelantado || 0)}</strong>
+            </div>
+            <div class="plan-inline-item">
+              <span class="plan-inline-label">Estado del plan</span>
+              <strong class="plan-inline-value">${escaparHTML(configModoPago.estado)}</strong>
             </div>
           </div>
         </div>
-      </div>
-    `;
+
+        ${generarMetodosPagoHTML()}
+      `;
     };
 
-    // GENERAR SECCIÓN DE ABONO
     const generarAbonoHTML = () => {
       if (formaPago !== 'abono' || !datos.abono) return '';
-
-      // Obtener abonos agrupados
       const abonosAgrupados = this.getAbonosAgrupadosPublico(this.ventaParaRecibo);
 
       return `
-      <div class="resumen-venta page-break-avoid">
-        <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">HISTORIAL DE ABONOS</h6>
-        
-        <div style="background: #f8f9fa; padding: 8px; border-radius: 3px; margin: 6px 0; border-left: 2px solid #ffc107;">
-          <!-- Forma de pago -->
-          <div style="text-align: center; margin-bottom: 8px;">
-            <span style="background: #ffc107; color: black; padding: 2px 6px; border-radius: 3px; font-size: 10px;">ABONO PARCIAL</span>
+        <div class="section-card payment-overview ${configModoPago.theme} compact-card page-break-avoid">
+          <div class="section-head">
+            <div>
+              <span class="section-kicker">Resumen de pago</span>
+              <h3 class="section-title">${configModoPago.resumenTitulo}</h3>
+              <p class="section-copy">${configModoPago.resumenTexto}</p>
+            </div>
+            <span class="mode-badge ${configModoPago.theme}">${configModoPago.badge}</span>
           </div>
+          <div class="metric-grid metric-grid-4">
+            ${crearMetricaHTML('Total', formatearMonedaLocal(totalVenta), '', 'info')}
+            ${crearMetricaHTML('Abonado', formatearMonedaLocal(totalPagado), '', 'success')}
+            ${crearMetricaHTML('Deuda', formatearMonedaLocal(deudaPendiente), '', 'warning')}
+            ${crearMetricaHTML('Progreso', `${Number(datos.abono.porcentajePagado || porcentajePagado)}%`, '', 'neutral')}
+          </div>
+          <div class="progress-shell">
+            <div class="progress-track">
+              <span class="progress-fill" style="width: ${Math.max(0, Math.min(100, Number(datos.abono.porcentajePagado || porcentajePagado)))}%;"></span>
+            </div>
+          </div>
+        </div>
 
-          <!-- Tabla de abonos -->
+        <div class="section-card subtle-card compact-card page-break-avoid">
+          <div class="section-head compact">
+            <div>
+              <span class="section-kicker">Seguimiento</span>
+              <h3 class="section-title">Historial de abonos</h3>
+            </div>
+          </div>
           ${abonosAgrupados.length > 0 ? `
-            <div style="margin-bottom: 12px;">
-              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <div class="history-table-wrap">
+              <table class="history-table">
                 <thead>
-                  <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-                    <th style="padding: 4px; text-align: center; width: 15%;"># Abono</th>
-                    <th style="padding: 4px; text-align: left; width: 25%;">Fecha</th>
-                    <th style="padding: 4px; text-align: left; width: 40%;">Métodos de Pago</th>
-                    <th style="padding: 4px; text-align: right; width: 20%;">Monto</th>
+                  <tr>
+                    <th>#</th>
+                    <th>Fecha</th>
+                    <th>Metodos utilizados</th>
+                    <th class="text-end">Monto</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${abonosAgrupados.map((abono: any, index: number) => `
-                    <tr style="border-bottom: 1px solid #dee2e6;">
-                      <td style="padding: 4px; text-align: center;">
-                        <span style="background: #6c757d; color: white; padding: 1px 4px; border-radius: 2px; font-size: 7px;">
-                          ${abono.numeroPago}
-                        </span>
+                  ${abonosAgrupados.map((abono: any) => `
+                    <tr>
+                      <td><span class="history-badge">${escaparHTML(abono.numeroPago)}</span></td>
+                      <td>${escaparHTML(abono.fechaFormateada)}</td>
+                      <td>
+                        <div class="history-methods">
+                          ${abono.metodosDetalle.map((metodo: any) => {
+                            const metodoDetalle = [
+                              escaparHTML(formatearTipoPagoLocal(metodo.tipo)),
+                              formatearMonedaLocal(metodo.montoEnMonedaVenta || metodo.monto, metodo.moneda),
+                              metodo.referencia ? `Ref. ${escaparHTML(metodo.referencia)}` : '',
+                              metodo.banco ? escaparHTML(metodo.banco) : ''
+                            ].filter(Boolean).join(' <span class="meta-dot">&#8226;</span> ');
+
+                            return `
+                              <div class="history-method-item">
+                                ${metodoDetalle ? `<small>${metodoDetalle}</small>` : ''}
+                              </div>
+                            `;
+                          }).join('')}
+                        </div>
                       </td>
-                      <td style="padding: 4px;">${abono.fechaFormateada}</td>
-                      <td style="padding: 4px;">
-                        ${abono.metodosDetalle.map((metodo: any, idx: number) => `
-                          <div style="margin-bottom: 1px;">
-                            ${formatearTipoPagoLocal(metodo.tipo)}: 
-                            ${formatearMonedaLocal(metodo.montoEnMonedaVenta || metodo.monto, metodo.moneda)}
-                            ${metodo.referencia ? `(Ref: ${metodo.referencia})` : ''}
-                            ${metodo.banco ? `- ${metodo.banco}` : ''}
-                          </div>
-                        `).join('')}
-                      </td>
-                      <td style="padding: 4px; text-align: right; font-weight: bold;">
-                        ${formatearMonedaLocal(abono.montoAbonado, this.ventaParaRecibo.moneda)}
-                      </td>
+                      <td class="text-end fw-strong">${formatearMonedaLocal(abono.montoAbonado, this.ventaParaRecibo.moneda)}</td>
                     </tr>
                   `).join('')}
                 </tbody>
                 <tfoot>
-                  <tr style="background: #d4edda; font-weight: bold;">
-                    <td colspan="3" style="padding: 4px; text-align: right;">TOTAL ABONADO:</td>
-                    <td style="padding: 4px; text-align: right;">
-                      ${formatearMonedaLocal(this.getTotalAbonadoPublico(this.ventaParaRecibo), this.ventaParaRecibo.moneda)}
-                    </td>
+                  <tr>
+                    <td colspan="3">Total abonado</td>
+                    <td class="text-end">${formatearMonedaLocal(this.getTotalAbonadoPublico(this.ventaParaRecibo), this.ventaParaRecibo.moneda)}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
-          ` : ''}
-
-          <!-- Resumen financiero -->
-          <div style="background: white; padding: 8px; border-radius: 3px; border: 1px solid #e9ecef; margin: 6px 0;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;">
-              <div style="text-align: center;">
-                <div style="font-size: 7px; color: #666; margin-bottom: 2px;">TOTAL A PAGAR</div>
-                <div style="font-size: 12px; font-weight: bold; color: #2c5aa0;">
-                  ${formatearMonedaLocal(datos.totales.total)}
-                </div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 7px; color: #666; margin-bottom: 2px;">DEUDA PENDIENTE</div>
-                <div style="font-size: 12px; font-weight: bold; color: #dc3545;">
-                  ${formatearMonedaLocal(datos.abono.deudaPendiente)}
-                </div>
-              </div>
-            </div>
-            
-            <div style="text-align: center;">
-              <div style="font-size: 7px; color: #666; margin-bottom: 2px;">PORCENTAJE PAGADO</div>
-              <div style="font-size: 12px; font-weight: bold; color: #198754; margin-bottom: 4px;">
-                ${Math.round(datos.abono.porcentajePagado)}%
-              </div>
-              <div style="background: #e9ecef; border-radius: 4px; overflow: hidden; height: 4px; margin: 0 auto; width: 60%;">
-                <div style="background: #198754; height: 100%; width: ${datos.abono.porcentajePagado}%;"></div>
-              </div>
-            </div>
-          </div>
+          ` : '<div class="empty-note">Aun no hay abonos registrados para esta venta.</div>'}
         </div>
-      </div>
-    `;
+      `;
     };
 
-    // DETERMINAR QUÉ SECCIÓN MOSTRAR
     const seccionResumenHTML = formaPago === 'contado' ? generarContadoHTML() :
+      formaPago === 'de_contado-pendiente' ? generarContadoPendienteHTML() :
       formaPago === 'cashea' ? generarCasheaHTML() :
         formaPago === 'abono' ? generarAbonoHTML() : '';
 
@@ -4353,250 +4504,788 @@ export class HistorialVentasComponent implements OnInit {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recibo - ${datos.numeroVenta}</title>
     <style>
-        /* Estilos CSS existentes se mantienen igual */
         @page {
-            margin: 0;
+        margin: 12mm;
             size: A4;
         }
-        
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Arial', sans-serif;
-            font-size: 10px;
-            line-height: 1.15;
-            color: #333;
-            background: white;
-            padding: 20mm 10mm 10mm 10mm;
-            width: 210mm;
-            height: 297mm;
-            margin: 0 auto;
+        font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+        color: #17324d;
+        background: ${esVistaPrevia ? 'transparent' : esExportacion ? '#ffffff' : '#eef3f8'};
+        padding: ${esVistaPrevia || esExportacion ? '0' : '16px'};
         }
-        
+
+      .recibo-page {
+        max-width: ${esVistaPrevia || esExportacion ? 'none' : '820px'};
+        margin: ${esVistaPrevia || esExportacion ? '0' : '0 auto'};
+      }
+
         .recibo-container {
             width: 100%;
-            max-width: 190mm;
-            margin: 0 auto;
-            background: white;
-            padding: 0;
-            height: auto;
-            max-height: 257mm;
-            overflow: hidden;
+        background: ${esVistaPrevia ? 'transparent' : '#ffffff'};
+        border-radius: ${esVistaPrevia || esExportacion ? '0' : '24px'};
+        padding: ${esVistaPrevia || esExportacion ? '0' : '18px'};
+        box-shadow: ${esVistaPrevia || esExportacion ? 'none' : '0 18px 44px rgba(21, 45, 73, 0.12)'};
+        border: ${esVistaPrevia || esExportacion ? 'none' : '1px solid #dde7f1'};
         }
-        
+
         .recibo-header {
-            text-align: center;
-            border-bottom: 2px solid #2c5aa0;
-            padding-bottom: 6px;
-            margin-bottom: 8px;
+        background: linear-gradient(135deg, #163c63 0%, #275f8d 55%, #6bb0d8 100%);
+        border-radius: 20px;
+        padding: 16px 18px;
+        color: #ffffff;
+        display: grid;
+        grid-template-columns: 1.7fr 1fr;
+        gap: 14px;
+        align-items: end;
+        margin-bottom: 12px;
         }
-        
+
+      .brand-kicker {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        opacity: 0.84;
+        margin-bottom: 8px;
+      }
+
         .empresa-nombre {
-            font-size: 16px;
-            font-weight: bold;
-            color: #2c5aa0;
-            margin-bottom: 2px;
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        margin-bottom: 4px;
         }
-        
+
+      .empresa-tagline {
+        font-size: 11px;
+        opacity: 0.92;
+        max-width: 420px;
+      }
+
+      .header-aside {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+      }
+
+      .header-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        backdrop-filter: blur(6px);
+      }
+
+      .receipt-number-block {
+        width: 100%;
+        max-width: 220px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        padding: 10px 12px;
+        text-align: right;
+      }
+
+      .receipt-number-label {
+        display: block;
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        opacity: 0.75;
+        margin-bottom: 4px;
+      }
+
+      .receipt-number-value {
+        display: block;
+        font-size: 19px;
+        font-weight: 800;
+      }
+
         .empresa-info {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 1px;
-            line-height: 1.1;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.88);
+        line-height: 1.35;
         }
-        
+
         .titulo-venta {
-            font-size: 12px;
-            font-weight: 600;
-            color: #2c5aa0;
-            margin: 6px 0 2px 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: #17324d;
+        margin: 0;
         }
-        
-        .info-rapida {
-            background: #f8f9fa;
-            padding: 4px;
-            border-radius: 2px;
-            border: 1px solid #dee2e6;
-            margin-bottom: 8px;
-            font-size: 12px;
+
+      .header-contact {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 10px;
+        flex-wrap: wrap;
         }
-        
-        .cliente-compacto {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-left: 2px solid #2c5aa0;
-            padding: 6px;
-            font-size: 12px;
-            margin-bottom: 8px;
-            border-radius: 2px;
+
+      .meta-grid,
+      .client-grid,
+      .metric-grid,
+      .totals-layout {
+        display: grid;
+        gap: 10px;
         }
-        
-        .tabla-productos {
+
+      .meta-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-bottom: 10px;
+      }
+
+      .client-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .metric-grid-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .meta-card,
+      .metric-card,
+      .client-item,
+      .plan-inline-item {
+        background: #f8fbfd;
+        border: 1px solid #dbe7f0;
+        border-radius: 14px;
+        padding: 10px 12px;
+      }
+
+      .meta-label,
+      .client-label,
+      .metric-label,
+      .plan-inline-label {
+        display: block;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #66809a;
+        margin-bottom: 4px;
+      }
+
+      .meta-value,
+      .client-value,
+      .metric-value,
+      .plan-inline-value {
+        display: block;
+        font-size: 13px;
+        font-weight: 700;
+        color: #17324d;
+        line-height: 1.25;
+      }
+
+      .metric-value {
+        font-size: 16px;
+      }
+
+      .metric-caption {
+        display: block;
+        margin-top: 2px;
+        font-size: 10px;
+        color: #6f8598;
+        line-height: 1.3;
+      }
+
+      .metric-card.success {
+        background: linear-gradient(135deg, #f5fbf7 0%, #eaf8ee 100%);
+        border-color: #cfe9d8;
+      }
+
+      .metric-card.warning {
+        background: linear-gradient(135deg, #fff9ee 0%, #fff3d9 100%);
+        border-color: #f1deb1;
+      }
+
+      .metric-card.info {
+        background: linear-gradient(135deg, #f4f9ff 0%, #e9f2fb 100%);
+        border-color: #cfe1f2;
+      }
+
+      .metric-card.danger {
+        background: linear-gradient(135deg, #fff5f5 0%, #ffeded 100%);
+        border-color: #f0cccc;
+      }
+
+      .section-card {
+        background: #ffffff;
+        border: 1px solid #dde7f1;
+        border-radius: 18px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+      }
+
+      .compact-card {
+        padding: 12px 14px;
+      }
+
+      .subtle-card {
+        background: #fbfdff;
+      }
+
+      .payment-overview.theme-contado {
+        background: linear-gradient(135deg, #f5fbf7 0%, #f9fcff 100%);
+      }
+
+      .payment-overview.theme-abono {
+        background: linear-gradient(135deg, #fffbf3 0%, #fffdf8 100%);
+      }
+
+      .payment-overview.theme-cashea {
+        background: linear-gradient(135deg, #f4fcff 0%, #fbfeff 100%);
+      }
+
+      .payment-overview.theme-pendiente {
+        background: linear-gradient(135deg, #fff6f2 0%, #fffdfb 100%);
+      }
+
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .section-head.compact {
+        margin-bottom: 8px;
+      }
+
+      .section-kicker {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #6b86a0;
+        margin-bottom: 4px;
+      }
+
+      .section-title {
+        font-size: 16px;
+        line-height: 1.2;
+        font-weight: 800;
+        color: #17324d;
+      }
+
+      .section-copy {
+        margin-top: 4px;
+        color: #69829a;
+        font-size: 10px;
+        line-height: 1.35;
+        max-width: 520px;
+      }
+
+      .mode-badge {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 124px;
+        padding: 7px 11px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border: 1px solid transparent;
+      }
+
+      .metric-grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .compact-metrics {
+        gap: 8px;
+      }
+
+      .mode-badge.theme-contado {
+        background: #e9f7ef;
+        color: #19704a;
+        border-color: #cbe8d7;
+      }
+
+      .mode-badge.theme-abono {
+        background: #fff4d9;
+        color: #8f6500;
+        border-color: #f1dc9b;
+      }
+
+      .mode-badge.theme-cashea {
+        background: #dcf7ff;
+        color: #0f6f8c;
+        border-color: #bfe7f2;
+      }
+
+      .mode-badge.theme-pendiente {
+        background: #ffe8e0;
+        color: #9a4a28;
+        border-color: #f0cbbd;
+      }
+
+      .tabla-productos,
+      .history-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 8px;
-            font-size: 12px;
+        font-size: 11px;
         }
-        
-        .tabla-productos th {
-            background: #2c5aa0;
-            color: white;
-            font-weight: 600;
-            padding: 3px 4px;
-            text-align: left;
-            border: 1px solid #dee2e6;
-            font-size: 12px;
+
+      .tabla-productos th,
+      .history-table th {
+        padding: 9px 8px;
+        text-align: left;
+        font-size: 9px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #69829a;
+        border-bottom: 1px solid #d8e3ed;
         }
-        
-        .tabla-productos td {
-            border: 1px solid #dee2e6;
-            padding: 2px 3px;
+
+      .tabla-productos td,
+      .history-table td {
+        border-bottom: 1px solid #edf2f7;
+        padding: 8px 8px;
             vertical-align: middle;
-            font-size: 12px;
+          font-size: 11px;
         }
-        
+
+      .tabla-productos tbody tr:last-child td,
+      .history-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      .product-name {
+        font-weight: 700;
+        color: #17324d;
+      }
+
+      .service-tag,
+      .payment-pill,
+      .history-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3px 7px;
+        border-radius: 999px;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      .service-tag {
+        background: #eaf3fb;
+        color: #205b84;
+        margin-left: 6px;
+      }
+
+      .payment-pill,
+      .history-badge {
+        background: #edf4fb;
+        color: #22567d;
+      }
+
         .text-center { text-align: center; }
         .text-end { text-align: right; }
-        
-        .resumen-cashea {
-            background: #f8f9fa;
-            padding: 6px;
-            border-radius: 3px;
-            margin: 6px 0;
-            border-left: 2px solid #0dcaf0;
+
+      .fw-strong {
+        font-weight: 800;
         }
-        
-        .resumen-abono {
-            background: #f8f9fa;
-            padding: 6px;
-            border-radius: 3px;
-            margin: 6px 0;
-            border-left: 2px solid #ffc107;
+
+      .payment-list {
+        display: grid;
+        gap: 8px;
         }
-        
-        .resumen-contado {
-            background: #f8f9fa;
-            padding: 6px;
-            border-radius: 3px;
-            margin: 6px 0;
-            border-left: 2px solid #198754;
+
+      .payment-list.compact-list {
+        gap: 6px;
+      }
+
+      .payment-item {
+        padding: 10px 12px;
+        border: 1px solid #dde7f1;
+        border-radius: 14px;
+        background: #ffffff;
         }
-        
-        .text-danger { color: #dc3545; }
-        .text-success { color: #198754; }
-        .text-warning { color: #ffc107; }
-        .text-primary { color: #2c5aa0; }
-        .text-muted { color: #666; }
-        
-        .badge {
-            display: inline-block;
-            padding: 1px 3px;
-            font-size: 7px;
-            font-weight: 600;
-            line-height: 1;
-            text-align: center;
-            white-space: nowrap;
-            vertical-align: baseline;
-            border-radius: 1px;
+
+      .payment-topline,
+      .payment-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
         }
-        
-        .bg-primary { background-color: #2c5aa0; color: white; }
-        .bg-success { background-color: #198754; color: white; }
-        .bg-info { background-color: #0dcaf0; color: black; }
-        .bg-warning { background-color: #ffc107; color: black; }
-        
-        .fw-bold { font-weight: bold; }
-        .small { font-size: 7px; }
-        .fs-6 { font-size: 10px; }
+
+      .payment-main {
+        justify-content: flex-start;
+      }
+
+      .payment-amount {
+        font-size: 13px;
+        font-weight: 800;
+        color: #17324d;
+      }
+
+      .payment-index {
+        font-size: 9px;
+        color: #7b91a6;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+
+      .payment-meta,
+      .history-method-item small,
+      .empty-note {
+        color: #70869b;
+        font-size: 10px;
+        line-height: 1.35;
+      }
+
+      .payment-meta {
+        margin-top: 5px;
+      }
+
+      .meta-dot {
+        display: inline-block;
+        margin: 0 6px;
+        color: #a2b3c3;
+      }
+
+      .plan-inline-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .compact-inline-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .progress-shell {
+        margin-top: 8px;
+      }
+
+      .progress-track {
+        height: 6px;
+        background: #e8eef5;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #2a77b6 0%, #58c296 100%);
+      }
+
+      .history-methods {
+        display: grid;
+        gap: 4px;
+      }
+
+      .history-method-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .history-table-wrap {
+        overflow: hidden;
+        border-radius: 14px;
+        border: 1px solid #dde7f1;
+      }
+
+      .history-table thead,
+      .tabla-productos thead {
+        background: #f8fbfd;
+      }
+
+      .history-table tfoot td {
+        background: #edf6f0;
+        font-weight: 800;
+        color: #19704a;
+        border-top: 1px solid #d6e9dd;
+      }
+
+      .totals-layout {
+        grid-template-columns: minmax(0, 1fr) 220px;
+        align-items: stretch;
+      }
+
+      .compact-totals-layout {
+        gap: 10px;
+      }
+
+      .totals-breakdown {
+        border: 1px solid #dde7f1;
+        border-radius: 14px;
+        padding: 8px 12px;
+        background: #fbfdff;
+      }
+
+      .total-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 7px 0;
+        border-bottom: 1px solid #edf2f7;
+        font-size: 12px;
+        color: #5c748a;
+      }
+
+      .total-row:last-child {
+        border-bottom: none;
+      }
+
+      .total-row strong {
+        color: #17324d;
+        font-size: 12px;
+      }
+
+      .total-row.danger strong {
+        color: #b55454;
+      }
+
+      .totals-highlight {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .highlight-card {
+        border-radius: 16px;
+        padding: 14px 16px;
+        border: 1px solid #dce6f1;
+        background: linear-gradient(135deg, #173c63 0%, #2d658f 55%, #75afd0 100%);
+        color: #ffffff;
+        min-height: 96px;
+      }
+
+      .highlight-card .metric-label,
+      .highlight-card .metric-caption {
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .highlight-card .metric-value {
+        color: #ffffff;
+        font-size: 22px;
+      }
+
+      .note-card {
+        background: linear-gradient(135deg, #fff7df 0%, #fffdf4 100%);
+        border: 1px solid #f0dfaa;
+        color: #7a6221;
+      }
+
+      .footer-band {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding-top: 4px;
+        margin-top: 6px;
+        font-size: 10px;
+        color: #6a8095;
+      }
+
+      .message-card {
+        margin-top: 8px;
+        border-radius: 14px;
+        padding: 10px 12px;
+        background: linear-gradient(135deg, #edf6ff 0%, #f7fbff 100%);
+        border: 1px solid #d7e7f6;
+        color: #224e72;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .empty-note {
+        padding: 6px 2px 2px;
+      }
 
         .page-break-avoid {
             page-break-inside: avoid;
             break-inside: avoid;
         }
 
+      @media (max-width: 768px) {
+        body {
+          padding: 10px;
+        }
+
+        .recibo-container {
+          border-radius: 18px;
+          padding: 12px;
+        }
+
+        .recibo-header,
+        .meta-grid,
+        .client-grid,
+        .metric-grid-3,
+        .metric-grid-4,
+        .plan-inline-grid,
+        .totals-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .header-aside {
+          align-items: flex-start;
+        }
+
+        .receipt-number-block {
+          text-align: left;
+          max-width: none;
+        }
+
+        .section-head {
+          flex-direction: column;
+        }
+      }
+
         @media print {
             body {
-                padding: 20mm 10mm 10mm 10mm;
+          background: #ffffff;
+          padding: 0;
                 margin: 0;
-                width: 210mm;
-                height: 297mm;
-                font-size: 9px;
-            }
-            
-            .recibo-container {
-                border: none;
-                padding: 0;
-                box-shadow: none;
-                max-height: 257mm;
-                overflow: hidden;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
             }
 
-            @page {
-                margin: 0;
-                size: A4;
-            }
-            
-            body {
-                margin: 0;
-                -webkit-print-color-adjust: exact;
+        .recibo-page {
+          max-width: none;
+          margin: 0;
+        }
+
+            .recibo-container {
+                border: none;
+                box-shadow: none;
+          padding: 0;
+          border-radius: 0;
             }
         }
     </style>
 </head>
 <body>
-    <div class="recibo-container page-break-avoid">
-        <!-- Encabezado -->
-        <div class="recibo-header page-break-avoid">
-            <div class="empresa-nombre">NEW VISION LENS</div>
-            <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
-            <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
-            <div class="titulo-venta">${tituloRecibo}</div>
+    <div class="recibo-page">
+      <div class="recibo-container page-break-avoid">
+      <div class="recibo-header page-break-avoid">
+        <div>
+          <span class="brand-kicker">New Vision Lens</span>
+          <div class="empresa-nombre">${escaparHTML(tituloRecibo)}</div>
+          <div class="empresa-tagline">Comprobante de venta y pago.</div>
+          <div class="header-contact">
+            <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas</div>
+            <div class="empresa-info">Tel: 0212-365-39-42</div>
+            <div class="empresa-info">RIF: J-123456789</div>
+            <div class="empresa-info">newvisionlens2020@gmail.com</div>
+          </div>
         </div>
-
-        <!-- Información rápida -->
-        <div class="info-rapida page-break-avoid">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px;">
-                <div><strong>Recibo:</strong> ${datos.numeroVenta}</div>
-                <div><strong>Fecha:</strong> ${datos.fecha}</div>
-                <div><strong>Hora:</strong> ${datos.hora}</div>
-                <div><strong>Vendedor:</strong> ${datos.vendedor}</div>
+        <div class="header-aside">
+          <span class="header-badge">${escaparHTML(configModoPago.badge)}</span>
+          <div class="receipt-number-block">
+            <span class="receipt-number-label">Numero de recibo</span>
+            <span class="receipt-number-value">${escaparHTML(datos.numeroVenta)}</span>
+          </div>
             </div>
         </div>
 
-        <!-- Cliente -->
-        <div class="cliente-compacto page-break-avoid">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
-                <div><strong>Cliente:</strong> ${datos.cliente.nombre}</div>
-                <div><strong>Cédula:</strong> ${datos.cliente.cedula}</div>
-                <div><strong>Teléfono:</strong> ${datos.cliente.telefono}</div>
+      <div class="meta-grid page-break-avoid">
+        <div class="meta-card">
+          <span class="meta-label">Fecha</span>
+          <span class="meta-value">${escaparHTML(datos.fecha)}</span>
+        </div>
+        <div class="meta-card">
+          <span class="meta-label">Hora</span>
+          <span class="meta-value">${escaparHTML(datos.hora)}</span>
+        </div>
+        <div class="meta-card">
+          <span class="meta-label">Asesor</span>
+          <span class="meta-value">${escaparHTML(datos.vendedor)}</span>
+        </div>
+        <div class="meta-card">
+          <span class="meta-label">Estado</span>
+          <span class="meta-value">${escaparHTML(configModoPago.estado)}</span>
             </div>
         </div>
 
-        <!-- Productos -->
-        <div class="productos-compactos page-break-avoid">
-            <h6 style="font-weight: bold; margin-bottom: 6px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 2px;">PRODUCTOS</h6>
+      <div class="section-card page-break-avoid">
+        <div class="section-head compact">
+          <div>
+            <span class="section-kicker">Cliente</span>
+            <h3 class="section-title">Datos del comprador</h3>
+          </div>
+        </div>
+        <div class="client-grid">
+          <div class="client-item">
+            <span class="client-label">Nombre</span>
+            <span class="client-value">${escaparHTML(datos.cliente.nombre)}</span>
+          </div>
+          <div class="client-item">
+            <span class="client-label">Cedula</span>
+            <span class="client-value">${escaparHTML(datos.cliente.cedula)}</span>
+          </div>
+          <div class="client-item">
+            <span class="client-label">Telefono</span>
+            <span class="client-value">${escaparHTML(datos.cliente.telefono)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card page-break-avoid">
+        <div class="section-head compact">
+          <div>
+            <span class="section-kicker">Detalle de venta</span>
+            <h3 class="section-title">Productos y servicios</h3>
+          </div>
+        </div>
             <table class="tabla-productos">
                 <thead>
                     <tr>
-                        <th width="5%" class="text-center">#</th>
-                        <th width="55%">Descripción</th>
-                        <th width="10%" class="text-center">Cant</th>
-                        <th width="15%" class="text-end">P. Unitario</th>
-                        <th width="15%" class="text-end">Subtotal</th>
+              <th width="6%" class="text-center">#</th>
+              <th width="52%">Descripcion</th>
+              <th width="10%" class="text-center">Cant</th>
+              <th width="16%" class="text-end">P. Unitario</th>
+              <th width="16%" class="text-end">Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${datos.productos && datos.productos.length > 0
         ? datos.productos.map((producto: any, index: number) => {
-          const precioUnitario = producto.precio_unitario_sin_iva || 0;
+        const precioUnitario = producto.precio_unitario_sin_iva || producto.precio || 0;
           const subtotal = producto.subtotal || 0;
           return `
                                 <tr>
                                     <td class="text-center">${index + 1}</td>
-                                    <td>${producto.nombre}</td>
+                    <td>
+                      <span class="product-name">${escaparHTML(producto.nombre)}</span>
+                      ${producto.esServicio ? '<span class="service-tag">SERVICIO</span>' : ''}
+                    </td>
                                     <td class="text-center">${producto.cantidad || 1}</td>
                                     <td class="text-end">${formatearMonedaLocal(precioUnitario)}</td>
                                     <td class="text-end">${formatearMonedaLocal(subtotal)}</td>
@@ -4613,117 +5302,117 @@ export class HistorialVentasComponent implements OnInit {
             </table>
         </div>
 
-        <!-- SECCIÓN DE RESUMEN (CONTADO/CASHEA/ABONO) -->
         ${seccionResumenHTML}
 
-        <!-- Totales -->
-        <div class="totales-compactos page-break-avoid">
-            <div style="display: flex; justify-content: flex-end;">
-                <div style="width: 50%;">
-                    <table style="width: 100%;">
-                        <tr>
-                            <td class="fw-bold" style="font-size: 10px;">Subtotal:</td>
-                            <td class="text-end" style="font-size: 10px;">${formatearMonedaLocal(datos.totales.subtotal)}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold" style="font-size: 10px;">Descuento:</td>
-                            <td class="text-end text-danger" style="font-size: 10px;">- ${formatearMonedaLocal(datos.totales.descuento)}</td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold" style="font-size: 10px;">IVA:</td>
-                            <td class="text-end" style="font-size: 10px;">${formatearMonedaLocal(datos.totales.iva)}</td>
-                        </tr>
-                        ${mostrarTotalAPagar ? `
-                            <tr class="table-info">
-                                <td class="fw-bold" style="font-size: 11px;">${textoTotalAPagar}:</td>
-                                <td class="text-end fw-bold" style="font-size: 11px;">${formatearMonedaLocal(datos.totales.total)}</td>
-                            </tr>
-                        ` : ''}
-                        <tr class="table-success">
-                            <td class="fw-bold" style="font-size: 11px;">${this.getTextoTotalPagadoParaHTML(formaPago)}:</td>
-                            <td class="text-end fw-bold" style="font-size: 11px;">${formatearMonedaLocal(datos.totales.totalPagado)}</td>
-                        </tr>
-                    </table>
+        <div class="section-card page-break-avoid">
+          <div class="section-head compact">
+            <div>
+              <span class="section-kicker">Cierre financiero</span>
+              <h3 class="section-title">Totales de la operacion</h3>
+            </div>
+          </div>
+          <div class="totals-layout compact-totals-layout">
+            <div class="totals-breakdown">
+              <div class="total-row">
+                <span>Subtotal</span>
+                <strong>${formatearMonedaLocal(datos.totales.subtotal)}</strong>
+              </div>
+              <div class="total-row danger">
+                <span>Descuento</span>
+                <strong>- ${formatearMonedaLocal(datos.totales.descuento || 0)}</strong>
+              </div>
+              <div class="total-row">
+                <span>IVA</span>
+                <strong>${formatearMonedaLocal(datos.totales.iva)}</strong>
+              </div>
+              ${mostrarTotalAPagar ? `
+                <div class="total-row">
+                <span>${escaparHTML(textoTotalAPagar)}</span>
+                <strong>${formatearMonedaLocal(datos.totales.total)}</strong>
+                </div>
+              ` : ''}
+              <div class="total-row">
+                <span>${escaparHTML(this.getTextoTotalPagadoParaHTML(formaPago))}</span>
+                <strong>${formatearMonedaLocal(datos.totales.totalPagado)}</strong>
+              </div>
+            </div>
+            <div class="totals-highlight">
+              <div class="highlight-card">
+                <span class="metric-label">Total final</span>
+                <strong class="metric-value">${formatearMonedaLocal(totalVenta)}</strong>
+                <small class="metric-caption">${escaparHTML(deudaPendiente > 0 ? 'Saldo pendiente por cobrar.' : 'Pago conciliado.')}</small>
+              </div>
                 </div>
             </div>
         </div>
 
-        <!-- Observaciones -->
         ${datos.configuracion?.observaciones ? `
-            <div class="observaciones-compactas page-break-avoid">
-                <div style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 4px; border-radius: 2px; font-size: 12px;">
-                    <strong>Observación:</strong> ${datos.configuracion.observaciones}
-                </div>
+          <div class="section-card note-card compact-card page-break-avoid">
+            <div class="section-head compact">
+              <div>
+                <span class="section-kicker">Observacion</span>
+                <h3 class="section-title">Nota</h3>
+              </div>
+            </div>
+            <div style="font-size: 12px; line-height: 1.5;">${escaparHTML(datos.configuracion.observaciones)}</div>
             </div>
         ` : ''}
-       </br></br>
-        <!-- Términos y condiciones -->
-        <div class="terminos-compactos page-break-avoid">
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 6px;">
-                <div>
-                    <p style="margin-bottom: 2px;">
-                        <i class="bi bi-exclamation-triangle"></i>
-                        Pasados 30 días no nos hacemos responsables de trabajos no retirados
-                    </p>
-                </div>
-                <div style="text-align: right;">
-                    <small>${new Date().getFullYear()} © New Vision Lens</small>
-                </div>
-            </div>
+
+        <div class="footer-band page-break-avoid">
+          <div>Pasados 30 dias no nos hacemos responsables de trabajos no retirados.</div>
+          <div>${new Date().getFullYear()} © New Vision Lens</div>
         </div>
 
-        <!-- Mensaje final -->
-        <div class="mensaje-final page-break-avoid">
-            <i class="bi bi-check-circle"></i>
-            ${mensajeFinal}
+        <div class="message-card page-break-avoid">
+          ${escaparHTML(mensajeFinal)}
         </div>
-    </div>
-</body>
-</html>
-  `;
+        </div>
+      </div>
+      </body>
+    </html>
+      `;
   }
 
-  imprimirRecibo(): void {
-    // Verificar primero que tengamos los datos necesarios
+  obtenerVistaPreviaReciboHTML(): string {
     if (!this.ventaParaRecibo) {
-      console.error('Error: No hay venta seleccionada para imprimir recibo');
-      this.swalService.showError('Error', 'No hay venta seleccionada. Primero seleccione una venta.');
+      return '';
+    }
+
+    const datos = this.datosRecibo?.totales ? this.datosRecibo : this.crearDatosReciboReal();
+    return this.generarReciboHTML(datos, 'preview');
+  }
+
+  private actualizarVistaPreviaRecibo(): void {
+    const html = this.obtenerVistaPreviaReciboHTML();
+
+    this.limpiarVistaPreviaRecibo();
+
+    if (!html) {
+      this.previewReciboUrl = null;
       return;
     }
 
-    // Asegurarse de que tenemos los datos del recibo
-    if (!this.datosRecibo) {
-      this.datosRecibo = this.crearDatosReciboReal();
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    this.previewReciboObjectUrl = URL.createObjectURL(blob);
+    this.previewReciboUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.previewReciboObjectUrl);
+  }
+
+  private limpiarVistaPreviaRecibo(): void {
+    this.previewReciboUrl = null;
+
+    if (this.previewReciboObjectUrl) {
+      URL.revokeObjectURL(this.previewReciboObjectUrl);
+      this.previewReciboObjectUrl = null;
+    }
+  }
+
+  imprimirRecibo(): void {
+    const htmlContent = this.obtenerReciboHTMLParaSalida('print');
+    if (!htmlContent) {
+      return;
     }
 
-    // Validar que los datos tengan la estructura correcta
-    if (!this.datosRecibo || !this.datosRecibo.productos || !Array.isArray(this.datosRecibo.productos)) {
-      console.error('Error: Datos del recibo incompletos o inválidos:', this.datosRecibo);
-
-      // Intentar recrear los datos
-      try {
-        this.datosRecibo = this.crearDatosReciboReal();
-
-        if (!this.datosRecibo || !this.datosRecibo.productos) {
-          this.swalService.showError('Error', 'No se pudieron generar los datos del recibo.');
-          return;
-        }
-      } catch (error) {
-        console.error('Error al recrear datos del recibo:', error);
-        this.swalService.showError('Error', 'Error interno al preparar el recibo.');
-        return;
-      }
-    }
-
-    // Generar cuotas Cashea si no existen
-    if (this.ventaParaRecibo?.formaPago === 'cashea' && (!this.cuotasCashea || this.cuotasCashea.length === 0)) {
-      this.generarCuotasCashea();
-    }
-
-    const datos = this.datosRecibo;
-    const htmlContent = this.generarReciboHTML(datos);
-
-    const ventanaImpresion = window.open('', '_blank', 'width=400,height=600');
+    const ventanaImpresion = window.open('', '_blank', 'width=900,height=1100');
 
     if (!ventanaImpresion) {
       this.swalService.showError('Error', 'No se pudo abrir la ventana de impresión. Permite ventanas emergentes.');
