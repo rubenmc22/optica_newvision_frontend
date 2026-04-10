@@ -714,6 +714,7 @@ export class HistorialVentasComponent implements OnInit {
       formaPago: formaPagoReal,
       formaPagoApi: formaPagoApi,
       formaPagoCompleto: formaPagoDetalle,
+      tasasHistoricas: formaPagoDetalle?.tasasActuales || formaPagoApi?.tasasActuales || [],
       descuento: venta.descuento || 0,
       observaciones: venta.observaciones,
 
@@ -867,6 +868,14 @@ export class HistorialVentasComponent implements OnInit {
     const monedaVenta = this.normalizarMoneda(venta?.moneda || 'dolar');
     const monedaSistema = this.normalizarMoneda(metodo?.monedaSistema || this.getMonedaSistema());
     const montoOriginal = Number(metodo?.monto || 0);
+    const tasaHistoricaValor = Number(
+      metodo?.tasaUsada ??
+      metodo?.tasaUasada ??
+      metodo?.tasa_usada
+    );
+    const tasaHistorica = Number.isFinite(tasaHistoricaValor) && tasaHistoricaValor > 0
+      ? tasaHistoricaValor
+      : null;
 
     const montoEnMonedaVenta = Number(
       metodo?.montoEnMonedaVenta ??
@@ -882,7 +891,13 @@ export class HistorialVentasComponent implements OnInit {
 
     const montoEnBolivar = Number(
       metodo?.montoEnBolivar ??
-      (monedaMetodo === 'bolivar' ? montoOriginal : this.convertirMonto(montoOriginal, monedaMetodo, 'bolivar'))
+      metodo?.monto_en_bolivar ??
+      metodo?.montoEnBolivares ??
+      (monedaMetodo === 'bolivar'
+        ? montoOriginal
+        : tasaHistorica !== null
+          ? montoOriginal * tasaHistorica
+          : this.convertirMonto(montoOriginal, monedaMetodo, 'bolivar'))
     );
 
     return {
@@ -893,6 +908,8 @@ export class HistorialVentasComponent implements OnInit {
       montoEnMonedaSistema: this.redondear(montoEnMonedaSistema),
       monedaSistema,
       montoEnBolivar: this.redondear(montoEnBolivar),
+      tasaUsada: tasaHistorica,
+      tasaUasada: tasaHistorica,
       referencia: metodo?.referencia || null,
       bancoCodigo: metodo?.bancoCodigo || null,
       bancoNombre: metodo?.bancoNombre || null,
@@ -3758,8 +3775,12 @@ export class HistorialVentasComponent implements OnInit {
     return metodosPago.map((metodo: any) => ({
       tipo: metodo.tipo || 'efectivo',
       monto: metodo.monto || 0,
-      montoEnMonedaVenta: metodo.monto_en_moneda_de_venta || metodo.monto || 0,
-      moneda: metodo.moneda_id || 'dolar',
+      montoEnMonedaVenta: metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.montoEnMonedaSistema || metodo.monto || 0,
+      moneda: metodo.moneda || metodo.moneda_id || this.ventaParaRecibo?.moneda || 'dolar',
+      monedaSistema: metodo.monedaSistema || this.ventaParaRecibo?.moneda || 'dolar',
+      montoEnSistema: metodo.montoEnSistema || metodo.montoEnMonedaSistema || metodo.montoEnMonedaVenta || metodo.monto || 0,
+      montoEnBolivar: metodo.montoEnBolivar ?? metodo.montoEnBolivares ?? null,
+      tasaUsada: metodo.tasaUsada ?? metodo.tasaUasada ?? null,
       referencia: metodo.referencia,
       banco: metodo.bancoNombre || metodo.banco,
       fecha: metodo.fechaRegistro
@@ -4187,6 +4208,10 @@ export class HistorialVentasComponent implements OnInit {
                 monto: metodo.monto || 0,
                 monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.monto,
                 moneda: metodo.moneda || metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+                montoEnSistema: metodo.montoEnSistema || metodo.montoEnMonedaSistema || metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.monto,
+                monedaSistema: metodo.monedaSistema || this.ventaParaRecibo.moneda || 'dolar',
+                montoEnBolivar: metodo.montoEnBolivar ?? metodo.montoEnBolivares ?? null,
+                tasaUsada: metodo.tasaUsada ?? metodo.tasaUasada ?? null,
                 referencia: metodo.referencia,
                 banco: metodo.bancoNombre || metodo.banco,
                 bancoReceptor: metodo.bancoReceptorNombre || metodo.bancoReceptor,
@@ -4262,6 +4287,75 @@ export class HistorialVentasComponent implements OnInit {
       });
     };
 
+    const normalizarMonedaReciboLocal = (moneda: any): string => {
+      switch (String(moneda ?? '').trim().toLowerCase()) {
+        case 'usd':
+        case '$':
+        case 'dolar':
+          return 'dolar';
+        case 'eur':
+        case 'euro':
+        case '€':
+          return 'euro';
+        case 'ves':
+        case 'bs':
+        case 'bs.':
+        case 'bolivar':
+          return 'bolivar';
+        default:
+          return String(moneda ?? '').trim().toLowerCase();
+      }
+    };
+
+    const obtenerMontoVisibleMetodoLocal = (metodo: any): number => {
+      const montoVisible = Number(
+        metodo?.monto_en_moneda_de_venta ??
+        metodo?.montoEnMonedaVenta ??
+        metodo?.montoEnSistema ??
+        metodo?.montoEnMonedaSistema ??
+        metodo?.monto
+      );
+
+      return Number.isFinite(montoVisible) ? montoVisible : 0;
+    };
+
+    const obtenerMonedaVisibleMetodoLocal = (metodo: any): string => {
+      return normalizarMonedaReciboLocal(
+        metodo?.monedaSistema ??
+        datos?.configuracion?.moneda ??
+        this.ventaParaRecibo?.moneda ??
+        metodo?.moneda ??
+        metodo?.moneda_id ??
+        'dolar'
+      ) || 'dolar';
+    };
+
+    const obtenerMontoBolivarMetodoLocal = (metodo: any): number | null => {
+      const montoBolivarDirecto = Number(
+        metodo?.montoEnBolivar ??
+        metodo?.monto_en_bolivar ??
+        metodo?.montoEnBolivares
+      );
+
+      if (Number.isFinite(montoBolivarDirecto)) {
+        return montoBolivarDirecto;
+      }
+
+      const tasaHistorica = Number(metodo?.tasaUsada ?? metodo?.tasaUasada);
+      const montoOriginal = Number(metodo?.monto ?? 0);
+
+      if (Number.isFinite(tasaHistorica) && tasaHistorica > 0 && Number.isFinite(montoOriginal)) {
+        return this.redondear(montoOriginal * tasaHistorica);
+      }
+
+      return null;
+    };
+
+    const debeMostrarReferenciaBolivarMetodoLocal = (metodo: any): boolean => {
+      const monedaOriginal = normalizarMonedaReciboLocal(metodo?.moneda ?? metodo?.moneda_id);
+      return monedaOriginal !== 'bolivar' && obtenerMontoBolivarMetodoLocal(metodo) !== null;
+    };
+
     const sedeRecibo = datos?.sede || this.obtenerSedeActualParaRecibo();
 
     const configModoPago = (() => {
@@ -4324,7 +4418,11 @@ export class HistorialVentasComponent implements OnInit {
           </div>
           <div class="payment-list compact-list">
             ${metodosPago.map((metodo: any, index: number) => {
+              const referenciaBolivar = debeMostrarReferenciaBolivarMetodoLocal(metodo)
+                ? `Equiv.: ${formatearMonedaLocal(obtenerMontoBolivarMetodoLocal(metodo), 'bolivar')}`
+                : '';
               const detalles = [
+                referenciaBolivar,
                 metodo.referencia ? `Ref. ${escaparHTML(metodo.referencia)}` : '',
                 metodo.banco ? escaparHTML(metodo.banco) : '',
                 metodo.bancoReceptor ? `Receptor: ${escaparHTML(metodo.bancoReceptor)}` : '',
@@ -4337,7 +4435,7 @@ export class HistorialVentasComponent implements OnInit {
                   <div class="payment-topline">
                     <div class="payment-main">
                       <span class="payment-pill">${escaparHTML(formatearTipoPagoLocal(metodo.tipo))}</span>
-                      <strong class="payment-amount">${formatearMonedaLocal(metodo.monto_en_moneda_de_venta || metodo.monto, metodo.moneda)}</strong>
+                      <strong class="payment-amount">${formatearMonedaLocal(obtenerMontoVisibleMetodoLocal(metodo), obtenerMonedaVisibleMetodoLocal(metodo))}</strong>
                     </div>
                     <span class="payment-index">#${index + 1}</span>
                   </div>
@@ -4477,9 +4575,13 @@ export class HistorialVentasComponent implements OnInit {
                       <td>
                         <div class="history-methods">
                           ${abono.metodosDetalle.map((metodo: any) => {
+                            const referenciaBolivar = debeMostrarReferenciaBolivarMetodoLocal(metodo)
+                              ? `Equiv.: ${formatearMonedaLocal(obtenerMontoBolivarMetodoLocal(metodo), 'bolivar')}`
+                              : '';
                             const metodoDetalle = [
                               escaparHTML(formatearTipoPagoLocal(metodo.tipo)),
-                              formatearMonedaLocal(metodo.montoEnMonedaVenta || metodo.monto, metodo.moneda),
+                              formatearMonedaLocal(obtenerMontoVisibleMetodoLocal(metodo), obtenerMonedaVisibleMetodoLocal(metodo)),
+                              referenciaBolivar,
                               metodo.referencia ? `Ref. ${escaparHTML(metodo.referencia)}` : '',
                               metodo.banco ? escaparHTML(metodo.banco) : ''
                             ].filter(Boolean).join(' <span class="meta-dot">&#8226;</span> ');
@@ -6027,6 +6129,10 @@ export class HistorialVentasComponent implements OnInit {
                 monto: metodo.monto || 0,
                 monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.monto,
                 moneda: metodo.moneda || metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+                montoEnSistema: metodo.montoEnSistema || metodo.montoEnMonedaSistema || metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.monto,
+                monedaSistema: metodo.monedaSistema || this.ventaParaRecibo.moneda || 'dolar',
+                montoEnBolivar: metodo.montoEnBolivar ?? metodo.montoEnBolivares ?? null,
+                tasaUsada: metodo.tasaUsada ?? metodo.tasaUasada ?? null,
                 referencia: metodo.referencia,
                 banco: metodo.bancoNombre || metodo.banco,
                 bancoReceptor: metodo.bancoReceptorNombre || metodo.bancoReceptor,
@@ -6067,6 +6173,10 @@ export class HistorialVentasComponent implements OnInit {
                   monto: metodo.monto || 0,
                   monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.monto,
                   moneda: metodo.moneda || metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+                  montoEnSistema: metodo.montoEnSistema || metodo.montoEnMonedaSistema || metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.monto,
+                  monedaSistema: metodo.monedaSistema || this.ventaParaRecibo.moneda || 'dolar',
+                  montoEnBolivar: metodo.montoEnBolivar ?? metodo.montoEnBolivares ?? null,
+                  tasaUsada: metodo.tasaUsada ?? metodo.tasaUasada ?? null,
                   referencia: metodo.referencia,
                   banco: metodo.bancoNombre || metodo.banco,
                   bancoReceptor: metodo.bancoReceptorNombre || metodo.bancoReceptor,
@@ -6145,7 +6255,7 @@ export class HistorialVentasComponent implements OnInit {
       // Función para convertir cualquier monto
       const convertirMonto = (monto: number, monedaOrigen: string): number => {
         if (monedaOrigen === monedaSistemaNormalizada) return monto;
-        return this.convertirMonto(monto, monedaOrigen, monedaSistemaNormalizada);
+        return this.convertirMontoHistoricoVenta(monto, monedaOrigen, venta, monedaSistemaNormalizada);
       };
 
       const totalVentaConvertido = convertirMonto(venta.total || 0, monedaVenta);
@@ -7069,6 +7179,111 @@ export class HistorialVentasComponent implements OnInit {
     return this.redondear(montoConvertido);
   }
 
+  private obtenerTasasHistoricasVenta(venta: any): Record<string, number> {
+    const tasasHistoricas: Record<string, number> = { bolivar: 1 };
+
+    const registrarTasa = (moneda: any, valor: any): void => {
+      const monedaNormalizada = this.normalizarMoneda(moneda);
+      const tasa = Number(valor);
+
+      if (!monedaNormalizada || monedaNormalizada === 'bolivar') {
+        tasasHistoricas['bolivar'] = 1;
+        return;
+      }
+
+      if (Number.isFinite(tasa) && tasa > 0) {
+        tasasHistoricas[monedaNormalizada] = tasa;
+      }
+    };
+
+    const fuentesTasas = [
+      venta?.tasasHistoricas,
+      venta?.formaPagoCompleto?.tasasActuales,
+      venta?.formaPagoDetalle?.tasasActuales,
+      venta?.formaPagoApi?.tasasActuales,
+      venta?.tasasActuales
+    ];
+
+    fuentesTasas.forEach((fuente: any) => {
+      if (Array.isArray(fuente)) {
+        fuente.forEach((item: any) => {
+          registrarTasa(item?.id ?? item?.moneda ?? item?.key, item?.valor ?? item?.tasa);
+        });
+        return;
+      }
+
+      if (fuente && typeof fuente === 'object') {
+        Object.entries(fuente).forEach(([moneda, valor]: [string, any]) => {
+          registrarTasa(moneda, valor?.valor ?? valor?.tasa ?? valor);
+        });
+      }
+    });
+
+    const gruposPago = Array.isArray(venta?.metodosPago) ? venta.metodosPago : [];
+    gruposPago.forEach((grupo: any) => {
+      const metodos = Array.isArray(grupo?.metodosPago)
+        ? grupo.metodosPago
+        : (grupo?.tipo ? [grupo] : []);
+      metodos.forEach((metodo: any) => {
+        registrarTasa(metodo?.moneda, metodo?.tasaUsada ?? metodo?.tasaUasada);
+      });
+    });
+
+    const metodosVentaApi = Array.isArray(venta?.metodosDePago) ? venta.metodosDePago : [];
+    metodosVentaApi.forEach((metodo: any) => {
+      registrarTasa(metodo?.moneda, metodo?.tasaUsada ?? metodo?.tasaUasada);
+    });
+
+    const abonosHistoricos = Array.isArray(venta?.formaPagoCompleto?.abonos)
+      ? venta.formaPagoCompleto.abonos
+      : Array.isArray(venta?.formaPagoDetalle?.abonos)
+        ? venta.formaPagoDetalle.abonos
+        : [];
+
+    abonosHistoricos.forEach((abono: any) => {
+      const metodosAbono = Array.isArray(abono?.metodosDePago) ? abono.metodosDePago : [];
+      metodosAbono.forEach((metodo: any) => {
+        registrarTasa(metodo?.moneda, metodo?.tasaUsada ?? metodo?.tasaUasada);
+      });
+    });
+
+    return tasasHistoricas;
+  }
+
+  private obtenerTasaBolivarHistorica(venta: any, moneda: string): number {
+    const monedaNormalizada = this.normalizarMoneda(moneda);
+
+    if (monedaNormalizada === 'bolivar') {
+      return 1;
+    }
+
+    const tasasHistoricas = this.obtenerTasasHistoricasVenta(venta);
+    return tasasHistoricas[monedaNormalizada] ?? this.obtenerTasaBolivar(monedaNormalizada);
+  }
+
+  private convertirMontoHistoricoVenta(monto: number, monedaOrigen: string, venta: any, monedaDestino?: string): number {
+    const montoNumerico = Number(monto || 0);
+    if (!Number.isFinite(montoNumerico) || montoNumerico === 0) {
+      return 0;
+    }
+
+    const origenNormalizado = this.normalizarMoneda(monedaOrigen || venta?.moneda || this.getMonedaSistema());
+    const destinoNormalizado = this.normalizarMoneda(monedaDestino || this.getMonedaSistema());
+
+    if (origenNormalizado === destinoNormalizado) {
+      return this.redondear(montoNumerico);
+    }
+
+    const tasaOrigen = this.obtenerTasaBolivarHistorica(venta, origenNormalizado);
+    const tasaDestino = this.obtenerTasaBolivarHistorica(venta, destinoNormalizado);
+
+    if (!tasaOrigen || !tasaDestino) {
+      return this.redondear(montoNumerico);
+    }
+
+    return this.redondear((montoNumerico * tasaOrigen) / tasaDestino);
+  }
+
   obtenerTasaBolivar(moneda: string): number {
     const monedaNormalizada = this.normalizarMoneda(moneda);
 
@@ -7100,7 +7315,7 @@ export class HistorialVentasComponent implements OnInit {
     const monedaOriginal = venta.moneda || 'dolar';
 
     // Convertir a la moneda del sistema
-    return this.convertirAMonedaSistema(totalOriginal, monedaOriginal);
+    return this.convertirMontoHistoricoVenta(totalOriginal, monedaOriginal, venta, this.getMonedaSistema());
   }
 
   getTotalPagadoVentaSistema(venta: any): number {
@@ -7111,7 +7326,7 @@ export class HistorialVentasComponent implements OnInit {
     const monedaOriginal = venta.moneda || 'dolar';
 
     // Convertir a la moneda del sistema
-    return this.convertirAMonedaSistema(pagadoOriginal, monedaOriginal);
+    return this.convertirMontoHistoricoVenta(pagadoOriginal, monedaOriginal, venta, this.getMonedaSistema());
   }
 
   getDeudaPendienteVentaSistema(venta: any): number {
@@ -7122,7 +7337,7 @@ export class HistorialVentasComponent implements OnInit {
     const monedaOriginal = venta.moneda || 'dolar';
 
     // Convertir a la moneda del sistema
-    return this.convertirAMonedaSistema(deudaOriginal, monedaOriginal);
+    return this.convertirMontoHistoricoVenta(deudaOriginal, monedaOriginal, venta, this.getMonedaSistema());
   }
 
   getSubtotalVentaSistema(venta: any): number {
@@ -7152,7 +7367,7 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     // Convertir a la moneda del sistema
-    const montoConvertido = this.convertirAMonedaSistema(monto, monedaOrigenReal);
+    const montoConvertido = this.convertirMontoHistoricoVenta(monto, monedaOrigenReal, venta, this.getMonedaSistema());
 
     // Formatear en la moneda del sistema
     return this.formatearMoneda(montoConvertido, this.getMonedaSistema());
@@ -7352,7 +7567,7 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     const monedaVenta = this.normalizarMoneda(venta?.moneda || this.getMonedaSistema());
-    return this.redondear(this.convertirMonto(Number(monto || 0), monedaVenta, 'bolivar'));
+    return this.convertirMontoHistoricoVenta(Number(monto || 0), monedaVenta, venta, 'bolivar');
   }
 
   formatearMonedaVenta(venta: any, monto: number): string {
@@ -7382,10 +7597,12 @@ export class HistorialVentasComponent implements OnInit {
   }
 
 
-  getMontoMetodoPago(metodo: any): { monto: number, moneda: string, montoOriginal?: number, monedaOriginal?: string } {
+  getMontoMetodoPago(metodo: any, venta?: any): { monto: number, moneda: string, montoOriginal?: number, monedaOriginal?: string } {
     // Si el backend ya envió el monto convertido a la moneda del sistema
-    if (metodo.montoEnMonedaSistema !== undefined && metodo.montoEnMonedaSistema !== null) {
-      const monedaSistema = metodo.monedaSistema || this.getMonedaSistema();
+    const monedaSistemaActual = this.getMonedaSistema();
+
+    if (metodo.montoEnMonedaSistema !== undefined && metodo.montoEnMonedaSistema !== null && this.normalizarMoneda(metodo.monedaSistema || monedaSistemaActual) === monedaSistemaActual) {
+      const monedaSistema = metodo.monedaSistema || monedaSistemaActual;
       return {
         monto: metodo.montoEnMonedaSistema,
         moneda: monedaSistema,
@@ -7395,10 +7612,19 @@ export class HistorialVentasComponent implements OnInit {
     }
 
     // Si el backend envió el monto en bolívares
-    if (metodo.montoEnBolivar !== undefined && metodo.montoEnBolivar !== null && this.getMonedaSistema() === 'bolivar') {
+    if (metodo.montoEnBolivar !== undefined && metodo.montoEnBolivar !== null && monedaSistemaActual === 'bolivar') {
       return {
         monto: metodo.montoEnBolivar,
         moneda: 'bolivar',
+        montoOriginal: metodo.monto,
+        monedaOriginal: metodo.moneda
+      };
+    }
+
+    if (venta && metodo?.monto !== undefined && metodo?.monto !== null) {
+      return {
+        monto: this.convertirMontoHistoricoVenta(Number(metodo.monto || 0), metodo.moneda || venta?.moneda, venta, monedaSistemaActual),
+        moneda: monedaSistemaActual,
         montoOriginal: metodo.monto,
         monedaOriginal: metodo.moneda
       };
@@ -7413,8 +7639,8 @@ export class HistorialVentasComponent implements OnInit {
     };
   }
 
-  formatearMontoMetodoPago(metodo: any): string {
-    const { monto, moneda, montoOriginal, monedaOriginal } = this.getMontoMetodoPago(metodo);
+  formatearMontoMetodoPago(metodo: any, venta?: any): string {
+    const { monto, moneda, montoOriginal, monedaOriginal } = this.getMontoMetodoPago(metodo, venta);
 
     const montoFormateado = this.formatearMoneda(monto, moneda);
 

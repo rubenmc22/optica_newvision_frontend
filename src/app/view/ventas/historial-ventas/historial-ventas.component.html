@@ -867,16 +867,14 @@
               <div *ngIf="selectedVenta.consulta.montoTotal > 0" class="calculo-linea consulta-calculo">
                 <div class="calculo-parte">
                   <span class="cantidad">1 consulta ×</span>
-                  <span class="precio-base">{{
-                    formatearMonedaSistema(convertirAMonedaSistema(selectedVenta.consulta.montoTotal,
-                    selectedVenta?.moneda)) }}</span>
+                  <span class="precio-base">{{ getMontoParaMostrar(selectedVenta, selectedVenta.consulta.montoTotal,
+                    selectedVenta?.moneda) }}</span>
                   <span class="moneda">{{ getSimboloMonedaSistema() }}</span>
                 </div>
                 <span class="igual">=</span>
                 <div class="calculo-parte total-final">
-                  <span class="total-producto">{{
-                    formatearMonedaSistema(convertirAMonedaSistema(selectedVenta.consulta.montoTotal,
-                    selectedVenta?.moneda)) }}</span>
+                  <span class="total-producto">{{ getMontoParaMostrar(selectedVenta, selectedVenta.consulta.montoTotal,
+                    selectedVenta?.moneda) }}</span>
                 </div>
               </div>
 
@@ -885,15 +883,13 @@
                 class="consulta-desglose">
                 <div class="desglose-item" *ngIf="selectedVenta.consulta.pagoMedico > 0">
                   <span class="desglose-label">Pago médico:</span>
-                  <span class="desglose-valor">{{
-                    formatearMonedaSistema(convertirAMonedaSistema(selectedVenta.consulta.pagoMedico,
-                    selectedVenta?.moneda)) }}</span>
+                  <span class="desglose-valor">{{ getMontoParaMostrar(selectedVenta, selectedVenta.consulta.pagoMedico,
+                    selectedVenta?.moneda) }}</span>
                 </div>
                 <div class="desglose-item" *ngIf="selectedVenta.consulta.pagoOptica > 0">
                   <span class="desglose-label">Pago óptica:</span>
-                  <span class="desglose-valor">{{
-                    formatearMonedaSistema(convertirAMonedaSistema(selectedVenta.consulta.pagoOptica,
-                    selectedVenta?.moneda)) }}</span>
+                  <span class="desglose-valor">{{ getMontoParaMostrar(selectedVenta, selectedVenta.consulta.pagoOptica,
+                    selectedVenta?.moneda) }}</span>
                 </div>
               </div>
             </div>
@@ -912,27 +908,27 @@
               <div class="calculo-linea">
                 <div class="calculo-parte">
                   <span class="cantidad">{{producto.cantidad}} und ×</span>
-                  <span class="precio-base">{{formatearMoneda(convertirAMonedaSistema(producto.precioUnitarioSinIva,
-                    selectedVenta?.moneda), getMonedaSistema())}}</span>
+                  <span class="precio-base">{{ getMontoParaMostrar(selectedVenta, producto.precioUnitarioSinIva,
+                    selectedVenta?.moneda) }}</span>
                 </div>
                 <span *ngIf="producto.tieneIva" class="separador-calc">+</span>
                 <div *ngIf="producto.tieneIva" class="calculo-parte">
-                  <span class="iva-total">{{formatearMonedaSistema(convertirAMonedaSistema(producto.ivaTotalProducto,
-                    selectedVenta?.moneda))}}</span>
+                  <span class="iva-total">{{ getMontoParaMostrar(selectedVenta, producto.ivaTotalProducto,
+                    selectedVenta?.moneda) }}</span>
                   <span class="iva-label">IVA</span>
                 </div>
                 <span class="igual">=</span>
                 <div class="calculo-parte total-final">
-                  <span class="total-producto">{{formatearMonedaSistema(convertirAMonedaSistema(producto.total,
-                    selectedVenta?.moneda))}}</span>
+                  <span class="total-producto">{{ getMontoParaMostrar(selectedVenta, producto.total,
+                    selectedVenta?.moneda) }}</span>
                 </div>
               </div>
 
               <!-- Información de IVA por unidad (solo si aplica) -->
               <div *ngIf="producto.tieneIva && producto.cantidad > 1" class="info-iva-unidad">
                 <span class="info-label">IVA por unidad:</span>
-                <span class="info-valor">{{formatearMonedaSistema(convertirAMonedaSistema(producto.ivaPorUnidad,
-                  selectedVenta?.moneda))}}</span>
+                <span class="info-valor">{{ getMontoParaMostrar(selectedVenta, producto.ivaPorUnidad,
+                  selectedVenta?.moneda) }}</span>
               </div>
             </div>
 
@@ -991,8 +987,8 @@
               <div class="pago-detalle-contado">
                 <div class="pago-subitem">
                   <span>Total pagado:</span>
-                  <strong>{{formatearMonedaSistema(convertirAMonedaSistema(selectedVenta?.formaPagoCompleto?.totalPagado
-                    || selectedVenta?.total, selectedVenta?.moneda))}}</strong>
+                  <strong>{{ getMontoParaMostrar(selectedVenta, selectedVenta?.formaPagoCompleto?.totalPagado
+                    || selectedVenta?.total, selectedVenta?.moneda) }}</strong>
                 </div>
               </div>
             </div>
@@ -1037,24 +1033,24 @@
                 <div class="pago-item-compact">
                   <label><i class="bi bi-cash-coin"></i> Inicial</label>
                   <div class="value small">
-                    {{formatearMonedaSistema(convertirAMonedaSistema(selectedVenta?.montoInicial,
-                    selectedVenta?.moneda))}}
+                    {{ getMontoParaMostrar(selectedVenta, selectedVenta?.montoInicial,
+                    selectedVenta?.moneda) }}
                   </div>
                 </div>
                 <div class="pago-item-compact">
                   <label><i class="bi bi-calendar-week"></i> Cuotas</label>
                   <div class="value small">
                     {{selectedVenta?.cantidadCuotas}}x
-                    {{formatearMonedaSistema(convertirAMonedaSistema(selectedVenta?.montoPorCuota,
-                    selectedVenta?.moneda))}}
+                    {{ getMontoParaMostrar(selectedVenta, selectedVenta?.montoPorCuota,
+                    selectedVenta?.moneda) }}
                   </div>
                 </div>
                 <div class="pago-item-compact" *ngIf="selectedVenta?.cuotasAdelantadas?.length > 0">
                   <label><i class="bi bi-lightning"></i> Adelantadas</label>
                   <div class="value small info">
                     {{selectedVenta?.cuotasAdelantadas?.length}}
-                    ({{formatearMonedaSistema(convertirAMonedaSistema(getTotalCuotasAdelantadas(),
-                    selectedVenta?.moneda))}})
+                    ({{ getMontoParaMostrar(selectedVenta, getTotalCuotasAdelantadas(),
+                    selectedVenta?.moneda) }})
                   </div>
                 </div>
               </div>
@@ -1097,8 +1093,8 @@
                   <div class="value small success">
                     <!-- Monto convertido a moneda del sistema -->
                     <span class="monto-convertido">
-                      {{ formatearMoneda(convertirAMonedaSistema(selectedVenta?.formaPagoCompleto?.totalPagado,
-                      selectedVenta?.moneda), getMonedaSistema()) }}
+                      {{ getMontoParaMostrar(selectedVenta, selectedVenta?.formaPagoCompleto?.totalPagado,
+                      selectedVenta?.moneda) }}
                     </span>
                   </div>
                 </div>
@@ -1107,8 +1103,8 @@
                   <div class="value small warning">
                     <!-- Monto convertido a moneda del sistema -->
                     <span class="monto-convertido">
-                      {{ formatearMoneda(convertirAMonedaSistema(selectedVenta?.formaPagoCompleto?.deuda,
-                      selectedVenta?.moneda), getMonedaSistema()) }}
+                      {{ getMontoParaMostrar(selectedVenta, selectedVenta?.formaPagoCompleto?.deuda,
+                      selectedVenta?.moneda) }}
                     </span>
                   </div>
                 </div>
@@ -1142,7 +1138,7 @@
                 <div class="text-end">
                   <div class="fw-semibold">{{ formatearMoneda(pagoGroup.montoAbonado || 0, selectedVenta?.moneda) }}</div>
                   <div class="small text-muted">
-                    {{ formatearMonedaSistema(convertirAMonedaSistema(pagoGroup.montoAbonado || 0, selectedVenta?.moneda)) }}
+                    {{ getMontoParaMostrar(selectedVenta, pagoGroup.montoAbonado || 0, selectedVenta?.moneda) }}
                   </div>
                 </div>
               </div>
@@ -1165,7 +1161,7 @@
                       {{ formatearMoneda(metodo.monto, metodo.moneda) }}
                     </div>
                     <div class="monto-convertido text-muted small" *ngIf="metodo.moneda !== getMonedaSistema()">
-                      {{ formatearMonedaSistema(metodo.montoEnMonedaSistema || convertirAMonedaSistema(metodo.monto, metodo.moneda)) }}
+                      {{ getMontoParaMostrar(selectedVenta, metodo.monto, metodo.moneda) }}
                     </div>
                   </div>
 
@@ -1215,8 +1211,7 @@
             <div class="resumen-hero-total">
               <div class="hero-copy">
                 <span class="hero-kicker">Total de la venta</span>
-                <div class="hero-amount">{{
-                  formatearMonedaSistema(convertirAMonedaSistema(getTotalVenta(selectedVenta), selectedVenta?.moneda))
+                <div class="hero-amount">{{ getMontoParaMostrar(selectedVenta, getTotalVenta(selectedVenta), selectedVenta?.moneda)
                   }}</div>
                 <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="hero-reference">≈ {{
                   formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getTotalVenta(selectedVenta)), 'bolivar') }}</small>
@@ -1229,15 +1224,13 @@
             <div class="resumen-balance-strip" *ngIf="debeMostrarResumenDeSaldo(selectedVenta)">
               <div class="balance-chip success">
                 <span class="chip-label">{{ getEtiquetaPagadoResumen(selectedVenta) }}</span>
-                <strong>{{
-                  formatearMonedaSistema(convertirAMonedaSistema(getTotalPagadoVenta(selectedVenta), selectedVenta?.moneda))
+                <strong>{{ getMontoParaMostrar(selectedVenta, getTotalPagadoVenta(selectedVenta), selectedVenta?.moneda)
                   }}</strong>
               </div>
 
               <div class="balance-chip warning">
                 <span class="chip-label">{{ getEtiquetaPendienteResumen(selectedVenta) }}</span>
-                <strong>{{
-                  formatearMonedaSistema(convertirAMonedaSistema(getDeudaPendiente(selectedVenta), selectedVenta?.moneda))
+                <strong>{{ getMontoParaMostrar(selectedVenta, getDeudaPendiente(selectedVenta), selectedVenta?.moneda)
                   }}</strong>
               </div>
             </div>
@@ -1249,8 +1242,7 @@
                   <small class="resumen-caption">Base sin impuesto</small>
                 </div>
                 <div class="resumen-values-wrap">
-                  <span class="resumen-value">{{
-                    formatearMonedaSistema(convertirAMonedaSistema(getSubtotalVenta(selectedVenta), selectedVenta?.moneda))
+                  <span class="resumen-value">{{ getMontoParaMostrar(selectedVenta, getSubtotalVenta(selectedVenta), selectedVenta?.moneda)
                     }}</span>
                   <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ {{
                     formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getSubtotalVenta(selectedVenta)), 'bolivar') }}</small>
@@ -1263,8 +1255,8 @@
                   <small class="resumen-caption">Impuesto aplicado</small>
                 </div>
                 <div class="resumen-values-wrap">
-                  <span class="resumen-value">{{ formatearMonedaSistema(convertirAMonedaSistema(getIvaVenta(selectedVenta),
-                    selectedVenta?.moneda)) }}</span>
+                  <span class="resumen-value">{{ getMontoParaMostrar(selectedVenta, getIvaVenta(selectedVenta),
+                    selectedVenta?.moneda) }}</span>
                   <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ {{
                     formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getIvaVenta(selectedVenta)), 'bolivar') }}</small>
                 </div>
@@ -1276,8 +1268,7 @@
                   <small class="resumen-caption">Monto rebajado</small>
                 </div>
                 <div class="resumen-values-wrap">
-                  <span class="resumen-value">-{{
-                    formatearMonedaSistema(convertirAMonedaSistema(selectedVenta?.totalDescuento, selectedVenta?.moneda))
+                  <span class="resumen-value">-{{ getMontoParaMostrar(selectedVenta, selectedVenta?.totalDescuento, selectedVenta?.moneda)
                     }}</span>
                   <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ -{{
                     formatearMoneda(getMontoReferenciaBolivar(selectedVenta, selectedVenta?.totalDescuento), 'bolivar') }}</small>
@@ -1290,8 +1281,7 @@
                   <small class="resumen-caption">Monto consolidado</small>
                 </div>
                 <div class="resumen-values-wrap">
-                  <span class="resumen-value">{{
-                    formatearMonedaSistema(convertirAMonedaSistema(getTotalVenta(selectedVenta), selectedVenta?.moneda))
+                  <span class="resumen-value">{{ getMontoParaMostrar(selectedVenta, getTotalVenta(selectedVenta), selectedVenta?.moneda)
                     }}</span>
                   <small *ngIf="debeMostrarReferenciaBolivar(selectedVenta)" class="resumen-reference">≈ {{
                     formatearMoneda(getMontoReferenciaBolivar(selectedVenta, getTotalVenta(selectedVenta)), 'bolivar') }}</small>
