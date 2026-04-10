@@ -1,4 +1,5 @@
 import { Component, OnInit, ChangeDetectorRef, OnDestroy, ViewChild, HostListener } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Producto } from '../../productos/producto.model';
 import { ProductoService } from '../../productos/producto.service';
 import { SystemConfigService } from '../../system-config/system-config.service';
@@ -24,8 +25,10 @@ import { Subscription } from 'rxjs';
 import { ProductoConversionService } from '../../productos/productos-list/producto-conversion.service';
 import { ClienteService } from '../../clientes/clientes.services';
 import { NgSelectComponent } from '@ng-select/ng-select';
+import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generateUnifiedReceiptHTML, ReceiptViewMode } from '../shared/receipt-html.util';
 
 // Constantes
 import {
@@ -82,7 +85,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         private empleadosService: EmpleadosService,
         private systemConfigService: SystemConfigService,
         private productoConversionService: ProductoConversionService,
-        private clienteService: ClienteService
+        private clienteService: ClienteService,
+        private sanitizer: DomSanitizer
     ) {
     }
 
@@ -225,6 +229,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     // Modal para mostrar el recibo
     mostrarModalRecibo: boolean = false;
     datosRecibo: any = null;
+    previewReciboUrl: SafeResourceUrl | null = null;
+    private previewReciboObjectUrl: string | null = null;
+    private ventaReciboKey: string | null = null;
     currentYear: number = new Date().getFullYear();
     informacionVenta: any = null;
     // OBTENER INFORMACIÓN DE LA SEDE DESDE EL COMPONENTE
@@ -3420,18 +3427,18 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         switch (this.venta.formaPago) {
             case 'contado':
                 if (Math.abs(totalPagado - totalRequerido) > 0.01) {
-                    //console.log('Contado: montos no coinciden');
+                    console.log('Contado: montos no coinciden');
                     return false;
                 }
                 break;
 
             case 'abono':
                 if (this.venta.montoAbonado <= 0) {
-                   // console.log('Abono: monto inválido');
+                    console.log('Abono: monto inválido');
                     return false;
                 }
                 if (Math.abs(this.venta.montoAbonado - totalPagado) > 0.01) {
-                   // console.log('Abono: monto abonado no coincide con métodos');
+                    console.log('Abono: monto abonado no coincide con métodos');
                     return false;
                 }
                 break;
@@ -3439,21 +3446,21 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             case 'cashea':
                 const inicialMinima = this.calcularInicialCasheaPorNivel(totalRequerido, this.nivelCashea);
                 if ((this.venta.montoInicial || 0) < inicialMinima) {
-                    //console.log('Cashea: inicial insuficiente');
+                    console.log('Cashea: inicial insuficiente');
                     return false;
                 }
                 break;
 
             case 'de_contado-pendiente':
-                //console.log('Pago pendiente - válido sin métodos');
+                console.log('Pago pendiente - válido sin métodos');
                 break;
 
             default:
-                //console.log('Forma de pago no válida');
+                console.log('Forma de pago no válida');
                 return false;
         }
 
-        //console.log('Todo válido - se puede generar');
+        console.log('Todo válido - se puede generar');
         return true;
     }
 
@@ -3576,7 +3583,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.generarVentaService.crearVenta(datosParaAPI).subscribe({
                 next: async (resultado: any) => {
                     if (resultado.message === 'ok' && resultado.venta) {
-                        const numeroVenta = resultado.venta.numero_venta
+                        const numeroVenta = resultado.venta.numero_venta;
+                        const ventaKey = resultado.venta.key || resultado.venta.id || resultado.venta._id || null;
 
                         this.loader.updateMessage('Venta generada exitosamente');
                         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -3587,7 +3595,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                         this.loader.hide();
 
                         // ACTUALIZAR solo el número de venta y mostrar recibo
-                        this.actualizarNumeroVentaRecibo(numeroVenta);
+                        this.actualizarNumeroVentaRecibo(numeroVenta, ventaKey);
                         this.mostrarReciboAutomatico();
                         this.limpiarSelectProductos();
                         this.resetearVentaCompleta(false);
@@ -3612,28 +3620,34 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.datosRecibo = this.crearDatosReciboReal();
     }
 
-    private actualizarNumeroVentaRecibo(numeroVenta: string): void {
+    private actualizarNumeroVentaRecibo(numeroVenta: string, ventaKey: string | null = null): void {
         if (this.datosRecibo) {
             // Solo actualizar el número de venta
             this.datosRecibo.numeroVenta = numeroVenta;
         }
+
+        this.ventaReciboKey = ventaKey;
     }
 
     /**
      * Obtiene información de la sede
      */
     private obtenerInfoSede(): any {
-        if (this.sedeInfo) {
+        const sedeKeyActual = (this.sedeInfo?.key || this.currentUser?.sede || this.sedeActiva || '').trim().toLowerCase();
+        const sedeActual = this.sedeInfo
+            || this.userStateService.getSedeActual()
+            || (sedeKeyActual ? this.userStateService.getSedePorKey(sedeKeyActual) : null);
+
+        if (sedeActual) {
             return {
-                nombre: this.sedeInfo.nombre_optica || '',
-                direccion: this.sedeInfo.direccion || '',
-                telefono: this.sedeInfo.telefono || '',
-                rif: this.sedeInfo.rif || '',
-                email: this.sedeInfo.email || ''
+                nombre: sedeActual.nombre_optica || sedeActual.nombre || 'NEW VISION LENS',
+                direccion: sedeActual.direccion || 'C.C. Candelaria, Local PB-04, Guarenas',
+                telefono: sedeActual.telefono || '0212-365-39-42',
+                rif: sedeActual.rif || 'J-123456789',
+                email: sedeActual.email || 'newvisionlens2020@gmail.com'
             };
         }
 
-        // Fallback si no hay información de sede
         return {
             nombre: 'NEW VISION LENS',
             direccion: 'C.C. Candelaria, Local PB-04, Guarenas',
@@ -3657,6 +3671,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             moneda: this.datosRecibo.configuracion.moneda
         };
 
+        this.actualizarVistaPreviaRecibo();
         this.mostrarModalRecibo = true;
         this.ventaGenerada = true;
         this.cerrarModalResumen();
@@ -3681,882 +3696,61 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }, 1500);
     }
 
+    private generarReciboHTMLUnificado(datos: any, vista: ReceiptViewMode = 'preview'): string {
+        const contacto = this.obtenerInfoSede();
+        const formaPago = datos?.configuracion?.formaPago || this.venta.formaPago || 'contado';
+
+        return generateUnifiedReceiptHTML({
+            datos,
+            vista,
+            tituloRecibo: this.getTituloReciboParaHTML(formaPago),
+            mensajeFinal: this.getMensajeFinalParaHTML(formaPago),
+            formatearMoneda: (monto, moneda) => this.formatearMoneda(monto, moneda),
+            formatearTipoPago: (tipo) => this.formatearTipoPago(tipo),
+            obtenerNombreNivelCashea: (nivel) => this.obtenerNombreNivelCashea(nivel),
+            contacto
+        });
+    }
+
     generarReciboHTML(datos: any): string {
+        return this.generarReciboHTMLUnificado(datos || this.crearDatosReciboReal(), 'print');
+    }
+
+    private obtenerReciboHTMLParaSalida(vista: 'print' | 'pdf' = 'print'): string | null {
+        const datos = this.datosRecibo || this.crearDatosReciboReal();
         if (!datos) {
-            datos = this.crearDatosReciboReal();
+            return null;
         }
 
-        const formaPago = datos.configuracion?.formaPago || 'contado';
-        const tituloRecibo = this.getTituloReciboParaHTML(formaPago);
-        const mensajeFinal = this.getMensajeFinalParaHTML(formaPago);
-
-        // OBTENER INFORMACIÓN DE LA SEDE DESDE EL COMPONENTE
-        const sedeInfo = this.sedeInfo || this.userStateService.getSedeActual();
-
-        // FUNCIÓN PARA LIMPIAR EL RIF
-        const limpiarRif = (rif: string): string => {
-            if (!rif) return '';
-            return rif.replace(/^rif/i, '').trim();
-        };
-
-        // CREAR UNA FUNCIÓN LOCAL PARA FORMATEAR MONEDA
-        const formatearMonedaLocal = (monto: number | null | undefined, moneda?: string) => {
-            if (monto === null || monto === undefined || isNaN(monto)) {
-                return this.obtenerSimboloMoneda(moneda || datos.configuracion?.moneda || 'dolar') + '0.00';
-            }
-
-            // Asegurarse de que es un número
-            const montoNumerico = Number(monto);
-
-            if (isNaN(montoNumerico)) {
-                return this.obtenerSimboloMoneda(moneda || datos.configuracion?.moneda || 'dolar') + '0.00';
-            }
-
-            const monedaFinal = moneda || datos.configuracion?.moneda || 'dolar';
-            const simbolo = this.obtenerSimboloMoneda(monedaFinal);
-
-            // Formatear al estilo venezolano
-            const valorRedondeado = Math.round(montoNumerico * 100) / 100;
-            const partes = valorRedondeado.toString().split('.');
-            let parteEntera = partes[0];
-            let parteDecimal = partes[1] || '00';
-            parteDecimal = parteDecimal.padEnd(2, '0');
-            parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-            if (simbolo === 'Bs.') {
-                return `${simbolo} ${parteEntera},${parteDecimal}`;
-            } else {
-                return `${simbolo}${parteEntera},${parteDecimal}`;
-            }
-        };
-
-        const formatearMontoConBolivar = (monto: number | null | undefined, moneda?: string) => {
-            const monedaBase = moneda || datos.configuracion?.moneda || 'dolar';
-            const montoPrincipal = formatearMonedaLocal(monto, monedaBase);
-
-            if (monedaBase === 'bolivar') {
-                return montoPrincipal;
-            }
-
-            const montoEnBolivar = this.obtenerMontoReciboEnBolivar(Number(monto || 0), monedaBase);
-            return `${montoPrincipal}<br><span style="font-size: 10px; color: #6c757d;">${formatearMonedaLocal(montoEnBolivar, 'bolivar')}</span>`;
-        };
-
-        const construirDetalleMetodo = (metodo: any) => {
-            const detalles: string[] = [];
-
-            if (metodo.referencia) {
-                detalles.push(`Ref: ${metodo.referencia}`);
-            }
-
-            if (metodo.bancoEmisor || metodo.banco) {
-                detalles.push(`Emisor: ${metodo.bancoEmisor || metodo.banco}`);
-            }
-
-            if (metodo.bancoReceptor) {
-                detalles.push(`Receptor: ${metodo.bancoReceptor}`);
-            }
-
-            if (metodo.notaPago) {
-                detalles.push(`Nota: ${metodo.notaPago}`);
-            }
-
-            return detalles.join(' - ');
-        };
-
-        // GENERAR ENCABEZADO DINÁMICO
-        const generarEncabezadoSede = () => {
-            if (sedeInfo) {
-                const rifLimpio = limpiarRif(sedeInfo.rif || '');
-                return `
-                <div class="empresa-nombre">${sedeInfo.nombre_optica || sedeInfo.nombre || 'NEW VISION LENS'}</div>
-                <div class="empresa-info">${sedeInfo.direccion || 'C.C. Candelaria, Local PB-04, Guarenas'} | Tel: ${sedeInfo.telefono || '0212-365-39-42'}</div>
-                <div class="empresa-info">RIF: ${rifLimpio || 'J-123456789'} | ${sedeInfo.email || 'newvisionlens2020@gmail.com'}</div>
-            `;
-            }
-
-            // Fallback si no hay información de sede
-            return `
-            <div class="empresa-nombre">NEW VISION LENS</div>
-            <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas | Tel: 0212-365-39-42</div>
-            <div class="empresa-info">RIF: J-123456789 | newvisionlens2020@gmail.com</div>
-        `;
-        };
-
-        // GENERAR CLIENTE
-        const generarClienteHTML = () => {
-            // Determinar si es paciente basado en datos.cliente.tipo o datos.cliente.esPaciente
-            const esPaciente = datos.cliente?.tipo === 'PACIENTE' || datos.cliente?.esPaciente === true;
-            const labelCliente = esPaciente ? 'Paciente:' : 'Cliente:';
-            const nombreDefault = esPaciente ? 'PACIENTE' : 'CLIENTE GENERAL';
-
-            return `
-                <div class="cliente-compacto page-break-avoid">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-                        <div><strong>${labelCliente}</strong> ${datos.cliente.nombre || nombreDefault}</div>
-                        <div><strong>Cédula:</strong> ${datos.cliente.cedula || 'N/A'}</div>
-                        <div><strong>Teléfono:</strong> ${datos.cliente.telefono || 'N/A'}</div>
-                    </div>
-                </div>
-            `;
-        };
-
-        // GENERAR TABLA DE PRODUCTOS CORREGIDA
-        const generarTablaProductos = () => {
-            if (!datos.productos || datos.productos.length === 0) {
-                return '<div class="alert alert-warning">No hay productos</div>';
-            }
-
-            return `
-            <div class="productos-compactos page-break-avoid">
-                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">PRODUCTOS</h6>
-                <table class="tabla-productos" style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr>
-                            <th width="5%" style="text-align: center; padding: 4px; background-color: #2c5aa0; color: white; font-weight: bold;">#</th>
-                            <th width="55%" style="text-align: left; padding: 4px; background-color: #2c5aa0; color: white; font-weight: bold;">Producto</th>
-                            <th width="15%" style="text-align: center; padding: 4px; background-color: #2c5aa0; color: white; font-weight: bold;">P. Unitario</th>
-                            <th width="10%" style="text-align: center; padding: 4px; background-color: #2c5aa0; color: white; font-weight: bold;">Cant</th>
-                            <th width="15%" style="text-align: center; padding: 4px; background-color: #2c5aa0; color: white; font-weight: bold;">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${datos.productos.map((producto: any, index: number) => {
-                // Asegurar que los valores son correctos
-                const precioUnitario = producto.precioUnitario || 0;
-                const cantidad = producto.cantidad || 1;
-                const subtotalCalculado = precioUnitario * cantidad;
-
-                return `
-                            <tr>
-                                <td style="text-align: center; padding: 4px; border-bottom: 1px solid #dee2e6;">${index + 1}</td>
-                                <td style="text-align: left; padding: 4px; border-bottom: 1px solid #dee2e6;">${producto.nombre || 'Producto'}</td>
-                                <td style="text-align: right; padding: 4px; border-bottom: 1px solid #dee2e6;">${formatearMonedaLocal(precioUnitario)}</td>
-                                <td style="text-align: center; padding: 4px; border-bottom: 1px solid #dee2e6;">${cantidad}</td>
-                                <td style="text-align: right; padding: 4px; border-bottom: 1px solid #dee2e6;">${formatearMonedaLocal(subtotalCalculado)}</td>
-                            </tr>
-                            `;
-            }).join('')}
-                    </tbody>
-                </table>
-            </div>
-            `;
-        };
-
-        // GENERAR RESUMEN DE FORMA DE PAGO
-        const generarResumenFormaPago = () => {
-            let contenido = '';
-
-            if (datos.cashea) {
-                contenido = `
-                            <div class="resumen-venta page-break-avoid">
-                                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6>
-                                
-                                <div class="resumen-cashea">
-                                    <!-- Forma de pago -->
-                                    <div style="text-align: center; margin-bottom: 10px;">
-                                        <span class="badge bg-info fs-6">PLAN CASHEA</span>
-                                    </div>
-
-                                    <!-- Información del plan Cashea -->
-                                    <div style="text-align: center; margin-bottom: 10px;">
-                                        <div class="cashea-info">
-                                            <div class="nivel-cashea" style="margin-bottom: 5px;">
-                                                <small class="text-muted">NIVEL</small>
-                                                <div class="fw-bold text-primary" style="font-size: 12px;">${this.obtenerNombreNivelCashea(datos.cashea.nivel)}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Desglose de pagos -->
-                                    <div class="pagos-section">
-                                        <h6 style="text-align: center; margin-bottom: 10px; font-weight: bold; color: #2c5aa0; font-size: 12px;">DESGLOSE DE PAGOS</h6>
-
-                                        <!-- Pago inicial -->
-                                        <div class="pago-item">
-                                            <div style="text-align: center; width: 50%;">
-                                                <strong style="font-size: 11px;">Pago Inicial</strong>
-                                            </div>
-                                            <div style="text-align: center; width: 50%;">
-                                                <strong style="font-size: 11px;">${formatearMontoConBolivar(datos.cashea.inicial, datos.configuracion?.moneda)}</strong>
-                                            </div>
-                                        </div>
-
-                                        <!-- Cuotas adelantadas -->
-                                        ${datos.cashea.cuotasAdelantadas > 0 ? `
-                                            <div class="pago-item">
-                                                <div style="text-align: center; width: 50%;">
-                                                    <strong style="font-size: 11px;">${datos.cashea.cuotasAdelantadas} Cuota${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''} Adelantada${datos.cashea.cuotasAdelantadas > 1 ? 's' : ''}</strong>
-                                                </div>
-                                                <div style="text-align: center; width: 50%;">
-                                                    <strong style="font-size: 11px;">${formatearMontoConBolivar(datos.cashea.montoAdelantado, datos.configuracion?.moneda)}</strong>
-                                                </div>
-                                            </div>
-                                        ` : ''}
-
-                                        <!-- Total pagado ahora -->
-                                        <div class="pago-total">
-                                            <div style="text-align: center; width: 50%;">
-                                                <strong style="font-size: 11px;">TOTAL PAGADO AHORA:</strong>
-                                            </div>
-                                            <div style="text-align: center; width: 50%;">
-                                                <strong class="text-success" style="font-size: 11px;">${formatearMontoConBolivar(datos.totales.totalPagado, datos.configuracion?.moneda)}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Resumen de cuotas -->
-                                    <div class="resumen-cuotas-compacto">
-                                        <div class="cuota-info">
-                                            <small class="text-muted" style="font-size: 10px;">CUOTAS PENDIENTES</small>
-                                            <div class="fw-bold text-warning" style="font-size: 12px;">${datos.cashea.cantidadCuotas - datos.cashea.cuotasAdelantadas}</div>
-                                            <div class="monto-cuota">${formatearMontoConBolivar(datos.cashea.montoPorCuota, datos.configuracion?.moneda)} c/u</div>
-                                        </div>
-                                        <div class="cuota-info">
-                                            <small class="text-muted" style="font-size: 10px;">DEUDA PENDIENTE</small>
-                                            <div class="fw-bold text-danger" style="font-size: 12px;">${formatearMontoConBolivar(datos.cashea.deudaPendiente, datos.configuracion?.moneda)}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-            } else if (datos.abono) {
-                contenido = `
-                            <div class="resumen-venta page-break-avoid">
-                                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6>
-                                
-                                <div class="resumen-abono">
-                                    <!-- Forma de pago -->
-                                    <div style="text-align: center; margin-bottom: 10px;">
-                                        <span class="badge bg-warning text-dark fs-6">ABONO PARCIAL</span>
-                                    </div>
-
-                                    <!-- Abonos realizados -->
-                                    <div class="abonos-section">
-                                        <h6 style="text-align: center; margin-bottom: 10px; font-weight: bold; color: #2c5aa0; font-size: 12px;">ABONOS REALIZADOS</h6>
-
-                                        <div class="abonos-list">
-                                            <div class="abono-item">
-                                                <div style="text-align: center; width: 50%;">
-                                                    <strong style="font-size: 11px;">${datos.fecha}</strong>
-                                                </div>
-                                                <div style="text-align: center; width: 50%;">
-                                                    <strong style="font-size: 11px;">${formatearMontoConBolivar(datos.abono.montoAbonado, datos.configuracion?.moneda)}</strong>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Total abonado -->
-                                            <div class="abono-item total-abonado" style="border-top: 1px solid #ccc; padding-top: 5px; margin-top: 5px;">
-                                                <div style="text-align: center; width: 50%;">
-                                                    <strong style="font-size: 11px;">TOTAL ABONADO:</strong>
-                                                </div>
-                                                <div style="text-align: center; width: 50%;">
-                                                    <strong class="text-success" style="font-size: 11px;">${formatearMontoConBolivar(datos.abono.montoAbonado, datos.configuracion?.moneda)}</strong>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Resumen financiero -->
-                                    <div class="resumen-financiero">
-                                        <div class="deuda-section">
-                                            <div class="deuda-label">DEUDA PENDIENTE</div>
-                                            <div class="deuda-monto text-danger">${formatearMontoConBolivar(datos.abono.deudaPendiente, datos.configuracion?.moneda)}</div>
-                                        </div>
-
-                                        <div class="progreso-section">
-                                            <div class="progreso-label">PORCENTAJE PAGADO</div>
-                                            <div class="progreso-porcentaje text-success">${Math.round(datos.abono.porcentajePagado)}%</div>
-                                            <div class="progress">
-                                                <div class="progress-bar" style="width: ${datos.abono.porcentajePagado}%"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-            } else {
-                contenido = `
-                            <div class="resumen-venta page-break-avoid">
-                                <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">RESUMEN DE VENTA</h6>
-                                
-                                <div class="resumen-contado">
-                                    <div style="margin-bottom: 8px;">
-                                        <strong style="font-size: 12px;">Forma de pago:</strong><br>
-                                        <span class="badge bg-success">CONTADO</span>
-                                    </div>
-                                    <div>
-                                        <strong style="font-size: 12px;">Monto total:</strong><br>
-                                        ${formatearMontoConBolivar(datos.totales.total, datos.configuracion?.moneda)}
-                                    </div>
-                                    <div style="margin-top: 8px; font-size: 11px; color: #666;">
-                                        El pago ha sido realizado en su totalidad
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-            }
-
-            return contenido;
-        };
-
-        // GENERAR MÉTODOS DE PAGO
-        const generarMetodosPago = () => {
-            if (!datos.metodosPago || datos.metodosPago.length === 0) {
-                return '';
-            }
-
-            return `
-                        <div class="metodos-pago page-break-avoid" style="margin-bottom: 10px;">
-                            <h6 style="font-weight: bold; margin-bottom: 8px; color: #2c5aa0; border-bottom: 1px solid #2c5aa0; padding-bottom: 3px;">MÉTODOS DE PAGO</h6>
-                            ${datos.metodosPago.map((metodo: any) => `
-                                <div class="metodo-item">
-                                    <span>
-                                        <span class="badge bg-primary">${this.formatearTipoPago(metodo.tipo)}</span>
-                                        ${construirDetalleMetodo(metodo) ? '- ' + construirDetalleMetodo(metodo) : ''}
-                                    </span>
-                                    <span style="text-align: right;">
-                                        ${formatearMonedaLocal(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || datos.configuracion?.moneda)}
-                                        ${metodo.monedaSistema && metodo.moneda && metodo.monedaSistema !== metodo.moneda ? `<br><span style="font-size: 10px; color: #6c757d;">Orig: ${formatearMonedaLocal(metodo.monto, metodo.moneda)}</span>` : ''}
-                                        ${this.debeMostrarConversionBsPorMetodo(metodo) ? `<br><span style="font-size: 10px; color: #6c757d;">${formatearMonedaLocal(metodo.montoEnBolivar ?? this.obtenerMontoReciboEnBolivar(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || metodo.moneda), 'bolivar')}</span>` : ''}
-                                    </span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-        };
-
-        // GENERAR TOTALES
-        const generarTotales = () => {
-            const mostrarTotalAPagar = this.debeMostrarTotalAPagar(formaPago, datos);
-            const textoTotalAPagar = this.getTextoTotalAPagarParaHTML(formaPago);
-            const textoTotalPagado = this.getTextoTotalPagadoParaHTML(formaPago);
-
-            // Construir las filas de la tabla
-            let filasTotales = '';
-
-            // Subtotal (productos)
-            filasTotales += `
-        <tr>
-            <td class="fw-bold" style="font-size: 12px;">Subtotal (productos):</td>
-            <td class="text-end" style="font-size: 12px;">${formatearMontoConBolivar(datos.totales.subtotal, datos.configuracion?.moneda)}</td>
-        </tr>
-    `;
-
-            // Consulta (si existe)
-            if ((datos.totales.consulta || 0) > 0) {
-                filasTotales += `
-            <tr>
-                <td class="fw-bold" style="font-size: 12px;">Consulta:</td>
-                <td class="text-end" style="font-size: 12px;">${formatearMontoConBolivar(datos.totales.consulta, datos.configuracion?.moneda)}</td>
-            </tr>
-        `;
-            }
-
-            // Descuento (si existe)
-            if (datos.totales.descuento > 0) {
-                filasTotales += `
-            <tr>
-                <td class="fw-bold" style="font-size: 12px;">Descuento:</td>
-                <td class="text-end text-danger" style="font-size: 12px;">- ${formatearMontoConBolivar(datos.totales.descuento, datos.configuracion?.moneda)}</td>
-            </tr>
-        `;
-            }
-
-            // IVA
-            filasTotales += `
-        <tr>
-            <td class="fw-bold" style="font-size: 12px;">IVA:</td>
-            <td class="text-end" style="font-size: 12px;">${formatearMontoConBolivar(datos.totales.iva, datos.configuracion?.moneda)}</td>
-        </tr>
-    `;
-
-            // Total a pagar (si aplica)
-            if (mostrarTotalAPagar) {
-                filasTotales += `
-            <tr class="table-info">
-                <td class="fw-bold" style="font-size: 13px;">${textoTotalAPagar}:</td>
-                <td class="text-end fw-bold" style="font-size: 13px;">${formatearMontoConBolivar(datos.totales.total, datos.configuracion?.moneda)}</td>
-            </tr>
-        `;
-            }
-
-            // Total pagado (siempre al final)
-            filasTotales += `
-        <tr class="table-success">
-            <td class="fw-bold" style="font-size: 13px;">${textoTotalPagado}:</td>
-            <td class="text-end fw-bold" style="font-size: 13px;">${formatearMontoConBolivar(datos.totales.totalPagado, datos.configuracion?.moneda)}</td>
-        </tr>
-    `;
-
-            return `
-        <div class="totales-compactos page-break-avoid">
-            <div style="display: flex; justify-content: flex-end;">
-                <div style="width: 50%;">
-                    <table style="width: 100%;">
-                        ${filasTotales}
-                    </table>
-                </div>
-            </div>
-        </div>
-    `;
-        };
-
-        return `
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Recibo - ${datos.numeroVenta}</title>
-                <style>
-                    /* ESTILOS MEJORADOS - FUENTES AUMENTADAS */
-                    @page {
-                        margin: 0;
-                        size: A4;
-                    }
-                    
-                    * {
-                        margin: 0;
-                        padding: 0;
-                        box-sizing: border-box;
-                    }
-                    
-                    body {
-                        font-family: 'Arial', sans-serif;
-                        font-size: 12px;
-                        line-height: 1.25;
-                        color: #333;
-                        background: white;
-                        padding: 15mm 12mm 12mm 12mm;
-                        width: 210mm;
-                        height: 297mm;
-                        margin: 0 auto;
-                    }
-                    
-                    .recibo-container {
-                        width: 100%;
-                        max-width: 186mm;
-                        margin: 0 auto;
-                        background: white;
-                        padding: 0;
-                        height: auto;
-                        max-height: 255mm;
-                        overflow: hidden;
-                    }
-                    
-                    .recibo-header {
-                        text-align: center;
-                        border-bottom: 2px solid #2c5aa0;
-                        padding-bottom: 8px;
-                        margin-bottom: 10px;
-                    }
-                    
-                    .empresa-nombre {
-                        font-size: 18px;
-                        font-weight: bold;
-                        color: #2c5aa0;
-                        margin-bottom: 3px;
-                    }
-                    
-                    .empresa-info {
-                        font-size: 10px;
-                        color: #666;
-                        margin-bottom: 2px;
-                        line-height: 1.3;
-                    }
-                    
-                    .titulo-venta {
-                        font-size: 14px;
-                        font-weight: 600;
-                        color: #2c5aa0;
-                        margin: 8px 0 4px 0;
-                    }
-                    
-                    .info-rapida {
-                        background: #f8f9fa;
-                        padding: 6px;
-                        border-radius: 3px;
-                        border: 1px solid #dee2e6;
-                        margin-bottom: 10px;
-                        font-size: 10px;
-                    }
-                    
-                    .cliente-compacto {
-                        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                        border-left: 3px solid #2c5aa0;
-                        padding: 8px;
-                        font-size: 10px;
-                        margin-bottom: 10px;
-                        border-radius: 3px;
-                    }
-                    
-                    .tabla-productos {
-                        width: 100%;
-                        border-collapse: collapse;
-                        margin-bottom: 10px;
-                        font-size: 10px;
-                    }
-                    
-                    .tabla-productos th {
-                        background: #2c5aa0;
-                        color: white;
-                        font-weight: 600;
-                        padding: 4px 5px;
-                        text-align: left;
-                        border: 1px solid #dee2e6;
-                        font-size: 10px;
-                    }
-                    
-                    .tabla-productos td {
-                        border: 1px solid #dee2e6;
-                        padding: 3px 4px;
-                        vertical-align: middle;
-                        font-size: 10px;
-                    }
-                    
-                    .text-center { text-align: center; }
-                    .text-end { text-align: right; }
-                    
-                    .metodo-item {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 4px;
-                        padding: 3px 0;
-                        border-bottom: 1px dashed #dee2e6;
-                        font-size: 10px;
-                    }
-                    
-                    .resumen-cashea {
-                        background: #f8f9fa;
-                        padding: 8px;
-                        border-radius: 4px;
-                        margin: 8px 0;
-                        border-left: 3px solid #0dcaf0;
-                    }
-                    
-                    .pago-item {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 4px;
-                        padding: 4px 0;
-                        border-bottom: 1px dashed #dee2e6;
-                        font-size: 10px;
-                    }
-                    
-                    .pago-total {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-top: 6px;
-                        padding-top: 6px;
-                        border-top: 1px solid #ccc;
-                        font-size: 10px;
-                    }
-                    
-                    .resumen-cuotas-compacto {
-                        display: flex;
-                        justify-content: center;
-                        gap: 18px;
-                        margin-top: 8px;
-                        text-align: center;
-                    }
-                    
-                    .monto-cuota {
-                        font-size: 9px;
-                        color: #666;
-                        margin-top: 2px;
-                    }
-                    
-                    .resumen-abono {
-                        background: #f8f9fa;
-                        padding: 8px;
-                        border-radius: 4px;
-                        margin: 8px 0;
-                        border-left: 3px solid #ffc107;
-                    }
-                    
-                    .abono-item {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 4px;
-                        padding: 4px 0;
-                        border-bottom: 1px dashed #dee2e6;
-                        font-size: 10px;
-                    }
-                    
-                    .total-abonado {
-                        border-top: 1px solid #ccc;
-                        padding-top: 4px;
-                        margin-top: 4px;
-                    }
-                    
-                    .resumen-financiero {
-                        background: white;
-                        padding: 8px;
-                        border-radius: 4px;
-                        border: 1px solid #e9ecef;
-                        margin: 8px 0;
-                    }
-                    
-                    .deuda-section, .progreso-section {
-                        text-align: center;
-                        margin-bottom: 8px;
-                    }
-                    
-                    .deuda-label, .progreso-label {
-                        font-size: 9px;
-                        color: #666;
-                        margin-bottom: 2px;
-                    }
-                    
-                    .deuda-monto, .progreso-porcentaje {
-                        font-size: 12px;
-                        font-weight: bold;
-                    }
-                    
-                    .resumen-contado {
-                        background: #f8f9fa;
-                        padding: 8px;
-                        border-radius: 4px;
-                        margin: 8px 0;
-                        border-left: 3px solid #198754;
-                        text-align: center;
-                    }
-                    
-                    .totales-compactos table {
-                        width: 100%;
-                        border-collapse: collapse;
-                        font-size: 11px;
-                    }
-                    
-                    .totales-compactos td {
-                        padding: 4px 5px;
-                        border: 1px solid #dee2e6;
-                    }
-                    
-                    .table-success {
-                        background: linear-gradient(135deg, #d4edda, #c3e6cb);
-                    }
-                    
-                    .table-info {
-                        background: linear-gradient(135deg, #d1ecf1, #c3e6ff);
-                    }
-                    
-                    .observaciones-compactas {
-                        margin-bottom: 10px;
-                    }
-                    
-                    .alert-warning {
-                        background: #fff3cd;
-                        border: 1px solid #ffeaa7;
-                        color: #856404;
-                        padding: 6px;
-                        border-radius: 3px;
-                        font-size: 10px;
-                    }
-                    
-                    .terminos-compactos {
-                        border-top: 1px solid #ddd;
-                        padding-top: 8px;
-                        margin-top: 10px;
-                        font-size: 9px;
-                        color: #666;
-                    }
-                    
-                    .mensaje-final {
-                        text-align: center;
-                        border-top: 1px solid #ddd;
-                        padding-top: 8px;
-                        margin-top: 8px;
-                        font-size: 11px;
-                        color: #2c5aa0;
-                        font-weight: bold;
-                    }
-                    
-                    .text-danger { color: #dc3545; }
-                    .text-success { color: #198754; }
-                    .text-warning { color: #ffc107; }
-                    .text-primary { color: #2c5aa0; }
-                    .text-muted { color: #666; }
-                    
-                    .badge {
-                        display: inline-block;
-                        padding: 2px 4px;
-                        font-size: 9px;
-                        font-weight: 600;
-                        line-height: 1.2;
-                        text-align: center;
-                        white-space: nowrap;
-                        vertical-align: baseline;
-                        border-radius: 2px;
-                    }
-                    
-                    .bg-primary { background-color: #2c5aa0; color: white; }
-                    .bg-success { background-color: #198754; color: white; }
-                    .bg-info { background-color: #0dcaf0; color: black; }
-                    .bg-warning { background-color: #ffc107; color: black; }
-                    
-                    .progress {
-                        background-color: #e9ecef;
-                        border-radius: 4px;
-                        overflow: hidden;
-                        height: 4px;
-                        margin: 3px auto;
-                        width: 60%;
-                    }
-                    
-                    .progress-bar {
-                        background-color: #198754;
-                        height: 100%;
-                        transition: width 0.6s ease;
-                    }
-                    
-                    .fw-bold { font-weight: bold; }
-                    .small { font-size: 9px; }
-                    .fs-6 { font-size: 12px; }
-
-                    .page-break-avoid {
-                        page-break-inside: avoid;
-                        break-inside: avoid;
-                    }
-
-                    @media print {
-                        body {
-                            padding: 15mm 12mm 12mm 12mm;
-                            margin: 0;
-                            width: 210mm;
-                            height: 297mm;
-                            font-size: 11px;
-                        }
-                        
-                        .recibo-container {
-                            border: none;
-                            padding: 0;
-                            box-shadow: none;
-                            max-height: 255mm;
-                            overflow: hidden;
-                        }
-
-                        @page {
-                            margin: 0;
-                            size: A4;
-                        }
-                        
-                        body {
-                            margin: 0;
-                            -webkit-print-color-adjust: exact;
-                        }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="recibo-container page-break-avoid">
-                    <!-- ENCABEZADO DINÁMICO CON INFO DE SEDE -->
-                    <div class="recibo-header page-break-avoid">
-                        ${generarEncabezadoSede()}
-                        <div class="titulo-venta">${tituloRecibo}</div>
-                    </div>
-
-                    <!-- Información rápida -->
-                    <div class="info-rapida page-break-avoid">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;">
-                            <div><strong>Recibo:</strong> ${datos.numeroVenta}</div>
-                            <div><strong>Fecha:</strong> ${datos.fecha}</div>
-                            <div><strong>Hora:</strong> ${datos.hora}</div>
-                            <div><strong>Vendedor:</strong> ${datos.vendedor}</div>
-                        </div>
-                    </div>
-
-                    <!-- Cliente -->
-                    ${generarClienteHTML()}
-
-                    <!-- Productos -->
-                    ${generarTablaProductos()}
-
-                    <!-- Métodos de pago -->
-                    ${generarMetodosPago()}
-
-                    <!-- Sección de Forma de Pago -->
-                    ${generarResumenFormaPago()}
-
-                    <!-- Totales -->
-                    ${generarTotales()}
-
-                    <!-- Observaciones -->
-                    ${datos.configuracion?.observaciones ? `
-                        <div class="observaciones-compactas page-break-avoid">
-                            <div class="alert-warning">
-                                <strong>Observación:</strong> ${datos.configuracion.observaciones}
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <!-- Términos y condiciones -->
-                    <div class="terminos-compactos page-break-avoid">
-                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px;">
-                            <div>
-                                <p style="margin-bottom: 3px;">
-                                    <i class="bi bi-exclamation-triangle"></i>
-                                    Pasados 30 días no nos hacemos responsables de trabajos no retirados
-                                </p>
-                                <p style="margin-bottom: 0;">
-                                    <i class="bi bi-info-circle"></i>
-                                    Estado de orden: tracking.optolapp.com
-                                </p>
-                            </div>
-                            <div style="text-align: right;">
-                                <small>${new Date().getFullYear()} © ${sedeInfo?.nombre_optica || 'New Vision Lens'}</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Mensaje final -->
-                    <div class="mensaje-final page-break-avoid">
-                        <i class="bi bi-check-circle"></i>
-                        ${mensajeFinal}
-                    </div>
-                </div>
-            </body>
-            </html>
-            `;
+        return this.generarReciboHTMLUnificado(datos, vista);
     }
 
-    /**
-     * Determina si debe mostrar el "Total a pagar" según la forma de pago
-     */
-    private debeMostrarTotalAPagar(formaPago: string, datos: any): boolean {
-        switch (formaPago) {
-            case 'contado':
-                // Contado: siempre mostrar solo el total pagado (no hay deuda)
-                return false;
+    obtenerVistaPreviaReciboHTML(): string {
+        const datos = this.datosRecibo || this.crearDatosReciboReal();
+        return datos ? this.generarReciboHTMLUnificado(datos, 'preview') : '';
+    }
 
-            case 'cashea':
-                // Cashea: mostrar si hay deuda pendiente
-                const deudaCashea = datos.cashea?.deudaPendiente || 0;
-                return deudaCashea > 0.01;
+    private actualizarVistaPreviaRecibo(): void {
+        const html = this.obtenerVistaPreviaReciboHTML();
 
-            case 'abono':
-                // Abono: mostrar si hay deuda pendiente
-                const deudaAbono = datos.abono?.deudaPendiente || 0;
-                return deudaAbono > 0.01;
+        this.limpiarVistaPreviaRecibo();
 
-            default:
-                return false;
+        if (!html) {
+            this.previewReciboUrl = null;
+            return;
         }
+
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        this.previewReciboObjectUrl = URL.createObjectURL(blob);
+        this.previewReciboUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.previewReciboObjectUrl);
     }
 
-    /**
-     * Obtiene el texto para "Total a pagar" según la forma de pago
-     */
-    private getTextoTotalAPagarParaHTML(formaPago: string): string {
-        switch (formaPago) {
-            case 'cashea':
-                return 'Total a pagar';
-            case 'abono':
-                return 'Total a pagar';
-            case 'contado':
-            default:
-                return 'Total';
+    private limpiarVistaPreviaRecibo(): void {
+        this.previewReciboUrl = null;
+
+        if (this.previewReciboObjectUrl) {
+            URL.revokeObjectURL(this.previewReciboObjectUrl);
+            this.previewReciboObjectUrl = null;
         }
     }
 
@@ -4576,9 +3770,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     private getMensajeFinalParaHTML(formaPago: string): string {
         switch (formaPago) {
             case 'abono':
-                return '¡Gracias por su abono!';
+                return '¡Gracias por su compra!';
             case 'cashea':
-                return '¡Gracias por su compra! Plan Cashea activado';
+                return '¡Gracias por su compra! ';
             case 'contado':
             default:
                 return '¡Gracias por su compra!';
@@ -4598,15 +3792,12 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     imprimirRecibo(): void {
-        // Generar cuotas Cashea si no existen
-        if (this.venta.formaPago === 'cashea' && (!this.cuotasCashea || this.cuotasCashea.length === 0)) {
-            this.generarCuotasCashea();
+        const htmlContent = this.obtenerReciboHTMLParaSalida('print');
+        if (!htmlContent) {
+            return;
         }
 
-        const datos = this.datosRecibo || this.crearDatosReciboReal();
-        const htmlContent = this.generarReciboHTML(datos);
-
-        const ventanaImpresion = window.open('', '_blank', 'width=400,height=600');
+        const ventanaImpresion = window.open('', '_blank', 'width=900,height=1100');
 
         if (!ventanaImpresion) {
             this.swalService.showError('Error', 'No se pudo abrir la ventana de impresión. Permite ventanas emergentes.');
@@ -4616,43 +3807,132 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         ventanaImpresion.document.write(htmlContent);
         ventanaImpresion.document.close();
 
-        // Esperar a que el contenido se cargue completamente
         ventanaImpresion.onload = () => {
             setTimeout(() => {
                 try {
                     ventanaImpresion.focus();
-
-                    // Agregar evento para cerrar la ventana después de imprimir
                     ventanaImpresion.onafterprint = () => {
                         setTimeout(() => {
                             ventanaImpresion.close();
                         }, 100);
                     };
-
                     ventanaImpresion.print();
-
                 } catch (error) {
                     console.error('Error al imprimir:', error);
                     this.swalService.showInfo(
                         'Recibo listo',
                         'El recibo se ha generado. Usa Ctrl+P para imprimir manualmente.'
                     );
-                    // Cerrar la ventana incluso si hay error
                     setTimeout(() => {
                         ventanaImpresion.close();
                     }, 2000);
                 }
-            }, 500);
+            }, 400);
         };
 
-        // Fallback: cerrar después de un tiempo si no se detecta la impresión
         setTimeout(() => {
             if (!ventanaImpresion.closed) {
                 ventanaImpresion.close();
             }
-        }, 10000); // Cerrar después de 10 segundos como máximo
+        }, 10000);
     }
 
+    async descargarPDF(): Promise<void> {
+        const htmlContent = this.obtenerReciboHTMLParaSalida('pdf');
+        if (!htmlContent) {
+            return;
+        }
+
+        this.swalService.showLoadingAlert('Generando PDF del recibo...');
+
+        try {
+            const canvas = await this.renderizarReciboHTMLACanvas(htmlContent);
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const imgData = canvas.toDataURL('image/png', 1.0);
+            const imgWidth = pageWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            let remainingHeight = imgHeight;
+            let offsetY = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, offsetY, imgWidth, imgHeight, undefined, 'FAST');
+            remainingHeight -= pageHeight;
+
+            while (remainingHeight > 0.1) {
+                offsetY = remainingHeight - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, offsetY, imgWidth, imgHeight, undefined, 'FAST');
+                remainingHeight -= pageHeight;
+            }
+
+            pdf.save(`recibo-${this.datosRecibo?.numeroVenta || 'venta'}.pdf`);
+        } catch (error) {
+            console.error('Error al generar PDF del recibo:', error);
+            this.swalService.showError('Error', 'No se pudo generar el PDF del recibo.');
+        } finally {
+            this.swalService.closeLoading();
+        }
+    }
+
+    private async renderizarReciboHTMLACanvas(htmlContent: string): Promise<HTMLCanvasElement> {
+        const iframe = document.createElement('iframe');
+        const objectUrl = URL.createObjectURL(new Blob([htmlContent], { type: 'text/html;charset=utf-8' }));
+
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-10000px';
+        iframe.style.top = '0';
+        iframe.style.width = '840px';
+        iframe.style.height = '1188px';
+        iframe.style.opacity = '0';
+        iframe.style.pointerEvents = 'none';
+        iframe.style.border = '0';
+
+        document.body.appendChild(iframe);
+
+        try {
+            await new Promise<void>((resolve, reject) => {
+                iframe.onload = () => resolve();
+                iframe.onerror = () => reject(new Error('No se pudo cargar el documento temporal del recibo.'));
+                iframe.src = objectUrl;
+            });
+
+            const iframeWindow = iframe.contentWindow;
+            const iframeDocument = iframe.contentDocument;
+
+            if (!iframeWindow || !iframeDocument) {
+                throw new Error('No se pudo acceder al documento temporal del recibo.');
+            }
+
+            await new Promise<void>((resolve) => {
+                iframeWindow.requestAnimationFrame(() => {
+                    iframeWindow.setTimeout(() => resolve(), 180);
+                });
+            });
+
+            const target = (iframeDocument.querySelector('.recibo-page') as HTMLElement) || iframeDocument.body;
+
+            return await html2canvas(target, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                width: Math.ceil(target.scrollWidth),
+                height: Math.ceil(target.scrollHeight),
+                windowWidth: Math.ceil(target.scrollWidth),
+                windowHeight: Math.ceil(target.scrollHeight)
+            });
+        } finally {
+            URL.revokeObjectURL(objectUrl);
+            iframe.remove();
+        }
+    }
     formatearMoneda(monto: number | null | undefined, moneda?: string): string {
         // Validar que el monto sea un número válido
         if (monto === null || monto === undefined || isNaN(monto)) {
@@ -4713,7 +3993,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.limpiarTodosLosSelects();
         this.mostrarModalRecibo = false;
         this.ventaGenerada = false;
+        this.limpiarVistaPreviaRecibo();
         this.datosRecibo = null;
+        this.ventaReciboKey = null;
 
         this.cerrarModalResumen();
 
@@ -4762,582 +4044,20 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return tipos[tipo] || tipo.toUpperCase();
     }
 
-    async descargarPDF(): Promise<void> {
-        try {
-            // Preparar datos si es necesario
-            if (this.venta.formaPago === 'cashea' && (!this.cuotasCashea || this.cuotasCashea.length === 0)) {
-                this.generarCuotasCashea();
-            }
-
-            const datos = this.datosRecibo || this.crearDatosReciboReal();
-
-            // Mostrar loading
-            this.swalService.showLoadingAlert('🖨️ Generando PDF...');
-
-            // Llamar directamente al método que genera PDF
-            await this.generarPDFConTexto(datos);
-
-        } catch (error) {
-            console.error('Error al generar PDF:', error);
-            this.swalService.closeLoading();
-
-            // Mostrar error al usuario
-            this.swalService.showError(
-                'Error al generar PDF',
-                'No se pudo generar el archivo PDF. Por favor, intente de nuevo.'
-            );
-        }
-    }
-
-    private generarPDFConTexto(datos: any): void {
-        try {
-            this.swalService.showLoadingAlert('🖨️ Generando PDF...');
-
-            // Crear PDF
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4'
-            });
-
-            // Márgenes reducidos para más espacio
-            const marginLeft = 10;
-            const marginTop = 10;
-            const pageWidth = 210;
-            const contentWidth = pageWidth - (marginLeft * 2);
-            let currentY = marginTop;
-
-            // Obtener información de la sede desde UserStateService
-            const sedeInfo = this.userStateService.getSedeActual() || this.obtenerInfoSede();
-
-            // Determinar si es paciente
-            const esPaciente = datos.cliente?.tipo === 'PACIENTE' || datos.cliente?.esPaciente === true;
-            const labelCliente = esPaciente ? 'Paciente:' : 'Cliente:';
-            const nombreDefault = esPaciente ? 'PACIENTE' : 'CLIENTE GENERAL';
-
-            // ===== 1. ENCABEZADO DE LA EMPRESA =====
-            pdf.setFontSize(14);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(0, 0, 0);
-            pdf.text(sedeInfo.nombre_optica || sedeInfo.nombre || 'NEW VISION LENS', 105, currentY, { align: 'center' });
-            currentY += 6;
-
-            pdf.setFontSize(8);
-            pdf.setFont('helvetica', 'normal');
-
-            // Dirección
-            const direccion = sedeInfo.direccion || 'C.C. Candelaria, Local PB-04, Guarenas';
-            pdf.text(direccion, 105, currentY, { align: 'center' });
-            currentY += 4;
-
-            // Teléfono y RIF
-            const telefono = sedeInfo.telefono || '0212-365-39-42';
-            const rif = sedeInfo.rif ? sedeInfo.rif.replace(/^rif/i, '').trim() : 'J-123456789';
-            pdf.text(`Tel: ${telefono} | RIF: ${rif}`, 105, currentY, { align: 'center' });
-            currentY += 4;
-
-            // Email
-            const email = sedeInfo.email || 'newvisionlens2020@gmail.com';
-            pdf.text(`Email: ${email}`, 105, currentY, { align: 'center' });
-            currentY += 6;
-
-            // Línea separadora
-            pdf.setDrawColor(44, 90, 160);
-            pdf.setLineWidth(0.5);
-            pdf.line(marginLeft, currentY, 195, currentY);
-            currentY += 8;
-
-            // Título del recibo
-            pdf.setFontSize(12);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(44, 90, 160);
-            pdf.text('RECIBO DE VENTA', 105, currentY, { align: 'center' });
-            currentY += 8;
-
-            // ===== 2. INFORMACIÓN RÁPIDA =====
-            // Fondo gris claro
-            pdf.setFillColor(248, 249, 250);
-            pdf.roundedRect(marginLeft, currentY, contentWidth, 10, 1, 1, 'F');
-
-            // Bordes
-            pdf.setDrawColor(222, 226, 230);
-            pdf.setLineWidth(0.2);
-            pdf.roundedRect(marginLeft, currentY, contentWidth, 10, 1, 1, 'S');
-
-            pdf.setFontSize(8);
-            pdf.setFont('helvetica', 'normal');
-            pdf.setTextColor(51, 51, 51);
-
-            const gridWidth = contentWidth / 4;
-            const gridX = [marginLeft, marginLeft + gridWidth, marginLeft + (gridWidth * 2), marginLeft + (gridWidth * 3)];
-            const gridTextY = currentY + 7;
-
-            // Recibo
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('Recibo:', gridX[0] + 3, gridTextY);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(datos.numeroVenta, gridX[0] + 15, gridTextY);
-
-            // Fecha
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('Fecha:', gridX[1] + 3, gridTextY);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(datos.fecha, gridX[1] + 15, gridTextY);
-
-            // Hora
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('Hora:', gridX[2] + 3, gridTextY);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(datos.hora, gridX[2] + 12, gridTextY);
-
-            // Vendedor
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('Vendedor:', gridX[3] + 3, gridTextY);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(datos.vendedor, gridX[3] + 20, gridTextY);
-
-            currentY += 12;
-
-            // ==== 3. INFORMACIÓN DEL CLIENTE ====
-            const colorPaciente = [13, 202, 240];
-            const colorCliente = [44, 90, 160];
-
-            pdf.setDrawColor(
-                esPaciente ? colorPaciente[0] : colorCliente[0],
-                esPaciente ? colorPaciente[1] : colorCliente[1],
-                esPaciente ? colorPaciente[2] : colorCliente[2]
-            );
-            pdf.setLineWidth(2);
-            pdf.line(marginLeft, currentY, marginLeft, currentY + 12);
-
-            // Bordes restantes
-            pdf.setDrawColor(222, 226, 230);
-            pdf.setLineWidth(0.2);
-            pdf.roundedRect(marginLeft, currentY, contentWidth, 12, 1, 1, 'S');
-
-            pdf.setFontSize(8);
-            pdf.setTextColor(51, 51, 51);
-
-            const clienteGridWidth = contentWidth / 3;
-            const clienteGridX = [marginLeft, marginLeft + clienteGridWidth, marginLeft + (clienteGridWidth * 2)];
-            const clienteTextY = currentY + 8;
-
-            // Cliente - USAR LABEL DINÁMICO
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(labelCliente, clienteGridX[0] + 3, clienteTextY);
-            pdf.setFont('helvetica', 'normal');
-            // Usar nombreDefault si no hay nombre
-            pdf.text(datos.cliente.nombre || nombreDefault, clienteGridX[0] + 20, clienteTextY);
-
-            // Cédula
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('Cédula:', clienteGridX[1] + 3, clienteTextY);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(datos.cliente.cedula || 'N/A', clienteGridX[1] + 15, clienteTextY);
-
-            // Teléfono
-            pdf.setFont('helvetica', 'bold');
-            pdf.text('Teléfono:', clienteGridX[2] + 3, clienteTextY);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(datos.cliente.telefono || 'N/A', clienteGridX[2] + 20, clienteTextY);
-
-            currentY += 14;
-
-            // ===== 4. TABLA DE PRODUCTOS =====
-            pdf.setFontSize(10);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(44, 90, 160);
-            pdf.text('PRODUCTOS', marginLeft, currentY);
-
-            // Línea debajo del título
-            pdf.setDrawColor(44, 90, 160);
-            pdf.setLineWidth(0.5);
-            pdf.line(marginLeft, currentY + 1, marginLeft + 25, currentY + 1);
-
-            currentY += 6;
-
-            // En la tabla de productos, antes de mapear los datos
-            let tableData = [];
-
-            if (datos.productos && datos.productos.length > 0) {
-                const productosData = datos.productos.map((producto: any, index: number) => [
-                    (index + 1).toString(),
-                    producto.nombre,
-                    producto.cantidad.toString(),
-                    this.formatearMonedaParaPDF(producto.precioUnitario),
-                    this.formatearMonedaParaPDF(producto.subtotal)
-                ]);
-                tableData = [...tableData, ...productosData];
-            }
-
-            // Crear tabla con autoTable
-            autoTable(pdf, {
-                startY: currentY,
-                margin: { left: marginLeft, right: 10 },
-                head: [['#', 'Descripción', 'Cant', 'P. Unitario', 'Subtotal']],
-                body: tableData,
-                headStyles: {
-                    fillColor: [44, 90, 160], // Azul
-                    textColor: [255, 255, 255], // Blanco
-                    fontStyle: 'bold',
-                    fontSize: 8,
-                    cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
-                    halign: 'left'
-                },
-                bodyStyles: {
-                    fontSize: 8,
-                    cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
-                    textColor: [51, 51, 51],
-                    lineColor: [222, 226, 230]
-                },
-                styles: {
-                    lineWidth: 0.2,
-                    lineColor: [222, 226, 230]
-                },
-                columnStyles: {
-                    0: {
-                        cellWidth: 10,
-                        halign: 'center',
-                        cellPadding: { top: 2, right: 1, bottom: 2, left: 1 }
-                    },
-                    1: {
-                        cellWidth: 90,
-                        cellPadding: { top: 2, right: 2, bottom: 2, left: 2 }
-                    },
-                    2: {
-                        cellWidth: 15,
-                        halign: 'center',
-                        cellPadding: { top: 2, right: 1, bottom: 2, left: 1 }
-                    },
-                    3: {
-                        cellWidth: 25,
-                        halign: 'right',
-                        cellPadding: { top: 2, right: 3, bottom: 2, left: 1 }
-                    },
-                    4: {
-                        cellWidth: 25,
-                        halign: 'right',
-                        cellPadding: { top: 2, right: 3, bottom: 2, left: 1 }
-                    }
-                },
-                theme: 'grid',
-                didDrawPage: (data) => {
-                    // Evitar que la tabla se corte mal
-                    if (data.cursor.y > 250) {
-                        pdf.addPage();
-                        currentY = marginTop;
-                    }
-                }
-            });
-
-            // Obtener la posición Y después de la tabla
-            currentY = (pdf as any).lastAutoTable.finalY + 8;
-
-            // ===== 5. MÉTODOS DE PAGO =====
-            if (datos.metodosPago && datos.metodosPago.length > 0) {
-                datos.metodosPago.forEach((metodo: any) => {
-                    const metodoX = marginLeft;
-                    const metodoWidth = contentWidth;
-
-                    // Línea punteada
-                    const dashPattern = [2, 2];
-                    pdf.setLineDashPattern(dashPattern, 0);
-                    pdf.setDrawColor(222, 226, 230);
-                    pdf.setLineWidth(0.3);
-                    pdf.line(metodoX, currentY, metodoX + metodoWidth, currentY);
-                    pdf.setLineDashPattern([], 0);
-
-                    currentY += 3;
-
-                    // Badge del tipo de pago
-                    pdf.setFillColor(44, 90, 160);
-                    pdf.roundedRect(metodoX, currentY - 1, 15, 4, 1, 1, 'F');
-
-                    pdf.setFont('helvetica', 'bold');
-                    pdf.setFontSize(7);
-                    pdf.setTextColor(255, 255, 255);
-                    const tipoPagoAbrev = this.formatearTipoPago(metodo.tipo).substring(0, 8);
-                    pdf.text(tipoPagoAbrev, metodoX + 2, currentY + 1);
-
-                    // Texto del método
-                    pdf.setFontSize(8);
-                    pdf.setTextColor(51, 51, 51);
-                    pdf.setFont('helvetica', 'normal');
-
-                    const metodoDetalles: string[] = [];
-                    if (metodo.referencia) {
-                        metodoDetalles.push(`Ref: ${metodo.referencia}`);
-                    }
-                    if (metodo.bancoEmisor || metodo.banco) {
-                        metodoDetalles.push(`Emisor: ${metodo.bancoEmisor || metodo.banco}`);
-                    }
-                    if (metodo.bancoReceptor) {
-                        metodoDetalles.push(`Receptor: ${metodo.bancoReceptor}`);
-                    }
-                    if (metodo.notaPago) {
-                        metodoDetalles.push(`Nota: ${metodo.notaPago}`);
-                    }
-                    const metodoText = metodoDetalles.join(' - ');
-
-                    if (metodoText) {
-                        pdf.text(metodoText, metodoX + 18, currentY + 1);
-                    }
-
-                    // Monto
-                    const montoMetodoPdf = this.formatearMonedaParaPDF(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || datos.configuracion?.moneda);
-                    const montoMetodoBsPdf = this.debeMostrarConversionBsPorMetodo(metodo)
-                        ? ` / ${this.formatearMonedaParaPDF(metodo.montoEnBolivar ?? this.obtenerMontoReciboEnBolivar(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || metodo.moneda), 'bolivar')}`
-                        : '';
-                    pdf.text(`${montoMetodoPdf}${montoMetodoBsPdf}`,
-                        metodoX + metodoWidth - 2, currentY + 1, { align: 'right' });
-
-                    currentY += 6;
-                });
-                currentY += 2;
-            }
-
-            // ===== 6. SECCIÓN DE FORMA DE PAGO =====
-            const formaPago = datos.configuracion?.formaPago || 'contado';
-
-            if (formaPago === 'contado') {
-                pdf.setFillColor(248, 249, 250);
-                pdf.roundedRect(marginLeft, currentY, contentWidth, 20, 2, 2, 'F');
-
-                pdf.setDrawColor(25, 135, 84);
-                pdf.setLineWidth(2);
-                pdf.line(marginLeft, currentY, marginLeft, currentY + 20);
-
-                pdf.setDrawColor(222, 226, 230);
-                pdf.setLineWidth(0.2);
-                pdf.roundedRect(marginLeft, currentY, contentWidth, 20, 2, 2, 'S');
-
-                const centerX = marginLeft + (contentWidth / 2);
-                const contentStartY = currentY + 8;
-
-                pdf.setFontSize(10);
-                pdf.setFont('helvetica', 'bold');
-                pdf.setTextColor(51, 51, 51);
-                pdf.text('Forma de pago:', centerX, contentStartY, { align: 'center' });
-
-                // Badge CONTADO
-                pdf.setFillColor(25, 135, 84);
-                pdf.roundedRect(centerX - 15, contentStartY + 4, 30, 6, 3, 3, 'F');
-
-                pdf.setFontSize(9);
-                pdf.setTextColor(255, 255, 255);
-                pdf.text('CONTADO', centerX, contentStartY + 7, { align: 'center' });
-
-                pdf.setFontSize(10);
-                pdf.setTextColor(51, 51, 51);
-                pdf.text('Monto total:', centerX, contentStartY + 16, { align: 'center' });
-
-                pdf.text(this.formatearMonedaParaPDF(datos.totales.totalPagado), centerX, contentStartY + 22, { align: 'center' });
-
-                currentY += 25;
-            }
-
-            // ===== 7. TOTALES =====
-            currentY += 4;
-
-            const totalesWidth = contentWidth / 2;
-            const totalesX = marginLeft + (contentWidth - totalesWidth);
-
-            // Crear array base para los totales
-            let totalesData = [];
-
-            // Subtotal de productos
-            const subtotalPdf = this.formatearMonedaParaPDF(datos.totales.subtotal, datos.configuracion?.moneda);
-            const subtotalBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
-                ? ` / ${this.formatearMonedaParaPDF(this.obtenerMontoReciboEnBolivar(datos.totales.subtotal, datos.configuracion?.moneda), 'bolivar')}`
-                : '';
-            totalesData.push(['Subtotal (productos):', `${subtotalPdf}${subtotalBsPdf}`]);
-
-            // Consulta (si existe)
-            if ((datos.totales.consulta || 0) > 0) {
-                const montoConsultaPdf = this.formatearMonedaParaPDF(datos.totales.consulta, datos.configuracion?.moneda);
-                const montoConsultaBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
-                    ? ` / ${this.formatearMonedaParaPDF(this.obtenerMontoReciboEnBolivar(datos.totales.consulta, datos.configuracion?.moneda), 'bolivar')}`
-                    : '';
-                totalesData.push(['Consulta:', `${montoConsultaPdf}${montoConsultaBsPdf}`]);
-            }
-
-            // Descuento (si existe)
-            if (datos.totales.descuento > 0) {
-                const descuentoPdf = this.formatearMonedaParaPDF(datos.totales.descuento, datos.configuracion?.moneda);
-                const descuentoBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
-                    ? ` / ${this.formatearMonedaParaPDF(this.obtenerMontoReciboEnBolivar(datos.totales.descuento, datos.configuracion?.moneda), 'bolivar')}`
-                    : '';
-                totalesData.push(['Descuento:', `- ${descuentoPdf}${descuentoBsPdf}`]);
-            }
-
-            // IVA
-            const ivaPdf = this.formatearMonedaParaPDF(datos.totales.iva, datos.configuracion?.moneda);
-            const ivaBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
-                ? ` / ${this.formatearMonedaParaPDF(this.obtenerMontoReciboEnBolivar(datos.totales.iva, datos.configuracion?.moneda), 'bolivar')}`
-                : '';
-            totalesData.push(['IVA:', `${ivaPdf}${ivaBsPdf}`]);
-
-            if (formaPago === 'abono' || formaPago === 'cashea') {
-                const totalVentaPdf = this.formatearMonedaParaPDF(datos.totales.total, datos.configuracion?.moneda);
-                const totalVentaBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
-                    ? ` / ${this.formatearMonedaParaPDF(datos.totales.totalEnBolivar ?? this.obtenerMontoReciboEnBolivar(datos.totales.total, datos.configuracion?.moneda), 'bolivar')}`
-                    : '';
-                totalesData.push(['Total venta:', `${totalVentaPdf}${totalVentaBsPdf}`]);
-            }
-
-            const etiquetaTotalPagado = formaPago === 'abono'
-                ? 'TOTAL ABONADO:'
-                : formaPago === 'cashea'
-                    ? 'TOTAL PAGADO AHORA:'
-                    : 'TOTAL PAGADO:';
-            const totalPagadoPdf = this.formatearMonedaParaPDF(datos.totales.totalPagado, datos.configuracion?.moneda);
-            const totalPagadoBsPdf = this.debeMostrarConversionBsEnRecibo(datos.configuracion?.moneda)
-                ? ` / ${this.formatearMonedaParaPDF(this.obtenerMontoReciboEnBolivar(datos.totales.totalPagado, datos.configuracion?.moneda), 'bolivar')}`
-                : '';
-            totalesData.push([etiquetaTotalPagado, `${totalPagadoPdf}${totalPagadoBsPdf}`]);
-
-            // Dibujar tabla de totales
-            let totalY = currentY;
-            totalesData.forEach((row, index) => {
-                const isTotal = index === totalesData.length - 1;
-
-                // Fondo para total
-                if (isTotal) {
-                    pdf.setFillColor(212, 237, 218);
-                    pdf.rect(totalesX, totalY - 3, totalesWidth, 6, 'F');
-                }
-
-                // Bordes
-                pdf.setDrawColor(222, 226, 230);
-                pdf.setLineWidth(0.2);
-                pdf.rect(totalesX, totalY - 3, totalesWidth, 6, 'S');
-
-                // Texto
-                pdf.setFontSize(isTotal ? 11 : 10);
-                pdf.setFont('helvetica', 'bold');
-
-                if (row[0].includes('Descuento')) {
-                    pdf.setTextColor(220, 53, 69);
-                } else if (isTotal) {
-                    pdf.setTextColor(25, 135, 84);
-                } else {
-                    pdf.setTextColor(51, 51, 51);
-                }
-
-                // Etiqueta
-                pdf.text(row[0], totalesX + 4, totalY);
-
-                // Valor
-                pdf.text(row[1], totalesX + totalesWidth - 4, totalY, { align: 'right' });
-
-                totalY += 6;
-            });
-
-            currentY = totalY + 8;
-
-            // ===== 8. OBSERVACIONES =====
-            if (datos.configuracion?.observaciones) {
-                pdf.setFillColor(255, 243, 205);
-                pdf.setDrawColor(255, 234, 167);
-                pdf.setLineWidth(0.5);
-                pdf.roundedRect(marginLeft, currentY, contentWidth, 8, 1, 1, 'FD');
-
-                pdf.setFontSize(8);
-                pdf.setFont('helvetica', 'normal');
-                pdf.setTextColor(133, 100, 4);
-                pdf.text(`Observación: ${datos.configuracion.observaciones}`, marginLeft + 4, currentY + 5);
-
-                currentY += 10;
-            }
-
-            // ===== 9. TÉRMINOS Y CONDICIONES =====
-            const terminosY = Math.min(currentY, 270);
-
-            // Línea separadora
-            pdf.setDrawColor(221, 221, 221);
-            pdf.setLineWidth(0.5);
-            pdf.line(marginLeft, terminosY, 195, terminosY);
-
-            pdf.setFontSize(7);
-            pdf.setFont('helvetica', 'normal');
-            pdf.setTextColor(102, 102, 102);
-
-            // Términos
-            pdf.text('Pasados 30 días no nos hacemos responsables de trabajos no retirados',
-                marginLeft, terminosY + 6);
-            pdf.text('Estado de orden: tracking.optolapp.com',
-                marginLeft, terminosY + 12);
-
-            // Copyright
-            const copyrightText = `${new Date().getFullYear()} © ${sedeInfo.nombre_optica || sedeInfo.nombre || 'New Vision Lens'}`;
-            pdf.text(copyrightText, 195, terminosY + 18, { align: 'right' });
-
-            // ===== 10. MENSAJE FINAL =====
-            const mensajeFinalY = Math.min(terminosY + 24, 285);
-
-            pdf.setFontSize(9);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(44, 90, 160);
-            pdf.text('✓ ¡Gracias por su compra!', 105, mensajeFinalY, { align: 'center' });
-
-            // ===== 11. GUARDAR PDF =====
-            pdf.save(`Recibo_${datos.numeroVenta}.pdf`);
-
-            // Cerrar loading
-            setTimeout(() => {
-                this.swalService.closeLoading();
-            }, 500);
-
-        } catch (error) {
-            console.error('Error generando PDF con texto:', error);
-            this.swalService.closeLoading();
-            this.swalService.showError('Error', 'No se pudo generar el PDF.');
-            throw error;
-        }
-    }
-
-    // Mantén este método auxiliar para formatear moneda
-    private formatearMonedaParaPDF(monto: number | null | undefined, moneda?: string): string {
-        if (monto === null || monto === undefined || isNaN(monto)) {
-            return '$0,00';
-        }
-
-        const montoNumerico = Number(monto);
-        if (isNaN(montoNumerico)) {
-            return '$0,00';
-        }
-
-        // Formatear al estilo venezolano
-        const partes = montoNumerico.toFixed(2).split('.');
-        let parteEntera = partes[0];
-        let parteDecimal = partes[1] || '00';
-
-        // Agregar separadores de miles
-        parteEntera = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-        // Determinar símbolo
-        let simbolo = '$';
-        if (moneda) {
-            const monedaNormalizada = moneda.toLowerCase();
-            if (monedaNormalizada === 'bolivar' || monedaNormalizada === 'ves' || monedaNormalizada === 'bs') {
-                simbolo = 'Bs.';
-                return `${simbolo} ${parteEntera},${parteDecimal}`;
-            } else if (monedaNormalizada === 'euro' || monedaNormalizada === 'eur') {
-                simbolo = '€';
-            }
-        }
-
-        return `${simbolo}${parteEntera},${parteDecimal}`;
-    }
-
     async copiarEnlace(): Promise<void> {
         try {
             this.swalService.showLoadingAlert('Generando enlace de descarga...');
 
             const datos = this.datosRecibo || this.crearDatosReciboReal();
+            const sedeInfo = datos?.sede || this.obtenerInfoSede();
+            const nombreSede = sedeInfo?.nombre || 'NEW VISION LENS';
+            const direccionSede = sedeInfo?.direccion || 'C.C. Candelaria, Local PB-04, Guarenas';
+            const telefonoSede = sedeInfo?.telefono || '0212-365-39-42';
+            const rifSede = sedeInfo?.rif || 'J-123456789';
+            const emailSede = sedeInfo?.email || 'newvisionlens2020@gmail.com';
 
             // EN LUGAR de generar PDF, creamos un texto con la información
-            let texto = `📋 NEW VISION LENS - Recibo de Venta\n\n` +
+            let texto = `📋 ${nombreSede} - Recibo de Venta\n\n` +
                 `Recibo: ${datos.numeroVenta}\n` +
                 `Fecha: ${datos.fecha}\n` +
                 `Hora: ${datos.hora}\n` +
@@ -5354,9 +4074,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 texto += `${index + 1}. ${producto.nombre} x${producto.cantidad} - ${this.formatearMoneda(producto.subtotal)}\n`;
             });
 
-            texto += `\n📍 NEW VISION LENS\n`;
-            texto += `🏪 C.C. Candelaria, Local PB-04, Guarenas\n`;
-            texto += `📞 0212-365-39-42\n\n`;
+            texto += `\n📍 ${nombreSede}\n`;
+            texto += `🏪 ${direccionSede}\n`;
+            texto += `📞 ${telefonoSede}\n`;
+            texto += `🧾 RIF: ${rifSede}\n`;
+            texto += `✉️ ${emailSede}\n\n`;
             texto += `_Conserve este comprobante para cualquier reclamo._`;
 
             // Copiar al portapapeles
@@ -5868,8 +4590,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private enviarWhatsAppDirecto(telefono: string, datos: any): void {
+        const sedeInfo = datos?.sede || this.obtenerInfoSede();
+        const nombreSede = sedeInfo?.nombre || 'NEW VISION LENS';
+        const direccionSede = sedeInfo?.direccion || 'C.C. Candelaria, Local PB-04, Guarenas';
+        const telefonoSede = sedeInfo?.telefono || '0212-365-39-42';
+        const emailSede = sedeInfo?.email || 'newvisionlens2020@gmail.com';
+
         // Crear mensaje mejorado
-        let mensaje = `*NEW VISION LENS* 🛍️\n\n`;
+        let mensaje = `*${nombreSede}* 🛍️\n\n`;
         mensaje += `*${this.getTituloRecibo()}* 📄\n`;
         mensaje += `*Número:* ${datos.numeroVenta}\n`;
         mensaje += `*Fecha:* ${datos.fecha}\n`;
@@ -5934,9 +4662,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             });
         }
 
-        mensaje += `\n📍 *NEW VISION LENS*\n`;
-        mensaje += `🏪 C.C. Candelaria, Local PB-04, Guarenas\n`;
-        mensaje += `📞 0212-365-39-42\n\n`;
+        mensaje += `\n📍 *${nombreSede}*\n`;
+        mensaje += `🏪 ${direccionSede}\n`;
+        mensaje += `📞 ${telefonoSede}\n`;
+        mensaje += `✉️ ${emailSede}\n\n`;
         mensaje += `_Conserve este comprobante para cualquier reclamo._`;
 
         // Crear URL de WhatsApp
@@ -7576,7 +6305,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Obtener costos reales del backend
             this.generarVentaService.getCostosConsulta(historia.id).pipe(take(1)).subscribe({
                 next: (costos) => {
-                    //console.log('💰 Costos recibidos:', costos);
+                    console.log('💰 Costos recibidos:', costos);
 
                     const totalConsulta = parseFloat(costos.totalConsulta) || 0;
                     const costoMedico = parseFloat(costos.costoMedico) || 0;
@@ -7597,11 +6326,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     this.montoConsultaOriginal = totalConsulta;
                     this.consultaEnCarrito = true;
 
-                   /* console.log('✅ Valores asignados:', {
+                    console.log('✅ Valores asignados:', {
                         pagoMedico: this.pagoMedico,
                         pagoOptica: this.pagoOptica,
                         montoConsulta: this.montoConsulta
-                    });*/
+                    });
 
                     this.cdr.detectChanges();
 
@@ -8226,7 +6955,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 return false;
             });
 
-            //console.log('Historias para solo consulta:', historiasBase.length);
+            console.log('Historias para solo consulta:', historiasBase.length);
             historiasBase.forEach(h => {
                 const especialista = h.datosConsulta?.especialista;
                 console.log(`- ${h.nHistoria}: ${especialista?.tipo}, formulaExterna: ${h.formulaExterna}`);
@@ -8448,7 +7177,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const formulaExterna = datosConsulta?.formulaExterna === true;
         const tieneFormulaOriginal = !!datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
 
-        /*console.log('Determinando tipo:', {
+        console.log('Determinando tipo:', {
             especialistaTipo: especialista?.tipo,
             esOftalmologo,
             esOptometrista,
@@ -8456,7 +7185,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             pagoPendiente,
             formulaExterna,
             tieneFormulaOriginal
-        });*/
+        });
 
         // Caso 1: Oftalmólogo interno (no externa)
         if (esOftalmologo && !formulaExterna) {
@@ -8492,7 +7221,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     seleccionarHistoria(historia: any): void {
-       // console.log('Historia:', historia);
+        console.log('📋 seleccionarHistoria llamado');
+        console.log('Historia:', historia);
 
         if (this.historiaSeleccionadaId === historia.id) {
             return;
@@ -8510,11 +7240,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
         const tipo = this.determinarTipoHistoria(historia);
 
-            /*  console.log('Tipo determinado:', tipo);
+        console.log('Tipo determinado:', tipo);
         console.log('¿Pago pendiente?:', pagoPendiente);
         console.log('¿Es oftalmólogo?:', esOftalmologo);
         console.log('¿Es externa?:', formulaExterna);
-                console.log('¿Tiene fórmula original?:', tieneFormulaOriginal);*/
+        console.log('¿Tiene fórmula original?:', tieneFormulaOriginal);
 
         // ============================================
         // CASO: SOLO CONSULTA

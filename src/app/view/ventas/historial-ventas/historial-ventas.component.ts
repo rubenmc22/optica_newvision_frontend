@@ -4029,6 +4029,22 @@ export class HistorialVentasComponent implements OnInit {
     return this.construirItemsRecibo();
   }
 
+  private obtenerSedeActualParaRecibo(): any {
+    const sedeSesion = this.sedeInfo || this.userStateService.getSedeActual();
+    const sedeVenta = typeof this.ventaParaRecibo?.sede === 'string'
+      ? this.userStateService.getSedePorKey(this.ventaParaRecibo.sede)
+      : this.ventaParaRecibo?.sede;
+    const sedeResuelta = sedeSesion || sedeVenta;
+
+    return {
+      nombre: sedeResuelta?.nombre_optica || sedeResuelta?.nombre || 'NEW VISION LENS',
+      direccion: sedeResuelta?.direccion || 'C.C. Candelaria, Local PB-04, Guarenas',
+      telefono: sedeResuelta?.telefono || '0212-365-39-42',
+      rif: sedeResuelta?.rif || 'J-123456789',
+      email: sedeResuelta?.email || 'newvisionlens2020@gmail.com'
+    };
+  }
+
   crearDatosReciboReal(): any {
     if (!this.ventaParaRecibo) {
       console.error('Error: No hay ventaParaRecibo definida');
@@ -4042,6 +4058,7 @@ export class HistorialVentasComponent implements OnInit {
       ? Math.round((totalPagado / this.ventaParaRecibo.total) * 100)
       : 0;
 
+    const sedeRecibo = this.obtenerSedeActualParaRecibo();
     const productosParaImprimir = this.prepararProductosParaImpresion();
     const metodosPagoRecibo = this.getMetodosPagoParaTipo(this.ventaParaRecibo.formaPago || 'contado');
 
@@ -4062,6 +4079,8 @@ export class HistorialVentasComponent implements OnInit {
         telefono: this.ventaParaRecibo.paciente?.telefono || 'N/A'
       },
 
+      sede: sedeRecibo,
+
       // Productos CORREGIDOS para impresión
       productos: productosParaImprimir,
 
@@ -4069,8 +4088,11 @@ export class HistorialVentasComponent implements OnInit {
       metodosPago: (metodosPagoRecibo || []).map((metodo: any) => ({
         tipo: metodo.tipo || 'efectivo',
         monto: metodo.monto || 0,
-        monto_en_moneda_de_venta: metodo.monto_en_moneda_de_venta || metodo.montoEnMonedaVenta || metodo.monto || 0,
+        monto_en_moneda_de_venta: (metodo.monto_en_moneda_de_venta ?? metodo.montoEnMonedaVenta ?? metodo.montoEnMonedaSistema ?? metodo.monto) || 0,
         moneda: metodo.moneda || metodo.moneda_id || this.ventaParaRecibo.moneda || 'dolar',
+        montoEnSistema: (metodo.montoEnSistema ?? metodo.montoEnMonedaSistema ?? metodo.monto_en_moneda_de_venta ?? metodo.montoEnMonedaVenta ?? metodo.monto) || 0,
+        monedaSistema: metodo.monedaSistema || this.getMonedaSistema(),
+        montoEnBolivar: metodo.montoEnBolivar ?? metodo.montoEnBolivares ?? null,
         referencia: metodo.referencia,
         banco: metodo.banco || metodo.bancoNombre,
         bancoReceptor: metodo.bancoReceptor || metodo.bancoReceptorNombre,
@@ -4239,6 +4261,8 @@ export class HistorialVentasComponent implements OnInit {
         minute: '2-digit'
       });
     };
+
+    const sedeRecibo = datos?.sede || this.obtenerSedeActualParaRecibo();
 
     const configModoPago = (() => {
       switch (formaPago) {
@@ -5367,14 +5391,14 @@ export class HistorialVentasComponent implements OnInit {
       <div class="recibo-container page-break-avoid">
       <div class="recibo-header page-break-avoid">
         <div>
-          <span class="brand-kicker">New Vision Lens</span>
+          <span class="brand-kicker">${escaparHTML(sedeRecibo?.nombre || 'NEW VISION LENS')}</span>
           <div class="empresa-nombre">${escaparHTML(tituloRecibo)}</div>
           <div class="empresa-tagline">Comprobante de venta y pago.</div>
           <div class="header-contact">
-            <div class="empresa-info">C.C. Candelaria, Local PB-04, Guarenas</div>
-            <div class="empresa-info">Tel: 0212-365-39-42</div>
-            <div class="empresa-info">RIF: J-123456789</div>
-            <div class="empresa-info">newvisionlens2020@gmail.com</div>
+            <div class="empresa-info">${escaparHTML(sedeRecibo?.direccion || 'C.C. Candelaria, Local PB-04, Guarenas')}</div>
+            <div class="empresa-info">Tel: ${escaparHTML(sedeRecibo?.telefono || '0212-365-39-42')}</div>
+            <div class="empresa-info">RIF: ${escaparHTML(sedeRecibo?.rif || 'J-123456789')}</div>
+            <div class="empresa-info">${escaparHTML(sedeRecibo?.email || 'newvisionlens2020@gmail.com')}</div>
           </div>
         </div>
         <div class="header-aside">
