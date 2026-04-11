@@ -13,10 +13,6 @@
   <!-- Pestañas de Navegación -->
   <div class="tabs-navigation">
     <div class="tabs-container">
-      <button class="tab-button" [class.active]="activeTab === 'moneda'" (click)="seleccionarTab('moneda')">
-        <i class="bi bi-currency-exchange"></i>
-        Moneda Principal
-      </button>
       <button class="tab-button" [class.active]="activeTab === 'general'" (click)="seleccionarTab('general')">
         <i class="bi bi-gear"></i>
         Configuración General
@@ -30,112 +26,88 @@
 
   <!-- Contenido de Pestañas -->
   <div class="tab-content">
-    
-    <!-- Pestaña: Moneda Principal -->
-    <div class="tab-pane" [class.active]="activeTab === 'moneda'" id="moneda-tab">
-      <div class="config-grid">
-        
-        <!-- Configuración de Moneda -->
-        <div class="config-section">
-          <div class="section-header">
-            <div class="section-icon">
-              <i class="bi bi-currency-dollar"></i>
-            </div>
-            <div class="section-info">
-              <h3>Moneda del Sistema</h3>
-              <p>Define la moneda principal para nuevas transacciones</p>
-            </div>
-          </div>
 
-          <div class="section-body">
-            <div class="form-group-modern">
-              <label class="form-label-modern">Moneda Principal</label>
-              <p class="form-description-modern">
-                Esta será la moneda predeterminada para todas las nuevas ventas, productos y reportes del sistema.
-              </p>
-              
-              <div class="moneda-options">
-                <div *ngFor="let moneda of monedas" 
-                     class="moneda-option" 
-                     [class.moneda-active]="config.monedaPrincipal === moneda.codigo"
-                     (click)="seleccionarMoneda(moneda.codigo)">
-                  <div class="moneda-symbol">{{moneda.simbolo}}</div>
-                  <div class="moneda-info">
-                    <span class="moneda-name">{{moneda.nombre}}</span>
-                    <span class="moneda-code">{{moneda.codigo}}</span>
-                  </div>
-                  <div class="moneda-check" *ngIf="config.monedaPrincipal === moneda.codigo">
-                    <i class="bi bi-check-circle-fill"></i>
-                  </div>
-                </div>
-              </div>
-
-              <div class="current-config">
-                <div class="config-badge">
-                  <i class="bi bi-info-circle"></i>
-                  <div class="badge-content">
-                    <strong>Configuración Actual:</strong>
-                    <span>{{config.simboloMoneda}} {{getNombreMoneda(config.monedaPrincipal)}}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Información de la Configuración -->
-        <div class="info-section">
-          <div class="info-card-modern">
-            <div class="info-header">
-              <i class="bi bi-lightbulb"></i>
-              <h4>¿Cómo funciona?</h4>
-            </div>
-            <div class="info-content">
-              <div class="info-item-modern">
-                <i class="bi bi-archive"></i>
-                <div>
-                  <strong>Ventas Existentes</strong>
-                  <p>Conservan su moneda original para mantener la integridad histórica de los datos.</p>
-                </div>
-              </div>
-              <div class="info-item-modern">
-                <i class="bi bi-plus-square"></i>
-                <div>
-                  <strong>Nuevas Transacciones</strong>
-                  <p>Se crearán automáticamente en la moneda principal seleccionada.</p>
-                </div>
-              </div>
-              <div class="info-item-modern">
-                <i class="bi bi-arrow-left-right"></i>
-                <div>
-                  <strong>Conversión Automática</strong>
-                  <p>Los montos se convierten en tiempo real usando las tasas configuradas.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Acciones Rápidas -->
-          <div class="actions-card">
-            <div class="actions-header">
-              <i class="bi bi-lightning"></i>
-              <h4>Acciones Rápidas</h4>
-            </div>
-            <div class="actions-content">
-              <button class="btn-action" (click)="resetConfig()">
-                <i class="bi bi-arrow-counterclockwise"></i>
-                <span>Restablecer Configuración</span>
-                <small>Vuelve a los valores predeterminados</small>
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- Otras pestañas (para futuro) -->
     <div class="tab-pane" [class.active]="activeTab === 'general'" id="general-tab">
+      <div class="settings-subsection settings-subsection--currency">
+        <div class="settings-subsection__header">
+          <div class="settings-subsection__title-wrap">
+            <div class="settings-subsection__icon">
+              <i class="bi bi-currency-exchange"></i>
+            </div>
+            <div>
+              <h3>Moneda Principal</h3>
+              <p>Define la moneda base para nuevas operaciones y mantén la referencia operativa del sistema.</p>
+            </div>
+          </div>
+
+          <div class="settings-subsection__actions">
+            <div class="settings-subsection__meta">
+              <small>{{ config.simboloMoneda }} {{ getNombreMoneda(config.monedaPrincipal) }}</small>
+              <small>Actualizado {{ formatFecha(config.ultimaActualizacion) }}</small>
+            </div>
+
+            <button
+              class="settings-subsection__toggle"
+              type="button"
+              [attr.aria-expanded]="estaSeccionGeneralExpandida('monedaPrincipal')"
+              (click)="alternarSeccionGeneral('monedaPrincipal')">
+              <span>{{ estaSeccionGeneralExpandida('monedaPrincipal') ? 'Ocultar' : 'Mostrar' }}</span>
+              <i class="bi" [ngClass]="estaSeccionGeneralExpandida('monedaPrincipal') ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="currency-config" *ngIf="estaSeccionGeneralExpandida('monedaPrincipal')">
+          <div class="currency-compact-grid">
+            <button
+              *ngFor="let moneda of monedas"
+              class="currency-compact-card"
+              type="button"
+              [disabled]="isLoading"
+              [class.currency-compact-card--active]="config.monedaPrincipal === moneda.codigo"
+              (click)="seleccionarMoneda(moneda.codigo)">
+              <div class="currency-compact-card__header">
+                <span class="currency-compact-symbol">{{ moneda.simbolo }}</span>
+                <span class="currency-compact-check" *ngIf="config.monedaPrincipal === moneda.codigo">
+                  <i class="bi bi-check2-circle"></i>
+                </span>
+              </div>
+
+              <strong>{{ moneda.nombre }}</strong>
+              <small>{{ moneda.codigo }}</small>
+              <span class="currency-compact-rate">Tasa actual: {{ formatTasa(getValorTasa(moneda.codigo)) }}</span>
+            </button>
+          </div>
+
+          <div class="currency-compact-footer">
+            <div class="currency-mini-badge">
+              <i class="bi bi-info-circle"></i>
+              <div>
+                <strong>Moneda activa</strong>
+                <span>{{ config.simboloMoneda }} {{ getNombreMoneda(config.monedaPrincipal) }}</span>
+              </div>
+            </div>
+
+            <div class="currency-impact-grid">
+              <div class="currency-impact-item">
+                <i class="bi bi-plus-square"></i>
+                <span>Nuevas ventas y registros toman esta moneda por defecto.</span>
+              </div>
+
+              <div class="currency-impact-item">
+                <i class="bi bi-clock-history"></i>
+                <span>Las operaciones históricas conservan su moneda original.</span>
+              </div>
+
+              <div class="currency-impact-item">
+                <i class="bi bi-graph-up-arrow"></i>
+                <span>Las tasas visibles se recalculan en tiempo real según la base seleccionada.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="settings-subsection settings-subsection--notifications">
         <div class="settings-subsection__header">
           <div class="settings-subsection__title-wrap">
@@ -469,126 +441,100 @@
             </div>
 
             <aside class="payment-methods-sidebar">
-              <div class="payment-side-card">
-                <h4>Catálogo de bancos</h4>
-                <p>Administra el inventario de bancos nacionales e internacionales. Los bancos inactivos dejan de salir en nuevas selecciones, pero se conservan para referencias ya configuradas.</p>
+              <div class="payment-side-card payment-side-card--quick-action">
+                <div class="payment-side-card__header-inline">
+                  <div>
+                    <h4>Agregar método</h4>
+                    <p>Crea nuevas opciones de cobro sin ocupar espacio fijo en el panel.</p>
+                  </div>
 
-                <div class="payment-bank-form-grid">
-                  <label class="payment-field">
-                    <span>Código</span>
-                    <input type="text" [(ngModel)]="nuevoBancoCatalogo.code" placeholder="Ej: 0102 o BOFAUS3N">
-                  </label>
-
-                  <label class="payment-field">
-                    <span>Tipo de banco</span>
-                    <select [(ngModel)]="nuevoBancoCatalogo.scope">
-                      <option value="national">Nacional</option>
-                      <option value="international">Internacional</option>
-                    </select>
-                  </label>
-
-                  <label class="payment-field payment-field--wide">
-                    <span>Nombre del banco</span>
-                    <input type="text" [(ngModel)]="nuevoBancoCatalogo.name" placeholder="Ej: Banco de Venezuela">
-                  </label>
-
-                  <button class="btn-primary-modern btn-primary-modern--full payment-bank-form-grid__action" type="button" (click)="agregarBancoCatalogo()">
-                    <i class="bi bi-building-add"></i>
-                    Añadir banco
+                  <button class="btn-primary-modern btn-primary-modern--compact" type="button" (click)="abrirModalNuevoMetodo()">
+                    <i class="bi bi-plus-circle"></i>
+                    Agregar método
                   </button>
                 </div>
+              </div>
 
-                <div class="bank-group-card">
-                  <div class="bank-group-card__header">
+              <div class="payment-side-card">
+                <h4>Catálogo de bancos</h4>
+                <p>Centraliza bancos activos e inactivos. Los botones + de cada listado abren el formulario exacto según el tipo de banco.</p>
+
+                <div class="payment-catalog-summary-grid">
+                  <div class="payment-catalog-summary-card">
+                    <span>Nacionales</span>
+                    <strong>{{ getCantidadBancosActivosPorAlcance('national') }}</strong>
+                    <small>{{ getCantidadBancosInactivosPorAlcance('national') }} inactivos</small>
+                  </div>
+
+                  <div class="payment-catalog-summary-card payment-catalog-summary-card--alt">
+                    <span>Internacionales</span>
+                    <strong>{{ getCantidadBancosActivosPorAlcance('international') }}</strong>
+                    <small>{{ getCantidadBancosInactivosPorAlcance('international') }} inactivos</small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bank-group-card">
+                <div class="bank-group-card__header">
+                  <div class="bank-group-card__title-wrap">
                     <h5>Bancos nacionales</h5>
                     <span>{{ getCantidadBancosActivosPorAlcance('national') }}/{{ getCantidadBancosPorAlcance('national') }}</span>
                   </div>
 
-                  <div class="bank-catalog-list">
-                    <div class="bank-catalog-item" *ngFor="let banco of getBancosPorAlcance('national')" [class.bank-catalog-item--inactive]="!esBancoActivo(banco)">
-                      <div class="bank-catalog-item__meta">
-                        <strong>{{ banco.name }}</strong>
-                        <small>{{ banco.code }}</small>
-                      </div>
-
-                      <div class="bank-catalog-item__actions">
-                        <span class="bank-status-chip" [class.bank-status-chip--inactive]="!esBancoActivo(banco)">
-                          {{ esBancoActivo(banco) ? 'Activo' : 'Inactivo' }}
-                        </span>
-
-                        <button class="icon-action-button icon-action-button--soft" type="button" (click)="alternarEstadoBancoCatalogo(banco.code)">
-                          <i class="bi" [ngClass]="esBancoActivo(banco) ? 'bi-pause-circle' : 'bi-arrow-clockwise'"></i>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <button class="icon-action-button icon-action-button--soft" type="button" (click)="abrirModalNuevoBanco('national')">
+                    <i class="bi bi-plus-lg"></i>
+                  </button>
                 </div>
 
-                <div class="bank-group-card bank-group-card--international">
-                  <div class="bank-group-card__header">
-                    <h5>Bancos internacionales</h5>
-                    <span>{{ getCantidadBancosActivosPorAlcance('international') }}/{{ getCantidadBancosPorAlcance('international') }}</span>
-                  </div>
+                <div class="bank-catalog-list">
+                  <div class="bank-catalog-item" *ngFor="let banco of getBancosPorAlcance('national')" [class.bank-catalog-item--inactive]="!esBancoActivo(banco)">
+                    <div class="bank-catalog-item__meta">
+                      <strong>{{ banco.name }}</strong>
+                      <small>{{ banco.code }}</small>
+                    </div>
 
-                  <div class="bank-catalog-list">
-                    <div class="bank-catalog-item" *ngFor="let banco of getBancosPorAlcance('international')" [class.bank-catalog-item--inactive]="!esBancoActivo(banco)">
-                      <div class="bank-catalog-item__meta">
-                        <strong>{{ banco.name }}</strong>
-                        <small>{{ banco.code }}</small>
-                      </div>
+                    <div class="bank-catalog-item__actions">
+                      <span class="bank-status-chip" [class.bank-status-chip--inactive]="!esBancoActivo(banco)">
+                        {{ esBancoActivo(banco) ? 'Activo' : 'Inactivo' }}
+                      </span>
 
-                      <div class="bank-catalog-item__actions">
-                        <span class="bank-status-chip" [class.bank-status-chip--inactive]="!esBancoActivo(banco)">
-                          {{ esBancoActivo(banco) ? 'Activo' : 'Inactivo' }}
-                        </span>
-
-                        <button class="icon-action-button icon-action-button--soft" type="button" (click)="alternarEstadoBancoCatalogo(banco.code)">
-                          <i class="bi" [ngClass]="esBancoActivo(banco) ? 'bi-pause-circle' : 'bi-arrow-clockwise'"></i>
-                        </button>
-                      </div>
+                      <button class="icon-action-button icon-action-button--soft" type="button" (click)="alternarEstadoBancoCatalogo(banco.code)">
+                        <i class="bi" [ngClass]="esBancoActivo(banco) ? 'bi-pause-circle' : 'bi-arrow-clockwise'"></i>
+                      </button>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div class="payment-side-card">
-                <h4>Nuevo método</h4>
-                <p>Agrega una opción adicional y déjala preparada para futuras operaciones.</p>
+              <div class="bank-group-card bank-group-card--international">
+                <div class="bank-group-card__header">
+                  <div class="bank-group-card__title-wrap">
+                    <h5>Bancos internacionales</h5>
+                    <span>{{ getCantidadBancosActivosPorAlcance('international') }}/{{ getCantidadBancosPorAlcance('international') }}</span>
+                  </div>
 
-                <div class="payment-side-form">
-                  <label class="payment-field">
-                    <span>Nombre visible</span>
-                    <input type="text" [(ngModel)]="nuevoMetodoPago.label" placeholder="Ej: Binance Pay">
-                  </label>
-
-                  <label class="payment-field">
-                    <span>Descripción</span>
-                    <input type="text" [(ngModel)]="nuevoMetodoPago.description" placeholder="Ej: Canal digital alterno">
-                  </label>
-
-                  <label class="payment-field">
-                    <span>Moneda operativa</span>
-                    <select [(ngModel)]="nuevoMetodoPago.currency">
-                      <option value="VES">Bolívares</option>
-                      <option value="USD">Dólares</option>
-                      <option value="EUR">Euros</option>
-                      <option value="MULTI">VES, USD y EUR</option>
-                      <option value="CRYPTO">Cripto</option>
-                      <option value="USDT">USDT</option>
-                      <option value="BTC">BTC</option>
-                      <option value="ETH">ETH</option>
-                    </select>
-                  </label>
-
-                  <label class="payment-inline-check">
-                    <input type="checkbox" [(ngModel)]="nuevoMetodoPago.requiresReceiverAccount">
-                    <span>Este método requiere banco receptor y datos del titular</span>
-                  </label>
-
-                  <button class="btn-primary-modern btn-primary-modern--full" type="button" (click)="agregarNuevoMetodoPago()">
-                    <i class="bi bi-plus-circle"></i>
-                    Añadir método
+                  <button class="icon-action-button icon-action-button--soft" type="button" (click)="abrirModalNuevoBanco('international')">
+                    <i class="bi bi-plus-lg"></i>
                   </button>
+                </div>
+
+                <div class="bank-catalog-list">
+                  <div class="bank-catalog-item" *ngFor="let banco of getBancosPorAlcance('international')" [class.bank-catalog-item--inactive]="!esBancoActivo(banco)">
+                    <div class="bank-catalog-item__meta">
+                      <strong>{{ banco.name }}</strong>
+                      <small>{{ banco.code }}</small>
+                    </div>
+
+                    <div class="bank-catalog-item__actions">
+                      <span class="bank-status-chip" [class.bank-status-chip--inactive]="!esBancoActivo(banco)">
+                        {{ esBancoActivo(banco) ? 'Activo' : 'Inactivo' }}
+                      </span>
+
+                      <button class="icon-action-button icon-action-button--soft" type="button" (click)="alternarEstadoBancoCatalogo(banco.code)">
+                        <i class="bi" [ngClass]="esBancoActivo(banco) ? 'bi-pause-circle' : 'bi-arrow-clockwise'"></i>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </aside>
@@ -607,6 +553,115 @@
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-modal-backdrop" *ngIf="mostrarModalNuevoMetodo || mostrarModalNuevoBanco" (click)="mostrarModalNuevoMetodo ? cerrarModalNuevoMetodo() : cerrarModalNuevoBanco()"></div>
+
+    <div class="config-modal" *ngIf="mostrarModalNuevoMetodo">
+      <div class="config-modal__dialog" (click)="$event.stopPropagation()">
+        <div class="config-modal__header">
+          <div>
+            <h3>Agregar método</h3>
+            <p>Configura una nueva opción de cobro y déjala lista para futuras operaciones.</p>
+          </div>
+
+          <button class="icon-action-button icon-action-button--soft" type="button" (click)="cerrarModalNuevoMetodo()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <div class="config-modal__body">
+          <div class="payment-side-form payment-side-form--modal">
+            <label class="payment-field">
+              <span>Nombre visible</span>
+              <input type="text" [(ngModel)]="nuevoMetodoPago.label" placeholder="Ej: Binance Pay">
+            </label>
+
+            <label class="payment-field">
+              <span>Descripción</span>
+              <input type="text" [(ngModel)]="nuevoMetodoPago.description" placeholder="Ej: Canal digital alterno">
+            </label>
+
+            <label class="payment-field">
+              <span>Moneda operativa</span>
+              <select [(ngModel)]="nuevoMetodoPago.currency">
+                <option value="VES">Bolívares</option>
+                <option value="USD">Dólares</option>
+                <option value="EUR">Euros</option>
+                <option value="MULTI">VES, USD y EUR</option>
+                <option value="CRYPTO">Cripto</option>
+                <option value="USDT">USDT</option>
+                <option value="BTC">BTC</option>
+                <option value="ETH">ETH</option>
+              </select>
+            </label>
+
+            <label class="payment-inline-check payment-inline-check--modal">
+              <input type="checkbox" [(ngModel)]="nuevoMetodoPago.requiresReceiverAccount">
+              <span>Este método requiere banco receptor y datos del titular</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="config-modal__footer">
+          <button class="btn-secondary-modern" type="button" (click)="cerrarModalNuevoMetodo()">
+            Cancelar
+          </button>
+
+          <button class="btn-primary-modern" type="button" (click)="confirmarNuevoMetodo()">
+            <i class="bi bi-plus-circle"></i>
+            Guardar método
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-modal" *ngIf="mostrarModalNuevoBanco">
+      <div class="config-modal__dialog config-modal__dialog--bank" (click)="$event.stopPropagation()">
+        <div class="config-modal__header">
+          <div>
+            <h3>{{ getTituloModalBanco() }}</h3>
+            <p>Agrega un banco al catálogo {{ modalBancoScope === 'international' ? 'internacional' : 'nacional' }} para disponibilizarlo en cuentas receptoras.</p>
+          </div>
+
+          <button class="icon-action-button icon-action-button--soft" type="button" (click)="cerrarModalNuevoBanco()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <div class="config-modal__body">
+          <div class="payment-bank-form-grid payment-bank-form-grid--modal">
+            <label class="payment-field">
+              <span>Código</span>
+              <input type="text" [(ngModel)]="nuevoBancoCatalogo.code" placeholder="Ej: 0102 o BOFAUS3N">
+            </label>
+
+            <label class="payment-field">
+              <span>Tipo de banco</span>
+              <select [(ngModel)]="nuevoBancoCatalogo.scope">
+                <option value="national">Nacional</option>
+                <option value="international">Internacional</option>
+              </select>
+            </label>
+
+            <label class="payment-field payment-field--wide">
+              <span>Nombre del banco</span>
+              <input type="text" [(ngModel)]="nuevoBancoCatalogo.name" placeholder="Ej: Banco de Venezuela">
+            </label>
+          </div>
+        </div>
+
+        <div class="config-modal__footer">
+          <button class="btn-secondary-modern" type="button" (click)="cerrarModalNuevoBanco()">
+            Cancelar
+          </button>
+
+          <button class="btn-primary-modern" type="button" (click)="confirmarNuevoBanco()">
+            <i class="bi bi-building-add"></i>
+            Guardar banco
+          </button>
         </div>
       </div>
     </div>

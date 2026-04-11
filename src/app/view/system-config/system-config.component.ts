@@ -28,6 +28,8 @@ function correosDebenSerDistintos(control: AbstractControl): ValidationErrors | 
   return correoPrincipal === correoSecundario ? { correosDuplicados: true } : null;
 }
 
+type GeneralSectionKey = 'monedaPrincipal' | 'metodosPago' | 'correos';
+
 @Component({
   selector: 'app-system-config',
   standalone: false,
@@ -42,16 +44,20 @@ export class SystemConfigComponent implements OnInit {
   isSavingNotifications = false;
   isPaymentMethodsLoading = false;
   isSavingPaymentMethods = false;
-  activeTab: 'moneda' | 'general' | 'avanzada' = 'moneda';
+  activeTab: 'general' | 'avanzada' = 'general';
   correosConfig: NotificationEmailSettings | null = null;
   tieneCorreosPersistidos = false;
   metodosPagoConfig: PaymentMethodsSettings | null = null;
   metodosPagoDraft: PaymentMethodsSettings | null = null;
   tieneMetodosPagoPersistidos = false;
   metodoPagoExpandido: string | null = null;
+  mostrarModalNuevoMetodo = false;
+  mostrarModalNuevoBanco = false;
+  modalBancoScope: PaymentMethodBankScope = 'national';
   tasasActuales = { usd: 0, eur: 0 };
   notificationForm!: FormGroup;
   seccionesGeneralesExpandidas = {
+    monedaPrincipal: false,
     correos: false,
     metodosPago: false
   };
@@ -113,7 +119,7 @@ export class SystemConfigComponent implements OnInit {
     });
   }
 
-  seleccionarTab(tab: 'moneda' | 'general' | 'avanzada'): void {
+  seleccionarTab(tab: 'general' | 'avanzada'): void {
     if (tab === 'avanzada') {
       return;
     }
@@ -121,11 +127,11 @@ export class SystemConfigComponent implements OnInit {
     this.activeTab = tab;
   }
 
-  alternarSeccionGeneral(seccion: 'correos' | 'metodosPago'): void {
+  alternarSeccionGeneral(seccion: GeneralSectionKey): void {
     this.seccionesGeneralesExpandidas[seccion] = !this.seccionesGeneralesExpandidas[seccion];
   }
 
-  estaSeccionGeneralExpandida(seccion: 'correos' | 'metodosPago'): boolean {
+  estaSeccionGeneralExpandida(seccion: GeneralSectionKey): boolean {
     return this.seccionesGeneralesExpandidas[seccion];
   }
 
@@ -391,17 +397,31 @@ export class SystemConfigComponent implements OnInit {
 
     this.metodosPagoDraft.methods = [...this.metodosPagoDraft.methods, nuevoMetodo];
     this.metodoPagoExpandido = key;
-    this.nuevoMetodoPago = {
-      label: '',
-      description: '',
-      currency: 'VES',
-      requiresReceiverAccount: false
-    };
+    this.reiniciarFormularioNuevoMetodo();
   }
 
-  agregarBancoCatalogo(): void {
+  abrirModalNuevoMetodo(): void {
+    this.reiniciarFormularioNuevoMetodo();
+    this.mostrarModalNuevoMetodo = true;
+  }
+
+  cerrarModalNuevoMetodo(): void {
+    this.mostrarModalNuevoMetodo = false;
+    this.reiniciarFormularioNuevoMetodo();
+  }
+
+  confirmarNuevoMetodo(): void {
+    const totalPrevio = this.metodosPagoDraft?.methods.length || 0;
+    this.agregarNuevoMetodoPago();
+
+    if ((this.metodosPagoDraft?.methods.length || 0) > totalPrevio) {
+      this.cerrarModalNuevoMetodo();
+    }
+  }
+
+  agregarBancoCatalogo(): boolean {
     if (!this.metodosPagoDraft) {
-      return;
+      return false;
     }
 
     const code = this.nuevoBancoCatalogo.code.trim().toUpperCase();
@@ -412,7 +432,7 @@ export class SystemConfigComponent implements OnInit {
         'Datos incompletos',
         'Debes indicar el código y el nombre del banco antes de agregarlo al catálogo.'
       );
-      return;
+      return false;
     }
 
     const claveNuevoBanco = this.getClaveAgrupacionBanco({
@@ -429,7 +449,7 @@ export class SystemConfigComponent implements OnInit {
         'Banco duplicado',
         'Ya existe un banco registrado con ese código o con ese mismo nombre en el catálogo.'
       );
-      return;
+      return false;
     }
 
     this.metodosPagoDraft.bankCatalog = [
@@ -442,11 +462,29 @@ export class SystemConfigComponent implements OnInit {
       }
     ].sort((actual, siguiente) => actual.name.localeCompare(siguiente.name));
 
+    this.reiniciarFormularioNuevoBanco();
+    return true;
+  }
+
+  abrirModalNuevoBanco(scope: PaymentMethodBankScope): void {
+    this.modalBancoScope = scope;
     this.nuevoBancoCatalogo = {
       code: '',
       name: '',
-      scope: 'national'
+      scope
     };
+    this.mostrarModalNuevoBanco = true;
+  }
+
+  cerrarModalNuevoBanco(): void {
+    this.mostrarModalNuevoBanco = false;
+    this.reiniciarFormularioNuevoBanco();
+  }
+
+  confirmarNuevoBanco(): void {
+    if (this.agregarBancoCatalogo()) {
+      this.cerrarModalNuevoBanco();
+    }
   }
 
   alternarEstadoBancoCatalogo(code: string): void {
@@ -501,6 +539,14 @@ export class SystemConfigComponent implements OnInit {
 
   getCantidadBancosActivosPorAlcance(scope: PaymentMethodBankScope): number {
     return this.getBancosPorAlcance(scope, false).length;
+  }
+
+  getCantidadBancosInactivosPorAlcance(scope: PaymentMethodBankScope): number {
+    return this.getCantidadBancosPorAlcance(scope) - this.getCantidadBancosActivosPorAlcance(scope);
+  }
+
+  getTituloModalBanco(): string {
+    return this.modalBancoScope === 'international' ? 'Agregar banco internacional' : 'Agregar banco nacional';
   }
 
   esBancoActivo(banco: PaymentMethodBank): boolean {
@@ -701,6 +747,23 @@ export class SystemConfigComponent implements OnInit {
       .replace(/[\u0300-\u036f]/g, '')
       .trim()
       .toLowerCase()}`;
+  }
+
+  private reiniciarFormularioNuevoMetodo(): void {
+    this.nuevoMetodoPago = {
+      label: '',
+      description: '',
+      currency: 'VES',
+      requiresReceiverAccount: false
+    };
+  }
+
+  private reiniciarFormularioNuevoBanco(): void {
+    this.nuevoBancoCatalogo = {
+      code: '',
+      name: '',
+      scope: this.modalBancoScope
+    };
   }
 
   private reiniciarExpansionMetodosPago(): void {
