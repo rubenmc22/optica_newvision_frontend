@@ -6,6 +6,17 @@ export interface Transaccion {
   fecha: Date;
   metodoPago: string;
   moneda?: string;
+  monedaOriginal?: string;
+  montoOriginal?: number;
+  montoTotal?: number;
+  montoPagado?: number;
+  deudaPendiente?: number;
+  montoSistema?: number;
+  tasasHistoricas?: Array<{
+    moneda: string;
+    tasa: number;
+    valor?: number;
+  }>;
   usuario: string;
   estado: 'confirmado' | 'pendiente' | 'anulado' | 'en_proceso';
   categoria: string;
@@ -23,10 +34,21 @@ export interface Transaccion {
     tipo: string;
     monto: number;
     moneda: string;
+    montoEnBolivar?: number;
+    montoEnMonedaVenta?: number;
+    montoEnMonedaSistema?: number;
+    tasaUsada?: number;
     referencia?: string;
     banco?: string;
     bancoNombre?: string;
     bancoCodigo?: string;
+    bancoReceptor?: string;
+    bancoReceptorNombre?: string;
+    bancoReceptorCodigo?: string;
+    cuentaReceptoraId?: string;
+    cuentaReceptoraAlias?: string;
+    cuentaReceptoraUltimos4?: string;
+    cuentaReceptoraEmail?: string;
   }>;
   productos?: Array<{
     nombre: string;
@@ -40,11 +62,19 @@ export interface Transaccion {
   sede?: string;
   tieneConsulta?: boolean;
   tieneProductos?: boolean;
+  tipoVenta?: string;
+  consulta?: {
+    pagoMedico?: number;
+    pagoOptica?: number;
+    montoTotal?: number;
+    moneda?: string;
+  };
 }
 
 export interface CierreDiario {
   id: string;
   fecha: Date;
+  descripcion?: string;
   efectivoInicial: number;
 
   efectivoInicialDetalle?: {
@@ -105,14 +135,44 @@ export interface CierreDiario {
     pagomovil: {
       total: number;
       cantidad: number;
+      porBanco: Array<{
+        banco: string;
+        bancoCodigo: string;
+        total: number;
+        cantidad: number;
+        totalOriginal?: number;
+        monedaOriginal?: string;
+        destinoKey?: string;
+        destinoLabel?: string;
+      }>;
     };
     transferencia: {
       total: number;
       cantidad: number;
+      porBanco: Array<{
+        banco: string;
+        bancoCodigo: string;
+        total: number;
+        cantidad: number;
+        totalOriginal?: number;
+        monedaOriginal?: string;
+        destinoKey?: string;
+        destinoLabel?: string;
+      }>;
     };
     zelle: {
       total: number;
       cantidad: number;
+      porBanco: Array<{
+        banco: string;
+        bancoCodigo: string;
+        total: number;
+        cantidad: number;
+        totalOriginal?: number;
+        monedaOriginal?: string;
+        destinoKey?: string;
+        destinoLabel?: string;
+      }>;
     };
     mixto: {
       total: number;
@@ -178,25 +238,55 @@ export interface CierreDiario {
       cantidadReal?: number;
       cantidadSistema?: number;
     }>;
-    transferencia: {
-      diferencia: number;
-      justificacion?: string;
-      porBanco: Array<{
+    transferencia:
+      | Array<{
         banco: string;
+        bancoCodigo?: string;
+        destinoKey?: string;
+        destinoLabel?: string;
+        montoReal: number;
+        montoSistema: number;
+        diferencia: number;
+      }>
+      | {
         diferencia: number;
         justificacion?: string;
-      }>;
-    };
-    pagomovil: {
-      diferencia: number;
-      justificacion?: string;
-      porBanco: Array<{
+        porBanco: Array<{
+          banco: string;
+          diferencia: number;
+          justificacion?: string;
+        }>;
+      };
+    pagomovil:
+      | Array<{
         banco: string;
+        bancoCodigo?: string;
+        destinoKey?: string;
+        destinoLabel?: string;
+        montoReal: number;
+        montoSistema: number;
+        diferencia: number;
+      }>
+      | {
         diferencia: number;
         justificacion?: string;
+        porBanco: Array<{
+          banco: string;
+          diferencia: number;
+          justificacion?: string;
+        }>;
+      };
+    zelle:
+      | number
+      | Array<{
+        banco: string;
+        bancoCodigo?: string;
+        destinoKey?: string;
+        destinoLabel?: string;
+        montoReal: number;
+        montoSistema: number;
+        diferencia: number;
       }>;
-    };
-    zelle: number;
     notasCierre: string;
     fechaCierre: Date;
     usuarioCierre: string;

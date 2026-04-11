@@ -135,8 +135,6 @@ export class HistorialVentasComponent implements OnInit {
   simboloMonedaSistema: string = '$';
   private configSubscription!: Subscription;
 
-  tasaCableada: number = 243.00;
-
   // Propiedades para el modal de recibo
   mostrarModalRecibo: boolean = false;
   datosRecibo: any = null;
@@ -405,10 +403,12 @@ export class HistorialVentasComponent implements OnInit {
         const tasas = tasasResponse.tasas ?? [];
         this.tasasDisponibles = tasas;
         this.monedasDisponibles = tasas;
+        const tasaDolar = Number(tasas.find(t => t.id === 'dolar')?.valor ?? this.tasasPorId['dolar'] ?? 1);
+        const tasaEuro = Number(tasas.find(t => t.id === 'euro')?.valor ?? this.tasasPorId['euro'] ?? 1);
 
         this.tasasPorId = {
-          'dolar': tasas.find(t => t.id === 'dolar')?.valor || 36.5,
-          'euro': tasas.find(t => t.id === 'euro')?.valor || 39.2,
+          'dolar': tasaDolar > 0 ? tasaDolar : 1,
+          'euro': tasaEuro > 0 ? tasaEuro : 1,
           'bolivar': 1
         };
 
@@ -419,8 +419,8 @@ export class HistorialVentasComponent implements OnInit {
       error: (error) => {
         console.error('Error al cargar tasas de cambio:', error);
         this.tasasPorId = {
-          'dolar': 36.5,
-          'euro': 39.2,
+          'dolar': Number(this.tasasPorId['dolar'] ?? 1) || 1,
+          'euro': Number(this.tasasPorId['euro'] ?? 1) || 1,
           'bolivar': 1
         };
 
@@ -2684,7 +2684,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   getTasaDisplay(): string {
-    return `Tasa: 1 USD = ${this.tasaCableada} Bs`;
+    return `Tasa: 1 USD = ${this.getTasaBolivar().toFixed(2)} Bs`;
   }
 
   getMontoDisplayMetodoPago(metodo: any, venta: any): string {
@@ -2759,21 +2759,23 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   getTasaBolivar(): number {
-    if (!this.selectedVenta) return this.tasaCableada;
+    if (!this.selectedVenta) {
+      return this.obtenerTasaBolivar('dolar');
+    }
 
     const monedaVenta = this.selectedVenta.moneda;
 
     // Si la venta es en dólares, usar tasa dólar
     if (monedaVenta === 'dolar') {
-      return this.tasasPorId['dolar'] || this.tasaCableada;
+      return this.obtenerTasaBolivar('dolar');
     }
 
     // Si la venta es en euros, usar tasa euro
     if (monedaVenta === 'euro') {
-      return this.tasasPorId['euro'] || (this.tasaCableada * 0.85);
+      return this.obtenerTasaBolivar('euro');
     }
 
-    return this.tasaCableada;
+    return this.obtenerTasaBolivar('dolar');
   }
 
   getTipoPagoDisplay(tipo: string): string {
@@ -7289,9 +7291,9 @@ export class HistorialVentasComponent implements OnInit {
 
     switch (monedaNormalizada) {
       case 'dolar':
-        return this.tasasPorId['dolar'] || 473.87;
+        return Number(this.tasasPorId['dolar'] ?? 1) || 1;
       case 'euro':
-        return this.tasasPorId['euro'] || 542.64;
+        return Number(this.tasasPorId['euro'] ?? 1) || 1;
       case 'bolivar':
         return 1;
       default:

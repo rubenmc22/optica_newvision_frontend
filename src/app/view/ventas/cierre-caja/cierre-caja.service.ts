@@ -11,17 +11,21 @@ import { CierreDiario, Transaccion, TasasCambio } from './cierre-caja.interfaz';
 })
 export class CierreCajaService {
     private apiUrl = environment.apiUrl;
-    private usarDummy: boolean = true;
+    private usarDummy: boolean = (environment as any)?.cierreCajaUsarDummy ?? true;
     private cierres: Map<string, CierreDiario> = new Map();
     private ventas: any[] = [];
-
-    // Tasas de cambio reales
-    private readonly TASA_USD_A_VES = 474.0598;  // 1 USD = 474.06 Bs
-    private readonly TASA_EUR_A_VES = 542.6382; // 1 EUR = 542.64 Bs
-    private readonly TASA_EUR_A_USD = 1.1447;   // 1 EUR = 1.1447 USD
+    private readonly tasasDummyBase = {
+        dolar: 476.4342,
+        euro: 550.8954,
+        bolivar: 1
+    };
 
     constructor(private http: HttpClient) {
         this.inicializarDatosDummy();
+    }
+
+    setUsarDummy(valor: boolean): void {
+        this.usarDummy = valor;
     }
 
     private formatearFechaYYYYMMDD(fecha: Date): string {
@@ -29,6 +33,526 @@ export class CierreCajaService {
         const month = String(fecha.getMonth() + 1).padStart(2, '0');
         const day = String(fecha.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
+    }
+
+    private redondear(valor: number, decimales: number = 2): number {
+        if (!Number.isFinite(valor)) {
+            return 0;
+        }
+
+        return Number(valor.toFixed(decimales));
+    }
+
+    private normalizarMoneda(moneda?: string): 'dolar' | 'euro' | 'bolivar' {
+        const valor = (moneda || 'USD').toString().trim().toLowerCase();
+
+        if (['usd', 'dolar', 'dólar', '$'].includes(valor)) {
+            return 'dolar';
+        }
+
+        if (['eur', 'euro', '€'].includes(valor)) {
+            return 'euro';
+        }
+
+        return 'bolivar';
+    }
+
+    private obtenerCodigoMoneda(moneda?: string): 'USD' | 'EUR' | 'VES' {
+        const monedaNormalizada = this.normalizarMoneda(moneda);
+
+        if (monedaNormalizada === 'dolar') {
+            return 'USD';
+        }
+
+        if (monedaNormalizada === 'euro') {
+            return 'EUR';
+        }
+
+        return 'VES';
+    }
+
+    private obtenerClaveMonedaTasa(item?: any): 'dolar' | 'euro' | 'bolivar' {
+        return this.normalizarMoneda(item?.moneda ?? item?.id ?? item?.moneda_id);
+    }
+
+    private normalizarClaveDestino(valor: string): string {
+        return (valor || 'destino')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '') || 'destino';
+    }
+
+    private obtenerCodigoBancoDemo(banco?: string | null): string {
+        const nombre = (banco || '').trim().toLowerCase();
+        const mapa: Record<string, string> = {
+            'banco de venezuela': '0102',
+            'banesco': '0134',
+            'provincial': '0108',
+            'banco provincial': '0108',
+            'bnc': '0191',
+            'bancaribe': '0114',
+            'bank of america': 'BOFA',
+            'chase': 'CHASE',
+            'wells fargo': 'WF'
+        };
+
+        return mapa[nombre] || this.normalizarClaveDestino(nombre).toUpperCase();
+    }
+
+    private obtenerDestinoReceptorAgrupado(metodo: any, tipo: string, moneda: string): any {
+        const bancoBase = tipo === 'punto'
+            ? (metodo?.bancoNombre || metodo?.banco || 'Otro')
+            : (metodo?.bancoReceptorNombre || metodo?.bancoReceptor || metodo?.bancoNombre || metodo?.banco || (tipo === 'zelle' ? 'Cuenta Zelle principal' : 'Destino sin identificar'));
+        const bancoCodigoBase = tipo === 'punto'
+            ? (metodo?.bancoCodigo || this.obtenerCodigoBancoDemo(bancoBase))
+            : (metodo?.bancoReceptorCodigo || metodo?.bancoCodigo || this.obtenerCodigoBancoDemo(bancoBase));
+        const cuentaAlias = metodo?.cuentaReceptoraAlias || metodo?.cuentaReceptoraEmail || metodo?.cuentaReceptoraUltimos4 || null;
+        const cuentaId = metodo?.cuentaReceptoraId || null;
+        const destinoLabel = cuentaAlias && cuentaAlias !== bancoBase
+            ? `${bancoBase} · ${cuentaAlias}`
+            : bancoBase;
+        const destinoKey = this.normalizarClaveDestino(`${bancoCodigoBase}_${cuentaId || cuentaAlias || bancoBase}_${moneda}`);
+
+        return {
+            banco: bancoBase,
+            bancoCodigo: bancoCodigoBase,
+            destinoKey,
+            destinoLabel,
+            cuentaAlias,
+            cuentaId,
+            monedaOriginal: moneda
+        };
+    }
+
+    private obtenerTasasReferenciaBolivar(): { dolar: number; euro: number; bolivar: number } {
+        const tasasDesdeVentas = this.obtenerTasasReferenciaDesdeVentas();
+
+        if (tasasDesdeVentas) {
+            return tasasDesdeVentas;
+        }
+
+        return { ...this.tasasDummyBase };
+    }
+
+    private obtenerTasasReferenciaDesdeVentas(): { dolar: number; euro: number; bolivar: number } | null {
+        for (const venta of this.ventas) {
+            const tasasHistoricas = Array.isArray(venta?.formaPagoDetalle?.tasasActuales)
+                ? venta.formaPagoDetalle.tasasActuales
+                : [];
+
+            const tasaDolar = Number(
+                tasasHistoricas.find((item: any) => this.obtenerClaveMonedaTasa(item) === 'dolar')?.tasa ??
+                tasasHistoricas.find((item: any) => this.obtenerClaveMonedaTasa(item) === 'dolar')?.valor ??
+                0
+            );
+            const tasaEuro = Number(
+                tasasHistoricas.find((item: any) => this.obtenerClaveMonedaTasa(item) === 'euro')?.tasa ??
+                tasasHistoricas.find((item: any) => this.obtenerClaveMonedaTasa(item) === 'euro')?.valor ??
+                0
+            );
+
+            if (tasaDolar > 0 && tasaEuro > 0) {
+                return {
+                    dolar: tasaDolar,
+                    euro: tasaEuro,
+                    bolivar: 1
+                };
+            }
+        }
+
+        return null;
+    }
+
+    private construirTasasHistoricasDesdeReferencia(
+        tasasReferencia: { dolar: number; euro: number; bolivar: number }
+    ): Array<{ moneda: string; tasa: number; valor: number }> {
+        return [
+            { moneda: 'dolar', tasa: tasasReferencia.dolar, valor: tasasReferencia.dolar },
+            { moneda: 'euro', tasa: tasasReferencia.euro, valor: tasasReferencia.euro },
+            { moneda: 'bolivar', tasa: tasasReferencia.bolivar, valor: tasasReferencia.bolivar }
+        ];
+    }
+
+    private construirTasasCambio(monedaPrincipal: string): TasasCambio {
+        const tasasReferencia = this.obtenerTasasReferenciaBolivar();
+        const tasaDolar = Number(tasasReferencia.dolar || 0);
+        const tasaEuro = Number(tasasReferencia.euro || 0);
+
+        if (monedaPrincipal === 'EUR') {
+            return {
+                dolar: tasaDolar > 0 && tasaEuro > 0 ? tasaDolar / tasaEuro : 1,
+                euro: 1,
+                bolivar: tasaEuro > 0 ? 1 / tasaEuro : 1
+            };
+        }
+
+        if (monedaPrincipal === 'VES') {
+            return {
+                dolar: tasaDolar > 0 ? tasaDolar : 1,
+                euro: tasaEuro > 0 ? tasaEuro : 1,
+                bolivar: 1
+            };
+        }
+
+        return {
+            dolar: 1,
+            euro: tasaDolar > 0 && tasaEuro > 0 ? tasaEuro / tasaDolar : 1,
+            bolivar: tasaDolar > 0 ? 1 / tasaDolar : 1
+        };
+    }
+
+    private generarTasasHistoricas(fecha: Date, numeroVenta: string): Array<{ moneda: string; tasa: number; valor: number }> {
+        const tasasReferencia = this.obtenerTasasReferenciaBolivar();
+        const semilla = `${numeroVenta}-${fecha.toISOString()}`
+            .split('')
+            .reduce((acumulado, caracter, indice) => acumulado + (caracter.charCodeAt(0) * (indice + 1)), 0);
+
+        const variacionUsd = ((semilla % 17) - 8) * 0.0045;
+        const variacionEuro = (((Math.floor(semilla / 7)) % 13) - 6) * 0.0035;
+
+        const tasaUsdBase = Number(tasasReferencia.dolar || 1);
+        const tasaEuroBase = Number(tasasReferencia.euro || 1);
+        const tasaUsd = this.redondear(tasaUsdBase * (1 + variacionUsd), 4);
+        const tasaEuro = this.redondear(tasaEuroBase * (1 + variacionEuro), 4);
+
+        return [
+            { moneda: 'dolar', tasa: tasaUsd, valor: tasaUsd },
+            { moneda: 'euro', tasa: tasaEuro, valor: tasaEuro },
+            { moneda: 'bolivar', tasa: 1, valor: 1 }
+        ];
+    }
+
+    private obtenerMapaTasasHistoricas(tasasHistoricas?: Array<{ moneda: string; tasa: number; valor?: number }>): Record<string, number> {
+        const tasasBase = this.obtenerTasasReferenciaBolivar();
+        const tasas: Record<string, number> = {
+            dolar: tasasBase.dolar,
+            euro: tasasBase.euro,
+            bolivar: tasasBase.bolivar
+        };
+
+        (tasasHistoricas || []).forEach((item) => {
+            const moneda = this.obtenerClaveMonedaTasa(item);
+            const tasa = Number(item?.tasa ?? item?.valor ?? 0);
+
+            if (Number.isFinite(tasa) && tasa > 0) {
+                tasas[moneda] = tasa;
+            }
+        });
+
+        return tasas;
+    }
+
+    private convertirMontoHistorico(
+        monto: number,
+        monedaOrigen: string,
+        monedaDestino: string,
+        tasasHistoricas?: Array<{ moneda: string; tasa: number; valor?: number }>
+    ): number {
+        const montoSeguro = Number(monto || 0);
+        const origen = this.normalizarMoneda(monedaOrigen);
+        const destino = this.normalizarMoneda(monedaDestino);
+
+        if (!montoSeguro) {
+            return 0;
+        }
+
+        if (origen === destino) {
+            return this.redondear(montoSeguro);
+        }
+
+        const tasas = this.obtenerMapaTasasHistoricas(tasasHistoricas);
+        const montoEnBolivar = origen === 'bolivar'
+            ? montoSeguro
+            : montoSeguro * (tasas[origen] || 1);
+
+        if (destino === 'bolivar') {
+            return this.redondear(montoEnBolivar);
+        }
+
+        return this.redondear(montoEnBolivar / (tasas[destino] || 1));
+    }
+
+    private extraerTasasHistoricasDesdeMetodos(metodos: any[] = []): Array<{ moneda: string; tasa: number; valor: number }> {
+        const mapa = new Map<string, number>();
+        const tasasBase = this.obtenerTasasReferenciaBolivar();
+
+        metodos.forEach((metodo: any) => {
+            const moneda = this.normalizarMoneda(metodo?.moneda || metodo?.moneda_id);
+            const tasa = Number(metodo?.tasaUsada ?? metodo?.tasaUasada ?? metodo?.tasa_usada ?? 0);
+
+            if (Number.isFinite(tasa) && tasa > 0) {
+                mapa.set(moneda, tasa);
+            }
+        });
+
+        if (!mapa.has('dolar')) {
+            mapa.set('dolar', tasasBase.dolar);
+        }
+
+        if (!mapa.has('euro')) {
+            mapa.set('euro', tasasBase.euro);
+        }
+
+        if (!mapa.has('bolivar')) {
+            mapa.set('bolivar', 1);
+        }
+
+        return Array.from(mapa.entries()).map(([moneda, tasa]) => ({ moneda, tasa, valor: tasa }));
+    }
+
+    private normalizarMetodoPagoApi(
+        metodo: any,
+        monedaVenta: string,
+        tasasHistoricas: Array<{ moneda: string; tasa: number; valor?: number }>
+    ): any {
+        const monedaMetodo = this.obtenerCodigoMoneda(metodo?.moneda || metodo?.moneda_id || monedaVenta);
+        const montoOriginal = Number(metodo?.monto || metodo?.montoAbonado || 0);
+        const tasaUsada = Number(
+            metodo?.tasaUsada ??
+            metodo?.tasaUasada ??
+            metodo?.tasa_usada ??
+            this.obtenerMapaTasasHistoricas(tasasHistoricas)[this.normalizarMoneda(monedaMetodo)]
+        );
+
+        return {
+            tipo: metodo?.tipo || 'efectivo',
+            monto: montoOriginal,
+            moneda: monedaMetodo,
+            referencia: metodo?.referencia || null,
+            bancoCodigo: metodo?.bancoCodigo || null,
+            bancoNombre: metodo?.bancoNombre || null,
+            bancoReceptorCodigo: metodo?.bancoReceptorCodigo || null,
+            bancoReceptorNombre: metodo?.bancoReceptorNombre || null,
+            bancoReceptor: metodo?.bancoReceptor || null,
+            cuentaReceptoraId: metodo?.cuentaReceptoraId || null,
+            cuentaReceptoraAlias: metodo?.cuentaReceptoraAlias || null,
+            cuentaReceptoraUltimos4: metodo?.cuentaReceptoraUltimos4 || null,
+            cuentaReceptoraEmail: metodo?.cuentaReceptoraEmail || null,
+            notaPago: metodo?.notaPago || null,
+            tasaUsada: Number.isFinite(tasaUsada) && tasaUsada > 0 ? tasaUsada : undefined,
+            montoEnMonedaVenta: Number(
+                metodo?.montoEnMonedaVenta ??
+                metodo?.monto_en_moneda_de_venta ??
+                this.convertirMontoHistorico(montoOriginal, monedaMetodo, monedaVenta, tasasHistoricas)
+            ),
+            montoEnBolivar: Number(
+                metodo?.montoEnBolivar ??
+                metodo?.monto_en_bolivar ??
+                metodo?.montoEnBolivares ??
+                this.convertirMontoHistorico(montoOriginal, monedaMetodo, 'VES', tasasHistoricas)
+            ),
+            montoEnMonedaSistema: Number(
+                metodo?.montoEnMonedaSistema ??
+                this.convertirMontoHistorico(montoOriginal, monedaMetodo, 'USD', tasasHistoricas)
+            )
+        };
+    }
+
+    private extraerMetodosPagoDeRespuestaApi(ventaApi: any, monedaVenta: string, tasasHistoricas: Array<{ moneda: string; tasa: number; valor?: number }>): any[] {
+        if (Array.isArray(ventaApi?.metodosDePago) && ventaApi.metodosDePago.length) {
+            return ventaApi.metodosDePago.map((metodo: any) => this.normalizarMetodoPagoApi(metodo, monedaVenta, tasasHistoricas));
+        }
+
+        if (Array.isArray(ventaApi?.metodosPago) && ventaApi.metodosPago.length) {
+            return ventaApi.metodosPago.flatMap((grupo: any) => {
+                if (Array.isArray(grupo?.metodosPago) && grupo.metodosPago.length) {
+                    return grupo.metodosPago.map((metodo: any) => this.normalizarMetodoPagoApi(metodo, monedaVenta, tasasHistoricas));
+                }
+
+                return [];
+            });
+        }
+
+        return [];
+    }
+
+    private adaptarVentaApi(entrada: any): any {
+        const ventaBase = entrada?.venta || entrada || {};
+        const totales = entrada?.totales || {};
+        const formaPagoDetalle = entrada?.formaPagoDetalle || entrada?.formaPago || ventaBase?.formaPagoDetalle || entrada?.formaPago || {};
+        const monedaVenta = this.obtenerCodigoMoneda(ventaBase?.moneda || entrada?.moneda || 'USD');
+        const metodosFuente = Array.isArray(entrada?.metodosDePago) || Array.isArray(entrada?.metodosPago)
+            ? entrada
+            : ventaBase;
+        const tasasHistoricas = Array.isArray(formaPagoDetalle?.tasasActuales) && formaPagoDetalle.tasasActuales.length
+            ? formaPagoDetalle.tasasActuales
+            : this.extraerTasasHistoricasDesdeMetodos(
+                Array.isArray(metodosFuente?.metodosDePago)
+                    ? metodosFuente.metodosDePago
+                    : Array.isArray(metodosFuente?.metodosPago)
+                        ? metodosFuente.metodosPago.flatMap((grupo: any) => grupo?.metodosPago || [])
+                        : []
+            );
+        const metodosDePago = this.extraerMetodosPagoDeRespuestaApi(metodosFuente, monedaVenta, tasasHistoricas);
+        const total = Number(
+            totales?.total ??
+            entrada?.total ??
+            ventaBase?.total ??
+            formaPagoDetalle?.montoTotal ??
+            0
+        );
+        const totalPagado = Number(
+            totales?.totalPagado ??
+            formaPagoDetalle?.totalPagado ??
+            formaPagoDetalle?.totalPagadoAhora ??
+            entrada?.total_pagado ??
+            ventaBase?.total_pagado ??
+            0
+        );
+        const deudaPendiente = Number(
+            formaPagoDetalle?.deudaPendiente ??
+            formaPagoDetalle?.deuda ??
+            Math.max(0, total - totalPagado)
+        );
+        const clienteInfo = entrada?.cliente?.informacion || entrada?.cliente || ventaBase?.cliente?.informacion || ventaBase?.cliente || {};
+        const productos = Array.isArray(entrada?.productos)
+            ? entrada.productos.map((producto: any) => ({
+                nombre: producto?.datos?.nombre || producto?.nombre || 'Producto',
+                cantidad: Number(producto?.cantidad || 1),
+                precio: Number(producto?.precio ?? producto?.precio_unitario ?? producto?.precio_unitario_sin_iva ?? producto?.total ?? 0),
+                precioUnitario: Number(producto?.precio ?? producto?.precio_unitario ?? producto?.precio_unitario_sin_iva ?? producto?.total ?? 0),
+                aplicaIva: Boolean(producto?.aplicaIva ?? producto?.tiene_iva),
+                moneda: this.obtenerCodigoMoneda(producto?.moneda || monedaVenta)
+            }))
+            : [];
+
+        return {
+            key: ventaBase?.key || entrada?.key,
+            numero_venta: ventaBase?.numero_venta || entrada?.numero_venta,
+            fecha: ventaBase?.fecha || entrada?.fecha || entrada?.auditoria?.fechaCreacion || ventaBase?.auditoria?.fechaCreacion,
+            tipoVenta: entrada?.tipoVenta || ventaBase?.tipoVenta || entrada?.consulta?.tipoVentaConsulta || 'solo_productos',
+            moneda: monedaVenta,
+            sede: entrada?.sede || ventaBase?.sede || 'guatire',
+            total_pagado: totalPagado,
+            total: total,
+            estatus_pago: ventaBase?.estatus_pago || entrada?.estatus_pago || (deudaPendiente > 0 ? 'pendiente' : 'completado'),
+            estado: ventaBase?.estatus_venta || entrada?.estado || entrada?.estatus_venta || 'completada',
+            formaPago: typeof ventaBase?.formaPago === 'string'
+                ? ventaBase.formaPago
+                : (formaPagoDetalle?.tipo || entrada?.formaPago || 'contado'),
+            metodosDePago,
+            cliente: {
+                informacion: {
+                    nombreCompleto: clienteInfo?.nombreCompleto || clienteInfo?.nombre || 'Cliente',
+                    cedula: clienteInfo?.cedula || '',
+                    telefono: clienteInfo?.telefono || '',
+                    email: clienteInfo?.email || ''
+                }
+            },
+            asesor: {
+                nombre: entrada?.asesor?.nombre || ventaBase?.asesor?.nombre || entrada?.auditoria?.usuarioCreacion?.nombre || ventaBase?.auditoria?.usuarioCreacion?.nombre || 'Usuario'
+            },
+            auditoria: {
+                usuarioCreacion: {
+                    nombre: entrada?.auditoria?.usuarioCreacion?.nombre || ventaBase?.auditoria?.usuarioCreacion?.nombre || 'Usuario'
+                },
+                fechaCreacion: entrada?.auditoria?.fechaCreacion || ventaBase?.auditoria?.fechaCreacion || ventaBase?.fecha || entrada?.fecha
+            },
+            formaPagoDetalle: {
+                ...formaPagoDetalle,
+                tipo: formaPagoDetalle?.tipo || ventaBase?.formaPago || 'contado',
+                montoTotal: Number(formaPagoDetalle?.montoTotal ?? total),
+                totalPagado: totalPagado,
+                deuda: deudaPendiente,
+                deudaPendiente: deudaPendiente,
+                tasasActuales: tasasHistoricas
+            },
+            productos,
+            consulta: entrada?.consulta || ventaBase?.consulta || null,
+            generarOrdenTrabajo: Boolean(entrada?.ordenTrabajo ?? entrada?.generarOrdenTrabajo ?? ventaBase?.generarOrdenTrabajo)
+        };
+    }
+
+    private normalizarCierreApi(cierre: any): CierreDiario {
+        const monedaPrincipal = this.obtenerCodigoMoneda(cierre?.monedaPrincipal || cierre?.moneda || 'USD');
+
+        return {
+            ...cierre,
+            fecha: cierre?.fecha ? new Date(cierre.fecha) : new Date(),
+            fechaApertura: cierre?.fechaApertura ? new Date(cierre.fechaApertura) : new Date(),
+            fechaCierre: cierre?.fechaCierre ? new Date(cierre.fechaCierre) : undefined,
+            monedaPrincipal,
+            efectivoInicial: Number(cierre?.efectivoInicial || 0),
+            ventasEfectivo: Number(cierre?.ventasEfectivo || 0),
+            ventasTarjeta: Number(cierre?.ventasTarjeta || 0),
+            ventasTransferencia: Number(cierre?.ventasTransferencia || 0),
+            ventasDebito: Number(cierre?.ventasDebito || 0),
+            ventasCredito: Number(cierre?.ventasCredito || 0),
+            ventasPagomovil: Number(cierre?.ventasPagomovil || 0),
+            ventasZelle: Number(cierre?.ventasZelle || 0),
+            otrosIngresos: Number(cierre?.otrosIngresos || 0),
+            egresos: Number(cierre?.egresos || 0),
+            efectivoFinalTeorico: Number(cierre?.efectivoFinalTeorico || 0),
+            efectivoFinalReal: Number(cierre?.efectivoFinalReal || 0),
+            diferencia: Number(cierre?.diferencia || 0),
+            transacciones: Array.isArray(cierre?.transacciones) ? cierre.transacciones : [],
+            tasasCambio: cierre?.tasasCambio || this.construirTasasCambio(monedaPrincipal),
+            ventasPorTipo: cierre?.ventasPorTipo || {
+                soloConsulta: { cantidad: 0, total: 0, montoMedico: 0, montoOptica: 0 },
+                consultaProductos: { cantidad: 0, total: 0, montoMedico: 0, montoProductos: 0 },
+                soloProductos: { cantidad: 0, total: 0 }
+            },
+            metodosPago: cierre?.metodosPago || {
+                efectivo: { total: 0, porMoneda: { dolar: 0, euro: 0, bolivar: 0 }, cantidad: 0 },
+                punto: { total: 0, porBanco: [], cantidad: 0 },
+                pagomovil: { total: 0, cantidad: 0, porBanco: [] },
+                transferencia: { total: 0, cantidad: 0, porBanco: [] },
+                zelle: { total: 0, cantidad: 0, porBanco: [] },
+                mixto: { total: 0, cantidad: 0 }
+            },
+            formasPago: cierre?.formasPago || {
+                contado: { cantidad: 0, total: 0 },
+                abono: { cantidad: 0, total: 0, montoAbonado: 0, deudaPendiente: 0 },
+                cashea: { cantidad: 0, total: 0, montoInicial: 0, deudaPendiente: 0, cuotasPendientes: 0 },
+                deContadoPendiente: { cantidad: 0, total: 0, deudaPendiente: 0 }
+            },
+            ventasPendientes: Array.isArray(cierre?.ventasPendientes)
+                ? cierre.ventasPendientes.map((venta: any) => ({
+                    ...venta,
+                    total: Number(venta?.total || 0),
+                    deuda: Number(venta?.deuda || 0),
+                    fecha: venta?.fecha ? new Date(venta.fecha) : new Date()
+                }))
+                : [],
+            totales: {
+                ingresos: Number(cierre?.totales?.ingresos || 0),
+                egresos: Number(cierre?.totales?.egresos || 0),
+                neto: Number(cierre?.totales?.neto || 0),
+                ventasContado: Number(cierre?.totales?.ventasContado || 0),
+                ventasCredito: Number(cierre?.totales?.ventasCredito || 0),
+                ventasPendientes: Number(cierre?.totales?.ventasPendientes || 0)
+            },
+            metodosPagoDetallados: Array.isArray(cierre?.metodosPagoDetallados) ? cierre.metodosPagoDetallados : []
+        } as CierreDiario;
+    }
+
+    private normalizarResumenBackend(resumen: any): any {
+        const ventasApi = Array.isArray(resumen?.ventas) ? resumen.ventas : [];
+        const ventas = ventasApi.map((venta: any) => this.adaptarVentaApi(venta));
+        const cierreExistente = resumen?.cierreExistente ? this.normalizarCierreApi(resumen.cierreExistente) : null;
+
+        return {
+            ...resumen,
+            ventas,
+            cierreExistente,
+            estadisticas: {
+                totalVentas: ventas.reduce((sum: number, venta: any) => sum + Number(venta?.total || 0), 0),
+                cantidadVentas: ventas.length,
+                ...(resumen?.estadisticas || {})
+            }
+        };
+    }
+
+    private normalizarHistorialBackend(cierres: any): CierreDiario[] {
+        const lista = Array.isArray(cierres)
+            ? cierres
+            : Array.isArray(cierres?.cierres)
+                ? cierres.cierres
+                : [];
+
+        return lista.map((cierre: any) => this.normalizarCierreApi(cierre));
     }
 
     private inicializarDatosDummy(): void {
@@ -94,7 +618,7 @@ export class CierreCajaService {
         this.crearVentaCompleta(horaBase, 'V-006', 'consulta_productos', 'contado', 'punto', 'Laura Díaz', '44455566', 151699, 151699, 'VES', { medico: 18962, productos: 132737 }, 'Provincial');
 
         // Zelle (USD)
-        this.crearVentaCompleta(horaBase, 'V-007', 'solo_productos', 'contado', 'zelle', 'Valentina Torres', '22233344', 200, 200, 'USD');
+        this.crearVentaCompleta(horaBase, 'V-007', 'solo_productos', 'contado', 'zelle', 'Valentina Torres', '22233344', 200, 200, 'USD', undefined, 'Bank of America');
     }
 
     private crearVentaCompleta(
@@ -119,20 +643,48 @@ export class CierreCajaService {
         const horaOffset = Math.floor(Math.random() * 10) + 8;
         hora.setHours(horaOffset, Math.floor(Math.random() * 60), 0);
 
+        const tasasActuales = this.generarTasasHistoricas(hora, numeroVenta);
+        const monedaVenta = this.obtenerCodigoMoneda(moneda);
+
         let metodosDePago: any[] = [];
 
         if (metodosMultiples) {
-            metodosDePago = metodosMultiples;
+            metodosDePago = metodosMultiples.map((metodo: any) => {
+                const monedaMetodo = this.obtenerCodigoMoneda(metodo?.moneda || monedaVenta);
+                const montoMetodo = Number(metodo?.monto || 0);
+
+                return {
+                    ...metodo,
+                    moneda: monedaMetodo,
+                    monto: montoMetodo,
+                    tasaUsada: this.obtenerMapaTasasHistoricas(tasasActuales)[this.normalizarMoneda(monedaMetodo)],
+                    montoEnBolivar: this.convertirMontoHistorico(montoMetodo, monedaMetodo, 'VES', tasasActuales),
+                    montoEnMonedaVenta: this.convertirMontoHistorico(montoMetodo, monedaMetodo, monedaVenta, tasasActuales),
+                    montoEnMonedaSistema: this.convertirMontoHistorico(montoMetodo, monedaMetodo, 'USD', tasasActuales)
+                };
+            });
         } else if (metodoPago !== 'pendiente') {
+            const monedaMetodo = this.obtenerCodigoMoneda(moneda);
+            const mapaTasas = this.obtenerMapaTasasHistoricas(tasasActuales);
             const metodo: any = {
                 tipo: metodoPago,
                 monto: pagado,
-                moneda: moneda.toLowerCase()
+                moneda: monedaMetodo,
+                tasaUsada: mapaTasas[this.normalizarMoneda(monedaMetodo)],
+                montoEnBolivar: this.convertirMontoHistorico(pagado, monedaMetodo, 'VES', tasasActuales),
+                montoEnMonedaVenta: this.convertirMontoHistorico(pagado, monedaMetodo, monedaVenta, tasasActuales),
+                montoEnMonedaSistema: this.convertirMontoHistorico(pagado, monedaMetodo, 'USD', tasasActuales)
             };
 
-            if (banco && (metodoPago === 'punto' || metodoPago === 'transferencia' || metodoPago === 'pagomovil')) {
+            if (banco && metodoPago === 'punto') {
                 metodo.bancoNombre = banco;
-                metodo.bancoCodigo = banco === 'BNC' ? '0114' : banco === 'Provincial' ? '0108' : '0102';
+                metodo.bancoCodigo = this.obtenerCodigoBancoDemo(banco);
+            }
+
+            if (banco && (metodoPago === 'transferencia' || metodoPago === 'pagomovil' || metodoPago === 'zelle')) {
+                metodo.bancoReceptorNombre = banco;
+                metodo.bancoReceptorCodigo = this.obtenerCodigoBancoDemo(banco);
+                metodo.bancoReceptor = banco;
             }
             if (referencia && (metodoPago === 'transferencia' || metodoPago === 'pagomovil')) {
                 metodo.referencia = referencia;
@@ -142,6 +694,9 @@ export class CierreCajaService {
         }
 
         let formaPagoDetalle: any = { tipo: formaPago, montoTotal: total };
+        formaPagoDetalle.tasasActuales = tasasActuales;
+        formaPagoDetalle.totalPagado = pagado;
+        formaPagoDetalle.deuda = Math.max(0, total - pagado);
 
         if (formaPago === 'contado') {
             formaPagoDetalle.totalPagado = pagado;
@@ -178,7 +733,7 @@ export class CierreCajaService {
             numero_venta: numeroVenta,
             fecha: hora.toISOString(),
             tipoVenta: tipoVenta,
-            moneda: moneda,
+            moneda: monedaVenta,
             sede: 'guatire',
             total_pagado: pagado,
             total: total,
@@ -220,10 +775,14 @@ export class CierreCajaService {
         const formasPago = this.calcularFormasPago(ventasDelDia);
         const ventasPendientes = this.calcularVentasPendientes(ventasDelDia);
         const totales = this.calcularTotales(ventasDelDia);
+        const tasasReferencia = this.obtenerTasasReferenciaDesdeVentas() || this.obtenerTasasReferenciaBolivar();
+        const tasasHistoricasBase = this.construirTasasHistoricasDesdeReferencia(tasasReferencia);
 
-        // Efectivo inicial en USD (100 USD + 200 EUR convertidos + 1000 Bs convertidos)
-        const efectivoInicialUSD = 100 + (200 * this.TASA_EUR_A_USD) + (1000 / this.TASA_USD_A_VES);
-        // = 100 + 228.94 + 2.11 = 331.05 USD
+        const efectivoInicialUSD = this.redondear(
+            this.convertirMontoHistorico(100, 'USD', 'USD', tasasHistoricasBase) +
+            this.convertirMontoHistorico(200, 'EUR', 'USD', tasasHistoricasBase) +
+            this.convertirMontoHistorico(1000, 'VES', 'USD', tasasHistoricasBase)
+        );
 
         const cierre: CierreDiario = {
             id: id,
@@ -257,7 +816,7 @@ export class CierreCajaService {
             archivosAdjuntos: [],
             sede: sedeKey,
             monedaPrincipal: 'USD',
-            tasasCambio: { dolar: 1, euro: this.TASA_EUR_A_USD, bolivar: 1 / this.TASA_USD_A_VES },
+            tasasCambio: this.construirTasasCambio('USD'),
             metodosPagoDetallados: [],
             ventasPorTipo: ventasPorTipo,
             metodosPago: metodosPago,
@@ -277,83 +836,80 @@ export class CierreCajaService {
             punto: { total: 0, porBanco: [] as any[], cantidad: 0 },
             pagomovil: { total: 0, cantidad: 0, porBanco: [] as any[] },
             transferencia: { total: 0, cantidad: 0, porBanco: [] as any[] },
-            zelle: { total: 0, cantidad: 0 },
+            zelle: { total: 0, cantidad: 0, porBanco: [] as any[] },
             mixto: { total: 0, cantidad: 0 }
         };
 
         ventas.forEach(v => {
+            const tasasHistoricas = v?.formaPagoDetalle?.tasasActuales || v?.formaPago?.tasasActuales || [];
             if (v.metodosDePago && v.metodosDePago.length > 0) {
                 v.metodosDePago.forEach((m: any) => {
-                    let monto = m.monto || v.total_pagado || v.total;
-                    const moneda = m.moneda || v.moneda || 'USD';
-
-                    // Convertir a USD para almacenar en el total
-                    let montoEnUSD = monto;
-                    if (moneda === 'VES') {
-                        montoEnUSD = monto / this.TASA_USD_A_VES;
-                    } else if (moneda === 'EUR') {
-                        montoEnUSD = monto / this.TASA_EUR_A_USD;
-                    }
+                    const monto = Number(m.monto || v.total_pagado || v.total || 0);
+                    const moneda = this.obtenerCodigoMoneda(m.moneda || v.moneda || 'USD');
+                    const montoEnUSD = this.convertirMontoHistorico(monto, moneda, 'USD', tasasHistoricas);
 
                     if (m.tipo === 'efectivo') {
                         metodos.efectivo.total += montoEnUSD;
                         metodos.efectivo.cantidad++;
                         if (moneda === 'USD') metodos.efectivo.porMoneda.dolar += monto;
                         else if (moneda === 'EUR') metodos.efectivo.porMoneda.euro += monto;
-                        else if (moneda === 'VES') metodos.efectivo.porMoneda.bolivar += monto;
-
-                        console.log(`Venta efectivo: ${monto} ${moneda} = ${montoEnUSD} USD`);
+                        else metodos.efectivo.porMoneda.bolivar += monto;
                     }
                     else if (m.tipo === 'punto') {
-                        const montoEnUSD = monto / this.TASA_USD_A_VES;
                         metodos.punto.total += montoEnUSD;
                         metodos.punto.cantidad++;
-                        const banco = m.bancoNombre || 'Otro';
-                        let bancoExistente = metodos.punto.porBanco.find(b => b.banco === banco);
+                        const destino = this.obtenerDestinoReceptorAgrupado(m, 'punto', moneda);
+                        let bancoExistente = metodos.punto.porBanco.find(b => b.destinoKey === destino.destinoKey);
                         if (!bancoExistente) {
-                            bancoExistente = { banco, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
+                            bancoExistente = { ...destino, total: 0, totalOriginal: 0, cantidad: 0 };
                             metodos.punto.porBanco.push(bancoExistente);
                         }
-                        bancoExistente.total += monto;
+                        bancoExistente.total += montoEnUSD;
+                        bancoExistente.totalOriginal += monto;
                         bancoExistente.cantidad++;
                     }
                     else if (m.tipo === 'pagomovil') {
-                        const montoEnUSD = monto / this.TASA_USD_A_VES;
                         metodos.pagomovil.total += montoEnUSD;
                         metodos.pagomovil.cantidad++;
-                        if (m.bancoNombre) {
-                            let bancoExistente = metodos.pagomovil.porBanco.find(b => b.banco === m.bancoNombre);
-                            if (!bancoExistente) {
-                                bancoExistente = { banco: m.bancoNombre, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
-                                metodos.pagomovil.porBanco.push(bancoExistente);
-                            }
-                            bancoExistente.total += monto;
-                            bancoExistente.cantidad++;
+                        const destino = this.obtenerDestinoReceptorAgrupado(m, 'pagomovil', moneda);
+                        let bancoExistente = metodos.pagomovil.porBanco.find(b => b.destinoKey === destino.destinoKey);
+                        if (!bancoExistente) {
+                            bancoExistente = { ...destino, total: 0, totalOriginal: 0, cantidad: 0 };
+                            metodos.pagomovil.porBanco.push(bancoExistente);
                         }
+                        bancoExistente.total += montoEnUSD;
+                        bancoExistente.totalOriginal += monto;
+                        bancoExistente.cantidad++;
                     }
                     else if (m.tipo === 'transferencia') {
-                        const montoEnUSD = monto / this.TASA_USD_A_VES;
                         metodos.transferencia.total += montoEnUSD;
                         metodos.transferencia.cantidad++;
-                        if (m.bancoNombre) {
-                            let bancoExistente = metodos.transferencia.porBanco.find(b => b.banco === m.bancoNombre);
-                            if (!bancoExistente) {
-                                bancoExistente = { banco: m.bancoNombre, bancoCodigo: m.bancoCodigo || '', total: 0, cantidad: 0 };
-                                metodos.transferencia.porBanco.push(bancoExistente);
-                            }
-                            bancoExistente.total += monto;
-                            bancoExistente.cantidad++;
+                        const destino = this.obtenerDestinoReceptorAgrupado(m, 'transferencia', moneda);
+                        let bancoExistente = metodos.transferencia.porBanco.find(b => b.destinoKey === destino.destinoKey);
+                        if (!bancoExistente) {
+                            bancoExistente = { ...destino, total: 0, totalOriginal: 0, cantidad: 0 };
+                            metodos.transferencia.porBanco.push(bancoExistente);
                         }
+                        bancoExistente.total += montoEnUSD;
+                        bancoExistente.totalOriginal += monto;
+                        bancoExistente.cantidad++;
                     }
                     else if (m.tipo === 'zelle') {
-                        metodos.zelle.total += monto;
+                        metodos.zelle.total += montoEnUSD;
                         metodos.zelle.cantidad++;
+                        const destino = this.obtenerDestinoReceptorAgrupado(m, 'zelle', moneda);
+                        let bancoExistente = metodos.zelle.porBanco.find(b => b.destinoKey === destino.destinoKey);
+                        if (!bancoExistente) {
+                            bancoExistente = { ...destino, total: 0, totalOriginal: 0, cantidad: 0 };
+                            metodos.zelle.porBanco.push(bancoExistente);
+                        }
+                        bancoExistente.total += montoEnUSD;
+                        bancoExistente.totalOriginal += monto;
+                        bancoExistente.cantidad++;
                     }
                 });
             }
         });
-
-        console.log('Total ventas efectivo en USD:', metodos.efectivo.total);
 
         return metodos;
     }
@@ -366,20 +922,31 @@ export class CierreCajaService {
         };
 
         ventas.forEach(v => {
+            const monedaVenta = v.moneda || 'USD';
+            const tasasHistoricas = v?.formaPagoDetalle?.tasasActuales || v?.formaPago?.tasasActuales || [];
+            const totalSistema = this.convertirMontoHistorico(v.total || 0, monedaVenta, 'USD', tasasHistoricas);
+            const montoMedicoSistema = this.convertirMontoHistorico(v.consulta?.pagoMedico || 0, monedaVenta, 'USD', tasasHistoricas);
+            const montoOpticaSistema = this.convertirMontoHistorico(v.consulta?.pagoOptica || 0, monedaVenta, 'USD', tasasHistoricas);
+            const totalProductosSistema = this.convertirMontoHistorico(
+                v.productos?.reduce((sum: number, p: any) => sum + ((p.precio || 0) * (p.cantidad || 1)), 0) || 0,
+                monedaVenta,
+                'USD',
+                tasasHistoricas
+            );
+
             if (v.tipoVenta === 'solo_consulta') {
                 resultado.soloConsulta.cantidad++;
-                resultado.soloConsulta.total += v.total;
-                resultado.soloConsulta.montoMedico += v.consulta?.pagoMedico || 0;
-                resultado.soloConsulta.montoOptica += v.consulta?.pagoOptica || 0;
+                resultado.soloConsulta.total += totalSistema;
+                resultado.soloConsulta.montoMedico += montoMedicoSistema;
+                resultado.soloConsulta.montoOptica += montoOpticaSistema;
             } else if (v.tipoVenta === 'consulta_productos') {
                 resultado.consultaProductos.cantidad++;
-                resultado.consultaProductos.total += v.total;
-                resultado.consultaProductos.montoMedico += v.consulta?.pagoMedico || 0;
-                const totalProductos = v.productos?.reduce((sum: number, p: any) => sum + (p.precio * p.cantidad), 0) || 0;
-                resultado.consultaProductos.montoProductos += totalProductos;
+                resultado.consultaProductos.total += totalSistema;
+                resultado.consultaProductos.montoMedico += montoMedicoSistema;
+                resultado.consultaProductos.montoProductos += totalProductosSistema;
             } else if (v.tipoVenta === 'solo_productos') {
                 resultado.soloProductos.cantidad++;
-                resultado.soloProductos.total += v.total;
+                resultado.soloProductos.total += totalSistema;
             }
         });
 
@@ -396,8 +963,11 @@ export class CierreCajaService {
 
         ventas.forEach(v => {
             const fp = v.formaPago;
-            const total = v.total;
-            const pagado = v.total_pagado || 0;
+            const monedaVenta = v.moneda || 'USD';
+            const tasasHistoricas = v?.formaPagoDetalle?.tasasActuales || v?.formaPago?.tasasActuales || [];
+            const total = this.convertirMontoHistorico(v.total || 0, monedaVenta, 'USD', tasasHistoricas);
+            const pagado = this.convertirMontoHistorico(v.total_pagado || 0, monedaVenta, 'USD', tasasHistoricas);
+            const deuda = this.convertirMontoHistorico((v.total || 0) - (v.total_pagado || 0), monedaVenta, 'USD', tasasHistoricas);
 
             if (fp === 'contado') {
                 formas.contado.cantidad++;
@@ -406,17 +976,17 @@ export class CierreCajaService {
                 formas.abono.cantidad++;
                 formas.abono.total += total;
                 formas.abono.montoAbonado += pagado;
-                formas.abono.deudaPendiente += total - pagado;
+                formas.abono.deudaPendiente += deuda;
             } else if (fp === 'cashea') {
                 formas.cashea.cantidad++;
                 formas.cashea.total += total;
-                formas.cashea.montoInicial += v.formaPagoDetalle?.montoInicial || pagado;
-                formas.cashea.deudaPendiente += v.formaPagoDetalle?.deudaPendiente || (total - pagado);
+                formas.cashea.montoInicial += this.convertirMontoHistorico(v.formaPagoDetalle?.montoInicial || (v.total_pagado || 0), monedaVenta, 'USD', tasasHistoricas);
+                formas.cashea.deudaPendiente += this.convertirMontoHistorico(v.formaPagoDetalle?.deudaPendiente || ((v.total || 0) - (v.total_pagado || 0)), monedaVenta, 'USD', tasasHistoricas);
                 formas.cashea.cuotasPendientes += 3 - (v.formaPagoDetalle?.cuotasAdelantadas || 0);
             } else if (fp === 'de_contado-pendiente') {
                 formas.deContadoPendiente.cantidad++;
                 formas.deContadoPendiente.total += total;
-                formas.deContadoPendiente.deudaPendiente += total;
+                formas.deContadoPendiente.deudaPendiente += deuda || total;
             }
         });
 
@@ -428,28 +998,45 @@ export class CierreCajaService {
             .filter(v => v.formaPago === 'de_contado-pendiente' ||
                 (v.formaPago === 'abono' && v.total > (v.total_pagado || 0)) ||
                 (v.formaPago === 'cashea' && v.total > (v.total_pagado || 0)))
-            .map(v => ({
+            .map(v => {
+                const monedaVenta = v.moneda || 'USD';
+                const tasasHistoricas = v?.formaPagoDetalle?.tasasActuales || v?.formaPago?.tasasActuales || [];
+
+                return ({
                 numeroVenta: v.numero_venta,
                 cliente: v.cliente?.informacion?.nombreCompleto || 'Cliente',
-                total: v.total,
+                total: this.convertirMontoHistorico(v.total || 0, monedaVenta, 'USD', tasasHistoricas),
                 formaPago: v.formaPago === 'de_contado-pendiente' ? 'Pendiente' :
                     (v.formaPago === 'abono' ? 'Abono' : 'Cashea'),
-                deuda: v.total - (v.total_pagado || 0),
+                deuda: this.convertirMontoHistorico((v.total || 0) - (v.total_pagado || 0), monedaVenta, 'USD', tasasHistoricas),
                 fecha: new Date(v.fecha)
-            }));
+                });
+            });
     }
 
     private calcularTotales(ventas: any[]): any {
-        const ingresos = ventas.reduce((sum, v) => sum + (v.total_pagado || v.total), 0);
-        const pendientes = ventas.filter(v => v.formaPago === 'de_contado-pendiente').reduce((sum, v) => sum + v.total, 0);
+        const ingresos = ventas.reduce((sum, v) => {
+            const tasasHistoricas = v?.formaPagoDetalle?.tasasActuales || v?.formaPago?.tasasActuales || [];
+            return sum + this.convertirMontoHistorico(v.total_pagado || v.total || 0, v.moneda || 'USD', 'USD', tasasHistoricas);
+        }, 0);
+        const pendientes = ventas.filter(v => v.formaPago === 'de_contado-pendiente').reduce((sum, v) => {
+            const tasasHistoricas = v?.formaPagoDetalle?.tasasActuales || v?.formaPago?.tasasActuales || [];
+            return sum + this.convertirMontoHistorico(v.total || 0, v.moneda || 'USD', 'USD', tasasHistoricas);
+        }, 0);
         const credito = ventas.filter(v => v.formaPago === 'abono' || v.formaPago === 'cashea')
-            .reduce((sum, v) => sum + (v.total - (v.total_pagado || 0)), 0);
+            .reduce((sum, v) => {
+                const tasasHistoricas = v?.formaPagoDetalle?.tasasActuales || v?.formaPago?.tasasActuales || [];
+                return sum + this.convertirMontoHistorico((v.total || 0) - (v.total_pagado || 0), v.moneda || 'USD', 'USD', tasasHistoricas);
+            }, 0);
 
         return {
             ingresos: ingresos,
             egresos: 0,
             neto: ingresos,
-            ventasContado: ventas.filter(v => v.formaPago === 'contado').reduce((sum, v) => sum + (v.total_pagado || v.total), 0),
+            ventasContado: ventas.filter(v => v.formaPago === 'contado').reduce((sum, v) => {
+                const tasasHistoricas = v?.formaPagoDetalle?.tasasActuales || v?.formaPago?.tasasActuales || [];
+                return sum + this.convertirMontoHistorico(v.total_pagado || v.total || 0, v.moneda || 'USD', 'USD', tasasHistoricas);
+            }, 0),
             ventasCredito: credito,
             ventasPendientes: pendientes
         };
@@ -461,8 +1048,15 @@ export class CierreCajaService {
             tipo: 'venta',
             descripcion: `Venta #${v.numero_venta} - ${v.cliente?.informacion?.nombreCompleto || 'Cliente'}`,
             monto: v.total_pagado || v.total,
+            montoOriginal: v.total_pagado || v.total,
+            montoTotal: v.total,
+            montoPagado: v.total_pagado || 0,
+            deudaPendiente: Math.max(0, (v.total || 0) - (v.total_pagado || 0)),
             fecha: new Date(v.fecha),
             metodoPago: v.metodosDePago?.length === 1 ? v.metodosDePago[0].tipo : 'mixto',
+            moneda: v.moneda,
+            monedaOriginal: v.moneda,
+            tasasHistoricas: v?.formaPagoDetalle?.tasasActuales || v?.formaPago?.tasasActuales || [],
             usuario: v.asesor?.nombre || 'Usuario',
             estado: 'confirmado',
             categoria: 'venta',
@@ -475,7 +1069,9 @@ export class CierreCajaService {
             detalleMetodosPago: v.metodosDePago,
             productos: v.productos,
             asesor: v.asesor?.nombre,
-            ordenTrabajoGenerada: v.generarOrdenTrabajo
+            ordenTrabajoGenerada: v.generarOrdenTrabajo,
+            tipoVenta: v.tipoVenta,
+            consulta: v.consulta
         }));
     }
 
@@ -506,7 +1102,9 @@ export class CierreCajaService {
                 fecha: fecha.toISOString().split('T')[0],
                 sede: sede
             }
-        });
+        }).pipe(
+            map((response: any) => this.normalizarResumenBackend(response))
+        );
     }
 
     guardarCierre(cierre: CierreDiario): Observable<any> {
@@ -533,7 +1131,9 @@ export class CierreCajaService {
                 fechaFin: fechaFin.toISOString().split('T')[0],
                 sede: sede
             }
-        });
+        }).pipe(
+            map((response: any) => this.normalizarHistorialBackend(response))
+        );
     }
 
     anularCierre(id: string, motivo: string): Observable<any> {
@@ -552,11 +1152,7 @@ export class CierreCajaService {
 
     obtenerTasasCambio(): Observable<TasasCambio> {
         if (this.usarDummy) {
-            return of({
-                dolar: 1,
-                euro: this.TASA_EUR_A_USD,
-                bolivar: 1 / this.TASA_USD_A_VES
-            }).pipe(delay(300));
+            return of(this.construirTasasCambio('USD')).pipe(delay(300));
         }
         return this.http.get<TasasCambio>(`${this.apiUrl}/tasas-cambio`);
     }

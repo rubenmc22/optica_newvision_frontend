@@ -1,4 +1,4 @@
-<!-- cierre-caja.component.html -->
+﻿<!-- cierre-caja.component.html -->
 <div class="cierre-caja-container">
 
   <!-- HEADER  -->
@@ -825,6 +825,8 @@
                        step="0.01" 
                        min="0"
                        placeholder="0,00"
+                    (focus)="onInputFocus($event)"
+                    (blur)="onInputBlur($event)"
                        (input)="calcularTotalEfectivoInicial()">
               </div>
             </div>
@@ -846,6 +848,8 @@
                        step="0.01" 
                        min="0"
                        placeholder="0,00"
+                    (focus)="onInputFocus($event)"
+                    (blur)="onInputBlur($event)"
                        (input)="calcularTotalEfectivoInicial()">
               </div>
             </div>
@@ -867,6 +871,8 @@
                        step="0.01" 
                        min="0"
                        placeholder="0,00"
+                    (focus)="onInputFocus($event)"
+                    (blur)="onInputBlur($event)"
                        (input)="calcularTotalEfectivoInicial()">
               </div>
             </div>
@@ -957,13 +963,6 @@
             </div>
           </div>
 
-          <!-- Alerta de diferencia si existe -->
-          <div class="alert alert-warning mb-3" *ngIf="hayDiferencia">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            <strong>¡Atención!</strong> Se detectó una diferencia de {{ getDiferenciaTotalFormateada() }}.
-            Debes explicar el motivo en el campo "Notas de Cierre" (mínimo 10 caracteres).
-          </div>
-
           <!-- Tabs modernos -->
           <div class="tabs-modernos mb-4">
             <button type="button" class="tab-btn" [class.active]="tabActivoCierre === 'efectivo'" 
@@ -1000,15 +999,6 @@
             
             <!-- TAB EFECTIVO -->
             <div *ngIf="tabActivoCierre === 'efectivo'">
-              <div class="alert alert-info mb-3">
-                <i class="bi bi-info-circle-fill me-2"></i>
-                <strong>¿Cómo contar el efectivo?</strong>
-                <small class="d-block mt-1">
-                  El "Monto Real" debe ser el TOTAL de efectivo que tienes en caja (billetes + monedas), 
-                  incluyendo el efectivo inicial y las ventas del día.
-                </small>
-              </div>
-
               <div class="efectivo-grid">
                 <!-- Dólares -->
                 <div class="moneda-card-cierre">
@@ -1179,15 +1169,6 @@
 
             <!-- TAB PUNTO DE VENTA -->
             <div *ngIf="tabActivoCierre === 'punto'">
-              <div class="alert alert-info mb-3">
-                <i class="bi bi-info-circle-fill me-2"></i>
-                <strong>Ingreso en {{ simboloMonedaSistema }}</strong>
-                <small class="d-block mt-1">
-                  El monto se convertirá automáticamente a Bolívares usando la tasa actual: 
-                  <strong>1 USD = {{ (1 / (tasasCambio?.bolivar || 0.00211)) | number:'1.2-2' }} VES</strong>
-                </small>
-              </div>
-
               <div class="bancos-grid-cierre">
                 <div class="banco-card-cierre" *ngFor="let banco of analisisMetodosPago.punto.porBanco">
                   <div class="banco-header">
@@ -1233,164 +1214,302 @@
 
             <!-- TAB TRANSFERENCIAS -->
             <div *ngIf="tabActivoCierre === 'transferencias'">
-              <div class="alert alert-info mb-3">
-                <i class="bi bi-info-circle-fill me-2"></i>
-                <strong>Ingreso en {{ simboloMonedaSistema }}</strong>
-                <small class="d-block mt-1">
-                  El monto se convertirá automáticamente a Bolívares usando la tasa actual: 
-                  <strong>1 USD = {{ (1 / (tasasCambio?.bolivar || 0.00211)) | number:'1.2-2' }} VES</strong>
-                </small>
-              </div>
-
-              <div class="metodo-simple-card">
-                <div class="card-icon">
-                  <i class="bi bi-bank2"></i>
-                </div>
-                <div class="card-content">
-                  <h4>Transferencias Bancarias</h4>
-                  <div class="campo-monto">
-                    <label>Monto Real Total ({{ simboloMonedaSistema }})</label>
-                    <div class="input-wrapper">
-                      <span class="input-icon">{{ simboloMonedaSistema }}</span>
-                      <input type="number" 
-                            class="form-control" 
-                            formControlName="transferenciaRealTotal" 
-                            step="0.01" 
-                            min="0"
-                            placeholder="0.00"
-                            (focus)="onInputFocus($event)"
-                            (blur)="onInputBlur($event)">
-                      <button class="btn-auto" type="button" 
-                              (click)="autoCompletarTransferencia()"
-                              title="Auto completar con el monto del sistema">
-                        <i class="bi bi-magic"></i>
-                      </button>
+              <div class="bancos-grid-cierre" *ngIf="getDestinosMetodo('transferencia').length; else transferenciaGeneral">
+                <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('transferencia')">
+                  <div class="banco-header">
+                    <i class="bi bi-bank2"></i>
+                    <span>{{ destino.destinoLabel || destino.banco }}</span>
+                    <span class="badge-cantidad">{{ destino.cantidad }} ops</span>
+                  </div>
+                  <div class="banco-body">
+                    <div class="campo-monto">
+                      <label>Monto Real ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number"
+                              class="form-control"
+                              [formControlName]="getNombreControlMetodo('transferencia', destino)"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button"
+                                (click)="autoCompletarMetodoPorDestino('transferencia', destino)"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares:
+                        <strong class="text-success">
+                          Bs. {{ getMontoSistemaEnBolivar(getMontoRealMetodoPorDestino('transferencia', destino)) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
+                    <div class="info-sistema">
+                      <span class="label">Sistema:</span>
+                      <span class="value">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      <span class="label ms-2" *ngIf="getTextoMontoOriginalBanco(destino)">Original:</span>
+                      <span class="value" *ngIf="getTextoMontoOriginalBanco(destino)">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('transferencia', destino) !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('transferencia', destino))">
+                        Diferencia: {{ getDiferenciaMetodoPorDestino('transferencia', destino) | number:'1.2-2' }} {{ monedaSistema }}
+                      </span>
                     </div>
                   </div>
-                  <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
-                    <small class="text-muted">
-                      <i class="bi bi-currency-exchange"></i>
-                      Equivalente en Bolívares: 
-                      <strong class="text-success">
-                        Bs. {{ convertirUSDaVES(cierreForm.get('transferenciaRealTotal')?.value || 0) | number:'1.2-2' }}
-                      </strong>
-                    </small>
-                  </div>
-                  <div class="info-sistema">
-                    <span class="label">Sistema:</span>
-                    <span class="value">{{ analisisMetodosPago.transferencia.total | number:'1.2-2' }} Bs.</span>
-                    <span class="label ms-2">(USD):</span>
-                    <span class="value">{{ analisisMetodosPago.transferencia.total / (1 / (tasasCambio?.bolivar || 0.00211)) | number:'1.2-2' }} USD</span>
-                    <span class="badge-cantidad">{{ analisisMetodosPago.transferencia.cantidad }} transferencias</span>
-                  </div>
-                  <div class="diferencia-info" *ngIf="getDiferenciaTransferencia() !== 0">
-                    <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaTransferencia())">
-                      Diferencia: {{ getDiferenciaTransferenciaFormateada() }}
-                    </span>
-                  </div>
                 </div>
               </div>
+
+              <ng-template #transferenciaGeneral>
+                <div class="metodo-simple-card">
+                  <div class="card-icon">
+                    <i class="bi bi-bank2"></i>
+                  </div>
+                  <div class="card-content">
+                    <h4>Transferencias Bancarias</h4>
+                    <div class="campo-monto">
+                      <label>Monto Real Total ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number" 
+                              class="form-control" 
+                              formControlName="transferenciaRealTotal" 
+                              step="0.01" 
+                              min="0"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button" 
+                                (click)="autoCompletarTransferencia()"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares: 
+                        <strong class="text-success">
+                          Bs. {{ convertirUSDaVES(cierreForm.get('transferenciaRealTotal')?.value || 0) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
+                    <div class="info-sistema">
+                      <span class="label">Sistema:</span>
+                      <span class="value">{{ analisisMetodosPago.transferencia.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      <span class="badge-cantidad">{{ analisisMetodosPago.transferencia.cantidad }} transferencias</span>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaTransferencia() !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaTransferencia())">
+                        Diferencia: {{ getDiferenciaTransferenciaFormateada() }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
             </div>
 
             <!-- TAB PAGO MÓVIL -->
             <div *ngIf="tabActivoCierre === 'pagomovil'">
-              <div class="alert alert-info mb-3">
-                <i class="bi bi-info-circle-fill me-2"></i>
-                <strong>Ingreso en {{ simboloMonedaSistema }}</strong>
-                <small class="d-block mt-1">
-                  El monto se convertirá automáticamente a Bolívares usando la tasa actual: 
-                  <strong>1 USD = {{ (1 / (tasasCambio?.bolivar || 0.00211)) | number:'1.2-2' }} VES</strong>
-                </small>
-              </div>
 
-              <div class="metodo-simple-card">
-                <div class="card-icon">
-                  <i class="bi bi-phone"></i>
-                </div>
-                <div class="card-content">
-                  <h4>Pago Móvil</h4>
-                  <div class="campo-monto">
-                    <label>Monto Real Total ({{ simboloMonedaSistema }})</label>
-                    <div class="input-wrapper">
-                      <span class="input-icon">{{ simboloMonedaSistema }}</span>
-                      <input type="number" 
-                            class="form-control" 
-                            formControlName="pagomovilRealTotal" 
-                            step="0.01" 
-                            min="0"
-                            placeholder="0.00"
-                            (focus)="onInputFocus($event)"
-                            (blur)="onInputBlur($event)">
-                      <button class="btn-auto" type="button" 
-                              (click)="autoCompletarPagomovil()"
-                              title="Auto completar con el monto del sistema">
-                        <i class="bi bi-magic"></i>
-                      </button>
+              <div class="bancos-grid-cierre" *ngIf="getDestinosMetodo('pagomovil').length; else pagomovilGeneral">
+                <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('pagomovil')">
+                  <div class="banco-header">
+                    <i class="bi bi-phone"></i>
+                    <span>{{ destino.destinoLabel || destino.banco }}</span>
+                    <span class="badge-cantidad">{{ destino.cantidad }} ops</span>
+                  </div>
+                  <div class="banco-body">
+                    <div class="campo-monto">
+                      <label>Monto Real ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number"
+                              class="form-control"
+                              [formControlName]="getNombreControlMetodo('pagomovil', destino)"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button"
+                                (click)="autoCompletarMetodoPorDestino('pagomovil', destino)"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares:
+                        <strong class="text-success">
+                          Bs. {{ getMontoSistemaEnBolivar(getMontoRealMetodoPorDestino('pagomovil', destino)) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
+                    <div class="info-sistema">
+                      <span class="label">Sistema:</span>
+                      <span class="value">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      <span class="label ms-2" *ngIf="getTextoMontoOriginalBanco(destino)">Original:</span>
+                      <span class="value" *ngIf="getTextoMontoOriginalBanco(destino)">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('pagomovil', destino) !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('pagomovil', destino))">
+                        Diferencia: {{ getDiferenciaMetodoPorDestino('pagomovil', destino) | number:'1.2-2' }} {{ monedaSistema }}
+                      </span>
                     </div>
                   </div>
-                  <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
-                    <small class="text-muted">
-                      <i class="bi bi-currency-exchange"></i>
-                      Equivalente en Bolívares: 
-                      <strong class="text-success">
-                        Bs. {{ convertirUSDaVES(cierreForm.get('pagomovilRealTotal')?.value || 0) | number:'1.2-2' }}
-                      </strong>
-                    </small>
-                  </div>
-                  <div class="info-sistema">
-                    <span class="label">Sistema:</span>
-                    <span class="value">{{ analisisMetodosPago.pagomovil.total | number:'1.2-2' }} Bs.</span>
-                    <span class="label ms-2">(USD):</span>
-                    <span class="value">{{ analisisMetodosPago.pagomovil.total / (1 / (tasasCambio?.bolivar || 0.00211)) | number:'1.2-2' }} USD</span>
-                    <span class="badge-cantidad">{{ analisisMetodosPago.pagomovil.cantidad }} operaciones</span>
-                  </div>
-                  <div class="diferencia-info" *ngIf="getDiferenciaPagomovil() !== 0">
-                    <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaPagomovil())">
-                      Diferencia: {{ getDiferenciaPagomovilFormateada() }}
-                    </span>
-                  </div>
                 </div>
               </div>
+
+              <ng-template #pagomovilGeneral>
+                <div class="metodo-simple-card">
+                  <div class="card-icon">
+                    <i class="bi bi-phone"></i>
+                  </div>
+                  <div class="card-content">
+                    <h4>Pago Móvil</h4>
+                    <div class="campo-monto">
+                      <label>Monto Real Total ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number" 
+                              class="form-control" 
+                              formControlName="pagomovilRealTotal" 
+                              step="0.01" 
+                              min="0"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button" 
+                                (click)="autoCompletarPagomovil()"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares: 
+                        <strong class="text-success">
+                          Bs. {{ convertirUSDaVES(cierreForm.get('pagomovilRealTotal')?.value || 0) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
+                    <div class="info-sistema">
+                      <span class="label">Sistema:</span>
+                      <span class="value">{{ analisisMetodosPago.pagomovil.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      <span class="badge-cantidad">{{ analisisMetodosPago.pagomovil.cantidad }} operaciones</span>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaPagomovil() !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaPagomovil())">
+                        Diferencia: {{ getDiferenciaPagomovilFormateada() }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
             </div>
 
             <!-- TAB ZELLE -->
             <div *ngIf="tabActivoCierre === 'zelle'">
-              <div class="metodo-simple-card">
-                <div class="card-icon">
-                  <i class="bi bi-globe2"></i>
-                </div>
-                <div class="card-content">
-                  <h4>Zelle</h4>
-                  <div class="campo-monto">
-                    <label>Monto Real Total ({{ simboloMonedaSistema }})</label>
-                    <div class="input-wrapper">
-                      <span class="input-icon">{{ simboloMonedaSistema }}</span>
-                      <input type="number" 
-                            class="form-control" 
-                            formControlName="zelleReal" 
-                            step="0.01" 
-                            min="0"
-                            placeholder="0.00"
-                            (focus)="onInputFocus($event)"
-                            (blur)="onInputBlur($event)">
-                      <button class="btn-auto" type="button" 
-                              (click)="autoCompletarZelle()"
-                              title="Auto completar con el monto del sistema">
-                        <i class="bi bi-magic"></i>
-                      </button>
+              <div class="bancos-grid-cierre" *ngIf="getDestinosMetodo('zelle').length; else zelleGeneral">
+                <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('zelle')">
+                  <div class="banco-header">
+                    <i class="bi bi-globe2"></i>
+                    <span>{{ destino.destinoLabel || destino.banco }}</span>
+                    <span class="badge-cantidad">{{ destino.cantidad }} ops</span>
+                  </div>
+                  <div class="banco-body">
+                    <div class="campo-monto">
+                      <label>Monto Real ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number"
+                              class="form-control"
+                              [formControlName]="getNombreControlMetodo('zelle', destino)"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button"
+                                (click)="autoCompletarMetodoPorDestino('zelle', destino)"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div class="info-sistema">
-                    <span class="label">Sistema:</span>
-                    <span class="value">{{ analisisMetodosPago.zelle.total | number:'1.2-2' }} USD</span>
-                  </div>
-                  <div class="diferencia-info" *ngIf="getDiferenciaZelle() !== 0">
-                    <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaZelle())">
-                      Diferencia: {{ getDiferenciaZelleFormateada() }}
-                    </span>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares:
+                        <strong class="text-success">
+                          Bs. {{ getMontoSistemaEnBolivar(getMontoRealMetodoPorDestino('zelle', destino)) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
+                    <div class="info-sistema">
+                      <span class="label">Sistema:</span>
+                      <span class="value">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      <span class="label ms-2" *ngIf="getTextoMontoOriginalBanco(destino)">Original:</span>
+                      <span class="value" *ngIf="getTextoMontoOriginalBanco(destino)">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('zelle', destino) !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('zelle', destino))">
+                        Diferencia: {{ getDiferenciaMetodoPorDestino('zelle', destino) | number:'1.2-2' }} {{ monedaSistema }}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              <ng-template #zelleGeneral>
+                <div class="metodo-simple-card">
+                  <div class="card-icon">
+                    <i class="bi bi-globe2"></i>
+                  </div>
+                  <div class="card-content">
+                    <h4>Zelle</h4>
+                    <div class="campo-monto">
+                      <label>Monto Real Total ({{ simboloMonedaSistema }})</label>
+                      <div class="input-wrapper">
+                        <span class="input-icon">{{ simboloMonedaSistema }}</span>
+                        <input type="number" 
+                              class="form-control" 
+                              formControlName="zelleReal" 
+                              step="0.01" 
+                              min="0"
+                              placeholder="0.00"
+                              (focus)="onInputFocus($event)"
+                              (blur)="onInputBlur($event)">
+                        <button class="btn-auto" type="button" 
+                                (click)="autoCompletarZelle()"
+                                title="Auto completar con el monto del sistema">
+                          <i class="bi bi-magic"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="info-sistema">
+                      <span class="label">Sistema:</span>
+                      <span class="value">{{ analisisMetodosPago.zelle.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                    </div>
+                    <div class="diferencia-info" *ngIf="getDiferenciaZelle() !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaZelle())">
+                        Diferencia: {{ getDiferenciaZelleFormateada() }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </ng-template>
             </div>
 
           </div>
@@ -1504,9 +1623,6 @@
               <strong>Importante</strong>
               <small>Una vez cerrada la caja, no se podrán modificar las transacciones de este día.
               Asegúrese de que todos los movimientos estén registrados correctamente.</small>
-              <small *ngIf="hayDiferencia" class="d-block mt-1 text-warning">
-                ⚠️ La caja presenta una diferencia. Debes justificarla en las notas de cierre.
-              </small>
             </div>
           </div>
 
@@ -1520,7 +1636,7 @@
                   class="btn-cerrar" 
                   [class.btn-cerrar-con-diferencia]="hayDiferencia"
                   [class.btn-cerrar-sin-diferencia]="!hayDiferencia"
-                  [disabled]="cierreForm.invalid || (comentarioRequerido && (!cierreForm.get('notasCierre')?.value?.trim() || cierreForm.get('notasCierre')?.value?.trim().length < 10))">
+              [disabled]="!puedeCerrarCaja()">
             <i class="bi" [class.bi-lock-fill]="!hayDiferencia" [class.bi-exclamation-triangle-fill]="hayDiferencia"></i>
             <span>{{ hayDiferencia ? 'Cerrar con Diferencia' : 'Cerrar Caja' }}</span>
           </button>
@@ -1634,6 +1750,8 @@
               <div class="input-group">
                 <span class="input-group-text bg-light border-0">{{ simboloMonedaSistema }}</span>
                 <input type="number" class="form-control" formControlName="monto" step="0.01" min="0.01"
+                  (focus)="onInputFocus($event)"
+                  (blur)="onInputBlur($event)"
                   placeholder="0.00">
               </div>
             </div>
