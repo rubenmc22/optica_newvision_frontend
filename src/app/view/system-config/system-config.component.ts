@@ -6,6 +6,13 @@ import {
   NotificationEmailChannel,
   NotificationEmailSettings,
   NotificationEmailUpsertRequest,
+  PaymentMethodAccount,
+  PaymentMethodBank,
+  PaymentMethodBankScope,
+  PaymentMethodConfig,
+  PaymentMethodCurrency,
+  PaymentMethodsSettings,
+  PaymentMethodsUpsertRequest,
   SystemConfig
 } from './system-config.interface';
 import { SwalService } from '../../core/services/swal/swal.service';
@@ -33,11 +40,32 @@ export class SystemConfigComponent implements OnInit {
   isLoading = false;
   isNotificationsLoading = false;
   isSavingNotifications = false;
+  isPaymentMethodsLoading = false;
+  isSavingPaymentMethods = false;
   activeTab: 'moneda' | 'general' | 'avanzada' = 'moneda';
   correosConfig: NotificationEmailSettings | null = null;
   tieneCorreosPersistidos = false;
+  metodosPagoConfig: PaymentMethodsSettings | null = null;
+  metodosPagoDraft: PaymentMethodsSettings | null = null;
+  tieneMetodosPagoPersistidos = false;
+  metodoPagoExpandido: string | null = null;
   tasasActuales = { usd: 0, eur: 0 };
   notificationForm!: FormGroup;
+  seccionesGeneralesExpandidas = {
+    correos: false,
+    metodosPago: false
+  };
+  nuevoMetodoPago = {
+    label: '',
+    description: '',
+    currency: 'VES' as PaymentMethodCurrency,
+    requiresReceiverAccount: false
+  };
+  nuevoBancoCatalogo = {
+    code: '',
+    name: '',
+    scope: 'national' as PaymentMethodBankScope
+  };
   
   monedas = [
     { codigo: 'USD', nombre: 'Dólar Americano', simbolo: '$' },
@@ -78,6 +106,7 @@ export class SystemConfigComponent implements OnInit {
     // Cargar configuración desde el backend al iniciar
     this.configService.obtenerConfigDesdeBackend();
     this.cargarCorreosNotificacion();
+    this.cargarMetodosPagoConfigurables();
 
     this.notificationForm.get('habilitado')?.valueChanges.subscribe(habilitado => {
       this.configurarValidadoresNotificaciones(!!habilitado);
@@ -90,6 +119,14 @@ export class SystemConfigComponent implements OnInit {
     }
 
     this.activeTab = tab;
+  }
+
+  alternarSeccionGeneral(seccion: 'correos' | 'metodosPago'): void {
+    this.seccionesGeneralesExpandidas[seccion] = !this.seccionesGeneralesExpandidas[seccion];
+  }
+
+  estaSeccionGeneralExpandida(seccion: 'correos' | 'metodosPago'): boolean {
+    return this.seccionesGeneralesExpandidas[seccion];
   }
 
   cargarCorreosNotificacion(): void {
@@ -202,6 +239,367 @@ export class SystemConfigComponent implements OnInit {
     return this.tieneCorreosPersistidos ? 'Actualizar correos' : 'Guardar correos';
   }
 
+  cargarMetodosPagoConfigurables(): void {
+    this.isPaymentMethodsLoading = true;
+    this.tieneMetodosPagoPersistidos = this.configService.tieneMetodosPagoPersistidos();
+
+    this.configService.obtenerMetodosPagoConfigurables().subscribe({
+      next: ({ paymentMethods }) => {
+        this.metodosPagoConfig = this.clonarMetodosPago(paymentMethods);
+        this.metodosPagoDraft = this.clonarMetodosPago(paymentMethods);
+        this.asegurarMetodoPagoExpandido();
+        this.isPaymentMethodsLoading = false;
+      },
+      error: (error) => {
+        console.error('Error cargando métodos de pago:', error);
+        this.isPaymentMethodsLoading = false;
+        this.swalService.showWarning(
+          'Métodos no disponibles',
+          'No se pudo cargar la configuración de métodos de pago en este momento.'
+        );
+      }
+    });
+  }
+
+  guardarMetodosPagoConfigurables(): void {
+    if (!this.esConfiguracionMetodosPagoValida()) {
+      this.swalService.showWarning(
+        'Configuración incompleta',
+        'Revisa los métodos habilitados y completa las cuentas receptoras obligatorias antes de guardar.'
+      );
+      return;
+    }
+
+    const payload = this.construirPayloadMetodosPago();
+    const request$ = this.tieneMetodosPagoPersistidos
+      ? this.configService.actualizarMetodosPagoConfigurables(payload)
+      : this.configService.guardarMetodosPagoConfigurables(payload);
+
+    this.isSavingPaymentMethods = true;
+
+    request$.subscribe({
+      next: ({ paymentMethods }) => {
+        this.isSavingPaymentMethods = false;
+        this.tieneMetodosPagoPersistidos = true;
+        this.metodosPagoConfig = this.clonarMetodosPago(paymentMethods);
+        this.metodosPagoDraft = this.clonarMetodosPago(paymentMethods);
+        this.asegurarMetodoPagoExpandido();
+
+        this.swalService.showSuccess(
+          'Métodos actualizados',
+          'La configuración de métodos de pago quedó lista y centralizada desde este panel.'
+        );
+      },
+      error: (error) => {
+        console.error('Error guardando métodos de pago:', error);
+        this.isSavingPaymentMethods = false;
+        this.swalService.showError(
+          'No se pudo guardar',
+          'Ocurrió un problema al intentar guardar la configuración de métodos de pago.'
+        );
+      }
+    });
+  }
+
+  descartarCambiosMetodosPago(): void {
+    if (!this.metodosPagoConfig) {
+      return;
+    }
+
+    this.metodosPagoDraft = this.clonarMetodosPago(this.metodosPagoConfig);
+    this.asegurarMetodoPagoExpandido();
+  }
+
+  alternarExpansionMetodo(metodoKey: string): void {
+    this.metodoPagoExpandido = this.metodoPagoExpandido === metodoKey ? null : metodoKey;
+  }
+
+  alternarDisponibilidadMetodo(metodo: PaymentMethodConfig, habilitado: boolean): void {
+    metodo.enabled = !!habilitado;
+
+    if (metodo.enabled && metodo.requiresReceiverAccount && metodo.accounts.length === 0) {
+      metodo.accounts.push(this.crearCuentaReceptoraVacia());
+      this.metodoPagoExpandido = metodo.key;
+    }
+  }
+
+  agregarCuentaReceptora(metodoKey: string): void {
+    const metodo = this.obtenerMetodoPagoDraft(metodoKey);
+    if (!metodo) {
+      return;
+    }
+
+    metodo.accounts.push(this.crearCuentaReceptoraVacia());
+    this.metodoPagoExpandido = metodoKey;
+  }
+
+  eliminarCuentaReceptora(metodoKey: string, cuentaId: string): void {
+    const metodo = this.obtenerMetodoPagoDraft(metodoKey);
+    if (!metodo) {
+      return;
+    }
+
+    metodo.accounts = metodo.accounts.filter(cuenta => cuenta.id !== cuentaId);
+  }
+
+  actualizarBancoCuenta(metodoKey: string, cuentaId: string, bankCode: string): void {
+    const metodo = this.obtenerMetodoPagoDraft(metodoKey);
+    const banco = this.getBancosConfigurables(metodo).find(item => item.code === bankCode);
+    const cuenta = metodo?.accounts.find(item => item.id === cuentaId);
+
+    if (!cuenta) {
+      return;
+    }
+
+    if (!banco) {
+      cuenta.bankCode = '';
+      cuenta.bank = '';
+      return;
+    }
+
+    cuenta.bankCode = banco.code;
+    cuenta.bank = banco.name;
+  }
+
+  agregarNuevoMetodoPago(): void {
+    if (!this.metodosPagoDraft) {
+      return;
+    }
+
+    const label = this.nuevoMetodoPago.label.trim();
+    const description = this.nuevoMetodoPago.description.trim();
+
+    if (!label || !description) {
+      this.swalService.showWarning(
+        'Datos incompletos',
+        'Debes indicar el nombre visible y la descripción del nuevo método antes de agregarlo.'
+      );
+      return;
+    }
+
+    const key = this.generarClaveMetodo(label);
+    const nuevoMetodo: PaymentMethodConfig = {
+      key,
+      label,
+      description,
+      enabled: false,
+      currency: this.nuevoMetodoPago.currency,
+      requiresReceiverAccount: this.nuevoMetodoPago.requiresReceiverAccount,
+      isCustom: true,
+      accounts: this.nuevoMetodoPago.requiresReceiverAccount ? [this.crearCuentaReceptoraVacia()] : []
+    };
+
+    this.metodosPagoDraft.methods = [...this.metodosPagoDraft.methods, nuevoMetodo];
+    this.metodoPagoExpandido = key;
+    this.nuevoMetodoPago = {
+      label: '',
+      description: '',
+      currency: 'VES',
+      requiresReceiverAccount: false
+    };
+  }
+
+  eliminarMetodoPersonalizado(metodoKey: string): void {
+    if (!this.metodosPagoDraft) {
+      return;
+    }
+
+    this.metodosPagoDraft.methods = this.metodosPagoDraft.methods.filter(metodo => metodo.key !== metodoKey);
+    this.asegurarMetodoPagoExpandido();
+  }
+
+  agregarBancoCatalogo(): void {
+    if (!this.metodosPagoDraft) {
+      return;
+    }
+
+    const code = this.nuevoBancoCatalogo.code.trim().toUpperCase();
+    const name = this.nuevoBancoCatalogo.name.trim();
+
+    if (!code || !name) {
+      this.swalService.showWarning(
+        'Datos incompletos',
+        'Debes indicar el código y el nombre del banco antes de agregarlo al catálogo.'
+      );
+      return;
+    }
+
+    const duplicado = this.metodosPagoDraft.bankCatalog.some(banco => banco.code === code);
+    if (duplicado) {
+      this.swalService.showWarning(
+        'Banco duplicado',
+        'Ya existe un banco registrado con ese código en el catálogo.'
+      );
+      return;
+    }
+
+    this.metodosPagoDraft.bankCatalog = [
+      ...this.metodosPagoDraft.bankCatalog,
+      {
+        code,
+        name,
+        scope: this.nuevoBancoCatalogo.scope
+      }
+    ].sort((actual, siguiente) => actual.name.localeCompare(siguiente.name));
+
+    this.nuevoBancoCatalogo = {
+      code: '',
+      name: '',
+      scope: 'national'
+    };
+  }
+
+  eliminarBancoCatalogo(code: string): void {
+    if (!this.metodosPagoDraft) {
+      return;
+    }
+
+    if (this.bancoEstaEnUso(code)) {
+      this.swalService.showWarning(
+        'Banco en uso',
+        'No puedes eliminar un banco que ya está asociado a una cuenta receptora activa.'
+      );
+      return;
+    }
+
+    this.metodosPagoDraft.bankCatalog = this.metodosPagoDraft.bankCatalog.filter(banco => banco.code !== code);
+  }
+
+  getBancosConfigurables(metodo?: PaymentMethodConfig): PaymentMethodBank[] {
+    if (!this.metodosPagoDraft) {
+      return [];
+    }
+
+    if (!metodo) {
+      return this.metodosPagoDraft.bankCatalog;
+    }
+
+    if (this.esMetodoBinance(metodo)) {
+      return [];
+    }
+
+    return this.usaBancosInternacionales(metodo)
+      ? this.getBancosPorAlcance('international')
+      : this.getBancosPorAlcance('national');
+  }
+
+  getBancosPorAlcance(scope: PaymentMethodBankScope): PaymentMethodBank[] {
+    return (this.metodosPagoDraft?.bankCatalog || []).filter(banco => banco.scope === scope);
+  }
+
+  getCantidadBancosPorAlcance(scope: PaymentMethodBankScope): number {
+    return this.getBancosPorAlcance(scope).length;
+  }
+
+  bancoEstaEnUso(code: string): boolean {
+    return !!this.metodosPagoDraft?.methods.some(metodo => metodo.accounts.some(cuenta => cuenta.bankCode === code));
+  }
+
+  getCantidadMetodosActivos(): number {
+    return this.metodosPagoDraft?.methods.filter(metodo => metodo.enabled).length || 0;
+  }
+
+  getCantidadMetodosConCuentas(): number {
+    return this.metodosPagoDraft?.methods.filter(metodo => metodo.requiresReceiverAccount).length || 0;
+  }
+
+  getCantidadCuentasConfiguradas(): number {
+    return this.metodosPagoDraft?.methods.reduce((total, metodo) => total + metodo.accounts.length, 0) || 0;
+  }
+
+  getTextoBotonMetodosPago(): string {
+    return this.tieneMetodosPagoPersistidos ? 'Actualizar métodos' : 'Guardar métodos';
+  }
+
+  getResumenMetodoPago(metodo: PaymentMethodConfig): string {
+    if (!metodo.requiresReceiverAccount) {
+      return 'No requiere cuentas receptoras.';
+    }
+
+    if (!metodo.accounts.length) {
+      return 'Sin cuentas receptoras configuradas.';
+    }
+
+    const cuentaTexto = metodo.accounts.length === 1 ? 'cuenta receptora' : 'cuentas receptoras';
+    return `${metodo.accounts.length} ${cuentaTexto} configuradas.`;
+  }
+
+  formatearMonedaMetodo(moneda: PaymentMethodCurrency): string {
+    switch (moneda) {
+      case 'EUR':
+        return 'Opera en EUR';
+      case 'USD':
+        return 'Opera en USD';
+      case 'CRYPTO':
+        return 'Opera en Cripto';
+      case 'USDT':
+        return 'Opera en USDT';
+      case 'BTC':
+        return 'Opera en BTC';
+      case 'ETH':
+        return 'Opera en ETH';
+      case 'MULTI':
+        return 'VES, USD y EUR';
+      default:
+        return 'Opera en VES';
+    }
+  }
+
+  requiereEmailCuenta(metodo: PaymentMethodConfig): boolean {
+    return metodo.key === 'zelle';
+  }
+
+  requiereBancoCuenta(metodo: PaymentMethodConfig): boolean {
+    return !this.esMetodoBinance(metodo);
+  }
+
+  usaBancosInternacionales(metodo: PaymentMethodConfig): boolean {
+    return metodo.currency === 'USD' || metodo.currency === 'EUR';
+  }
+
+  requiereTitularCuenta(metodo: PaymentMethodConfig): boolean {
+    return !this.esMetodoPuntoVenta(metodo);
+  }
+
+  requiereDocumentoCuenta(metodo: PaymentMethodConfig): boolean {
+    return !this.esMetodoPuntoVenta(metodo) && !this.esMetodoBinance(metodo);
+  }
+
+  requiereTelefonoCuenta(metodo: PaymentMethodConfig): boolean {
+    return !this.esMetodoPuntoVenta(metodo) && !this.esMetodoBinance(metodo);
+  }
+
+  requiereWalletCuenta(metodo: PaymentMethodConfig): boolean {
+    return this.esMetodoBinance(metodo);
+  }
+
+  getOpcionesMonedaOperativa(): PaymentMethodCurrency[] {
+    return ['VES', 'USD', 'EUR', 'MULTI', 'CRYPTO', 'USDT', 'BTC', 'ETH'];
+  }
+
+  metodoPagoTieneErrores(metodo: PaymentMethodConfig): boolean {
+    return !this.metodoPagoEsValido(metodo);
+  }
+
+  puedeGuardarMetodosPago(): boolean {
+    return !!this.metodosPagoDraft &&
+      this.esConfiguracionMetodosPagoValida() &&
+      this.hayCambiosMetodosPago() &&
+      !this.isSavingPaymentMethods;
+  }
+
+  puedeDescartarCambiosMetodosPago(): boolean {
+    return this.hayCambiosMetodosPago() && !this.isSavingPaymentMethods;
+  }
+
+  trackByMetodo(_: number, metodo: PaymentMethodConfig): string {
+    return metodo.key;
+  }
+
+  trackByCuenta(_: number, cuenta: PaymentMethodAccount): string {
+    return cuenta.id;
+  }
+
   puedeGuardarCorreos(): boolean {
     return this.notificationForm.valid && this.notificationForm.dirty && !this.isSavingNotifications;
   }
@@ -220,6 +618,166 @@ export class SystemConfigComponent implements OnInit {
     this.configurarValidadoresNotificaciones(correos.habilitado);
     this.notificationForm.markAsPristine();
     this.notificationForm.markAsUntouched();
+  }
+
+  private obtenerMetodoPagoDraft(metodoKey: string): PaymentMethodConfig | undefined {
+    return this.metodosPagoDraft?.methods.find(metodo => metodo.key === metodoKey);
+  }
+
+  private crearCuentaReceptoraVacia(): PaymentMethodAccount {
+    return {
+      id: this.generarIdLocal('account'),
+      bank: '',
+      bankCode: '',
+      ownerName: '',
+      ownerId: '',
+      phone: '',
+      email: '',
+      walletAddress: '',
+      accountDescription: ''
+    };
+  }
+
+  private esMetodoPuntoVenta(metodo: PaymentMethodConfig): boolean {
+    return metodo.key === 'punto_de_venta';
+  }
+
+  private esMetodoBinance(metodo: PaymentMethodConfig): boolean {
+    return metodo.key === 'binance';
+  }
+
+  private construirPayloadMetodosPago(): PaymentMethodsUpsertRequest {
+    return {
+      bankCatalog: this.clonarMetodosPago(this.metodosPagoDraft?.bankCatalog || []),
+      methods: this.clonarMetodosPago(this.metodosPagoDraft?.methods || [])
+    };
+  }
+
+  private clonarMetodosPago<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value)) as T;
+  }
+
+  private asegurarMetodoPagoExpandido(): void {
+    if (!this.metodosPagoDraft?.methods.length) {
+      this.metodoPagoExpandido = null;
+      return;
+    }
+
+    const metodoExiste = this.metodosPagoDraft.methods.some(metodo => metodo.key === this.metodoPagoExpandido);
+    if (metodoExiste) {
+      return;
+    }
+
+    const metodoPrioritario = this.metodosPagoDraft.methods.find(metodo => metodo.requiresReceiverAccount) || this.metodosPagoDraft.methods[0];
+    this.metodoPagoExpandido = metodoPrioritario?.key || null;
+  }
+
+  private esConfiguracionMetodosPagoValida(): boolean {
+    return !!this.metodosPagoDraft?.methods.every(metodo => this.metodoPagoEsValido(metodo));
+  }
+
+  private metodoPagoEsValido(metodo: PaymentMethodConfig): boolean {
+    const tieneBaseValida = !!metodo.label.trim() && !!metodo.description.trim();
+    if (!tieneBaseValida) {
+      return false;
+    }
+
+    if (!metodo.enabled || !metodo.requiresReceiverAccount) {
+      return true;
+    }
+
+    return metodo.accounts.length > 0 && metodo.accounts.every(cuenta => this.cuentaReceptoraEsValida(metodo, cuenta));
+  }
+
+  private cuentaReceptoraEsValida(metodo: PaymentMethodConfig, cuenta: PaymentMethodAccount): boolean {
+    if (this.esMetodoPuntoVenta(metodo)) {
+      return !!cuenta.bank.trim() && !!cuenta.bankCode.trim() && !!cuenta.accountDescription.trim();
+    }
+
+    if (this.esMetodoBinance(metodo)) {
+      return !!cuenta.ownerName.trim() && !!cuenta.walletAddress?.trim() && !!cuenta.accountDescription.trim();
+    }
+
+    const tieneBase = !!cuenta.bank.trim() &&
+      !!cuenta.bankCode.trim() &&
+      !!cuenta.ownerName.trim() &&
+      !!cuenta.ownerId.trim() &&
+      !!cuenta.phone.trim() &&
+      !!cuenta.accountDescription.trim();
+
+    if (!tieneBase) {
+      return false;
+    }
+
+    if (!this.requiereEmailCuenta(metodo)) {
+      return true;
+    }
+
+    return !!cuenta.email?.trim();
+  }
+
+  private hayCambiosMetodosPago(): boolean {
+    if (!this.metodosPagoConfig || !this.metodosPagoDraft) {
+      return false;
+    }
+
+    return !this.sonIgualesMetodosPago(this.metodosPagoConfig, this.metodosPagoDraft);
+  }
+
+  private sonIgualesMetodosPago(actual: PaymentMethodsSettings, draft: PaymentMethodsSettings): boolean {
+    return JSON.stringify(this.normalizarSnapshotMetodosPago(actual)) === JSON.stringify(this.normalizarSnapshotMetodosPago(draft));
+  }
+
+  private normalizarSnapshotMetodosPago(settings: PaymentMethodsSettings): unknown {
+    return {
+      bankCatalog: settings.bankCatalog.map(banco => ({
+        code: banco.code.trim(),
+        name: banco.name.trim(),
+        scope: banco.scope
+      })),
+      methods: settings.methods.map(metodo => ({
+        key: metodo.key,
+        label: metodo.label.trim(),
+        description: metodo.description.trim(),
+        enabled: !!metodo.enabled,
+        currency: metodo.currency,
+        requiresReceiverAccount: !!metodo.requiresReceiverAccount,
+        isCustom: !!metodo.isCustom,
+        accounts: metodo.accounts.map(cuenta => ({
+          bank: cuenta.bank.trim(),
+          bankCode: cuenta.bankCode.trim(),
+          ownerName: cuenta.ownerName.trim(),
+          ownerId: cuenta.ownerId.trim(),
+          phone: cuenta.phone.trim(),
+          email: cuenta.email?.trim().toLowerCase() || '',
+          walletAddress: cuenta.walletAddress?.trim() || '',
+          accountDescription: cuenta.accountDescription.trim()
+        }))
+      }))
+    };
+  }
+
+  private generarClaveMetodo(label: string): string {
+    const base = label
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'metodo_personalizado';
+
+    let key = base;
+    let indice = 2;
+
+    while (this.metodosPagoDraft?.methods.some(metodo => metodo.key === key)) {
+      key = `${base}_${indice}`;
+      indice += 1;
+    }
+
+    return key;
+  }
+
+  private generarIdLocal(prefix: string): string {
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   }
 
   private configurarValidadoresNotificaciones(habilitado: boolean): void {

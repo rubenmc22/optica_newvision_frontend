@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { SystemConfigComponent } from './system-config.component';
 import { SystemConfigService } from './system-config.service';
@@ -28,6 +28,7 @@ describe('SystemConfigComponent', () => {
     cambiarMonedaPrincipal: () => of({ message: 'ok', moneda_base: 'dolar' }),
     resetConfig: jasmine.createSpy('resetConfig'),
     tieneCorreosNotificacionPersistidos: () => true,
+    tieneMetodosPagoPersistidos: () => true,
     obtenerCorreosNotificacion: () => of({
       message: 'ok',
       correos: {
@@ -36,6 +37,40 @@ describe('SystemConfigComponent', () => {
         correoSecundario: 'respaldo.notificaciones@opticanewvision.com',
         correoSeleccionado: 'principal',
         ultimaActualizacion: '2026-04-11T10:00:00.000Z'
+      }
+    }),
+    obtenerMetodosPagoConfigurables: () => of({
+      message: 'ok',
+      paymentMethods: {
+        ultimaActualizacion: '2026-04-11T10:00:00.000Z',
+        bankCatalog: [
+          { code: '0102', name: 'Banco de Venezuela', scope: 'national' },
+          { code: '0134', name: 'Banesco', scope: 'national' },
+          { code: 'BOFAUS3N', name: 'Bank of America (BOFA)', scope: 'international' }
+        ],
+        methods: [
+          {
+            key: 'pago_movil',
+            label: 'Pago Móvil',
+            description: 'Pago móvil interbancario',
+            enabled: true,
+            currency: 'VES',
+            requiresReceiverAccount: true,
+            isCustom: false,
+            accounts: [
+              {
+                id: 'pm-1',
+                bank: 'Banco de Venezuela',
+                bankCode: '0102',
+                ownerName: 'Ruben Perez',
+                ownerId: 'V-12345678',
+                phone: '04121234567',
+                email: '',
+                accountDescription: 'Cuenta personal principal'
+              }
+            ]
+          }
+        ]
       }
     }),
     guardarCorreosNotificacion: () => of({
@@ -48,6 +83,16 @@ describe('SystemConfigComponent', () => {
         ultimaActualizacion: '2026-04-11T10:00:00.000Z'
       }
     }),
+    guardarMetodosPagoConfigurables: () => of({
+      message: 'ok',
+      paymentMethods: {
+        ultimaActualizacion: '2026-04-11T10:00:00.000Z',
+        bankCatalog: [
+          { code: '0102', name: 'Banco de Venezuela', scope: 'national' }
+        ],
+        methods: []
+      }
+    }),
     actualizarCorreosNotificacion: () => of({
       message: 'ok',
       correos: {
@@ -58,6 +103,16 @@ describe('SystemConfigComponent', () => {
         ultimaActualizacion: '2026-04-11T10:00:00.000Z'
       }
     }),
+    actualizarMetodosPagoConfigurables: () => of({
+      message: 'ok',
+      paymentMethods: {
+        ultimaActualizacion: '2026-04-11T10:00:00.000Z',
+        bankCatalog: [
+          { code: '0102', name: 'Banco de Venezuela', scope: 'national' }
+        ],
+        methods: []
+      }
+    })
   };
 
   const swalServiceMock = {
@@ -70,7 +125,7 @@ describe('SystemConfigComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [SystemConfigComponent],
-      imports: [ReactiveFormsModule],
+      imports: [FormsModule, ReactiveFormsModule],
       providers: [
         { provide: SystemConfigService, useValue: configServiceMock },
         { provide: SwalService, useValue: swalServiceMock }

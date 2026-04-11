@@ -55,3 +55,56 @@ export interface NotificationEmailUpsertResponse {
   message: string;
   correos: NotificationEmailSettings;
 }
+
+export type PaymentMethodCurrency = 'VES' | 'USD' | 'EUR' | 'CRYPTO' | 'USDT' | 'BTC' | 'ETH' | 'MULTI';
+export type PaymentMethodBankScope = 'national' | 'international';
+
+export interface PaymentMethodBank {
+  code: string;
+  name: string;
+  scope: PaymentMethodBankScope;
+}
+
+export interface PaymentMethodAccount {
+  id: string;
+  bank: string;
+  bankCode: string;
+  ownerName: string;
+  ownerId: string;
+  phone: string;
+  email?: string;
+  walletAddress?: string;
+  accountDescription: string;
+}
+
+export interface PaymentMethodConfig {
+  key: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  currency: PaymentMethodCurrency;
+  requiresReceiverAccount: boolean;
+  isCustom: boolean;
+  accounts: PaymentMethodAccount[];
+}
+
+export interface PaymentMethodsSettings {
+  bankCatalog: PaymentMethodBank[];
+  methods: PaymentMethodConfig[];
+  ultimaActualizacion: string;
+}
+
+export interface PaymentMethodsUpsertRequest {
+  bankCatalog: PaymentMethodBank[];
+  methods: PaymentMethodConfig[];
+}
+
+export interface PaymentMethodsGetResponse {
+  message: string;
+  paymentMethods: PaymentMethodsSettings;
+}
+
+export interface PaymentMethodsUpsertResponse {
+  message: string;
+  paymentMethods: PaymentMethodsSettings;
+}

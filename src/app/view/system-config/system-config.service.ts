@@ -8,6 +8,13 @@ import {
   NotificationEmailSettings,
   NotificationEmailUpsertRequest,
   NotificationEmailUpsertResponse,
+  PaymentMethodAccount,
+  PaymentMethodBank,
+  PaymentMethodConfig,
+  PaymentMethodsGetResponse,
+  PaymentMethodsSettings,
+  PaymentMethodsUpsertRequest,
+  PaymentMethodsUpsertResponse,
   SystemConfig
 } from './system-config.interface';
 import { environment } from '../../../environments/environment';
@@ -22,6 +29,7 @@ import { TasaCambiariaService } from './../../core/services/tasaCambiaria/tasaCa
 export class SystemConfigService {
   private readonly CONFIG_KEY = 'opticlass_system_config';
   private readonly NOTIFICATION_EMAILS_KEY = 'opticlass_notification_emails';
+  private readonly PAYMENT_METHODS_KEY = 'opticlass_payment_methods_settings';
 
   // Configuración por defecto
   private defaultConfig: SystemConfig = {
@@ -36,6 +44,186 @@ export class SystemConfigService {
     correoPrincipal: 'notificaciones@opticanewvision.com',
     correoSecundario: 'respaldo.notificaciones@opticanewvision.com',
     correoSeleccionado: 'principal',
+    ultimaActualizacion: new Date().toISOString()
+  };
+
+  private readonly defaultPaymentMethodBanks: PaymentMethodBank[] = [
+    { code: '0102', name: 'Banco de Venezuela', scope: 'national' },
+    { code: '0104', name: 'Venezolano de Crédito', scope: 'national' },
+    { code: '0105', name: 'Mercantil', scope: 'national' },
+    { code: '0108', name: 'Banco Provincial', scope: 'national' },
+    { code: '0114', name: 'Bancaribe', scope: 'national' },
+    { code: '0115', name: 'BOD', scope: 'national' },
+    { code: '0116', name: 'Banco Plaza', scope: 'national' },
+    { code: '0118', name: 'Banco del Sur', scope: 'national' },
+    { code: '0121', name: 'Bancamiga', scope: 'national' },
+    { code: '0128', name: 'Banco Caribe', scope: 'national' },
+    { code: '0134', name: 'Banesco', scope: 'national' },
+    { code: '0151', name: '100% Banco', scope: 'national' },
+    { code: '0156', name: 'Banco del Tesoro', scope: 'national' },
+    { code: '0157', name: 'Banco Bicentenario', scope: 'national' },
+    { code: '0163', name: 'Banco Fondo Común', scope: 'national' },
+    { code: '0166', name: 'Banco Agrícola de Venezuela', scope: 'national' },
+    { code: '0168', name: 'Bancrecer', scope: 'national' },
+    { code: '0169', name: 'Mi Banco', scope: 'national' },
+    { code: '0171', name: 'Banco Activo', scope: 'national' },
+    { code: '0172', name: 'Bancamiga', scope: 'national' },
+    { code: '0173', name: 'Banco Internacional de Desarrollo', scope: 'national' },
+    { code: '0174', name: 'Banco Plaza', scope: 'national' },
+    { code: '0175', name: 'Banco de la Fuerza Armada Nacional Bolivariana', scope: 'national' },
+    { code: '0177', name: 'Banco del Tesoro', scope: 'national' },
+    { code: '0191', name: 'Banco Nacional de Crédito', scope: 'national' },
+    { code: 'BOFAUS3N', name: 'Bank of America (BOFA)', scope: 'international' },
+    { code: 'CHASUS33', name: 'JPMorgan Chase Bank', scope: 'international' },
+    { code: 'CITIUS33', name: 'Citibank N.A.', scope: 'international' },
+    { code: 'WFBIUS6S', name: 'Wells Fargo Bank', scope: 'international' },
+    { code: 'USBKUS44', name: 'U.S. Bank', scope: 'international' },
+    { code: 'PNCCUS33', name: 'PNC Bank', scope: 'international' }
+  ];
+
+  private readonly defaultPaymentMethodsSettings: PaymentMethodsSettings = {
+    bankCatalog: this.defaultPaymentMethodBanks,
+    methods: [
+      {
+        key: 'efectivo',
+        label: 'Efectivo',
+        description: 'Pago inmediato en caja para operaciones presenciales.',
+        enabled: true,
+        currency: 'MULTI',
+        requiresReceiverAccount: false,
+        isCustom: false,
+        accounts: []
+      },
+      {
+        key: 'punto_de_venta',
+        label: 'Punto de Venta',
+        description: 'Cobro con tarjetas procesadas a través de puntos de venta físicos internos.',
+        enabled: true,
+        currency: 'VES',
+        requiresReceiverAccount: true,
+        isCustom: false,
+        accounts: [
+          {
+            id: 'punto-1',
+            bank: 'Bancamiga',
+            bankCode: '0172',
+            ownerName: '',
+            ownerId: '',
+            phone: '',
+            accountDescription: 'Punto de venta interno - Óptica Principal'
+          },
+          {
+            id: 'punto-2',
+            bank: 'Banco Nacional de Crédito',
+            bankCode: '0191',
+            ownerName: '',
+            ownerId: '',
+            phone: '',
+            accountDescription: 'Punto de venta interno - Óptica Sucursal'
+          }
+        ]
+      },
+      {
+        key: 'pago_movil',
+        label: 'Pago Móvil',
+        description: 'Pago móvil interbancario con selección de banco receptor.',
+        enabled: true,
+        currency: 'VES',
+        requiresReceiverAccount: true,
+        isCustom: false,
+        accounts: [
+          {
+            id: 'pm-1',
+            bank: 'Banco Provincial',
+            bankCode: '0108',
+            ownerName: 'Ruben Martinez',
+            ownerId: '24367965',
+            phone: '04123920817',
+            accountDescription: 'Cuenta personal de Ruben'
+          },
+          {
+            id: 'pm-2',
+            bank: 'Banco de Venezuela',
+            bankCode: '0102',
+            ownerName: 'Jesus Castro',
+            ownerId: '25874563',
+            phone: '04241456878',
+            accountDescription: 'Cuenta personal de Jesus'
+          }
+        ]
+      },
+      {
+        key: 'transferencia',
+        label: 'Transferencia',
+        description: 'Transferencia bancaria tradicional a cuentas receptoras autorizadas.',
+        enabled: true,
+        currency: 'VES',
+        requiresReceiverAccount: true,
+        isCustom: false,
+        accounts: [
+          {
+            id: 'trf-1',
+            bank: 'Banco de Venezuela',
+            bankCode: '0102',
+            ownerName: 'Ruben Perez',
+            ownerId: 'V-12345678',
+            phone: '04121234567',
+            accountDescription: 'Cuenta personal de Ruben'
+          },
+          {
+            id: 'trf-2',
+            bank: 'Banesco',
+            bankCode: '0134',
+            ownerName: 'Ender Rodriguez',
+            ownerId: 'V-23456789',
+            phone: '04169876543',
+            accountDescription: 'Cuenta Ender'
+          }
+        ]
+      },
+      {
+        key: 'zelle',
+        label: 'Zelle',
+        description: 'Transferencia electrónica en USD con destino operativo definido.',
+        enabled: true,
+        currency: 'USD',
+        requiresReceiverAccount: true,
+        isCustom: false,
+        accounts: [
+          {
+            id: 'zelle-1',
+            bank: 'Bank of America (BOFA)',
+            bankCode: 'BOFAUS3N',
+            ownerName: 'Ruben Perez',
+            ownerId: 'V-12345678',
+            phone: '+15875551234',
+            email: 'ruben.perez@email.com',
+            accountDescription: 'Cuenta personal de Ruben (Zelle)'
+          }
+        ]
+      },
+      {
+        key: 'binance',
+        label: 'Binance',
+        description: 'Recepción de pagos digitales con wallet operativa y titular configurado.',
+        enabled: false,
+        currency: 'USDT',
+        requiresReceiverAccount: true,
+        isCustom: false,
+        accounts: [
+          {
+            id: 'binance-1',
+            bank: '',
+            bankCode: '',
+            ownerName: 'Ruben Martinez',
+            ownerId: '',
+            phone: '',
+            walletAddress: 'TRX-TN8J8A2EXAMPLEWALLET001',
+            accountDescription: 'Wallet principal para cobros por Binance Pay'
+          }
+        ]
+      }
+    ],
     ultimaActualizacion: new Date().toISOString()
   };
 
@@ -63,6 +251,13 @@ export class SystemConfigService {
    */
   tieneCorreosNotificacionPersistidos(): boolean {
     return !!localStorage.getItem(this.NOTIFICATION_EMAILS_KEY);
+  }
+
+  /**
+   * Indica si la configuración de métodos de pago ya fue persistida localmente
+   */
+  tieneMetodosPagoPersistidos(): boolean {
+    return !!localStorage.getItem(this.PAYMENT_METHODS_KEY);
   }
 
   /**
@@ -109,6 +304,16 @@ export class SystemConfigService {
   }
 
   /**
+   * Obtiene los métodos de pago configurables persistidos localmente
+   */
+  obtenerMetodosPagoConfigurables(): Observable<PaymentMethodsGetResponse> {
+    return of({
+      message: 'ok',
+      paymentMethods: this.getPaymentMethodsSettings()
+    }).pipe(delay(280));
+  }
+
+  /**
    * Guarda la configuración inicial de correos de notificación
    */
   guardarCorreosNotificacion(payload: NotificationEmailUpsertRequest): Observable<NotificationEmailUpsertResponse> {
@@ -125,6 +330,26 @@ export class SystemConfigService {
     return this.persistNotificationEmails(
       payload,
       'Los correos de notificación fueron actualizados correctamente.'
+    );
+  }
+
+  /**
+   * Guarda la configuración inicial de métodos de pago
+   */
+  guardarMetodosPagoConfigurables(payload: PaymentMethodsUpsertRequest): Observable<PaymentMethodsUpsertResponse> {
+    return this.persistPaymentMethods(
+      payload,
+      'La configuración de métodos de pago fue guardada correctamente.'
+    );
+  }
+
+  /**
+   * Actualiza la configuración existente de métodos de pago
+   */
+  actualizarMetodosPagoConfigurables(payload: PaymentMethodsUpsertRequest): Observable<PaymentMethodsUpsertResponse> {
+    return this.persistPaymentMethods(
+      payload,
+      'La configuración de métodos de pago fue actualizada correctamente.'
     );
   }
 
@@ -147,6 +372,194 @@ export class SystemConfigService {
       message,
       correos: config
     }).pipe(delay(350));
+  }
+
+  /**
+   * Obtiene la configuración local de métodos de pago
+   */
+  private getPaymentMethodsSettings(): PaymentMethodsSettings {
+    const saved = localStorage.getItem(this.PAYMENT_METHODS_KEY);
+    if (!saved) {
+      return this.clonePaymentMethodsSettings(this.defaultPaymentMethodsSettings);
+    }
+
+    try {
+      return this.normalizePaymentMethodsSettings(JSON.parse(saved) as PaymentMethodsSettings);
+    } catch (error) {
+      console.warn('No se pudo leer la configuración local de métodos de pago:', error);
+      return this.clonePaymentMethodsSettings(this.defaultPaymentMethodsSettings);
+    }
+  }
+
+  /**
+   * Guarda la configuración local de métodos de pago
+   */
+  private savePaymentMethodsSettings(config: PaymentMethodsSettings): PaymentMethodsSettings {
+    localStorage.setItem(this.PAYMENT_METHODS_KEY, JSON.stringify(config));
+    return config;
+  }
+
+  /**
+   * Persiste la configuración local de métodos de pago
+   */
+  private persistPaymentMethods(
+    payload: PaymentMethodsUpsertRequest,
+    message: string
+  ): Observable<PaymentMethodsUpsertResponse> {
+    const config = this.savePaymentMethodsSettings(
+      this.normalizePaymentMethodsSettings({
+        bankCatalog: payload.bankCatalog,
+        methods: payload.methods,
+        ultimaActualizacion: new Date().toISOString()
+      })
+    );
+
+    return of({
+      message,
+      paymentMethods: config
+    }).pipe(delay(350));
+  }
+
+  /**
+   * Normaliza la estructura de métodos de pago antes de persistirla
+   */
+  private normalizePaymentMethodsSettings(settings: PaymentMethodsSettings): PaymentMethodsSettings {
+    const bankCatalog = this.mergePaymentMethodBanks(settings?.bankCatalog);
+
+    const methodSource = Array.isArray(settings?.methods) && settings.methods.length
+      ? settings.methods
+      : this.defaultPaymentMethodsSettings.methods;
+
+    return {
+      bankCatalog,
+      methods: methodSource.map(method => this.normalizePaymentMethod(method, bankCatalog)),
+      ultimaActualizacion: settings?.ultimaActualizacion || new Date().toISOString()
+    };
+  }
+
+  /**
+   * Normaliza un método de pago individual
+   */
+  private normalizePaymentMethod(method: PaymentMethodConfig, bankCatalog: PaymentMethodBank[]): PaymentMethodConfig {
+    const requiresReceiverAccount = !!method?.requiresReceiverAccount;
+
+    return {
+      key: this.normalizeMethodKey(method?.key || method?.label || 'metodo_pago'),
+      label: `${method?.label || 'Método de pago'}`.trim(),
+      description: `${method?.description || ''}`.trim(),
+      enabled: !!method?.enabled,
+      currency: this.normalizeMethodCurrency(method?.currency),
+      requiresReceiverAccount,
+      isCustom: !!method?.isCustom,
+      accounts: requiresReceiverAccount
+        ? (Array.isArray(method?.accounts) ? method.accounts : []).map(account => this.normalizePaymentAccount(account, bankCatalog))
+        : []
+    };
+  }
+
+  /**
+   * Normaliza una cuenta receptora individual
+   */
+  private normalizePaymentAccount(account: PaymentMethodAccount, bankCatalog: PaymentMethodBank[]): PaymentMethodAccount {
+    const normalizedCode = `${account?.bankCode || ''}`.trim();
+    const matchedBank = bankCatalog.find(bank => bank.code === normalizedCode);
+
+    return {
+      id: `${account?.id || this.generateLocalId('account')}`,
+      bank: matchedBank?.name || `${account?.bank || ''}`.trim(),
+      bankCode: matchedBank?.code || normalizedCode,
+      ownerName: `${account?.ownerName || ''}`.trim(),
+      ownerId: `${account?.ownerId || ''}`.trim(),
+      phone: `${account?.phone || ''}`.trim(),
+      email: `${account?.email || ''}`.trim().toLowerCase(),
+      walletAddress: `${account?.walletAddress || ''}`.trim(),
+      accountDescription: `${account?.accountDescription || ''}`.trim()
+    };
+  }
+
+  /**
+   * Normaliza el alcance del banco en el catálogo
+   */
+  private normalizeBankScope(bank: Partial<PaymentMethodBank> | undefined): 'national' | 'international' {
+    if (bank?.scope === 'international' || bank?.scope === 'national') {
+      return bank.scope;
+    }
+
+    const code = `${bank?.code || ''}`.trim().toUpperCase();
+    const name = `${bank?.name || ''}`.trim().toLowerCase();
+    const knownBank = this.defaultPaymentMethodBanks.find(item =>
+      item.code.toUpperCase() === code || item.name.trim().toLowerCase() === name
+    );
+
+    if (knownBank) {
+      return knownBank.scope;
+    }
+
+    return /[A-Z]/.test(code) ? 'international' : 'national';
+  }
+
+  /**
+   * Mezcla el catálogo persistido con el catálogo por defecto para no perder bancos base ni bancos agregados manualmente
+   */
+  private mergePaymentMethodBanks(bankCatalog: PaymentMethodBank[] | undefined): PaymentMethodBank[] {
+    const mergedBanks = new Map<string, PaymentMethodBank>();
+
+    this.defaultPaymentMethodBanks.forEach(bank => {
+      mergedBanks.set(bank.code.trim().toUpperCase(), { ...bank });
+    });
+
+    (Array.isArray(bankCatalog) ? bankCatalog : [])
+      .map(bank => ({
+        code: `${bank?.code || ''}`.trim(),
+        name: `${bank?.name || ''}`.trim(),
+        scope: this.normalizeBankScope(bank)
+      }))
+      .filter(bank => !!bank.code && !!bank.name)
+      .forEach(bank => {
+        mergedBanks.set(bank.code.trim().toUpperCase(), bank);
+      });
+
+    return Array.from(mergedBanks.values()).sort((current, next) => {
+      if (current.scope !== next.scope) {
+        return current.scope === 'national' ? -1 : 1;
+      }
+
+      return current.name.localeCompare(next.name);
+    });
+  }
+
+  /**
+   * Normaliza el identificador interno del método
+   */
+  private normalizeMethodKey(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'metodo_pago';
+  }
+
+  /**
+   * Normaliza la moneda configurada para un método
+   */
+  private normalizeMethodCurrency(currency: string | undefined): 'VES' | 'USD' | 'EUR' | 'CRYPTO' | 'USDT' | 'BTC' | 'ETH' | 'MULTI' {
+    const currencies = ['VES', 'USD', 'EUR', 'CRYPTO', 'USDT', 'BTC', 'ETH', 'MULTI'];
+    return currencies.includes(`${currency || ''}`) ? currency as 'VES' | 'USD' | 'EUR' | 'CRYPTO' | 'USDT' | 'BTC' | 'ETH' | 'MULTI' : 'VES';
+  }
+
+  /**
+   * Genera un identificador local simple para registros temporales
+   */
+  private generateLocalId(prefix: string): string {
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  /**
+   * Crea una copia profunda de la configuración local de métodos de pago
+   */
+  private clonePaymentMethodsSettings(settings: PaymentMethodsSettings): PaymentMethodsSettings {
+    return JSON.parse(JSON.stringify(settings)) as PaymentMethodsSettings;
   }
 
   /**
