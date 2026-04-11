@@ -13,11 +13,11 @@
   <!-- Pestañas de Navegación -->
   <div class="tabs-navigation">
     <div class="tabs-container">
-      <button class="tab-button active" data-tab="moneda">
+      <button class="tab-button" [class.active]="activeTab === 'moneda'" (click)="seleccionarTab('moneda')">
         <i class="bi bi-currency-exchange"></i>
         Moneda Principal
       </button>
-      <button class="tab-button" data-tab="general" disabled>
+      <button class="tab-button" [class.active]="activeTab === 'general'" (click)="seleccionarTab('general')">
         <i class="bi bi-gear"></i>
         Configuración General
       </button>
@@ -32,7 +32,7 @@
   <div class="tab-content">
     
     <!-- Pestaña: Moneda Principal -->
-    <div class="tab-pane active" id="moneda-tab">
+    <div class="tab-pane" [class.active]="activeTab === 'moneda'" id="moneda-tab">
       <div class="config-grid">
         
         <!-- Configuración de Moneda -->
@@ -135,15 +135,133 @@
     </div>
 
     <!-- Otras pestañas (para futuro) -->
-    <div class="tab-pane" id="general-tab">
-      <div class="coming-soon">
-        <i class="bi bi-gear"></i>
-        <h3>Configuración General</h3>
-        <p>Próximamente estarán disponibles más opciones de configuración</p>
+    <div class="tab-pane" [class.active]="activeTab === 'general'" id="general-tab">
+      <div class="settings-subsection settings-subsection--notifications">
+        <div class="settings-subsection__header">
+          <div class="settings-subsection__title-wrap">
+            <div class="settings-subsection__icon">
+              <i class="bi bi-envelope-check"></i>
+            </div>
+            <div>
+              <h3>Correos de Notificación</h3>
+              <p>Canales operativos del sistema para alertas y avisos automáticos.</p>
+            </div>
+          </div>
+
+          <div class="settings-subsection__meta" *ngIf="correosConfig">
+            <small>Actualizado {{ formatFecha(correosConfig.ultimaActualizacion) }}</small>
+          </div>
+        </div>
+
+        <div class="notification-loading" *ngIf="isNotificationsLoading">
+          <div class="loading-orb"></div>
+          <div>
+            <strong>Cargando configuración</strong>
+            <p>Preparando los correos de notificación.</p>
+          </div>
+        </div>
+
+        <form class="notification-form notification-form--compact" *ngIf="!isNotificationsLoading" [formGroup]="notificationForm" (ngSubmit)="guardarCorreosNotificacion()">
+          <div class="notification-toolbar">
+            <label class="notification-toggle">
+              <input type="checkbox" formControlName="habilitado">
+              <span class="notification-toggle__track">
+                <span class="notification-toggle__thumb"></span>
+              </span>
+              <span class="notification-toggle__label">{{ getEstadoNotificaciones() }}</span>
+            </label>
+          </div>
+
+          <div class="notification-compact-grid">
+            <div class="notification-compact-card"
+                 [class.notification-compact-card--active]="notificationForm.get('correoSeleccionado')?.value === 'principal'"
+                 (click)="seleccionarCanalActivo('principal')">
+              <div class="notification-compact-card__header">
+                <div>
+                  <span class="slot-badge slot-badge--primary">Principal</span>
+                  <h4>Correo principal</h4>
+                </div>
+
+                <label class="slot-selector" (click)="$event.stopPropagation()">
+                  <input type="radio" formControlName="correoSeleccionado" value="principal">
+                  <span>Activo</span>
+                </label>
+              </div>
+
+              <div class="input-shell" [class.input-shell--invalid]="esCorreoInvalido('correoPrincipal')">
+                <i class="bi bi-envelope-at"></i>
+                <input type="email" formControlName="correoPrincipal" placeholder="notificaciones@empresa.com">
+              </div>
+
+              <small class="slot-helper">Canal principal para avisos del sistema.</small>
+
+              <div class="field-error" *ngIf="esCorreoInvalido('correoPrincipal')">
+                Ingresa un correo principal válido.
+              </div>
+            </div>
+
+            <div class="notification-compact-card"
+                 [class.notification-compact-card--active]="notificationForm.get('correoSeleccionado')?.value === 'secundario'"
+                 (click)="seleccionarCanalActivo('secundario')">
+              <div class="notification-compact-card__header">
+                <div>
+                  <span class="slot-badge slot-badge--secondary">Secundario</span>
+                  <h4>Correo secundario</h4>
+                </div>
+
+                <label class="slot-selector" (click)="$event.stopPropagation()">
+                  <input type="radio" formControlName="correoSeleccionado" value="secundario">
+                  <span>Activo</span>
+                </label>
+              </div>
+
+              <div class="input-shell" [class.input-shell--invalid]="esCorreoInvalido('correoSecundario')">
+                <i class="bi bi-envelope-paper"></i>
+                <input type="email" formControlName="correoSecundario" placeholder="respaldo@empresa.com">
+              </div>
+
+              <small class="slot-helper">Canal alterno para continuidad operativa.</small>
+
+              <div class="field-error" *ngIf="esCorreoInvalido('correoSecundario')">
+                Ingresa un correo secundario válido.
+              </div>
+            </div>
+          </div>
+
+          <div class="notification-inline-row">
+            <div class="notification-inline-summary">
+              <div class="status-row status-row--compact">
+                <span>Estado</span>
+                <strong>{{ getEstadoNotificaciones() }}</strong>
+              </div>
+              <div class="status-row status-row--compact">
+                <span>Correo activo</span>
+                <strong>{{ getCorreoActivoPreview() || 'Sin definir' }}</strong>
+              </div>
+            </div>
+
+            <div class="notification-form-actions notification-form-actions--compact">
+              <button class="btn-primary-modern" type="submit" [disabled]="!puedeGuardarCorreos()">
+                <i class="bi" [ngClass]="isSavingNotifications ? 'bi-arrow-repeat spinning' : 'bi-save2'"></i>
+                {{ getTextoBotonCorreos() }}
+              </button>
+
+              <button class="btn-secondary-modern" type="button" [disabled]="!puedeDescartarCambiosCorreos()" (click)="descartarCambiosCorreos()">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                Descartar cambios
+              </button>
+            </div>
+          </div>
+
+          <div class="notification-alert" *ngIf="getHayCorreosDuplicados()">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>El correo principal y el secundario deben ser diferentes.</span>
+          </div>
+        </form>
       </div>
     </div>
 
-    <div class="tab-pane" id="avanzada-tab">
+    <div class="tab-pane" [class.active]="activeTab === 'avanzada'" id="avanzada-tab">
       <div class="coming-soon">
         <i class="bi bi-tools"></i>
         <h3>Configuración Avanzada</h3>

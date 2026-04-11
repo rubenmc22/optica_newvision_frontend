@@ -28,3 +28,30 @@ export interface MonedaBaseResponse {
   message: string;
   moneda_base: string;
 }
+
+export type NotificationEmailChannel = 'principal' | 'secundario';
+
+export interface NotificationEmailSettings {
+  habilitado: boolean;
+  correoPrincipal: string;
+  correoSecundario: string;
+  correoSeleccionado: NotificationEmailChannel;
+  ultimaActualizacion: string;
+}
+
+export interface NotificationEmailUpsertRequest {
+  habilitado: boolean;
+  correoPrincipal: string;
+  correoSecundario: string;
+  correoSeleccionado: NotificationEmailChannel;
+}
+
+export interface NotificationEmailGetResponse {
+  message: string;
+  correos: NotificationEmailSettings;
+}
+
+export interface NotificationEmailUpsertResponse {
+  message: string;
+  correos: NotificationEmailSettings;
+}

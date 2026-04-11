@@ -1766,3 +1766,59 @@ nuevo realice abono
     "observaciones": ""
 }
 
+
+CONFIGURACION GENERAL - CORREOS DE NOTIFICACIONES
+
+//get correos de notificaciones
+//GET /configuracion/correos_notificaciones-get
+{
+    "message": "ok",
+    "correos": {
+        "habilitado": true,
+        "correoPrincipal": "notificaciones@opticanewvision.com",
+        "correoSecundario": "respaldo.notificaciones@opticanewvision.com",
+        "correoSeleccionado": "principal",
+        "ultimaActualizacion": "2026-04-11T16:20:00.000Z"
+    }
+}
+
+//guardar correos de notificaciones
+//POST /configuracion/correos_notificaciones-save
+{
+    "habilitado": true,
+    "correoPrincipal": "notificaciones@opticanewvision.com",
+    "correoSecundario": "respaldo.notificaciones@opticanewvision.com",
+    "correoSeleccionado": "principal"
+}
+
+{
+    "message": "Correos de notificación guardados correctamente",
+    "correos": {
+        "habilitado": true,
+        "correoPrincipal": "notificaciones@opticanewvision.com",
+        "correoSecundario": "respaldo.notificaciones@opticanewvision.com",
+        "correoSeleccionado": "principal",
+        "ultimaActualizacion": "2026-04-11T16:20:00.000Z"
+    }
+}
+
+//actualizar correos de notificaciones
+//PUT /configuracion/correos_notificaciones-update
+{
+    "habilitado": false,
+    "correoPrincipal": "alertas@opticanewvision.com",
+    "correoSecundario": "supervision@opticanewvision.com",
+    "correoSeleccionado": "secundario"
+}
+
+{
+    "message": "Correos de notificación actualizados correctamente",
+    "correos": {
+        "habilitado": false,
+        "correoPrincipal": "alertas@opticanewvision.com",
+        "correoSecundario": "supervision@opticanewvision.com",
+        "correoSeleccionado": "secundario",
+        "ultimaActualizacion": "2026-04-11T16:45:00.000Z"
+    }
+}
+

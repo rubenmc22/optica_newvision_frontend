@@ -1,8 +1,25 @@
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { Component, OnInit } from '@angular/core';
 import { SystemConfigService } from './system-config.service';
-import { SystemConfig, MonedaBaseResponse } from './system-config.interface';
+import {
+  MonedaBaseResponse,
+  NotificationEmailChannel,
+  NotificationEmailSettings,
+  NotificationEmailUpsertRequest,
+  SystemConfig
+} from './system-config.interface';
 import { SwalService } from '../../core/services/swal/swal.service';
-import { TasaCambiariaService } from '../../core/services/tasaCambiaria/tasaCambiaria.service';
+
+function correosDebenSerDistintos(control: AbstractControl): ValidationErrors | null {
+  const correoPrincipal = control.get('correoPrincipal')?.value?.trim().toLowerCase();
+  const correoSecundario = control.get('correoSecundario')?.value?.trim().toLowerCase();
+
+  if (!correoPrincipal || !correoSecundario) {
+    return null;
+  }
+
+  return correoPrincipal === correoSecundario ? { correosDuplicados: true } : null;
+}
 
 @Component({
   selector: 'app-system-config',
@@ -14,7 +31,13 @@ import { TasaCambiariaService } from '../../core/services/tasaCambiaria/tasaCamb
 export class SystemConfigComponent implements OnInit {
   config: SystemConfig;
   isLoading = false;
+  isNotificationsLoading = false;
+  isSavingNotifications = false;
+  activeTab: 'moneda' | 'general' | 'avanzada' = 'moneda';
+  correosConfig: NotificationEmailSettings | null = null;
+  tieneCorreosPersistidos = false;
   tasasActuales = { usd: 0, eur: 0 };
+  notificationForm!: FormGroup;
   
   monedas = [
     { codigo: 'USD', nombre: 'Dólar Americano', simbolo: '$' },
@@ -24,10 +47,21 @@ export class SystemConfigComponent implements OnInit {
 
   constructor(
     private configService: SystemConfigService,
-    private tasaCambiariaService: TasaCambiariaService,
-    private swalService: SwalService
+    private swalService: SwalService,
+    private formBuilder: FormBuilder
   ) {
     this.config = this.configService.getConfig();
+    this.notificationForm = this.formBuilder.group(
+      {
+        habilitado: [true],
+        correoPrincipal: ['', [Validators.required, Validators.email]],
+        correoSecundario: ['', [Validators.required, Validators.email]],
+        correoSeleccionado: ['principal' as NotificationEmailChannel, Validators.required]
+      },
+      { validators: correosDebenSerDistintos }
+    );
+
+    this.configurarValidadoresNotificaciones(true);
   }
 
   ngOnInit(): void {
@@ -43,6 +77,183 @@ export class SystemConfigComponent implements OnInit {
 
     // Cargar configuración desde el backend al iniciar
     this.configService.obtenerConfigDesdeBackend();
+    this.cargarCorreosNotificacion();
+
+    this.notificationForm.get('habilitado')?.valueChanges.subscribe(habilitado => {
+      this.configurarValidadoresNotificaciones(!!habilitado);
+    });
+  }
+
+  seleccionarTab(tab: 'moneda' | 'general' | 'avanzada'): void {
+    if (tab === 'avanzada') {
+      return;
+    }
+
+    this.activeTab = tab;
+  }
+
+  cargarCorreosNotificacion(): void {
+    this.isNotificationsLoading = true;
+    this.tieneCorreosPersistidos = this.configService.tieneCorreosNotificacionPersistidos();
+
+    this.configService.obtenerCorreosNotificacion().subscribe({
+      next: ({ correos }) => {
+        this.correosConfig = correos;
+        this.aplicarCorreosEnFormulario(correos);
+        this.isNotificationsLoading = false;
+      },
+      error: (error) => {
+        console.error('Error cargando correos de notificación:', error);
+        this.isNotificationsLoading = false;
+        this.swalService.showWarning(
+          'Correos no disponibles',
+          'No se pudieron cargar los correos de notificación en este momento.'
+        );
+      }
+    });
+  }
+
+  guardarCorreosNotificacion(): void {
+    if (this.notificationForm.invalid) {
+      this.notificationForm.markAllAsTouched();
+      this.swalService.showWarning(
+        'Formulario incompleto',
+        'Debes ingresar dos correos válidos y seleccionar cuál será el canal activo.'
+      );
+      return;
+    }
+
+    const payload = this.construirPayloadCorreos();
+    const request$ = this.tieneCorreosPersistidos
+      ? this.configService.actualizarCorreosNotificacion(payload)
+      : this.configService.guardarCorreosNotificacion(payload);
+
+    this.isSavingNotifications = true;
+
+    request$.subscribe({
+      next: ({ correos }) => {
+        this.isSavingNotifications = false;
+        this.tieneCorreosPersistidos = true;
+        this.correosConfig = correos;
+        this.aplicarCorreosEnFormulario(correos);
+
+        this.swalService.showSuccess(
+          'Correos actualizados',
+          correos.habilitado
+            ? `El ${this.getEtiquetaCanal(correos.correoSeleccionado).toLowerCase()} quedó activo para las notificaciones del sistema.`
+            : 'Las notificaciones por correo quedaron desactivadas.'
+        );
+      },
+      error: (error) => {
+        console.error('Error guardando correos de notificación:', error);
+        this.isSavingNotifications = false;
+        this.swalService.showError(
+          'No se pudo guardar',
+          'Ocurrió un problema al intentar guardar la configuración de correos.'
+        );
+      }
+    });
+  }
+
+  descartarCambiosCorreos(): void {
+    if (!this.correosConfig) {
+      return;
+    }
+
+    this.aplicarCorreosEnFormulario(this.correosConfig);
+  }
+
+  seleccionarCanalActivo(canal: NotificationEmailChannel): void {
+    this.notificationForm.patchValue({ correoSeleccionado: canal });
+  }
+
+  esCorreoInvalido(controlName: 'correoPrincipal' | 'correoSecundario'): boolean {
+    const control = this.notificationForm.get(controlName);
+    return !!control && control.invalid && (control.touched || control.dirty);
+  }
+
+  getHayCorreosDuplicados(): boolean {
+    return !!this.notificationForm.errors?.['correosDuplicados'] &&
+      (this.notificationForm.touched || this.notificationForm.dirty);
+  }
+
+  getCorreoActivoPreview(): string {
+    if (!this.notificationForm.get('habilitado')?.value) {
+      return 'Notificaciones desactivadas';
+    }
+
+    const correoSeleccionado = this.notificationForm.get('correoSeleccionado')?.value as NotificationEmailChannel;
+    return correoSeleccionado === 'secundario'
+      ? (this.notificationForm.get('correoSecundario')?.value || '')
+      : (this.notificationForm.get('correoPrincipal')?.value || '');
+  }
+
+  getEstadoNotificaciones(): string {
+    return this.notificationForm.get('habilitado')?.value
+      ? 'Notificaciones activas'
+      : 'Notificaciones desactivadas';
+  }
+
+  getEtiquetaCanal(canal: NotificationEmailChannel): string {
+    return canal === 'secundario' ? 'Correo secundario' : 'Correo principal';
+  }
+
+  getTextoBotonCorreos(): string {
+    return this.tieneCorreosPersistidos ? 'Actualizar correos' : 'Guardar correos';
+  }
+
+  puedeGuardarCorreos(): boolean {
+    return this.notificationForm.valid && this.notificationForm.dirty && !this.isSavingNotifications;
+  }
+
+  puedeDescartarCambiosCorreos(): boolean {
+    return this.notificationForm.dirty && !this.isSavingNotifications;
+  }
+
+  private aplicarCorreosEnFormulario(correos: NotificationEmailSettings): void {
+    this.notificationForm.reset({
+      habilitado: correos.habilitado,
+      correoPrincipal: correos.correoPrincipal,
+      correoSecundario: correos.correoSecundario,
+      correoSeleccionado: correos.correoSeleccionado
+    }, { emitEvent: false });
+    this.configurarValidadoresNotificaciones(correos.habilitado);
+    this.notificationForm.markAsPristine();
+    this.notificationForm.markAsUntouched();
+  }
+
+  private configurarValidadoresNotificaciones(habilitado: boolean): void {
+    const correoPrincipal = this.notificationForm.get('correoPrincipal');
+    const correoSecundario = this.notificationForm.get('correoSecundario');
+    const correoSeleccionado = this.notificationForm.get('correoSeleccionado');
+
+    if (habilitado) {
+      correoPrincipal?.setValidators([Validators.required, Validators.email]);
+      correoSecundario?.setValidators([Validators.required, Validators.email]);
+      correoSeleccionado?.setValidators([Validators.required]);
+      this.notificationForm.setValidators(correosDebenSerDistintos);
+    } else {
+      correoPrincipal?.clearValidators();
+      correoSecundario?.clearValidators();
+      correoSeleccionado?.clearValidators();
+      this.notificationForm.clearValidators();
+    }
+
+    correoPrincipal?.updateValueAndValidity({ emitEvent: false });
+    correoSecundario?.updateValueAndValidity({ emitEvent: false });
+    correoSeleccionado?.updateValueAndValidity({ emitEvent: false });
+    this.notificationForm.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private construirPayloadCorreos(): NotificationEmailUpsertRequest {
+    const formValue = this.notificationForm.getRawValue();
+
+    return {
+      habilitado: !!formValue.habilitado,
+      correoPrincipal: formValue.correoPrincipal?.trim() || '',
+      correoSecundario: formValue.correoSecundario?.trim() || '',
+      correoSeleccionado: formValue.correoSeleccionado || 'principal'
+    };
   }
 
   /**

@@ -1,7 +1,15 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, delay, of, tap } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { SystemConfig, Tasa, SystemConfigResponse, MonedaBaseRequest, MonedaBaseResponse } from './system-config.interface';
+import {
+  MonedaBaseRequest,
+  MonedaBaseResponse,
+  NotificationEmailGetResponse,
+  NotificationEmailSettings,
+  NotificationEmailUpsertRequest,
+  NotificationEmailUpsertResponse,
+  SystemConfig
+} from './system-config.interface';
 import { environment } from '../../../environments/environment';
 import { TasaCambiariaService } from './../../core/services/tasaCambiaria/tasaCambiaria.service';
 
@@ -13,12 +21,21 @@ import { TasaCambiariaService } from './../../core/services/tasaCambiaria/tasaCa
 
 export class SystemConfigService {
   private readonly CONFIG_KEY = 'opticlass_system_config';
+  private readonly NOTIFICATION_EMAILS_KEY = 'opticlass_notification_emails';
 
   // Configuración por defecto
   private defaultConfig: SystemConfig = {
     monedaPrincipal: 'USD',
     simboloMoneda: '$',
     decimales: 2,
+    ultimaActualizacion: new Date().toISOString()
+  };
+
+  private readonly defaultNotificationEmails: NotificationEmailSettings = {
+    habilitado: true,
+    correoPrincipal: 'notificaciones@opticanewvision.com',
+    correoSecundario: 'respaldo.notificaciones@opticanewvision.com',
+    correoSeleccionado: 'principal',
     ultimaActualizacion: new Date().toISOString()
   };
 
@@ -42,11 +59,101 @@ export class SystemConfigService {
   }
 
   /**
+   * Indica si la configuración de correos ya fue persistida localmente
+   */
+  tieneCorreosNotificacionPersistidos(): boolean {
+    return !!localStorage.getItem(this.NOTIFICATION_EMAILS_KEY);
+  }
+
+  /**
    * Guarda la configuración en localStorage y notifica a los observadores
    */
   private saveConfig(config: SystemConfig): void {
     localStorage.setItem(this.CONFIG_KEY, JSON.stringify(config));
     this.configSubject.next(config);
+  }
+
+  /**
+   * Obtiene la configuración local de correos de notificación
+   */
+  private getNotificationEmails(): NotificationEmailSettings {
+    const saved = localStorage.getItem(this.NOTIFICATION_EMAILS_KEY);
+    if (!saved) {
+      return { ...this.defaultNotificationEmails };
+    }
+
+    try {
+      return JSON.parse(saved) as NotificationEmailSettings;
+    } catch (error) {
+      console.warn('No se pudo leer la configuración local de correos de notificación:', error);
+      return { ...this.defaultNotificationEmails };
+    }
+  }
+
+  /**
+   * Guarda la configuración local de correos de notificación
+   */
+  private saveNotificationEmails(config: NotificationEmailSettings): NotificationEmailSettings {
+    localStorage.setItem(this.NOTIFICATION_EMAILS_KEY, JSON.stringify(config));
+    return config;
+  }
+
+  /**
+   * Obtiene los correos de notificación persistidos localmente
+   */
+  obtenerCorreosNotificacion(): Observable<NotificationEmailGetResponse> {
+    return of({
+      message: 'ok',
+      correos: this.getNotificationEmails()
+    }).pipe(delay(250));
+  }
+
+  /**
+   * Guarda la configuración inicial de correos de notificación
+   */
+  guardarCorreosNotificacion(payload: NotificationEmailUpsertRequest): Observable<NotificationEmailUpsertResponse> {
+    return this.persistNotificationEmails(
+      payload,
+      'Los correos de notificación fueron guardados correctamente.'
+    );
+  }
+
+  /**
+   * Actualiza la configuración existente de correos de notificación
+   */
+  actualizarCorreosNotificacion(payload: NotificationEmailUpsertRequest): Observable<NotificationEmailUpsertResponse> {
+    return this.persistNotificationEmails(
+      payload,
+      'Los correos de notificación fueron actualizados correctamente.'
+    );
+  }
+
+  /**
+  * Persiste la configuración de correos y devuelve la estructura esperada por la vista
+   */
+  private persistNotificationEmails(
+    payload: NotificationEmailUpsertRequest,
+    message: string
+  ): Observable<NotificationEmailUpsertResponse> {
+    const config = this.saveNotificationEmails({
+      habilitado: payload.habilitado,
+      correoPrincipal: this.normalizarCorreo(payload.correoPrincipal),
+      correoSecundario: this.normalizarCorreo(payload.correoSecundario),
+      correoSeleccionado: payload.correoSeleccionado,
+      ultimaActualizacion: new Date().toISOString()
+    });
+
+    return of({
+      message,
+      correos: config
+    }).pipe(delay(350));
+  }
+
+  /**
+   * Normaliza el valor del correo antes de persistirlo
+   */
+  private normalizarCorreo(correo: string): string {
+    return correo.trim().toLowerCase();
   }
 
   /**
