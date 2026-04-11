@@ -778,6 +778,11 @@
     background: rgba(168, 85, 247, 0.12);
     color: #7c3aed;
   }
+
+  &.payment-method-chip--inactive {
+    background: rgba(100, 116, 139, 0.14);
+    color: #475569;
+  }
 }
 
 .payment-method-card__actions {
@@ -865,6 +870,16 @@
   &.payment-field--wide {
     grid-column: 1 / -1;
   }
+}
+
+.payment-field-note {
+  color: #64748b;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.payment-field-note--warning {
+  color: #b45309;
 }
 
 .payment-method-footnote {
@@ -1085,6 +1100,41 @@
     color: #64748b;
     font-size: 0.75rem;
   }
+
+  &.bank-catalog-item--inactive {
+    opacity: 0.78;
+    background: rgba(248, 250, 252, 0.98);
+  }
+}
+
+.bank-catalog-item__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.bank-catalog-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.bank-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 0.32rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.12);
+  color: #0f766e;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.bank-status-chip--inactive {
+  background: rgba(100, 116, 139, 0.14);
+  color: #475569;
 }
 
 .payment-inline-check {

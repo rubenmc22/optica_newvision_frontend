@@ -44,9 +44,9 @@ describe('SystemConfigComponent', () => {
       paymentMethods: {
         ultimaActualizacion: '2026-04-11T10:00:00.000Z',
         bankCatalog: [
-          { code: '0102', name: 'Banco de Venezuela', scope: 'national' },
-          { code: '0134', name: 'Banesco', scope: 'national' },
-          { code: 'BOFAUS3N', name: 'Bank of America (BOFA)', scope: 'international' }
+          { code: '0102', name: 'Banco de Venezuela', scope: 'national', active: true },
+          { code: '0134', name: 'Banesco', scope: 'national', active: true },
+          { code: 'BOFAUS3N', name: 'Bank of America (BOFA)', scope: 'international', active: true }
         ],
         methods: [
           {
@@ -88,7 +88,7 @@ describe('SystemConfigComponent', () => {
       paymentMethods: {
         ultimaActualizacion: '2026-04-11T10:00:00.000Z',
         bankCatalog: [
-          { code: '0102', name: 'Banco de Venezuela', scope: 'national' }
+          { code: '0102', name: 'Banco de Venezuela', scope: 'national', active: true }
         ],
         methods: []
       }
@@ -108,7 +108,7 @@ describe('SystemConfigComponent', () => {
       paymentMethods: {
         ultimaActualizacion: '2026-04-11T10:00:00.000Z',
         bankCatalog: [
-          { code: '0102', name: 'Banco de Venezuela', scope: 'national' }
+          { code: '0102', name: 'Banco de Venezuela', scope: 'national', active: true }
         ],
         methods: []
       }

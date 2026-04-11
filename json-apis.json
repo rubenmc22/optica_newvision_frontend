@@ -1826,6 +1826,7 @@ CONFIGURACION GENERAL - CORREOS DE NOTIFICACIONES
 CONFIGURACION GENERAL - METODOS DE PAGO
 
 //catalogo de bancos receptores
+//cada banco incluye el campo activo para soportar desactivacion logica
 //GET /configuracion/bancos_receptores-get
 {
     "message": "Catálogo de bancos disponible",
@@ -1833,7 +1834,8 @@ CONFIGURACION GENERAL - METODOS DE PAGO
         {
             "codigo": "0102",
             "nombre": "Banco de Venezuela",
-            "scope": "national"
+            "scope": "national",
+            "activo": true
         },
         {
             "codigo": "0104",
@@ -1857,27 +1859,12 @@ CONFIGURACION GENERAL - METODOS DE PAGO
         },
         {
             "codigo": "0115",
-            "nombre": "BOD",
-            "scope": "national"
-        },
-        {
-            "codigo": "0116",
-            "nombre": "Banco Plaza",
-            "scope": "national"
-        },
-        {
-            "codigo": "0118",
-            "nombre": "Banco del Sur",
-            "scope": "national"
-        },
-        {
-            "codigo": "0121",
-            "nombre": "Bancamiga",
+            "nombre": "Banco Exterior",
             "scope": "national"
         },
         {
             "codigo": "0128",
-            "nombre": "Banco Caribe",
+            "nombre": "Banco Caroni",
             "scope": "national"
         },
         {
@@ -1886,23 +1873,38 @@ CONFIGURACION GENERAL - METODOS DE PAGO
             "scope": "national"
         },
         {
+            "codigo": "0137",
+            "nombre": "Banco Sofitasa",
+            "scope": "national"
+        },
+        {
+            "codigo": "0138",
+            "nombre": "Banco Plaza",
+            "scope": "national"
+        },
+        {
+            "codigo": "0146",
+            "nombre": "Banco de la Gente Emprendedora",
+            "scope": "national"
+        },
+        {
             "codigo": "0151",
-            "nombre": "100% Banco",
+            "nombre": "Banco Fondo Común",
             "scope": "national"
         },
         {
             "codigo": "0156",
-            "nombre": "Banco del Tesoro",
+            "nombre": "100% Banco",
             "scope": "national"
         },
         {
             "codigo": "0157",
-            "nombre": "Banco Bicentenario",
+            "nombre": "DelSur",
             "scope": "national"
         },
         {
             "codigo": "0163",
-            "nombre": "Banco Fondo Común",
+            "nombre": "Banco del Tesoro",
             "scope": "national"
         },
         {
@@ -1937,17 +1939,17 @@ CONFIGURACION GENERAL - METODOS DE PAGO
         },
         {
             "codigo": "0174",
-            "nombre": "Banco Plaza",
+            "nombre": "Banplus",
             "scope": "national"
         },
         {
             "codigo": "0175",
-            "nombre": "Banco de la Fuerza Armada Nacional Bolivariana",
+            "nombre": "Banco Bicentenario del Pueblo",
             "scope": "national"
         },
         {
             "codigo": "0177",
-            "nombre": "Banco del Tesoro",
+            "nombre": "Banco de la Fuerza Armada Nacional Bolivariana",
             "scope": "national"
         },
         {
@@ -1956,9 +1958,15 @@ CONFIGURACION GENERAL - METODOS DE PAGO
             "scope": "national"
         },
         {
+            "codigo": "0601",
+            "nombre": "Instituto Municipal de Crédito Popular",
+            "scope": "national"
+        },
+        {
             "codigo": "BOFAUS3N",
             "nombre": "Bank of America (BOFA)",
-            "scope": "international"
+            "scope": "international",
+            "activo": true
         },
         {
             "codigo": "CHASUS33",
@@ -1997,6 +2005,17 @@ CONFIGURACION GENERAL - METODOS DE PAGO
             {
                 "codigo": "0102",
                 "nombre": "Banco de Venezuela",
+                "scope": "national",
+                "activo": true
+            },
+            {
+                "codigo": "0104",
+                "nombre": "Venezolano de Crédito",
+                "scope": "national"
+            },
+            {
+                "codigo": "0105",
+                "nombre": "Mercantil",
                 "scope": "national"
             },
             {
@@ -2005,24 +2024,120 @@ CONFIGURACION GENERAL - METODOS DE PAGO
                 "scope": "national"
             },
             {
+                "codigo": "0114",
+                "nombre": "Bancaribe",
+                "scope": "national"
+            },
+            {
+                "codigo": "0115",
+                "nombre": "Banco Exterior",
+                "scope": "national"
+            },
+            {
+                "codigo": "0128",
+                "nombre": "Banco Caroni",
+                "scope": "national"
+            },
+            {
                 "codigo": "0134",
                 "nombre": "Banesco",
                 "scope": "national"
             },
             {
-                "codigo": "0175",
+                "codigo": "0137",
+                "nombre": "Banco Sofitasa",
+                "scope": "national"
+            },
+            {
+                "codigo": "0138",
+                "nombre": "Banco Plaza",
+                "scope": "national"
+            },
+            {
+                "codigo": "0146",
+                "nombre": "Banco de la Gente Emprendedora",
+                "scope": "national"
+            },
+            {
+                "codigo": "0151",
+                "nombre": "Banco Fondo Común",
+                "scope": "national"
+            },
+            {
+                "codigo": "0156",
+                "nombre": "100% Banco",
+                "scope": "national"
+            },
+            {
+                "codigo": "0157",
+                "nombre": "DelSur",
+                "scope": "national"
+            },
+            {
+                "codigo": "0163",
+                "nombre": "Banco del Tesoro",
+                "scope": "national"
+            },
+            {
+                "codigo": "0166",
+                "nombre": "Banco Agrícola de Venezuela",
+                "scope": "national"
+            },
+            {
+                "codigo": "0168",
+                "nombre": "Bancrecer",
+                "scope": "national"
+            },
+            {
+                "codigo": "0169",
+                "nombre": "Mi Banco",
+                "scope": "national"
+            },
+            {
+                "codigo": "0171",
+                "nombre": "Banco Activo",
+                "scope": "national"
+            },
+            {
+                "codigo": "0172",
                 "nombre": "Bancamiga",
                 "scope": "national"
             },
             {
+                "codigo": "0173",
+                "nombre": "Banco Internacional de Desarrollo",
+                "scope": "national"
+            },
+            {
+                "codigo": "0174",
+                "nombre": "Banplus",
+                "scope": "national"
+            },
+            {
+                "codigo": "0175",
+                "nombre": "Banco Bicentenario del Pueblo",
+                "scope": "national"
+            },
+            {
+                "codigo": "0177",
+                "nombre": "Banco de la Fuerza Armada Nacional Bolivariana",
+                "scope": "national"
+            },
+            {
                 "codigo": "0191",
-                "nombre": "BNC Venezuela",
+                "nombre": "Banco Nacional de Crédito",
+                "scope": "national"
+            },
+            {
+                "codigo": "0601",
+                "nombre": "Instituto Municipal de Crédito Popular",
                 "scope": "national"
             },
             {
                 "codigo": "BOFAUS3N",
                 "nombre": "Bank of America (BOFA)",
-                "scope": "international"
+                "scope": "international",
+                "activo": true
             }
         ],
         "metodos": [
@@ -2048,7 +2163,7 @@ CONFIGURACION GENERAL - METODOS DE PAGO
                     {
                         "id": "punto-1",
                         "bank": "Bancamiga",
-                        "bankCode": "0175",
+                        "bankCode": "0172",
                         "ownerName": "",
                         "ownerId": "",
                         "phone": "",
@@ -2058,7 +2173,7 @@ CONFIGURACION GENERAL - METODOS DE PAGO
                     },
                     {
                         "id": "punto-2",
-                        "bank": "BNC Venezuela",
+                        "bank": "Banco Nacional de Crédito",
                         "bankCode": "0191",
                         "ownerName": "",
                         "ownerId": "",
@@ -2180,17 +2295,26 @@ CONFIGURACION GENERAL - METODOS DE PAGO
         {
             "codigo": "0102",
             "nombre": "Banco de Venezuela",
-            "scope": "national"
+            "scope": "national",
+            "activo": true
         },
         {
-            "codigo": "0175",
+            "codigo": "0172",
             "nombre": "Bancamiga",
-            "scope": "national"
+            "scope": "national",
+            "activo": true
+        },
+        {
+            "codigo": "0191",
+            "nombre": "Banco Nacional de Crédito",
+            "scope": "national",
+            "activo": true
         },
         {
             "codigo": "BOFAUS3N",
             "nombre": "Bank of America (BOFA)",
-            "scope": "international"
+            "scope": "international",
+            "activo": true
         }
     ],
     "metodos": [
@@ -2216,7 +2340,7 @@ CONFIGURACION GENERAL - METODOS DE PAGO
                 {
                     "id": "punto-1",
                     "bank": "Bancamiga",
-                    "bankCode": "0175",
+                    "bankCode": "0172",
                     "ownerName": "",
                     "ownerId": "",
                     "phone": "",
@@ -2259,17 +2383,26 @@ CONFIGURACION GENERAL - METODOS DE PAGO
             {
                 "codigo": "0102",
                 "nombre": "Banco de Venezuela",
-                "scope": "national"
+                "scope": "national",
+                "activo": true
             },
             {
-                "codigo": "0175",
+                "codigo": "0172",
                 "nombre": "Bancamiga",
-                "scope": "national"
+                "scope": "national",
+                "activo": true
+            },
+            {
+                "codigo": "0191",
+                "nombre": "Banco Nacional de Crédito",
+                "scope": "national",
+                "activo": true
             },
             {
                 "codigo": "BOFAUS3N",
                 "nombre": "Bank of America (BOFA)",
-                "scope": "international"
+                "scope": "international",
+                "activo": true
             }
         ],
         "metodos": [
@@ -2295,7 +2428,7 @@ CONFIGURACION GENERAL - METODOS DE PAGO
                     {
                         "id": "punto-1",
                         "bank": "Bancamiga",
-                        "bankCode": "0175",
+                        "bankCode": "0172",
                         "ownerName": "",
                         "ownerId": "",
                         "phone": "",
@@ -2338,17 +2471,20 @@ CONFIGURACION GENERAL - METODOS DE PAGO
         {
             "codigo": "0108",
             "nombre": "Banco Provincial",
-            "scope": "national"
+            "scope": "national",
+            "activo": true
         },
         {
             "codigo": "BOFAUS3N",
             "nombre": "Bank of America (BOFA)",
-            "scope": "international"
+            "scope": "international",
+            "activo": false
         },
         {
             "codigo": "CHASUS33",
             "nombre": "JPMorgan Chase Bank",
-            "scope": "international"
+            "scope": "international",
+            "activo": true
         }
     ],
     "metodos": [
@@ -2417,27 +2553,32 @@ CONFIGURACION GENERAL - METODOS DE PAGO
             {
                 "codigo": "0102",
                 "nombre": "Banco de Venezuela",
-                "scope": "national"
+                "scope": "national",
+                "activo": true
             },
             {
                 "codigo": "0108",
                 "nombre": "Banco Provincial",
-                "scope": "national"
+                "scope": "national",
+                "activo": true
             },
             {
-                "codigo": "0175",
+                "codigo": "0172",
                 "nombre": "Bancamiga",
-                "scope": "national"
+                "scope": "national",
+                "activo": true
             },
             {
                 "codigo": "BOFAUS3N",
                 "nombre": "Bank of America (BOFA)",
-                "scope": "international"
+                "scope": "international",
+                "activo": false
             },
             {
                 "codigo": "CHASUS33",
                 "nombre": "JPMorgan Chase Bank",
-                "scope": "international"
+                "scope": "international",
+                "activo": true
             }
         ],
         "metodos": [

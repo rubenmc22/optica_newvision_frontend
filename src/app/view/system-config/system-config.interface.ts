@@ -63,6 +63,7 @@ export interface PaymentMethodBank {
   code: string;
   name: string;
   scope: PaymentMethodBankScope;
+  active: boolean;
 }
 
 export interface PaymentMethodAccount {

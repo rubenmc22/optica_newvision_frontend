@@ -48,37 +48,38 @@ export class SystemConfigService {
   };
 
   private readonly defaultPaymentMethodBanks: PaymentMethodBank[] = [
-    { code: '0102', name: 'Banco de Venezuela', scope: 'national' },
-    { code: '0104', name: 'Venezolano de Crédito', scope: 'national' },
-    { code: '0105', name: 'Mercantil', scope: 'national' },
-    { code: '0108', name: 'Banco Provincial', scope: 'national' },
-    { code: '0114', name: 'Bancaribe', scope: 'national' },
-    { code: '0115', name: 'BOD', scope: 'national' },
-    { code: '0116', name: 'Banco Plaza', scope: 'national' },
-    { code: '0118', name: 'Banco del Sur', scope: 'national' },
-    { code: '0121', name: 'Bancamiga', scope: 'national' },
-    { code: '0128', name: 'Banco Caribe', scope: 'national' },
-    { code: '0134', name: 'Banesco', scope: 'national' },
-    { code: '0151', name: '100% Banco', scope: 'national' },
-    { code: '0156', name: 'Banco del Tesoro', scope: 'national' },
-    { code: '0157', name: 'Banco Bicentenario', scope: 'national' },
-    { code: '0163', name: 'Banco Fondo Común', scope: 'national' },
-    { code: '0166', name: 'Banco Agrícola de Venezuela', scope: 'national' },
-    { code: '0168', name: 'Bancrecer', scope: 'national' },
-    { code: '0169', name: 'Mi Banco', scope: 'national' },
-    { code: '0171', name: 'Banco Activo', scope: 'national' },
-    { code: '0172', name: 'Bancamiga', scope: 'national' },
-    { code: '0173', name: 'Banco Internacional de Desarrollo', scope: 'national' },
-    { code: '0174', name: 'Banco Plaza', scope: 'national' },
-    { code: '0175', name: 'Banco de la Fuerza Armada Nacional Bolivariana', scope: 'national' },
-    { code: '0177', name: 'Banco del Tesoro', scope: 'national' },
-    { code: '0191', name: 'Banco Nacional de Crédito', scope: 'national' },
-    { code: 'BOFAUS3N', name: 'Bank of America (BOFA)', scope: 'international' },
-    { code: 'CHASUS33', name: 'JPMorgan Chase Bank', scope: 'international' },
-    { code: 'CITIUS33', name: 'Citibank N.A.', scope: 'international' },
-    { code: 'WFBIUS6S', name: 'Wells Fargo Bank', scope: 'international' },
-    { code: 'USBKUS44', name: 'U.S. Bank', scope: 'international' },
-    { code: 'PNCCUS33', name: 'PNC Bank', scope: 'international' }
+    { code: '0102', name: 'Banco de Venezuela', scope: 'national', active: true },
+    { code: '0104', name: 'Venezolano de Crédito', scope: 'national', active: true },
+    { code: '0105', name: 'Mercantil', scope: 'national', active: true },
+    { code: '0108', name: 'Banco Provincial', scope: 'national', active: true },
+    { code: '0114', name: 'Bancaribe', scope: 'national', active: true },
+    { code: '0115', name: 'Banco Exterior', scope: 'national', active: true },
+    { code: '0128', name: 'Banco Caroni', scope: 'national', active: true },
+    { code: '0134', name: 'Banesco', scope: 'national', active: true },
+    { code: '0137', name: 'Banco Sofitasa', scope: 'national', active: true },
+    { code: '0138', name: 'Banco Plaza', scope: 'national', active: true },
+    { code: '0146', name: 'Banco de la Gente Emprendedora', scope: 'national', active: true },
+    { code: '0151', name: 'Banco Fondo Común', scope: 'national', active: true },
+    { code: '0156', name: '100% Banco', scope: 'national', active: true },
+    { code: '0157', name: 'DelSur', scope: 'national', active: true },
+    { code: '0163', name: 'Banco del Tesoro', scope: 'national', active: true },
+    { code: '0166', name: 'Banco Agrícola de Venezuela', scope: 'national', active: true },
+    { code: '0168', name: 'Bancrecer', scope: 'national', active: true },
+    { code: '0169', name: 'Mi Banco', scope: 'national', active: true },
+    { code: '0171', name: 'Banco Activo', scope: 'national', active: true },
+    { code: '0172', name: 'Bancamiga', scope: 'national', active: true },
+    { code: '0173', name: 'Banco Internacional de Desarrollo', scope: 'national', active: true },
+    { code: '0174', name: 'Banplus', scope: 'national', active: true },
+    { code: '0175', name: 'Banco Bicentenario del Pueblo', scope: 'national', active: true },
+    { code: '0177', name: 'Banco de la Fuerza Armada Nacional Bolivariana', scope: 'national', active: true },
+    { code: '0191', name: 'Banco Nacional de Crédito', scope: 'national', active: true },
+    { code: '0601', name: 'Instituto Municipal de Crédito Popular', scope: 'national', active: true },
+    { code: 'BOFAUS3N', name: 'Bank of America (BOFA)', scope: 'international', active: true },
+    { code: 'CHASUS33', name: 'JPMorgan Chase Bank', scope: 'international', active: true },
+    { code: 'CITIUS33', name: 'Citibank N.A.', scope: 'international', active: true },
+    { code: 'WFBIUS6S', name: 'Wells Fargo Bank', scope: 'international', active: true },
+    { code: 'USBKUS44', name: 'U.S. Bank', scope: 'international', active: true },
+    { code: 'PNCCUS33', name: 'PNC Bank', scope: 'international', active: true }
   ];
 
   private readonly defaultPaymentMethodsSettings: PaymentMethodsSettings = {
@@ -462,7 +463,11 @@ export class SystemConfigService {
    */
   private normalizePaymentAccount(account: PaymentMethodAccount, bankCatalog: PaymentMethodBank[]): PaymentMethodAccount {
     const normalizedCode = `${account?.bankCode || ''}`.trim();
-    const matchedBank = bankCatalog.find(bank => bank.code === normalizedCode);
+    const canonicalBank = this.resolveCanonicalBank({
+      code: normalizedCode,
+      name: `${account?.bank || ''}`.trim()
+    });
+    const matchedBank = bankCatalog.find(bank => bank.code === (canonicalBank?.code || normalizedCode)) || canonicalBank;
 
     return {
       id: `${account?.id || this.generateLocalId('account')}`,
@@ -485,17 +490,22 @@ export class SystemConfigService {
       return bank.scope;
     }
 
-    const code = `${bank?.code || ''}`.trim().toUpperCase();
-    const name = `${bank?.name || ''}`.trim().toLowerCase();
-    const knownBank = this.defaultPaymentMethodBanks.find(item =>
-      item.code.toUpperCase() === code || item.name.trim().toLowerCase() === name
-    );
+    const knownBank = this.resolveCanonicalBank(bank);
 
     if (knownBank) {
       return knownBank.scope;
     }
 
+    const code = `${bank?.code || ''}`.trim().toUpperCase();
+
     return /[A-Z]/.test(code) ? 'international' : 'national';
+  }
+
+  /**
+   * Normaliza el estado activo del banco para soportar desactivación lógica
+   */
+  private normalizeBankActive(bank: Partial<PaymentMethodBank> | undefined): boolean {
+    return bank?.active !== false;
   }
 
   /**
@@ -509,11 +519,16 @@ export class SystemConfigService {
     });
 
     (Array.isArray(bankCatalog) ? bankCatalog : [])
-      .map(bank => ({
-        code: `${bank?.code || ''}`.trim(),
-        name: `${bank?.name || ''}`.trim(),
-        scope: this.normalizeBankScope(bank)
-      }))
+      .map(bank => {
+        const canonicalBank = this.resolveCanonicalBank(bank);
+
+        return {
+          code: canonicalBank?.code || `${bank?.code || ''}`.trim(),
+          name: canonicalBank?.name || `${bank?.name || ''}`.trim(),
+          scope: canonicalBank?.scope || this.normalizeBankScope(bank),
+          active: this.normalizeBankActive(bank)
+        };
+      })
       .filter(bank => !!bank.code && !!bank.name)
       .forEach(bank => {
         mergedBanks.set(bank.code.trim().toUpperCase(), bank);
@@ -522,6 +537,10 @@ export class SystemConfigService {
     return Array.from(mergedBanks.values()).sort((current, next) => {
       if (current.scope !== next.scope) {
         return current.scope === 'national' ? -1 : 1;
+      }
+
+      if (current.active !== next.active) {
+        return current.active ? -1 : 1;
       }
 
       return current.name.localeCompare(next.name);
@@ -546,6 +565,63 @@ export class SystemConfigService {
   private normalizeMethodCurrency(currency: string | undefined): 'VES' | 'USD' | 'EUR' | 'CRYPTO' | 'USDT' | 'BTC' | 'ETH' | 'MULTI' {
     const currencies = ['VES', 'USD', 'EUR', 'CRYPTO', 'USDT', 'BTC', 'ETH', 'MULTI'];
     return currencies.includes(`${currency || ''}`) ? currency as 'VES' | 'USD' | 'EUR' | 'CRYPTO' | 'USDT' | 'BTC' | 'ETH' | 'MULTI' : 'VES';
+  }
+
+  /**
+   * Intenta resolver un banco a su representación canónica a partir del nombre o código.
+   */
+  private resolveCanonicalBank(bank: Partial<PaymentMethodBank> | { code?: string; name?: string } | undefined): PaymentMethodBank | undefined {
+    const normalizedName = this.normalizeBankName(`${bank?.name || ''}`.trim());
+    const normalizedCode = `${bank?.code || ''}`.trim().toUpperCase();
+
+    if (normalizedName) {
+      const byName = this.defaultPaymentMethodBanks.find(item => this.normalizeBankName(item.name) === normalizedName);
+      if (byName) {
+        return byName;
+      }
+    }
+
+    if (!normalizedCode) {
+      return undefined;
+    }
+
+    return this.defaultPaymentMethodBanks.find(item => item.code.toUpperCase() === normalizedCode);
+  }
+
+  /**
+   * Normaliza variantes históricas de nombre para corregir catálogos viejos.
+   */
+  private normalizeBankName(value: string): string {
+    const normalized = value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+
+    const aliases: Record<string, string> = {
+      'banco exterior c.a. banco universal': 'banco exterior',
+      'banco caroni': 'banco caroni',
+      'banco caribe': 'banco caroni',
+      'banco sofitasa banco universal c.a.': 'banco sofitasa',
+      'banco plaza banco universal': 'banco plaza',
+      'banco de la gente emprendedora c.a.': 'banco de la gente emprendedora',
+      'banco fondo comun': 'banco fondo comun',
+      '100 banco': '100% banco',
+      '100% banco': '100% banco',
+      'banco del sur': 'delsur',
+      'delsur': 'delsur',
+      'bancamiga banco universal c.a.': 'bancamiga',
+      'banplus banco universal c.a.': 'banplus',
+      'banco bicentenario': 'banco bicentenario del pueblo',
+      'banco bicentenario del pueblo': 'banco bicentenario del pueblo',
+      'banco de la fuerza armada nacional bolivariana': 'banco de la fuerza armada nacional bolivariana',
+      'banfanb': 'banco de la fuerza armada nacional bolivariana',
+      'banco nacional de credito': 'banco nacional de credito',
+      'bnc venezuela': 'banco nacional de credito',
+      'bod': 'banco nacional de credito'
+    };
+
+    return aliases[normalized] || normalized;
   }
 
   /**

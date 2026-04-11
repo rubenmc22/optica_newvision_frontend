@@ -247,7 +247,7 @@ export class SystemConfigComponent implements OnInit {
       next: ({ paymentMethods }) => {
         this.metodosPagoConfig = this.clonarMetodosPago(paymentMethods);
         this.metodosPagoDraft = this.clonarMetodosPago(paymentMethods);
-        this.asegurarMetodoPagoExpandido();
+        this.reiniciarExpansionMetodosPago();
         this.isPaymentMethodsLoading = false;
       },
       error: (error) => {
@@ -283,7 +283,7 @@ export class SystemConfigComponent implements OnInit {
         this.tieneMetodosPagoPersistidos = true;
         this.metodosPagoConfig = this.clonarMetodosPago(paymentMethods);
         this.metodosPagoDraft = this.clonarMetodosPago(paymentMethods);
-        this.asegurarMetodoPagoExpandido();
+        this.reiniciarExpansionMetodosPago();
 
         this.swalService.showSuccess(
           'Métodos actualizados',
@@ -307,7 +307,7 @@ export class SystemConfigComponent implements OnInit {
     }
 
     this.metodosPagoDraft = this.clonarMetodosPago(this.metodosPagoConfig);
-    this.asegurarMetodoPagoExpandido();
+    this.reiniciarExpansionMetodosPago();
   }
 
   alternarExpansionMetodo(metodoKey: string): void {
@@ -344,8 +344,8 @@ export class SystemConfigComponent implements OnInit {
 
   actualizarBancoCuenta(metodoKey: string, cuentaId: string, bankCode: string): void {
     const metodo = this.obtenerMetodoPagoDraft(metodoKey);
-    const banco = this.getBancosConfigurables(metodo).find(item => item.code === bankCode);
     const cuenta = metodo?.accounts.find(item => item.id === cuentaId);
+    const banco = this.metodosPagoDraft?.bankCatalog.find(item => item.code === bankCode);
 
     if (!cuenta) {
       return;
@@ -399,15 +399,6 @@ export class SystemConfigComponent implements OnInit {
     };
   }
 
-  eliminarMetodoPersonalizado(metodoKey: string): void {
-    if (!this.metodosPagoDraft) {
-      return;
-    }
-
-    this.metodosPagoDraft.methods = this.metodosPagoDraft.methods.filter(metodo => metodo.key !== metodoKey);
-    this.asegurarMetodoPagoExpandido();
-  }
-
   agregarBancoCatalogo(): void {
     if (!this.metodosPagoDraft) {
       return;
@@ -424,11 +415,19 @@ export class SystemConfigComponent implements OnInit {
       return;
     }
 
-    const duplicado = this.metodosPagoDraft.bankCatalog.some(banco => banco.code === code);
+    const claveNuevoBanco = this.getClaveAgrupacionBanco({
+      code,
+      name,
+      scope: this.nuevoBancoCatalogo.scope,
+      active: true
+    });
+    const duplicado = this.metodosPagoDraft.bankCatalog.some(banco =>
+      banco.code === code || this.getClaveAgrupacionBanco(banco) === claveNuevoBanco
+    );
     if (duplicado) {
       this.swalService.showWarning(
         'Banco duplicado',
-        'Ya existe un banco registrado con ese código en el catálogo.'
+        'Ya existe un banco registrado con ese código o con ese mismo nombre en el catálogo.'
       );
       return;
     }
@@ -438,7 +437,8 @@ export class SystemConfigComponent implements OnInit {
       {
         code,
         name,
-        scope: this.nuevoBancoCatalogo.scope
+        scope: this.nuevoBancoCatalogo.scope,
+        active: true
       }
     ].sort((actual, siguiente) => actual.name.localeCompare(siguiente.name));
 
@@ -449,46 +449,71 @@ export class SystemConfigComponent implements OnInit {
     };
   }
 
-  eliminarBancoCatalogo(code: string): void {
+  alternarEstadoBancoCatalogo(code: string): void {
     if (!this.metodosPagoDraft) {
       return;
     }
 
-    if (this.bancoEstaEnUso(code)) {
-      this.swalService.showWarning(
-        'Banco en uso',
-        'No puedes eliminar un banco que ya está asociado a una cuenta receptora activa.'
-      );
+    const banco = this.metodosPagoDraft.bankCatalog.find(item => item.code === code);
+    if (!banco) {
       return;
     }
 
-    this.metodosPagoDraft.bankCatalog = this.metodosPagoDraft.bankCatalog.filter(banco => banco.code !== code);
+    const siguienteEstado = !this.esBancoActivo(banco);
+    const claveGrupo = this.getClaveAgrupacionBanco(banco);
+
+    this.metodosPagoDraft.bankCatalog.forEach(item => {
+      if (this.getClaveAgrupacionBanco(item) === claveGrupo) {
+        item.active = siguienteEstado;
+      }
+    });
   }
 
-  getBancosConfigurables(metodo?: PaymentMethodConfig): PaymentMethodBank[] {
+  getBancosConfigurables(metodo?: PaymentMethodConfig, _cuenta?: PaymentMethodAccount): PaymentMethodBank[] {
     if (!this.metodosPagoDraft) {
       return [];
     }
 
     if (!metodo) {
-      return this.metodosPagoDraft.bankCatalog;
+      return this.metodosPagoDraft.bankCatalog.filter(banco => this.esBancoActivo(banco));
     }
 
     if (this.esMetodoBinance(metodo)) {
       return [];
     }
 
-    return this.usaBancosInternacionales(metodo)
-      ? this.getBancosPorAlcance('international')
-      : this.getBancosPorAlcance('national');
+    const bancosActivos = this.usaBancosInternacionales(metodo)
+      ? this.getBancosPorAlcance('international', false)
+      : this.getBancosPorAlcance('national', false);
+
+    return this.deduplicarBancosPorNombre(bancosActivos);
   }
 
-  getBancosPorAlcance(scope: PaymentMethodBankScope): PaymentMethodBank[] {
-    return (this.metodosPagoDraft?.bankCatalog || []).filter(banco => banco.scope === scope);
+  getBancosPorAlcance(scope: PaymentMethodBankScope, incluirInactivos = true): PaymentMethodBank[] {
+    return (this.metodosPagoDraft?.bankCatalog || []).filter(banco =>
+      banco.scope === scope && (incluirInactivos || this.esBancoActivo(banco))
+    );
   }
 
   getCantidadBancosPorAlcance(scope: PaymentMethodBankScope): number {
     return this.getBancosPorAlcance(scope).length;
+  }
+
+  getCantidadBancosActivosPorAlcance(scope: PaymentMethodBankScope): number {
+    return this.getBancosPorAlcance(scope, false).length;
+  }
+
+  esBancoActivo(banco: PaymentMethodBank): boolean {
+    return banco.active !== false;
+  }
+
+  esBancoCuentaInactivo(cuenta: PaymentMethodAccount): boolean {
+    if (!cuenta.bankCode || !this.metodosPagoDraft) {
+      return false;
+    }
+
+    const banco = this.metodosPagoDraft.bankCatalog.find(item => item.code === cuenta.bankCode);
+    return !!banco && !this.esBancoActivo(banco);
   }
 
   bancoEstaEnUso(code: string): boolean {
@@ -657,19 +682,29 @@ export class SystemConfigComponent implements OnInit {
     return JSON.parse(JSON.stringify(value)) as T;
   }
 
-  private asegurarMetodoPagoExpandido(): void {
-    if (!this.metodosPagoDraft?.methods.length) {
-      this.metodoPagoExpandido = null;
-      return;
-    }
+  private deduplicarBancosPorNombre(bancos: PaymentMethodBank[]): PaymentMethodBank[] {
+    const bancosUnicos = new Map<string, PaymentMethodBank>();
 
-    const metodoExiste = this.metodosPagoDraft.methods.some(metodo => metodo.key === this.metodoPagoExpandido);
-    if (metodoExiste) {
-      return;
-    }
+    bancos.forEach(banco => {
+      const clave = this.getClaveAgrupacionBanco(banco);
+      if (!bancosUnicos.has(clave)) {
+        bancosUnicos.set(clave, banco);
+      }
+    });
 
-    const metodoPrioritario = this.metodosPagoDraft.methods.find(metodo => metodo.requiresReceiverAccount) || this.metodosPagoDraft.methods[0];
-    this.metodoPagoExpandido = metodoPrioritario?.key || null;
+    return Array.from(bancosUnicos.values());
+  }
+
+  private getClaveAgrupacionBanco(banco: PaymentMethodBank): string {
+    return `${banco.scope}_${banco.name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase()}`;
+  }
+
+  private reiniciarExpansionMetodosPago(): void {
+    this.metodoPagoExpandido = null;
   }
 
   private esConfiguracionMetodosPagoValida(): boolean {
@@ -691,7 +726,10 @@ export class SystemConfigComponent implements OnInit {
 
   private cuentaReceptoraEsValida(metodo: PaymentMethodConfig, cuenta: PaymentMethodAccount): boolean {
     if (this.esMetodoPuntoVenta(metodo)) {
-      return !!cuenta.bank.trim() && !!cuenta.bankCode.trim() && !!cuenta.accountDescription.trim();
+      return !!cuenta.bank.trim() &&
+        !!cuenta.bankCode.trim() &&
+        !this.esBancoCuentaInactivo(cuenta) &&
+        !!cuenta.accountDescription.trim();
     }
 
     if (this.esMetodoBinance(metodo)) {
@@ -700,6 +738,7 @@ export class SystemConfigComponent implements OnInit {
 
     const tieneBase = !!cuenta.bank.trim() &&
       !!cuenta.bankCode.trim() &&
+      !this.esBancoCuentaInactivo(cuenta) &&
       !!cuenta.ownerName.trim() &&
       !!cuenta.ownerId.trim() &&
       !!cuenta.phone.trim() &&
@@ -733,7 +772,8 @@ export class SystemConfigComponent implements OnInit {
       bankCatalog: settings.bankCatalog.map(banco => ({
         code: banco.code.trim(),
         name: banco.name.trim(),
-        scope: banco.scope
+        scope: banco.scope,
+        active: this.esBancoActivo(banco)
       })),
       methods: settings.methods.map(metodo => ({
         key: metodo.key,
