@@ -11,9 +11,9 @@ $transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
 .graficos-carrusel {
   position: relative;
-  max-width: 1000px;
+  max-width: 880px;
   margin: 0 auto;
-  padding: 15px;
+  padding: 8px 10px;
 }
 
 // Controles de navegación
@@ -116,8 +116,8 @@ $transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   border-radius: $border-radius;
   background: white;
   box-shadow: $shadow;
-  margin-bottom: 15px;
-  height: 420px; // Altura reducida
+  margin-bottom: 10px;
+  height: 350px;
 
   .carrusel-track {
     display: flex;
@@ -137,7 +137,7 @@ $transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 14px 16px;
   background: white;
   position: relative;
 
@@ -206,7 +206,7 @@ $transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 
   .chart-title-section {
     display: flex;
@@ -235,7 +235,7 @@ $transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     .chart-title-content {
       .chart-title {
         margin: 0;
-        font-size: 1.4rem;
+        font-size: 1.15rem;
         font-weight: 700;
         color: $dark-color;
         line-height: 1.2;
@@ -244,7 +244,7 @@ $transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       .chart-subtitle {
         margin: 4px 0 0 0;
         color: #6c757d;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
       }
     }
   }

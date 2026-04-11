@@ -44,18 +44,7 @@ export class GraficoPacientesPorMesComponent implements OnInit, OnChanges, OnDes
     { nombre: 'Historias Médicas', icono: 'fas fa-file-medical' }
   ];
 
-  modulosFuturos = [
-    {
-      nombre: 'Módulo de Ventas',
-      icono: 'fas fa-shopping-cart',
-      descripcion: 'Seguimiento de ventas y transacciones'
-    },
-    {
-      nombre: 'Órdenes de Venta',
-      icono: 'fas fa-clipboard-list',
-      descripcion: 'Gestión de órdenes y pedidos'
-    }
-  ];
+  modulosFuturos: Array<{ nombre: string; icono: string; descripcion: string }> = [];
 
   // Paleta de colores moderna
   private coloresModernos = [

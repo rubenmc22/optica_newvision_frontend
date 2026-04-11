@@ -1,6 +1,6 @@
 export interface DatosPorSede {
   pacientes: number;
-  ventas: number;
-  ordenes: number;
   historias: number;
+  consultasPendientes: number;
+  historiasFacturadas: number;
 }

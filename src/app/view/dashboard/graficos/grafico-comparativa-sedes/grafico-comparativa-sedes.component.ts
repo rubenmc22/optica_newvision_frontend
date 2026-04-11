@@ -27,8 +27,8 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
   private colores = {
     pacientes: '#3498db',
     historias: '#2ecc71',
-    ventas: '#f39c12',
-    ordenes: '#e74c3c',
+    pendientes: '#f39c12',
+    facturadas: '#e74c3c',
     sedes: '#9b59b6'
   };
 
@@ -225,26 +225,26 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
       });
     }
 
-    // Ventas
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'ventas') {
+    // Consultas pendientes
+    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'pendientes') {
       datasets.push({
-        label: 'Ventas',
-        data: sedesArray.map(s => s.ventas || s.totalVentas || 0),
-        backgroundColor: this.colores.ventas,
-        borderColor: this.colores.ventas,
+        label: 'Pendientes de cobro',
+        data: sedesArray.map(s => s.consultasPendientes || s.totalPendientes || 0),
+        backgroundColor: this.colores.pendientes,
+        borderColor: this.colores.pendientes,
         borderWidth: 1,
         borderRadius: 4,
         barPercentage: 0.7
       });
     }
 
-    // Órdenes
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'ordenes') {
+    // Historias facturadas
+    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'facturadas') {
       datasets.push({
-        label: 'Órdenes Pendientes',
-        data: sedesArray.map(s => s.ordenes || s.ordenesPendientes || 0),
-        backgroundColor: this.colores.ordenes,
-        borderColor: this.colores.ordenes,
+        label: 'Historias con venta',
+        data: sedesArray.map(s => s.historiasFacturadas || s.totalFacturadas || 0),
+        backgroundColor: this.colores.facturadas,
+        borderColor: this.colores.facturadas,
         borderWidth: 1,
         borderRadius: 4,
         barPercentage: 0.7
@@ -284,25 +284,25 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
       });
     }
 
-    // Ventas
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'ventas') {
+    // Consultas pendientes
+    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'pendientes') {
       datasets.push({
-        label: 'Ventas',
-        data: sedes.map(sede => sedesObj[sede].ventas || sedesObj[sede].totalVentas || 0),
-        backgroundColor: this.colores.ventas,
-        borderColor: this.colores.ventas,
+        label: 'Pendientes de cobro',
+        data: sedes.map(sede => sedesObj[sede].consultasPendientes || sedesObj[sede].totalPendientes || 0),
+        backgroundColor: this.colores.pendientes,
+        borderColor: this.colores.pendientes,
         borderWidth: 1,
         borderRadius: 4
       });
     }
 
-    // Órdenes
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'ordenes') {
+    // Historias facturadas
+    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'facturadas') {
       datasets.push({
-        label: 'Órdenes Pendientes',
-        data: sedes.map(sede => sedesObj[sede].ordenes || sedesObj[sede].ordenesPendientes || 0),
-        backgroundColor: this.colores.ordenes,
-        borderColor: this.colores.ordenes,
+        label: 'Historias con venta',
+        data: sedes.map(sede => sedesObj[sede].historiasFacturadas || sedesObj[sede].totalFacturadas || 0),
+        backgroundColor: this.colores.facturadas,
+        borderColor: this.colores.facturadas,
         borderWidth: 1,
         borderRadius: 4
       });
@@ -316,20 +316,20 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
 
     let totalPacientes = 0;
     let totalHistorias = 0;
-    let totalVentas = 0;
-    let totalOrdenes = 0;
+    let totalPendientes = 0;
+    let totalFacturadas = 0;
 
     if (Array.isArray(this.data)) {
       totalPacientes = this.data.reduce((sum, sede) => sum + (sede.pacientes || sede.totalPacientes || 0), 0);
       totalHistorias = this.data.reduce((sum, sede) => sum + (sede.historias || sede.totalHistorias || 0), 0);
-      totalVentas = this.data.reduce((sum, sede) => sum + (sede.ventas || sede.totalVentas || 0), 0);
-      totalOrdenes = this.data.reduce((sum, sede) => sum + (sede.ordenes || sede.ordenesPendientes || 0), 0);
+      totalPendientes = this.data.reduce((sum, sede) => sum + (sede.consultasPendientes || sede.totalPendientes || 0), 0);
+      totalFacturadas = this.data.reduce((sum, sede) => sum + (sede.historiasFacturadas || sede.totalFacturadas || 0), 0);
     } else if (typeof this.data === 'object') {
       const sedes = Object.keys(this.data);
       totalPacientes = sedes.reduce((sum, sede) => sum + (this.data[sede].pacientes || this.data[sede].totalPacientes || 0), 0);
       totalHistorias = sedes.reduce((sum, sede) => sum + (this.data[sede].historias || this.data[sede].totalHistorias || 0), 0);
-      totalVentas = sedes.reduce((sum, sede) => sum + (this.data[sede].ventas || this.data[sede].totalVentas || 0), 0);
-      totalOrdenes = sedes.reduce((sum, sede) => sum + (this.data[sede].ordenes || this.data[sede].ordenesPendientes || 0), 0);
+      totalPendientes = sedes.reduce((sum, sede) => sum + (this.data[sede].consultasPendientes || this.data[sede].totalPendientes || 0), 0);
+      totalFacturadas = sedes.reduce((sum, sede) => sum + (this.data[sede].historiasFacturadas || this.data[sede].totalFacturadas || 0), 0);
     }
 
     this.estadisticasRapidas = [
@@ -346,16 +346,16 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
         color: this.colores.historias
       },
       {
-        icono: 'fas fa-shopping-cart',
-        label: 'Total Ventas',
-        valor: this.formatearNumero(totalVentas),
-        color: this.colores.ventas
+        icono: 'fas fa-wallet',
+        label: 'Pendientes de cobro',
+        valor: this.formatearNumero(totalPendientes),
+        color: this.colores.pendientes
       },
       {
-        icono: 'fas fa-clipboard-list',
-        label: 'Órdenes Pendientes',
-        valor: this.formatearNumero(totalOrdenes),
-        color: this.colores.ordenes
+        icono: 'fas fa-receipt',
+        label: 'Historias con venta',
+        valor: this.formatearNumero(totalFacturadas),
+        color: this.colores.facturadas
       }
     ];
   }

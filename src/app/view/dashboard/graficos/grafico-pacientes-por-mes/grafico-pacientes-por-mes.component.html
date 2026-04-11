@@ -38,14 +38,8 @@
               </div>
             </div>
             <div class="chart-actions-carrusel">
-              <button class="btn-chart-action" (click)="exportarGrafico('pacientes')" title="Descargar">
-                <i class="fas fa-download"></i>
-              </button>
               <button class="btn-chart-action" (click)="cambiarTipoGrafico('pacientes')" title="Cambiar tipo">
                 <i class="fas fa-chart-bar"></i>
-              </button>
-              <button class="btn-chart-action" (click)="maximizarGrafico('pacientes')" title="Expandir">
-                <i class="fas fa-expand"></i>
               </button>
             </div>
           </div>
@@ -116,14 +110,8 @@
               </div>
             </div>
             <div class="chart-actions-carrusel">
-              <button class="btn-chart-action" (click)="exportarGrafico('historias')" title="Descargar">
-                <i class="fas fa-download"></i>
-              </button>
               <button class="btn-chart-action" (click)="cambiarTipoGrafico('historias')" title="Cambiar tipo">
                 <i class="fas fa-chart-bar"></i>
-              </button>
-              <button class="btn-chart-action" (click)="maximizarGrafico('historias')" title="Expandir">
-                <i class="fas fa-expand"></i>
               </button>
             </div>
           </div>
@@ -180,22 +168,6 @@
         </div>
       </div>
 
-      <!-- Placeholder para módulos futuros -->
-      <div class="carrusel-slide" *ngFor="let modulo of modulosFuturos; let i = index">
-        <div class="chart-card-carrusel placeholder">
-          <div class="placeholder-content">
-            <div class="placeholder-icon">
-              <i [class]="modulo.icono"></i>
-            </div>
-            <h3>{{ modulo.nombre }}</h3>
-            <p>{{ modulo.descripcion }}</p>
-            <button class="btn-placeholder" (click)="activarModulo(modulo)">
-              <i class="fas fa-plus"></i>
-              Activar Módulo
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -203,8 +175,7 @@
   <div class="carrusel-info">
     <div class="info-item">
       <span class="info-label">Gráfico {{ graficoActual + 1 }} de {{ totalGraficos }}</span>
-      <span class="info-title">{{ graficoActual < graficos.length ? graficos[graficoActual].nombre :
-          modulosFuturos[graficoActual - graficos.length].nombre }}</span>
+      <span class="info-title">{{ graficos[graficoActual].nombre }}</span>
     </div>
     <div class="auto-play-controls">
       <button class="btn-auto-play" (click)="toggleAutoPlay()" [class.active]="autoPlayActivo">

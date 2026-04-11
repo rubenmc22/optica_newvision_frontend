@@ -10,18 +10,12 @@
       </div>
     </div>
     <div class="chart-actions-moderno">
-      <button class="btn-chart-action" (click)="exportarGrafico()" title="Descargar">
-        <i class="fas fa-download"></i>
-      </button>
       <button class="btn-chart-action" (click)="cambiarVista()" title="Cambiar orientación">
         <i class="fas fa-arrows-alt-h"></i>
       </button>
       <button class="btn-chart-action" (click)="cambiarTipoGrafico(chartType === 'bar' ? 'line' : 'bar')" 
               title="Cambiar tipo de gráfico">
         <i class="fas" [class.fa-chart-bar]="chartType === 'line'" [class.fa-chart-line]="chartType === 'bar'"></i>
-      </button>
-      <button class="btn-chart-action" (click)="maximizarGrafico()" title="Expandir">
-        <i class="fas fa-expand"></i>
       </button>
     </div>
   </div>
@@ -36,8 +30,8 @@
             <option value="todas">Todas las métricas</option>
             <option value="pacientes">Solo Pacientes</option>
             <option value="historias">Solo Historias Médicas</option>
-            <option value="ventas">Solo Ventas</option>
-            <option value="ordenes">Solo Órdenes</option>
+            <option value="pendientes">Solo Pendientes de cobro</option>
+            <option value="facturadas">Solo Historias con venta</option>
           </select>
         </div>
         <div class="filtro-grupo">
