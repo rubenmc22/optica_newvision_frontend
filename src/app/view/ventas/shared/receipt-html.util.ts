@@ -73,22 +73,30 @@ function normalizarMonedaRecibo(moneda: any): string {
   }
 }
 
+function obtenerMonedaOriginalMetodo(metodo: any, monedaVenta?: string): string {
+  return normalizarMonedaRecibo(
+    metodo?.moneda
+    ?? metodo?.moneda_id
+    ?? metodo?.monedaOriginal
+    ?? monedaVenta
+  ) || 'dolar';
+}
+
 function obtenerMontoVisibleMetodo(metodo: any): number {
-  const valor = metodo?.monto_en_moneda_de_venta
+  const valor = metodo?.monto
+    ?? metodo?.montoOriginal
+    ?? metodo?.monto_en_moneda_original
+    ?? metodo?.montoEnMonedaOriginal
+    ?? metodo?.monto_en_moneda_de_venta
     ?? metodo?.montoEnSistema
     ?? metodo?.montoEnMonedaSistema
-    ?? metodo?.monto;
+    ?? metodo?.montoEnMonedaVenta;
   const monto = Number(valor ?? 0);
   return Number.isFinite(monto) ? monto : 0;
 }
 
 function obtenerMonedaVisibleMetodo(metodo: any, monedaVenta?: string): string {
-  return normalizarMonedaRecibo(
-    metodo?.monedaSistema
-    ?? metodo?.monedaVenta
-    ?? monedaVenta
-    ?? metodo?.moneda
-  ) || 'dolar';
+  return obtenerMonedaOriginalMetodo(metodo, monedaVenta);
 }
 
 function obtenerMontoBolivarMetodo(metodo: any): number | null {
@@ -98,9 +106,8 @@ function obtenerMontoBolivarMetodo(metodo: any): number | null {
 }
 
 function debeMostrarReferenciaBolivarMetodo(metodo: any, monedaVenta?: string): boolean {
-  const monedaVisible = obtenerMonedaVisibleMetodo(metodo, monedaVenta);
-  const monedaOriginal = normalizarMonedaRecibo(metodo?.moneda);
-  return monedaVisible !== 'bolivar' && monedaOriginal !== 'bolivar' && obtenerMontoBolivarMetodo(metodo) !== null;
+  const monedaOriginal = obtenerMonedaOriginalMetodo(metodo, monedaVenta);
+  return monedaOriginal !== 'bolivar' && obtenerMontoBolivarMetodo(metodo) !== null;
 }
 
 export function generateUnifiedReceiptHTML(options: ReceiptRenderOptions): string {

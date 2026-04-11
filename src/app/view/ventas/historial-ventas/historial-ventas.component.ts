@@ -4311,11 +4311,14 @@ export class HistorialVentasComponent implements OnInit {
 
     const obtenerMontoVisibleMetodoLocal = (metodo: any): number => {
       const montoVisible = Number(
+        metodo?.monto ??
+        metodo?.montoOriginal ??
+        metodo?.monto_en_moneda_original ??
+        metodo?.montoEnMonedaOriginal ??
         metodo?.monto_en_moneda_de_venta ??
         metodo?.montoEnMonedaVenta ??
         metodo?.montoEnSistema ??
-        metodo?.montoEnMonedaSistema ??
-        metodo?.monto
+        metodo?.montoEnMonedaSistema
       );
 
       return Number.isFinite(montoVisible) ? montoVisible : 0;
@@ -4323,11 +4326,12 @@ export class HistorialVentasComponent implements OnInit {
 
     const obtenerMonedaVisibleMetodoLocal = (metodo: any): string => {
       return normalizarMonedaReciboLocal(
-        metodo?.monedaSistema ??
-        datos?.configuracion?.moneda ??
-        this.ventaParaRecibo?.moneda ??
         metodo?.moneda ??
         metodo?.moneda_id ??
+        metodo?.monedaOriginal ??
+        datos?.configuracion?.moneda ??
+        this.ventaParaRecibo?.moneda ??
+        metodo?.monedaSistema ??
         'dolar'
       ) || 'dolar';
     };
@@ -4354,7 +4358,7 @@ export class HistorialVentasComponent implements OnInit {
     };
 
     const debeMostrarReferenciaBolivarMetodoLocal = (metodo: any): boolean => {
-      const monedaOriginal = normalizarMonedaReciboLocal(metodo?.moneda ?? metodo?.moneda_id);
+      const monedaOriginal = obtenerMonedaVisibleMetodoLocal(metodo);
       return monedaOriginal !== 'bolivar' && obtenerMontoBolivarMetodoLocal(metodo) !== null;
     };
 

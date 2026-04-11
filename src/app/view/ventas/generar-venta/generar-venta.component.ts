@@ -4297,12 +4297,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     debeMostrarConversionBsPorMetodo(metodo: any): boolean {
-        const monedaSistema = this.normalizarMonedaMetodo(metodo?.monedaSistema)
-            || this.normalizarMonedaMetodo(this.datosRecibo?.configuracion?.moneda)
-            || this.normalizarMonedaMetodo(this.venta.moneda);
         const monedaOriginal = this.normalizarMonedaMetodo(metodo?.moneda) || 'dolar';
 
-        return monedaSistema !== 'bolivar' && monedaOriginal !== 'bolivar';
+        return monedaOriginal !== 'bolivar';
     }
 
     private crearDatosReciboReal(): any {
@@ -4640,12 +4637,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             mensaje += `\n*Métodos de pago utilizados:*\n`;
             datos.metodosPago.forEach((metodo: any) => {
                 const emoji = this.obtenerEmojiMetodoPago(metodo.tipo);
-                mensaje += `• ${emoji} ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || datos.configuracion?.moneda)}\n`;
-                if (metodo.monedaSistema && metodo.moneda && metodo.monedaSistema !== metodo.moneda) {
-                    mensaje += `  Original: ${this.formatearMoneda(metodo.monto, metodo.moneda)}\n`;
-                }
+                const montoVisible = metodo.monto ?? metodo.montoEnSistema ?? metodo.montoEnMonedaSistema;
+                const monedaVisible = metodo.moneda || metodo.monedaSistema || datos.configuracion?.moneda;
+                mensaje += `• ${emoji} ${this.formatearTipoPago(metodo.tipo)}: ${this.formatearMoneda(montoVisible, monedaVisible)}\n`;
                 if (this.debeMostrarConversionBsPorMetodo(metodo)) {
-                    mensaje += `  Bs: ${this.formatearMoneda(metodo.montoEnBolivar ?? this.obtenerMontoReciboEnBolivar(metodo.montoEnSistema ?? metodo.monto, metodo.monedaSistema || metodo.moneda), 'bolivar')}\n`;
+                    mensaje += `  Bs: ${this.formatearMoneda(metodo.montoEnBolivar ?? this.obtenerMontoReciboEnBolivar(montoVisible, monedaVisible), 'bolivar')}\n`;
                 }
                 if (metodo.referencia) {
                     mensaje += `  Ref: ${metodo.referencia}\n`;
