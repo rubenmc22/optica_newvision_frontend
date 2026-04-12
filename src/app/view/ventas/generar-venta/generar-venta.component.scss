@@ -7475,14 +7475,21 @@
 
         .btn-secondary-cancelar,
         .btn-detalle {
-            flex: 1 1 0;
             justify-content: center;
             text-align: center;
             min-width: 0;
             padding-inline: 0.9rem;
         }
 
+        .btn-secondary-cancelar {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
         .btn-detalle {
+            flex: 1 1 auto;
+            white-space: nowrap;
+
             .btn-detalle__label--desktop,
             .btn-detalle__hint {
                 display: none;
@@ -7490,6 +7497,7 @@
 
             .btn-detalle__label--mobile {
                 display: inline;
+                white-space: nowrap;
             }
         }
     }

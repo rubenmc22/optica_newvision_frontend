@@ -15,3 +15,39 @@ body {
     margin: 0;
     font-family: Roboto, "Helvetica Neue", sans-serif;
 }
+
+@media (max-width: 768px) {
+    .modal.show {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0.75rem !important;
+    }
+
+    .modal.show .modal-dialog {
+        margin: 0 !important;
+        width: min(100%, calc(100vw - 1.5rem));
+        max-width: calc(100vw - 1.5rem) !important;
+        min-height: calc(100vh - 1.5rem);
+        min-height: calc(100dvh - 1.5rem);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.show .modal-dialog.modal-dialog-scrollable {
+        height: auto;
+    }
+
+    .modal.show .modal-content {
+        width: 100%;
+        max-height: calc(100vh - 1.5rem);
+        max-height: calc(100dvh - 1.5rem);
+        overflow: hidden;
+    }
+
+    .modal.show .modal-body {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
