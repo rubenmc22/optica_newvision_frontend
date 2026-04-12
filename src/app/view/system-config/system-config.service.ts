@@ -659,9 +659,9 @@ export class SystemConfigService {
    * Cambia la moneda principal del sistema y guarda en el backend
    */
   cambiarMonedaPrincipal(nuevaMoneda: 'USD' | 'EUR' | 'VES'): Observable<MonedaBaseResponse> {
-    const config = this.getConfig();
+    const configAnterior = this.getConfig();
     const nuevoConfig: SystemConfig = {
-      ...config,
+      ...configAnterior,
       monedaPrincipal: nuevaMoneda,
       simboloMoneda: this.obtenerSimboloMoneda(nuevaMoneda),
       ultimaActualizacion: new Date().toISOString()
@@ -679,8 +679,7 @@ export class SystemConfigService {
         },
         error: (error) => {
           console.error('❌ Error guardando en backend:', error);
-          // Aún así notificar el cambio local
-          this.notificarCambioMoneda(nuevaMoneda);
+          this.saveConfig(configAnterior);
         }
       })
     );

@@ -26,6 +26,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     readonly PRODUCTOS_POR_PAGINA = 12;
     readonly RANGO_PAGINACION = 3;
     readonly IVA = 0.16;
+    readonly STOCK_BAJO_LIMITE = 5;
     precioInputTemporal: string = '';
     estaEditandoPrecio: boolean = false;
 
@@ -270,6 +271,26 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         return this.simboloMonedaSistema;
     }
 
+    get etiquetaMonedaSistema(): string {
+        return `${this.simboloMonedaSistema} ${this.monedaSistema}`;
+    }
+
+    get totalProductosRegistrados(): number {
+        return this.productos.length;
+    }
+
+    get totalProductosActivos(): number {
+        return this.productos.filter(producto => producto.activo).length;
+    }
+
+    get totalProductosConAlerta(): number {
+        return this.productos.filter(producto => (producto.stock ?? 0) <= this.STOCK_BAJO_LIMITE).length;
+    }
+
+    get totalProductosAgotados(): number {
+        return this.productos.filter(producto => (producto.stock ?? 0) === 0).length;
+    }
+
     esMonedaBolivar(moneda: string): boolean {
         if (!moneda) return false;
         const monedaNormalizada = moneda.toLowerCase();
@@ -284,8 +305,35 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             case 'usd': return 'dolar';
             case 'eur': return 'euro';
             case 'bs': return 'bolivar';
+            case 'ves': return 'bolivar';
             default: return moneda?.toLowerCase() ?? 'bolivar';
         }
+    }
+
+    private obtenerMonedaPersistencia(producto: Producto): string {
+        return producto.monedaOriginal || producto.moneda || this.monedaSistema;
+    }
+
+    private obtenerPrecioVisibleFormulario(producto: Producto): number {
+        const precioVisible = producto.aplicaIva
+            ? (producto.precioConIva ?? producto.precio)
+            : producto.precio;
+
+        return Number((precioVisible || 0).toFixed(2));
+    }
+
+    private obtenerPrecioParaPersistencia(producto: Producto): number {
+        const monedaVisible = producto.moneda || this.monedaSistema;
+        const monedaPersistencia = this.obtenerMonedaPersistencia(producto);
+        const precioVisible = this.obtenerPrecioVisibleFormulario(producto);
+
+        const precioConvertido = this.systemConfigService.convertirMonto(
+            precioVisible,
+            monedaVisible,
+            monedaPersistencia
+        );
+
+        return Number(precioConvertido.toFixed(2));
     }
 
     // =========== GESTIÓN DE MODAL ===========
@@ -340,6 +388,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         this.cargando = true;
 
         const producto = this.productoConversionService.prepararNuevoProducto(this.productoSeguro);
+        const precioPersistencia = this.obtenerPrecioParaPersistencia(producto);
         const formData = new FormData();
 
         formData.append('nombre', producto.nombre);
@@ -350,17 +399,12 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         formData.append('proveedor', producto.proveedor);
         formData.append('categoria', producto.categoria);
         formData.append('stock', producto.stock.toString());
-        formData.append('moneda', producto.moneda);
+        formData.append('moneda', this.obtenerMonedaPersistencia(producto));
         formData.append('activo', producto.activo ? 'true' : 'false');
         formData.append('descripcion', producto.descripcion ?? '');
         formData.append('fechaIngreso', producto.fechaIngreso);
         formData.append('aplicaIva', producto.aplicaIva.toString());
-
-        if (producto.aplicaIva) {
-            producto.precio = producto.precioConIva ?? producto.precio;
-        }
-
-        formData.append('precio', producto.precio.toString());
+        formData.append('precio', precioPersistencia.toString());
 
         if (this.imagenSeleccionada) {
             formData.append('imagen', this.imagenSeleccionada);
@@ -374,6 +418,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         ).subscribe({
             next: ({ productos }) => {
                 this.productos = this.productoConversionService.convertirListaProductosAmonedaSistema(productos);
+                this.corregirProductosInconsistentes();
                 this.cargando = false;
                 this.cerrarModal();
             },
@@ -389,6 +434,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         this.cargando = true;
 
         const producto = this.productoSeguro;
+        const precioPersistencia = this.obtenerPrecioParaPersistencia(producto);
         const formData = new FormData();
 
         formData.append('nombre', producto.nombre ?? '');
@@ -399,17 +445,12 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         formData.append('proveedor', producto.proveedor ?? '');
         formData.append('categoria', producto.categoria ?? '');
         formData.append('stock', producto.stock?.toString() ?? '0');
-        formData.append('moneda', producto.moneda ?? '');
+        formData.append('moneda', this.obtenerMonedaPersistencia(producto));
         formData.append('activo', producto.activo ? 'true' : 'false');
         formData.append('descripcion', producto.descripcion ?? '');
         formData.append('fechaIngreso', producto.fechaIngreso ?? '');
         formData.append('aplicaIva', producto.aplicaIva.toString());
-
-        if (producto.aplicaIva) {
-            producto.precio = producto.precioConIva ?? producto.precio;
-        }
-
-        formData.append('precio', producto.precio?.toString() ?? '0');
+        formData.append('precio', precioPersistencia.toString());
 
         if (this.imagenSeleccionada) {
             formData.append('imagen', this.imagenSeleccionada);
@@ -429,7 +470,8 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             })
         ).subscribe({
             next: ({ productos }) => {
-                this.productos = productos;
+                this.productos = this.productoConversionService.convertirListaProductosAmonedaSistema(productos);
+                this.corregirProductosInconsistentes();
                 this.cargando = false;
                 this.cerrarModal();
             },
@@ -547,7 +589,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         return {
             ...base,
             id: base.id || crypto.randomUUID(),
-            moneda: base.moneda?.toLowerCase() ?? 'bolivar',
+            moneda: base.moneda || this.monedaSistema,
             fechaIngreso: base.fechaIngreso || new Date().toISOString().split('T')[0],
             imagenUrl: this.avatarPreview || base.imagenUrl || ''
         };
@@ -569,7 +611,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             aplicaIva: false,
             precio: 0,
             precioConIva: 0,
-            moneda: null as any,
+            moneda: this.monedaSistema,
             activo: true,
             descripcion: '',
             imagenUrl: '',

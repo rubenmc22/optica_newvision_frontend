@@ -1,5 +1,5 @@
-<div *ngIf="dataIsReady" class="fade-in mb-5">
-  <div class="container-fluid mt-4">
+<div *ngIf="dataIsReady" class="inventory-shell fade-in mb-5">
+  <div class="inventory-panel">
     <div class="card productos-moderno">
       <!-- Header modernizado -->
       <div class="card-header-moderno">
@@ -8,8 +8,9 @@
             <i class="bi bi-box-seam"></i>
           </div>
           <div class="header-text">
+            <span class="header-badge">Inventario</span>
             <h4 class="header-title">Catálogo de Productos</h4>
-            <div class="header-subtitle">Administra el inventario de productos</div>
+            <div class="header-subtitle">Controla referencias, stock y precios con la misma línea visual del sistema.</div>
           </div>
         </div>
         <button class="btn btn-agregar-producto" (click)="abrirModal('agregar')">
@@ -20,6 +21,26 @@
 
       <!-- Cuerpo modernizado -->
       <div class="card-body-moderno">
+        <section class="inventory-insights">
+          <article class="insight-card">
+            <span class="insight-label">Referencias registradas</span>
+            <strong class="insight-value">{{ totalProductosRegistrados }}</strong>
+            <span class="insight-meta">Productos cargados en el inventario actual.</span>
+          </article>
+
+          <article class="insight-card">
+            <span class="insight-label">Productos activos</span>
+            <strong class="insight-value">{{ totalProductosActivos }}</strong>
+            <span class="insight-meta">Disponibles para operar y mostrar en venta.</span>
+          </article>
+
+          <article class="insight-card">
+            <span class="insight-label">Alertas de stock</span>
+            <strong class="insight-value">{{ totalProductosConAlerta }}</strong>
+            <span class="insight-meta">Incluye {{ totalProductosAgotados }} agotados y referencias con stock bajo.</span>
+          </article>
+        </section>
+
         <!-- Filtros modernos mejorados -->
         <div class="filtros-modernos">
           <div class="filtro-item">
@@ -165,6 +186,11 @@
                 {{ producto.marca }} · {{ producto.nombre }}
               </h6>
 
+              <div class="producto-meta-row">
+                <span class="meta-pill">{{ producto.categoria }}</span>
+                <span class="meta-pill meta-pill--soft" *ngIf="producto.sede">{{ producto.sede | titlecase }}</span>
+              </div>
+
               <!-- SECCIÓN DE PRECIOS  -->
               <div class="producto-precio">
                 <div class="precio-principal">
@@ -180,6 +206,7 @@
                     Bs {{ getPrecioBs(producto) | number:'1.2-2' }}
                   </span>
                 </div>
+
               </div>
 
               <div class="producto-stock">
