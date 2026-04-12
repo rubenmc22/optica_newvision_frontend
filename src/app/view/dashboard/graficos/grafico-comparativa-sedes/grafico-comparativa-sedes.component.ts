@@ -1,5 +1,34 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, HostListener, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { ChartData, ChartOptions } from 'chart.js';
+
+type MetricaComparativa = 'todas' | 'pacientes' | 'historias' | 'pendientes' | 'facturadas';
+type TipoComparativa = 'bar' | 'line';
+
+interface SedeComparativa {
+  key: string;
+  label: string;
+  pacientes: number;
+  historias: number;
+  consultasPendientes: number;
+  historiasFacturadas: number;
+}
+
+interface DatasetComparativa {
+  key: Exclude<MetricaComparativa, 'todas'>;
+  label: string;
+  color: string;
+  softColor: string;
+  values: number[];
+}
+
+interface ResumenSede {
+  label: string;
+  total: number;
+  pacientes: number;
+  historias: number;
+  pendientes: number;
+  facturadas: number;
+}
 
 @Component({
   selector: 'app-grafico-comparativa-sedes',
@@ -8,141 +37,22 @@ import { ChartData, ChartOptions } from 'chart.js';
   styleUrls: ['./grafico-comparativa-sedes.component.scss']
 })
 export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
-
   @Input() data: any = {};
 
-  // Configuración del gráfico
-  chartType: any = 'bar';
-  chartData: ChartData<'bar'> = { labels: [], datasets: [] };
-  mostrarGrafico: boolean = false;
+  chartType: TipoComparativa = 'bar';
+  metricaSeleccionada: MetricaComparativa = 'todas';
+  mostrarGrafico = false;
+  chartData: ChartData<'bar' | 'line'> = { labels: [], datasets: [] };
+  resumenSedes: ResumenSede[] = [];
+  sedesVisibles: string[] = [];
 
-  // Filtros y configuraciones
-  metricaSeleccionada: string = 'todas';
-  esHorizontal: boolean = false;
-
-  // Estadísticas rápidas
-  estadisticasRapidas: any[] = [];
-
-  // Paleta de colores moderna
-  private colores = {
-    pacientes: '#3498db',
-    historias: '#2ecc71',
-    pendientes: '#f39c12',
-    facturadas: '#e74c3c',
-    sedes: '#9b59b6'
-  };
-
-  // Opciones base del gráfico
-  private get baseOptions(): ChartOptions<'bar'> {
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      indexAxis: this.esHorizontal ? 'y' : 'x', // Configuración horizontal/vertical
-      plugins: {
-        legend: {
-          position: 'top',
-          labels: {
-            color: '#6c757d',
-            font: {
-              family: "'Inter', sans-serif",
-              size: 12
-            },
-            padding: 15,
-            usePointStyle: true,
-            boxWidth: 8
-          }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(44, 62, 80, 0.95)',
-          titleColor: '#ffffff',
-          bodyColor: '#ffffff',
-          borderColor: '#3498db',
-          borderWidth: 1,
-          cornerRadius: 8,
-          displayColors: true,
-          callbacks: {
-            label: (context: any) => {
-              const label = context.dataset.label || '';
-              let value: number;
-
-              // Manejar diferentes tipos de datos de Chart.js
-              if (typeof context.parsed === 'object') {
-                // Para gráficos de barras
-                value = this.esHorizontal ? context.parsed.x : context.parsed.y;
-              } else {
-                // Para otros tipos de gráficos
-                value = context.parsed ?? 0;
-              }
-
-              return `${label}: ${this.formatearNumero(value)}`;
-            },
-            title: (context: any) => {
-              return `Sede: ${context[0].label}`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)'
-          },
-          ticks: {
-            color: '#6c757d',
-            font: {
-              family: "'Inter', sans-serif"
-            },
-            callback: this.esHorizontal ? undefined : (value: any) => {
-              const numValue = typeof value === 'number' ? value : Number(value);
-              return this.formatearNumero(numValue);
-            }
-          },
-          title: {
-            display: true,
-            text: this.esHorizontal ? 'Cantidad' : 'Sedes',
-            color: '#6c757d',
-            font: {
-              family: "'Inter', sans-serif",
-              size: 12
-            }
-          }
-        },
-        y: {
-          beginAtZero: true,
-          grid: {
-            color: 'rgba(0, 0, 0, 0.05)'
-          },
-          ticks: {
-            color: '#6c757d',
-            font: {
-              family: "'Inter', sans-serif"
-            },
-            callback: this.esHorizontal ? undefined : (value: any) => {
-              const numValue = typeof value === 'number' ? value : Number(value);
-              return this.formatearNumero(numValue);
-            }
-          },
-          title: {
-            display: true,
-            text: this.esHorizontal ? 'Sedes' : 'Cantidad',
-            color: '#6c757d',
-            font: {
-              family: "'Inter', sans-serif",
-              size: 12
-            }
-          }
-        }
-      },
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      }
-    };
-  }
-
-  get chartOptions(): ChartOptions<'bar'> {
-    return this.baseOptions;
-  }
+  readonly filtrosVista: Array<{ key: MetricaComparativa; label: string; icon: string }> = [
+    { key: 'todas', label: 'Vista general', icon: 'fas fa-layer-group' },
+    { key: 'pacientes', label: 'Pacientes', icon: 'fas fa-users' },
+    { key: 'historias', label: 'Historias', icon: 'fas fa-file-medical' },
+    { key: 'pendientes', label: 'Pendientes', icon: 'fas fa-wallet' },
+    { key: 'facturadas', label: 'Con venta', icon: 'fas fa-receipt' }
+  ];
 
   ngOnInit(): void {
     this.actualizarGrafico();
@@ -154,268 +64,227 @@ export class GraficoComparativaSedesComponent implements OnInit, OnChanges {
     }
   }
 
-  actualizarGrafico(): void {
-    //console.log('📊 Datos recibidos en comparativa-sedes:', this.data);
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.mostrarGrafico) {
+      this.actualizarGrafico();
+    }
+  }
 
-    this.mostrarGrafico = this.tieneDatos();
+  get chartOptions(): ChartOptions<'bar' | 'line'> {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const esHorizontal = isMobile;
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      indexAxis: esHorizontal ? 'y' : 'x',
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
+      plugins: {
+        legend: {
+          position: isMobile ? 'bottom' : 'top',
+          align: 'start',
+          labels: {
+            color: '#55707d',
+            usePointStyle: true,
+            boxWidth: isMobile ? 8 : 10,
+            padding: isMobile ? 10 : 16,
+            font: {
+              family: "'Inter', sans-serif",
+              size: isMobile ? 10 : 12,
+              weight: 600
+            }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(14, 35, 48, 0.96)',
+          titleColor: '#ffffff',
+          bodyColor: '#f2f7f9',
+          borderColor: 'rgba(106, 173, 201, 0.35)',
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 12,
+          callbacks: {
+            label: (context: any) => {
+              const label = context.dataset.label || '';
+              const rawValue = typeof context.parsed === 'object'
+                ? Number(esHorizontal ? context.parsed.x : context.parsed.y)
+                : Number(context.parsed ?? 0);
+              return `${label}: ${rawValue}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(20, 56, 72, 0.08)'
+          },
+          ticks: {
+            precision: 0,
+            color: '#6b7f8c',
+            autoSkip: true,
+            maxRotation: 0,
+            minRotation: 0,
+            font: {
+              family: "'Inter', sans-serif",
+              size: isMobile ? 10 : 11
+            }
+          }
+        },
+        y: {
+          grid: {
+            display: !esHorizontal,
+            color: 'rgba(20, 56, 72, 0.06)'
+          },
+          ticks: {
+            color: '#6b7f8c',
+            autoSkip: false,
+            font: {
+              family: "'Inter', sans-serif",
+              size: isMobile ? 10 : 11,
+              weight: 600
+            }
+          }
+        }
+      },
+      elements: {
+        line: {
+          tension: 0.28,
+          borderWidth: isMobile ? 2 : 3,
+          fill: false
+        },
+        point: {
+          radius: this.chartType === 'line' ? (isMobile ? 3 : 4) : 0,
+          hoverRadius: isMobile ? 5 : 6,
+          borderWidth: 0
+        },
+        bar: {
+          borderRadius: 12,
+          borderSkipped: false
+        }
+      }
+    };
+  }
+
+  seleccionarVista(vista: MetricaComparativa): void {
+    if (this.metricaSeleccionada === vista) return;
+    this.metricaSeleccionada = vista;
+    this.actualizarGrafico();
+  }
+
+  alternarTipoGrafico(): void {
+    this.chartType = this.chartType === 'bar' ? 'line' : 'bar';
+    this.actualizarGrafico();
+  }
+
+  private actualizarGrafico(): void {
+    const sedes = this.obtenerSedesComparativas();
+    this.mostrarGrafico = sedes.length > 0;
 
     if (!this.mostrarGrafico) {
-      console.warn('No hay datos para mostrar en el gráfico de comparativa');
-      this.mostrarGraficoVacio();
+      this.chartData = { labels: [], datasets: [] };
+      this.resumenSedes = [];
+      this.sedesVisibles = [];
       return;
     }
 
-    try {
-      const { labels, datasets } = this.procesarDatos();
-      this.chartData.labels = labels;
-      this.chartData.datasets = datasets;
+    const datasets = this.construirDatasets(sedes);
+    const visibles = this.metricaSeleccionada === 'todas'
+      ? datasets
+      : datasets.filter(dataset => dataset.key === this.metricaSeleccionada);
 
-      // Actualizar estadísticas rápidas
-      this.actualizarEstadisticasRapidas();
+    this.sedesVisibles = sedes.map(sede => sede.label);
+    this.chartData = {
+      labels: this.sedesVisibles,
+      datasets: visibles.map(dataset => ({
+        label: dataset.label,
+        data: dataset.values,
+        borderColor: dataset.color,
+        backgroundColor: this.chartType === 'line' ? dataset.softColor : dataset.color,
+        pointBackgroundColor: dataset.color,
+        pointHoverBackgroundColor: dataset.color,
+        pointHoverBorderColor: '#ffffff',
+        pointHoverBorderWidth: 2,
+        borderWidth: this.chartType === 'line' ? 3 : 1
+      }))
+    };
 
-   //   console.log('✅ Gráfico de comparativa actualizado:', this.chartData);
-    } catch (error) {
-      console.error('❌ Error procesando datos de comparativa:', error);
-      this.mostrarGraficoVacio();
-    }
+    this.resumenSedes = sedes.map(sede => ({
+      label: sede.label,
+      total: sede.pacientes + sede.historias + sede.consultasPendientes + sede.historiasFacturadas,
+      pacientes: sede.pacientes,
+      historias: sede.historias,
+      pendientes: sede.consultasPendientes,
+      facturadas: sede.historiasFacturadas
+    }));
   }
 
-  private procesarDatos(): { labels: string[], datasets: any[] } {
-    if (Array.isArray(this.data)) {
-      return this.procesarArraySedes(this.data);
-    }
-
-    if (typeof this.data === 'object' && !Array.isArray(this.data)) {
-      return this.procesarObjetoSedes(this.data);
-    }
-
-    throw new Error('Estructura de datos no reconocida');
-  }
-
-  private procesarArraySedes(sedesArray: any[]): { labels: string[], datasets: any[] } {
-    const labels = sedesArray.map(sede =>
-      sede.nombre || sede.sede || sede.id || 'Sede Sin Nombre'
-    );
-
-    const datasets = [];
-
-    // Pacientes
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'pacientes') {
-      datasets.push({
+  private construirDatasets(sedes: SedeComparativa[]): DatasetComparativa[] {
+    const definiciones: Omit<DatasetComparativa, 'values'>[] = [
+      {
+        key: 'pacientes',
         label: 'Pacientes',
-        data: sedesArray.map(s => s.pacientes || s.totalPacientes || 0),
-        backgroundColor: this.colores.pacientes,
-        borderColor: this.colores.pacientes,
-        borderWidth: 1,
-        borderRadius: 4,
-        barPercentage: 0.7
-      });
-    }
-
-    // Historias Médicas
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'historias') {
-      datasets.push({
-        label: 'Historias Médicas',
-        data: sedesArray.map(s => s.historias || s.totalHistorias || 0),
-        backgroundColor: this.colores.historias,
-        borderColor: this.colores.historias,
-        borderWidth: 1,
-        borderRadius: 4,
-        barPercentage: 0.7
-      });
-    }
-
-    // Consultas pendientes
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'pendientes') {
-      datasets.push({
-        label: 'Pendientes de cobro',
-        data: sedesArray.map(s => s.consultasPendientes || s.totalPendientes || 0),
-        backgroundColor: this.colores.pendientes,
-        borderColor: this.colores.pendientes,
-        borderWidth: 1,
-        borderRadius: 4,
-        barPercentage: 0.7
-      });
-    }
-
-    // Historias facturadas
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'facturadas') {
-      datasets.push({
-        label: 'Historias con venta',
-        data: sedesArray.map(s => s.historiasFacturadas || s.totalFacturadas || 0),
-        backgroundColor: this.colores.facturadas,
-        borderColor: this.colores.facturadas,
-        borderWidth: 1,
-        borderRadius: 4,
-        barPercentage: 0.7
-      });
-    }
-
-    return { labels, datasets };
-  }
-
-  private procesarObjetoSedes(sedesObj: Record<string, any>): { labels: string[], datasets: any[] } {
-    const sedes = Object.keys(sedesObj);
-    const labels = sedes.map(sede => this.formatearNombreSede(sede));
-
-    const datasets = [];
-
-    // Pacientes
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'pacientes') {
-      datasets.push({
-        label: 'Pacientes',
-        data: sedes.map(sede => sedesObj[sede].pacientes || sedesObj[sede].totalPacientes || 0),
-        backgroundColor: this.colores.pacientes,
-        borderColor: this.colores.pacientes,
-        borderWidth: 1,
-        borderRadius: 4
-      });
-    }
-
-    // Historias Médicas
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'historias') {
-      datasets.push({
-        label: 'Historias Médicas',
-        data: sedes.map(sede => sedesObj[sede].historias || sedesObj[sede].totalHistorias || 0),
-        backgroundColor: this.colores.historias,
-        borderColor: this.colores.historias,
-        borderWidth: 1,
-        borderRadius: 4
-      });
-    }
-
-    // Consultas pendientes
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'pendientes') {
-      datasets.push({
-        label: 'Pendientes de cobro',
-        data: sedes.map(sede => sedesObj[sede].consultasPendientes || sedesObj[sede].totalPendientes || 0),
-        backgroundColor: this.colores.pendientes,
-        borderColor: this.colores.pendientes,
-        borderWidth: 1,
-        borderRadius: 4
-      });
-    }
-
-    // Historias facturadas
-    if (this.metricaSeleccionada === 'todas' || this.metricaSeleccionada === 'facturadas') {
-      datasets.push({
-        label: 'Historias con venta',
-        data: sedes.map(sede => sedesObj[sede].historiasFacturadas || sedesObj[sede].totalFacturadas || 0),
-        backgroundColor: this.colores.facturadas,
-        borderColor: this.colores.facturadas,
-        borderWidth: 1,
-        borderRadius: 4
-      });
-    }
-
-    return { labels, datasets };
-  }
-
-  private actualizarEstadisticasRapidas(): void {
-    if (!this.data) return;
-
-    let totalPacientes = 0;
-    let totalHistorias = 0;
-    let totalPendientes = 0;
-    let totalFacturadas = 0;
-
-    if (Array.isArray(this.data)) {
-      totalPacientes = this.data.reduce((sum, sede) => sum + (sede.pacientes || sede.totalPacientes || 0), 0);
-      totalHistorias = this.data.reduce((sum, sede) => sum + (sede.historias || sede.totalHistorias || 0), 0);
-      totalPendientes = this.data.reduce((sum, sede) => sum + (sede.consultasPendientes || sede.totalPendientes || 0), 0);
-      totalFacturadas = this.data.reduce((sum, sede) => sum + (sede.historiasFacturadas || sede.totalFacturadas || 0), 0);
-    } else if (typeof this.data === 'object') {
-      const sedes = Object.keys(this.data);
-      totalPacientes = sedes.reduce((sum, sede) => sum + (this.data[sede].pacientes || this.data[sede].totalPacientes || 0), 0);
-      totalHistorias = sedes.reduce((sum, sede) => sum + (this.data[sede].historias || this.data[sede].totalHistorias || 0), 0);
-      totalPendientes = sedes.reduce((sum, sede) => sum + (this.data[sede].consultasPendientes || this.data[sede].totalPendientes || 0), 0);
-      totalFacturadas = sedes.reduce((sum, sede) => sum + (this.data[sede].historiasFacturadas || this.data[sede].totalFacturadas || 0), 0);
-    }
-
-    this.estadisticasRapidas = [
-      {
-        icono: 'fas fa-users',
-        label: 'Total Pacientes',
-        valor: this.formatearNumero(totalPacientes),
-        color: this.colores.pacientes
+        color: '#118ab2',
+        softColor: 'rgba(17, 138, 178, 0.18)'
       },
       {
-        icono: 'fas fa-file-medical',
-        label: 'Total Historias',
-        valor: this.formatearNumero(totalHistorias),
-        color: this.colores.historias
+        key: 'historias',
+        label: 'Historias',
+        color: '#06a77d',
+        softColor: 'rgba(6, 167, 125, 0.18)'
       },
       {
-        icono: 'fas fa-wallet',
-        label: 'Pendientes de cobro',
-        valor: this.formatearNumero(totalPendientes),
-        color: this.colores.pendientes
+        key: 'pendientes',
+        label: 'Pendientes',
+        color: '#f59e0b',
+        softColor: 'rgba(245, 158, 11, 0.18)'
       },
       {
-        icono: 'fas fa-receipt',
-        label: 'Historias con venta',
-        valor: this.formatearNumero(totalFacturadas),
-        color: this.colores.facturadas
+        key: 'facturadas',
+        label: 'Con venta',
+        color: '#7c3aed',
+        softColor: 'rgba(124, 58, 237, 0.18)'
       }
     ];
+
+    return definiciones.map(definicion => ({
+      ...definicion,
+      values: sedes.map(sede => {
+        if (definicion.key === 'pacientes') return sede.pacientes;
+        if (definicion.key === 'historias') return sede.historias;
+        if (definicion.key === 'pendientes') return sede.consultasPendientes;
+        return sede.historiasFacturadas;
+      })
+    }));
   }
 
-  // Métodos auxiliares
+  private obtenerSedesComparativas(): SedeComparativa[] {
+    if (!this.data) return [];
+
+    const origen = Array.isArray(this.data)
+      ? this.data
+      : Object.keys(this.data).map(key => ({ key, ...this.data[key] }));
+
+    return origen
+      .map((sede: any) => ({
+        key: (sede.key || sede.sede || sede.nombre || '').toString().trim().toLowerCase(),
+        label: this.formatearNombreSede((sede.key || sede.sede || sede.nombre || '').toString()),
+        pacientes: Number(sede.pacientes || sede.totalPacientes || 0),
+        historias: Number(sede.historias || sede.totalHistorias || 0),
+        consultasPendientes: Number(sede.consultasPendientes || sede.totalPendientes || 0),
+        historiasFacturadas: Number(sede.historiasFacturadas || sede.totalFacturadas || 0)
+      }))
+      .filter(sede => !!sede.key && sede.key !== 'sin-sede')
+      .slice(0, 2);
+  }
+
   private formatearNombreSede(nombre: string): string {
-    return nombre.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  }
-
-  private formatearNumero(numero: number): string {
-    if (numero >= 1000000) {
-      return (numero / 1000000).toFixed(1) + 'M';
-    } else if (numero >= 1000) {
-      return (numero / 1000).toFixed(1) + 'K';
-    }
-    return numero.toString();
-  }
-
-  private tieneDatos(): boolean {
-    if (!this.data) return false;
-    if (Array.isArray(this.data)) return this.data.length > 0;
-    if (typeof this.data === 'object') return Object.keys(this.data).length > 0;
-    return false;
-  }
-
-  private mostrarGraficoVacio(): void {
-    this.chartData = {
-      labels: ['Sin datos disponibles'],
-      datasets: [{
-        label: 'Datos',
-        data: [0],
-        backgroundColor: '#6c757d'
-      }]
-    };
-    this.estadisticasRapidas = [];
-  }
-
-  // Métodos públicos para las acciones
-  exportarGrafico(): void {
-  //  console.log('Exportando gráfico de comparativa');
-    alert('Funcionalidad de exportación en desarrollo');
-  }
-
-  cambiarVista(): void {
-    // Alternar entre vista vertical y horizontal
-    this.esHorizontal = !this.esHorizontal;
-    this.actualizarGrafico();
-  }
-
-  cambiarTipoGrafico(tipo: string): void {
-    if (tipo === 'line') {
-      this.chartType = 'line';
-    } else {
-      this.chartType = 'bar';
-    }
-    this.actualizarGrafico();
-  }
-
-  maximizarGrafico(): void {
-    //console.log('Maximizando gráfico de comparativa');
-    alert('Vista ampliada en desarrollo');
+    return nombre.replace(/_/g, ' ').replace(/\b\w/g, letra => letra.toUpperCase()).trim();
   }
 }

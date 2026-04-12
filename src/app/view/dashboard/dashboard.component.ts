@@ -12,6 +12,7 @@ import { filter } from 'rxjs/operators';
 import { HistorialVentaService } from '../ventas/historial-ventas/historial-ventas.service';
 import { OrdenesTrabajoService } from '../gestion-ordenes-trabajo/gestion-ordenes-trabajo.service';
 import { OrdenTrabajo } from '../gestion-ordenes-trabajo/gestion-ordenes-trabajo.model';
+import { UserStateService } from '../../core/services/userState/user-state-service';
 
 
 @Component({
@@ -67,6 +68,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Timers para actualización automática
   private actualizacionTimer: any;
+  private sedesValidas: string[] = [];
 
   constructor(
     private pacientesService: PacientesService,
@@ -74,7 +76,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private historialVentaService: HistorialVentaService,
     private ordenesTrabajoService: OrdenesTrabajoService,
     private loader: LoaderService,
-    private router: Router
+    private router: Router,
+    private userStateService: UserStateService
   ) { }
 
   ngOnInit(): void {
@@ -130,11 +133,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private initializePantalla(): void {
+    this.sedesValidas = this.userStateService
+      .getSedes()
+      .map(sede => this.normalizarSede(sede?.key))
+      .filter(Boolean);
+
     const sessionUser = sessionStorage.getItem('authData');
     if (sessionUser) {
       const auth = JSON.parse(sessionUser) as AuthData;
       this.rolUsuario = auth.rol ?? null;
       this.sedeActual = this.normalizarSede(auth.sede?.key ?? 'sin-sede');
+
+      if (this.sedeActual && !this.sedesValidas.includes(this.sedeActual) && this.sedeActual !== 'sin-sede') {
+        this.sedesValidas = [...this.sedesValidas, this.sedeActual];
+      }
     }
 
     this.cargarDashboard();
@@ -277,10 +289,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   cargarDatosGraficos(pacientesSede: any[], historiasSede: any[], ventasSede: any[], ordenesSede: OrdenTrabajo[]): void {
     const agrupadoPorSede: Record<string, DatosPorSede> = {};
+    const sedesComparables = this.obtenerSedesComparables();
+
+    sedesComparables.forEach(sede => {
+      agrupadoPorSede[sede] = {
+        pacientes: 0,
+        historias: 0,
+        consultasPendientes: 0,
+        historiasFacturadas: 0
+      };
+    });
 
     // Contar pacientes por sede
     for (const p of this.pacientes) {
       const sede = this.normalizarSede(p.sede);
+      if (!sedesComparables.includes(sede)) continue;
+
       if (!agrupadoPorSede[sede]) {
         agrupadoPorSede[sede] = {
           pacientes: 0,
@@ -295,6 +319,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Contar historias por sede
     for (const h of this.historiasApi) {
       const sede = this.normalizarSede(h.sedeId ?? 'sin-sede');
+      if (!sedesComparables.includes(sede)) continue;
+
       if (!agrupadoPorSede[sede]) {
         agrupadoPorSede[sede] = {
           pacientes: 0,
@@ -489,6 +515,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private normalizarSede(sede: string | null | undefined): string {
     return (sede ?? 'sin-sede').toString().trim().toLowerCase();
+  }
+
+  private obtenerSedesComparables(): string[] {
+    const sedes = this.sedesValidas.filter(sede => sede && sede !== 'sin-sede');
+    return sedes.length ? sedes : ['guarenas', 'guatire'];
   }
 
   /**

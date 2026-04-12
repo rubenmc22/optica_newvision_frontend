@@ -1,4 +1,5 @@
 import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouterModule } from '@angular/router';
@@ -86,6 +87,7 @@ import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
     DetalleOrdenComponent
   ],
   imports: [
+    CommonModule,
     NgChartsModule,
     NgSelectModule,
     BrowserModule,

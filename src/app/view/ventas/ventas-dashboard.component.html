@@ -110,6 +110,6 @@
     <app-generar-venta *ngIf="vista === 'generacion-de-ventas'"></app-generar-venta>
     <app-presupuesto *ngIf="vista === 'presupuestos'"></app-presupuesto>
     <app-historial-ventas *ngIf="vista === 'historial-de-ventas'"></app-historial-ventas>
-    <app-cierre-caja *ngIf="vista === 'cierre-de-caja'"></app-cierre-caja>
+    <ng-container *ngIf="vista === 'cierre-de-caja'" [ngComponentOutlet]="cierreCajaComponent"></ng-container>
   </div>
 </div>

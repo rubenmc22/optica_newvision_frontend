@@ -1,81 +1,50 @@
-<div class="chart-card-moderno">
-  <div class="chart-header-moderno">
-    <div class="chart-title-section">
-      <div class="chart-icon">
-        <i class="fas fa-hospital"></i>
-      </div>
-      <div class="chart-title-content">
-        
-        <p class="chart-subtitle">Desempeño comparativo entre sedes</p>
-      </div>
-    </div>
-    <div class="chart-actions-moderno">
-      <button class="btn-chart-action" (click)="cambiarVista()" title="Cambiar orientación">
-        <i class="fas fa-arrows-alt-h"></i>
-      </button>
-      <button class="btn-chart-action" (click)="cambiarTipoGrafico(chartType === 'bar' ? 'line' : 'bar')" 
-              title="Cambiar tipo de gráfico">
-        <i class="fas" [class.fa-chart-bar]="chartType === 'line'" [class.fa-chart-line]="chartType === 'bar'"></i>
-      </button>
+<div class="comparison-board">
+  <div class="comparison-board__topbar">
+    <button type="button" class="comparison-board__toggle" (click)="alternarTipoGrafico()">
+      <i class="fas" [class.fa-chart-line]="chartType === 'bar'" [class.fa-chart-bar]="chartType === 'line'"></i>
+      {{ chartType === 'bar' ? 'Ver líneas' : 'Ver barras' }}
+    </button>
+  </div>
+
+  <div class="comparison-board__filters">
+    <button
+      type="button"surface-header
+      class="comparison-filter"
+      *ngFor="let filtro of filtrosVista"
+      [class.comparison-filter--active]="metricaSeleccionada === filtro.key"
+      (click)="seleccionarVista(filtro.key)">
+      <i [class]="filtro.icon"></i>
+      <span>{{ filtro.label }}</span>
+    </button>
+  </div>
+
+  <div *ngIf="mostrarGrafico" class="comparison-board__canvas-shell">
+    <div class="comparison-board__canvas">
+      <canvas baseChart [type]="chartType" [data]="chartData" [options]="chartOptions"></canvas>
     </div>
   </div>
 
-  <div class="chart-body-moderno">
-    <!-- Filtros y controles -->
-    <div class="chart-controls" *ngIf="mostrarGrafico && chartData.labels && chartData.labels.length > 0">
-      <div class="filtros-container">
-        <div class="filtro-grupo">
-          <label class="filtro-label">Métrica:</label>
-          <select class="filtro-select" [(ngModel)]="metricaSeleccionada" (change)="actualizarGrafico()">
-            <option value="todas">Todas las métricas</option>
-            <option value="pacientes">Solo Pacientes</option>
-            <option value="historias">Solo Historias Médicas</option>
-            <option value="pendientes">Solo Pendientes de cobro</option>
-            <option value="facturadas">Solo Historias con venta</option>
-          </select>
-        </div>
-        <div class="filtro-grupo">
-          <span class="vista-activa">
-            <i class="fas" [class.fa-bars]="esHorizontal" [class.fa-chart-bar]="!esHorizontal"></i>
-            {{ esHorizontal ? 'Horizontal' : 'Vertical' }}
-          </span>
-        </div>
-      </div>
+  <div *ngIf="!mostrarGrafico" class="comparison-board__empty">
+    <div class="comparison-board__empty-icon">
+      <i class="fas fa-hospital"></i>
     </div>
+    <h4>Sin datos para comparar</h4>
+    <p>La comparación aparecerá cuando existan registros para ambas sedes.</p>
+  </div>
 
-    <!-- Gráfico principal -->
-    <div class="grafico-principal">
-      <div *ngIf="mostrarGrafico && chartData.labels && chartData.labels.length > 0" 
-           class="chart-container">
-        <canvas baseChart
-          [type]="chartType"
-          [data]="chartData"
-          [options]="chartOptions"
-        ></canvas>
+  <div *ngIf="resumenSedes.length" class="comparison-board__summary-grid">
+    <article class="comparison-summary" *ngFor="let sede of resumenSedes">
+      <div class="comparison-summary__header">
+        <span class="comparison-summary__badge">{{ sede.label }}</span>
+        <strong class="comparison-summary__total">{{ sede.total | number:'1.0-0' }}</strong>
       </div>
-      
-      <!-- Estado vacío -->
-      <div *ngIf="!mostrarGrafico || !chartData.labels || chartData.labels.length === 0" 
-           class="empty-state">
-        <div class="empty-icon">
-          <i class="fas fa-hospital"></i>
-        </div>
-        <h4>No hay datos de comparativa</h4>
-        <p>Los datos se mostrarán cuando haya información disponible de múltiples sedes</p>
-      </div>
-    </div>
 
-    <!-- Estadísticas rápidas -->
-    <div class="stats-rapidas" *ngIf="mostrarGrafico && chartData.labels && chartData.labels.length > 0">
-      <div class="stat-card" *ngFor="let stat of estadisticasRapidas">
-        <div class="stat-icon" [style.background]="stat.color">
-          <i [class]="stat.icono"></i>
-        </div>
-        <div class="stat-content">
-          <span class="stat-valor">{{ stat.valor }}</span>
-          <span class="stat-label">{{ stat.label }}</span>
-        </div>
+      <div class="comparison-summary__stats">
+        <span>Pacientes {{ sede.pacientes }}</span>
+        <span>Historias {{ sede.historias }}</span>
+        <span>Pendientes {{ sede.pendientes }}</span>
+        <span>Con venta {{ sede.facturadas }}</span>
       </div>
-    </div>
+    </article>
   </div>
 </div>

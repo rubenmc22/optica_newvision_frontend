@@ -1,187 +1,56 @@
-<div class="graficos-carrusel">
-  <!-- Controles de navegación -->
-  <div class="carrusel-controls">
-    <button class="control-btn prev-btn" (click)="anteriorGrafico()" [disabled]="graficoActual === 0">
-      <i class="fas fa-chevron-left"></i>
-    </button>
-
-    <div class="indicadores">
-      <div class="indicador" *ngFor="let grafico of graficos; let i = index" [class.active]="i === graficoActual"
-        (click)="irAgrafico(i)">
-        <div class="indicador-icono">
-          <i [class]="grafico.icono"></i>
-        </div>
-        <span class="indicador-texto">{{ grafico.nombre }}</span>
-      </div>
+<div class="movement-board">
+  <div class="movement-board__topbar">
+    <div class="movement-board__heading">
+      <span class="movement-board__eyebrow">Actividad mensual</span>
+      <h4 class="movement-board__title">Operación de {{ sedeActual }}</h4>
+      <p class="movement-board__subtitle">
+        {{ periodoDescripcion }}
+        <span *ngIf="mesPicoLabel">· pico en {{ mesPicoLabel }} con {{ mesPicoValor }} movimientos</span>
+      </p>
     </div>
 
-    <button class="control-btn next-btn" (click)="siguienteGrafico()" [disabled]="graficoActual === totalGraficos - 1">
-      <i class="fas fa-chevron-right"></i>
+    <button type="button" class="movement-board__toggle" (click)="alternarTipoGrafico()">
+      <i class="fas" [class.fa-wave-square]="chartType === 'line'" [class.fa-chart-column]="chartType === 'bar'"></i>
+      {{ chartType === 'line' ? 'Ver barras' : 'Ver líneas' }}
     </button>
   </div>
 
-  <!-- Contenedor del carrusel -->
-  <div class="carrusel-container">
-    <div class="carrusel-track" [style.transform]="'translateX(-' + (graficoActual * 100) + '%)'">
+  <div class="movement-board__filters">
+    <button
+      type="button"
+      class="movement-filter"
+      *ngFor="let filtro of filtrosVista"
+      [class.movement-filter--active]="vistaActual === filtro.key"
+      (click)="seleccionarVista(filtro.key)">
+      <i [class]="filtro.icon"></i>
+      <span>{{ filtro.label }}</span>
+    </button>
+  </div>
 
-      <!-- Gráfico de Pacientes -->
-      <div class="carrusel-slide">
-        <div class="chart-card-carrusel">
-          <div class="chart-header-carrusel">
-            <div class="chart-title-section">
-              <div class="chart-icon pacientes">
-                <i class="fas fa-users"></i>
-              </div>
-              <div class="chart-title-content">
-                <h3 class="chart-title">Distribución de Pacientes</h3>
-                <p class="chart-subtitle">Por mes - {{ sedeActual }}</p>
-              </div>
-            </div>
-            <div class="chart-actions-carrusel">
-              <button class="btn-chart-action" (click)="cambiarTipoGrafico('pacientes')" title="Cambiar tipo">
-                <i class="fas fa-chart-bar"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="chart-body-carrusel">
-            <!-- Gráfico de Pacientes con solución para cambio de tipo -->
-            <div *ngIf="mostrarPacientes && chartPacientesData.labels && chartPacientesData.labels.length > 0"
-              class="chart-container-carrusel">
-              <div class="chart-wrapper">
-                <!-- Canvas principal -->
-                <div *ngIf="!refrescarGraficos">
-                  <canvas baseChart [type]="chartPacientesType" [data]="chartPacientesData"
-                    [options]="getChartOptions()">
-                  </canvas>
-                </div>
-                <!-- Canvas alterno para forzar recreación -->
-                <div *ngIf="refrescarGraficos">
-                  <canvas baseChart [type]="chartPacientesType" [data]="chartPacientesData"
-                    [options]="getChartOptions()">
-                  </canvas>
-                </div>
-              </div>
-
-              <div class="chart-stats-carrusel">
-                <div class="stat-item">
-                  <span class="stat-value">{{ totalPacientes }}</span>
-                  <span class="stat-label">Total</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-value">{{ promedioPacientes }}</span>
-                  <span class="stat-label">Promedio/mes</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-value" [class.trend-positive]="crecimientoPacientes >= 0"
-                    [class.trend-negative]="crecimientoPacientes < 0">
-                    <i class="fas" [class.fa-arrow-up]="crecimientoPacientes >= 0"
-                      [class.fa-arrow-down]="crecimientoPacientes < 0"></i>
-                    {{ Math.abs(crecimientoPacientes) }}%
-                  </span>
-                  <span class="stat-label">Crecimiento</span>
-                </div>
-              </div>
-            </div>
-
-            <div *ngIf="!mostrarPacientes || !chartPacientesData.labels || chartPacientesData.labels.length === 0"
-              class="empty-chart-state-carrusel">
-              <div class="empty-chart-icon">
-                <i class="fas fa-users"></i>
-              </div>
-              <h4>No hay datos de pacientes</h4>
-              <p>Los datos se mostrarán cuando haya pacientes registrados en esta sede</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Gráfico de Historias Médicas -->
-      <div class="carrusel-slide">
-        <div class="chart-card-carrusel">
-          <div class="chart-header-carrusel">
-            <div class="chart-title-section">
-              <div class="chart-icon historias">
-                <i class="fas fa-file-medical"></i>
-              </div>
-              <div class="chart-title-content">
-                <h3 class="chart-title">Historias Médicas</h3>
-                <p class="chart-subtitle">Por mes - {{ sedeActual }}</p>
-              </div>
-            </div>
-            <div class="chart-actions-carrusel">
-              <button class="btn-chart-action" (click)="cambiarTipoGrafico('historias')" title="Cambiar tipo">
-                <i class="fas fa-chart-bar"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="chart-body-carrusel">
-            <!-- Gráfico de Historias con solución para cambio de tipo -->
-            <div *ngIf="mostrarHistorias && chartHistoriasData.labels && chartHistoriasData.labels.length > 0"
-              class="chart-container-carrusel">
-              <div class="chart-wrapper">
-                <!-- Canvas principal -->
-                <div *ngIf="!refrescarGraficos">
-                  <canvas baseChart [type]="chartHistoriasType" [data]="chartHistoriasData"
-                    [options]="getChartOptions()">
-                  </canvas>
-                </div>
-                <!-- Canvas alterno para forzar recreación -->
-                <div *ngIf="refrescarGraficos">
-                  <canvas baseChart [type]="chartHistoriasType" [data]="chartHistoriasData"
-                    [options]="getChartOptions()">
-                  </canvas>
-                </div>
-              </div>
-
-              <div class="chart-stats-carrusel">
-                <div class="stat-item">
-                  <span class="stat-value">{{ totalHistorias }}</span>
-                  <span class="stat-label">Total</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-value">{{ promedioHistorias }}</span>
-                  <span class="stat-label">Promedio/mes</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-value" [class.trend-positive]="crecimientoHistorias >= 0"
-                    [class.trend-negative]="crecimientoHistorias < 0">
-                    <i class="fas" [class.fa-arrow-up]="crecimientoHistorias >= 0"
-                      [class.fa-arrow-down]="crecimientoHistorias < 0"></i>
-                    {{ Math.abs(crecimientoHistorias) }}%
-                  </span>
-                  <span class="stat-label">Crecimiento</span>
-                </div>
-              </div>
-            </div>
-
-            <div *ngIf="!mostrarHistorias || !chartHistoriasData.labels || chartHistoriasData.labels.length === 0"
-              class="empty-chart-state-carrusel">
-              <div class="empty-chart-icon">
-                <i class="fas fa-file-medical"></i>
-              </div>
-              <h4>No hay datos de historias médicas</h4>
-              <p>Los datos se mostrarán cuando haya historias médicas registradas en esta sede</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+  <div *ngIf="mostrarGrafico" class="movement-board__canvas-shell">
+    <div class="movement-board__canvas">
+      <canvas baseChart [type]="chartType" [data]="chartData" [options]="chartOptions"></canvas>
     </div>
   </div>
 
-  <!-- Información adicional -->
-  <div class="carrusel-info">
-    <div class="info-item">
-      <span class="info-label">Gráfico {{ graficoActual + 1 }} de {{ totalGraficos }}</span>
-      <span class="info-title">{{ graficos[graficoActual].nombre }}</span>
+  <div *ngIf="!mostrarGrafico" class="movement-board__empty">
+    <div class="movement-board__empty-icon">
+      <i class="fas fa-chart-line"></i>
     </div>
-    <div class="auto-play-controls">
-      <button class="btn-auto-play" (click)="toggleAutoPlay()" [class.active]="autoPlayActivo">
-        <i class="fas" [class.fa-pause]="autoPlayActivo" [class.fa-play]="!autoPlayActivo"></i>
-        {{ autoPlayActivo ? 'Pausar' : 'Auto-play' }}
-      </button>
-    </div>
+    <h4>Sin datos suficientes</h4>
+    <p>Cuando exista movimiento mensual en la sede, aquí verás pacientes, historias, ventas y órdenes.</p>
+  </div>
+
+  <div *ngIf="resumenTarjetas.length" class="movement-board__summary-grid">
+    <article class="movement-metric" *ngFor="let item of resumenTarjetas" [style.--metric-color]="item.color">
+      <div class="movement-metric__icon">
+        <i [class]="item.icon"></i>
+      </div>
+      <div class="movement-metric__content">
+        <span class="movement-metric__label">{{ item.label }}</span>
+        <strong class="movement-metric__value">{{ item.value | number:'1.0-0' }}</strong>
+        <small class="movement-metric__detail">{{ item.detail }}</small>
+      </div>
+    </article>
   </div>
 </div>

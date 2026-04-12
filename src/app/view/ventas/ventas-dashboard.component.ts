@@ -16,6 +16,7 @@ import { PacientesService } from '../../core/services/pacientes/pacientes.servic
 import { HistoriaMedicaService } from '../../core/services/historias-medicas/historias-medicas.service';
 import { HistoriaMedica } from './../historias-medicas/historias_medicas-interface';
 import { Sede, SedeCompleta } from '../../view/login/login-interface';
+import { CierreCajaComponent } from './cierre-caja/cierre-caja.component';
 
 @Component({
     selector: 'app-ventas-dashboard',
@@ -25,6 +26,7 @@ import { Sede, SedeCompleta } from '../../view/login/login-interface';
 })
 export class VentasDashboardComponent implements OnInit, OnDestroy {
     vista: 'generacion-de-ventas' | 'presupuestos' | 'historial-de-ventas' | 'cierre-de-caja' = 'generacion-de-ventas';
+    readonly cierreCajaComponent = CierreCajaComponent;
 
     totalVentas = 0;
     totalPresupuestos = 0;

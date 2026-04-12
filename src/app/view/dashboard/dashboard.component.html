@@ -2,23 +2,18 @@
 
 <div class="dashboard-shell mb-5">
   <div class="container-fluid dashboard-container px-4 py-4">
-    <section class="hero-panel mb-4">
-      <div class="hero-copy">
+    <section class="dashboard-topbar mb-4">
+      <div class="dashboard-topbar__copy">
         <span class="hero-eyebrow">Dashboard</span>
-        <h1 class="hero-title">Centro de gestión</h1>
-        <p class="hero-subtitle">Monitoreo consolidado de la operación comercial y clínica de la sede actual, con foco en seguimiento diario y control de ejecución.</p>
-
-        <div class="hero-meta">
-          <span class="hero-meta__item">
-            <i class="fas fa-clock"></i>
-            {{ textoUltimoUpdate }}
-          </span>
-          <span class="hero-meta__divider"></span>
-          <span class="hero-meta__item">Datos consolidados de la jornada y del mes</span>
-        </div>
+        <h1 class="dashboard-topbar__title">Resumen operativo</h1>
+        <p class="dashboard-topbar__subtitle">Lo más importante del día.</p>
+        <p class="dashboard-topbar__meta">
+          <i class="fas fa-clock"></i>
+          {{ textoUltimoUpdate }}
+        </p>
       </div>
 
-      <div class="hero-actions">
+      <div class="dashboard-topbar__actions">
         <button class="hero-action hero-action--ghost" (click)="irAHistorialVentas()">
           <i class="fas fa-chart-line"></i>
           Historial de ventas
@@ -49,28 +44,6 @@
 
         <button class="kpi-link" (click)="irAHistorialVentas()">
           Abrir historial de ventas
-          <i class="fas fa-arrow-right"></i>
-        </button>
-      </article>
-
-      <article class="kpi-card kpi-card--orders">
-        <div class="kpi-card__header">
-          <div>
-            <span class="kpi-label">OT por pasar a laboratorio</span>
-            <h2 class="kpi-value">{{ ordenesPorPasarLaboratorio }}</h2>
-          </div>
-          <div class="kpi-icon">
-            <i class="fas fa-clipboard-list"></i>
-          </div>
-        </div>
-
-        <div class="kpi-meta-row">
-          <span class="kpi-chip">{{ ordenesEnLaboratorio }} en laboratorio</span>
-          <span class="kpi-chip">{{ ordenesPendienteRetiro }} por retirar</span>
-        </div>
-
-        <button class="kpi-link" (click)="irAOrdenes()">
-          Revisar flujo de órdenes
           <i class="fas fa-arrow-right"></i>
         </button>
       </article>
@@ -123,14 +96,6 @@
     <div *ngIf="hayDatos" class="row g-4 align-items-stretch">
       <div class="col-xl-8">
         <section class="surface-card surface-card--chart h-100">
-          <div class="surface-header">
-            <div>
-              <span class="surface-eyebrow">Tendencia mensual</span>
-              <h3 class="surface-title">Movimiento clínico de la sede</h3>
-              <p class="surface-subtitle">Comportamiento mensual de pacientes e historias registradas.</p>
-            </div>
-          </div>
-
           <div class="surface-body surface-body--chart">
             <app-grafico-pacientes-por-mes [data]="datosLocales?.porMes" [sedeActual]="nombreSedeVisible"></app-grafico-pacientes-por-mes>
           </div>
@@ -143,7 +108,7 @@
             <div>
               <span class="surface-eyebrow">Órdenes de trabajo</span>
               <h3 class="surface-title">Flujo actual</h3>
-              <p class="surface-subtitle">Seguimiento del tránsito entre tienda, laboratorio y entrega.</p>
+              <p class="surface-subtitle">Qué está pendiente, en proceso y listo para entregar.</p>
             </div>
           </div>
 
@@ -195,8 +160,8 @@
           <div class="surface-header">
             <div>
               <span class="surface-eyebrow">Comparativa</span>
-              <h3 class="surface-title">Carga clínica entre sedes</h3>
-              <p class="surface-subtitle">Comparación del movimiento de pacientes e historias clínicas entre ambas sedes.</p>
+              <h3 class="surface-title">Comparación entre sedes</h3>
+              <p class="surface-subtitle">Vista lado a lado de Guarenas y Guatire.</p>
             </div>
           </div>
 
