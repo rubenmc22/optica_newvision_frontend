@@ -453,7 +453,7 @@ export class MyAccountComponent implements OnInit {
 
   private async uploadImage(file: File): Promise<string> {
     const formData = new FormData();
-    formData.append('profileImage', file);
+      formData.append('imagen', file, file.name);
 
     for (let pair of (formData as any).entries()) {
     }
