@@ -2142,9 +2142,14 @@
                         [disabled]="!puedeGenerarVenta || generandoVenta" [title]="mensajeEstadoBoton">
                         <i class="bi" [class.bi-check-circle]="!generandoVenta"
                             [class.bi-hourglass-split]="generandoVenta" class="me-2"></i>
-                        {{ generandoVenta ? 'Procesando...' : 'Confirmar y Generar Venta' }}
-                        <span *ngIf="!puedeGenerarVenta && !generandoVenta" class="ms-1">({{ mensajeEstadoBoton
-                            }})</span>
+                        <span class="btn-detalle__label btn-detalle__label--desktop">
+                            {{ generandoVenta ? 'Procesando...' : 'Confirmar y Generar Venta' }}
+                        </span>
+                        <span class="btn-detalle__label btn-detalle__label--mobile">
+                            {{ generandoVenta ? 'Procesando...' : 'Generar Venta' }}
+                        </span>
+                        <span *ngIf="!puedeGenerarVenta && !generandoVenta" class="ms-1 btn-detalle__hint">({{
+                            mensajeEstadoBoton }})</span>
                     </button>
                 </div>
             </div>

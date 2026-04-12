@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, OnDestroy, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, Input, OnDestroy, ChangeDetectorRef, HostListener } from '@angular/core';
 import { AuthService } from '../../core/services/auth/auth.service';
 import { Router, NavigationEnd } from '@angular/router';
 import { SwalService } from '../../core/services/swal/swal.service';
@@ -21,7 +21,7 @@ import * as bootstrap from 'bootstrap';
   styleUrls: ['./sidebar.component.scss']
 })
 
-export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
+export class SidebarComponent implements OnInit, OnDestroy {
   @Input() userRoleKey: string = '';
   @Input() userRoleName: string = '';
   @Input() userName: string = '';
@@ -29,12 +29,31 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
   sedeActual: string = '';
   tasaDolar: number = 0;
   tasaEuro: number = 0;
-  private subsTasaCambio!: Subscription;
+  private tasaStreamSub?: Subscription;
+  private tasaActualSub?: Subscription;
   selectedMenuLabel: string = '';
   selectedSubmenuLabel: string | null = null;
+  isMobileView: boolean = false;
+  isSidebarOpen: boolean = false;
+  isDesktopSidebarCollapsed: boolean = false;
+  isUserDropdownOpen: boolean = false;
+  isCompactDesktopView: boolean = false;
+  showQuickAccessDock: boolean = false;
+  useStaticTopbar: boolean = false;
+  refreshingRateId: 'dolar' | 'euro' | 'all' | null = null;
+  isModalOpen: boolean = false;
 
   private userSubscriptions: Subscription[] = [];
-  private userDropdown: any;
+  private readonly modalShownHandler = () => {
+    this.isModalOpen = true;
+    this.updateQuickAccessDock();
+    this.cdRef.detectChanges();
+  };
+  private readonly modalHiddenHandler = () => {
+    this.isModalOpen = !!document.querySelector('.modal.show, .modal-backdrop.show') || document.body.classList.contains('modal-open');
+    this.updateQuickAccessDock();
+    this.cdRef.detectChanges();
+  };
 
   constructor(
     private swalService: SwalService,
@@ -97,6 +116,9 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
   filteredMenu: any[] = [];
 
   ngOnInit(): void {
+    this.isDesktopSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    this.updateViewportState();
+
     //Restaurar selección previa desde localStorage
     const savedMenu = localStorage.getItem('selectedMenuLabel');
     const savedSubmenu = localStorage.getItem('selectedSubmenuLabel');
@@ -114,7 +136,7 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     //Obtener tasas de cambio
-    this.subsTasaCambio = this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
+    this.tasaStreamSub = this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
       this.tasaDolar = usd;
       this.tasaEuro = eur;
       this.cdRef.detectChanges();
@@ -125,23 +147,9 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
     this.markActiveFromUrl(this.router.url);
     this.initializeUserData();
     this.setupSubscriptions();
+    this.setupModalStateSync();
     this.obtenerSedeActual();
     this.obtenerTasaCambio();
-  }
-
-  ngAfterViewInit(): void {
-    setTimeout(() => {
-      this.initializeBootstrapDropdowns();
-      this.cdRef.detectChanges();
-    });
-  }
-
-  private initializeBootstrapDropdowns(): void {
-    // Inicializar dropdown de usuario con Bootstrap
-    const userDropdownElement = document.getElementById('userDropdown');
-    if (userDropdownElement) {
-      this.userDropdown = new bootstrap.Dropdown(userDropdownElement);
-    }
   }
 
   // Método para toggle manual del dropdown
@@ -149,37 +157,14 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
     event.preventDefault();
     event.stopPropagation();
 
-    if (this.userDropdown) {
-      this.userDropdown.toggle();
-    } else {
-      // Fallback manual
-      const dropdownMenu = document.querySelector('.user-dropdown-menu');
-      if (dropdownMenu) {
-        const isShowing = dropdownMenu.classList.contains('show');
-
-        // Cerrar todos los dropdowns primero
-        document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-          menu.classList.remove('show');
-        });
-
-        // Abrir/cerrar el actual
-        if (!isShowing) {
-          dropdownMenu.classList.add('show');
-        }
-      }
-    }
+    this.isUserDropdownOpen = !this.isUserDropdownOpen;
+    this.cdRef.detectChanges();
   }
 
   // Cerrar dropdown cuando se hace click en un item
   closeUserDropdown(): void {
-    if (this.userDropdown) {
-      this.userDropdown.hide();
-    } else {
-      const dropdownMenu = document.querySelector('.user-dropdown-menu');
-      if (dropdownMenu) {
-        dropdownMenu.classList.remove('show');
-      }
-    }
+    this.isUserDropdownOpen = false;
+    this.cdRef.detectChanges();
   }
 
   // Navegar a Mi Perfil
@@ -251,8 +236,38 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy(): void {
     this.userSubscriptions.forEach(sub => sub.unsubscribe());
-    if (this.subsTasaCambio) {
-      this.subsTasaCambio.unsubscribe();
+    this.tasaStreamSub?.unsubscribe();
+    this.tasaActualSub?.unsubscribe();
+    document.removeEventListener('shown.bs.modal', this.modalShownHandler as EventListener);
+    document.removeEventListener('hidden.bs.modal', this.modalHiddenHandler as EventListener);
+
+    this.unlockBodyScroll();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.updateViewportState();
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    this.updateQuickAccessDock();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (!target?.closest('.user-menu')) {
+      this.isUserDropdownOpen = false;
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    this.isUserDropdownOpen = false;
+
+    if (this.isMobileView && this.isSidebarOpen) {
+      this.closeSidebar();
     }
   }
 
@@ -284,6 +299,9 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       filter((event): event is NavigationEnd => event instanceof NavigationEnd)
     ).subscribe(event => {
       this.markActiveFromUrl(event.urlAfterRedirects);
+      if (this.isMobileView) {
+        this.closeSidebar();
+      }
       this.cdRef.detectChanges();
     });
 
@@ -346,10 +364,15 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       .filter(menu => menu.roles.includes(this.userRoleKey) || (menu.submenu && menu.submenu.length > 0));
   }
 
-  toggleSubmenu(event: Event): void {
+  toggleSubmenu(event: Event, menu: any): void {
     event.preventDefault();
-    const target = event.currentTarget as HTMLElement;
-    const menuLabel = target.querySelector('p')?.textContent?.trim() || '';
+
+    if (!this.isMobileView && this.isDesktopSidebarCollapsed) {
+      this.isDesktopSidebarCollapsed = false;
+      localStorage.setItem('sidebarCollapsed', 'false');
+    }
+
+    const menuLabel = menu.label || '';
 
     const isSameMenu = this.selectedMenuLabel === menuLabel;
 
@@ -390,17 +413,163 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
       this.selectedSubmenuLabel = null;
     }
 
-    // 📱 Cierre automático en móvil
-    if (window.innerWidth < 768) {
-      const body = document.body;
-      if (body.classList.contains('sidebar-open')) {
-        const toggleButton = document.querySelector('[data-widget="pushmenu"]') as HTMLElement;
-        toggleButton?.click();
-      }
+    if (this.isMobileView) {
+      this.closeSidebar();
     }
 
     localStorage.setItem('selectedMenuLabel', this.selectedMenuLabel);
     localStorage.setItem('selectedSubmenuLabel', this.selectedSubmenuLabel || '');
+  }
+
+  toggleSidebar(event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    if (!this.isMobileView) {
+      this.isDesktopSidebarCollapsed = !this.isDesktopSidebarCollapsed;
+      this.isUserDropdownOpen = false;
+      localStorage.setItem('sidebarCollapsed', String(this.isDesktopSidebarCollapsed));
+      this.cdRef.detectChanges();
+      return;
+    }
+
+    this.isSidebarOpen = !this.isSidebarOpen;
+    this.isUserDropdownOpen = false;
+    this.syncBodyScrollState();
+    this.cdRef.detectChanges();
+  }
+
+  closeSidebar(): void {
+    if (!this.isMobileView) {
+      return;
+    }
+
+    this.isSidebarOpen = false;
+    this.isUserDropdownOpen = false;
+    this.syncBodyScrollState();
+    this.cdRef.detectChanges();
+  }
+
+  openSidebarFromDock(event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    if (this.isMobileView) {
+      this.isSidebarOpen = true;
+      this.syncBodyScrollState();
+      this.updateQuickAccessDock();
+      this.cdRef.detectChanges();
+      return;
+    }
+
+    if (this.isDesktopSidebarCollapsed) {
+      this.isDesktopSidebarCollapsed = false;
+      localStorage.setItem('sidebarCollapsed', 'false');
+      this.cdRef.detectChanges();
+    }
+  }
+
+  scrollToTop(event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  refreshRate(rateId: 'dolar' | 'euro', event?: Event): void {
+    this.refreshAllRates(event);
+  }
+
+  refreshAllRates(event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    if (this.refreshingRateId) {
+      return;
+    }
+
+    this.refreshingRateId = 'all';
+    this.cdRef.detectChanges();
+
+    this.tasaCambiariaService.updateTasaBCV().subscribe({
+      next: () => {
+        this.refreshingRateId = null;
+        this.cdRef.detectChanges();
+      },
+      error: () => {
+        this.refreshingRateId = null;
+        this.cdRef.detectChanges();
+        this.swalService.showError('No se pudo actualizar la tasa', 'Intenta nuevamente en unos segundos.');
+      }
+    });
+  }
+
+  private updateViewportState(): void {
+    const mobile = window.innerWidth <= 991;
+    const zoomScale = window.visualViewport?.scale ?? 1;
+    this.isCompactDesktopView = !mobile && (window.innerHeight <= 860 || zoomScale >= 1.5);
+    this.useStaticTopbar = true;
+
+    if (mobile !== this.isMobileView) {
+      this.isMobileView = mobile;
+      this.isSidebarOpen = false;
+      this.isUserDropdownOpen = false;
+      this.syncBodyScrollState();
+      this.updateQuickAccessDock();
+      this.cdRef.detectChanges();
+      return;
+    }
+
+    if (!this.isMobileView) {
+      this.isSidebarOpen = false;
+      this.isUserDropdownOpen = false;
+      this.unlockBodyScroll();
+      this.isDesktopSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    }
+
+    this.updateQuickAccessDock();
+  }
+
+  private updateQuickAccessDock(): void {
+    const topbar = document.querySelector('.app-topbar') as HTMLElement | null;
+    const modalVisible = this.isModalOpen
+      || document.body.classList.contains('modal-open')
+      || !!document.querySelector('.modal.show, .modal-backdrop.show');
+
+    if (!topbar || modalVisible || this.isSidebarOpen) {
+      this.showQuickAccessDock = false;
+      return;
+    }
+
+    const topbarBounds = topbar.getBoundingClientRect();
+    this.showQuickAccessDock = topbarBounds.bottom <= 24;
+  }
+
+  private setupModalStateSync(): void {
+    document.addEventListener('shown.bs.modal', this.modalShownHandler as EventListener);
+    document.addEventListener('hidden.bs.modal', this.modalHiddenHandler as EventListener);
+    this.isModalOpen = !!document.querySelector('.modal.show, .modal-backdrop.show') || document.body.classList.contains('modal-open');
+  }
+
+  private syncBodyScrollState(): void {
+    if (this.isMobileView && this.isSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+
+    this.unlockBodyScroll();
+  }
+
+  private unlockBodyScroll(): void {
+    document.body.style.overflow = '';
   }
 
   //Método para abrir el modal de logout
@@ -466,14 +635,8 @@ export class SidebarComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   obtenerTasaCambio(): void {
-    //Solo te suscribís una vez al subject reactivo
-    this.subsTasaCambio = this.tasaCambiariaService.getTasas().subscribe(({ usd, eur }) => {
-      this.tasaDolar = usd;
-      this.tasaEuro = eur;
-    });
-
     //Inicializás las tasas desde el backend, pero sin reasignar directamente
-    this.tasaCambiariaService.getTasaActual().subscribe({
+    this.tasaActualSub = this.tasaCambiariaService.getTasaActual().subscribe({
       next: (res: { tasas: Tasa[] }) => {
         const dolar = res.tasas.find(t => t.id === 'dolar');
         const euro = res.tasas.find(t => t.id === 'euro');
