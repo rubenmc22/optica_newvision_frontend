@@ -61,6 +61,10 @@ export class SystemConfigComponent implements OnInit {
     correos: false,
     metodosPago: false
   };
+  seccionesBancosExpandidas: Record<PaymentMethodBankScope, boolean> = {
+    national: false,
+    international: false
+  };
   nuevoMetodoPago = {
     label: '',
     description: '',
@@ -250,9 +254,10 @@ export class SystemConfigComponent implements OnInit {
     this.tieneMetodosPagoPersistidos = this.configService.tieneMetodosPagoPersistidos();
 
     this.configService.obtenerMetodosPagoConfigurables().subscribe({
-      next: ({ paymentMethods }) => {
+      next: ({ paymentMethods, persisted }) => {
         this.metodosPagoConfig = this.clonarMetodosPago(paymentMethods);
         this.metodosPagoDraft = this.clonarMetodosPago(paymentMethods);
+        this.tieneMetodosPagoPersistidos = persisted ?? this.tieneMetodosPagoPersistidos;
         this.reiniciarExpansionMetodosPago();
         this.isPaymentMethodsLoading = false;
       },
@@ -479,6 +484,14 @@ export class SystemConfigComponent implements OnInit {
   cerrarModalNuevoBanco(): void {
     this.mostrarModalNuevoBanco = false;
     this.reiniciarFormularioNuevoBanco();
+  }
+
+  alternarExpansionBanco(scope: PaymentMethodBankScope): void {
+    this.seccionesBancosExpandidas[scope] = !this.seccionesBancosExpandidas[scope];
+  }
+
+  estaSeccionBancoExpandida(scope: PaymentMethodBankScope): boolean {
+    return this.seccionesBancosExpandidas[scope];
   }
 
   confirmarNuevoBanco(): void {

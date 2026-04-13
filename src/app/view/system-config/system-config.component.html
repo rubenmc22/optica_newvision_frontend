@@ -299,6 +299,10 @@
 
           <div class="payment-methods-layout">
             <div class="payment-methods-list">
+              <div class="payment-method-note" *ngIf="!metodosPagoDraft.methods.length">
+                No hay métodos de pago agregados en este momento.
+              </div>
+
               <article
                 class="payment-method-card"
                 *ngFor="let metodo of metodosPagoDraft.methods; trackBy: trackByMetodo"
@@ -481,12 +485,23 @@
                     <span>{{ getCantidadBancosActivosPorAlcance('national') }}/{{ getCantidadBancosPorAlcance('national') }}</span>
                   </div>
 
-                  <button class="icon-action-button icon-action-button--soft" type="button" (click)="abrirModalNuevoBanco('national')">
-                    <i class="bi bi-plus-lg"></i>
-                  </button>
+                  <div class="bank-group-card__controls">
+                    <button
+                      class="icon-action-button icon-action-button--soft"
+                      type="button"
+                      (click)="alternarExpansionBanco('national')"
+                      [attr.aria-expanded]="estaSeccionBancoExpandida('national')"
+                      aria-label="Mostrar u ocultar bancos nacionales">
+                      <i class="bi" [ngClass]="estaSeccionBancoExpandida('national') ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+
+                    <button class="icon-action-button icon-action-button--soft" type="button" (click)="abrirModalNuevoBanco('national')">
+                      <i class="bi bi-plus-lg"></i>
+                    </button>
+                  </div>
                 </div>
 
-                <div class="bank-catalog-list">
+                <div class="bank-catalog-list" *ngIf="estaSeccionBancoExpandida('national')">
                   <div class="bank-catalog-item" *ngFor="let banco of getBancosPorAlcance('national')" [class.bank-catalog-item--inactive]="!esBancoActivo(banco)">
                     <div class="bank-catalog-item__meta">
                       <strong>{{ banco.name }}</strong>
@@ -513,12 +528,23 @@
                     <span>{{ getCantidadBancosActivosPorAlcance('international') }}/{{ getCantidadBancosPorAlcance('international') }}</span>
                   </div>
 
-                  <button class="icon-action-button icon-action-button--soft" type="button" (click)="abrirModalNuevoBanco('international')">
-                    <i class="bi bi-plus-lg"></i>
-                  </button>
+                  <div class="bank-group-card__controls">
+                    <button
+                      class="icon-action-button icon-action-button--soft"
+                      type="button"
+                      (click)="alternarExpansionBanco('international')"
+                      [attr.aria-expanded]="estaSeccionBancoExpandida('international')"
+                      aria-label="Mostrar u ocultar bancos internacionales">
+                      <i class="bi" [ngClass]="estaSeccionBancoExpandida('international') ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+
+                    <button class="icon-action-button icon-action-button--soft" type="button" (click)="abrirModalNuevoBanco('international')">
+                      <i class="bi bi-plus-lg"></i>
+                    </button>
+                  </div>
                 </div>
 
-                <div class="bank-catalog-list">
+                <div class="bank-catalog-list" *ngIf="estaSeccionBancoExpandida('international')">
                   <div class="bank-catalog-item" *ngFor="let banco of getBancosPorAlcance('international')" [class.bank-catalog-item--inactive]="!esBancoActivo(banco)">
                     <div class="bank-catalog-item__meta">
                       <strong>{{ banco.name }}</strong>

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, delay, of, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, delay, forkJoin, map, of, switchMap, tap } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import {
   MonedaBaseRequest,
@@ -10,7 +10,14 @@ import {
   NotificationEmailUpsertResponse,
   PaymentMethodAccount,
   PaymentMethodBank,
+  PaymentMethodBankApiItem,
+  PaymentMethodBackendResponse,
+  PaymentMethodBackendUpdateRequest,
+  PaymentMethodBankBackendResponse,
+  PaymentMethodBankBackendUpdateRequest,
+  PaymentMethodBanksCatalogResponse,
   PaymentMethodConfig,
+  PaymentMethodsBackendGetResponse,
   PaymentMethodsGetResponse,
   PaymentMethodsSettings,
   PaymentMethodsUpsertRequest,
@@ -84,147 +91,7 @@ export class SystemConfigService {
 
   private readonly defaultPaymentMethodsSettings: PaymentMethodsSettings = {
     bankCatalog: this.defaultPaymentMethodBanks,
-    methods: [
-      {
-        key: 'efectivo',
-        label: 'Efectivo',
-        description: 'Pago inmediato en caja para operaciones presenciales.',
-        enabled: true,
-        currency: 'MULTI',
-        requiresReceiverAccount: false,
-        isCustom: false,
-        accounts: []
-      },
-      {
-        key: 'punto_de_venta',
-        label: 'Punto de Venta',
-        description: 'Cobro con tarjetas procesadas a través de puntos de venta físicos internos.',
-        enabled: true,
-        currency: 'VES',
-        requiresReceiverAccount: true,
-        isCustom: false,
-        accounts: [
-          {
-            id: 'punto-1',
-            bank: 'Bancamiga',
-            bankCode: '0172',
-            ownerName: '',
-            ownerId: '',
-            phone: '',
-            accountDescription: 'Punto de venta interno - Óptica Principal'
-          },
-          {
-            id: 'punto-2',
-            bank: 'Banco Nacional de Crédito',
-            bankCode: '0191',
-            ownerName: '',
-            ownerId: '',
-            phone: '',
-            accountDescription: 'Punto de venta interno - Óptica Sucursal'
-          }
-        ]
-      },
-      {
-        key: 'pago_movil',
-        label: 'Pago Móvil',
-        description: 'Pago móvil interbancario con selección de banco receptor.',
-        enabled: true,
-        currency: 'VES',
-        requiresReceiverAccount: true,
-        isCustom: false,
-        accounts: [
-          {
-            id: 'pm-1',
-            bank: 'Banco Provincial',
-            bankCode: '0108',
-            ownerName: 'Ruben Martinez',
-            ownerId: '24367965',
-            phone: '04123920817',
-            accountDescription: 'Cuenta personal de Ruben'
-          },
-          {
-            id: 'pm-2',
-            bank: 'Banco de Venezuela',
-            bankCode: '0102',
-            ownerName: 'Jesus Castro',
-            ownerId: '25874563',
-            phone: '04241456878',
-            accountDescription: 'Cuenta personal de Jesus'
-          }
-        ]
-      },
-      {
-        key: 'transferencia',
-        label: 'Transferencia',
-        description: 'Transferencia bancaria tradicional a cuentas receptoras autorizadas.',
-        enabled: true,
-        currency: 'VES',
-        requiresReceiverAccount: true,
-        isCustom: false,
-        accounts: [
-          {
-            id: 'trf-1',
-            bank: 'Banco de Venezuela',
-            bankCode: '0102',
-            ownerName: 'Ruben Perez',
-            ownerId: 'V-12345678',
-            phone: '04121234567',
-            accountDescription: 'Cuenta personal de Ruben'
-          },
-          {
-            id: 'trf-2',
-            bank: 'Banesco',
-            bankCode: '0134',
-            ownerName: 'Ender Rodriguez',
-            ownerId: 'V-23456789',
-            phone: '04169876543',
-            accountDescription: 'Cuenta Ender'
-          }
-        ]
-      },
-      {
-        key: 'zelle',
-        label: 'Zelle',
-        description: 'Transferencia electrónica en USD con destino operativo definido.',
-        enabled: true,
-        currency: 'USD',
-        requiresReceiverAccount: true,
-        isCustom: false,
-        accounts: [
-          {
-            id: 'zelle-1',
-            bank: 'Bank of America (BOFA)',
-            bankCode: 'BOFAUS3N',
-            ownerName: 'Ruben Perez',
-            ownerId: 'V-12345678',
-            phone: '+15875551234',
-            email: 'ruben.perez@email.com',
-            accountDescription: 'Cuenta personal de Ruben (Zelle)'
-          }
-        ]
-      },
-      {
-        key: 'binance',
-        label: 'Binance',
-        description: 'Recepción de pagos digitales con wallet operativa y titular configurado.',
-        enabled: false,
-        currency: 'USDT',
-        requiresReceiverAccount: true,
-        isCustom: false,
-        accounts: [
-          {
-            id: 'binance-1',
-            bank: '',
-            bankCode: '',
-            ownerName: 'Ruben Martinez',
-            ownerId: '',
-            phone: '',
-            walletAddress: 'TRX-TN8J8A2EXAMPLEWALLET001',
-            accountDescription: 'Wallet principal para cobros por Binance Pay'
-          }
-        ]
-      }
-    ],
+    methods: [],
     ultimaActualizacion: new Date().toISOString()
   };
 
@@ -308,10 +175,52 @@ export class SystemConfigService {
    * Obtiene los métodos de pago configurables persistidos localmente
    */
   obtenerMetodosPagoConfigurables(): Observable<PaymentMethodsGetResponse> {
-    return of({
-      message: 'ok',
-      paymentMethods: this.getPaymentMethodsSettings()
-    }).pipe(delay(280));
+    const localSettings = this.getPaymentMethodsSettings();
+
+    return forkJoin({
+      banksResponse: this.obtenerCatalogoBancosReceptores().pipe(
+        catchError((error) => {
+          console.warn('No se pudo cargar el catálogo real de bancos receptores:', error);
+          return of(null);
+        })
+      ),
+      methodsResponse: this.obtenerMetodosPagoDesdeBackend().pipe(
+        catchError((error) => {
+          console.warn('No se pudo cargar la configuración de métodos de pago desde el backend:', error);
+          return of(null);
+        })
+      )
+    }).pipe(
+      map(({ banksResponse, methodsResponse }) => {
+        const hasBackendMethods = !!methodsResponse && Array.isArray(methodsResponse.metodos) && methodsResponse.metodos.length > 0;
+        const paymentMethods = this.normalizePaymentMethodsSettings({
+          bankCatalog: banksResponse ? this.adaptarBancosDesdeBackend(banksResponse.bancos) : localSettings.bankCatalog,
+          methods: methodsResponse?.metodos ?? [],
+          ultimaActualizacion: methodsResponse?.ultimaActualizacion || new Date().toISOString()
+        });
+
+        let message = 'ok';
+        let persisted = false;
+
+        if (banksResponse && methodsResponse) {
+          message = methodsResponse.message;
+          persisted = hasBackendMethods;
+        } else if (banksResponse) {
+          message = 'Catálogo de bancos cargado desde el backend; no hay métodos de pago agregados en este momento.';
+          persisted = false;
+        } else if (methodsResponse) {
+          message = methodsResponse.message;
+          persisted = hasBackendMethods;
+        }
+
+        return {
+          message,
+          paymentMethods,
+          persisted
+        };
+      }),
+      tap(({ paymentMethods }) => this.savePaymentMethodsSettings(paymentMethods))
+    );
   }
 
   /**
@@ -338,20 +247,14 @@ export class SystemConfigService {
    * Guarda la configuración inicial de métodos de pago
    */
   guardarMetodosPagoConfigurables(payload: PaymentMethodsUpsertRequest): Observable<PaymentMethodsUpsertResponse> {
-    return this.persistPaymentMethods(
-      payload,
-      'La configuración de métodos de pago fue guardada correctamente.'
-    );
+    return this.persistirMetodosPagoConfigurables(payload, 'Los métodos de pago fueron guardados correctamente.');
   }
 
   /**
    * Actualiza la configuración existente de métodos de pago
    */
   actualizarMetodosPagoConfigurables(payload: PaymentMethodsUpsertRequest): Observable<PaymentMethodsUpsertResponse> {
-    return this.persistPaymentMethods(
-      payload,
-      'La configuración de métodos de pago fue actualizada correctamente.'
-    );
+    return this.persistirMetodosPagoConfigurables(payload, 'Los métodos de pago fueron actualizados correctamente.');
   }
 
   /**
@@ -401,33 +304,278 @@ export class SystemConfigService {
   }
 
   /**
-   * Persiste la configuración local de métodos de pago
+   * Obtiene el catálogo real de bancos receptores desde el backend
    */
-  private persistPaymentMethods(
-    payload: PaymentMethodsUpsertRequest,
-    message: string
-  ): Observable<PaymentMethodsUpsertResponse> {
-    const config = this.savePaymentMethodsSettings(
-      this.normalizePaymentMethodsSettings({
-        bankCatalog: payload.bankCatalog,
-        methods: payload.methods,
-        ultimaActualizacion: new Date().toISOString()
-      })
-    );
+  private obtenerCatalogoBancosReceptores(): Observable<PaymentMethodBanksCatalogResponse> {
+    return this.http.get<PaymentMethodBanksCatalogResponse>(`${environment.apiUrl}/configuracion/bancos_receptores-get`);
+  }
 
-    return of({
-      message,
-      paymentMethods: config
-    }).pipe(delay(350));
+  /**
+   * Obtiene la lista de métodos de pago desde el backend
+   */
+  private obtenerMetodosPagoDesdeBackend(): Observable<PaymentMethodsBackendGetResponse> {
+    return this.http.get<PaymentMethodsBackendGetResponse>(`${environment.apiUrl}/configuracion/metodos_pago_config-get`);
+  }
+
+  /**
+   * Adapta los bancos del backend al catálogo del frontend
+   */
+  private adaptarBancosDesdeBackend(bancos: PaymentMethodBankApiItem[] | undefined): PaymentMethodBank[] {
+    return (Array.isArray(bancos) ? bancos : []).map((banco) => ({
+      code: `${banco?.codigo || ''}`.trim().toUpperCase(),
+      name: `${banco?.nombre || ''}`.trim(),
+      scope: banco?.scope === 'international' ? 'international' : 'national',
+      active: banco?.activo !== false
+    }));
+  }
+
+  /**
+   * Persiste la configuración de bancos y métodos mediante operaciones individuales y luego refresca el estado agregado.
+   */
+  private persistirMetodosPagoConfigurables(
+    payload: PaymentMethodsUpsertRequest,
+    successMessage: string
+  ): Observable<PaymentMethodsUpsertResponse> {
+    const normalizedTarget = this.normalizePaymentMethodsSettings({
+      bankCatalog: payload.bankCatalog,
+      methods: payload.methods,
+      ultimaActualizacion: new Date().toISOString()
+    });
+    const baseline = this.getPaymentMethodsSettings();
+    const syncOperations = [
+      ...this.construirOperacionesBancos(baseline.bankCatalog, normalizedTarget.bankCatalog),
+      ...this.construirOperacionesMetodos(baseline.methods, normalizedTarget.methods)
+    ];
+
+    const sync$ = syncOperations.length ? forkJoin(syncOperations) : of([]);
+
+    return sync$.pipe(
+      switchMap(() => this.refrescarMetodosPagoDesdeBackend(normalizedTarget)),
+      map((paymentMethods) => ({
+        message: successMessage,
+        paymentMethods
+      })),
+      tap(({ paymentMethods }) => this.savePaymentMethodsSettings(paymentMethods))
+    );
+  }
+
+  /**
+   * Refresca la configuración agregada desde backend usando fallback local si una de las colecciones falla.
+   */
+  private refrescarMetodosPagoDesdeBackend(fallback: PaymentMethodsSettings): Observable<PaymentMethodsSettings> {
+    return forkJoin({
+      banksResponse: this.obtenerCatalogoBancosReceptores().pipe(catchError(() => of(null))),
+      methodsResponse: this.obtenerMetodosPagoDesdeBackend().pipe(catchError(() => of(null)))
+    }).pipe(
+      map(({ banksResponse, methodsResponse }) => this.normalizePaymentMethodsSettings({
+        bankCatalog: banksResponse ? this.adaptarBancosDesdeBackend(banksResponse.bancos) : fallback.bankCatalog,
+        methods: methodsResponse?.metodos || fallback.methods,
+        ultimaActualizacion: methodsResponse?.ultimaActualizacion || fallback.ultimaActualizacion || new Date().toISOString()
+      }))
+    );
+  }
+
+  /**
+   * Construye las operaciones de sincronización para bancos.
+   */
+  private construirOperacionesBancos(actuales: PaymentMethodBank[], siguientes: PaymentMethodBank[]): Observable<unknown>[] {
+    const actualesPorCodigo = new Map(actuales.map((banco) => [banco.code, banco]));
+
+    return siguientes.reduce<Observable<unknown>[]>((operations, banco) => {
+      const actual = actualesPorCodigo.get(banco.code);
+
+      if (!actual) {
+        operations.push(this.crearBancoReceptor(banco));
+        return operations;
+      }
+
+      if (this.bancoCambio(actual, banco)) {
+        operations.push(this.actualizarBancoReceptor(banco));
+      }
+
+      return operations;
+    }, []);
+  }
+
+  /**
+   * Construye las operaciones de sincronización para métodos.
+   */
+  private construirOperacionesMetodos(actuales: PaymentMethodConfig[], siguientes: PaymentMethodConfig[]): Observable<unknown>[] {
+    const actualesPorKey = new Map(actuales.map((metodo) => [metodo.key, metodo]));
+
+    return siguientes.reduce<Observable<unknown>[]>((operations, metodo) => {
+      const actual = actualesPorKey.get(metodo.key);
+
+      if (!actual) {
+        operations.push(this.crearMetodoPago(metodo));
+        return operations;
+      }
+
+      if (this.metodoCambio(actual, metodo)) {
+        operations.push(this.actualizarMetodoPago(metodo));
+      }
+
+      return operations;
+    }, []);
+  }
+
+  /**
+   * Crea un banco receptor en backend.
+   */
+  private crearBancoReceptor(banco: PaymentMethodBank): Observable<PaymentMethodBankBackendResponse> {
+    return this.http.post<PaymentMethodBankBackendResponse>(
+      `${environment.apiUrl}/configuracion/bancos_receptores-save`,
+      this.construirPayloadBancoBackend(banco, true)
+    );
+  }
+
+  /**
+   * Actualiza un banco receptor en backend.
+   */
+  private actualizarBancoReceptor(banco: PaymentMethodBank): Observable<PaymentMethodBankBackendResponse> {
+    return this.http.put<PaymentMethodBankBackendResponse>(
+      `${environment.apiUrl}/configuracion/bancos_receptores-update/${encodeURIComponent(banco.code)}`,
+      this.construirPayloadBancoBackend(banco, false)
+    );
+  }
+
+  /**
+   * Crea un método de pago en backend.
+   */
+  private crearMetodoPago(metodo: PaymentMethodConfig): Observable<PaymentMethodBackendResponse> {
+    return this.http.post<PaymentMethodBackendResponse>(
+      `${environment.apiUrl}/configuracion/metodos_pago_config-save`,
+      this.construirPayloadMetodoBackend(metodo, true)
+    );
+  }
+
+  /**
+   * Actualiza un método de pago en backend.
+   */
+  private actualizarMetodoPago(metodo: PaymentMethodConfig): Observable<PaymentMethodBackendResponse> {
+    return this.http.put<PaymentMethodBackendResponse>(
+      `${environment.apiUrl}/configuracion/metodos_pago_config-update/${encodeURIComponent(metodo.key)}`,
+      this.construirPayloadMetodoBackend(metodo, false)
+    );
+  }
+
+  /**
+   * Construye el payload de banco para backend.
+   */
+  private construirPayloadBancoBackend(
+    banco: PaymentMethodBank,
+    includeCode: boolean
+  ): PaymentMethodBankApiItem | PaymentMethodBankBackendUpdateRequest {
+    const payload = {
+      nombre: banco.name.trim(),
+      scope: banco.scope,
+      activo: banco.active !== false
+    };
+
+    if (includeCode) {
+      return {
+        codigo: banco.code.trim().toUpperCase(),
+        ...payload
+      };
+    }
+
+    return payload;
+  }
+
+  /**
+   * Construye el payload de método para backend.
+   */
+  private construirPayloadMetodoBackend(
+    metodo: PaymentMethodConfig,
+    includeKey: boolean
+  ): PaymentMethodConfig | PaymentMethodBackendUpdateRequest {
+    const payload = {
+      label: metodo.label.trim(),
+      description: metodo.description.trim(),
+      enabled: !!metodo.enabled,
+      currency: this.normalizeMethodCurrency(metodo.currency),
+      requiresReceiverAccount: !!metodo.requiresReceiverAccount,
+      isCustom: !!metodo.isCustom,
+      accounts: metodo.accounts.map((cuenta) => ({
+        ...cuenta,
+        bank: cuenta.bank.trim(),
+        bankCode: cuenta.bankCode.trim().toUpperCase(),
+        ownerName: cuenta.ownerName.trim(),
+        ownerId: cuenta.ownerId.trim(),
+        phone: cuenta.phone.trim(),
+        email: cuenta.email?.trim().toLowerCase() || '',
+        walletAddress: cuenta.walletAddress?.trim() || '',
+        accountDescription: cuenta.accountDescription.trim()
+      }))
+    };
+
+    if (includeKey) {
+      return {
+        key: metodo.key,
+        ...payload
+      };
+    }
+
+    return payload;
+  }
+
+  /**
+   * Determina si un banco cambió respecto al estado base.
+   */
+  private bancoCambio(actual: PaymentMethodBank, siguiente: PaymentMethodBank): boolean {
+    return JSON.stringify({
+      name: actual.name.trim(),
+      scope: actual.scope,
+      active: actual.active !== false
+    }) !== JSON.stringify({
+      name: siguiente.name.trim(),
+      scope: siguiente.scope,
+      active: siguiente.active !== false
+    });
+  }
+
+  /**
+   * Determina si un método cambió respecto al estado base.
+   */
+  private metodoCambio(actual: PaymentMethodConfig, siguiente: PaymentMethodConfig): boolean {
+    return JSON.stringify(this.normalizarMetodoParaComparacion(actual)) !== JSON.stringify(this.normalizarMetodoParaComparacion(siguiente));
+  }
+
+  /**
+   * Normaliza un método para comparaciones profundas.
+   */
+  private normalizarMetodoParaComparacion(metodo: PaymentMethodConfig): unknown {
+    return {
+      key: metodo.key,
+      label: metodo.label.trim(),
+      description: metodo.description.trim(),
+      enabled: !!metodo.enabled,
+      currency: this.normalizeMethodCurrency(metodo.currency),
+      requiresReceiverAccount: !!metodo.requiresReceiverAccount,
+      isCustom: !!metodo.isCustom,
+      accounts: metodo.accounts.map((cuenta) => ({
+        bank: cuenta.bank.trim(),
+        bankCode: cuenta.bankCode.trim().toUpperCase(),
+        ownerName: cuenta.ownerName.trim(),
+        ownerId: cuenta.ownerId.trim(),
+        phone: cuenta.phone.trim(),
+        email: cuenta.email?.trim().toLowerCase() || '',
+        walletAddress: cuenta.walletAddress?.trim() || '',
+        accountDescription: cuenta.accountDescription.trim()
+      }))
+    };
   }
 
   /**
    * Normaliza la estructura de métodos de pago antes de persistirla
    */
   private normalizePaymentMethodsSettings(settings: PaymentMethodsSettings): PaymentMethodsSettings {
-    const bankCatalog = this.mergePaymentMethodBanks(settings?.bankCatalog);
+    const bankCatalogSource = Array.isArray(settings?.bankCatalog) && settings.bankCatalog.length
+      ? settings.bankCatalog
+      : this.defaultPaymentMethodBanks;
+    const bankCatalog = this.normalizePaymentMethodBanks(bankCatalogSource);
 
-    const methodSource = Array.isArray(settings?.methods) && settings.methods.length
+    const methodSource = Array.isArray(settings?.methods)
       ? settings.methods
       : this.defaultPaymentMethodsSettings.methods;
 
@@ -509,14 +657,10 @@ export class SystemConfigService {
   }
 
   /**
-   * Mezcla el catálogo persistido con el catálogo por defecto para no perder bancos base ni bancos agregados manualmente
+   * Normaliza el catálogo de bancos respetando el origen recibido.
    */
-  private mergePaymentMethodBanks(bankCatalog: PaymentMethodBank[] | undefined): PaymentMethodBank[] {
+  private normalizePaymentMethodBanks(bankCatalog: PaymentMethodBank[] | undefined): PaymentMethodBank[] {
     const mergedBanks = new Map<string, PaymentMethodBank>();
-
-    this.defaultPaymentMethodBanks.forEach(bank => {
-      mergedBanks.set(bank.code.trim().toUpperCase(), { ...bank });
-    });
 
     (Array.isArray(bankCatalog) ? bankCatalog : [])
       .map(bank => {

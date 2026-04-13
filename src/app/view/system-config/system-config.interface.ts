@@ -66,6 +66,13 @@ export interface PaymentMethodBank {
   active: boolean;
 }
 
+export interface PaymentMethodBankApiItem {
+  codigo: string;
+  nombre: string;
+  scope: PaymentMethodBankScope;
+  activo?: boolean;
+}
+
 export interface PaymentMethodAccount {
   id: string;
   bank: string;
@@ -103,9 +110,48 @@ export interface PaymentMethodsUpsertRequest {
 export interface PaymentMethodsGetResponse {
   message: string;
   paymentMethods: PaymentMethodsSettings;
+  persisted?: boolean;
 }
 
 export interface PaymentMethodsUpsertResponse {
   message: string;
   paymentMethods: PaymentMethodsSettings;
+}
+
+export interface PaymentMethodBanksCatalogResponse {
+  message: string;
+  bancos: PaymentMethodBankApiItem[];
+}
+
+export interface PaymentMethodBankBackendResponse {
+  message: string;
+  banco: PaymentMethodBankApiItem;
+}
+
+export interface PaymentMethodBankBackendUpdateRequest {
+  nombre: string;
+  scope: PaymentMethodBankScope;
+  activo?: boolean;
+}
+
+export interface PaymentMethodsBackendGetResponse {
+  message: string;
+  metodos: PaymentMethodConfig[];
+  ultimaActualizacion: string;
+}
+
+export interface PaymentMethodBackendResponse {
+  message: string;
+  metodo: PaymentMethodConfig;
+  ultimaActualizacion: string;
+}
+
+export interface PaymentMethodBackendUpdateRequest {
+  label: string;
+  description: string;
+  enabled: boolean;
+  currency: PaymentMethodCurrency;
+  requiresReceiverAccount: boolean;
+  isCustom: boolean;
+  accounts: PaymentMethodAccount[];
 }
