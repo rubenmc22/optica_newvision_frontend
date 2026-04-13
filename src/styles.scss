@@ -16,6 +16,10 @@ body {
     font-family: Roboto, "Helvetica Neue", sans-serif;
 }
 
+body.recibo-modal-open {
+    overflow: hidden !important;
+}
+
 body.modal-open .modal-backdrop {
     z-index: 2000 !important;
 }

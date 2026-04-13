@@ -6,12 +6,17 @@
 .btn-icon-refresh {
     background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 10px;
     width: 42px;
     height: 42px;
     padding: 0;
     display: flex;
     align-items: center;
+    position: relative;
+    z-index: 1;
     justify-content: center;
     cursor: pointer;
     position: relative;
@@ -19,6 +24,8 @@
     box-shadow: 0 3px 8px rgba(59, 130, 246, 0.2);
 
     &:hover:not(:disabled):not(.loading) {
+        position: relative;
+        z-index: 1;
         background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
         transform: translateY(-2px) scale(1.05);
         box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
@@ -28,6 +35,8 @@
         }
     }
 
+        position: relative;
+        z-index: 1;
     &:active:not(:disabled):not(.loading) {
         transform: translateY(0) scale(0.98);
     }
@@ -45,7 +54,6 @@
         position: relative;
         display: flex;
         align-items: center;
-        justify-content: center;
     }
 
     .refresh-icon {
@@ -12377,8 +12385,11 @@ form {
 }
 
 #reciboModal {
+    position: fixed;
+    inset: 0;
     padding: 0.85rem;
     overflow-y: auto;
+    z-index: 3200;
 }
 
 #reciboModal .modal-dialog {
@@ -12976,15 +12987,22 @@ form {
 }
 
 #reciboModal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     background: radial-gradient(circle at top, rgba(255, 255, 255, 0.16) 0%, rgba(12, 24, 38, 0.28) 100%);
 }
 
 #reciboModal .modal-dialog {
+    position: relative;
+    z-index: 3201;
     align-items: center;
 }
 
 .recibo-viewer-shell {
     display: block !important;
+    position: relative;
+    z-index: 1;
     max-height: none !important;
     border-radius: 20px !important;
     clip-path: none !important;
@@ -12993,6 +13011,8 @@ form {
     box-shadow: none !important;
 
     .recibo-preview-shell {
+        position: relative;
+        z-index: 1;
         padding: 0.42rem;
         border-radius: 20px;
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(242, 247, 251, 0.96) 100%);
@@ -13002,6 +13022,8 @@ form {
 
     .recibo-preview-frame {
         display: block;
+        position: relative;
+        z-index: 1;
         width: 100%;
         height: min(80dvh, 860px);
         border: 0;
@@ -13023,6 +13045,12 @@ form {
     }
 
     .recibo-floating-actions {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        bottom: 12px;
+        z-index: 40;
+        pointer-events: auto;
         background: rgba(255, 255, 255, 0.92);
         border-color: rgba(216, 226, 236, 0.96);
         box-shadow: 0 12px 28px rgba(14, 34, 52, 0.11);
@@ -13107,6 +13135,9 @@ form {
     }
 
     .recibo-floating-close {
+        position: absolute;
+        z-index: 41;
+        pointer-events: auto;
         top: 14px;
         right: 14px;
         width: 34px;

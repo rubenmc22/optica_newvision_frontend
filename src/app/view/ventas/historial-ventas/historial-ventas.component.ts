@@ -301,6 +301,7 @@ export class HistorialVentasComponent implements OnInit {
 
   ngOnDestroy(): void {
     this.modalInstance?.close();
+    this.actualizarEstadoModalRecibo(false);
 
     if (this.configSubscription) {
       this.configSubscription.unsubscribe();
@@ -311,6 +312,14 @@ export class HistorialVentasComponent implements OnInit {
 
     // Destruir gráficos al cerrar
     this.destruirGraficos();
+  }
+
+  private actualizarEstadoModalRecibo(abierto: boolean): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    document.body.classList.toggle('recibo-modal-open', abierto);
   }
 
   onBusquedaDinamica(termino: string): void {
@@ -3340,6 +3349,7 @@ export class HistorialVentasComponent implements OnInit {
 
       // 3. Mostrar el modal
       this.mostrarModalRecibo = true;
+      this.actualizarEstadoModalRecibo(true);
 
       // 4. Resetear scroll DEL MODAL después de que se renderice
       setTimeout(() => this.resetScrollModal(), 50);
@@ -3979,6 +3989,7 @@ export class HistorialVentasComponent implements OnInit {
 
   cerrarModalRecibo(): void {
     this.mostrarModalRecibo = false;
+    this.actualizarEstadoModalRecibo(false);
     this.limpiarVistaPreviaRecibo();
 
     // Limpiar primero la referencia
