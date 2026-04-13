@@ -15,10 +15,10 @@
 // =============================================
 
 .modern-card {
-  background: white;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e9ecef;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(203, 213, 225, 0.72);
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   position: relative;
@@ -132,7 +132,7 @@
   font-size: 2rem;
   font-weight: 700;
   line-height: 1;
-  background: linear-gradient(135deg, #2c3e50, #3498db);
+  background: linear-gradient(135deg, #0f172a, #1e3a8a);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -227,64 +227,64 @@
 
 .card-venta {
   .card-icon {
-    background: linear-gradient(135deg, #17a2b8, #20c997);
+    background: linear-gradient(135deg, #0f766e, #14b8a6);
     color: white;
   }
 
   &:hover {
-    border-color: #17a2b8;
+    border-color: #14b8a6;
 
     .card-action,
     .card-footer i {
-      color: #17a2b8;
+      color: #0f766e;
     }
   }
 }
 
 .card-presupuesto {
   .card-icon {
-    background: linear-gradient(135deg, #28a745, #20c997);
+    background: linear-gradient(135deg, #2563eb, #38bdf8);
     color: white;
   }
 
   &:hover {
-    border-color: #28a745;
+    border-color: #2563eb;
 
     .card-action,
     .card-footer i {
-      color: #28a745;
+      color: #2563eb;
     }
   }
 }
 
 .card-historial {
   .card-icon {
-    background: linear-gradient(135deg, #ffc107, #fd7e14);
+    background: linear-gradient(135deg, #f59e0b, #fb923c);
     color: white;
   }
 
   &:hover {
-    border-color: #ffc107;
+    border-color: #f59e0b;
 
     .card-action,
     .card-footer i {
-      color: #ffc107;
+      color: #d97706;
     }
   }
 }
 
 .card-caja {
   .card-icon {
-    background: linear-gradient(135deg, #dc3545, #e83e8c);
+    background: linear-gradient(135deg, #e11d48, #f43f5e);
     color: white;
   }
 
   &:hover {
-    border-color: #dc3545;
+    border-color: #e11d48;
 
     .card-action,
     .card-footer i {
-      color: #dc3545;
+      color: #e11d48;
     }
   }
 }

@@ -12,8 +12,9 @@
     </div>
     <div class="header-actions">
       <!-- Botón para abrir resumen financiero -->
-      <button class="btn btn-resumen-financiero" (click)="abrirModalResumenFinanciero()">
-        <i class="bi bi-graph-up me-2"></i>
+      <button class="btn btn-resumen-financiero" (click)="abrirModalResumenFinanciero()" [disabled]="resumenCargando">
+        <i class="bi me-2" [class.bi-graph-up]="!resumenCargando" [class.bi-arrow-repeat]="resumenCargando"
+          [class.spin-icon]="resumenCargando"></i>
         <span>Resumen Financiero</span>
       </button>
 
@@ -2202,848 +2203,425 @@
 
 
   <!-- Modal de Resumen Financiero -->
-  <div class="modal fade" id="modalResumenFinanciero" tabindex="-1" aria-hidden="true" #modalResumenFinanciero>
-    <div class="modal-dialog modal-lg-xl modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content border-0">
-        <!-- Header del Modal -->
-        <div class="modal-header-moderno">
-          <div class="modal-header-content">
-            <div class="modal-header-icon">
-              <i class="bi bi-graph-up"></i>
-            </div>
-            <div class="modal-header-text">
-              <h4 class="modal-header-title">Resumen Financiero</h4>
-              <div class="modal-header-subtitle">
-                Análisis completo de ventas, abonos y deudas pendientes
-              </div>
-            </div>
-          </div>
-          <div class="modal-header-actions">
-            <!-- Botón X para cerrar -->
-            <button type="button" class="btn-close-modal" (click)="cerrarModal()" aria-label="Close">
-              <i class="bi bi-x-lg"></i>
-            </button>
-          </div>
+  <ng-template #modalResumenFinanciero let-modal>
+    <div class="resumen-v2-shell">
+      <div class="resumen-v2-header">
+        <div>
+          <span class="resumen-v2-kicker">Panel Ejecutivo</span>
+          <h3>Resumen financiero de ventas</h3>
+          <p>Lectura consolidada de facturación, cobranza, deuda pendiente y distribución por modalidad.</p>
         </div>
+        <button type="button" class="resumen-v2-close" (click)="modal.close()" aria-label="Cerrar resumen">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
 
-        <!-- Body del Modal -->
-        <div class="modal-body">
-          <!-- Panel de Filtros Compacto (No flotante) -->
-          <div class="panel-filtros-compacto mb-4">
-            <div class="card border-0 shadow-sm">
-              <div class="card-body p-3">
-                <div class="d-flex align-items-center justify-content-between">
-                  <!-- Icono y título -->
-                  <div class="d-flex align-items-center">
-                    <div
-                      class="icono-filtro-panel bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
-                      <i class="bi bi-sliders"></i>
+      <div class="resumen-v2-body" #resumenExportable>
+        <section class="resumen-v2-filters">
+          <div class="resumen-v2-filters-top">
+            <div>
+              <h4>Filtros del análisis</h4>
+              <p>{{ getPeriodoResumenTexto() }} · {{ getFormaPagoResumenTexto() }}</p>
+            </div>
+            <div class="resumen-v2-filters-actions">
+              <span class="resumen-v2-badge" *ngIf="contarFiltrosActivos() > 0">
+                {{ contarFiltrosActivos() }} filtro{{ contarFiltrosActivos() > 1 ? 's' : '' }} activo{{ contarFiltrosActivos() > 1 ? 's' : '' }}
+              </span>
+              <button type="button" class="btn-periodo-rapido" [class.active]="resumenFiltros.periodo === 'hoy'"
+                (click)="aplicarPeriodoResumen('hoy')">
+                Hoy
+              </button>
+              <button type="button" class="btn-periodo-rapido" [class.active]="resumenFiltros.periodo === 'semana'"
+                (click)="aplicarPeriodoResumen('semana')">
+                Semana
+              </button>
+              <button type="button" class="btn-periodo-rapido" [class.active]="resumenFiltros.periodo === 'mes'"
+                (click)="aplicarPeriodoResumen('mes')">
+                Mes
+              </button>
+              <button type="button" class="btn-toggle-avanzado" (click)="toggleFiltrosAvanzados()">
+                <i class="bi bi-sliders me-1"></i>
+                {{ mostrarFiltrosAvanzados ? 'Ocultar filtros' : 'Más filtros' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="resumen-v2-filters-grid" *ngIf="mostrarFiltrosAvanzados">
+            <label>
+              <span>Fecha desde</span>
+              <input type="date" [(ngModel)]="resumenFiltros.fechaDesde" (change)="actualizarResumen()">
+            </label>
+            <label>
+              <span>Fecha hasta</span>
+              <input type="date" [(ngModel)]="resumenFiltros.fechaHasta" (change)="actualizarResumen()">
+            </label>
+            <label>
+              <span>Año</span>
+              <select [(ngModel)]="resumenFiltros.anio" (change)="actualizarResumen()">
+                <option [ngValue]="0">Todos</option>
+                <option *ngFor="let anio of anosDisponibles" [ngValue]="anio">{{ anio }}</option>
+              </select>
+            </label>
+            <label>
+              <span>Mes</span>
+              <select [(ngModel)]="resumenFiltros.mes" (change)="actualizarResumen()">
+                <option [ngValue]="0">Todos</option>
+                <option *ngFor="let mes of mesesDisponibles; let i = index" [ngValue]="i + 1">{{ mes }}</option>
+              </select>
+            </label>
+            <label>
+              <span>Asesor</span>
+              <select [(ngModel)]="resumenFiltros.asesor" (change)="actualizarResumen()">
+                <option value="">Todos los asesores</option>
+                <option *ngFor="let asesor of asesores" [value]="asesor.id">{{ asesor.nombre }}</option>
+              </select>
+            </label>
+            <label>
+              <span>Forma de pago</span>
+              <select [(ngModel)]="resumenFiltros.formaPago" (change)="actualizarResumen()">
+                <option value="">Todas</option>
+                <option value="contado">Contado</option>
+                <option value="de_contado-pendiente">Contado pendiente</option>
+                <option value="abono">Abono</option>
+                <option value="cashea">Cashea</option>
+                <option value="credito">Crédito</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="resumen-v2-chip-row" *ngIf="contarFiltrosActivos() > 0">
+            <button type="button" class="filtro-chip" *ngIf="resumenFiltros.periodo" (click)="limpiarFiltroPeriodo()">
+              {{ getPeriodoDisplay() }} <i class="bi bi-x"></i>
+            </button>
+            <button type="button" class="filtro-chip" *ngIf="resumenFiltros.anio" (click)="limpiarFiltroAnio()">
+              Año {{ resumenFiltros.anio }} <i class="bi bi-x"></i>
+            </button>
+            <button type="button" class="filtro-chip" *ngIf="resumenFiltros.mes" (click)="limpiarFiltroMes()">
+              {{ getMesDisplay() }} <i class="bi bi-x"></i>
+            </button>
+            <button type="button" class="filtro-chip" *ngIf="resumenFiltros.asesor" (click)="limpiarFiltroAsesor()">
+              {{ getAsesorNombre(resumenFiltros.asesor) }} <i class="bi bi-x"></i>
+            </button>
+            <button type="button" class="filtro-chip" *ngIf="resumenFiltros.formaPago" (click)="limpiarFiltroFormaPago()">
+              {{ getFormaPagoDisplay(resumenFiltros.formaPago) }} <i class="bi bi-x"></i>
+            </button>
+            <button type="button" class="filtro-chip is-clear" (click)="limpiarTodosLosFiltros()">Limpiar todo</button>
+          </div>
+        </section>
+
+        <ng-container *ngIf="!resumenCargando; else resumenLoadingState">
+          <ng-container *ngIf="!resumenError; else resumenErrorState">
+            <section class="resumen-v2-kpis">
+              <article class="resumen-kpi-card is-primary">
+                <span>Total facturado</span>
+                <strong>{{ getMontoTotalGeneral() }}</strong>
+                <small>{{ getCantidadVentasResumen() }} operaciones registradas</small>
+              </article>
+              <article class="resumen-kpi-card is-success">
+                <span>Total cobrado</span>
+                <strong>{{ getMontoCobrado() }}</strong>
+                <small>{{ getPorcentajeRecaudo() | number:'1.0-1' }}% del total facturado</small>
+              </article>
+              <article class="resumen-kpi-card is-warning">
+                <span>Saldo pendiente</span>
+                <strong>{{ getDeudaPendienteTotal() }}</strong>
+                <small>{{ getPorcentajePendiente() | number:'1.0-1' }}% pendiente de recaudo</small>
+              </article>
+              <article class="resumen-kpi-card is-neutral">
+                <span>Ticket promedio</span>
+                <strong>{{ getTicketPromedio() }}</strong>
+                <small>{{ getAsesorResumenTexto() }}</small>
+              </article>
+            </section>
+
+            <section class="resumen-v2-overview">
+              <article class="resumen-story-card">
+                <div class="story-header">
+                  <span class="story-pill">Estado del período</span>
+                  <h4>{{ getEstadoCobranza() }}</h4>
+                </div>
+                <p>{{ getEstadoCobranzaDetalle() }}</p>
+                <dl>
+                  <div>
+                    <dt>Período</dt>
+                    <dd>{{ getFechaRango() }}</dd>
+                  </div>
+                  <div>
+                    <dt>Asesor</dt>
+                    <dd>{{ getAsesorResumenTexto() }}</dd>
+                  </div>
+                  <div>
+                    <dt>Forma líder</dt>
+                    <dd>{{ getFormaPagoLiderTexto() }}</dd>
+                  </div>
+                </dl>
+              </article>
+
+              <article class="resumen-health-card">
+                <div class="health-ring" [style.--recaudo]="getPorcentajeRecaudo()">
+                  <span>{{ getPorcentajeRecaudo() | number:'1.0-0' }}%</span>
+                  <small>recaudado</small>
+                </div>
+                <div class="health-metrics">
+                  <div>
+                    <span>Abonos</span>
+                    <strong>{{ getTotalAbonosRecibidos() }}</strong>
+                  </div>
+                  <div>
+                    <span>Deuda por Cashea</span>
+                    <strong>{{ getDeudaPorCashea() }}</strong>
+                  </div>
+                  <div>
+                    <span>Deuda por abonos</span>
+                    <strong>{{ getDeudaPorAbonos() }}</strong>
+                  </div>
+                  <div>
+                    <span>Contado pendiente</span>
+                    <strong>{{ getDeudaPorContadoPendiente() }}</strong>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section class="resumen-v2-snapshots">
+              <article class="resumen-snapshot-card">
+                <span>Pico diario</span>
+                <strong>{{ getPicoDiarioResumen() }}</strong>
+                <small>Máximo nivel de facturación diaria dentro del rango actual.</small>
+              </article>
+              <article class="resumen-snapshot-card">
+                <span>Corte mensual más reciente</span>
+                <strong>{{ getCorteMensualResumen() }}</strong>
+                <small>Último cierre mensual consolidado con datos reales del backend.</small>
+              </article>
+              <article class="resumen-snapshot-card">
+                <span>Asesor destacado</span>
+                <strong>{{ getMejorAsesorResumen() }}</strong>
+                <small>Ranking calculado por monto facturado acumulado.</small>
+              </article>
+            </section>
+
+            <section class="resumen-v2-breakdown">
+              <article class="resumen-table-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Distribución por modalidad</h4>
+                    <p>Participación sobre el total facturado</p>
+                  </div>
+                </div>
+                <div class="resumen-table-list">
+                  <div class="resumen-table-row" *ngFor="let item of getResumenFormasPago(); trackBy: trackByItem"
+                    [ngClass]="item.accentClass">
+                    <div class="row-main">
+                      <span class="row-icon"><i class="bi" [ngClass]="item.icono"></i></span>
+                      <div>
+                        <strong>{{ item.label }}</strong>
+                        <small>{{ item.cantidad }} ventas</small>
+                      </div>
                     </div>
+                    <div class="row-metric">
+                      <strong>{{ item.montoFormateado }}</strong>
+                      <small>{{ item.participacion | number:'1.0-1' }}%</small>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="resumen-table-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Composición de deuda</h4>
+                    <p>Cómo se reparte el saldo pendiente</p>
+                  </div>
+                </div>
+                <div class="resumen-table-list">
+                  <div class="resumen-table-row" *ngFor="let item of getComposicionDeuda(); trackBy: trackByItem"
+                    [ngClass]="item.accentClass">
+                    <div class="row-main">
+                      <span class="row-icon"><i class="bi bi-circle-fill"></i></span>
+                      <div>
+                        <strong>{{ item.label }}</strong>
+                        <small>{{ item.descripcion }}</small>
+                      </div>
+                    </div>
+                    <div class="row-metric">
+                      <strong>{{ item.montoFormateado }}</strong>
+                      <small>{{ item.porcentaje | number:'1.0-1' }}%</small>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section class="resumen-v2-charts">
+              <article class="resumen-chart-card is-lg">
+                <div class="section-heading">
+                  <div>
+                    <h4>Evolución diaria</h4>
+                    <p>Últimos 14 puntos con facturación y cobranza real</p>
+                  </div>
+                </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenSerieDiariaChart"></canvas>
+                </div>
+              </article>
+
+              <article class="resumen-chart-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Cierre mensual</h4>
+                    <p>Comparativo mensual facturado vs. cobrado</p>
+                  </div>
+                </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenSerieMensualChart"></canvas>
+                </div>
+              </article>
+
+              <article class="resumen-chart-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Ranking comercial</h4>
+                    <p>Top asesores por facturación acumulada</p>
+                  </div>
+                </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenAsesoresChart"></canvas>
+                </div>
+              </article>
+            </section>
+
+            <section class="resumen-v2-insights">
+              <article class="resumen-table-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Ranking de asesores</h4>
+                    <p>Detalle operativo del período seleccionado</p>
+                  </div>
+                </div>
+                <div class="ranking-list">
+                  <div class="ranking-row" *ngFor="let item of resumenVista.rankingAsesoresTop; let i = index; trackBy: trackByItem">
+                    <div class="ranking-main">
+                      <span class="ranking-position">{{ i + 1 }}</span>
+                      <div>
+                        <strong>{{ item.asesorNombre }}</strong>
+                        <small>{{ item.ventas }} ventas · {{ formatearMoneda(item.cobrado, monedaSistema) }} cobrados</small>
+                      </div>
+                    </div>
+                    <div class="row-metric">
+                      <strong>{{ item.facturadoFormateado }}</strong>
+                      <small>{{ formatearMoneda(item.pendiente, monedaSistema) }} pendientes</small>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="resumen-table-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Últimos cortes mensuales</h4>
+                    <p>Vista rápida de desempeño reciente</p>
+                  </div>
+                </div>
+                <div class="mini-period-list">
+                  <div class="mini-period-row" *ngFor="let item of resumenVista.seriesMensualReciente; trackBy: trackByItem">
                     <div>
-                      <span class="fw-semibold text-primary">Filtros del Resumen</span>
-                      <small class="text-muted d-block small">Personaliza el análisis financiero</small>
+                      <strong>{{ item.label }}</strong>
+                      <small>{{ item.ventas }} ventas</small>
                     </div>
-                  </div>
-
-                  <!-- Filtros rápidos y contador -->
-                  <div class="d-flex align-items-center">
-                    <!-- Contador de filtros activos -->
-                    <span class="badge bg-primary rounded-pill me-3" *ngIf="contarFiltrosActivos() > 0">
-                      {{ contarFiltrosActivos() }} activo{{ contarFiltrosActivos() > 1 ? 's' : '' }}
-                    </span>
-
-                    <!-- Filtros rápidos -->
-                    <div class="d-flex flex-wrap gap-1 me-3">
-                      <button type="button" class="btn btn-sm btn-periodo-rapido"
-                        [class.active]="resumenFiltros.periodo === 'hoy'" (click)="aplicarPeriodoResumen('hoy')"
-                        title="Hoy">
-                        <i class="bi bi-calendar-day"></i>
-                        <span class="d-none d-sm-inline ms-1">Hoy</span>
-                      </button>
-                      <button type="button" class="btn btn-sm btn-periodo-rapido"
-                        [class.active]="resumenFiltros.periodo === 'semana'" (click)="aplicarPeriodoResumen('semana')"
-                        title="Esta semana">
-                        <i class="bi bi-calendar-week"></i>
-                        <span class="d-none d-sm-inline ms-1">Semana</span>
-                      </button>
-                      <button type="button" class="btn btn-sm btn-periodo-rapido"
-                        [class.active]="resumenFiltros.periodo === 'mes'" (click)="aplicarPeriodoResumen('mes')"
-                        title="Este mes">
-                        <i class="bi bi-calendar-month"></i>
-                        <span class="d-none d-sm-inline ms-1">Mes</span>
-                      </button>
-                    </div>
-
-                    <!-- Botón para mostrar/ocultar filtros avanzados -->
-                    <button class="btn btn-sm btn-toggle-avanzado" type="button" (click)="toggleFiltrosAvanzados()"
-                      [attr.aria-expanded]="mostrarFiltrosAvanzados" [class.active]="mostrarFiltrosAvanzados">
-                      <i class="bi bi-gear me-1"></i>
-                      <span>{{ mostrarFiltrosAvanzados ? 'Ocultar' : 'Avanzado' }}</span>
-                      <i class="bi bi-chevron-down ms-1 toggle-icon" [class.rotated]="mostrarFiltrosAvanzados"></i>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Filtros avanzados (Mostrar/Ocultar) -->
-                <div class="filtros-avanzados-container mt-3" *ngIf="mostrarFiltrosAvanzados">
-                  <div class="border-top pt-3">
-                    <div class="row g-3">
-                      <!-- Rango de fechas personalizado -->
-                      <div class="col-lg-6">
-                        <div class="filtro-item">
-                          <label class="form-label small fw-semibold text-primary mb-2">
-                            <i class="bi bi-calendar-range me-1"></i>Rango de Fechas
-                          </label>
-                          <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-light">
-                              <i class="bi bi-calendar"></i>
-                            </span>
-                            <input type="date" class="form-control" [(ngModel)]="resumenFiltros.fechaDesde"
-                              (change)="actualizarResumen()" placeholder="Desde">
-                            <span class="input-group-text bg-light">a</span>
-                            <input type="date" class="form-control" [(ngModel)]="resumenFiltros.fechaHasta"
-                              (change)="actualizarResumen()" placeholder="Hasta">
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Año y Mes -->
-                      <div class="col-lg-3">
-                        <div class="filtro-item">
-                          <label class="form-label small fw-semibold text-primary mb-2">
-                            <i class="bi bi-calendar me-1"></i>Año
-                          </label>
-                          <select class="form-select form-select-sm" [(ngModel)]="resumenFiltros.anio"
-                            (change)="actualizarResumen()">
-                            <option value="">Seleccionar año</option>
-                            <option *ngFor="let anio of anosDisponibles" [value]="anio">{{ anio }}</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div class="col-lg-3">
-                        <div class="filtro-item">
-                          <label class="form-label small fw-semibold text-primary mb-2">
-                            <i class="bi bi-calendar3 me-1"></i>Mes
-                          </label>
-                          <select class="form-select form-select-sm" [(ngModel)]="resumenFiltros.mes"
-                            (change)="actualizarResumen()">
-                            <option value="">Todos los meses</option>
-                            <option *ngFor="let mes of mesesDisponibles; let i = index" [value]="i+1">
-                              {{ mes }}
-                            </option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <!-- Asesor -->
-                      <div class="col-lg-6">
-                        <div class="filtro-item">
-                          <label class="form-label small fw-semibold text-primary mb-2">
-                            <i class="bi bi-person-badge me-1"></i>Asesor
-                          </label>
-                          <select class="form-select form-select-sm" [(ngModel)]="resumenFiltros.asesor"
-                            (change)="actualizarResumen()">
-                            <option value="">Todos los asesores</option>
-                            <option *ngFor="let asesor of asesores" [value]="asesor.id">
-                              {{ asesor.nombre }}
-                            </option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <!-- Forma de Pago -->
-                      <div class="col-lg-6">
-                        <div class="filtro-item">
-                          <label class="form-label small fw-semibold text-primary mb-2">
-                            <i class="bi bi-credit-card me-1"></i>Forma de Pago
-                          </label>
-                          <select class="form-select form-select-sm" [(ngModel)]="resumenFiltros.formaPago"
-                            (change)="actualizarResumen()">
-                            <option value="">Todas las formas</option>
-                            <option value="contado">Contado</option>
-                            <option value="contado-pendiente">Contado - Pendiente por Pago</option>
-                            <option value="abono">Abono</option>
-                            <option value="cashea">Cashea</option>
-                            <option value="credito">Crédito</option>
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Botón para limpiar todos los filtros -->
-                    <div class="d-flex justify-content-end mt-3">
-                      <button class="btn btn-sm btn-limpiar-filtros" (click)="limpiarTodosLosFiltros()"
-                        *ngIf="contarFiltrosActivos() > 0">
-                        <i class="bi bi-x-circle me-1"></i>
-                        Limpiar todos los filtros
-                      </button>
+                    <div class="row-metric">
+                      <strong>{{ formatearMoneda(item.facturado, monedaSistema) }}</strong>
+                      <small>{{ formatearMoneda(item.cobrado, monedaSistema) }} cobrados</small>
                     </div>
                   </div>
                 </div>
+              </article>
+            </section>
 
-                <!-- Filtros Activos (chips) -->
-                <div class="filtros-activos-chips mt-3" *ngIf="contarFiltrosActivos() > 0">
-                  <div class="d-flex align-items-center flex-wrap gap-2">
-                    <small class="text-muted">
-                      <i class="bi bi-funnel me-1"></i>Filtros aplicados:
-                    </small>
-
-                    <!-- Filtro de período -->
-                    <span class="filtro-chip" *ngIf="resumenFiltros.periodo">
-                      <i class="bi bi-calendar-range me-1"></i>
-                      {{ getPeriodoDisplay() }}
-                      <i class="bi bi-x ms-1" (click)="limpiarFiltroPeriodo()"></i>
-                    </span>
-
-                    <!-- Filtro de año -->
-                    <span class="filtro-chip" *ngIf="resumenFiltros.anio">
-                      <i class="bi bi-calendar-year me-1"></i>Año {{ resumenFiltros.anio }}
-                      <i class="bi bi-x ms-1" (click)="limpiarFiltroAnio()"></i>
-                    </span>
-
-                    <!-- Filtro de mes -->
-                    <span class="filtro-chip" *ngIf="resumenFiltros.mes">
-                      <i class="bi bi-calendar-month me-1"></i>{{ getMesDisplay() }}
-                      <i class="bi bi-x ms-1" (click)="limpiarFiltroMes()"></i>
-                    </span>
-
-                    <!-- Filtro de asesor -->
-                    <span class="filtro-chip" *ngIf="resumenFiltros.asesor">
-                      <i class="bi bi-person-badge me-1"></i>{{ getAsesorNombre(resumenFiltros.asesor) }}
-                      <i class="bi bi-x ms-1" (click)="limpiarFiltroAsesor()"></i>
-                    </span>
-
-                    <!-- Filtro de forma de pago -->
-                    <span class="filtro-chip" *ngIf="resumenFiltros.formaPago">
-                      <i class="bi bi-credit-card me-1"></i>{{ getFormaPagoDisplay(resumenFiltros.formaPago) }}
-                      <i class="bi bi-x ms-1" (click)="limpiarFiltroFormaPago()"></i>
-                    </span>
+            <section class="resumen-v2-charts">
+              <article class="resumen-chart-card is-lg">
+                <div class="section-heading">
+                  <div>
+                    <h4>Participación por forma de pago</h4>
+                    <p>Distribución del monto facturado</p>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenFormasPagoChart"></canvas>
+                </div>
+              </article>
 
-          <!-- Sección de Montos Detallados -->
-          <div class="row mb-4">
-            <div class="col-12">
-              <div class="card border-0 shadow-sm">
-                <div class="card-header bg-primary text-white py-3">
-                  <div class="d-flex align-items-center">
-                    <i class="bi bi-currency-dollar me-2"></i>
-                    <h5 class="mb-0">Resumen Financiero</h5>
-                    <span class="ms-auto badge bg-light text-dark">
-                      {{ getFechaRango() }}
-                    </span>
+              <article class="resumen-chart-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Cobranza del período</h4>
+                    <p>Facturado, cobrado y pendiente</p>
                   </div>
                 </div>
-                <div class="card-body">
-                  <div class="row">
-                    <!-- Monto Total General -->
-                    <div class="col-md-4 mb-3">
-                      <div class="card h-100 border-primary">
-                        <div class="card-body">
-                          <div class="d-flex align-items-center">
-                            <div class="monto-icon bg-primary text-white me-3">
-                              <i class="bi bi-cash-stack"></i>
-                            </div>
-                            <div class="monto-content">
-                              <div class="monto-label text-muted">Monto Total General</div>
-                              <div class="monto-valor text-primary fw-bold fs-4">
-                                {{ getMontoTotalGeneral() }}
-                              </div>
-                              <div class="monto-subtext small">
-                                Valor total de ventas
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenCobranzaChart"></canvas>
+                </div>
+              </article>
 
-                    <!-- Total Abonos Recibidos -->
-                    <div class="col-md-4 mb-3">
-                      <div class="card h-100 border-success">
-                        <div class="card-body">
-                          <div class="d-flex align-items-center">
-                            <div class="monto-icon bg-success text-white me-3">
-                              <i class="bi bi-cash-coin"></i>
-                            </div>
-                            <div class="monto-content">
-                              <div class="monto-label text-muted">Total Abonos Recibidos</div>
-                              <div class="monto-valor text-success fw-bold fs-4">
-                                {{ getTotalAbonosRecibidos() }}
-                              </div>
-                              <div class="monto-subtext small">
-                                Pagos recibidos a la fecha
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Deuda Pendiente por Cobrar -->
-                    <div class="col-md-4 mb-3">
-                      <div class="card h-100 border-warning">
-                        <div class="card-body">
-                          <div class="d-flex align-items-center">
-                            <div class="monto-icon bg-warning text-white me-3">
-                              <i class="bi bi-clock-history"></i>
-                            </div>
-                            <div class="monto-content">
-                              <div class="monto-label text-muted">Deuda Pendiente por Cobrar</div>
-                              <div class="monto-valor text-warning fw-bold fs-4">
-                                {{ getDeudaPendienteTotal() }}
-                              </div>
-                              <div class="monto-subtext small">
-                                Monto por recibir
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Desglose de Deuda Pendiente -->
-                  <div class="row mt-3" *ngIf="getDeudaPendienteTotal() !== '0'">
-                    <div class="col-12">
-                      <div class="card border-0 bg-light">
-                        <div class="card-body">
-                          <h6 class="mb-3 text-muted">
-                            <i class="bi bi-pie-chart me-2"></i>
-                            Desglose de Deuda Pendiente
-                          </h6>
-                          <div class="row">
-                            <!-- Deuda por Cashea -->
-                            <div class="col-md-4">
-                              <div class="deuda-item">
-                                <div class="deuda-header">
-                                  <span class="deuda-label">
-                                    <i class="bi bi-calendar-check text-info me-2"></i>
-                                    Por Cashea
-                                  </span>
-                                  <span class="deuda-monto text-info">
-                                    {{ getDeudaPorCashea() }}
-                                  </span>
-                                </div>
-                                <div class="progress mt-2" style="height: 5px;">
-                                  <div class="progress-bar bg-info" [style.width.%]="getPorcentajeDeuda('cashea')">
-                                  </div>
-                                </div>
-                                <small class="text-muted">
-                                  {{ getCantidadVentasPorTipo('cashea') }} ventas pendientes
-                                </small>
-                              </div>
-                            </div>
-
-                            <!-- Deuda por Abonos -->
-                            <div class="col-md-4">
-                              <div class="deuda-item">
-                                <div class="deuda-header">
-                                  <span class="deuda-label">
-                                    <i class="bi bi-piggy-bank text-warning me-2"></i>
-                                    Por Abonos
-                                  </span>
-                                  <span class="deuda-monto text-warning">
-                                    {{ getDeudaPorAbonos() }}
-                                  </span>
-                                </div>
-                                <div class="progress mt-2" style="height: 5px;">
-                                  <div class="progress-bar bg-warning" [style.width.%]="getPorcentajeDeuda('abono')">
-                                  </div>
-                                </div>
-                                <small class="text-muted">
-                                  {{ getCantidadVentasPorTipo('abono') }} ventas pendientes
-                                </small>
-                              </div>
-                            </div>
-
-                            <!-- Deuda por Contado Pendiente -->
-                            <div class="col-md-4">
-                              <div class="deuda-item">
-                                <div class="deuda-header">
-                                  <span class="deuda-label">
-                                    <i class="bi bi-credit-card text-danger me-2"></i>
-                                    Por Contado Pendiente
-                                  </span>
-                                  <span class="deuda-monto text-danger">
-                                    {{ getDeudaPorContadoPendiente() }}
-                                  </span>
-                                </div>
-                                <div class="progress mt-2" style="height: 5px;">
-                                  <div class="progress-bar bg-danger" [style.width.%]="getPorcentajeDeuda('contado')">
-                                  </div>
-                                </div>
-                                <small class="text-muted">
-                                  {{ getCantidadVentasPorTipo('contado') }} ventas pendientes
-                                </small>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Resumen por Forma de Pago -->
-                  <div class="row mt-3">
-                    <div class="col-12">
-                      <div class="card border-0">
-                        <div class="card-body">
-                          <h6 class="mb-3 text-muted">
-                            <i class="bi bi-credit-card-2-front me-2"></i>
-                            Resumen por Forma de Pago
-                          </h6>
-                          <div class="row">
-                            <!-- Contado -->
-                            <div class="col-md-3 col-6 mb-3">
-                              <div class="forma-pago-item text-center">
-                                <div class="forma-pago-icon bg-primary text-white">
-                                  <i class="bi bi-cash"></i>
-                                </div>
-                                <div class="forma-pago-info mt-2">
-                                  <div class="forma-pago-label">Contado</div>
-                                  <div class="forma-pago-monto fw-bold">
-                                    {{ getMontoContado() }}
-                                  </div>
-                                  <small class="text-muted">
-                                    {{ getCantidadVentasPorFormaPago('contado') }} ventas
-                                  </small>
-                                </div>
-                              </div>
-                            </div>
-
-                            <!-- Abono -->
-                            <div class="col-md-3 col-6 mb-3">
-                              <div class="forma-pago-item text-center">
-                                <div class="forma-pago-icon bg-success text-white">
-                                  <i class="bi bi-piggy-bank"></i>
-                                </div>
-                                <div class="forma-pago-info mt-2">
-                                  <div class="forma-pago-label">Abonos</div>
-                                  <div class="forma-pago-monto fw-bold">
-                                    {{ getMontoAbonos() }}
-                                  </div>
-                                  <small class="text-muted">
-                                    {{ getCantidadVentasPorFormaPago('abono') }} ventas
-                                  </small>
-                                </div>
-                              </div>
-                            </div>
-
-                            <!-- Cashea -->
-                            <div class="col-md-3 col-6 mb-3">
-                              <div class="forma-pago-item text-center">
-                                <div class="forma-pago-icon bg-info text-white">
-                                  <i class="bi bi-calendar-check"></i>
-                                </div>
-                                <div class="forma-pago-info mt-2">
-                                  <div class="forma-pago-label">Cashea</div>
-                                  <div class="forma-pago-monto fw-bold">
-                                    {{ getMontoCashea() }}
-                                  </div>
-                                  <small class="text-muted">
-                                    {{ getCantidadVentasPorFormaPago('cashea') }} ventas
-                                  </small>
-                                </div>
-                              </div>
-                            </div>
-
-                            <!-- Crédito -->
-                            <div class="col-md-3 col-6 mb-3">
-                              <div class="forma-pago-item text-center">
-                                <div class="forma-pago-icon bg-secondary text-white">
-                                  <i class="bi bi-credit-card"></i>
-                                </div>
-                                <div class="forma-pago-info mt-2">
-                                  <div class="forma-pago-label">Crédito</div>
-                                  <div class="forma-pago-monto fw-bold">
-                                    {{ getMontoCredito() }}
-                                  </div>
-                                  <small class="text-muted">
-                                    {{ getCantidadVentasPorFormaPago('credito') }} ventas
-                                  </small>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+              <article class="resumen-chart-card">
+                <div class="section-heading">
+                  <div>
+                    <h4>Detalle de deuda</h4>
+                    <p>Saldo pendiente por categoría</p>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Sección de gráficos o análisis adicionales -->
-          <div class="row mt-4">
-            <div class="col-12">
-              <div class="card border-0 shadow-sm">
-                <div class="card-header bg-light py-3">
-                  <div class="d-flex align-items-center">
-                    <i class="bi bi-bar-chart me-2 text-primary"></i>
-                    <h6 class="mb-0 fw-semibold">Análisis Detallado</h6>
-                  </div>
+                <div class="chart-canvas-wrap">
+                  <canvas id="resumenDeudaChart"></canvas>
                 </div>
-                <div class="card-body">
+              </article>
+            </section>
+          </ng-container>
+        </ng-container>
+      </div>
 
-                  <!-- Fila 1: Gráficos principales - Diseño Moderno -->
-                  <div class="row mb-4">
-                    <!-- Ventas por Día - Moderno -->
-                    <div class="col-md-6 mb-4">
-                      <div class="card card-chart-moderno border-0 shadow-sm h-100">
-                        <div class="card-header-chart d-flex align-items-center justify-content-between py-3 px-4">
-                          <div>
-                            <h6 class="mb-0 fw-semibold text-primary">
-                              <i class="bi bi-bar-chart-line-fill me-2"></i>
-                              Ventas por Día
-                            </h6>
-                            <small class="text-muted" id="ventasDiasRango">
-                              {{ getRangoFechasVentas() }}
-                            </small>
-                          </div>
-                          <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
-                              data-bs-toggle="dropdown">
-                              <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                              <li><a class="dropdown-item" href="#">Ver detalles</a></li>
-                              <li><a class="dropdown-item" href="#">Exportar datos</a></li>
-                            </ul>
-                          </div>
-                        </div>
-                        <div class="card-body p-4">
-                          <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div>
-                              <h3 class="mb-0 fw-bold" id="ventasTotalDias">
-                                {{ getTotalVentasPeriodo() | currency:simboloMonedaSistema }}
-                              </h3>
-                              <small class="text-success">
-                                <i class="bi bi-arrow-up-right me-1"></i>
-                                <span id="variacionVentas">+12.5%</span> vs. período anterior
-                              </small>
-                            </div>
-                            <div class="icono-grafico-grande bg-primary bg-opacity-10 text-primary rounded-circle p-3">
-                              <i class="bi bi-calendar-week fs-4"></i>
-                            </div>
-                          </div>
-                          <div class="chart-container-moderno" style="height: 220px;">
-                            <canvas id="ventasPorDiaChart"></canvas>
-                          </div>
-                          <div class="mt-3 d-flex justify-content-between align-items-center">
-                            <div class="estadistica-rapida">
-                              <small class="text-muted">Día más alto:</small>
-                              <div class="fw-semibold" id="diaMasAlto">Vie: {{ getMaxVentaDia() |
-                                currency:simboloMonedaSistema }}</div>
-                            </div>
-                            <div class="estadistica-rapida">
-                              <small class="text-muted">Promedio diario:</small>
-                              <div class="fw-semibold" id="promedioDiario">{{ getPromedioVentas() |
-                                currency:simboloMonedaSistema }}</div>
-                            </div>
-                            <div class="estadistica-rapida">
-                              <small class="text-muted">Total días:</small>
-                              <div class="fw-semibold" id="totalDias">{{ getTotalDias() }} días</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Comparativa Mensual - Moderno -->
-                    <div class="col-md-6 mb-4">
-                      <div class="card card-chart-moderno border-0 shadow-sm h-100">
-                        <div class="card-header-chart d-flex align-items-center justify-content-between py-3 px-4">
-                          <div>
-                            <h6 class="mb-0 fw-semibold text-success">
-                              <i class="bi bi-graph-up-arrow me-2"></i>
-                              Comparativa Mensual
-                            </h6>
-                            <small class="text-muted" id="comparativaRango">
-                              {{ getMesActual() }} vs {{ getMesAnterior() }}
-                            </small>
-                          </div>
-                          <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button"
-                              data-bs-toggle="dropdown">
-                              <i class="bi bi-filter"></i> Filtros
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                              <li><a class="dropdown-item" href="#" (click)="cambiarPeriodoComparativa('mes')">Por
-                                  mes</a>
-                              </li>
-                              <li><a class="dropdown-item" href="#" (click)="cambiarPeriodoComparativa('trimestre')">Por
-                                  trimestre</a></li>
-                              <li><a class="dropdown-item" href="#" (click)="cambiarPeriodoComparativa('anio')">Por
-                                  año</a></li>
-                            </ul>
-                          </div>
-                        </div>
-                        <div class="card-body p-4">
-                          <div class="row mb-3">
-                            <div class="col-6">
-                              <div class="indicador-comparativa actual">
-                                <small class="text-muted d-block">Mes Actual</small>
-                                <h3 class="mb-0 fw-bold text-success">
-                                  {{ getVentasMesActual() | currency:simboloMonedaSistema }}
-                                </h3>
-                              </div>
-                            </div>
-                            <div class="col-6">
-                              <div class="indicador-comparativa anterior text-end">
-                                <small class="text-muted d-block">Mes Anterior</small>
-                                <h3 class="mb-0 fw-bold text-secondary">
-                                  {{ getVentasMesAnterior() | currency:simboloMonedaSistema }}
-                                </h3>
-                              </div>
-                            </div>
-                          </div>
-                          <div class="chart-container-moderno" style="height: 220px;">
-                            <canvas id="comparativaMensualChart"></canvas>
-                          </div>
-                          <div class="mt-3 d-flex justify-content-between align-items-center">
-                            <div class="variacion-indicador">
-                              <div class="d-flex align-items-center">
-                                <div class="variacion-icono me-2" [ngClass]="getVariacionClase()">
-                                  <i class="bi" [class.bi-arrow-up-right]="getVariacion() > 0"
-                                    [class.bi-arrow-down-right]="getVariacion() <= 0"></i>
-                                </div>
-                                <div>
-                                  <div class="fw-semibold" [ngClass]="getVariacionClase()">
-                                    {{ getVariacion() | number:'1.1-1' }}%
-                                  </div>
-                                  <small class="text-muted">Variación mensual</small>
-                                </div>
-                              </div>
-                            </div>
-                            <div class="meta-progreso">
-                              <small class="text-muted d-block">Meta mensual</small>
-                              <div class="progress" style="height: 6px; width: 120px;">
-                                <div class="progress-bar bg-success" [style.width.%]="getPorcentajeMeta()"></div>
-                              </div>
-                              <small class="text-muted">{{ getPorcentajeMeta() | number:'1.0-0' }}%</small>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Fila 2: Gráficos secundarios - Moderno -->
-                  <div class="row">
-                    <!-- Distribución por Forma de Pago - Moderno -->
-                    <div class="col-md-4 mb-4">
-                      <div class="card card-chart-moderno border-0 shadow-sm h-100">
-                        <div class="card-header-chart d-flex align-items-center justify-content-between py-3 px-4">
-                          <div>
-                            <h6 class="mb-0 fw-semibold text-info">
-                              <i class="bi bi-pie-chart-fill me-2"></i>
-                              Distribución de Pagos
-                            </h6>
-                            <small class="text-muted">Porcentaje por tipo de pago</small>
-                          </div>
-                          <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button"
-                              data-bs-toggle="dropdown">
-                              <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                              <li><a class="dropdown-item" href="#">Ver detalle</a></li>
-                              <li><a class="dropdown-item" href="#">Comparar con período anterior</a></li>
-                            </ul>
-                          </div>
-                        </div>
-                        <div class="card-body p-4">
-                          <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div>
-                              <h3 class="mb-0 fw-bold">{{ getTotalTransacciones() }}</h3>
-                              <small class="text-muted">Total transacciones</small>
-                            </div>
-                            <div class="icono-grafico-pequeno bg-info bg-opacity-10 text-info rounded-circle p-2">
-                              <i class="bi bi-credit-card fs-5"></i>
-                            </div>
-                          </div>
-                          <div class="chart-container-moderno-dona" style="height: 180px;">
-                            <canvas id="distribucionPagoChart"></canvas>
-                          </div>
-                          <div class="leyenda-distribucion mt-3">
-                            <div class="row g-2">
-                              <div class="col-6" *ngFor="let item of getDistribucionPago()">
-                                <div class="d-flex align-items-center">
-                                  <div class="color-leyenda me-2" [style.background-color]="item.color"></div>
-                                  <div class="flex-grow-1">
-                                    <div class="d-flex justify-content-between">
-                                      <small class="fw-semibold">{{ item.tipo }}</small>
-                                      <small class="text-muted">{{ item.porcentaje }}%</small>
-                                    </div>
-                                    <div class="fw-bold">{{ item.monto | currency:simboloMonedaSistema }}</div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Tendencia de Deuda - Moderno -->
-                    <div class="col-md-4 mb-4">
-                      <div class="card card-chart-moderno border-0 shadow-sm h-100">
-                        <div class="card-header-chart d-flex align-items-center justify-content-between py-3 px-4">
-                          <div>
-                            <h6 class="mb-0 fw-semibold text-warning">
-                              <i class="bi bi-clock-history me-2"></i>
-                              Tendencia de Deuda
-                            </h6>
-                            <small class="text-muted" id="tendenciaPeriodo">
-                              Últimas 4 semanas
-                            </small>
-                          </div>
-                          <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-warning dropdown-toggle" type="button"
-                              data-bs-toggle="dropdown">
-                              <i class="bi bi-calendar"></i> Período
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                              <li><a class="dropdown-item" href="#" (click)="cambiarTendenciaPeriodo('semanas')">Por
-                                  semanas</a></li>
-                              <li><a class="dropdown-item" href="#" (click)="cambiarTendenciaPeriodo('meses')">Por
-                                  meses</a></li>
-                              <li><a class="dropdown-item" href="#" (click)="cambiarTendenciaPeriodo('trimestres')">Por
-                                  trimestres</a></li>
-                            </ul>
-                          </div>
-                        </div>
-                        <div class="card-body p-4">
-                          <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div>
-                              <h3 class="mb-0 fw-bold text-warning">
-                                {{ getDeudaTotalActual() | currency:simboloMonedaSistema }}
-                              </h3>
-                              <small class="text-muted">Deuda total actual</small>
-                            </div>
-                            <div class="variacion-deuda" [ngClass]="getVariacionDeudaClase()">
-                              <i class="bi me-1" [class.bi-arrow-up-right]="getVariacionDeuda() > 0"
-                                [class.bi-arrow-down-right]="getVariacionDeuda() <= 0"></i>
-                              {{ getVariacionDeuda() | number:'1.1-1' }}%
-                            </div>
-                          </div>
-                          <div class="chart-container-moderno" style="height: 180px;">
-                            <canvas id="tendenciaDeudaChart"></canvas>
-                          </div>
-                          <div class="mt-3">
-                            <div class="row g-2">
-                              <div class="col-4" *ngFor="let tipo of getTiposDeuda()">
-                                <div class="tipo-deuda-item text-center">
-                                  <div class="fw-semibold small">{{ tipo.nombre }}</div>
-                                  <div class="fw-bold">{{ tipo.monto | currency:simboloMonedaSistema }}</div>
-                                  <div class="small text-muted">{{ tipo.cantidad }} ventas</div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Ventas por Asesor - Moderno -->
-                    <div class="col-md-4 mb-4">
-                      <div class="card card-chart-moderno border-0 shadow-sm h-100">
-                        <div class="card-header-chart d-flex align-items-center justify-content-between py-3 px-4">
-                          <div>
-                            <h6 class="mb-0 fw-semibold text-purple">
-                              <i class="bi bi-person-badge me-2"></i>
-                              Desempeño por Asesor
-                            </h6>
-                            <small class="text-muted" id="periodoAsesores">
-                              {{ getMesActual() }}
-                            </small>
-                          </div>
-                          <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-purple dropdown-toggle" type="button"
-                              data-bs-toggle="dropdown">
-                              <i class="bi bi-people"></i> {{ getTotalAsesores() }}
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                              <li><a class="dropdown-item" href="#">Ver ranking completo</a></li>
-                              <li><a class="dropdown-item" href="#">Comparar períodos</a></li>
-                              <li><a class="dropdown-item" href="#">Exportar reporte</a></li>
-                            </ul>
-                          </div>
-                        </div>
-                        <div class="card-body p-4">
-                          <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div>
-                              <h3 class="mb-0 fw-bold">{{ getMejorAsesor()?.nombre || 'N/A' }}</h3>
-                              <small class="text-muted">Asesor líder</small>
-                            </div>
-                            <div class="rendimiento-lider bg-purple bg-opacity-10 text-purple rounded p-2">
-                              <div class="fw-bold">{{ getMejorAsesor()?.ventas | currency:simboloMonedaSistema }}</div>
-                            </div>
-                          </div>
-                          <div class="chart-container-moderno" style="height: 180px;">
-                            <canvas id="ventasPorAsesorChart"></canvas>
-                          </div>
-                          <div class="ranking-asesores mt-3">
-                            <div class="row g-2">
-                              <div class="col-12" *ngFor="let asesor of getTopAsesores(3); let i = index">
-                                <div class="d-flex align-items-center ranking-item">
-                                  <div class="ranking-posicion me-2">
-                                    <span class="badge" [ngClass]="getRankingBadgeClass(i)">{{ i + 1 }}</span>
-                                  </div>
-                                  <div class="flex-grow-1">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                      <div class="fw-semibold small">{{ asesor.nombre }}</div>
-                                      <div class="fw-bold">{{ asesor.ventas | currency:simboloMonedaSistema }}</div>
-                                    </div>
-                                    <div class="progress mt-1" style="height: 4px;">
-                                      <div class="progress-bar bg-purple" [style.width.%]="asesor.porcentaje"></div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-          </div>
+      <div class="resumen-v2-footer">
+        <div class="resumen-v2-export-actions">
+          <button type="button" class="btn btn-excel-moderno" (click)="generarInformeDesdeModal()">
+            <i class="bi bi-file-earmark-excel me-2"></i>
+            Excel
+          </button>
+          <button type="button" class="btn btn-outline-secondary" (click)="descargarResumenCSV()">
+            <i class="bi bi-filetype-csv me-2"></i>
+            CSV
+          </button>
+          <button type="button" class="btn btn-outline-secondary" (click)="descargarResumenJSON()">
+            <i class="bi bi-braces me-2"></i>
+            JSON
+          </button>
+          <button type="button" class="btn btn-pdf-moderno" (click)="descargarResumenPDF()">
+            <i class="bi bi-file-earmark-pdf me-2"></i>
+            PDF
+          </button>
         </div>
-
-        <!-- Footer del Modal con ambos botones -->
-        <div class="modal-footer d-flex justify-content-between">
-          <div>
-            <!-- Botón Generar Informe Excel -->
-            <button class="btn btn-excel-moderno" (click)="generarInformeDesdeModal()">
-              <i class="bi bi-file-earmark-excel me-2"></i>
-              <span>Generar Informe Excel</span>
-            </button>
-
-            <!-- Botón Descargar Resumen PDF -->
-            <button type="button" class="btn btn-pdf-moderno ms-2" (click)="descargarResumenPDF()">
-              <i class="bi bi-file-earmark-pdf me-2"></i>
-              <span>Descargar Resumen PDF</span>
-            </button>
-          </div>
-
-          <div>
-            <!-- Botón Cerrar -->
-            <button type="button" class="btn btn-secondary" (click)="cerrarModal()">
-              <i class="bi bi-x-circle me-2"></i>
-              Cerrar
-            </button>
-          </div>
-        </div>
+        <button type="button" class="btn btn-secondary" (click)="modal.close()">
+          <i class="bi bi-x-circle me-2"></i>
+          Cerrar
+        </button>
       </div>
     </div>
-  </div>
+  </ng-template>
+
+  <ng-template #resumenLoadingState>
+    <section class="resumen-v2-state">
+      <div class="state-spinner"></div>
+      <h4>Calculando resumen financiero</h4>
+      <p>Estamos consolidando ventas, abonos y saldos pendientes para este período.</p>
+    </section>
+  </ng-template>
+
+  <ng-template #resumenErrorState>
+    <section class="resumen-v2-state is-error">
+      <div class="state-icon"><i class="bi bi-exclamation-triangle"></i></div>
+      <h4>No fue posible generar el resumen</h4>
+      <p>{{ resumenError }}</p>
+      <button type="button" class="btn btn-primary" (click)="actualizarResumen()">
+        <i class="bi bi-arrow-repeat me-2"></i>
+        Reintentar
+      </button>
+    </section>
+  </ng-template>

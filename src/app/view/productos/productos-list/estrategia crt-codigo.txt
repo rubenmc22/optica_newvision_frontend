@@ -1,0 +1,332 @@
+//@version=6
+indicator("CRT - Confluencia Total con Probabilidad", overlay=true, max_labels_count=500)
+
+// ============================================================================
+// 1. CONFIGURACIÓN DEL USUARIO
+// ============================================================================
+// Horarios ventana NY
+startHour = input.int(9, "Inicio ventana NY", minval=0, maxval=23, group="Horarios")
+startMinute = input.int(30, "Minuto inicio", minval=0, maxval=59, group="Horarios")
+endHour = input.int(12, "Cierre ventana NY", minval=0, maxval=23, group="Horarios")
+endMinute = input.int(30, "Minuto cierre", minval=0, maxval=59, group="Horarios")
+
+// Umbrales de probabilidad
+probD4H1H = input.int(88, "Probabilidad D+4H+1H (%)", minval=50, maxval=100, group="Probabilidades")
+prob4H1H = input.int(73, "Probabilidad 4H+1H (%)", minval=50, maxval=100, group="Probabilidades")
+probD1H = input.int(65, "Probabilidad D+1H (%)", minval=50, maxval=100, group="Probabilidades")
+probSolo1H = input.int(55, "Probabilidad solo 1H (%)", minval=50, maxval=100, group="Probabilidades")
+
+// Mostrar/ocultar elementos
+showLabels = input.bool(true, "Mostrar etiquetas en gráfico", group="Visualización")
+showDashboard = input.bool(true, "Mostrar panel de control", group="Visualización")
+showEntries5min = input.bool(true, "Mostrar señales de entrada en 5min", group="Visualización")
+
+// ============================================================================
+// 2. FUNCIONES UTILITARIAS
+// ============================================================================
+// Verificar si estamos dentro de la ventana operativa
+isWithinTradingWindow() =>
+    t = time(timeframe.period, "America/New_York")
+    if na(t)
+        false
+    else
+        currentHour = hour(timeframe.period, "America/New_York")
+        currentMinute = minute(timeframe.period, "America/New_York")
+        currentTimeInMinutes = currentHour * 60 + currentMinute
+        startTimeInMinutes = startHour * 60 + startMinute
+        endTimeInMinutes = endHour * 60 + endMinute
+        currentTimeInMinutes >= startTimeInMinutes and currentTimeInMinutes <= endTimeInMinutes
+
+// Detectar Turtle Soup (genérico)
+detectTurtleSoup() =>
+    prevLow = low[1]
+    prevHigh = high[1]
+    bearishSoup = low < prevLow and close > prevLow and close < high[1]
+    bullishSoup = high > prevHigh and close < prevHigh and close > low[1]
+    [bearishSoup, bullishSoup]
+
+// Detectar manipulación CRT (C2 rompe extremo de C1 y cierra dentro)
+detectCRTManipulation(c1High, c1Low, c2High, c2Low, c2Close, expectedDirection) =>
+    if expectedDirection == "BEARISH"
+        c2High > c1High and c2Close < c1High and c2Close > c1Low
+    else if expectedDirection == "BULLISH"
+        c2Low < c1Low and c2Close > c1Low and c2Close < c1High
+    else
+        false
+
+// Detectar Order Block
+detectOrderBlock() =>
+    isBullishOB = close[1] < open[1] and close > open and close > high[1]
+    isBearishOB = close[1] > open[1] and close < open and close < low[1]
+    [isBullishOB, isBearishOB]
+
+// Detectar FVG
+detectFVG() =>
+    isBullishFVG = low[2] > high
+    isBearishFVG = high[2] < low
+    [isBullishFVG, isBearishFVG]
+
+// ============================================================================
+// 3. DETECCIÓN DE MANIPULACIÓN POR TEMPORALIDAD
+// ============================================================================
+var bool dailyManipulation = false
+var string dailyDirection = na
+var bool h4Manipulation = false
+var string h4Direction = na
+var bool h1Manipulation = false
+var string h1Direction = na
+var int h1ManipulationBar = na
+
+var float h4C1High = na
+var float h4C1Low = na
+
+// Variables para búsqueda progresiva en 1H
+var float h1C1High = na
+var float h1C1Low = na
+var string h1C1Direction = na
+var int h1C1Bar = na
+var bool h1SearchActive = false
+var int h1AttemptCount = 0
+
+// ----------------------------------------------------------------------------
+// DIARIO (D) - Turtle Soup
+// ----------------------------------------------------------------------------
+[bearishDaily, bullishDaily] = detectTurtleSoup()
+if bearishDaily or bullishDaily
+    dailyManipulation := true
+    dailyDirection := bearishDaily ? "BEARISH" : "BULLISH"
+    if showLabels
+        label.new(x=bar_index, y=high, text="🐢 D: Turtle Soup\n" + (bearishDaily ? "Bajista" : "Alcista"),
+                 color=color.new(color.green, 80), textcolor=color.white, style=label.style_label_up)
+else
+    dailyManipulation := false
+    dailyDirection := na
+
+// ----------------------------------------------------------------------------
+// 4H - CRT (vela anterior a NY)
+// ----------------------------------------------------------------------------
+currentBarHour = hour(timeframe.period, "America/New_York")
+isPreNYBar4H = (currentBarHour >= 5 and currentBarHour <= 9) or (currentBarHour >= 6 and currentBarHour <= 10)
+
+if not dailyManipulation == false
+    if isPreNYBar4H and barstate.isconfirmed
+        if na(h4C1High)
+            h4C1High := high
+            h4C1Low := low
+            h4Direction := close > open ? "BEARISH" : "BULLISH"
+        else
+            isManip = detectCRTManipulation(h4C1High, h4C1Low, high, low, close, h4Direction)
+            if isManip
+                h4Manipulation := true
+                if showLabels
+                    label.new(x=bar_index, y=high, text="✅ 4H: CRT Manipulación\n" + (h4Direction == "BEARISH" ? "Bajista" : "Alcista"),
+                             color=color.new(color.green, 70), textcolor=color.white)
+                h4C1High := na
+            else
+                h4Manipulation := false
+                h4C1High := na
+
+// ----------------------------------------------------------------------------
+// 1H - BÚSQUEDA PROGRESIVA (9:30 - 12:30)
+// ----------------------------------------------------------------------------
+// Detectar si estamos en 1H
+is1H = timeframe.period == "60" or timeframe.period == "1H"
+
+if is1H
+    currentHour = hour(timeframe.period, "America/New_York")
+    currentMinute = minute(timeframe.period, "America/New_York")
+    currentTimeMinutes = currentHour * 60 + currentMinute
+    startTimeMinutes = 9 * 60 + 30  // 9:30
+    endTimeMinutes = 12 * 60 + 30   // 12:30
+    
+    // Iniciar búsqueda a las 9:30 con C1 = vela de 9:00 (anterior a apertura)
+    if currentTimeMinutes >= startTimeMinutes and currentTimeMinutes <= endTimeMinutes and not h1Manipulation
+        if na(h1C1High) and not h1SearchActive
+            // Tomar como C1 la vela de 9:00 (anterior a apertura)
+            // Para eso necesitamos buscar hacia atrás
+            h1C1High := high[1]  // Vela anterior (9:00)
+            h1C1Low := low[1]
+            h1C1Direction := close[1] > open[1] ? "BEARISH" : "BULLISH"
+            h1C1Bar := bar_index - 1
+            h1SearchActive := true
+            h1AttemptCount := 0
+            
+            if showLabels
+                label.new(x=bar_index, y=high, text="🔍 Iniciando búsqueda 1H\nC1: vela 9:00\nEsperando C2...",
+                         color=color.new(color.blue, 80), textcolor=color.white)
+        
+        // Si tenemos C1 y estamos en una vela posterior (C2 potencial)
+        if h1SearchActive and not na(h1C1High) and bar_index > h1C1Bar
+            isManip = detectCRTManipulation(h1C1High, h1C1Low, high, low, close, h1C1Direction)
+            
+            if isManip
+                // ¡Manipulación encontrada!
+                h1Manipulation := true
+                h1Direction := h1C1Direction
+                h1ManipulationBar := bar_index
+                
+                if showLabels
+                    label.new(x=bar_index, y=high, 
+                             text="✅ 1H: MANIPULACIÓN ENCONTRADA\n" +
+                                  "C1: " + (h1C1Direction == "BEARISH" ? "Alcista" : "Bajista") + "\n" +
+                                  "C2: " + (h1C1Direction == "BEARISH" ? "Bajista (rompe máximo)" : "Alcista (rompe mínimo)") + "\n" +
+                                  "Intento #" + str.tostring(h1AttemptCount + 1),
+                             color=color.new(color.green, 80), textcolor=color.white)
+                    
+                    // Dibujar el rango de C1
+                    box.new(left=h1C1Bar, top=h1C1High, right=bar_index, bottom=h1C1Low,
+                           bgcolor=color.new(color.gray, 80), border_color=color.new(color.white, 50))
+                
+                // Resetear búsqueda
+                h1SearchActive := false
+                h1C1High := na
+            else
+                // No manipuló → avanzar C1 a esta vela
+                h1AttemptCount := h1AttemptCount + 1
+                h1C1High := high
+                h1C1Low := low
+                h1C1Direction := close > open ? "BEARISH" : "BULLISH"
+                h1C1Bar := bar_index
+                
+                if showLabels and h1AttemptCount <= 3
+                    label.new(x=bar_index, y=low, 
+                             text="⚠️ Intento #" + str.tostring(h1AttemptCount) + " sin manipulación\n" +
+                                  "Avanzando C1 a esta vela\nBuscando en siguiente...",
+                             color=color.new(color.orange, 70), textcolor=color.white)
+    
+    // Resetear búsqueda si salimos de la ventana horaria
+    if currentTimeMinutes > endTimeMinutes and h1SearchActive and not h1Manipulation
+        h1SearchActive := false
+        h1C1High := na
+        if showLabels
+            label.new(x=bar_index, y=high, text="❌ BÚSQUEDA 1H FINALIZADA\nNo se encontró manipulación\nNo operar hoy",
+                     color=color.new(color.red, 70), textcolor=color.white)
+
+// ============================================================================
+// 4. CÁLCULO DE PROBABILIDAD SEGÚN COMBINACIÓN
+// ============================================================================
+var int probability = 0
+var string combination = ""
+var bool validToTrade = false
+var string signalDirection = na
+
+if h1Manipulation
+    if dailyManipulation and h4Manipulation
+        combination := "D + 4H + 1H"
+        probability := probD4H1H
+        validToTrade := true
+        signalDirection := dailyDirection
+    else if h4Manipulation
+        combination := "4H + 1H"
+        probability := prob4H1H
+        validToTrade := true
+        signalDirection := h4Direction
+    else if dailyManipulation
+        combination := "D + 1H"
+        probability := probD1H
+        validToTrade := true
+        signalDirection := dailyDirection
+    else
+        combination := "Solo 1H"
+        probability := probSolo1H
+        validToTrade := true
+        signalDirection := h1Direction
+else
+    combination := "1H no manipuló"
+    probability := 0
+    validToTrade := false
+    signalDirection := na
+
+// ============================================================================
+// 5. DETECCIÓN DE ENTRADA EN 5min (MODELOS 1 Y 2)
+// ============================================================================
+[bearishSoup5min, bullishSoup5min] = detectTurtleSoup()
+[isBullishOB, isBearishOB] = detectOrderBlock()
+[isBullishFVG, isBearishFVG] = detectFVG()
+
+var bool model1Signal = false
+var string model1Direction = na
+
+if bearishSoup5min or bullishSoup5min
+    model1Signal := true
+    model1Direction := bearishSoup5min ? "BEARISH" : "BULLISH"
+    if showEntries5min and showLabels
+        label.new(x=bar_index, y=bearishSoup5min ? high : low, 
+                 text="🐢 Modelo 1: Turtle Soup\n" + (bearishSoup5min ? "Bajista" : "Alcista") + "\nEntrar en SIGUIENTE vela",
+                 color=color.new(color.purple, 70), textcolor=color.white)
+
+var bool model2Signal = false
+var string model2Direction = na
+
+if (isBullishOB and isBullishFVG) or (isBearishOB and isBearishFVG)
+    model2Signal := true
+    model2Direction := isBullishOB ? "BULLISH" : "BEARISH"
+    if showEntries5min and showLabels
+        label.new(x=bar_index, y=isBullishOB ? low : high,
+                 text="📊 Modelo 2: OB + FVG\n" + (isBullishOB ? "Alcista" : "Bajista") + "\nEntrar en retroceso",
+                 color=color.new(color.orange, 70), textcolor=color.white)
+
+// ============================================================================
+// 6. SEÑAL FINAL DE OPERACIÓN
+// ============================================================================
+var bool finalSignal = false
+
+if validToTrade and (model1Signal or model2Signal) and isWithinTradingWindow()
+    finalSignal := true
+    
+    if showLabels
+        label.new(x=bar_index, y=low, 
+                 text="🔔 SEÑAL FINAL OPERATIVA\n" +
+                  "Confluencia: " + combination + "\n" +
+                  "Probabilidad: " + str.tostring(probability) + "%\n" +
+                  "Dirección: " + (signalDirection == "BEARISH" ? "BAJISTA" : "ALCISTA") + "\n" +
+                  "Entrada: " + (model1Signal ? "Modelo 1 (Turtle Soup)" : "Modelo 2 (OB+FVG)"),
+                 color=color.new(color.blue, 80), textcolor=color.white,
+                 style=label.style_label_up, size=size.large)
+    
+    alert("🔔 SEÑAL FINAL | " + combination + " (" + str.tostring(probability) + "%) | " +
+          (signalDirection == "BEARISH" ? "BAJISTA" : "ALCISTA") + " | " +
+          (model1Signal ? "Modelo 1" : "Modelo 2"), alert.freq_once_per_bar)
+
+// ============================================================================
+// 7. PANEL DE CONTROL
+// ============================================================================
+if showDashboard
+    var table dashboard = table.new(position.top_right, 2, 8, bgcolor=color.new(color.black, 85))
+    
+    if barstate.islast
+        table.cell(dashboard, 0, 0, "🔍 CRT STRATEGY", text_color=color.white, text_size=size.medium, align=text.align_center, colspan=2)
+        
+        table.cell(dashboard, 0, 1, "Diario (D):", text_color=color.white, text_size=size.small)
+        table.cell(dashboard, 1, 1, dailyManipulation ? "✅ " + (dailyDirection == "BEARISH" ? "Bajista" : "Alcista") : "❌ Sin manipulación",
+                   text_color=dailyManipulation ? color.green : color.red, text_size=size.small)
+        
+        table.cell(dashboard, 0, 2, "4 Horas (4H):", text_color=color.white, text_size=size.small)
+        table.cell(dashboard, 1, 2, h4Manipulation ? "✅ " + (h4Direction == "BEARISH" ? "Bajista" : "Alcista") : "❌ Sin manipulación",
+                   text_color=h4Manipulation ? color.green : color.red, text_size=size.small)
+        
+        table.cell(dashboard, 0, 3, "1 Hora (1H):", text_color=color.white, text_size=size.small)
+        table.cell(dashboard, 1, 3, h1Manipulation ? "✅ " + (h1Direction == "BEARISH" ? "Bajista" : "Alcista") : "❌ Sin manipulación",
+                   text_color=h1Manipulation ? color.green : color.red, text_size=size.small)
+        
+        table.cell(dashboard, 0, 4, "─────────", text_color=color.gray, text_size=size.small, colspan=2)
+        
+        table.cell(dashboard, 0, 5, "Combinación:", text_color=color.white, text_size=size.small)
+        table.cell(dashboard, 1, 5, combination, text_color=color.orange, text_size=size.small)
+        
+        table.cell(dashboard, 0, 6, "Probabilidad:", text_color=color.white, text_size=size.small)
+        probColor = probability >= 70 ? color.green : (probability >= 55 ? color.orange : color.red)
+        table.cell(dashboard, 1, 6, str.tostring(probability) + "%", text_color=probColor, text_size=size.small)
+        
+        table.cell(dashboard, 0, 7, "¿Operar?", text_color=color.white, text_size=size.small)
+        table.cell(dashboard, 1, 7, validToTrade ? "✅ SÍ" : "❌ NO", 
+                   text_color=validToTrade ? color.green : color.red, text_size=size.small)
+
+// ============================================================================
+// 8. ALERTAS ADICIONALES
+// ============================================================================
+if validToTrade and not (model1Signal or model2Signal) and isWithinTradingWindow()
+    alert("⚠️ Confluencia " + combination + " (" + str.tostring(probability) + "%) | Esperando entrada en 5min", alert.freq_once_per_bar)
+
+if (model1Signal or model2Signal) and not validToTrade and isWithinTradingWindow()
+    alert("⚠️ Señal de entrada en 5min SIN confluencia | Operar con precaución", alert.freq_once_per_bar)

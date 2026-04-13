@@ -20,13 +20,15 @@
 
 /* Header Styles */
 .presupuestos-header {
-    background: var(--degradado-color) !important;
-    color: white;
-    padding: 24px 28px;
+    background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%) !important;
+    color: #0f172a;
+    padding: 18px 20px;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: 24px;
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+    border-top: 1px solid #dbeafe;
+    margin-bottom: 16px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .header-content {
@@ -44,18 +46,18 @@
 }
 
 .header-title i {
-    font-size: 28px;
-    color: white;
-    background: rgba(255, 255, 255, 0.15);
-    width: 48px;
-    height: 48px;
+    font-size: 20px;
+    color: #2563eb;
+    background: #eff6ff;
+    width: 40px;
+    height: 40px;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: none;
+    backdrop-filter: none;
+    border: 1px solid #dbeafe;
 }
 
 .header-text {
@@ -64,18 +66,18 @@
 }
 
 .header-title h1 {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 600;
     margin: 0;
-    color: white;
+    color: #0f172a;
     letter-spacing: 0.5px;
     line-height: 1.2;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    text-shadow: none;
 }
 
 .header-subtitle {
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.85);
+    color: #64748b;
     margin-top: 4px;
     line-height: 1.4;
 }
@@ -109,13 +111,13 @@
 .search-input {
     width: 100%;
     padding: 10px 16px 10px 40px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid #cbd5e1;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.88);
     color: #2d3748;
     font-size: 14px;
     transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 14px rgba(148, 163, 184, 0.08);
 }
 
 .search-input::placeholder {
@@ -124,9 +126,9 @@
 
 .search-input:focus {
     outline: none;
-    border-color: white;
+    border-color: #93c5fd;
     background: white;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
 }
 
 .header-filters {
@@ -138,9 +140,9 @@
 .filtro-select {
     padding: 10px 16px;
     padding-right: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid #cbd5e1;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.88);
     color: #2d3748;
     font-size: 14px;
     cursor: pointer;
@@ -151,14 +153,14 @@
     background-repeat: no-repeat;
     background-position: right 12px center;
     background-size: 16px;
-    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 14px rgba(148, 163, 184, 0.08);
 }
 
 .filtro-select:focus {
     outline: none;
-    border-color: white;
+    border-color: #93c5fd;
     background-color: white;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
 }
 
 .filtro-select option {
@@ -186,9 +188,9 @@
     right: 12px;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
     cursor: pointer;
     padding: 6px;
     border-radius: 50%;
@@ -199,11 +201,13 @@
     font-size: 12px;
     width: 24px;
     height: 24px;
-    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 10px rgba(148, 163, 184, 0.12);
 }
 
 .btn-clear-search:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
     transform: translateY(-50%) scale(1.1);
 }
 
@@ -242,9 +246,9 @@
 }
 
 .btn-clear-filter {
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
     cursor: pointer;
     padding: 6px;
     border-radius: 50%;
@@ -255,11 +259,13 @@
     font-size: 12px;
     width: 32px;
     height: 32px;
-    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 10px rgba(148, 163, 184, 0.12);
 }
 
 .btn-clear-filter:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
     transform: scale(1.1);
 }
 
@@ -329,25 +335,24 @@
 }
 
 .btn-primary {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+    border: 1px solid rgba(37, 99, 235, 0.24);
     padding: 10px 24px;
     font-weight: 500;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.14);
 }
 
 .btn-primary:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(37, 99, 235, 0.18);
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 10px 24px rgba(59, 130, 246, 0.18);
+    border-color: rgba(37, 99, 235, 0.3);
 }
 
 .btn-primary:active {
     transform: translateY(0);
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(37, 99, 235, 0.14);
 }
 
 .btn-primary i {

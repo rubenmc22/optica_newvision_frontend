@@ -7,15 +7,15 @@ import { SwalService } from '../../../core/services/swal/swal.service';
 import { HistorialVentaService } from './../historial-ventas/historial-ventas.service';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { GenerarVentaService } from './../generar-venta/generar-venta.service';
-import { take } from 'rxjs/operators';
+import { finalize, take } from 'rxjs/operators';
 import { SystemConfigService } from '../../system-config/system-config.service';
 import { Subscription, Subject, debounceTime } from 'rxjs';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { LoaderService } from './../../../shared/loader/loader.service';
 import { UserStateService } from '../../../core/services/userState/user-state-service';
+import { ExcelExportService } from '../../../core/services/excel-export/excel-export.service';
 import { EstadisticasVentas, ResumenFiltros, FiltrosVentas } from '../venta-interfaz';
-import { ChartService } from '../../../core/services/chart-service/chart.service';
-import { Chart, ChartData, ChartOptions } from 'chart.js';
+import { Chart, registerables } from 'chart.js';
 import { Sede, SedeCompleta } from '../../../view/login/login-interface';
 
 
@@ -32,10 +32,11 @@ export class HistorialVentasComponent implements OnInit {
   @ViewChild('detalleVentaModal') detalleVentaModal!: TemplateRef<any>;
   @ViewChild('editarVentaModal') editarVentaModal!: TemplateRef<any>;
   @ViewChild('contenidoRecibo', { static: false }) contenidoRecibo!: ElementRef;
-  @ViewChild('modalResumenFinanciero') modalResumenFinanciero!: any;
+  @ViewChild('modalResumenFinanciero') modalResumenFinanciero!: TemplateRef<any>;
+  @ViewChild('resumenExportable', { static: false }) resumenExportable?: ElementRef<HTMLElement>;
   @ViewChild('realizarPagoModal') realizarPagoModal!: TemplateRef<any>;
 
-  private chartInstances: Chart[] = [];
+  private chartInstances: Record<string, Chart> = {};
 
   // Propiedades para los filtros
   asesores: any[] = [];
@@ -80,6 +81,7 @@ export class HistorialVentasComponent implements OnInit {
 
   estadisticasCargando = false;
   ventasCargando = false;
+  resumenCargando = false;
   private filtrosChanged$ = new Subject<void>();
 
   // Filtros específicos para el resumen financiero
@@ -94,17 +96,34 @@ export class HistorialVentasComponent implements OnInit {
   };
 
   resumenData = {
-    montoTotal: 12500,
-    totalAbonos: 8500,
-    deudaPendiente: 4000,
-    deudaCashea: 2500,
-    deudaAbonos: 1200,
-    deudaContado: 300,
-    ventasContado: { cantidad: 15, montoTotal: 7500 },
-    ventasAbono: { cantidad: 8, montoTotal: 3000 },
-    ventasCashea: { cantidad: 5, montoTotal: 1500 },
-    ventasCredito: { cantidad: 2, montoTotal: 500 }
+    montoTotal: 0,
+    totalAbonos: 0,
+    deudaPendiente: 0,
+    deudaCashea: 0,
+    deudaAbonos: 0,
+    deudaContado: 0,
+    ventasContado: { cantidad: 0, montoTotal: 0 },
+    ventasAbono: { cantidad: 0, montoTotal: 0 },
+    ventasCashea: { cantidad: 0, montoTotal: 0 },
+    ventasCredito: { cantidad: 0, montoTotal: 0 },
+    seriesDiaria: [] as any[],
+    seriesMensual: [] as any[],
+    rankingAsesores: [] as any[]
   };
+  resumenVista = {
+    formasPago: [] as any[],
+    composicionDeuda: [] as any[],
+    seriesDiaria: [] as any[],
+    seriesMensual: [] as any[],
+    rankingAsesores: [] as any[],
+    rankingAsesoresTop: [] as any[],
+    rankingAsesoresGrafico: [] as any[],
+    seriesMensualReciente: [] as any[],
+    picoDiario: 'Sin movimientos diarios en el período',
+    corteMensual: 'Sin corte mensual disponible',
+    mejorAsesor: 'Sin asesor destacado en el período'
+  };
+  resumenError: string | null = null;
 
   mostrarFiltrosAvanzados: boolean = false;
 
@@ -227,9 +246,10 @@ export class HistorialVentasComponent implements OnInit {
     private loader: LoaderService,
     private userStateService: UserStateService,
     private cdRef: ChangeDetectorRef,
-    private chartService: ChartService,
+    private excelExportService: ExcelExportService,
     private sanitizer: DomSanitizer
   ) {
+    Chart.register(...registerables);
     this.inicializarFormularioEdicion();
     //  this.inicializarFormularioPago();
 
@@ -280,6 +300,8 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   ngOnDestroy(): void {
+    this.modalInstance?.close();
+
     if (this.configSubscription) {
       this.configSubscription.unsubscribe();
     }
@@ -431,7 +453,7 @@ export class HistorialVentasComponent implements OnInit {
     });
   }
 
-  private cargarEmpleados(): void {
+  private cargarEmpleados(mostrarAdvertencia: boolean = true): void {
     this.empleadosService.getAllEmpleados().subscribe({
       next: (response: any) => {
 
@@ -459,7 +481,9 @@ export class HistorialVentasComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al cargar empleados:', error);
-        this.swalService.showWarning('Advertencia', 'No se pudieron cargar los empleados. Se usarán datos de prueba.');
+        if (mostrarAdvertencia) {
+          this.swalService.showWarning('Advertencia', 'No se pudieron cargar los empleados. Se usarán datos de prueba.');
+        }
       }
     });
   }
@@ -6379,9 +6403,10 @@ export class HistorialVentasComponent implements OnInit {
 
   // Método principal para cargar datos del resumen
   private cargarDatosResumen(): void {
-    this.loader.showWithMessage('📊 Calculando resumen financiero...');
+    this.resumenCargando = true;
+    this.resumenError = null;
+    this.destruirGraficos();
 
-    // Crear objeto de filtros para el servicio
     const filtrosResumen = {
       fechaDesde: this.resumenFiltros.fechaDesde,
       fechaHasta: this.resumenFiltros.fechaHasta,
@@ -6391,18 +6416,30 @@ export class HistorialVentasComponent implements OnInit {
       formaPago: this.resumenFiltros.formaPago
     };
 
-    // Aquí deberías llamar a tu servicio para obtener estadísticas financieras
-    this.historialVentaService.obtenerEstadisticasFinancieras(filtrosResumen).subscribe({
+    this.historialVentaService.obtenerEstadisticasFinancieras(filtrosResumen).pipe(
+      finalize(() => {
+        this.resumenCargando = false;
+        this.cdRef.detectChanges();
+      })
+    ).subscribe({
       next: (response: any) => {
-        if (response.message === 'ok') {
-          this.resumenData = response.data;
+        if (response?.message === 'ok') {
+          this.resumenData = this.normalizarResumenData(response.data);
+          this.actualizarResumenVista();
+          this.cdRef.detectChanges();
+          this.inicializarGraficosResumen();
+          return;
         }
-        this.loader.hide();
+
+        this.resumenError = 'No se pudo interpretar la respuesta del resumen financiero.';
+        this.actualizarResumenVista();
+        this.destruirGraficos();
       },
       error: (error) => {
         console.error('Error al cargar resumen financiero:', error);
-        this.loader.hide();
-        this.swalService.showError('Error', 'No se pudo cargar el resumen financiero');
+        this.resumenError = 'No se pudo cargar el resumen financiero para el rango seleccionado.';
+        this.actualizarResumenVista();
+        this.destruirGraficos();
       }
     });
   }
@@ -6463,6 +6500,329 @@ export class HistorialVentasComponent implements OnInit {
     return this.formatearMoneda(this.resumenData?.ventasCredito?.montoTotal || 0, this.monedaSistema);
   }
 
+  getCantidadVentasResumen(): number {
+    return this.getResumenFormasPago().reduce((total, item) => total + item.cantidad, 0);
+  }
+
+  getMontoCobrado(): string {
+    return this.formatearMoneda(this.getMontoCobradoNumerico(), this.monedaSistema);
+  }
+
+  getPorcentajeRecaudo(): number {
+    const montoTotal = this.getMontoTotalNumerico();
+    if (!montoTotal) return 0;
+    return Math.min((this.getMontoCobradoNumerico() / montoTotal) * 100, 100);
+  }
+
+  getPorcentajePendiente(): number {
+    const montoTotal = this.getMontoTotalNumerico();
+    if (!montoTotal) return 0;
+    return Math.min((this.getDeudaPendienteNumerica() / montoTotal) * 100, 100);
+  }
+
+  getTicketPromedio(): string {
+    const cantidadVentas = this.getCantidadVentasResumen();
+    const ticket = cantidadVentas > 0 ? this.getMontoTotalNumerico() / cantidadVentas : 0;
+    return this.formatearMoneda(ticket, this.monedaSistema);
+  }
+
+  getAsesorResumenTexto(): string {
+    return this.resumenFiltros.asesor ? this.getAsesorNombre(this.resumenFiltros.asesor) : 'Todos los asesores';
+  }
+
+  getFormaPagoResumenTexto(): string {
+    return this.resumenFiltros.formaPago ? this.getFormaPagoDisplay(this.resumenFiltros.formaPago) : 'Todas las modalidades';
+  }
+
+  getEstadoCobranza(): string {
+    const porcentaje = this.getPorcentajeRecaudo();
+
+    if (porcentaje >= 85) return 'Cobranza saludable';
+    if (porcentaje >= 65) return 'Cobranza en seguimiento';
+    return 'Cobranza con riesgo';
+  }
+
+  getEstadoCobranzaDetalle(): string {
+    const porcentajePendiente = this.getPorcentajePendiente();
+
+    if (porcentajePendiente <= 15) {
+      return 'La mayor parte del monto facturado ya fue recuperada en el período.';
+    }
+
+    if (porcentajePendiente <= 35) {
+      return 'Existe saldo pendiente, pero sigue en un rango controlado para seguimiento comercial.';
+    }
+
+    return 'El saldo pendiente ocupa una porción alta del total y conviene priorizar su cobranza.';
+  }
+
+  getFormaPagoLiderTexto(): string {
+    const formaLider = this.getResumenFormasPago()
+      .filter(item => item.monto > 0 || item.cantidad > 0)
+      .sort((a, b) => b.monto - a.monto)[0];
+
+    if (!formaLider) {
+      return 'Sin operaciones registradas en el período actual';
+    }
+
+    return `${formaLider.label} concentra ${formaLider.participacion.toFixed(1)}% del total facturado`;
+  }
+
+  getResumenFormasPago(): Array<{
+    key: string;
+    label: string;
+    cantidad: number;
+    monto: number;
+    montoFormateado: string;
+    participacion: number;
+    icono: string;
+    accentClass: string;
+  }> {
+    const total = this.getMontoTotalNumerico();
+    const formas = [
+      {
+        key: 'contado',
+        label: 'Contado',
+        cantidad: Number(this.resumenData?.ventasContado?.cantidad) || 0,
+        monto: Number(this.resumenData?.ventasContado?.montoTotal) || 0,
+        icono: 'bi-cash-coin',
+        accentClass: 'is-contado'
+      },
+      {
+        key: 'abono',
+        label: 'Abono',
+        cantidad: Number(this.resumenData?.ventasAbono?.cantidad) || 0,
+        monto: Number(this.resumenData?.ventasAbono?.montoTotal) || 0,
+        icono: 'bi-wallet2',
+        accentClass: 'is-abono'
+      },
+      {
+        key: 'cashea',
+        label: 'Cashea',
+        cantidad: Number(this.resumenData?.ventasCashea?.cantidad) || 0,
+        monto: Number(this.resumenData?.ventasCashea?.montoTotal) || 0,
+        icono: 'bi-phone',
+        accentClass: 'is-cashea'
+      },
+      {
+        key: 'credito',
+        label: 'Crédito',
+        cantidad: Number(this.resumenData?.ventasCredito?.cantidad) || 0,
+        monto: Number(this.resumenData?.ventasCredito?.montoTotal) || 0,
+        icono: 'bi-calendar2-week',
+        accentClass: 'is-credito'
+      }
+    ];
+
+    if (this.resumenVista.formasPago.length) {
+      return this.resumenVista.formasPago;
+    }
+
+    return formas.map((item) => ({
+      ...item,
+      montoFormateado: this.formatearMoneda(item.monto, this.monedaSistema),
+      participacion: total > 0 ? (item.monto / total) * 100 : 0
+    }));
+  }
+
+  getComposicionDeuda(): Array<{
+    key: string;
+    label: string;
+    descripcion: string;
+    monto: number;
+    montoFormateado: string;
+    porcentaje: number;
+    accentClass: string;
+  }> {
+    const deudaTotal = this.getDeudaPendienteNumerica();
+    const composicion = [
+      {
+        key: 'cashea',
+        label: 'Cashea',
+        descripcion: 'Financiamiento pendiente por cuotas.',
+        monto: Number(this.resumenData?.deudaCashea) || 0,
+        accentClass: 'is-cashea'
+      },
+      {
+        key: 'abono',
+        label: 'Abonos',
+        descripcion: 'Ventas con saldo parcial por completar.',
+        monto: Number(this.resumenData?.deudaAbonos) || 0,
+        accentClass: 'is-abono'
+      },
+      {
+        key: 'contado',
+        label: 'Contado pendiente',
+        descripcion: 'Pagos únicos todavía abiertos.',
+        monto: Number(this.resumenData?.deudaContado) || 0,
+        accentClass: 'is-contado'
+      }
+    ];
+
+    if (this.resumenVista.composicionDeuda.length) {
+      return this.resumenVista.composicionDeuda;
+    }
+
+    return composicion.map((item) => ({
+      ...item,
+      montoFormateado: this.formatearMoneda(item.monto, this.monedaSistema),
+      porcentaje: deudaTotal > 0 ? (item.monto / deudaTotal) * 100 : 0
+    }));
+  }
+
+  getSeriesDiarias(limit?: number): Array<{
+    fecha: string;
+    label: string;
+    ventas: number;
+    facturado: number;
+    cobrado: number;
+    pendiente: number;
+  }> {
+    const serie = this.resumenVista.seriesDiaria;
+    return typeof limit === 'number' ? serie.slice(-limit) : [...serie];
+  }
+
+  getSeriesMensuales(limit?: number): Array<{
+    periodo: string;
+    label: string;
+    ventas: number;
+    facturado: number;
+    cobrado: number;
+    pendiente: number;
+  }> {
+    const serie = this.resumenVista.seriesMensual;
+    return typeof limit === 'number' ? serie.slice(-limit) : [...serie];
+  }
+
+  getRankingAsesores(limit?: number): Array<{
+    asesorId: number;
+    asesorNombre: string;
+    ventas: number;
+    facturado: number;
+    cobrado: number;
+    pendiente: number;
+    facturadoFormateado: string;
+  }> {
+    const ranking = this.resumenVista.rankingAsesores;
+    return typeof limit === 'number' ? ranking.slice(0, limit) : [...ranking];
+  }
+
+  getMejorAsesorResumen(): string {
+    return this.resumenVista.mejorAsesor;
+  }
+
+  getPicoDiarioResumen(): string {
+    return this.resumenVista.picoDiario;
+  }
+
+  getCorteMensualResumen(): string {
+    return this.resumenVista.corteMensual;
+  }
+
+  private actualizarResumenVista(): void {
+    const total = this.getMontoTotalNumerico();
+    const deudaTotal = this.getDeudaPendienteNumerica();
+
+    const formasPago = [
+      {
+        key: 'contado',
+        label: 'Contado',
+        cantidad: this.getCantidadVentasPorFormaPago('contado'),
+        monto: Number(this.resumenData?.ventasContado?.montoTotal) || 0,
+        icono: 'bi-cash-stack',
+        accentClass: 'is-contado'
+      },
+      {
+        key: 'abono',
+        label: 'Abono',
+        cantidad: this.getCantidadVentasPorFormaPago('abono'),
+        monto: Number(this.resumenData?.ventasAbono?.montoTotal) || 0,
+        icono: 'bi-wallet2',
+        accentClass: 'is-abono'
+      },
+      {
+        key: 'cashea',
+        label: 'Cashea',
+        cantidad: this.getCantidadVentasPorFormaPago('cashea'),
+        monto: Number(this.resumenData?.ventasCashea?.montoTotal) || 0,
+        icono: 'bi-phone',
+        accentClass: 'is-cashea'
+      },
+      {
+        key: 'credito',
+        label: 'Crédito',
+        cantidad: this.getCantidadVentasPorFormaPago('credito'),
+        monto: Number(this.resumenData?.ventasCredito?.montoTotal) || 0,
+        icono: 'bi-credit-card',
+        accentClass: 'is-credito'
+      }
+    ].map((item) => ({
+      ...item,
+      montoFormateado: this.formatearMoneda(item.monto, this.monedaSistema),
+      participacion: total > 0 ? (item.monto / total) * 100 : 0
+    }));
+
+    const composicionDeuda = [
+      {
+        key: 'cashea',
+        label: 'Cashea',
+        descripcion: 'Financiamiento pendiente por cuotas.',
+        monto: Number(this.resumenData?.deudaCashea) || 0,
+        accentClass: 'is-cashea'
+      },
+      {
+        key: 'abono',
+        label: 'Abonos',
+        descripcion: 'Ventas con saldo parcial por completar.',
+        monto: Number(this.resumenData?.deudaAbonos) || 0,
+        accentClass: 'is-abono'
+      },
+      {
+        key: 'contado',
+        label: 'Contado pendiente',
+        descripcion: 'Pagos únicos todavía abiertos.',
+        monto: Number(this.resumenData?.deudaContado) || 0,
+        accentClass: 'is-contado'
+      }
+    ].map((item) => ({
+      ...item,
+      montoFormateado: this.formatearMoneda(item.monto, this.monedaSistema),
+      porcentaje: deudaTotal > 0 ? (item.monto / deudaTotal) * 100 : 0
+    }));
+
+    const seriesDiaria = Array.isArray(this.resumenData?.seriesDiaria) ? [...this.resumenData.seriesDiaria] : [];
+    const seriesMensual = Array.isArray(this.resumenData?.seriesMensual) ? [...this.resumenData.seriesMensual] : [];
+    const rankingAsesores = Array.isArray(this.resumenData?.rankingAsesores)
+      ? this.resumenData.rankingAsesores.map((item: any) => ({
+        asesorId: Number(item?.asesorId) || 0,
+        asesorNombre: item?.asesorNombre || 'Sin asesor',
+        ventas: Number(item?.ventas) || 0,
+        facturado: Number(item?.facturado) || 0,
+        cobrado: Number(item?.cobrado) || 0,
+        pendiente: Number(item?.pendiente) || 0,
+        facturadoFormateado: this.formatearMoneda(Number(item?.facturado) || 0, this.monedaSistema)
+      }))
+      : [];
+
+    const mejorDia = [...seriesDiaria].sort((a, b) => b.facturado - a.facturado)[0];
+    const ultimoMes = seriesMensual.slice(-1)[0];
+    const mejorAsesor = rankingAsesores[0];
+
+    this.resumenVista = {
+      formasPago,
+      composicionDeuda,
+      seriesDiaria,
+      seriesMensual,
+      rankingAsesores,
+      rankingAsesoresTop: rankingAsesores.slice(0, 5),
+      rankingAsesoresGrafico: rankingAsesores.slice(0, 6),
+      seriesMensualReciente: seriesMensual.slice(-4),
+      picoDiario: mejorDia ? `${mejorDia.label}: ${this.formatearMoneda(mejorDia.facturado, this.monedaSistema)}` : 'Sin movimientos diarios en el período',
+      corteMensual: ultimoMes ? `${ultimoMes.label}: ${this.formatearMoneda(ultimoMes.facturado, this.monedaSistema)}` : 'Sin corte mensual disponible',
+      mejorAsesor: mejorAsesor ? `${mejorAsesor.asesorNombre} lidera con ${mejorAsesor.facturadoFormateado}` : 'Sin asesor destacado en el período'
+    };
+  }
+
   getCantidadVentasPorFormaPago(formaPago: string): number {
     switch (formaPago) {
       case 'contado': return this.resumenData?.ventasContado?.cantidad || 0;
@@ -6489,11 +6849,199 @@ export class HistorialVentasComponent implements OnInit {
 
   // Métodos para acciones
   generarInformeDesdeModal(): void {
-    this.swalService.showInfo('Información', 'La generación de informe Excel estará disponible próximamente');
+    const resumenEjecutivo = [
+      { indicador: 'Total facturado', valor: this.getMontoTotalNumerico(), vista: this.getMontoTotalGeneral() },
+      { indicador: 'Total cobrado', valor: this.getMontoCobradoNumerico(), vista: this.getMontoCobrado() },
+      { indicador: 'Saldo pendiente', valor: this.getDeudaPendienteNumerica(), vista: this.getDeudaPendienteTotal() },
+      { indicador: 'Porcentaje de recaudo', valor: this.getPorcentajeRecaudo(), vista: `${this.getPorcentajeRecaudo().toFixed(1)}%` },
+      { indicador: 'Ticket promedio', valor: this.getCantidadVentasResumen() > 0 ? this.getMontoTotalNumerico() / this.getCantidadVentasResumen() : 0, vista: this.getTicketPromedio() },
+      { indicador: 'Ventas registradas', valor: this.getCantidadVentasResumen(), vista: this.getCantidadVentasResumen() }
+    ];
+
+    const filtros = [{
+      periodo: this.getPeriodoResumenTexto(),
+      rango: this.getFechaRango(),
+      asesor: this.getAsesorResumenTexto(),
+      formaPago: this.getFormaPagoResumenTexto(),
+      moneda: this.monedaSistema
+    }];
+
+    const serieDiaria = this.getSeriesDiarias().map(item => ({
+      fecha: item.fecha,
+      etiqueta: item.label,
+      ventas: item.ventas,
+      facturado: item.facturado,
+      cobrado: item.cobrado,
+      pendiente: item.pendiente
+    }));
+
+    const serieMensual = this.getSeriesMensuales().map(item => ({
+      periodo: item.periodo,
+      etiqueta: item.label,
+      ventas: item.ventas,
+      facturado: item.facturado,
+      cobrado: item.cobrado,
+      pendiente: item.pendiente
+    }));
+
+    const rankingAsesores = this.getRankingAsesores().map(item => ({
+      asesor: item.asesorNombre,
+      ventas: item.ventas,
+      facturado: item.facturado,
+      cobrado: item.cobrado,
+      pendiente: item.pendiente
+    }));
+
+    try {
+      this.excelExportService.exportMultipleSheets([
+        { data: resumenEjecutivo, sheetName: 'Resumen', columnWidths: { A: 28, B: 16, C: 20 } },
+        { data: this.getResumenFormasPago().map(item => ({ modalidad: item.label, operaciones: item.cantidad, monto: item.monto, participacion: `${item.participacion.toFixed(1)}%` })), sheetName: 'FormasPago', columnWidths: { A: 22, B: 14, C: 18, D: 16 } },
+        { data: this.getComposicionDeuda().map(item => ({ categoria: item.label, descripcion: item.descripcion, monto: item.monto, participacion: `${item.porcentaje.toFixed(1)}%` })), sheetName: 'Deuda', columnWidths: { A: 24, B: 40, C: 18, D: 16 } },
+        { data: serieDiaria, sheetName: 'SerieDiaria', columnWidths: { A: 16, B: 14, C: 10, D: 18, E: 18, F: 18 } },
+        { data: serieMensual, sheetName: 'SerieMensual', columnWidths: { A: 12, B: 16, C: 10, D: 18, E: 18, F: 18 } },
+        { data: rankingAsesores, sheetName: 'Asesores', columnWidths: { A: 28, B: 12, C: 18, D: 18, E: 18 } },
+        { data: filtros, sheetName: 'Filtros', columnWidths: { A: 22, B: 28, C: 26, D: 24, E: 12 } }
+      ], this.obtenerNombreBaseResumen());
+
+      this.swalService.showSuccess('Éxito', 'El resumen financiero se exportó en Excel.');
+    } catch (error) {
+      console.error('Error al exportar resumen a Excel:', error);
+      this.swalService.showError('Error', 'No se pudo exportar el resumen financiero a Excel.');
+    }
   }
 
-  descargarResumenPDF(): void {
-    this.swalService.showInfo('Información', 'La descarga del resumen PDF estará disponible próximamente');
+  descargarResumenCSV(): void {
+    try {
+      this.excelExportService.exportToCSV(
+        [
+          ...this.getResumenFormasPago().map(item => ({
+            seccion: 'Formas de pago',
+            etiqueta: item.label,
+            operaciones: item.cantidad,
+            facturado: item.monto,
+            cobrado: '',
+            pendiente: '',
+            participacion: `${item.participacion.toFixed(1)}%`
+          })),
+          ...this.getSeriesDiarias().map(item => ({
+            seccion: 'Serie diaria',
+            etiqueta: item.label,
+            operaciones: item.ventas,
+            facturado: item.facturado,
+            cobrado: item.cobrado,
+            pendiente: item.pendiente,
+            participacion: ''
+          })),
+          ...this.getSeriesMensuales().map(item => ({
+            seccion: 'Serie mensual',
+            etiqueta: item.label,
+            operaciones: item.ventas,
+            facturado: item.facturado,
+            cobrado: item.cobrado,
+            pendiente: item.pendiente,
+            participacion: ''
+          })),
+          ...this.getRankingAsesores().map(item => ({
+            seccion: 'Ranking asesores',
+            etiqueta: item.asesorNombre,
+            operaciones: item.ventas,
+            facturado: item.facturado,
+            cobrado: item.cobrado,
+            pendiente: item.pendiente,
+            participacion: ''
+          }))
+        ],
+        `${this.obtenerNombreBaseResumen()}_detalle`
+      );
+
+      this.swalService.showSuccess('Éxito', 'El resumen financiero se exportó en CSV.');
+    } catch (error) {
+      console.error('Error al exportar resumen a CSV:', error);
+      this.swalService.showError('Error', 'No se pudo exportar el resumen financiero a CSV.');
+    }
+  }
+
+  descargarResumenJSON(): void {
+    const payload = {
+      generadoEn: new Date().toISOString(),
+      filtros: {
+        periodo: this.getPeriodoResumenTexto(),
+        rango: this.getFechaRango(),
+        asesor: this.getAsesorResumenTexto(),
+        formaPago: this.getFormaPagoResumenTexto(),
+        moneda: this.monedaSistema
+      },
+      resumen: this.normalizarResumenData(this.resumenData),
+      formasPago: this.getResumenFormasPago(),
+      deuda: this.getComposicionDeuda(),
+      seriesDiaria: this.getSeriesDiarias(),
+      seriesMensual: this.getSeriesMensuales(),
+      rankingAsesores: this.getRankingAsesores()
+    };
+
+    try {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+      this.descargarBlob(blob, `${this.obtenerNombreBaseResumen()}.json`);
+      this.swalService.showSuccess('Éxito', 'El resumen financiero se exportó en JSON.');
+    } catch (error) {
+      console.error('Error al exportar resumen a JSON:', error);
+      this.swalService.showError('Error', 'No se pudo exportar el resumen financiero a JSON.');
+    }
+  }
+
+  async descargarResumenPDF(): Promise<void> {
+    if (!this.resumenExportable?.nativeElement) {
+      this.swalService.showWarning('Atención', 'No se encontró el contenido del resumen para exportar.');
+      return;
+    }
+
+    this.swalService.showLoadingAlert('Generando PDF del resumen...');
+
+    try {
+      const target = this.resumenExportable.nativeElement;
+      const canvas = await html2canvas(target, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#f5f7fb',
+        width: Math.ceil(target.scrollWidth),
+        height: Math.ceil(target.scrollHeight),
+        windowWidth: Math.ceil(target.scrollWidth),
+        windowHeight: Math.ceil(target.scrollHeight)
+      });
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let remainingHeight = imgHeight;
+      let offsetY = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, offsetY, imgWidth, imgHeight, undefined, 'FAST');
+      remainingHeight -= pageHeight;
+
+      while (remainingHeight > 0.1) {
+        offsetY = remainingHeight - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, offsetY, imgWidth, imgHeight, undefined, 'FAST');
+        remainingHeight -= pageHeight;
+      }
+
+      pdf.save(`${this.obtenerNombreBaseResumen()}.pdf`);
+    } catch (error) {
+      console.error('Error al generar PDF del resumen financiero:', error);
+      this.swalService.showError('Error', 'No se pudo generar el PDF del resumen financiero.');
+    } finally {
+      this.swalService.closeLoading();
+    }
   }
 
   getFechaRango(): string {
@@ -6614,12 +7162,27 @@ export class HistorialVentasComponent implements OnInit {
 
   // Método para cerrar el modal
   cerrarModal(): void {
+    this.modalInstance?.close();
+    this.destruirGraficos();
+  }
+
+  private abrirModalResumenFinancieroInterno(): void {
     if (this.modalInstance) {
-      this.modalInstance.hide();
+      return;
     }
 
-    // Destruir gráficos al cerrar
-    this.destruirGraficos();
+    this.modalInstance = this.modalService.open(this.modalResumenFinanciero, {
+      centered: true,
+      scrollable: true,
+      size: 'xl',
+      windowClass: 'modal-resumen-financiero-window'
+    });
+
+    this.modalInstance.result.finally(() => {
+      this.modalInstance = null;
+      this.destruirGraficos();
+      this.limpiarModal();
+    });
   }
 
   // Método para abrir el modal (actualizado)
@@ -6641,312 +7204,415 @@ export class HistorialVentasComponent implements OnInit {
 
     // Ocultar filtros avanzados por defecto
     this.mostrarFiltrosAvanzados = false;
+    this.resumenError = null;
 
     // Cargar asesores si no están cargados
     if (this.asesores.length === 0) {
-      this.cargarEmpleados();
+      this.cargarEmpleados(false);
     }
 
+    this.abrirModalResumenFinancieroInterno();
     this.cargarDatosResumen();
-
-    console.log('📊 Abriendo modal de resumen financiero');
-
-    // Usar Bootstrap vanilla para abrir el modal
-    const modalElement = document.getElementById('modalResumenFinanciero');
-    if (modalElement) {
-      this.modalInstance = new (window as any).bootstrap.Modal(modalElement);
-      this.modalInstance.show();
-    }
-
-    // Inicializar gráficos después de abrir el modal
-    setTimeout(() => {
-      this.inicializarGraficosEnModal();
-    }, 500);
   }
 
   // Método para limpiar al cerrar (opcional)
   limpiarModal(): void {
     this.mostrarFiltrosAvanzados = false;
-    // Agrega aquí cualquier limpieza adicional
+    this.resumenError = null;
   }
 
   inicializarGraficosEnModal(): void {
-    // Esperar un poco para que el DOM se renderice
+    this.inicializarGraficosResumen();
+  }
+
+  private inicializarGraficosResumen(): void {
+    if (!this.modalInstance) {
+      return;
+    }
+
     setTimeout(() => {
-      this.crearTodosLosGraficos();
-    }, 300);
+      this.destruirGraficos();
+      this.crearGraficoFormasPago();
+      this.crearGraficoCobranza();
+      this.crearGraficoDeuda();
+      setTimeout(() => {
+        if (!this.modalInstance) {
+          return;
+        }
+
+        this.crearGraficoSerieDiaria();
+        this.crearGraficoSerieMensual();
+        this.crearGraficoAsesores();
+      }, 40);
+    }, 80);
   }
 
-  private crearTodosLosGraficos(): void {
-    // Limpiar gráficos anteriores
-    this.destruirGraficos();
+  private crearGraficoFormasPago(): void {
+    const formasPago = this.getResumenFormasPago().filter(item => item.monto > 0 || item.cantidad > 0);
+    const canvas = document.getElementById('resumenFormasPagoChart') as HTMLCanvasElement | null;
+    const context = canvas?.getContext('2d');
 
-    // Crear nuevos gráficos
-    const simboloMoneda = this.simboloMonedaSistema;
+    if (!context || !formasPago.length) {
+      return;
+    }
 
-    // 1. Gráfico de Ventas por Día
-    const chart1 = this.chartService.crearGraficoVentasPorDia('ventasPorDiaChart', simboloMoneda);
-    if (chart1) this.chartInstances.push(chart1);
-
-    // 2. Gráfico de Comparativa Mensual
-    const chart2 = this.chartService.crearGraficoComparativaMensual('comparativaMensualChart', simboloMoneda);
-    if (chart2) this.chartInstances.push(chart2);
-
-    // 3. Gráfico de Distribución de Forma de Pago
-    const chart3 = this.chartService.crearGraficoDistribucionPago('distribucionPagoChart');
-    if (chart3) this.chartInstances.push(chart3);
-
-    // 4. Gráfico de Tendencia de Deuda
-    const chart4 = this.chartService.crearGraficoTendenciaDeuda('tendenciaDeudaChart', simboloMoneda);
-    if (chart4) this.chartInstances.push(chart4);
-
-    // 5. Gráfico de Ventas por Asesor
-    const chart5 = this.chartService.crearGraficoVentasPorAsesor('ventasPorAsesorChart', simboloMoneda);
-    if (chart5) this.chartInstances.push(chart5);
-  }
-
-  // En HistorialVentasComponent - Método corregido
-  private destruirGraficos(): void {
-    // Opción 1: Usar el método que destruye todos los gráficos
-    this.chartService.destruirTodosLosGraficos();
-
-    // Opción 2: Si necesitas destruir gráficos individualmente
-    this.chartInstances.forEach(chart => {
-      // Necesitas obtener el canvasId del gráfico
-      // Esto depende de cómo almacenes la relación entre gráficos y canvasIds
+    this.chartInstances['resumenFormasPagoChart'] = new Chart(context, {
+      type: 'doughnut',
+      data: {
+        labels: formasPago.map(item => item.label),
+        datasets: [{
+          data: formasPago.map(item => item.monto),
+          backgroundColor: ['#2563eb', '#16a34a', '#d97706', '#64748b'],
+          borderColor: '#ffffff',
+          borderWidth: 3,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: (context: any) => {
+                const valor = Number(context.parsed) || 0;
+                return `${context.label}: ${this.formatearMoneda(valor, this.monedaSistema)}`;
+              }
+            }
+          }
+        },
+        cutout: '62%'
+      }
     });
-
-    this.chartInstances = [];
   }
 
-  // Métodos para mostrar información de fechas
-  getRangoFechasVentas(): string {
-    const hoy = new Date();
-    const hace7Dias = new Date();
-    hace7Dias.setDate(hoy.getDate() - 6);
+  private crearGraficoCobranza(): void {
+    const canvas = document.getElementById('resumenCobranzaChart') as HTMLCanvasElement | null;
+    const context = canvas?.getContext('2d');
 
-    return `${this.formatFecha(hace7Dias.toISOString())} - ${this.formatFecha(hoy.toISOString())}`;
+    if (!context) {
+      return;
+    }
+
+    this.chartInstances['resumenCobranzaChart'] = new Chart(context, {
+      type: 'bar',
+      data: {
+        labels: ['Facturado', 'Cobrado', 'Pendiente'],
+        datasets: [{
+          label: 'Monto',
+          data: [this.getMontoTotalNumerico(), this.getMontoCobradoNumerico(), this.getDeudaPendienteNumerica()],
+          backgroundColor: ['#1d4ed8', '#15803d', '#b45309'],
+          borderRadius: 12,
+          maxBarThickness: 48
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (context: any) => this.formatearMoneda(Number(context.parsed.y) || 0, this.monedaSistema)
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: (value: any) => this.formatearMoneda(Number(value) || 0, this.monedaSistema)
+            }
+          }
+        }
+      }
+    });
   }
 
-  getTotalVentasPeriodo(): number {
-    return this.datosDePrueba?.ventasPorDia?.datos?.reduce((a: number, b: number) => a + b, 0) || 0;
+  private crearGraficoDeuda(): void {
+    const canvas = document.getElementById('resumenDeudaChart') as HTMLCanvasElement | null;
+    const context = canvas?.getContext('2d');
+    const deuda = this.getComposicionDeuda();
+
+    if (!context) {
+      return;
+    }
+
+    this.chartInstances['resumenDeudaChart'] = new Chart(context, {
+      type: 'bar',
+      data: {
+        labels: deuda.map(item => item.label),
+        datasets: [{
+          label: 'Saldo pendiente',
+          data: deuda.map(item => item.monto),
+          backgroundColor: ['#d97706', '#16a34a', '#2563eb'],
+          borderRadius: 10,
+          maxBarThickness: 36
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (context: any) => this.formatearMoneda(Number(context.parsed.x) || 0, this.monedaSistema)
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              callback: (value: any) => this.formatearMoneda(Number(value) || 0, this.monedaSistema)
+            }
+          },
+          y: { grid: { display: false } }
+        }
+      }
+    });
   }
 
-  getMaxVentaDia(): number {
-    return Math.max(...(this.datosDePrueba?.ventasPorDia?.datos || [0]));
+  private crearGraficoSerieDiaria(): void {
+    const serie = this.getSeriesDiarias(14);
+    const canvas = document.getElementById('resumenSerieDiariaChart') as HTMLCanvasElement | null;
+    const context = canvas?.getContext('2d');
+
+    if (!context || !serie.length) {
+      return;
+    }
+
+    this.chartInstances['resumenSerieDiariaChart'] = new Chart(context, {
+      type: 'line',
+      data: {
+        labels: serie.map(item => item.label),
+        datasets: [
+          {
+            label: 'Facturado',
+            data: serie.map(item => item.facturado),
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.12)',
+            tension: 0.35,
+            fill: true
+          },
+          {
+            label: 'Cobrado',
+            data: serie.map(item => item.cobrado),
+            borderColor: '#16a34a',
+            backgroundColor: 'rgba(22, 163, 74, 0.08)',
+            tension: 0.35,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: (context: any) => `${context.dataset.label}: ${this.formatearMoneda(Number(context.parsed.y) || 0, this.monedaSistema)}`
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: (value: any) => this.formatearMoneda(Number(value) || 0, this.monedaSistema)
+            }
+          }
+        }
+      }
+    });
   }
 
-  getPromedioVentas(): number {
-    const total = this.getTotalVentasPeriodo();
-    const dias = this.datosDePrueba?.ventasPorDia?.datos?.length || 1;
-    return total / dias;
+  private crearGraficoSerieMensual(): void {
+    const serie = this.getSeriesMensuales(12);
+    const canvas = document.getElementById('resumenSerieMensualChart') as HTMLCanvasElement | null;
+    const context = canvas?.getContext('2d');
+
+    if (!context || !serie.length) {
+      return;
+    }
+
+    this.chartInstances['resumenSerieMensualChart'] = new Chart(context, {
+      type: 'bar',
+      data: {
+        labels: serie.map(item => item.label),
+        datasets: [
+          {
+            label: 'Facturado',
+            data: serie.map(item => item.facturado),
+            backgroundColor: '#1d4ed8',
+            borderRadius: 10,
+            maxBarThickness: 42
+          },
+          {
+            label: 'Cobrado',
+            data: serie.map(item => item.cobrado),
+            backgroundColor: '#0f766e',
+            borderRadius: 10,
+            maxBarThickness: 42
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: (context: any) => `${context.dataset.label}: ${this.formatearMoneda(Number(context.parsed.y) || 0, this.monedaSistema)}`
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: (value: any) => this.formatearMoneda(Number(value) || 0, this.monedaSistema)
+            }
+          }
+        }
+      }
+    });
   }
 
-  getTotalDias(): number {
-    return this.datosDePrueba?.ventasPorDia?.datos?.length || 0;
+  private crearGraficoAsesores(): void {
+    const ranking = this.getRankingAsesores(6);
+    const canvas = document.getElementById('resumenAsesoresChart') as HTMLCanvasElement | null;
+    const context = canvas?.getContext('2d');
+
+    if (!context || !ranking.length) {
+      return;
+    }
+
+    this.chartInstances['resumenAsesoresChart'] = new Chart(context, {
+      type: 'bar',
+      data: {
+        labels: ranking.map(item => item.asesorNombre),
+        datasets: [{
+          label: 'Facturado',
+          data: ranking.map(item => item.facturado),
+          backgroundColor: ['#312e81', '#4338ca', '#2563eb', '#16a34a', '#d97706', '#64748b'],
+          borderRadius: 10,
+          maxBarThickness: 34
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (context: any) => this.formatearMoneda(Number(context.parsed.x) || 0, this.monedaSistema)
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              callback: (value: any) => this.formatearMoneda(Number(value) || 0, this.monedaSistema)
+            }
+          },
+          y: { grid: { display: false } }
+        }
+      }
+    });
   }
 
-  // Métodos para comparativa mensual
-  getMesActual(): string {
-    return new Date().toLocaleDateString('es-ES', { month: 'long' });
+  private destruirGraficos(): void {
+    Object.values(this.chartInstances).forEach(chart => chart.destroy());
+    this.chartInstances = {};
   }
 
-  getMesAnterior(): string {
-    const fecha = new Date();
-    fecha.setMonth(fecha.getMonth() - 1);
-    return fecha.toLocaleDateString('es-ES', { month: 'long' });
-  }
-
-  getVentasMesActual(): number {
-    return this.datosDePrueba?.comparativaMensual?.datosActual?.reduce((a: number, b: number) => a + b, 0) || 0;
-  }
-
-  getVentasMesAnterior(): number {
-    return this.datosDePrueba?.comparativaMensual?.datosAnterior?.reduce((a: number, b: number) => a + b, 0) || 0;
-  }
-
-  getVariacion(): number {
-    const actual = this.getVentasMesActual();
-    const anterior = this.getVentasMesAnterior();
-    if (anterior === 0) return 100;
-    return ((actual - anterior) / anterior) * 100;
-  }
-
-  getVariacionClase(): string {
-    return this.getVariacion() > 0 ? 'text-success' : 'text-danger';
-  }
-
-  getPorcentajeMeta(): number {
-    const meta = 20000; // Meta mensual
-    const actual = this.getVentasMesActual();
-    return Math.min((actual / meta) * 100, 100);
-  }
-
-  // Métodos para distribución de pagos
-  getDistribucionPago(): any[] {
-    const datos = this.datosDePrueba?.distribucionFormaPago || { labels: [], datos: [] };
-    const total = datos.datos.reduce((a: number, b: number) => a + b, 0);
-
-    return datos.labels.map((label: string, index: number) => ({
-      tipo: label,
-      monto: datos.datos[index],
-      porcentaje: Math.round((datos.datos[index] / total) * 100),
-      color: datos.colores?.[index] || '#4361ee'
-    }));
-  }
-
-  getTotalTransacciones(): number {
-    return this.datosDePrueba?.distribucionFormaPago?.datos?.length || 0;
-  }
-
-  // Métodos para tendencia de deuda
-  getDeudaTotalActual(): number {
-    const deudas = this.datosDePrueba?.tendenciaDeuda;
-    if (!deudas) return 0;
-
-    const ultimaSemana = deudas.deudaCashea[deudas.deudaCashea.length - 1] || 0;
-    return ultimaSemana;
-  }
-
-  getVariacionDeuda(): number {
-    const deudas = this.datosDePrueba?.tendenciaDeuda;
-    if (!deudas || deudas.deudaCashea.length < 2) return 0;
-
-    const actual = deudas.deudaCashea[deudas.deudaCashea.length - 1];
-    const anterior = deudas.deudaCashea[deudas.deudaCashea.length - 2];
-
-    if (anterior === 0) return 100;
-    return ((actual - anterior) / anterior) * 100;
-  }
-
-  getVariacionDeudaClase(): string {
-    return this.getVariacionDeuda() > 0 ? 'text-danger' : 'text-success';
-  }
-
-  getTiposDeuda(): any[] {
-    return [
-      { nombre: 'Cashea', monto: 2500, cantidad: 5 },
-      { nombre: 'Abonos', monto: 1200, cantidad: 8 },
-      { nombre: 'Contado', monto: 300, cantidad: 2 }
-    ];
-  }
-
-  // Métodos para asesores
-  getMejorAsesor(): any {
-    const datos = this.datosDePrueba?.ventasPorAsesor;
-    if (!datos || !datos.datos.length) return null;
-
-    const maxVentas = Math.max(...datos.datos);
-    const index = datos.datos.indexOf(maxVentas);
-
+  private normalizarResumenData(data: any) {
     return {
-      nombre: datos.labels[index],
-      ventas: maxVentas
+      montoTotal: Number(data?.montoTotal) || 0,
+      totalAbonos: Number(data?.totalAbonos) || 0,
+      deudaPendiente: Number(data?.deudaPendiente) || 0,
+      deudaCashea: Number(data?.deudaCashea) || 0,
+      deudaAbonos: Number(data?.deudaAbonos) || 0,
+      deudaContado: Number(data?.deudaContado) || 0,
+      ventasContado: {
+        cantidad: Number(data?.ventasContado?.cantidad) || 0,
+        montoTotal: Number(data?.ventasContado?.montoTotal) || 0
+      },
+      ventasAbono: {
+        cantidad: Number(data?.ventasAbono?.cantidad) || 0,
+        montoTotal: Number(data?.ventasAbono?.montoTotal) || 0
+      },
+      ventasCashea: {
+        cantidad: Number(data?.ventasCashea?.cantidad) || 0,
+        montoTotal: Number(data?.ventasCashea?.montoTotal) || 0
+      },
+      ventasCredito: {
+        cantidad: Number(data?.ventasCredito?.cantidad) || 0,
+        montoTotal: Number(data?.ventasCredito?.montoTotal) || 0
+      },
+      seriesDiaria: Array.isArray(data?.seriesDiaria) ? data.seriesDiaria.map((item: any) => ({
+        fecha: item?.fecha || '',
+        label: item?.label || item?.fecha || '',
+        ventas: Number(item?.ventas) || 0,
+        facturado: Number(item?.facturado) || 0,
+        cobrado: Number(item?.cobrado) || 0,
+        pendiente: Number(item?.pendiente) || 0
+      })) : [],
+      seriesMensual: Array.isArray(data?.seriesMensual) ? data.seriesMensual.map((item: any) => ({
+        periodo: item?.periodo || '',
+        label: item?.label || item?.periodo || '',
+        ventas: Number(item?.ventas) || 0,
+        facturado: Number(item?.facturado) || 0,
+        cobrado: Number(item?.cobrado) || 0,
+        pendiente: Number(item?.pendiente) || 0
+      })) : [],
+      rankingAsesores: Array.isArray(data?.rankingAsesores) ? data.rankingAsesores.map((item: any) => ({
+        asesorId: Number(item?.asesorId) || 0,
+        asesorNombre: item?.asesorNombre || 'Sin asesor',
+        ventas: Number(item?.ventas) || 0,
+        facturado: Number(item?.facturado) || 0,
+        cobrado: Number(item?.cobrado) || 0,
+        pendiente: Number(item?.pendiente) || 0
+      })) : []
     };
   }
 
-  getTopAsesores(limit: number = 3): any[] {
-    const datos = this.datosDePrueba?.ventasPorAsesor;
-    if (!datos) return [];
-
-    const asesores = datos.labels.map((label: string, index: number) => ({
-      nombre: label,
-      ventas: datos.datos[index],
-      porcentaje: (datos.datos[index] / Math.max(...datos.datos)) * 100
-    }));
-
-    return asesores
-      .sort((a, b) => b.ventas - a.ventas)
-      .slice(0, limit);
+  private getMontoTotalNumerico(): number {
+    return Number(this.resumenData?.montoTotal) || 0;
   }
 
-  getTotalAsesores(): number {
-    return this.datosDePrueba?.ventasPorAsesor?.labels?.length || 0;
+  private getMontoCobradoNumerico(): number {
+    return Number(this.resumenData?.totalAbonos) || 0;
   }
 
-  getRankingBadgeClass(index: number): string {
-    switch (index) {
-      case 0: return 'bg-gold';
-      case 1: return 'bg-silver';
-      case 2: return 'bg-bronze';
-      default: return 'bg-secondary';
-    }
+  private getDeudaPendienteNumerica(): number {
+    return Number(this.resumenData?.deudaPendiente) || 0;
   }
 
-  // Métodos auxiliares
-  private get datosDePrueba() {
-    return this.chartService.obtenerDatosDePrueba();
+  private obtenerNombreBaseResumen(): string {
+    const fecha = new Date().toISOString().split('T')[0];
+    return `resumen_financiero_${fecha}`;
   }
 
-  cambiarTendenciaPeriodo(periodo: string): void {
-
-    // Actualizar el texto del período
-    const elemento = document.getElementById('tendenciaPeriodo');
-    if (elemento) {
-      switch (periodo) {
-        case 'semanas':
-          elemento.textContent = 'Últimas 4 semanas';
-          break;
-        case 'meses':
-          elemento.textContent = 'Últimos 6 meses';
-          break;
-        case 'trimestres':
-          elemento.textContent = 'Últimos 4 trimestres';
-          break;
-      }
-    }
-
-    // Aquí puedes actualizar los datos del gráfico según el período
-    // Por ahora solo mostramos un mensaje
-    this.swalService.showInfo('Cambio de período',
-      `La tendencia se mostrará por ${periodo}. Esta funcionalidad se implementará próximamente.`);
-  }
-
-  cambiarPeriodoComparativa(periodo: string): void {
-    // Actualizar los datos de prueba según el período
-    switch (periodo) {
-      case 'mes':
-        this.chartService.actualizarDatosDePrueba({
-          comparativaMensual: {
-            labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-            datosActual: [12500, 14200, 13800, 16500, 15800, 17200],
-            datosAnterior: [11800, 13000, 12500, 15200, 14500, 16000]
-          }
-        });
-        break;
-      case 'trimestre':
-        this.chartService.actualizarDatosDePrueba({
-          comparativaMensual: {
-            labels: ['Q1', 'Q2', 'Q3', 'Q4'],
-            datosActual: [40500, 49500, 52000, 58000],
-            datosAnterior: [38000, 46500, 49000, 55000]
-          }
-        });
-        break;
-      case 'anio':
-        this.chartService.actualizarDatosDePrueba({
-          comparativaMensual: {
-            labels: ['2021', '2022', '2023', '2024'],
-            datosActual: [185000, 210000, 240000, 200000],
-            datosAnterior: [165000, 190000, 220000, 180000]
-          }
-        });
-        break;
-    }
-
-    // Recrear los gráficos con los nuevos datos
-    this.recargarGraficos();
-
-    this.swalService.showSuccess('Período cambiado',
-      `La comparativa ahora se muestra por ${periodo}.`);
-  }
-
-  // Método para recargar gráficos
-  private recargarGraficos(): void {
-    this.destruirGraficos();
-    setTimeout(() => {
-      this.inicializarGraficosEnModal();
-    }, 300);
+  private descargarBlob(blob: Blob, fileName: string): void {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   mostrarBotonRealizarPago(venta: any): boolean {

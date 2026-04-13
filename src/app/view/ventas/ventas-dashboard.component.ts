@@ -17,6 +17,9 @@ import { HistoriaMedicaService } from '../../core/services/historias-medicas/his
 import { HistoriaMedica } from './../historias-medicas/historias_medicas-interface';
 import { Sede, SedeCompleta } from '../../view/login/login-interface';
 import { CierreCajaComponent } from './cierre-caja/cierre-caja.component';
+import { PresupuestoService } from './presupuesto/presupuesto.service';
+import { HistorialVentaService } from './historial-ventas/historial-ventas.service';
+import { CierreCajaService } from './cierre-caja/cierre-caja.service';
 
 @Component({
     selector: 'app-ventas-dashboard',
@@ -80,6 +83,9 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
         private loader: LoaderService,
         private pacientesService: PacientesService,
         private historiaService: HistoriaMedicaService,
+        private presupuestoService: PresupuestoService,
+        private historialVentaService: HistorialVentaService,
+        private cierreCajaService: CierreCajaService,
         private route: ActivatedRoute,
         private router: Router
     ) { }
@@ -101,6 +107,9 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
             // Suscribirse a los cambios de sede actual
             this.userStateService.sedeActual$.subscribe(sede => {
                 this.sedeInfo = sede;
+                this.sedeActiva = sede?.key?.trim().toLowerCase() || this.sedeActiva;
+                this.sedeFiltro = this.sedeActiva;
+                this.actualizarContadoresPorSede();
             });
 
             // Iniciar auto-refresh después de cargar datos iniciales
@@ -244,7 +253,27 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
         this.tareaIniciada();
 
         forkJoin({
-            //  productos: this.productoService.getProductos().pipe(take(1)),
+            productosResponse: this.productoService.getProductos().pipe(
+                take(1),
+                catchError(error => {
+                    console.error('Error al cargar productos:', error);
+                    return of({ iva: 0, productos: [] as Producto[] });
+                })
+            ),
+            presupuestos: this.presupuestoService.getPresupuestos().pipe(
+                take(1),
+                catchError(error => {
+                    console.error('Error al cargar presupuestos:', error);
+                    return of([] as any[]);
+                })
+            ),
+            estadisticasVentas: this.historialVentaService.obtenerEstadisticasVentas({}).pipe(
+                take(1),
+                catchError(error => {
+                    console.error('Error al cargar conteo de ventas:', error);
+                    return of({});
+                })
+            ),
             user: this.userStateService.currentUser$.pipe(
                 take(1),
                 catchError(error => {
@@ -256,9 +285,13 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
                     return of(null);
                 })
             )
-        }).subscribe(({ user }) => {
+        }).subscribe(({ productosResponse, presupuestos, estadisticasVentas, user }) => {
             // Las sedes ya están cargadas en UserStateService
             const sedesCargadas = this.userStateService.getSedes();
+
+            this.productos = productosResponse?.productos ?? [];
+            this.totalPresupuestos = Array.isArray(presupuestos) ? presupuestos.length : 0;
+            this.totalHistorialVentas = this.extraerTotalVentas(estadisticasVentas);
 
             this.sedesDisponibles = sedesCargadas
                 .map(s => ({
@@ -285,8 +318,72 @@ export class VentasDashboardComponent implements OnInit, OnDestroy {
                 this.sedeInfo = this.userStateService.getSedePorKey(this.sedeActiva);
             }
 
+            this.actualizarContadoresPorSede();
+
             this.tareaFinalizada();
         });
+    }
+
+    private actualizarContadoresPorSede(): void {
+        const sedeKey = this.sedeActiva?.trim().toLowerCase();
+
+        const hoy = new Date();
+        const fechaHoy = hoy.toISOString().split('T')[0];
+
+        this.historialVentaService.obtenerEstadisticasVentas({
+            sede: sedeKey || undefined,
+            fechaDesde: fechaHoy,
+            fechaHasta: fechaHoy
+        }).pipe(take(1)).subscribe({
+            next: (response) => {
+                this.totalVentas = this.extraerTotalVentas(response);
+            },
+            error: (error) => {
+                console.error('Error al cargar conteo diario de ventas:', error);
+                this.totalVentas = 0;
+            }
+        });
+
+        if (!sedeKey) {
+            this.totalCierres = 0;
+            return;
+        }
+
+        const fechaInicio = new Date(2020, 0, 1);
+        const fechaFin = new Date();
+
+        this.cierreCajaService.obtenerHistorialCierres(fechaInicio, fechaFin, sedeKey).pipe(take(1)).subscribe({
+            next: (cierres) => {
+                this.totalCierres = Array.isArray(cierres) ? cierres.length : 0;
+            },
+            error: (error) => {
+                console.error('Error al cargar historial de cierres:', error);
+                this.totalCierres = 0;
+            }
+        });
+
+        this.historialVentaService.obtenerEstadisticasVentas({ sede: sedeKey }).pipe(take(1)).subscribe({
+            next: (response) => {
+                this.totalHistorialVentas = this.extraerTotalVentas(response);
+            },
+            error: (error) => {
+                console.error('Error al cargar conteo de ventas por sede:', error);
+            }
+        });
+    }
+
+    private extraerTotalVentas(response: any): number {
+        if (!response) {
+            return 0;
+        }
+
+        return Number(
+            response.ventas ??
+            response.totalVentas ??
+            response.total ??
+            response.pagination?.total ??
+            0
+        ) || 0;
     }
 
     // =========== GETTER PARA COMPONENTES HIJOS ===========

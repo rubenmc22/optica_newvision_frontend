@@ -689,19 +689,34 @@ export class SystemConfigService {
     // El config$ ya se actualiza automáticamente, pero podemos emitir un evento específico si es necesario
   }
 
+    normalizarMonedaId(moneda?: string): 'dolar' | 'euro' | 'bolivar' {
+      const valor = (moneda || 'USD').toString().trim().toLowerCase();
+
+      if (['usd', 'dolar', 'dólar', '$'].includes(valor)) {
+        return 'dolar';
+      }
+
+      if (['eur', 'euro', '€'].includes(valor)) {
+        return 'euro';
+      }
+
+      return 'bolivar';
+    }
+
   /**
    * Convierte un monto entre monedas
    */
   convertirMonto(monto: number, monedaOrigen: string, monedaDestino?: string): number {
-    if (!monedaDestino) {
-      monedaDestino = this.getMonedaPrincipal();
+      const origenNormalizado = this.normalizarMonedaId(monedaOrigen);
+      const destinoNormalizado = this.normalizarMonedaId(monedaDestino || this.getMonedaPrincipal());
+
+      if (origenNormalizado === destinoNormalizado) {
+        return Number(monto);
     }
 
-    if (monedaOrigen === monedaDestino) return monto;
-
     try {
-      const tasaOrigen = this.getTasaPorId(monedaOrigen);
-      const tasaDestino = this.getTasaPorId(monedaDestino);
+        const tasaOrigen = this.getTasaPorId(origenNormalizado);
+        const tasaDestino = this.getTasaPorId(destinoNormalizado);
       const montoEnBs = monto * tasaOrigen;
       const resultado = montoEnBs / tasaDestino;
 
@@ -734,12 +749,7 @@ export class SystemConfigService {
    * Convierte el código de moneda al formato que espera el backend
    */
   private convertirMonedaParaBackend(moneda: string): string {
-    const conversiones: { [key: string]: string } = {
-      'USD': 'dolar',
-      'EUR': 'euro',
-      'VES': 'bolivar'
-    };
-    return conversiones[moneda] || 'dolar';
+    return this.normalizarMonedaId(moneda);
   }
 
   /**
@@ -804,16 +814,14 @@ export class SystemConfigService {
    */
   getTasaPorId(id: string): number {
     const tasasActuales = this.tasaCambiariaService.getTasaActualValor();
+    const monedaNormalizada = this.normalizarMonedaId(id);
 
-    switch (id.toLowerCase()) {
+    switch (monedaNormalizada) {
       case 'dolar':
-      case 'usd':
         return tasasActuales.usd;
       case 'euro':
-      case 'eur':
         return tasasActuales.eur;
       case 'bolivar':
-      case 'ves':
         return 1;
       default:
         return 1;

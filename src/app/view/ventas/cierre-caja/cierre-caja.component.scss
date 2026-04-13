@@ -42,13 +42,15 @@
 }
 
 .cierre-header {
-  background: var(--degradado-color) !important;
-  color: white;
-  padding: 24px 28px;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%) !important;
+  color: #0f172a;
+  padding: 18px 20px;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 24px;
+  box-shadow: none;
+  border: 1px solid #e5e7eb;
+  border-top: 1px solid #dbeafe;
+  margin-bottom: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 
   .header-content {
     display: flex;
@@ -65,18 +67,18 @@
     flex-shrink: 0;
 
     i {
-      font-size: 28px;
-      color: white;
-      background: rgba(255, 255, 255, 0.15);
-      width: 48px;
-      height: 48px;
+      font-size: 20px;
+      color: #2563eb;
+      background: #eff6ff;
+      width: 40px;
+      height: 40px;
       border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: none;
+      backdrop-filter: none;
+      border: 1px solid #dbeafe;
     }
 
     .header-text {
@@ -84,13 +86,13 @@
       flex-direction: column;
 
       h1 {
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 600;
         margin: 0;
-        color: white;
+        color: #0f172a;
         letter-spacing: 0.5px;
         line-height: 1.2;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        text-shadow: none;
       }
 
       .header-subtitle {
@@ -108,10 +110,11 @@
           border-radius: 50px;
           font-size: 12px;
           font-weight: 500;
-          background: rgba(255, 255, 255, 0.2);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
+          background: #f8fafc;
+          backdrop-filter: none;
+          border: 1px solid #e2e8f0;
           white-space: nowrap;
+          color: #334155;
 
           i {
             font-size: 12px;
@@ -171,16 +174,16 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.82);
         padding: 6px 12px;
         border-radius: 50px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 6px 18px rgba(148, 163, 184, 0.12);
 
         .btn-fecha {
-          background: none;
+          background: transparent;
           border: none;
-          color: white;
+          color: #334155;
           cursor: pointer;
           padding: 6px;
           border-radius: 50%;
@@ -192,7 +195,8 @@
           height: 32px;
 
           &:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: #eff6ff;
+            color: #1d4ed8;
             transform: scale(1.05);
           }
         }
@@ -206,9 +210,11 @@
           padding: 0 8px;
           cursor: pointer;
           white-space: nowrap;
+          color: #334155;
 
           i {
             font-size: 14px;
+            color: #2563eb;
           }
 
           &:hover {
@@ -240,10 +246,10 @@
           font-weight: 500;
           cursor: pointer;
           transition: all 0.3s ease;
-          border: 1px solid transparent;
-          background: rgba(255, 255, 255, 0.2);
-          backdrop-filter: blur(10px);
-          color: white;
+          border: 1px solid #cbd5e1;
+          background: rgba(255, 255, 255, 0.86);
+          color: #334155;
+          box-shadow: 0 6px 18px rgba(148, 163, 184, 0.12);
 
           i {
             font-size: 16px;
@@ -251,39 +257,47 @@
 
           &:hover {
             transform: translateY(-1px);
-            background: rgba(255, 255, 255, 0.3);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            background: #ffffff;
+            border-color: #93c5fd;
+            box-shadow: 0 10px 24px rgba(59, 130, 246, 0.16);
           }
 
           &.btn-primary {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.3);
+            background: rgba(37, 99, 235, 0.12);
+            border-color: rgba(37, 99, 235, 0.22);
+            color: #1d4ed8;
           }
 
           &.btn-success {
-            background: rgba(40, 167, 69, 0.2);
-            border-color: rgba(40, 167, 69, 0.5);
+            background: rgba(34, 197, 94, 0.12);
+            border-color: rgba(34, 197, 94, 0.24);
+            color: #15803d;
 
             &:hover {
-              background: rgba(40, 167, 69, 0.35);
+              background: rgba(34, 197, 94, 0.18);
+              border-color: rgba(34, 197, 94, 0.3);
             }
           }
 
           &.btn-info {
-            background: rgba(23, 162, 184, 0.2);
-            border-color: rgba(23, 162, 184, 0.5);
+            background: rgba(6, 182, 212, 0.12);
+            border-color: rgba(6, 182, 212, 0.24);
+            color: #0f766e;
 
             &:hover {
-              background: rgba(23, 162, 184, 0.35);
+              background: rgba(6, 182, 212, 0.18);
+              border-color: rgba(6, 182, 212, 0.3);
             }
           }
 
           &.btn-warning {
-            background: rgba(255, 193, 7, 0.2);
-            border-color: rgba(255, 193, 7, 0.5);
+            background: rgba(245, 158, 11, 0.12);
+            border-color: rgba(245, 158, 11, 0.24);
+            color: #b45309;
 
             &:hover {
-              background: rgba(255, 193, 7, 0.35);
+              background: rgba(245, 158, 11, 0.18);
+              border-color: rgba(245, 158, 11, 0.3);
             }
           }
         }
@@ -295,19 +309,20 @@
           padding: 8px 16px;
           border-radius: 8px;
           font-size: 13px;
-          background: rgba(255, 255, 255, 0.15);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(255, 255, 255, 0.82);
+          border: 1px solid #cbd5e1;
           white-space: nowrap;
+          color: #475569;
+          box-shadow: 0 6px 18px rgba(148, 163, 184, 0.12);
 
           i {
             font-size: 14px;
           }
 
           &.warning {
-            background: rgba(255, 193, 7, 0.2);
-            border-color: rgba(255, 193, 7, 0.4);
-            color: #ffc107;
+            background: rgba(245, 158, 11, 0.12);
+            border-color: rgba(245, 158, 11, 0.24);
+            color: #b45309;
           }
         }
       }
