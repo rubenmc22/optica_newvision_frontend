@@ -1,5 +1,8 @@
 :host {
   display: block;
+  --dashboard-text-strong: #2c3e50;
+  --dashboard-text-base: #475569;
+  --dashboard-text-muted: #64748b;
 }
 
 .dashboard-shell {
@@ -37,13 +40,13 @@
   font-size: clamp(1.8rem, 3vw, 2.6rem);
   line-height: 1.05;
   letter-spacing: -0.04em;
-  color: #16353f;
-  font-weight: 900;
+  color: var(--dashboard-text-strong);
+  font-weight: 700;
 }
 
 .dashboard-topbar__subtitle {
   margin: 0.75rem 0 0;
-  color: #5f7380;
+  color: var(--dashboard-text-muted);
   line-height: 1.6;
   max-width: 700px;
 }
@@ -53,8 +56,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: #5d7481;
-  font-weight: 700;
+  color: var(--dashboard-text-muted);
+  font-weight: 600;
   font-size: 0.9rem;
 }
 
@@ -121,7 +124,7 @@
   padding: 0.4rem 0.8rem;
   border-radius: 999px;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -185,7 +188,7 @@
   border: none;
   border-radius: 16px;
   padding: 0.9rem 1.1rem;
-  font-weight: 800;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -210,7 +213,7 @@
 
 .hero-action--ghost {
   background: rgba(255, 255, 255, 0.88);
-  color: #173742;
+  color: var(--dashboard-text-strong);
   border: 1px solid rgba(20, 56, 72, 0.1);
 }
 
@@ -266,9 +269,9 @@
 
 .kpi-label {
   display: block;
-  color: #5c7080;
+  color: var(--dashboard-text-muted);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 0.55rem;
 }
 
@@ -276,9 +279,9 @@
   margin: 0;
   font-size: clamp(2rem, 3vw, 2.9rem);
   line-height: 0.95;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: -0.04em;
-  color: #173742;
+  color: var(--dashboard-text-strong);
 }
 
 .kpi-icon {
@@ -304,9 +307,9 @@
   padding: 0.5rem 0.75rem;
   border-radius: 999px;
   background: #edf5f7;
-  color: #35505d;
+  color: var(--dashboard-text-base);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .kpi-chip--warning {
@@ -319,7 +322,7 @@
   padding: 0;
   background: transparent;
   color: #155f73;
-  font-weight: 800;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -396,13 +399,13 @@
 .surface-title {
   margin: 0;
   font-size: 1.5rem;
-  font-weight: 900;
-  color: #16353f;
+  font-weight: 700;
+  color: var(--dashboard-text-strong);
 }
 
 .surface-subtitle {
   margin: 0.45rem 0 0;
-  color: #5c7280;
+  color: var(--dashboard-text-muted);
   line-height: 1.6;
 }
 
@@ -451,7 +454,7 @@
   border: 1px solid rgba(21, 95, 115, 0.12);
   color: #155f73;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .leaderboard-scope i {
@@ -525,13 +528,13 @@
 }
 
 .leaderboard-empty strong {
-  color: #16353f;
+  color: var(--dashboard-text-strong);
   font-size: 1rem;
 }
 
 .leaderboard-empty p {
   margin: 0;
-  color: #617682;
+  color: var(--dashboard-text-muted);
   line-height: 1.55;
 }
 
@@ -568,7 +571,7 @@
   padding: 0.35rem 0.7rem;
   border-radius: 999px;
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #1f3440;
@@ -577,7 +580,7 @@
 
 .leader-highlight__amount {
   font-size: 1.35rem;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .leader-list {
@@ -616,12 +619,13 @@
 .leader-row__main strong,
 .leader-row__metric strong {
   display: block;
-  color: #16353f;
+  color: var(--dashboard-text-strong);
+  font-weight: 700;
 }
 
 .leader-row__main small,
 .leader-row__metric small {
-  color: #617682;
+  color: var(--dashboard-text-muted);
 }
 
 .leader-row__metric {
@@ -634,7 +638,7 @@
   border-radius: 12px;
   display: grid;
   place-items: center;
-  font-weight: 900;
+  font-weight: 800;
   color: #155f73;
   background: #e5f1f4;
   flex-shrink: 0;
@@ -669,19 +673,20 @@
   place-items: center;
   color: #fff;
   font-size: 1.35rem;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .workflow-step__content strong {
   display: block;
   font-size: 0.98rem;
-  color: #16353f;
+  color: var(--dashboard-text-strong);
+  font-weight: 700;
 }
 
 .workflow-step__content span {
   display: block;
   margin-top: 0.25rem;
-  color: #617682;
+  color: var(--dashboard-text-muted);
   font-size: 0.86rem;
 }
 
@@ -751,12 +756,12 @@
 }
 
 .quick-action-btn span {
-  font-weight: 900;
-  color: #173540;
+  font-weight: 700;
+  color: var(--dashboard-text-strong);
 }
 
 .quick-action-btn small {
-  color: #687e89;
+  color: var(--dashboard-text-muted);
   font-size: 0.8rem;
 }
 
