@@ -104,44 +104,75 @@
 
       <div class="col-xl-4">
         <div class="dashboard-stack h-100">
-          <section class="surface-card leaderboard-card" *ngIf="rankingComercial.length">
+          <section class="surface-card leaderboard-card" *ngIf="mostrarTarjetaRankingComercial">
             <div class="surface-header surface-header--tight">
-              <div>
+              <div class="leaderboard-header-main">
                 <span class="surface-eyebrow">Ventas</span>
                 <h3 class="surface-title">Top comercial</h3>
                 <p class="surface-subtitle">Ranking mensual por facturación.</p>
+              </div>
+
+              <div class="leaderboard-header-actions">
                 <div class="leaderboard-scope">
                   <i class="bi bi-geo-alt"></i>
-                  <span>Sede actual: {{ nombreSedeVisible }}</span>
+                  <span>Sede en vista: {{ nombreSedeRankingVisible }}</span>
                 </div>
+
+                <button
+                  type="button"
+                  class="leaderboard-switch"
+                  *ngIf="puedeIntercambiarSedeRanking"
+                  [class.is-loading]="rankingComercialCargando"
+                  [disabled]="rankingComercialCargando"
+                  (click)="intercambiarSedeRanking()"
+                  [title]="'Cambiar ranking a ' + nombreSedeSiguienteRankingVisible"
+                  [attr.aria-label]="'Cambiar ranking a ' + nombreSedeSiguienteRankingVisible">
+                  <i class="bi" [ngClass]="rankingComercialCargando ? 'bi-arrow-repeat' : 'bi-arrow-left-right'"></i>
+                </button>
               </div>
             </div>
 
             <div class="surface-body leaderboard-body">
-              <article class="leader-highlight" *ngIf="mejorVendedorDashboard as lider">
-                <div class="leader-highlight__meta">
-                  <span class="leader-chip">Vendedor del mes</span>
-                  <strong>{{ lider.asesorNombre }}</strong>
-                  <small>{{ lider.ventas }} ventas cerradas · {{ lider.participacion | number:'1.1-1' }}% de participación</small>
-                </div>
-                <div class="leader-highlight__amount">{{ formatearMontoDashboard(lider.facturado) }}</div>
-              </article>
+              <ng-container *ngIf="tieneRankingComercial; else leaderboardEmptyState">
+                <article class="leader-highlight" *ngIf="mejorVendedorDashboard as lider">
+                  <div class="leader-highlight__meta">
+                    <span class="leader-chip">Vendedor del mes</span>
+                    <strong>{{ lider.asesorNombre }}</strong>
+                    <small>{{ lider.ventas }} ventas cerradas · {{ lider.participacion | number:'1.1-1' }}% de participación</small>
+                  </div>
+                  <div class="leader-highlight__amount">{{ formatearMontoDashboard(lider.facturado) }}</div>
+                </article>
 
-              <div class="leader-list">
-                <div class="leader-row" *ngFor="let item of rankingComercialSecundario; let i = index">
-                  <div class="leader-row__main">
-                    <span class="leader-rank">{{ i + 2 }}</span>
-                    <div>
-                      <strong>{{ item.asesorNombre }}</strong>
-                      <small>{{ item.ventas }} ventas</small>
+                <div class="leader-list">
+                  <div class="leader-row" *ngFor="let item of rankingComercialSecundario; let i = index">
+                    <div class="leader-row__main">
+                      <span class="leader-rank">{{ i + 2 }}</span>
+                      <div>
+                        <strong>{{ item.asesorNombre }}</strong>
+                        <small>{{ item.ventas }} ventas</small>
+                      </div>
+                    </div>
+                    <div class="leader-row__metric">
+                      <strong>{{ formatearMontoDashboard(item.facturado) }}</strong>
+                      <small>{{ item.participacion | number:'1.1-1' }}%</small>
                     </div>
                   </div>
-                  <div class="leader-row__metric">
-                    <strong>{{ formatearMontoDashboard(item.facturado) }}</strong>
-                    <small>{{ item.participacion | number:'1.1-1' }}%</small>
-                  </div>
                 </div>
-              </div>
+              </ng-container>
+
+              <ng-template #leaderboardEmptyState>
+                <div class="leaderboard-empty" [class.is-loading]="rankingComercialCargando">
+                  <div class="leaderboard-empty__icon">
+                    <i class="bi" [ngClass]="rankingComercialCargando ? 'bi-arrow-repeat' : 'bi-bar-chart-line'"></i>
+                  </div>
+                  <strong>{{ rankingComercialCargando ? 'Actualizando ranking...' : 'Sin datos para esta sede' }}</strong>
+                  <p>
+                    {{ rankingComercialCargando
+                    ? 'Consultando el rendimiento comercial de ' + nombreSedeRankingVisible + '.'
+                    : 'No hay ventas facturadas en ' + nombreSedeRankingVisible + ' dentro del rango mensual actual.' }}
+                  </p>
+                </div>
+              </ng-template>
 
               <button class="hero-action hero-action--ghost leaderboard-cta" (click)="irARendimientoComercial()">
                 <i class="fas fa-medal"></i>

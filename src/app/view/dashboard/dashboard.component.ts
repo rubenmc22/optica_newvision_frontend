@@ -32,9 +32,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     pendiente: number;
     participacion: number;
   }> = [];
+  rankingComercialCargando: boolean = false;
+  sedeRankingSeleccionada: string = '';
   totalFacturadoRanking: number = 0;
   monedaDashboard: string = 'USD';
   simboloMonedaDashboard: string = '$';
+  monedaRankingComercial: string = 'USD';
+  simboloRankingComercial: string = '$';
   rolUsuario: Rol | null = null;
   sedeActual: string = '';
   isLoading: boolean = false;
@@ -149,6 +153,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private initializePantalla(): void {
     this.monedaDashboard = this.systemConfigService.getMonedaPrincipal();
     this.simboloMonedaDashboard = this.systemConfigService.getSimboloMonedaPrincipal();
+    this.monedaRankingComercial = this.monedaDashboard;
+    this.simboloRankingComercial = this.simboloMonedaDashboard;
 
     this.sedesValidas = this.userStateService
       .getSedes()
@@ -160,6 +166,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const auth = JSON.parse(sessionUser) as AuthData;
       this.rolUsuario = auth.rol ?? null;
       this.sedeActual = this.normalizarSede(auth.sede?.key ?? 'sin-sede');
+      this.sedeRankingSeleccionada = this.sedeActual;
 
       if (this.sedeActual && !this.sedesValidas.includes(this.sedeActual) && this.sedeActual !== 'sin-sede') {
         this.sedesValidas = [...this.sedesValidas, this.sedeActual];
@@ -225,6 +232,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const filtrosHoy = this.crearFiltroDia(hoy);
     const filtrosMes = this.crearFiltroMes(hoy);
     const filtrosUltimosMeses = this.crearFiltroUltimosMeses(hoy, 11);
+    const filtrosRanking = {
+      ...filtrosMes,
+      ...(this.sedeRankingSeleccionada ? { sede: this.sedeRankingSeleccionada } : {})
+    };
 
     return forkJoin({
       pacientes: this.pacientesService.getPacientes().pipe(
@@ -251,10 +262,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
           return of(this.crearEstadisticasVentasVacias());
         })
       ),
-      rendimientoComercial: this.historialVentaService.obtenerEstadisticasFinancieras(filtrosMes).pipe(
+      rendimientoComercial: this.historialVentaService.obtenerEstadisticasFinancieras(filtrosRanking).pipe(
         catchError(error => {
           console.error('Error cargando ranking comercial del dashboard:', error);
-          return of({ data: { montoTotal: 0, rankingAsesores: [] } });
+          return of({ data: { montoTotal: 0, rankingAsesores: [], sede: { key: this.sedeRankingSeleccionada || this.sedeActual }, monedaBase: this.monedaRankingComercial } });
         })
       ),
       ventasHistorico: this.historialVentaService.obtenerVentasPaginadas(1, 1000, filtrosUltimosMeses).pipe(
@@ -536,6 +547,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private procesarRankingComercial(data: any): void {
     const totalFacturado = this.obtenerNumeroSeguro(data?.montoTotal);
     const ranking = Array.isArray(data?.rankingAsesores) ? data.rankingAsesores : [];
+    const sedeRanking = this.normalizarSede(data?.sede?.key ?? this.sedeRankingSeleccionada ?? this.sedeActual);
+
+    this.sedeRankingSeleccionada = sedeRanking || this.sedeActual;
+    this.actualizarMonedaRanking(data?.monedaBase);
 
     this.totalFacturadoRanking = totalFacturado;
     this.rankingComercial = ranking
@@ -552,12 +567,67 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .slice(0, 4);
   }
 
+  intercambiarSedeRanking(): void {
+    const siguienteSede = this.sedeSiguienteRankingKey;
+    if (!siguienteSede || this.rankingComercialCargando) {
+      return;
+    }
+
+    this.rankingComercialCargando = true;
+    this.historialVentaService.obtenerEstadisticasFinancieras({
+      ...this.crearFiltroMes(new Date()),
+      sede: siguienteSede
+    }).pipe(
+      finalize(() => {
+        this.rankingComercialCargando = false;
+      })
+    ).subscribe({
+      next: (response) => {
+        this.procesarRankingComercial(response?.data ?? response);
+      },
+      error: (error) => {
+        console.error('Error al intercambiar ranking de sede en dashboard:', error);
+      }
+    });
+  }
+
   private obtenerFechaVenta(venta: any): string | null {
     return venta?.fecha ?? venta?.auditoria?.fechaCreacion ?? venta?.created_at ?? null;
   }
 
   private normalizarSede(sede: string | null | undefined): string {
     return (sede ?? 'sin-sede').toString().trim().toLowerCase();
+  }
+
+  private formatearNombreSede(sede: string | null | undefined): string {
+    const sedeNormalizada = this.normalizarSede(sede);
+    const sedeInfo = this.userStateService.getSedePorKey(sedeNormalizada);
+    const nombreBase = (sedeInfo?.nombre || sedeNormalizada || 'tu sede').replace(/^sede\s+/i, '').replace(/_/g, ' ');
+    return nombreBase.replace(/\b\w/g, char => char.toUpperCase());
+  }
+
+  private actualizarMonedaRanking(monedaBase: string | null | undefined): void {
+    const monedaNormalizada = `${monedaBase || ''}`.trim().toLowerCase();
+
+    switch (monedaNormalizada) {
+      case 'euro':
+      case 'eur':
+        this.monedaRankingComercial = 'EUR';
+        this.simboloRankingComercial = '€';
+        break;
+      case 'bolivar':
+      case 'ves':
+      case 'bs':
+        this.monedaRankingComercial = 'VES';
+        this.simboloRankingComercial = 'Bs';
+        break;
+      case 'dolar':
+      case 'usd':
+      default:
+        this.monedaRankingComercial = 'USD';
+        this.simboloRankingComercial = '$';
+        break;
+    }
   }
 
   private obtenerSedesComparables(): string[] {
@@ -687,21 +757,60 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return ['admin', 'gerente'].includes(key) && !!this.datosComparativa;
   }
 
+  get puedeIntercambiarSedeRanking(): boolean {
+    const key = this.rolUsuario?.key ?? '';
+    return ['admin', 'gerente'].includes(key) && this.obtenerSedesComparables().length > 1;
+  }
+
+  get mostrarTarjetaRankingComercial(): boolean {
+    return this.rankingComercialCargando
+      || this.rankingComercial.length > 0
+      || this.totalFacturadoRanking > 0
+      || this.puedeIntercambiarSedeRanking;
+  }
+
+  get tieneRankingComercial(): boolean {
+    return this.rankingComercial.length > 0;
+  }
+
   get nombreSedeVisible(): string {
-    const sede = (this.sedeActual || 'tu sede').replace(/_/g, ' ');
-    return sede.replace(/\b\w/g, char => char.toUpperCase());
+    return this.formatearNombreSede(this.sedeActual);
+  }
+
+  get nombreSedeRankingVisible(): string {
+    return this.formatearNombreSede(this.sedeRankingSeleccionada || this.sedeActual);
+  }
+
+  get sedeSiguienteRankingKey(): string | null {
+    const sedesComparables = this.obtenerSedesComparables();
+    if (sedesComparables.length <= 1) {
+      return null;
+    }
+
+    const sedeActualRanking = this.normalizarSede(this.sedeRankingSeleccionada || this.sedeActual);
+    const indiceActual = sedesComparables.indexOf(sedeActualRanking);
+
+    if (indiceActual === -1) {
+      return sedesComparables[0];
+    }
+
+    return sedesComparables[(indiceActual + 1) % sedesComparables.length];
+  }
+
+  get nombreSedeSiguienteRankingVisible(): string {
+    return this.formatearNombreSede(this.sedeSiguienteRankingKey || this.sedeActual);
   }
 
   formatearMontoDashboard(valor: number): string {
     try {
-      return new Intl.NumberFormat(this.monedaDashboard === 'VES' ? 'es-VE' : 'en-US', {
+      return new Intl.NumberFormat(this.monedaRankingComercial === 'VES' ? 'es-VE' : 'en-US', {
         style: 'currency',
-        currency: this.monedaDashboard,
+        currency: this.monedaRankingComercial,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       }).format(this.obtenerNumeroSeguro(valor));
     } catch {
-      return `${this.simboloMonedaDashboard}${this.obtenerNumeroSeguro(valor).toFixed(2)}`;
+      return `${this.simboloRankingComercial}${this.obtenerNumeroSeguro(valor).toFixed(2)}`;
     }
   }
 

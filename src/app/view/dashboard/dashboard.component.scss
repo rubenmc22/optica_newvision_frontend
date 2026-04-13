@@ -428,8 +428,20 @@
   padding: 1.2rem;
 }
 
+.leaderboard-header-main {
+  min-width: 0;
+}
+
+.leaderboard-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .leaderboard-scope {
-  margin-top: 0.8rem;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -446,9 +458,81 @@
   font-size: 0.82rem;
 }
 
+.leaderboard-switch {
+  width: 2.45rem;
+  height: 2.45rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(21, 95, 115, 0.16);
+  border-radius: 14px;
+  background: #ffffff;
+  color: #155f73;
+  box-shadow: 0 10px 22px rgba(23, 52, 65, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.leaderboard-switch:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(21, 95, 115, 0.28);
+  box-shadow: 0 14px 24px rgba(23, 52, 65, 0.12);
+}
+
+.leaderboard-switch:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.leaderboard-switch i {
+  font-size: 1rem;
+}
+
+.leaderboard-switch.is-loading i {
+  animation: dashboard-spin 0.85s linear infinite;
+}
+
 .leaderboard-body {
   display: grid;
   gap: 0.9rem;
+}
+
+.leaderboard-empty {
+  display: grid;
+  gap: 0.7rem;
+  justify-items: start;
+  padding: 1rem;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(229, 241, 244, 0.72) 0%, rgba(255, 255, 255, 0.9) 100%);
+  border: 1px dashed rgba(21, 95, 115, 0.22);
+}
+
+.leaderboard-empty__icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: rgba(21, 95, 115, 0.1);
+  color: #155f73;
+}
+
+.leaderboard-empty__icon i {
+  font-size: 1.15rem;
+}
+
+.leaderboard-empty.is-loading .leaderboard-empty__icon i {
+  animation: dashboard-spin 0.85s linear infinite;
+}
+
+.leaderboard-empty strong {
+  color: #16353f;
+  font-size: 1rem;
+}
+
+.leaderboard-empty p {
+  margin: 0;
+  color: #617682;
+  line-height: 1.55;
 }
 
 .leader-highlight {
@@ -517,6 +601,16 @@
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
+}
+
+@keyframes dashboard-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .leader-row__main strong,
