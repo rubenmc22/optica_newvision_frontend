@@ -1824,9 +1824,8 @@ CONFIGURACION GENERAL - CORREOS DE NOTIFICACIONES
 
 
 CONFIGURACION GENERAL - METODOS DE PAGO
-
 //catalogo de bancos receptores
-//cada banco incluye el campo activo para soportar desactivacion logica
+//cada banco se administra individualmente
 //GET /configuracion/bancos_receptores-get
 {
     "message": "Catálogo de bancos disponible",
@@ -1840,127 +1839,32 @@ CONFIGURACION GENERAL - METODOS DE PAGO
         {
             "codigo": "0104",
             "nombre": "Venezolano de Crédito",
-            "scope": "national"
-        },
-        {
-            "codigo": "0105",
-            "nombre": "Mercantil",
-            "scope": "national"
+            "scope": "national",
+            "activo": true
         },
         {
             "codigo": "0108",
             "nombre": "Banco Provincial",
-            "scope": "national"
-        },
-        {
-            "codigo": "0114",
-            "nombre": "Bancaribe",
-            "scope": "national"
-        },
-        {
-            "codigo": "0115",
-            "nombre": "Banco Exterior",
-            "scope": "national"
-        },
-        {
-            "codigo": "0128",
-            "nombre": "Banco Caroni",
-            "scope": "national"
+            "scope": "national",
+            "activo": true
         },
         {
             "codigo": "0134",
             "nombre": "Banesco",
-            "scope": "national"
-        },
-        {
-            "codigo": "0137",
-            "nombre": "Banco Sofitasa",
-            "scope": "national"
-        },
-        {
-            "codigo": "0138",
-            "nombre": "Banco Plaza",
-            "scope": "national"
-        },
-        {
-            "codigo": "0146",
-            "nombre": "Banco de la Gente Emprendedora",
-            "scope": "national"
-        },
-        {
-            "codigo": "0151",
-            "nombre": "Banco Fondo Común",
-            "scope": "national"
-        },
-        {
-            "codigo": "0156",
-            "nombre": "100% Banco",
-            "scope": "national"
-        },
-        {
-            "codigo": "0157",
-            "nombre": "DelSur",
-            "scope": "national"
-        },
-        {
-            "codigo": "0163",
-            "nombre": "Banco del Tesoro",
-            "scope": "national"
-        },
-        {
-            "codigo": "0166",
-            "nombre": "Banco Agrícola de Venezuela",
-            "scope": "national"
-        },
-        {
-            "codigo": "0168",
-            "nombre": "Bancrecer",
-            "scope": "national"
-        },
-        {
-            "codigo": "0169",
-            "nombre": "Mi Banco",
-            "scope": "national"
-        },
-        {
-            "codigo": "0171",
-            "nombre": "Banco Activo",
-            "scope": "national"
+            "scope": "national",
+            "activo": true
         },
         {
             "codigo": "0172",
             "nombre": "Bancamiga",
-            "scope": "national"
-        },
-        {
-            "codigo": "0173",
-            "nombre": "Banco Internacional de Desarrollo",
-            "scope": "national"
-        },
-        {
-            "codigo": "0174",
-            "nombre": "Banplus",
-            "scope": "national"
-        },
-        {
-            "codigo": "0175",
-            "nombre": "Banco Bicentenario del Pueblo",
-            "scope": "national"
-        },
-        {
-            "codigo": "0177",
-            "nombre": "Banco de la Fuerza Armada Nacional Bolivariana",
-            "scope": "national"
+            "scope": "national",
+            "activo": true
         },
         {
             "codigo": "0191",
             "nombre": "Banco Nacional de Crédito",
-            "scope": "national"
-        },
-        {
-            "codigo": "0601",
-            "nombre": "Instituto Municipal de Crédito Popular",
-            "scope": "national"
+            "scope": "national",
+            "activo": true
         },
         {
             "codigo": "BOFAUS3N",
@@ -1971,352 +1875,55 @@ CONFIGURACION GENERAL - METODOS DE PAGO
         {
             "codigo": "CHASUS33",
             "nombre": "JPMorgan Chase Bank",
-            "scope": "international"
-        },
-        {
-            "codigo": "CITIUS33",
-            "nombre": "Citibank N.A.",
-            "scope": "international"
-        },
-        {
-            "codigo": "WFBIUS6S",
-            "nombre": "Wells Fargo Bank",
-            "scope": "international"
-        },
-        {
-            "codigo": "USBKUS44",
-            "nombre": "U.S. Bank",
-            "scope": "international"
-        },
-        {
-            "codigo": "PNCCUS33",
-            "nombre": "PNC Bank",
-            "scope": "international"
+            "scope": "international",
+            "activo": true
         }
     ]
 }
 
-//get configuracion de metodos de pago
-//GET /configuracion/metodos_pago_config-get
+//guardar banco receptor
+//POST /configuracion/bancos_receptores-save
 {
-    "message": "Métodos de pago configurables obtenidos correctamente",
-    "metodosPago": {
-        "catalogoBancos": [
-            {
-                "codigo": "0102",
-                "nombre": "Banco de Venezuela",
-                "scope": "national",
-                "activo": true
-            },
-            {
-                "codigo": "0104",
-                "nombre": "Venezolano de Crédito",
-                "scope": "national"
-            },
-            {
-                "codigo": "0105",
-                "nombre": "Mercantil",
-                "scope": "national"
-            },
-            {
-                "codigo": "0108",
-                "nombre": "Banco Provincial",
-                "scope": "national"
-            },
-            {
-                "codigo": "0114",
-                "nombre": "Bancaribe",
-                "scope": "national"
-            },
-            {
-                "codigo": "0115",
-                "nombre": "Banco Exterior",
-                "scope": "national"
-            },
-            {
-                "codigo": "0128",
-                "nombre": "Banco Caroni",
-                "scope": "national"
-            },
-            {
-                "codigo": "0134",
-                "nombre": "Banesco",
-                "scope": "national"
-            },
-            {
-                "codigo": "0137",
-                "nombre": "Banco Sofitasa",
-                "scope": "national"
-            },
-            {
-                "codigo": "0138",
-                "nombre": "Banco Plaza",
-                "scope": "national"
-            },
-            {
-                "codigo": "0146",
-                "nombre": "Banco de la Gente Emprendedora",
-                "scope": "national"
-            },
-            {
-                "codigo": "0151",
-                "nombre": "Banco Fondo Común",
-                "scope": "national"
-            },
-            {
-                "codigo": "0156",
-                "nombre": "100% Banco",
-                "scope": "national"
-            },
-            {
-                "codigo": "0157",
-                "nombre": "DelSur",
-                "scope": "national"
-            },
-            {
-                "codigo": "0163",
-                "nombre": "Banco del Tesoro",
-                "scope": "national"
-            },
-            {
-                "codigo": "0166",
-                "nombre": "Banco Agrícola de Venezuela",
-                "scope": "national"
-            },
-            {
-                "codigo": "0168",
-                "nombre": "Bancrecer",
-                "scope": "national"
-            },
-            {
-                "codigo": "0169",
-                "nombre": "Mi Banco",
-                "scope": "national"
-            },
-            {
-                "codigo": "0171",
-                "nombre": "Banco Activo",
-                "scope": "national"
-            },
-            {
-                "codigo": "0172",
-                "nombre": "Bancamiga",
-                "scope": "national"
-            },
-            {
-                "codigo": "0173",
-                "nombre": "Banco Internacional de Desarrollo",
-                "scope": "national"
-            },
-            {
-                "codigo": "0174",
-                "nombre": "Banplus",
-                "scope": "national"
-            },
-            {
-                "codigo": "0175",
-                "nombre": "Banco Bicentenario del Pueblo",
-                "scope": "national"
-            },
-            {
-                "codigo": "0177",
-                "nombre": "Banco de la Fuerza Armada Nacional Bolivariana",
-                "scope": "national"
-            },
-            {
-                "codigo": "0191",
-                "nombre": "Banco Nacional de Crédito",
-                "scope": "national"
-            },
-            {
-                "codigo": "0601",
-                "nombre": "Instituto Municipal de Crédito Popular",
-                "scope": "national"
-            },
-            {
-                "codigo": "BOFAUS3N",
-                "nombre": "Bank of America (BOFA)",
-                "scope": "international",
-                "activo": true
-            }
-        ],
-        "metodos": [
-            {
-                "key": "efectivo",
-                "label": "Efectivo",
-                "description": "Pago inmediato en caja para operaciones presenciales.",
-                "enabled": true,
-                "currency": "MULTI",
-                "requiresReceiverAccount": false,
-                "isCustom": false,
-                "accounts": []
-            },
-            {
-                "key": "punto_de_venta",
-                "label": "Punto de Venta",
-                "description": "Cobro con tarjetas procesadas a través de puntos de venta físicos internos.",
-                "enabled": true,
-                "currency": "VES",
-                "requiresReceiverAccount": true,
-                "isCustom": false,
-                "accounts": [
-                    {
-                        "id": "punto-1",
-                        "bank": "Bancamiga",
-                        "bankCode": "0172",
-                        "ownerName": "",
-                        "ownerId": "",
-                        "phone": "",
-                        "email": "",
-                        "walletAddress": "",
-                        "accountDescription": "Punto de venta interno - Óptica Principal"
-                    },
-                    {
-                        "id": "punto-2",
-                        "bank": "Banco Nacional de Crédito",
-                        "bankCode": "0191",
-                        "ownerName": "",
-                        "ownerId": "",
-                        "phone": "",
-                        "email": "",
-                        "walletAddress": "",
-                        "accountDescription": "Punto de venta interno - Óptica Sucursal"
-                    }
-                ]
-            },
-            {
-                "key": "pago_movil",
-                "label": "Pago Móvil",
-                "description": "Pago móvil interbancario con selección de banco receptor.",
-                "enabled": true,
-                "currency": "VES",
-                "requiresReceiverAccount": true,
-                "isCustom": false,
-                "accounts": [
-                    {
-                        "id": "pm-1",
-                        "bank": "Banco Provincial",
-                        "bankCode": "0108",
-                        "ownerName": "Ruben Martinez",
-                        "ownerId": "24367965",
-                        "phone": "04123920817",
-                        "email": "",
-                        "walletAddress": "",
-                        "accountDescription": "Cuenta personal de Ruben"
-                    },
-                    {
-                        "id": "pm-2",
-                        "bank": "Banco de Venezuela",
-                        "bankCode": "0102",
-                        "ownerName": "Jesus Castro",
-                        "ownerId": "25874563",
-                        "phone": "04241456878",
-                        "email": "",
-                        "walletAddress": "",
-                        "accountDescription": "Cuenta personal de Jesus"
-                    }
-                ]
-            },
-            {
-                "key": "transferencia",
-                "label": "Transferencia",
-                "description": "Transferencia bancaria tradicional a cuentas receptoras autorizadas.",
-                "enabled": true,
-                "currency": "VES",
-                "requiresReceiverAccount": true,
-                "isCustom": false,
-                "accounts": [
-                    {
-                        "id": "trf-1",
-                        "bank": "Banco de Venezuela",
-                        "bankCode": "0102",
-                        "ownerName": "Ruben Perez",
-                        "ownerId": "V-12345678",
-                        "phone": "04121234567",
-                        "email": "",
-                        "walletAddress": "",
-                        "accountDescription": "Cuenta personal de Ruben"
-                    }
-                ]
-            },
-            {
-                "key": "zelle",
-                "label": "Zelle",
-                "description": "Transferencia electrónica en USD con destino operativo definido.",
-                "enabled": true,
-                "currency": "USD",
-                "requiresReceiverAccount": true,
-                "isCustom": false,
-                "accounts": [
-                    {
-                        "id": "zelle-1",
-                        "bank": "Bank of America (BOFA)",
-                        "bankCode": "BOFAUS3N",
-                        "ownerName": "Ruben Perez",
-                        "ownerId": "V-12345678",
-                        "phone": "+15875551234",
-                        "email": "ruben.perez@email.com",
-                        "walletAddress": "",
-                        "accountDescription": "Cuenta personal de Ruben (Zelle)"
-                    }
-                ]
-            },
-            {
-                "key": "binance",
-                "label": "Binance",
-                "description": "Recepción de pagos digitales con wallet operativa y titular configurado.",
-                "enabled": false,
-                "currency": "USDT",
-                "requiresReceiverAccount": true,
-                "isCustom": false,
-                "accounts": [
-                    {
-                        "id": "binance-1",
-                        "bank": "",
-                        "bankCode": "",
-                        "ownerName": "Ruben Martinez",
-                        "ownerId": "",
-                        "phone": "",
-                        "email": "",
-                        "walletAddress": "TRX-TN8J8A2EXAMPLEWALLET001",
-                        "accountDescription": "Wallet principal para cobros por Binance Pay"
-                    }
-                ]
-            }
-        ],
-        "ultimaActualizacion": "2026-04-11T18:30:00.000Z"
+    "codigo": "CITIUS33",
+    "nombre": "Citibank N.A.",
+    "scope": "international",
+    "activo": true
+}
+
+{
+    "message": "Banco receptor guardado correctamente",
+    "banco": {
+        "codigo": "CITIUS33",
+        "nombre": "Citibank N.A.",
+        "scope": "international",
+        "activo": true
     }
 }
 
-//guardar configuracion de metodos de pago
-//POST /configuracion/metodos_pago_config-save
+//actualizar banco receptor
+//PUT /configuracion/bancos_receptores-update/BOFAUS3N
 {
-    "catalogoBancos": [
-        {
-            "codigo": "0102",
-            "nombre": "Banco de Venezuela",
-            "scope": "national",
-            "activo": true
-        },
-        {
-            "codigo": "0172",
-            "nombre": "Bancamiga",
-            "scope": "national",
-            "activo": true
-        },
-        {
-            "codigo": "0191",
-            "nombre": "Banco Nacional de Crédito",
-            "scope": "national",
-            "activo": true
-        },
-        {
-            "codigo": "BOFAUS3N",
-            "nombre": "Bank of America (BOFA)",
-            "scope": "international",
-            "activo": true
-        }
-    ],
+    "nombre": "Bank of America (BOFA)",
+    "scope": "international",
+    "activo": false
+}
+
+{
+    "message": "Banco receptor actualizado correctamente",
+    "banco": {
+        "codigo": "BOFAUS3N",
+        "nombre": "Bank of America (BOFA)",
+        "scope": "international",
+        "activo": false
+    }
+}
+
+//get metodos de pago configurables
+//cada metodo se administra individualmente
+//las cuentas receptoras se envian anidadas dentro del metodo
+//GET /configuracion/metodos_pago_config-get
+{
+    "message": "Métodos de pago configurables obtenidos correctamente",
     "metodos": [
         {
             "key": "efectivo",
@@ -2351,158 +1958,10 @@ CONFIGURACION GENERAL - METODOS DE PAGO
             ]
         },
         {
-            "key": "binance",
-            "label": "Binance",
-            "description": "Recepción de pagos digitales con wallet operativa y titular configurado.",
-            "enabled": true,
-            "currency": "USDT",
-            "requiresReceiverAccount": true,
-            "isCustom": false,
-            "accounts": [
-                {
-                    "id": "binance-1",
-                    "bank": "",
-                    "bankCode": "",
-                    "ownerName": "Ruben Martinez",
-                    "ownerId": "",
-                    "phone": "",
-                    "email": "",
-                    "walletAddress": "TRX-TN8J8A2EXAMPLEWALLET001",
-                    "accountDescription": "Wallet principal para cobros por Binance Pay"
-                }
-            ]
-        }
-    ]
-}
-
-{
-    "message": "Configuración de métodos de pago guardada correctamente",
-    "metodosPago": {
-        "ultimaActualizacion": "2026-04-11T18:40:00.000Z",
-        "catalogoBancos": [
-            {
-                "codigo": "0102",
-                "nombre": "Banco de Venezuela",
-                "scope": "national",
-                "activo": true
-            },
-            {
-                "codigo": "0172",
-                "nombre": "Bancamiga",
-                "scope": "national",
-                "activo": true
-            },
-            {
-                "codigo": "0191",
-                "nombre": "Banco Nacional de Crédito",
-                "scope": "national",
-                "activo": true
-            },
-            {
-                "codigo": "BOFAUS3N",
-                "nombre": "Bank of America (BOFA)",
-                "scope": "international",
-                "activo": true
-            }
-        ],
-        "metodos": [
-            {
-                "key": "efectivo",
-                "label": "Efectivo",
-                "description": "Pago inmediato en caja para operaciones presenciales.",
-                "enabled": true,
-                "currency": "MULTI",
-                "requiresReceiverAccount": false,
-                "isCustom": false,
-                "accounts": []
-            },
-            {
-                "key": "punto_de_venta",
-                "label": "Punto de Venta",
-                "description": "Cobro con tarjetas procesadas a través de puntos de venta físicos internos.",
-                "enabled": true,
-                "currency": "VES",
-                "requiresReceiverAccount": true,
-                "isCustom": false,
-                "accounts": [
-                    {
-                        "id": "punto-1",
-                        "bank": "Bancamiga",
-                        "bankCode": "0172",
-                        "ownerName": "",
-                        "ownerId": "",
-                        "phone": "",
-                        "email": "",
-                        "walletAddress": "",
-                        "accountDescription": "Punto de venta interno - Óptica Principal"
-                    }
-                ]
-            },
-            {
-                "key": "binance",
-                "label": "Binance",
-                "description": "Recepción de pagos digitales con wallet operativa y titular configurado.",
-                "enabled": true,
-                "currency": "USDT",
-                "requiresReceiverAccount": true,
-                "isCustom": false,
-                "accounts": [
-                    {
-                        "id": "binance-1",
-                        "bank": "",
-                        "bankCode": "",
-                        "ownerName": "Ruben Martinez",
-                        "ownerId": "",
-                        "phone": "",
-                        "email": "",
-                        "walletAddress": "TRX-TN8J8A2EXAMPLEWALLET001",
-                        "accountDescription": "Wallet principal para cobros por Binance Pay"
-                    }
-                ]
-            }
-        ]
-    }
-}
-
-//actualizar configuracion de metodos de pago
-//PUT /configuracion/metodos_pago_config-update
-{
-    "catalogoBancos": [
-        {
-            "codigo": "0108",
-            "nombre": "Banco Provincial",
-            "scope": "national",
-            "activo": true
-        },
-        {
-            "codigo": "BOFAUS3N",
-            "nombre": "Bank of America (BOFA)",
-            "scope": "international",
-            "activo": false
-        },
-        {
-            "codigo": "CHASUS33",
-            "nombre": "JPMorgan Chase Bank",
-            "scope": "international",
-            "activo": true
-        }
-    ],
-    "metodos": [
-        {
-            "key": "efectivo",
-            "label": "Efectivo",
-            "description": "Pago inmediato en caja para operaciones presenciales.",
-            "enabled": true,
-            "currency": "MULTI",
-            "requiresReceiverAccount": false,
-            "isCustom": false,
-            "accounts": []
-        },
-        {
             "key": "pago_movil",
             "label": "Pago Móvil",
             "description": "Pago móvil interbancario con selección de banco receptor.",
-            "enabled": false,
+            "enabled": true,
             "currency": "VES",
             "requiresReceiverAccount": true,
             "isCustom": false,
@@ -2521,122 +1980,131 @@ CONFIGURACION GENERAL - METODOS DE PAGO
             ]
         },
         {
-            "key": "binance",
-            "label": "Binance",
-            "description": "Recepción de pagos digitales con wallet operativa y titular configurado.",
+            "key": "zelle",
+            "label": "Zelle",
+            "description": "Transferencia electrónica en USD con destino operativo definido.",
             "enabled": true,
-            "currency": "BTC",
+            "currency": "USD",
             "requiresReceiverAccount": true,
             "isCustom": false,
             "accounts": [
                 {
-                    "id": "binance-1",
-                    "bank": "",
-                    "bankCode": "",
-                    "ownerName": "Ruben Martinez",
-                    "ownerId": "",
-                    "phone": "",
-                    "email": "",
-                    "walletAddress": "bc1qexamplewallet000123456789xyz",
-                    "accountDescription": "Wallet BTC principal"
+                    "id": "zelle-1",
+                    "bank": "Bank of America (BOFA)",
+                    "bankCode": "BOFAUS3N",
+                    "ownerName": "Ruben Perez",
+                    "ownerId": "V-12345678",
+                    "phone": "+15875551234",
+                    "email": "ruben.perez@email.com",
+                    "walletAddress": "",
+                    "accountDescription": "Cuenta personal de Ruben (Zelle)"
                 }
             ]
+        }
+    ],
+    "ultimaActualizacion": "2026-04-11T18:30:00.000Z"
+}
+
+//guardar metodo de pago
+//POST /configuracion/metodos_pago_config-save
+{
+    "key": "binance",
+    "label": "Binance",
+    "description": "Recepción de pagos digitales con wallet operativa y titular configurado.",
+    "enabled": true,
+    "currency": "USDT",
+    "requiresReceiverAccount": true,
+    "isCustom": false,
+    "accounts": [
+        {
+            "id": "binance-1",
+            "bank": "",
+            "bankCode": "",
+            "ownerName": "Ruben Martinez",
+            "ownerId": "",
+            "phone": "",
+            "email": "",
+            "walletAddress": "TRX-TN8J8A2EXAMPLEWALLET001",
+            "accountDescription": "Wallet principal para cobros por Binance Pay"
         }
     ]
 }
 
 {
-    "message": "Configuración de métodos de pago actualizada correctamente",
-    "metodosPago": {
-        "ultimaActualizacion": "2026-04-11T19:05:00.000Z",
-        "catalogoBancos": [
+    "message": "Método de pago guardado correctamente",
+    "metodo": {
+        "key": "binance",
+        "label": "Binance",
+        "description": "Recepción de pagos digitales con wallet operativa y titular configurado.",
+        "enabled": true,
+        "currency": "USDT",
+        "requiresReceiverAccount": true,
+        "isCustom": false,
+        "accounts": [
             {
-                "codigo": "0102",
-                "nombre": "Banco de Venezuela",
-                "scope": "national",
-                "activo": true
-            },
-            {
-                "codigo": "0108",
-                "nombre": "Banco Provincial",
-                "scope": "national",
-                "activo": true
-            },
-            {
-                "codigo": "0172",
-                "nombre": "Bancamiga",
-                "scope": "national",
-                "activo": true
-            },
-            {
-                "codigo": "BOFAUS3N",
-                "nombre": "Bank of America (BOFA)",
-                "scope": "international",
-                "activo": false
-            },
-            {
-                "codigo": "CHASUS33",
-                "nombre": "JPMorgan Chase Bank",
-                "scope": "international",
-                "activo": true
-            }
-        ],
-        "metodos": [
-            {
-                "key": "efectivo",
-                "label": "Efectivo",
-                "description": "Pago inmediato en caja para operaciones presenciales.",
-                "enabled": true,
-                "currency": "MULTI",
-                "requiresReceiverAccount": false,
-                "isCustom": false,
-                "accounts": []
-            },
-            {
-                "key": "pago_movil",
-                "label": "Pago Móvil",
-                "description": "Pago móvil interbancario con selección de banco receptor.",
-                "enabled": false,
-                "currency": "VES",
-                "requiresReceiverAccount": true,
-                "isCustom": false,
-                "accounts": [
-                    {
-                        "id": "pm-1",
-                        "bank": "Banco Provincial",
-                        "bankCode": "0108",
-                        "ownerName": "Ruben Martinez",
-                        "ownerId": "24367965",
-                        "phone": "04123920817",
-                        "email": "",
-                        "walletAddress": "",
-                        "accountDescription": "Cuenta personal de Ruben"
-                    }
-                ]
-            },
-            {
-                "key": "binance",
-                "label": "Binance",
-                "description": "Recepción de pagos digitales con wallet operativa y titular configurado.",
-                "enabled": true,
-                "currency": "BTC",
-                "requiresReceiverAccount": true,
-                "isCustom": false,
-                "accounts": [
-                    {
-                        "id": "binance-1",
-                        "bank": "",
-                        "bankCode": "",
-                        "ownerName": "Ruben Martinez",
-                        "ownerId": "",
-                        "phone": "",
-                        "email": "",
-                        "walletAddress": "bc1qexamplewallet000123456789xyz",
-                        "accountDescription": "Wallet BTC principal"
-                    }
-                ]
+                "id": "binance-1",
+                "bank": "",
+                "bankCode": "",
+                "ownerName": "Ruben Martinez",
+                "ownerId": "",
+                "phone": "",
+                "email": "",
+                "walletAddress": "TRX-TN8J8A2EXAMPLEWALLET001",
+                "accountDescription": "Wallet principal para cobros por Binance Pay"
             }
         ]
-    }
+    },
+    "ultimaActualizacion": "2026-04-11T18:40:00.000Z"
+}
+
+//actualizar metodo de pago
+//PUT /configuracion/metodos_pago_config-update/pago_movil
+{
+    "label": "Pago Móvil",
+    "description": "Pago móvil interbancario con selección de banco receptor.",
+    "enabled": false,
+    "currency": "VES",
+    "requiresReceiverAccount": true,
+    "isCustom": false,
+    "accounts": [
+        {
+            "id": "pm-1",
+            "bank": "Banco Provincial",
+            "bankCode": "0108",
+            "ownerName": "Ruben Martinez",
+            "ownerId": "24367965",
+            "phone": "04123920817",
+            "email": "",
+            "walletAddress": "",
+            "accountDescription": "Cuenta personal de Ruben"
+        }
+    ]
+}
+
+{
+    "message": "Método de pago actualizado correctamente",
+    "metodo": {
+        "key": "pago_movil",
+        "label": "Pago Móvil",
+        "description": "Pago móvil interbancario con selección de banco receptor.",
+        "enabled": false,
+        "currency": "VES",
+        "requiresReceiverAccount": true,
+        "isCustom": false,
+        "accounts": [
+            {
+                "id": "pm-1",
+                "bank": "Banco Provincial",
+                "bankCode": "0108",
+                "ownerName": "Ruben Martinez",
+                "ownerId": "24367965",
+                "phone": "04123920817",
+                "email": "",
+                "walletAddress": "",
+                "accountDescription": "Cuenta personal de Ruben"
+            }
+        ]
+    },
+    "ultimaActualizacion": "2026-04-11T19:05:00.000Z"
 }
 
