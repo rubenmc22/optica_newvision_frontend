@@ -41,6 +41,7 @@ import { clientesComponent } from './clientes/clientes.component';
 import { GestionOrdenesTrabajoComponent } from './gestion-ordenes-trabajo/gestion-ordenes-trabajo.component';
 import { DetalleOrdenComponent } from './gestion-ordenes-trabajo/detalle-orden/detalle-orden.component';
 import { PresupuestoComponent } from './ventas/presupuesto/presupuesto.component';
+import { RendimientoComercialComponent } from './ventas/rendimiento-comercial/rendimiento-comercial.component';
 
 
 
@@ -81,6 +82,7 @@ import { NgbDropdownModule } from '@ng-bootstrap/ng-bootstrap';
     VentasDashboardComponent,
     PresupuestoComponent,
     CierreCajaComponent,
+    RendimientoComercialComponent,
     clientesComponent,
     SystemConfigComponent,
     GestionOrdenesTrabajoComponent,

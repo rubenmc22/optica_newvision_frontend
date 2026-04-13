@@ -13,6 +13,7 @@ import { HistorialVentaService } from '../ventas/historial-ventas/historial-vent
 import { OrdenesTrabajoService } from '../gestion-ordenes-trabajo/gestion-ordenes-trabajo.service';
 import { OrdenTrabajo } from '../gestion-ordenes-trabajo/gestion-ordenes-trabajo.model';
 import { UserStateService } from '../../core/services/userState/user-state-service';
+import { SystemConfigService } from '../system-config/system-config.service';
 
 
 @Component({
@@ -22,6 +23,18 @@ import { UserStateService } from '../../core/services/userState/user-state-servi
   styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  rankingComercial: Array<{
+    asesorId: number;
+    asesorNombre: string;
+    ventas: number;
+    facturado: number;
+    cobrado: number;
+    pendiente: number;
+    participacion: number;
+  }> = [];
+  totalFacturadoRanking: number = 0;
+  monedaDashboard: string = 'USD';
+  simboloMonedaDashboard: string = '$';
   rolUsuario: Rol | null = null;
   sedeActual: string = '';
   isLoading: boolean = false;
@@ -77,7 +90,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private ordenesTrabajoService: OrdenesTrabajoService,
     private loader: LoaderService,
     private router: Router,
-    private userStateService: UserStateService
+    private userStateService: UserStateService,
+    private systemConfigService: SystemConfigService
   ) { }
 
   ngOnInit(): void {
@@ -133,6 +147,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private initializePantalla(): void {
+    this.monedaDashboard = this.systemConfigService.getMonedaPrincipal();
+    this.simboloMonedaDashboard = this.systemConfigService.getSimboloMonedaPrincipal();
+
     this.sedesValidas = this.userStateService
       .getSedes()
       .map(sede => this.normalizarSede(sede?.key))
@@ -234,6 +251,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
           return of(this.crearEstadisticasVentasVacias());
         })
       ),
+      rendimientoComercial: this.historialVentaService.obtenerEstadisticasFinancieras(filtrosMes).pipe(
+        catchError(error => {
+          console.error('Error cargando ranking comercial del dashboard:', error);
+          return of({ data: { montoTotal: 0, rankingAsesores: [] } });
+        })
+      ),
       ventasHistorico: this.historialVentaService.obtenerVentasPaginadas(1, 1000, filtrosUltimosMeses).pipe(
         catchError(error => {
           console.error('Error cargando historico de ventas para dashboard:', error);
@@ -250,7 +273,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private procesarDatos(response: any): void {
-    const { pacientes, historias, ventasHoy, ventasMes, ventasHistorico, ordenes } = response;
+    const { pacientes, historias, ventasHoy, ventasMes, rendimientoComercial, ventasHistorico, ordenes } = response;
 
     this.pacientesApi = Array.isArray(pacientes?.pacientes) ? pacientes.pacientes : [];
     this.historiasApi = Array.isArray(historias?.historiales_medicos) ? historias.historiales_medicos : [];
@@ -261,6 +284,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.ventasMes = this.obtenerNumeroSeguro(ventasMes?.ventas);
     this.ventasPendientesMes = this.obtenerNumeroSeguro(ventasMes?.pendientes);
     this.montoVentasMes = this.obtenerNumeroSeguro(ventasMes?.montoTotalGeneral);
+    this.procesarRankingComercial(rendimientoComercial?.data ?? rendimientoComercial);
 
     this.pacientes = Array.isArray(pacientes.pacientes)
       ? pacientes.pacientes.map((p: any): PacienteGrafico => ({
@@ -509,6 +533,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return Number.isFinite(numero) ? numero : 0;
   }
 
+  private procesarRankingComercial(data: any): void {
+    const totalFacturado = this.obtenerNumeroSeguro(data?.montoTotal);
+    const ranking = Array.isArray(data?.rankingAsesores) ? data.rankingAsesores : [];
+
+    this.totalFacturadoRanking = totalFacturado;
+    this.rankingComercial = ranking
+      .map((item: any) => ({
+        asesorId: this.obtenerNumeroSeguro(item?.asesorId),
+        asesorNombre: item?.asesorNombre || 'Sin asesor',
+        ventas: this.obtenerNumeroSeguro(item?.ventas),
+        facturado: this.obtenerNumeroSeguro(item?.facturado),
+        cobrado: this.obtenerNumeroSeguro(item?.cobrado),
+        pendiente: this.obtenerNumeroSeguro(item?.pendiente),
+        participacion: totalFacturado > 0 ? (this.obtenerNumeroSeguro(item?.facturado) / totalFacturado) * 100 : 0
+      }))
+      .sort((a, b) => b.facturado - a.facturado)
+      .slice(0, 4);
+  }
+
   private obtenerFechaVenta(venta: any): string | null {
     return venta?.fecha ?? venta?.auditoria?.fechaCreacion ?? venta?.created_at ?? null;
   }
@@ -583,6 +626,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.router.navigate(['/ventas'], { queryParams: { vista: 'historial-de-ventas' } });
   }
 
+  irARendimientoComercial(): void {
+    this.router.navigate(['/ventas/rendimiento-comercial']);
+  }
+
   irAOrdenes(): void {
     this.router.navigate(['/ordenes-de-trabajo']);
   }
@@ -643,5 +690,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
   get nombreSedeVisible(): string {
     const sede = (this.sedeActual || 'tu sede').replace(/_/g, ' ');
     return sede.replace(/\b\w/g, char => char.toUpperCase());
+  }
+
+  formatearMontoDashboard(valor: number): string {
+    try {
+      return new Intl.NumberFormat(this.monedaDashboard === 'VES' ? 'es-VE' : 'en-US', {
+        style: 'currency',
+        currency: this.monedaDashboard,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(this.obtenerNumeroSeguro(valor));
+    } catch {
+      return `${this.simboloMonedaDashboard}${this.obtenerNumeroSeguro(valor).toFixed(2)}`;
+    }
+  }
+
+  get mejorVendedorDashboard() {
+    return this.rankingComercial[0] ?? null;
+  }
+
+  get rankingComercialSecundario() {
+    return this.rankingComercial.slice(1);
   }
 }

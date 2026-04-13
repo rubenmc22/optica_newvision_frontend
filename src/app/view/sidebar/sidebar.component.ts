@@ -93,7 +93,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
     {
       label: 'Gestión de Ventas',
       icon: 'fas fa-shopping-cart',
-      routerLink: '/ventas',
+      submenu: [
+        { label: 'Ventas', routerLink: '/ventas', roles: ['admin', 'gerente', 'asesor-optico'] },
+        { label: 'Rendimiento Comercial', routerLink: '/ventas/rendimiento-comercial', roles: ['admin', 'gerente', 'asesor-optico'] }
+      ],
       roles: ['admin', 'gerente', 'asesor-optico'],
       underConstruction: false
     },
@@ -215,7 +218,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
       }
 
       if (menu.submenu) {
-        const sub = menu.submenu.find((s: { routerLink: string }) => this.routeMatches(url, s.routerLink));
+        const sub = [...menu.submenu]
+          .sort((a: { routerLink: string }, b: { routerLink: string }) => (b.routerLink?.length || 0) - (a.routerLink?.length || 0))
+          .find((s: { routerLink: string }) => this.routeMatches(url, s.routerLink));
         if (sub) {
           this.selectedMenuLabel = menu.label;
           this.selectedSubmenuLabel = sub.label;

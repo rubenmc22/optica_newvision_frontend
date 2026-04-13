@@ -1,0 +1,227 @@
+<section class="performance-shell">
+  <header class="performance-hero">
+    <div class="performance-hero__copy">
+      <div class="performance-hero__copy-surface">
+        <span class="performance-eyebrow">Gestión de ventas</span>
+        <h1>Rendimiento Comercial</h1>
+        <p>
+          Consulta el pulso del equipo comercial, identifica al vendedor con mejor desempeño y sigue la evolución del
+          periodo sin salir del módulo de ventas.
+        </p>
+      </div>
+    </div>
+
+    <div class="performance-hero__highlight" *ngIf="mejorAsesor as asesor; else emptyHighlight">
+      <span class="performance-hero__badge">{{ etiquetaReconocimiento }}</span>
+      <h2>{{ asesor.asesorNombre }}</h2>
+      <div class="performance-hero__metrics">
+        <div>
+          <small>Facturado</small>
+          <strong>{{ formatearMoneda(asesor.facturado) }}</strong>
+        </div>
+        <div>
+          <small>Ventas cerradas</small>
+          <strong>{{ asesor.ventas }}</strong>
+        </div>
+        <div>
+          <small>Participación</small>
+          <strong>{{ asesor.participacion | number:'1.1-1' }}%</strong>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #emptyHighlight>
+      <div class="performance-hero__highlight is-empty">
+        <span class="performance-hero__badge">Sin ranking</span>
+        <h2>No hay ventas registradas</h2>
+        <p>Cuando existan movimientos, aquí se resaltará el mejor vendedor del periodo.</p>
+      </div>
+    </ng-template>
+  </header>
+
+  <section class="filter-panel">
+    <div class="filter-panel__presets-block">
+      <div class="filter-panel__heading">
+        <span>Filtrado rápido</span>
+        <p>Selecciona un rango predefinido o ajusta el periodo manualmente.</p>
+      </div>
+
+      <div class="filter-panel__presets">
+        <button type="button" class="preset-chip" [class.is-active]="presetActivo === 'hoy'" (click)="aplicarPreset('hoy')">Hoy</button>
+        <button type="button" class="preset-chip" [class.is-active]="presetActivo === '7d'" (click)="aplicarPreset('7d')">7 días</button>
+        <button type="button" class="preset-chip" [class.is-active]="presetActivo === '30d'" (click)="aplicarPreset('30d')">30 días</button>
+        <button type="button" class="preset-chip" [class.is-active]="presetActivo === 'mes-actual'" (click)="aplicarPreset('mes-actual')">Mes actual</button>
+      </div>
+    </div>
+
+    <form class="filter-panel__form" (ngSubmit)="aplicarFiltros()">
+      <label class="filter-field">
+        <span>Desde</span>
+        <input type="date" name="fechaDesde" [(ngModel)]="filtros.fechaDesde">
+      </label>
+
+      <label class="filter-field">
+        <span>Hasta</span>
+        <input type="date" name="fechaHasta" [(ngModel)]="filtros.fechaHasta">
+      </label>
+
+      <div class="filter-panel__actions">
+        <button type="submit" class="btn-primary">Actualizar</button>
+        <button type="button" class="btn-secondary" (click)="limpiarFiltros()">Restablecer</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="kpi-grid" *ngIf="!loading; else loadingBlock">
+    <article class="kpi-card kpi-card--teal">
+      <span>Facturado total</span>
+      <strong>{{ formatearMoneda(totalFacturado) }}</strong>
+      <p>Promedio por vendedor: {{ formatearMoneda(promedioFacturacionPorVendedor) }}</p>
+    </article>
+
+    <article class="kpi-card kpi-card--blue">
+      <span>Total cobrado</span>
+      <strong>{{ formatearMoneda(totalCobrado) }}</strong>
+      <p>Efectividad de cobranza: {{ efectividadCobro | number:'1.1-1' }}%</p>
+    </article>
+
+    <article class="kpi-card kpi-card--amber">
+      <span>Saldo pendiente</span>
+      <strong>{{ formatearMoneda(deudaPendiente) }}</strong>
+      <p>Controla el pendiente por vendedor en la tabla inferior.</p>
+    </article>
+
+    <article class="kpi-card kpi-card--slate">
+      <span>Equipo activo</span>
+      <strong>{{ vendedoresActivos }}</strong>
+      <p>{{ totalVentas }} ventas registradas en el periodo.</p>
+    </article>
+  </section>
+
+  <ng-template #loadingBlock>
+    <section class="state-card state-card--loading">
+      <div class="spinner-border text-light" role="status"></div>
+      <p>Cargando rendimiento comercial...</p>
+    </section>
+  </ng-template>
+
+  <section class="state-card state-card--error" *ngIf="!loading && errorMessage">
+    <i class="bi bi-exclamation-triangle"></i>
+    <p>{{ errorMessage }}</p>
+  </section>
+
+  <section class="insight-grid" *ngIf="!loading && !errorMessage">
+    <article class="insight-card">
+      <span class="insight-card__eyebrow">Lectura rápida</span>
+      <h3>{{ tendenciaPeriodo }}</h3>
+      <p>Usa esta señal para detectar si el equipo viene acelerando o necesita una acción comercial puntual.</p>
+    </article>
+
+    <article class="insight-card insight-card--accent" *ngIf="mejorAsesor as asesor">
+      <span class="insight-card__eyebrow">Líder del periodo</span>
+      <h3>{{ asesor.asesorNombre }}</h3>
+      <p>
+        Ticket promedio de {{ formatearMoneda(asesor.ticketPromedio) }} y {{ obtenerParticipacionTexto(asesor.participacion) }}.
+      </p>
+    </article>
+  </section>
+
+  <section class="charts-grid" *ngIf="!loading && rankingAsesores.length; else emptyState">
+    <article class="chart-card chart-card--wide">
+      <div class="chart-card__header">
+        <div>
+          <span>Top de vendedores</span>
+          <h3>Ranking por facturación</h3>
+        </div>
+      </div>
+      <div class="chart-card__body">
+        <canvas #rankingChart></canvas>
+      </div>
+    </article>
+
+    <article class="chart-card">
+      <div class="chart-card__header">
+        <div>
+          <span>Distribución</span>
+          <h3>Participación comercial</h3>
+        </div>
+      </div>
+      <div class="chart-card__body">
+        <canvas #participacionChart></canvas>
+      </div>
+    </article>
+
+    <article class="chart-card chart-card--wide">
+      <div class="chart-card__header">
+        <div>
+          <span>Evolución</span>
+          <h3>Tendencia facturado vs cobrado</h3>
+        </div>
+      </div>
+      <div class="chart-card__body">
+        <canvas #tendenciaChart></canvas>
+      </div>
+    </article>
+  </section>
+
+  <ng-template #emptyState>
+    <section class="state-card" *ngIf="!loading && !errorMessage">
+      <i class="bi bi-bar-chart"></i>
+      <h3>Sin datos para este rango</h3>
+      <p>Ajusta las fechas o espera nuevos movimientos de ventas para generar el ranking comercial.</p>
+    </section>
+  </ng-template>
+
+  <section class="table-card" *ngIf="!loading && rankingAsesores.length">
+    <div class="table-card__header">
+      <div>
+        <span>Detalle comercial</span>
+        <h3>Desempeño por vendedor</h3>
+      </div>
+      <small>Periodo consultado: {{ filtros.fechaDesde || 'Sin inicio' }} al {{ filtros.fechaHasta || 'Hoy' }}</small>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 performance-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Vendedor</th>
+            <th>Ventas</th>
+            <th>Facturado</th>
+            <th>Cobrado</th>
+            <th>Pendiente</th>
+            <th>Ticket prom.</th>
+            <th>Participación</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let asesor of rankingAsesores; trackBy: trackByAsesor">
+            <td>
+              <span class="ranking-pill">{{ asesor.posicion }}</span>
+            </td>
+            <td>
+              <div class="advisor-cell">
+                <strong>{{ asesor.asesorNombre }}</strong>
+                <small>{{ etiquetaReconocimiento }} {{ asesor.posicion === 1 ? 'actual' : '#' + asesor.posicion }}</small>
+              </div>
+            </td>
+            <td>{{ asesor.ventas }}</td>
+            <td>{{ formatearMoneda(asesor.facturado) }}</td>
+            <td>{{ formatearMoneda(asesor.cobrado) }}</td>
+            <td>{{ formatearMoneda(asesor.pendiente) }}</td>
+            <td>{{ formatearMoneda(asesor.ticketPromedio) }}</td>
+            <td>
+              <div class="participation-cell">
+                <strong>{{ asesor.participacion | number:'1.1-1' }}%</strong>
+                <div class="participation-bar">
+                  <span [style.width.%]="asesor.participacion"></span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>

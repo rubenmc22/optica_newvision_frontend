@@ -103,54 +103,102 @@
       </div>
 
       <div class="col-xl-4">
-        <section class="surface-card surface-card--chart workflow-card h-100">
-          <div class="surface-header">
-            <div>
-              <span class="surface-eyebrow">Órdenes de trabajo</span>
-              <h3 class="surface-title">Flujo actual</h3>
-              <p class="surface-subtitle">Qué está pendiente, en proceso y listo para entregar.</p>
-            </div>
-          </div>
-
-          <div class="surface-body surface-body--chart workflow-body">
-            <div class="workflow-step workflow-step--store">
-              <div class="workflow-step__count">{{ ordenesPorPasarLaboratorio }}</div>
-              <div class="workflow-step__content">
-                <strong>En tienda</strong>
-                <span>Pendientes por pasar a laboratorio</span>
+        <div class="dashboard-stack h-100">
+          <section class="surface-card leaderboard-card" *ngIf="rankingComercial.length">
+            <div class="surface-header surface-header--tight">
+              <div>
+                <span class="surface-eyebrow">Ventas</span>
+                <h3 class="surface-title">Top comercial</h3>
+                <p class="surface-subtitle">Ranking mensual por facturación.</p>
+                <div class="leaderboard-scope">
+                  <i class="bi bi-geo-alt"></i>
+                  <span>Sede actual: {{ nombreSedeVisible }}</span>
+                </div>
               </div>
             </div>
 
-            <div class="workflow-step workflow-step--lab">
-              <div class="workflow-step__count">{{ ordenesEnLaboratorio }}</div>
-              <div class="workflow-step__content">
-                <strong>En laboratorio</strong>
-                <span>Órdenes actualmente en proceso</span>
+            <div class="surface-body leaderboard-body">
+              <article class="leader-highlight" *ngIf="mejorVendedorDashboard as lider">
+                <div class="leader-highlight__meta">
+                  <span class="leader-chip">Vendedor del mes</span>
+                  <strong>{{ lider.asesorNombre }}</strong>
+                  <small>{{ lider.ventas }} ventas cerradas · {{ lider.participacion | number:'1.1-1' }}% de participación</small>
+                </div>
+                <div class="leader-highlight__amount">{{ formatearMontoDashboard(lider.facturado) }}</div>
+              </article>
+
+              <div class="leader-list">
+                <div class="leader-row" *ngFor="let item of rankingComercialSecundario; let i = index">
+                  <div class="leader-row__main">
+                    <span class="leader-rank">{{ i + 2 }}</span>
+                    <div>
+                      <strong>{{ item.asesorNombre }}</strong>
+                      <small>{{ item.ventas }} ventas</small>
+                    </div>
+                  </div>
+                  <div class="leader-row__metric">
+                    <strong>{{ formatearMontoDashboard(item.facturado) }}</strong>
+                    <small>{{ item.participacion | number:'1.1-1' }}%</small>
+                  </div>
+                </div>
+              </div>
+
+              <button class="hero-action hero-action--ghost leaderboard-cta" (click)="irARendimientoComercial()">
+                <i class="fas fa-medal"></i>
+                Ver rendimiento comercial
+              </button>
+            </div>
+          </section>
+
+          <section class="surface-card surface-card--chart workflow-card h-100">
+            <div class="surface-header">
+              <div>
+                <span class="surface-eyebrow">Órdenes de trabajo</span>
+                <h3 class="surface-title">Flujo actual</h3>
+                <p class="surface-subtitle">Qué está pendiente, en proceso y listo para entregar.</p>
               </div>
             </div>
 
-            <div class="workflow-step workflow-step--ready">
-              <div class="workflow-step__count">{{ ordenesListasLaboratorio }}</div>
-              <div class="workflow-step__content">
-                <strong>Listas en laboratorio</strong>
-                <span>Disponibles para recepción en tienda</span>
+            <div class="surface-body surface-body--chart workflow-body">
+              <div class="workflow-step workflow-step--store">
+                <div class="workflow-step__count">{{ ordenesPorPasarLaboratorio }}</div>
+                <div class="workflow-step__content">
+                  <strong>En tienda</strong>
+                  <span>Pendientes por pasar a laboratorio</span>
+                </div>
               </div>
-            </div>
 
-            <div class="workflow-step workflow-step--pickup">
-              <div class="workflow-step__count">{{ ordenesPendienteRetiro }}</div>
-              <div class="workflow-step__content">
-                <strong>Pendiente por retirar</strong>
-                <span>Órdenes listas para entrega al cliente</span>
+              <div class="workflow-step workflow-step--lab">
+                <div class="workflow-step__count">{{ ordenesEnLaboratorio }}</div>
+                <div class="workflow-step__content">
+                  <strong>En laboratorio</strong>
+                  <span>Órdenes actualmente en proceso</span>
+                </div>
               </div>
-            </div>
 
-            <button class="hero-action hero-action--primary workflow-cta" (click)="irAOrdenes()">
-              <i class="fas fa-clipboard-check"></i>
-              Ir al tablero de órdenes
-            </button>
-          </div>
-        </section>
+              <div class="workflow-step workflow-step--ready">
+                <div class="workflow-step__count">{{ ordenesListasLaboratorio }}</div>
+                <div class="workflow-step__content">
+                  <strong>Listas en laboratorio</strong>
+                  <span>Disponibles para recepción en tienda</span>
+                </div>
+              </div>
+
+              <div class="workflow-step workflow-step--pickup">
+                <div class="workflow-step__count">{{ ordenesPendienteRetiro }}</div>
+                <div class="workflow-step__content">
+                  <strong>Pendiente por retirar</strong>
+                  <span>Órdenes listas para entrega al cliente</span>
+                </div>
+              </div>
+
+              <button class="hero-action hero-action--primary workflow-cta" (click)="irAOrdenes()">
+                <i class="fas fa-clipboard-check"></i>
+                Ir al tablero de órdenes
+              </button>
+            </div>
+          </section>
+        </div>
       </div>
     </div>
 

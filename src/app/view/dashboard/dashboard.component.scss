@@ -419,6 +419,137 @@
   padding-top: 0;
 }
 
+.dashboard-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.leaderboard-card {
+  padding: 1.2rem;
+}
+
+.leaderboard-scope {
+  margin-top: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.78rem;
+  border-radius: 999px;
+  background: rgba(21, 95, 115, 0.08);
+  border: 1px solid rgba(21, 95, 115, 0.12);
+  color: #155f73;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.leaderboard-scope i {
+  font-size: 0.82rem;
+}
+
+.leaderboard-body {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.leader-highlight {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #2c3e50 0%, #3a7bd5 100%);
+  color: #f7fbfd;
+  box-shadow: 0 18px 32px rgba(23, 52, 65, 0.14);
+}
+
+.leader-highlight__meta {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.leader-highlight__meta strong {
+  font-size: 1.2rem;
+  line-height: 1.2;
+  color: #f8fbff;
+}
+
+.leader-highlight__meta small,
+.leader-highlight__amount {
+  color: rgba(247, 251, 253, 0.84);
+}
+
+.leader-chip {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1f3440;
+  background: linear-gradient(135deg, #f2b134, #db8f00);
+}
+
+.leader-highlight__amount {
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.leader-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.leader-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f3f8fa 100%);
+  border: 1px solid rgba(22, 53, 63, 0.08);
+}
+
+.leader-row__main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.leader-row__main strong,
+.leader-row__metric strong {
+  display: block;
+  color: #16353f;
+}
+
+.leader-row__main small,
+.leader-row__metric small {
+  color: #617682;
+}
+
+.leader-row__metric {
+  text-align: right;
+}
+
+.leader-rank {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  color: #155f73;
+  background: #e5f1f4;
+  flex-shrink: 0;
+}
+
+.leaderboard-cta {
+  width: 100%;
+}
+
 .workflow-body {
   display: flex;
   flex-direction: column;
@@ -587,6 +718,14 @@
 
   .quick-actions-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .leader-row {
+    grid-template-columns: 1fr;
+  }
+
+  .leader-row__metric {
+    text-align: left;
   }
 }
 
