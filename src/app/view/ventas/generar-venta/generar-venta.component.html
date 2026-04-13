@@ -413,6 +413,19 @@
                             <i class="bi bi-search"></i>
                             Buscar producto
                         </label>
+
+                        <div class="filtros-rapidos">
+                            <button type="button" class="filtro-chip"
+                                [class.active]="!estaBuscandoProductosEnTodasLasSedes"
+                                (click)="cambiarFiltroSedeProductos(sedeActiva || '')">
+                                {{ nombreSedeActivaVisible }}
+                            </button>
+                            <button type="button" class="filtro-chip"
+                                [class.active]="estaBuscandoProductosEnTodasLasSedes"
+                                (click)="cambiarFiltroSedeProductos('todas')">
+                                Todas las sedes
+                            </button>
+                        </div>
                     </div>
 
                     <div class="search-wrapper">
@@ -424,7 +437,7 @@
                             placeholder="Buscar por nombre, código o categoría..." class="modern-ng-select">
 
                             <ng-template ng-option-tmp let-item="item">
-                                <div class="producto-option-moderno">
+                                <div class="producto-option-moderno" [class.is-disabled]="item.disabled">
                                     <div class="option-imagen">
                                         <i class="bi" [ngClass]="getIconoCategoria(item)"></i>
                                     </div>
@@ -435,8 +448,22 @@
                                             <span class="separator">•</span>
                                             <span class="precio">{{ formatearMoneda(item.precio) }}</span>
                                         </div>
+
+                                        <div class="option-extra">
+                                            <span class="option-badge option-badge--sede"
+                                                *ngIf="estaBuscandoProductosEnTodasLasSedes || item.esOtraSede">
+                                                <i class="bi bi-geo-alt"></i>
+                                                {{ item.sedeNombre }}
+                                            </span>
+
+                                            <span class="option-badge option-badge--blocked" *ngIf="item.motivoBloqueo">
+                                                <i class="bi bi-slash-circle"></i>
+                                                {{ item.motivoBloqueo }}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div class="option-stock" [class.low-stock]="item.stock < 5">
+                                    <div class="option-stock" [class.low-stock]="item.stock < 5 && item.stock > 0"
+                                        [class.out-of-stock]="item.stock <= 0">
                                         <i class="bi bi-box"></i>
                                         {{ item.stock }}
                                     </div>
@@ -446,11 +473,16 @@
                             <ng-template ng-notfound-tmp>
                                 <div class="not-found-moderno">
                                     <i class="bi bi-search"></i>
-                                    <span>No se encontraron productos</span>
+                                    <span>{{ mensajeSinProductosBusqueda }}</span>
                                 </div>
                             </ng-template>
                         </ng-select>
                     </div>
+
+                <div class="product-search-hint" *ngIf="estaBuscandoProductosEnTodasLasSedes">
+                    <i class="bi bi-info-circle"></i>
+                    <span>La búsqueda global muestra la sede del producto, pero solo permite seleccionar artículos con stock en {{ nombreSedeActivaVisible }}.</span>
+                </div>
                 </div>
 
                 <!-- Mensaje para solo consulta -->

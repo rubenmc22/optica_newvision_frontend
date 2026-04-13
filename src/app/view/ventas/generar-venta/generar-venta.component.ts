@@ -46,6 +46,13 @@ type TipoHistoria =
     | 'externa_rectificada_oftalmologo' // Fórmula externa + oftalmólogo (costo)
     | 'externa_rectificada_optometrista'; // Fórmula externa + optometrista (gratis)
 
+type ProductoBusquedaOption = Producto & {
+    disabled?: boolean;
+    sedeNombre?: string;
+    motivoBloqueo?: string;
+    esOtraSede?: boolean;
+};
+
 
 @Component({
     selector: 'app-generar-venta',
@@ -66,6 +73,7 @@ type TipoHistoria =
 })
 
 export class GenerarVentaComponent implements OnInit, OnDestroy {
+    private readonly FILTRO_TODAS_SEDES = 'todas';
 
     @ViewChild('productoSelect', { static: false }) productoSelect!: NgSelectComponent;
     @ViewChild('selectorPaciente', { static: false }) selectorPaciente!: NgSelectComponent;
@@ -279,16 +287,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             // Actualizar filtros si es necesario
             if (this.sedeInfo) {
-                this.sedeActiva = this.sedeInfo.key;
+                this.sedeActiva = this.normalizarClaveSede(this.sedeInfo.key);
                 this.sedeFiltro = this.sedeActiva;
-
-                // Filtrar productos por la sede
-                this.productosFiltradosPorSede = this.productos
-                    .filter(p =>
-                        p.sede?.trim().toLowerCase() === this.sedeActiva &&
-                        p.activo === true &&
-                        (p.stock ?? 0) > 0
-                    );
+                this.actualizarProductosFiltrados();
             }
         });
 
@@ -362,22 +363,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.currentUser = usuario;
             this.asesorSeleccionado = usuario?.id ?? null;
             this.empleadosDisponibles = asesores;
-            this.sedeActiva = usuario?.sede?.trim().toLowerCase() ?? '';
-
-            this.productosFiltradosPorSede = this.productos
-                .filter(p =>
-                    p.sede?.trim().toLowerCase() === this.sedeActiva &&
-                    p.activo === true &&
-                    (p.stock ?? 0) > 0
-                )
-                .map(p => ({
-                    ...p,
-                    precio: +(p.precio ?? 0),
-                    precioConIva: +(p.precioConIva ?? 0),
-                    aplicaIva: p.aplicaIva ?? false,
-                    moneda: p.moneda?.toLowerCase() === 'ves' ? 'bolivar' : p.moneda ?? 'dolar',
-                    stock: p.stock ?? 0
-                }));
+            this.sedeActiva = this.normalizarClaveSede(usuario?.sede);
+            this.sedeFiltro = this.sedeActiva;
+            this.actualizarProductosFiltrados();
 
             const tasas = tasasResponse.tasas ?? [];
             this.tasasDisponibles = tasas;
@@ -756,9 +744,22 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         // Buscar el producto completo por ID
-        const producto = this.productosFiltradosPorSede.find(p => p.id === productoId);
+        const producto = this.productosFiltradosPorCategoria.find(p => p.id === productoId);
 
         if (producto) {
+            if (!this.esProductoSeleccionable(producto)) {
+                this.productoSeleccionado = null;
+                if (this.productoSelect) {
+                    this.productoSelect.clearModel();
+                }
+
+                this.swalService.showWarning(
+                    'Producto no disponible',
+                    this.getMotivoBloqueoProducto(producto) || 'Este producto no se puede seleccionar en esta venta.'
+                );
+                return;
+            }
+
             this.agregarProductoAlCarrito(producto);
 
             setTimeout(() => {
@@ -869,8 +870,95 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     filtrarProductoPorNombreOCodigo(term: string, item: Producto): boolean {
         const nombre = item.nombre?.toLowerCase() ?? '';
         const codigo = item.codigo?.toLowerCase() ?? '';
+        const categoria = item.categoria?.toLowerCase() ?? '';
+        const sede = this.obtenerNombreSedeProducto(item.sede).toLowerCase();
         const normalizado = term.trim().toLowerCase();
-        return nombre.includes(normalizado) || codigo.includes(normalizado);
+        return nombre.includes(normalizado)
+            || codigo.includes(normalizado)
+            || categoria.includes(normalizado)
+            || sede.includes(normalizado);
+    }
+
+    cambiarFiltroSedeProductos(sedeKey: string): void {
+        const siguienteFiltro = this.normalizarClaveSede(sedeKey) || this.sedeActiva;
+        if (!siguienteFiltro || siguienteFiltro === this.sedeFiltro) {
+            return;
+        }
+
+        this.sedeFiltro = siguienteFiltro;
+        this.productoSeleccionado = null;
+
+        if (this.productoSelect) {
+            this.productoSelect.clearModel();
+        }
+
+        this.actualizarProductosFiltrados();
+        this.cdr.detectChanges();
+    }
+
+    private actualizarProductosFiltrados(): void {
+        const sedeFiltro = this.normalizarClaveSede(this.sedeFiltro || this.sedeActiva);
+        const productosActivos = this.productos
+            .filter(p => p.activo === true)
+            .map(p => this.normalizarProductoParaVenta(p));
+
+        this.productosFiltradosPorSede = !sedeFiltro || sedeFiltro === this.FILTRO_TODAS_SEDES
+            ? productosActivos
+            : productosActivos.filter(p => this.normalizarClaveSede(p.sede) === sedeFiltro);
+    }
+
+    private normalizarProductoParaVenta(producto: Producto): Producto {
+        return {
+            ...producto,
+            sede: this.normalizarClaveSede(producto.sede),
+            precio: +(producto.precio ?? 0),
+            precioConIva: +(producto.precioConIva ?? 0),
+            aplicaIva: producto.aplicaIva ?? false,
+            moneda: producto.moneda?.toLowerCase() === 'ves' ? 'bolivar' : producto.moneda ?? 'dolar',
+            stock: producto.stock ?? 0
+        };
+    }
+
+    private normalizarClaveSede(sede: string | null | undefined): string {
+        return (sede ?? '').toString().trim().toLowerCase();
+    }
+
+    private obtenerNombreSedeProducto(sedeKey: string | null | undefined): string {
+        const sedeNormalizada = this.normalizarClaveSede(sedeKey);
+        const sedeInfo = sedeNormalizada ? this.userStateService.getSedePorKey(sedeNormalizada) : null;
+        const nombreBase = sedeInfo?.nombre || sedeNormalizada || 'Sede no definida';
+        return nombreBase.replace(/^sede\s+/i, '').replace(/\b\w/g, char => char.toUpperCase());
+    }
+
+    esProductoSeleccionable(producto: Producto): boolean {
+        const mismaSede = this.normalizarClaveSede(producto.sede) === this.sedeActiva;
+        return mismaSede && (producto.stock ?? 0) > 0;
+    }
+
+    getMotivoBloqueoProducto(producto: Producto): string {
+        if ((producto.stock ?? 0) <= 0) {
+            return 'Sin stock disponible';
+        }
+
+        if (this.normalizarClaveSede(producto.sede) !== this.sedeActiva) {
+            return `Disponible en ${this.obtenerNombreSedeProducto(producto.sede)}`;
+        }
+
+        return '';
+    }
+
+    get nombreSedeActivaVisible(): string {
+        return this.obtenerNombreSedeProducto(this.sedeActiva) || 'Sede actual';
+    }
+
+    get estaBuscandoProductosEnTodasLasSedes(): boolean {
+        return this.normalizarClaveSede(this.sedeFiltro) === this.FILTRO_TODAS_SEDES;
+    }
+
+    get mensajeSinProductosBusqueda(): string {
+        return this.estaBuscandoProductosEnTodasLasSedes
+            ? 'No se encontraron productos activos en ninguna sede.'
+            : `No se encontraron productos activos en ${this.nombreSedeActivaVisible}.`;
     }
 
     onCantidadChange(p: any, nuevaCantidad: number): void {
@@ -6588,12 +6676,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
     }
 
-    get productosFiltradosPorCategoria(): Producto[] {
-        if (this.filtroCategoria === 'todos') {
-            return this.productosFiltradosPorSede;
-        }
-
-        return this.productosFiltradosPorSede.filter(p => {
+    get productosFiltradosPorCategoria(): ProductoBusquedaOption[] {
+        const productosBase = this.filtroCategoria === 'todos'
+            ? this.productosFiltradosPorSede
+            : this.productosFiltradosPorSede.filter(p => {
             const nombre = (p.nombre || '').toLowerCase();
             const categoria = (p.categoria || '').toLowerCase();
             const filtro = this.filtroCategoria;
@@ -6609,6 +6695,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     return true;
             }
         });
+
+        return productosBase.map(producto => ({
+            ...producto,
+            disabled: !this.esProductoSeleccionable(producto),
+            sedeNombre: this.obtenerNombreSedeProducto(producto.sede),
+            motivoBloqueo: this.getMotivoBloqueoProducto(producto),
+            esOtraSede: this.normalizarClaveSede(producto.sede) !== this.sedeActiva
+        }));
     }
 
     get requierePaciente(): boolean {

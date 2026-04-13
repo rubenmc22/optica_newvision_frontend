@@ -2049,6 +2049,12 @@
     padding: 0.5rem 0;
 }
 
+.producto-option-moderno {
+    &.is-disabled {
+        opacity: 0.72;
+    }
+}
+
 .option-avatar {
     width: 32px;
     height: 32px;
@@ -2071,6 +2077,13 @@
         font-size: 0.9rem;
         color: #212529;
     }
+}
+
+.option-extra {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
 }
 
 .option-details {
@@ -2096,6 +2109,34 @@
     border-radius: 12px;
     color: #495057;
     white-space: nowrap;
+}
+
+.option-badge--sede {
+    background: rgba(13, 110, 253, 0.12);
+    color: #0d5fca;
+}
+
+.option-badge--blocked {
+    background: rgba(220, 53, 69, 0.12);
+    color: #b42334;
+}
+
+.option-badge i {
+    margin-right: 0.25rem;
+}
+
+.option-stock.out-of-stock {
+    color: #b42334;
+}
+
+.product-search-hint {
+    margin-top: 0.65rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    color: #5c7280;
+    font-size: 0.82rem;
+    line-height: 1.45;
 }
 
 .not-found-moderno {
