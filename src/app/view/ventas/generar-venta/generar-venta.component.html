@@ -431,8 +431,9 @@
                     <div class="search-wrapper">
                         <i class="bi bi-search search-icon"></i>
                         <ng-select #productoSelect [items]="productosFiltradosPorCategoria" bindLabel="nombre"
-                            bindValue="id" [searchable]="true" [clearable]="true" [selectOnTab]="true"
-                            [(ngModel)]="productoSeleccionado" (change)="onProductoSeleccionadoChange($event)"
+                            [ngOptionDisabled]="'disabled'" [compareWith]="compararProductoBusqueda"
+                            [searchable]="true" [clearable]="true" [selectOnTab]="true"
+                            [(ngModel)]="productoSeleccionado" (ngModelChange)="onProductoSeleccionadoChange($event)"
                             [searchFn]="filtrarProductoPorNombreOCodigo"
                             placeholder="Buscar por nombre, código o categoría..." class="modern-ng-select">
 
@@ -454,6 +455,11 @@
                                                 *ngIf="estaBuscandoProductosEnTodasLasSedes || item.esOtraSede">
                                                 <i class="bi bi-geo-alt"></i>
                                                 {{ item.sedeNombre }}
+                                            </span>
+
+                                            <span class="option-badge option-badge--transfer" *ngIf="item.requiereTraslado">
+                                                <i class="bi bi-truck"></i>
+                                                Requiere traslado a {{ nombreSedeActivaVisible }}
                                             </span>
 
                                             <span class="option-badge option-badge--blocked" *ngIf="item.motivoBloqueo">
@@ -481,7 +487,7 @@
 
                 <div class="product-search-hint" *ngIf="estaBuscandoProductosEnTodasLasSedes">
                     <i class="bi bi-info-circle"></i>
-                    <span>La búsqueda global muestra la sede del producto, pero solo permite seleccionar artículos con stock en {{ nombreSedeActivaVisible }}.</span>
+                    <span>La búsqueda global muestra la sede del producto. Si eliges uno de otra sede, se agregará como solicitud de traslado hacia {{ nombreSedeActivaVisible }}.</span>
                 </div>
                 </div>
 
@@ -647,6 +653,10 @@
                                                     *ngIf="item.codigo && item.codigo !== 'N/A'">
                                                     {{ item.codigo }}
                                                 </small>
+                                                <small class="producto-transfer-chip" *ngIf="item.metadata?.requiereTraslado">
+                                                    <i class="bi bi-arrow-left-right"></i>
+                                                    {{ getMensajeTrasladoProducto(item) }}
+                                                </small>
                                             </div>
                                         </div>
                                     </td>
@@ -788,6 +798,10 @@
                             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                                 <span class="producto-nombre" style="font-weight: 500; color: #2d3436; font-size: 14px;">{{ item.nombre }}</span>
                                 <small class="producto-codigo" style="background: #e1e8ed; color: #2c3e50; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.3px; display: inline-block; white-space: nowrap;" *ngIf="item.codigo && item.codigo !== 'N/A'">{{ item.codigo }}</small>
+                                <small class="producto-transfer-chip" *ngIf="item.metadata?.requiereTraslado">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    {{ getMensajeTrasladoProducto(item) }}
+                                </small>
                             </div>
                         </div>
                     </td>
@@ -817,6 +831,14 @@
                 </tr>
             </tbody>
         </table>
+    </div>
+
+    <div class="transfer-request-banner" *ngIf="tieneProductosConTraslado">
+        <i class="bi bi-truck"></i>
+        <div>
+            <strong>Solicitud de traslado incluida</strong>
+            <p>Esta venta incluye {{ productosConTraslado.length }} producto{{ productosConTraslado.length > 1 ? 's' : '' }} de otra sede y la solicitud quedará registrada en las observaciones de la venta.</p>
+        </div>
     </div>
 
     <!-- Resumen para consulta + productos -->

@@ -51,6 +51,7 @@ type ProductoBusquedaOption = Producto & {
     sedeNombre?: string;
     motivoBloqueo?: string;
     esOtraSede?: boolean;
+    requiereTraslado?: boolean;
 };
 
 
@@ -160,13 +161,14 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     todosLosPacientes: Paciente[] = [];
     pacientesFiltradosPorSede: Paciente[] = [];
     productosFiltradosPorSede: Producto[] = [];
+    productosBusquedaDisponibles: ProductoBusquedaOption[] = [];
     empleadosDisponibles: Empleado[] = [];
     tasasDisponibles: Tasa[] = [];
     monedasDisponibles: Tasa[] = [];
     tasasPorId: Record<string, number> = {};
 
     pacienteSeleccionado: Paciente | null = null;
-    productoSeleccionado: string | null = null;
+    productoSeleccionado: ProductoBusquedaOption | null = null;
     asesorSeleccionado: string | null = null;
 
     // === PROPIEDADES ADICIONALES PARA CLIENTE SIN PACIENTE ===
@@ -725,51 +727,60 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return material ?? '';
     }
 
-    onProductoSeleccionadoChange(event: any): void {
+    async onProductoSeleccionadoChange(event: ProductoBusquedaOption | string | null): Promise<void> {
         if (event === null || event === undefined) {
             return;
         }
 
-        let productoId: string;
+        const producto = typeof event === 'object' && event !== null
+            ? event
+            : this.productosFiltradosPorCategoria.find(p => p.id === event?.toString());
 
-        if (typeof event === 'object' && event !== null) {
-            productoId = event.id;
-        } else {
-            productoId = event?.toString();
-        }
-
-        if (!productoId) {
-            console.error('No se pudo extraer ID del producto');
+        if (!producto) {
+            console.error('No se pudo resolver el producto seleccionado', event);
             return;
         }
 
-        // Buscar el producto completo por ID
-        const producto = this.productosFiltradosPorCategoria.find(p => p.id === productoId);
+        if (!this.esProductoSeleccionable(producto)) {
+            this.productoSeleccionado = null;
+            if (this.productoSelect) {
+                this.productoSelect.clearModel();
+            }
 
-        if (producto) {
-            if (!this.esProductoSeleccionable(producto)) {
+            this.swalService.showWarning(
+                'Producto no disponible',
+                this.getMotivoBloqueoProducto(producto) || 'Este producto no se puede seleccionar en esta venta.'
+            );
+            return;
+        }
+
+        const yaExiste = this.venta.productos.some(p => p.id === producto.id);
+        if (this.esProductoOtraSede(producto) && !yaExiste) {
+            const confirmacion = await this.swalService.showConfirm(
+                'Solicitar traslado',
+                `
+                <p>El producto <strong>${producto.nombre}</strong> se encuentra en <strong>${this.obtenerNombreSedeProducto(producto.sede)}</strong>.</p>
+                <p>Si continúas, se agregará como <strong>solicitud de traslado hacia ${this.nombreSedeActivaVisible}</strong>.</p>
+                <p>La solicitud quedará registrada en la observación de la venta.</p>
+                `,
+                'Solicitar traslado',
+                'Cancelar'
+            );
+
+            if (!confirmacion.isConfirmed) {
                 this.productoSeleccionado = null;
                 if (this.productoSelect) {
                     this.productoSelect.clearModel();
                 }
-
-                this.swalService.showWarning(
-                    'Producto no disponible',
-                    this.getMotivoBloqueoProducto(producto) || 'Este producto no se puede seleccionar en esta venta.'
-                );
                 return;
             }
-
-            this.agregarProductoAlCarrito(producto);
-
-            setTimeout(() => {
-                this.cdr.detectChanges();
-            }, 100);
-
-        } else {
-            console.error('Producto no encontrado para ID:', productoId);
-            this.swalService.showWarning('Error', 'No se pudo encontrar el producto seleccionado.');
         }
+
+        this.agregarProductoAlCarrito(producto);
+
+        setTimeout(() => {
+            this.cdr.detectChanges();
+        }, 100);
     }
 
 
@@ -795,6 +806,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const precioFinal = +(producto.precioConIva ?? 0);
         const monedaOriginal = this.idMap[producto.moneda?.toLowerCase()] ?? producto.moneda?.toLowerCase() ?? 'dolar';
         const aplicaIva = producto.aplicaIva ?? false;
+        const metadataTraslado = this.construirMetadataTraslado(producto);
 
         if (stockDisponible <= 0) {
             this.swalService.showWarning('Sin stock', 'Este producto no tiene unidades disponibles.');
@@ -841,8 +853,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 cantidad: 1,
                 aplicaIva: aplicaIva,
                 stock: producto.stock ?? 0,
+                sede: producto.sede,
                 tipo: 'PRODUCTO',  // Importante: marcar como PRODUCTO
-                descripcion: producto.descripcion || undefined
+                descripcion: producto.descripcion || undefined,
+                metadata: metadataTraslado
             };
 
             this.venta.productos.push(nuevoItem);
@@ -879,6 +893,18 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             || sede.includes(normalizado);
     }
 
+    compararProductoBusqueda = (productoActual: ProductoBusquedaOption | null, productoSeleccionado: ProductoBusquedaOption | null): boolean => {
+        if (!productoActual && !productoSeleccionado) {
+            return true;
+        }
+
+        if (!productoActual || !productoSeleccionado) {
+            return false;
+        }
+
+        return productoActual.id === productoSeleccionado.id;
+    };
+
     cambiarFiltroSedeProductos(sedeKey: string): void {
         const siguienteFiltro = this.normalizarClaveSede(sedeKey) || this.sedeActiva;
         if (!siguienteFiltro || siguienteFiltro === this.sedeFiltro) {
@@ -905,6 +931,37 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.productosFiltradosPorSede = !sedeFiltro || sedeFiltro === this.FILTRO_TODAS_SEDES
             ? productosActivos
             : productosActivos.filter(p => this.normalizarClaveSede(p.sede) === sedeFiltro);
+
+        this.productosBusquedaDisponibles = this.construirProductosBusquedaDisponibles(this.productosFiltradosPorSede);
+    }
+
+    private construirProductosBusquedaDisponibles(productosBase: Producto[]): ProductoBusquedaOption[] {
+        const productosFiltrados = this.filtroCategoria === 'todos'
+            ? productosBase
+            : productosBase.filter(producto => {
+                const nombre = (producto.nombre || '').toLowerCase();
+                const categoria = (producto.categoria || '').toLowerCase();
+
+                switch (this.filtroCategoria) {
+                    case 'lentes':
+                        return nombre.includes('lente') || categoria.includes('lente');
+                    case 'monturas':
+                        return nombre.includes('montura') || categoria.includes('montura');
+                    case 'accesorios':
+                        return nombre.includes('accesorio') || categoria.includes('accesorio');
+                    default:
+                        return true;
+                }
+            });
+
+        return productosFiltrados.map(producto => ({
+            ...producto,
+            disabled: !this.esProductoSeleccionable(producto),
+            sedeNombre: this.obtenerNombreSedeProducto(producto.sede),
+            motivoBloqueo: this.getMotivoBloqueoProducto(producto),
+            esOtraSede: this.normalizarClaveSede(producto.sede) !== this.sedeActiva,
+            requiereTraslado: this.esProductoOtraSede(producto) && this.esProductoSeleccionable(producto)
+        }));
     }
 
     private normalizarProductoParaVenta(producto: Producto): Producto {
@@ -931,8 +988,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     esProductoSeleccionable(producto: Producto): boolean {
-        const mismaSede = this.normalizarClaveSede(producto.sede) === this.sedeActiva;
-        return mismaSede && (producto.stock ?? 0) > 0;
+        return (producto.stock ?? 0) > 0;
     }
 
     getMotivoBloqueoProducto(producto: Producto): string {
@@ -940,11 +996,28 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return 'Sin stock disponible';
         }
 
-        if (this.normalizarClaveSede(producto.sede) !== this.sedeActiva) {
-            return `Disponible en ${this.obtenerNombreSedeProducto(producto.sede)}`;
+        return '';
+    }
+
+    esProductoOtraSede(producto: Pick<Producto, 'sede'> | ItemCarrito): boolean {
+        const sedeProducto = this.normalizarClaveSede(producto.sede);
+        return !!sedeProducto && sedeProducto !== this.sedeActiva;
+    }
+
+    getMensajeTrasladoProducto(producto: Pick<Producto, 'sede'> | ItemCarrito): string {
+        return `Traslado desde ${this.obtenerNombreSedeProducto(producto.sede)} hacia ${this.nombreSedeActivaVisible}`;
+    }
+
+    private construirMetadataTraslado(producto: Producto): ItemCarrito['metadata'] | undefined {
+        if (!this.esProductoOtraSede(producto)) {
+            return undefined;
         }
 
-        return '';
+        return {
+            requiereTraslado: true,
+            sedeOrigen: this.normalizarClaveSede(producto.sede),
+            sedeDestino: this.sedeActiva
+        };
     }
 
     get nombreSedeActivaVisible(): string {
@@ -959,6 +1032,36 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.estaBuscandoProductosEnTodasLasSedes
             ? 'No se encontraron productos activos en ninguna sede.'
             : `No se encontraron productos activos en ${this.nombreSedeActivaVisible}.`;
+    }
+
+    get productosConTraslado(): ItemCarrito[] {
+        return this.venta.productos.filter(producto => !!producto.metadata?.requiereTraslado);
+    }
+
+    get tieneProductosConTraslado(): boolean {
+        return this.productosConTraslado.length > 0;
+    }
+
+    private construirLineaTraslado(producto: Pick<ItemCarrito, 'nombre' | 'codigo' | 'sede' | 'metadata'>): string {
+        const sedeOrigen = producto.metadata?.sedeOrigen || this.normalizarClaveSede(producto.sede);
+        const sedeDestino = producto.metadata?.sedeDestino || this.sedeActiva;
+        const codigo = producto.codigo && producto.codigo !== 'N/A' ? ` (${producto.codigo})` : '';
+        return `Solicitud de traslado: ${producto.nombre}${codigo} desde ${this.obtenerNombreSedeProducto(sedeOrigen)} hacia ${this.obtenerNombreSedeProducto(sedeDestino)}.`;
+    }
+
+    private construirObservacionesVenta(): string | undefined {
+        const observacionManual = this.venta.observaciones?.trim() || '';
+        const notasTraslado = this.productosConTraslado.map(producto => this.construirLineaTraslado(producto));
+        const observaciones = [observacionManual, ...notasTraslado].filter(Boolean);
+        return observaciones.length ? observaciones.join('\n') : undefined;
+    }
+
+    private construirDescripcionProductoVenta(producto: ItemCarrito): string {
+        const descripcionBase = producto.descripcion?.trim() || '';
+        const descripcionTraslado = producto.metadata?.requiereTraslado
+            ? this.construirLineaTraslado(producto)
+            : '';
+        return [descripcionBase, descripcionTraslado].filter(Boolean).join(' | ');
     }
 
     onCantidadChange(p: any, nuevaCantidad: number): void {
@@ -3129,7 +3232,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             aplicaIva: p.aplicaIva || false,
             stock: p.stock || 0,
             tipo: 'PRODUCTO',
-            descripcion: p.descripcion || ''
+            descripcion: this.construirDescripcionProductoVenta(p),
+            sede: p.sede
         }));
 
         // 2. PREPARAR MÉTODOS DE PAGO
@@ -3363,7 +3467,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             total: this.redondear(totalFinal),
             descuento: this.venta.descuento || 0,
             impuesto: this.venta.impuesto || 16,
-            observaciones: this.venta.observaciones || undefined,
+            observaciones: this.construirObservacionesVenta(),
             metodosDePago: metodosPagoData,
             cliente: clienteData,
             especialista: especialistaData,
@@ -4523,7 +4627,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 moneda: this.venta.moneda,
                 descuento: this.venta.descuento,
                 impuesto: this.ivaPorcentaje,
-                observaciones: this.venta.observaciones
+                observaciones: this.construirObservacionesVenta()
             }
         };
 
@@ -6677,32 +6781,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     get productosFiltradosPorCategoria(): ProductoBusquedaOption[] {
-        const productosBase = this.filtroCategoria === 'todos'
-            ? this.productosFiltradosPorSede
-            : this.productosFiltradosPorSede.filter(p => {
-            const nombre = (p.nombre || '').toLowerCase();
-            const categoria = (p.categoria || '').toLowerCase();
-            const filtro = this.filtroCategoria;
-
-            switch (filtro) {
-                case 'lentes':
-                    return nombre.includes('lente') || categoria.includes('lente');
-                case 'monturas':
-                    return nombre.includes('montura') || categoria.includes('montura');
-                case 'accesorios':
-                    return nombre.includes('accesorio') || categoria.includes('accesorio');
-                default:
-                    return true;
-            }
-        });
-
-        return productosBase.map(producto => ({
-            ...producto,
-            disabled: !this.esProductoSeleccionable(producto),
-            sedeNombre: this.obtenerNombreSedeProducto(producto.sede),
-            motivoBloqueo: this.getMotivoBloqueoProducto(producto),
-            esOtraSede: this.normalizarClaveSede(producto.sede) !== this.sedeActiva
-        }));
+        return this.productosBusquedaDisponibles;
     }
 
     get requierePaciente(): boolean {

@@ -44,6 +44,7 @@ export interface ProductoVentaDto {
     moneda: string;
     precioConIva: number;
     aplicaIva: boolean;
+    sede?: string;
 }
 
 export interface ItemCarrito extends ProductoVentaDto {
@@ -63,6 +64,9 @@ export interface ItemCarrito extends ProductoVentaDto {
         totalOriginal?: number;                               // BIEN
         medicoNombre?: string;                                // OPCIONAL - útil para mostrar
         fechaConsulta?: string;                               // OPCIONAL - útil para referencia
+        requiereTraslado?: boolean;
+        sedeOrigen?: string;
+        sedeDestino?: string;
         // Podrías agregar estos campos si los necesitas:
         nHistoria?: string;                                   // Para referencia rápida
         medicoId?: string;                                    // Para trazabilidad
