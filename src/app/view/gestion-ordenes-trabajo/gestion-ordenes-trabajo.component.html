@@ -2,9 +2,16 @@
   <!-- Header -->
   <div class="ordenes-header">
     <div class="header-content">
-      <div class="header-title">
-        <i class="bi bi-clipboard-check"></i>
-        <h1>Gestión de Órdenes de Trabajo</h1>
+      <div class="header-copy">
+        <div class="header-title">
+          <span class="header-icon">
+            <i class="bi bi-clipboard-check"></i>
+          </span>
+          <div class="header-text">
+            <h1>Gestión de Órdenes de Trabajo</h1>
+            <p>Supervisa el flujo operativo de cada orden desde tienda hasta entrega.</p>
+          </div>
+        </div>
       </div>
       <div class="header-actions">
         <div class="search-container">
@@ -627,8 +634,8 @@
 </div>
 
 <!-- Modal Detalle Orden -->
-<div class="modal-backdrop" *ngIf="mostrarModalDetalle" (click)="cerrarModalDetalle()"></div>
-<div class="modal-detalle-orden" *ngIf="mostrarModalDetalle">
+<div class="modal-detalle-layer" *ngIf="mostrarModalDetalle" (click)="cerrarModalDetalle()">
+  <div class="modal-detalle-orden" (click)="$event.stopPropagation()">
   <div class="modal-header">
     <div class="header-left">
       <h2>
@@ -714,21 +721,29 @@
             <h4>Personal Asignado</h4>
           </div>
           <div class="info-content compact">
-            <div class="info-row" *ngIf="ordenSeleccionada?.especialista">
+            <div class="info-row" *ngIf="tieneEspecialistaAsignado(ordenSeleccionada)">
               <span class="info-label">Especialista:</span>
               <div class="info-value">
-                <div>{{ ordenSeleccionada?.especialista?.nombre || 'No especificado' }}</div>
-                <small class="text-muted" *ngIf="ordenSeleccionada?.especialista?.cedula">C.I. {{ ordenSeleccionada?.especialista?.cedula }}</small>
+                <div>{{ getNombreEspecialistaOrden(ordenSeleccionada) }}</div>
+                <div class="info-meta" *ngIf="getEspecialistaDetalleItems(ordenSeleccionada).length">
+                  <span class="info-meta__item" *ngFor="let item of getEspecialistaDetalleItems(ordenSeleccionada)">
+                    {{ item }}
+                  </span>
+                </div>
               </div>
             </div>
             <div class="info-row" *ngIf="ordenSeleccionada?.asesor">
               <span class="info-label">Asesor:</span>
               <div class="info-value">
                 <div>{{ ordenSeleccionada?.asesor?.nombre || 'No especificado' }}</div>
-                <small class="text-muted" *ngIf="ordenSeleccionada?.asesor?.cedula">C.I. {{ ordenSeleccionada?.asesor?.cedula }}</small>
+                <div class="info-meta" *ngIf="getAsesorDetalleItems(ordenSeleccionada).length">
+                  <span class="info-meta__item" *ngFor="let item of getAsesorDetalleItems(ordenSeleccionada)">
+                    {{ item }}
+                  </span>
+                </div>
               </div>
             </div>
-            <div class="text-center" *ngIf="!ordenSeleccionada?.especialista && !ordenSeleccionada?.asesor">
+            <div class="text-center" *ngIf="!tieneEspecialistaAsignado(ordenSeleccionada) && !ordenSeleccionada?.asesor">
               <i class="bi bi-person-x"></i>
               <span class="text-muted">Sin personal asignado</span>
             </div>
@@ -760,11 +775,30 @@
             
             <!-- CONTENIDO DE FORMULACIÓN -->
             <div class="tab-content" *ngIf="tabActivaDetalle === 'formulacion'">
+              <div class="formulacion-contexto" *ngIf="ordenSeleccionada && (tieneMedicoOrigenOrden(ordenSeleccionada) || tieneDescripcionHistoriaOrden(ordenSeleccionada))">
+                <div class="formulacion-contexto__meta" *ngIf="tieneMedicoOrigenOrden(ordenSeleccionada)">
+                  <div class="formulacion-contexto__chip formulacion-contexto__chip--origen">
+                    <span class="formulacion-contexto__label">Origen</span>
+                    <div class="formulacion-contexto__text">
+                      <strong>{{ getMedicoOrigenOrden(ordenSeleccionada)?.nombre }}</strong>
+                      <small *ngIf="getMedicoOrigenDetalle(ordenSeleccionada)">
+                        {{ getMedicoOrigenDetalle(ordenSeleccionada) }}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="formulacion-contexto__observaciones" *ngIf="tieneDescripcionHistoriaOrden(ordenSeleccionada)">
+                  <span class="formulacion-contexto__label">Observaciones</span>
+                  <p class="formulacion-descripcion">{{ getDescripcionHistoriaOrden(ordenSeleccionada) }}</p>
+                </div>
+              </div>
+
               <div class="formulacion-card-moderna" *ngIf="ordenSeleccionada?.cliente?.historia_medica?.examen_ocular_refraccion_final">
                 <div class="formulacion-header-compact">
                   <span class="formulacion-title">Refracción Final</span>
-                  <span class="formulacion-badge" [ngClass]="tieneFormulaCompleta(ordenSeleccionada) ? 'completa' : 'incompleta'">
-                    {{ tieneFormulaCompleta(ordenSeleccionada) ? 'Completa' : 'Incompleta' }}
+                  <span class="formulacion-badge" [ngClass]="esFormulaExternaOrden(ordenSeleccionada) ? 'incompleta' : 'completa'">
+                    {{ esFormulaExternaOrden(ordenSeleccionada) ? 'Fórmula externa' : 'Fórmula interna' }}
                   </span>
                 </div>
                 
@@ -977,6 +1011,7 @@
       </button>
     </div>
   </div>
+</div>
 </div>
 
 

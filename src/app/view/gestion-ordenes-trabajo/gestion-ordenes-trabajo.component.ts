@@ -1,9 +1,10 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnDestroy, OnInit, HostListener } from '@angular/core';
 import { CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { OrdenesTrabajoService } from './gestion-ordenes-trabajo.service';
-import { OrdenTrabajo, OrdenesTrabajoResponse, EstadoOrden } from './gestion-ordenes-trabajo.model';
+import { OrdenTrabajo, OrdenesTrabajoResponse, EstadoOrden, OrdenTrabajoDatosConsulta, OrdenTrabajoEspecialista } from './gestion-ordenes-trabajo.model';
 import { LoaderService } from './../../shared/loader/loader.service';
 import { SwalService } from '../../core/services/swal/swal.service';
+import * as XLSX from 'xlsx';
 
 // Constantes
 import {
@@ -20,7 +21,9 @@ import {
   styleUrls: ['./gestion-ordenes-trabajo.component.scss']
 })
 
-export class GestionOrdenesTrabajoComponent implements OnInit {
+export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
+  private readonly AUTO_ARCHIVO_STORAGE_KEY = 'gestion_ordenes_auto_archivo_dias';
+
   // Filtros
   filtroBusqueda: string = '';
   filtroEstado: string = '';
@@ -105,11 +108,15 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   ) { }
 
   ngOnInit() {
+    this.cargarConfiguracionAutoArchivadoLocal();
     this.cargarOrdenesDesdeAPI('');
     this.calcularEstadisticas();
-    this.verificarAutoArchivo();
     this.inicializarTooltips();
     this.loader.hide();
+  }
+
+  ngOnDestroy() {
+    this.desbloquearScroll();
   }
 
   /**
@@ -133,6 +140,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
           // Cargar en columnas
           this.cargarOrdenes();
+          this.filtrarArchivadas();
+          this.verificarAutoArchivo();
           this.calcularEstadisticas();
           this.loader.hide();
         } else {
@@ -508,14 +517,16 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
         // Mover de entregadas a archivadas
         this.ordenesEntregadas = this.ordenesEntregadas.filter(o => o.id !== orden.id);
         this.ordenesArchivadas.push(orden);
+        this.filtrarArchivadas();
+        this.calcularEstadisticas();
 
         if (!automatico) {
-          alert(`Orden ${orden.ordenId} archivada correctamente.`);
+          this.swalService.showSuccess('Orden archivada', `La orden ${orden.ordenId} fue archivada correctamente.`);
         }
       },
       error: (error) => {
         console.error('Error al archivar orden:', error);
-        alert('Error al archivar la orden. Intente nuevamente.');
+        this.swalService.showError('Error al archivar', 'No se pudo archivar la orden. Intente nuevamente.');
       }
     });
   }
@@ -540,12 +551,13 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
           // Actualizar filtro si está abierto
           this.filtrarArchivadas();
+          this.calcularEstadisticas();
           //this.cerrarModalArchivo();
-          alert(`Orden ${orden.ordenId} restaurada correctamente.`);
+          this.swalService.showSuccess('Orden restaurada', `La orden ${orden.ordenId} fue restaurada correctamente.`);
         },
         error: (error) => {
           console.error('Error al restaurar orden:', error);
-          alert('Error al restaurar la orden. Intente nuevamente.');
+          this.swalService.showError('Error al restaurar', 'No se pudo restaurar la orden. Intente nuevamente.');
         }
       });
     }
@@ -1044,13 +1056,96 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   }
 
   exportarReporte() {
-    console.log('📊 Exportando reporte...');
-    alert('🚀 Funcionalidad de exportación en desarrollo');
+    if (!this.todasLasOrdenes.length) {
+      this.swalService.showInfo('Sin datos', 'No hay órdenes para exportar en este momento.');
+      return;
+    }
+
+    const libro = XLSX.utils.book_new();
+    const detalleCompleto = this.todasLasOrdenes.map(orden => this.mapearOrdenParaReporte(orden));
+
+    const resumen = [
+      { Indicador: 'En Tienda', Cantidad: this.estadisticas.enTienda },
+      { Indicador: 'En Laboratorio', Cantidad: this.estadisticas.enProceso },
+      { Indicador: 'Listo en Laboratorio', Cantidad: this.estadisticas.listoLaboratorio },
+      { Indicador: 'Pendiente Retiro', Cantidad: this.estadisticas.pendienteRetiro },
+      { Indicador: 'Entregadas', Cantidad: this.ordenesEntregadas.length },
+      { Indicador: 'Archivadas', Cantidad: this.ordenesArchivadas.length },
+      { Indicador: 'Total general', Cantidad: this.todasLasOrdenes.length },
+      { Indicador: 'Días auto-archivado', Cantidad: this.diasParaAutoArchivo }
+    ];
+
+    const operativas = this.todasLasOrdenes
+      .filter(orden => !orden.archivado)
+      .map(orden => this.mapearOrdenParaReporte(orden));
+
+    const archivadas = this.ordenesArchivadas.map(orden => this.mapearOrdenParaReporte(orden));
+
+    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(detalleCompleto), 'Detalle');
+    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(operativas), 'Operativas');
+    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(archivadas), 'Archivadas');
+    XLSX.utils.book_append_sheet(libro, XLSX.utils.json_to_sheet(resumen), 'Resumen');
+
+    const fecha = this.formatearFechaReporte(new Date());
+    XLSX.writeFile(libro, `reporte_ordenes_trabajo_${fecha}.xlsx`);
+    this.swalService.showSuccess('Reporte exportado', 'El archivo Excel se descargó correctamente.');
   }
 
   generarReporte() {
-    console.log('🖨️ Generando reporte PDF...');
-    alert('🚀 Funcionalidad de reporte PDF en desarrollo');
+    if (!this.todasLasOrdenes.length) {
+      this.swalService.showInfo('Sin datos', 'No hay órdenes para imprimir en este momento.');
+      return;
+    }
+
+    const ventana = window.open('', '_blank', 'width=1280,height=900');
+    if (!ventana) {
+      this.swalService.showError('Ventana bloqueada', 'El navegador bloqueó la ventana de impresión. Permite popups e inténtalo nuevamente.');
+      return;
+    }
+
+    const fecha = new Date();
+    const resumen = this.obtenerResumenHtmlReporte();
+    const tablaActivas = this.generarTablaHtmlReporte(this.todasLasOrdenes.filter(orden => !orden.archivado), 'Órdenes operativas');
+    const tablaArchivadas = this.generarTablaHtmlReporte(this.ordenesArchivadas, 'Órdenes archivadas');
+
+    ventana.document.write(`
+      <html>
+        <head>
+          <title>Reporte de órdenes de trabajo</title>
+          <style>
+            body { font-family: Arial, sans-serif; color: #1f2937; margin: 24px; }
+            .header { margin-bottom: 24px; border-bottom: 2px solid #dbeafe; padding-bottom: 16px; }
+            .header h1 { margin: 0; font-size: 26px; color: #0f172a; }
+            .header p { margin: 6px 0 0; color: #64748b; }
+            .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0 28px; }
+            .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 14px; background: #f8fafc; }
+            .card strong { display: block; font-size: 22px; color: #0f172a; }
+            .card span { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+            h2 { margin: 28px 0 12px; color: #1e293b; font-size: 18px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; font-size: 12px; vertical-align: top; }
+            th { background: #eff6ff; color: #1e3a8a; }
+            .muted { color: #64748b; }
+            .empty { padding: 12px; border: 1px dashed #cbd5e1; border-radius: 12px; color: #64748b; background: #f8fafc; }
+            @media print { body { margin: 12px; } .summary { grid-template-columns: repeat(4, 1fr); } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Reporte de Órdenes de Trabajo</h1>
+            <p>Generado el ${fecha.toLocaleDateString('es-VE')} a las ${fecha.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</p>
+          </div>
+          ${resumen}
+          ${tablaActivas}
+          ${tablaArchivadas}
+        </body>
+      </html>
+    `);
+    ventana.document.close();
+    ventana.focus();
+    setTimeout(() => {
+      ventana.print();
+    }, 350);
   }
 
   /**
@@ -1311,7 +1406,53 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
   }
 
   imprimirOrden() {
-    // Lógica para imprimir
+    if (!this.ordenSeleccionada) {
+      this.swalService.showInfo('Sin orden seleccionada', 'Abre primero una orden para imprimir su detalle.');
+      return;
+    }
+
+    const ventana = window.open('', '_blank', 'width=980,height=780');
+    if (!ventana) {
+      this.swalService.showError('Ventana bloqueada', 'El navegador bloqueó la ventana de impresión.');
+      return;
+    }
+
+    const orden = this.ordenSeleccionada;
+    ventana.document.write(`
+      <html>
+        <head>
+          <title>${orden.ordenId}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 24px; color: #1f2937; }
+            h1 { margin: 0 0 12px; color: #0f172a; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+            .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; }
+            .label { color: #64748b; font-size: 12px; text-transform: uppercase; margin-bottom: 4px; }
+            .value { color: #1f2937; margin-bottom: 10px; }
+          </style>
+        </head>
+        <body>
+          <h1>Orden ${orden.ordenId}</h1>
+          <div class="grid">
+            <div class="card">
+              <div class="label">Cliente</div>
+              <div class="value">${this.getClienteNombre(orden)}</div>
+              <div class="label">Teléfono</div>
+              <div class="value">${this.getClienteTelefono(orden) || 'No disponible'}</div>
+            </div>
+            <div class="card">
+              <div class="label">Estado</div>
+              <div class="value">${this.getEstadoTexto(orden.estado)}</div>
+              <div class="label">Entrega estimada</div>
+              <div class="value">${this.getFechaEntregaFormateada(orden)}</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+    ventana.document.close();
+    ventana.focus();
+    setTimeout(() => ventana.print(), 250);
   }
 
   /**
@@ -1456,8 +1597,124 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
     }
   }
 
-  getEspecialistaCargo(especialista: { id: number; cedula: string; nombre: string; } | null): string {
-    return especialista ? 'Optometrista' : 'No asignado';
+  getDatosConsultaOrden(orden: OrdenTrabajo | null): OrdenTrabajoDatosConsulta | null {
+    return orden?.cliente?.historia_medica?.datosConsulta || null;
+  }
+
+  esFormulaExternaOrden(orden: OrdenTrabajo | null): boolean {
+    if (!orden) return false;
+
+    return this.getDatosConsultaOrden(orden)?.formulaExterna === true || orden.cliente?.historia_medica?.formula_externa === true;
+  }
+
+  getEspecialistaOrden(orden: OrdenTrabajo | null): OrdenTrabajoEspecialista | null {
+    if (!orden) return null;
+
+    return this.getDatosConsultaOrden(orden)?.especialista || orden.especialista || null;
+  }
+
+  tieneEspecialistaAsignado(orden: OrdenTrabajo | null): boolean {
+    const especialista = this.getEspecialistaOrden(orden);
+    return !!(especialista?.nombre || especialista?.cedula || especialista?.externo?.nombre);
+  }
+
+  getEspecialistaCargo(especialista: OrdenTrabajoEspecialista | null | undefined): string {
+    if (!especialista) return 'No asignado';
+
+    const tipo = (especialista.tipo || '').toUpperCase();
+    if (tipo === 'EXTERNO') {
+      return 'Especialista externo';
+    }
+
+    return especialista.cargo || especialista.tipo || 'Especialista';
+  }
+
+  getNombreEspecialistaOrden(orden: OrdenTrabajo | null): string {
+    const especialista = this.getEspecialistaOrden(orden);
+    return especialista?.nombre || especialista?.externo?.nombre || 'No especificado';
+  }
+
+  getEspecialistaDetalleItems(orden: OrdenTrabajo | null): string[] {
+    const especialista = this.getEspecialistaOrden(orden);
+    if (!especialista) return [];
+
+    const items: string[] = [];
+    const cargo = this.getEspecialistaCargo(especialista);
+    if (cargo && cargo !== 'No asignado') {
+      items.push(cargo);
+    }
+
+    if (especialista.cedula) {
+      items.push(`C.I. ${especialista.cedula}`);
+    }
+
+    if (especialista.externo?.lugarConsultorio) {
+      items.push(especialista.externo.lugarConsultorio);
+    }
+
+    return items;
+  }
+
+  getLugarEspecialistaOrden(orden: OrdenTrabajo | null): string {
+    const especialista = this.getEspecialistaOrden(orden);
+    return especialista?.externo?.lugarConsultorio || '';
+  }
+
+  getMedicoOrigenOrden(orden: OrdenTrabajo | null): { tipo: string | null; nombre: string | null; lugarConsultorio: string | null } | null {
+    const datosConsulta = this.getDatosConsultaOrden(orden);
+    if (datosConsulta?.formulaOriginal?.medicoOrigen) {
+      return datosConsulta.formulaOriginal.medicoOrigen;
+    }
+
+    const historia = orden?.cliente?.historia_medica;
+    if (historia?.formula_original_tipo || historia?.formula_original_nombre || historia?.formula_original_lugar) {
+      return {
+        tipo: historia.formula_original_tipo || null,
+        nombre: historia.formula_original_nombre || null,
+        lugarConsultorio: historia.formula_original_lugar || null,
+      };
+    }
+
+    return null;
+  }
+
+  tieneMedicoOrigenOrden(orden: OrdenTrabajo | null): boolean {
+    const medicoOrigen = this.getMedicoOrigenOrden(orden);
+    return !!(medicoOrigen?.nombre || medicoOrigen?.lugarConsultorio);
+  }
+
+  getMedicoOrigenDetalle(orden: OrdenTrabajo | null): string {
+    const medicoOrigen = this.getMedicoOrigenOrden(orden);
+    if (!medicoOrigen) return '';
+
+    return [medicoOrigen.tipo, medicoOrigen.lugarConsultorio].filter(Boolean).join(' · ');
+  }
+
+  getDescripcionHistoriaOrden(orden: OrdenTrabajo | null): string {
+    const recomendaciones = orden?.cliente?.historia_medica?.recomendaciones;
+    if (!Array.isArray(recomendaciones)) {
+      return '';
+    }
+
+    return recomendaciones
+      .map((recomendacion: any) => typeof recomendacion?.observaciones === 'string' ? recomendacion.observaciones.trim() : '')
+      .filter(Boolean)
+      .join(' · ');
+  }
+
+  tieneDescripcionHistoriaOrden(orden: OrdenTrabajo | null): boolean {
+    return this.getDescripcionHistoriaOrden(orden).length > 0;
+  }
+
+  getTipoFormulaOrden(orden: OrdenTrabajo | null): string {
+    return this.esFormulaExternaOrden(orden) ? 'Fórmula externa' : 'Fórmula interna';
+  }
+
+  getAsesorDetalleItems(orden: OrdenTrabajo | null): string[] {
+    const asesor = orden?.asesor;
+    if (!asesor) return [];
+
+    return [asesor.cargo || null, asesor.cedula ? `C.I. ${asesor.cedula}` : null].filter((item): item is string => !!item);
   }
 
   confirmarFechaEntrega(orden: OrdenTrabajo): void {
@@ -1641,6 +1898,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
   // Método para bloquear scroll
   bloquearScroll() {
+    document.body.classList.add('modal-open');
     document.body.classList.add('body-no-scroll');
     // Alternativa para mayor compatibilidad
     document.documentElement.style.overflow = 'hidden';
@@ -1649,6 +1907,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
   // Método para desbloquear scroll
   desbloquearScroll() {
+    document.body.classList.remove('modal-open');
     document.body.classList.remove('body-no-scroll');
     document.documentElement.style.overflow = '';
     document.body.style.overflow = '';
@@ -1827,8 +2086,17 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
 
   // Método auxiliar para mostrar notificaciones
   mostrarNotificacion(mensaje: string, tipo: 'success' | 'error' | 'info') {
-    // Implementa tu sistema de notificaciones aquí
-    console.log(`${tipo.toUpperCase()}: ${mensaje}`);
+    if (tipo === 'success') {
+      this.swalService.showSuccess('Operación completada', mensaje);
+      return;
+    }
+
+    if (tipo === 'error') {
+      this.swalService.showError('Ocurrió un problema', mensaje);
+      return;
+    }
+
+    this.swalService.showInfo('Información', mensaje);
   }
 
   // Método para abrir el modal
@@ -1930,6 +2198,8 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
           // Actualizar localmente
           this.diasArchivoActual = dias;
           this.diasParaAutoArchivo = dias;
+          this.persistirConfiguracionAutoArchivadoLocal(dias);
+          this.verificarAutoArchivo();
 
           // Cerrar modal
           this.mostrarModalAutoArchivado = false;
@@ -1959,6 +2229,215 @@ export class GestionOrdenesTrabajoComponent implements OnInit {
         this.mostrarNotificacion('Error al guardar configuración', 'error');
       }
     });
+  }
+
+  private cargarConfiguracionAutoArchivadoLocal(): void {
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+
+    try {
+      const diasGuardados = localStorage.getItem(this.AUTO_ARCHIVO_STORAGE_KEY);
+      if (!diasGuardados) return;
+
+      const dias = Number(diasGuardados);
+      if (!Number.isNaN(dias) && dias >= 1 && dias <= 365) {
+        this.diasParaAutoArchivo = dias;
+        this.diasArchivoActual = dias;
+        this.diasArchivoSeleccionados = dias;
+      }
+    } catch (error) {
+      console.warn('No se pudo cargar la configuración local de auto-archivado', error);
+    }
+  }
+
+  private persistirConfiguracionAutoArchivadoLocal(dias: number): void {
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+
+    try {
+      localStorage.setItem(this.AUTO_ARCHIVO_STORAGE_KEY, String(dias));
+    } catch (error) {
+      console.warn('No se pudo guardar la configuración local de auto-archivado', error);
+    }
+  }
+
+  private mapearOrdenParaReporte(orden: OrdenTrabajo): Record<string, string | number> {
+    return {
+      'Orden': orden.ordenId,
+      'Venta': orden.numero_venta || '',
+      'Recibo': orden.numero_recibo || '',
+      'Sede': orden.sede || '',
+      'Historia médica': orden.cliente?.historia_medica?.numero || '',
+      'Cliente': this.getClienteNombre(orden),
+      'Cédula paciente': this.getClienteCedula(orden),
+      'Teléfono': this.getClienteTelefono(orden) || '',
+      'Correo': this.getClienteEmail(orden),
+      'Tipo cliente': orden.cliente?.tipo || '',
+      'Producto(s)': this.getProductoNombre(orden),
+      'Detalle productos': this.getDetalleProductosReporte(orden),
+      'Especialista': this.getResumenEspecialistaReporte(orden),
+      'Asesor': this.getResumenAsesorReporte(orden),
+      'Tipo fórmula': this.getTipoFormulaOrden(orden),
+      'Médico origen': this.getResumenMedicoOrigenReporte(orden),
+      'Cristal recomendado': this.getCristalRecomendadoReporte(orden),
+      'Material recomendado': this.getMaterialRecomendadoReporte(orden),
+      'Observaciones formulación': this.getObservacionesFormulacion(orden) || '',
+      'Estado': this.getEstadoTexto(orden.estado),
+      'Progreso': `${this.getProgresoParaMostrar(orden)}%`,
+      'Fecha creación': this.formatearFechaHoraReporte(orden.fechaCreacion),
+      'Fecha inicio proceso': this.formatearFechaHoraReporte(orden.fechaInicioProceso),
+      'Entrega estimada': orden.fechaEntregaEstimada ? this.getFechaEntregaFormateada(orden) : 'Sin fecha',
+      'Fecha entrega': this.formatearFechaHoraReporte(orden.fechaEntrega || null),
+      'Archivada': orden.archivado ? 'Sí' : 'No',
+      'Motivo archivo': orden.motivoArchivo || '',
+      'Observaciones orden': orden.observaciones || ''
+    };
+  }
+
+  private formatearFechaReporte(fecha: Date): string {
+    return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+  }
+
+  private formatearFechaHoraReporte(fecha: string | null | undefined): string {
+    if (!fecha) return '';
+
+    const parsed = new Date(fecha);
+    if (Number.isNaN(parsed.getTime())) return '';
+
+    return parsed.toLocaleString('es-VE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  private obtenerResumenHtmlReporte(): string {
+    const tarjetas = [
+      { label: 'En tienda', value: this.estadisticas.enTienda },
+      { label: 'En laboratorio', value: this.estadisticas.enProceso },
+      { label: 'Listas', value: this.estadisticas.listoLaboratorio },
+      { label: 'Pendientes retiro', value: this.estadisticas.pendienteRetiro },
+      { label: 'Entregadas', value: this.ordenesEntregadas.length },
+      { label: 'Archivadas', value: this.ordenesArchivadas.length },
+      { label: 'Total', value: this.todasLasOrdenes.length },
+      { label: 'Auto-archivo', value: `${this.diasParaAutoArchivo} días` }
+    ];
+
+    return `<div class="summary">${tarjetas.map(item => `<div class="card"><span>${item.label}</span><strong>${item.value}</strong></div>`).join('')}</div>`;
+  }
+
+  private generarTablaHtmlReporte(ordenes: OrdenTrabajo[], titulo: string): string {
+    if (!ordenes.length) {
+      return `<h2>${titulo}</h2><div class="empty">No hay registros para mostrar.</div>`;
+    }
+
+    const filas = ordenes.map(orden => `
+      <tr>
+        <td>${orden.ordenId}</td>
+        <td>
+          <strong>${this.getClienteNombre(orden)}</strong><br>
+          <span class="muted">${this.getClienteCedula(orden) || 'Sin cédula'}</span>
+        </td>
+        <td>
+          ${this.getClienteTelefono(orden) || 'Sin teléfono'}<br>
+          <span class="muted">${this.getClienteEmail(orden) || 'Sin correo'}</span>
+        </td>
+        <td>${this.getDetalleProductosReporte(orden)}</td>
+        <td>
+          ${this.getTipoFormulaOrden(orden)}<br>
+          <span class="muted">${this.getResumenEspecialistaReporte(orden) || 'Sin especialista'}</span>
+          ${this.getResumenMedicoOrigenReporte(orden) ? `<br><span class="muted">Origen: ${this.getResumenMedicoOrigenReporte(orden)}</span>` : ''}
+        </td>
+        <td>${this.getEstadoTexto(orden.estado)}</td>
+        <td>${this.getProgresoParaMostrar(orden)}%</td>
+        <td>
+          Creación: ${this.formatearFechaHoraReporte(orden.fechaCreacion) || 'Sin fecha'}<br>
+          Entrega: ${orden.fechaEntregaEstimada ? this.getFechaEntregaFormateada(orden) : 'Sin fecha'}
+        </td>
+        <td>${orden.archivado ? (orden.motivoArchivo || 'Archivada') : 'Activa'}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <h2>${titulo}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Orden</th>
+            <th>Paciente</th>
+            <th>Contacto</th>
+            <th>Producto(s)</th>
+            <th>Resumen clínico</th>
+            <th>Estado</th>
+            <th>Progreso</th>
+            <th>Fechas</th>
+            <th>Observación</th>
+          </tr>
+        </thead>
+        <tbody>${filas}</tbody>
+      </table>
+    `;
+  }
+
+  private getClienteCedula(orden: OrdenTrabajo): string {
+    return orden.cliente?.informacion?.cedula || '';
+  }
+
+  private getClienteEmail(orden: OrdenTrabajo): string {
+    return orden.cliente?.informacion?.email || '';
+  }
+
+  private getDetalleProductosReporte(orden: OrdenTrabajo): string {
+    if (!Array.isArray(orden.productos) || !orden.productos.length) {
+      return 'Sin productos';
+    }
+
+    return orden.productos.map(producto => {
+      const partes = [producto.nombre, producto.codigo, producto.marca, producto.modelo].filter(Boolean);
+      return partes.join(' · ');
+    }).join(' | ');
+  }
+
+  private getResumenEspecialistaReporte(orden: OrdenTrabajo): string {
+    const nombre = this.getNombreEspecialistaOrden(orden);
+    const detalles = this.getEspecialistaDetalleItems(orden).join(' · ');
+
+    if (!nombre || nombre === 'No especificado') {
+      return '';
+    }
+
+    return [nombre, detalles].filter(Boolean).join(' · ');
+  }
+
+  private getResumenAsesorReporte(orden: OrdenTrabajo): string {
+    if (!orden.asesor?.nombre) {
+      return '';
+    }
+
+    return [orden.asesor.nombre, ...this.getAsesorDetalleItems(orden)].filter(Boolean).join(' · ');
+  }
+
+  private getResumenMedicoOrigenReporte(orden: OrdenTrabajo): string {
+    const medicoOrigen = this.getMedicoOrigenOrden(orden);
+    if (!medicoOrigen) {
+      return '';
+    }
+
+    return [medicoOrigen.nombre, medicoOrigen.tipo, medicoOrigen.lugarConsultorio].filter(Boolean).join(' · ');
+  }
+
+  private getCristalRecomendadoReporte(orden: OrdenTrabajo): string {
+    const recomendacion = orden.cliente?.historia_medica?.recomendaciones?.[0];
+    return recomendacion?.cristal ? this.getTipoCristalRecomendado(recomendacion.cristal) : '';
+  }
+
+  private getMaterialRecomendadoReporte(orden: OrdenTrabajo): string {
+    const recomendacion = orden.cliente?.historia_medica?.recomendaciones?.[0];
+    return recomendacion?.material ? this.getMaterialesRecomendados(recomendacion.material) : '';
   }
 
   // Agrega este método al componente para manejar mejor el responsive
