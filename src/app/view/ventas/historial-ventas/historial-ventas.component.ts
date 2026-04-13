@@ -675,11 +675,14 @@ export class HistorialVentasComponent implements OnInit {
         const subtotal = precioUnitario * cantidad;
         const tieneIva = prod.aplicaIva === true;
         const iva = tieneIva ? (subtotal * (venta.impuesto || 16) / 100) : 0;
+        const descripcion = prod.descripcion || '';
 
         return {
           id: prod.id?.toString(),
           nombre: prod.nombre,
           codigo: prod.codigo,
+          descripcion,
+          solicitudTraslado: this.extraerSolicitudTrasladoDesdeDescripcion(descripcion),
           precio: prod.precio,
           cantidad: cantidad,
           aplicaIva: tieneIva,
@@ -751,11 +754,18 @@ export class HistorialVentasComponent implements OnInit {
         tipoEspecialista: consulta.tipoEspecialista || '',
         tipoVentaConsulta: consulta.tipoVentaConsulta || '',
         montoOriginal: consulta.montoOriginal || 0,
+        datosConsulta: consulta.datosConsulta || consulta.historiaMedica?.datosConsulta || null,
+        examenOcular: consulta.examenOcular || consulta.historiaMedica?.examenOcular || null,
+        diagnosticoTratamiento: consulta.diagnosticoTratamiento || consulta.historiaMedica?.diagnosticoTratamiento || null,
+        recomendaciones: consulta.recomendaciones || consulta.historiaMedica?.recomendaciones || [],
+        conformidad: consulta.conformidad || consulta.historiaMedica?.conformidad || null,
+        historiaMedica: consulta.historiaMedica || null,
         // Información adicional del especialista
         especialista: {
           nombre: consulta.especialista?.nombre || '',
           tipo: consulta.especialista?.tipo || '',
-          cedula: consulta.especialista?.cedula || ''
+          cedula: consulta.especialista?.cedula || '',
+          externo: consulta.especialista?.externo || consulta.datosConsulta?.especialista?.externo || null
         }
       } : null,
 
@@ -3540,6 +3550,7 @@ export class HistorialVentasComponent implements OnInit {
     const cantidad = Math.max(1, Number(producto?.cantidad || 1));
     const impuesto = Number(this.ventaParaRecibo?.impuesto || 16);
     const tieneIva = producto?.tiene_iva === 1 || producto?.tieneIva === true || producto?.aplicaIva === true;
+    const descripcion = producto?.descripcion || '';
 
     const totalUnitarioConIva = Number(
       producto?.precio_unitario ??
@@ -3568,6 +3579,8 @@ export class HistorialVentasComponent implements OnInit {
 
     return {
       nombre: this.obtenerNombreProductoRecibo(producto, index),
+      descripcion,
+      solicitudTraslado: producto?.solicitudTraslado || this.extraerSolicitudTrasladoDesdeDescripcion(descripcion),
       cantidad,
       precio_unitario_sin_iva: this.redondear(precioUnitarioSinIva),
       precio_unitario: this.redondear(precioUnitarioConIva),
@@ -3773,6 +3786,135 @@ export class HistorialVentasComponent implements OnInit {
     return '¡Gracias por su compra!';
   }
 
+  getObservacionesGenerales(venta: any): string {
+    return this.obtenerLineasObservaciones(venta)
+      .filter(linea => !this.esLineaTraslado(linea))
+      .join('\n');
+  }
+
+  getSolicitudesTraslado(venta: any): string[] {
+    const lineasObservacion = this.obtenerLineasObservaciones(venta)
+      .filter(linea => this.esLineaTraslado(linea));
+    const lineasProductos = this.extraerSolicitudesTrasladoDesdeProductos(venta);
+
+    return Array.from(new Set([...lineasObservacion, ...lineasProductos]));
+  }
+
+  tieneSolicitudesTraslado(venta: any): boolean {
+    return this.getSolicitudesTraslado(venta).length > 0;
+  }
+
+  getResumenSolicitudesTraslado(venta: any): string {
+    const total = this.getSolicitudesTraslado(venta).length;
+
+    if (total <= 0) {
+      return '';
+    }
+
+    return total === 1
+      ? '1 solicitud de traslado manual registrada'
+      : `${total} solicitudes de traslado manual registradas`;
+  }
+
+  private obtenerLineasObservaciones(venta: any): string[] {
+    const observaciones = typeof venta?.observaciones === 'string' ? venta.observaciones : '';
+
+    return observaciones
+      .split(/\r?\n/)
+      .map((linea: string) => linea.trim())
+      .filter(Boolean);
+  }
+
+  private esLineaTraslado(linea: string): boolean {
+    return linea.toLowerCase().startsWith('solicitud de traslado:');
+  }
+
+  private extraerSolicitudesTrasladoDesdeProductos(venta: any): string[] {
+    const productos = Array.isArray(venta?.productos) ? venta.productos : [];
+
+    return productos
+      .flatMap((producto: any) => this.extraerLineasTrasladoDesdeTexto(producto?.descripcion))
+      .filter(Boolean);
+  }
+
+  private extraerSolicitudTrasladoDesdeDescripcion(descripcion: string | null | undefined): string {
+    return this.extraerLineasTrasladoDesdeTexto(descripcion)[0] || '';
+  }
+
+  private formatearSolicitudTraslado(linea: string): string {
+    const texto = (linea || '').replace(/\s+/g, ' ').trim();
+
+    if (!texto) {
+      return '';
+    }
+
+    const coincidencia = texto.match(/^solicitud de traslado:\s*(.+?)\s+desde\s+(?:sede\s+)?(.+?)(?:\s+hacia\s+.+?)?\.?$/i);
+
+    if (coincidencia) {
+      const producto = coincidencia[1].trim();
+      const sedeOrigen = coincidencia[2].trim().replace(/\.$/, '');
+      return `Solicitud de traslado: ${producto} desde sede ${sedeOrigen}.`;
+    }
+
+    return texto.endsWith('.') ? texto : `${texto}.`;
+  }
+
+  getTextoTrasladoDetalle(linea: string | null | undefined): string {
+    const texto = this.formatearSolicitudTraslado(linea || '');
+
+    return texto.replace(/^Solicitud de traslado:\s*/i, '').trim();
+  }
+
+  private extraerLineasTrasladoDesdeTexto(texto: string | null | undefined): string[] {
+    if (typeof texto !== 'string' || !texto.trim()) {
+      return [];
+    }
+
+    const coincidencias = texto.match(/solicitud de traslado:[^\r\n|]*/gi);
+
+    if (coincidencias?.length) {
+      return coincidencias
+        .map(linea => this.formatearSolicitudTraslado(linea))
+        .filter(Boolean);
+    }
+
+    return texto
+      .split(/[\r\n|]+/)
+      .map(linea => linea.trim())
+      .filter(linea => this.esLineaTraslado(linea))
+      .map(linea => this.formatearSolicitudTraslado(linea));
+  }
+
+  private getDatosConsultaVenta(consulta: any): any {
+    return consulta?.datosConsulta || consulta?.historiaMedica?.datosConsulta || null;
+  }
+
+  getTipoEspecialistaConsulta(consulta: any): string {
+    const datosConsulta = this.getDatosConsultaVenta(consulta);
+    return datosConsulta?.especialista?.tipo || consulta?.especialista?.tipo || consulta?.tipoEspecialista || 'Especialista no asignado';
+  }
+
+  getNombreEspecialistaConsulta(consulta: any): string {
+    const datosConsulta = this.getDatosConsultaVenta(consulta);
+    const esExterno = (this.getTipoEspecialistaConsulta(consulta) || '').toUpperCase() === 'EXTERNO';
+
+    if (esExterno) {
+      return datosConsulta?.especialista?.externo?.nombre || consulta?.especialista?.externo?.nombre || 'Médico externo no registrado';
+    }
+
+    return datosConsulta?.especialista?.nombre || consulta?.especialista?.nombre || consulta?.tipoEspecialista || 'No asignado';
+  }
+
+  getCedulaEspecialistaConsulta(consulta: any): string {
+    const datosConsulta = this.getDatosConsultaVenta(consulta);
+    return datosConsulta?.especialista?.cedula || consulta?.especialista?.cedula || '';
+  }
+
+  getLugarEspecialistaConsulta(consulta: any): string {
+    const datosConsulta = this.getDatosConsultaVenta(consulta);
+    return datosConsulta?.especialista?.externo?.lugarConsultorio || consulta?.especialista?.externo?.lugarConsultorio || '';
+  }
+
   // Método para obtener los abonos agrupados (también funciona para contado)
   getAbonosAgrupados(venta: any): any[] {
     if (!venta?.metodosPago || !Array.isArray(venta.metodosPago)) {
@@ -3896,11 +4038,14 @@ export class HistorialVentasComponent implements OnInit {
 
   compartirWhatsApp(): void {
     const numero = this.datosRecibo?.cliente?.telefono?.replace(/\D/g, '');
+    const resumenTraslado = Array.isArray(this.datosRecibo?.solicitudesTraslado) && this.datosRecibo.solicitudesTraslado.length
+      ? `%0A*Traslado:* ${encodeURIComponent(this.getResumenSolicitudesTraslado(this.ventaParaRecibo))}`
+      : '';
     const mensaje = `*NEW VISION LENS*%0A%0A` +
       `*Recibo:* ${this.datosRecibo?.numeroVenta}%0A` +
       `*Cliente:* ${this.datosRecibo?.cliente?.nombre}%0A` +
       `*Fecha:* ${this.datosRecibo?.fecha}%0A` +
-      `*Total:* ${this.formatearMoneda(this.datosRecibo?.totalVenta)}%0A%0A` +
+      `*Total:* ${this.formatearMoneda(this.datosRecibo?.totalVenta)}${resumenTraslado}%0A%0A` +
       `¡Gracias por su compra!`;
 
     if (numero) {
@@ -4108,6 +4253,8 @@ export class HistorialVentasComponent implements OnInit {
     const sedeRecibo = this.obtenerSedeActualParaRecibo();
     const productosParaImprimir = this.prepararProductosParaImpresion();
     const metodosPagoRecibo = this.getMetodosPagoParaTipo(this.ventaParaRecibo.formaPago || 'contado');
+    const observacionesGenerales = this.getObservacionesGenerales(this.ventaParaRecibo);
+    const solicitudesTraslado = this.getSolicitudesTraslado(this.ventaParaRecibo);
 
     return {
       // Información básica
@@ -4161,10 +4308,11 @@ export class HistorialVentasComponent implements OnInit {
       configuracion: {
         formaPago: this.ventaParaRecibo.formaPago || 'contado',
         moneda: this.ventaParaRecibo.moneda || 'dolar',
-        observaciones: this.ventaParaRecibo.observaciones
+        observaciones: observacionesGenerales
       },
 
-      observaciones: this.ventaParaRecibo.observaciones,
+      observaciones: observacionesGenerales,
+      solicitudesTraslado,
 
       // Cashea (si aplica)
       cashea: this.ventaParaRecibo.formaPago === 'cashea' ? {
@@ -4267,6 +4415,7 @@ export class HistorialVentasComponent implements OnInit {
     const metodosPago = this.getMetodosPagoParaTipo(formaPago);
     const mostrarTotalAPagar = this.debeMostrarTotalAPagar(formaPago, datos);
     const textoTotalAPagar = this.getTextoTotalAPagarParaHTML(formaPago);
+    const solicitudesTraslado = Array.isArray(datos.solicitudesTraslado) ? datos.solicitudesTraslado : [];
 
     const totalVenta = Number(datos.totales?.total || 0);
     const totalPagado = Number(datos.totales?.totalPagado || 0);
@@ -5520,7 +5669,7 @@ export class HistorialVentasComponent implements OnInit {
 </head>
 <body>
     <div class="recibo-page">
-      <div class="recibo-container page-break-avoid">
+      <div class="recibo-container">
       <div class="recibo-header page-break-avoid">
         <div>
           <span class="brand-kicker">${escaparHTML(sedeRecibo?.nombre || 'NEW VISION LENS')}</span>
@@ -5627,6 +5776,11 @@ export class HistorialVentasComponent implements OnInit {
                     <td>
                       <span class="product-name">${escaparHTML(producto.nombre)}</span>
                       ${producto.esServicio ? '<span class="service-tag">SERVICIO</span>' : ''}
+                      ${producto.solicitudTraslado ? `
+                        <div style="margin-top: 6px; font-size: 11px; line-height: 1.45; color: #9a3412; background: #fff7ed; border: 1px solid #fdba74; border-radius: 10px; padding: 6px 8px;">
+                          ${escaparHTML(producto.solicitudTraslado)}
+                        </div>
+                      ` : ''}
                     </td>
                                     <td class="text-center">${producto.cantidad || 1}</td>
                                     <td class="text-end">${formatearMonedaLocal(precioUnitario)}</td>
@@ -5830,6 +5984,8 @@ export class HistorialVentasComponent implements OnInit {
         id: prod.id,
         nombre: prod.nombre || 'Producto sin nombre',
         codigo: prod.codigo || 'N/A',
+        descripcion: prod.descripcion || '',
+        solicitudTraslado: this.extraerSolicitudTrasladoDesdeDescripcion(prod.descripcion),
         cantidad: cantidad,
         precioUnitarioSinIva: precioSinIva,
         precioUnitarioConIva: precioConIva,

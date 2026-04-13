@@ -1044,9 +1044,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     private construirLineaTraslado(producto: Pick<ItemCarrito, 'nombre' | 'codigo' | 'sede' | 'metadata'>): string {
         const sedeOrigen = producto.metadata?.sedeOrigen || this.normalizarClaveSede(producto.sede);
-        const sedeDestino = producto.metadata?.sedeDestino || this.sedeActiva;
         const codigo = producto.codigo && producto.codigo !== 'N/A' ? ` (${producto.codigo})` : '';
-        return `Solicitud de traslado: ${producto.nombre}${codigo} desde ${this.obtenerNombreSedeProducto(sedeOrigen)} hacia ${this.obtenerNombreSedeProducto(sedeDestino)}.`;
+        return `Solicitud de traslado: ${producto.nombre}${codigo} desde sede ${this.obtenerNombreSedeProducto(sedeOrigen)}.`;
     }
 
     private construirObservacionesVenta(): string | undefined {

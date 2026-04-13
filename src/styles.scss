@@ -16,6 +16,19 @@ body {
     font-family: Roboto, "Helvetica Neue", sans-serif;
 }
 
+body.modal-open .modal-backdrop {
+    z-index: 2000 !important;
+}
+
+body.modal-open .modal {
+    z-index: 2010 !important;
+}
+
+body.modal-open .modal-dialog,
+body.modal-open .modal-content {
+    z-index: 2011 !important;
+}
+
 @media (max-width: 768px) {
     .modal.show {
         display: flex !important;

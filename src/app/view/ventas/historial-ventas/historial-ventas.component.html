@@ -552,9 +552,14 @@
               </div>
 
               <!-- Observaciones -->
-              <div class="detalle-observaciones" *ngIf="venta.observaciones">
+              <div class="detalle-observaciones" *ngIf="getObservacionesGenerales(venta)">
                 <i class="bi bi-chat-left-text"></i>
-                <span>{{ venta.observaciones }}</span>
+                <span>{{ getObservacionesGenerales(venta) }}</span>
+              </div>
+
+              <div class="detalle-traslado-resumen" *ngIf="tieneSolicitudesTraslado(venta)">
+                <i class="bi bi-truck"></i>
+                <span>{{ getResumenSolicitudesTraslado(venta) }}</span>
               </div>
 
               <!-- Acciones -->
@@ -837,9 +842,9 @@
                   </span>
                 </div>
                 <div class="consulta-info">
-                  <span class="especialista-nombre">
+                  <span *ngIf="!selectedVenta.consulta.esFormulaExterna" class="especialista-nombre">
                     <i class="bi bi-person-badge"></i>
-                    {{ selectedVenta.consulta.tipoEspecialista || 'Especialista no asignado' }}
+                    {{ getTipoEspecialistaConsulta(selectedVenta.consulta) }}
                   </span>
                   <span *ngIf="selectedVenta.consulta.esFormulaExterna" class="badge-externa">
                     <i class="bi bi-box-arrow-up-right"></i> Fórmula externa
@@ -851,16 +856,19 @@
               <div class="consulta-detalle">
                 <div class="detalle-fila">
                   <span class="detalle-label">Especialista:</span>
-                  <span class="detalle-valor">{{ selectedVenta.consulta.especialista?.nombre ||
-                    selectedVenta.consulta.tipoEspecialista || 'No asignado' }}</span>
+                  <span class="detalle-valor">{{ getNombreEspecialistaConsulta(selectedVenta.consulta) }}</span>
                 </div>
-                <div class="detalle-fila" *ngIf="selectedVenta.consulta.especialista?.cedula">
+                <div class="detalle-fila" *ngIf="!selectedVenta.consulta.esFormulaExterna">
+                  <span class="detalle-label">Tipo:</span>
+                  <span class="detalle-valor">{{ getTipoEspecialistaConsulta(selectedVenta.consulta) }}</span>
+                </div>
+                <div class="detalle-fila" *ngIf="getCedulaEspecialistaConsulta(selectedVenta.consulta)">
                   <span class="detalle-label">Cédula:</span>
-                  <span class="detalle-valor">{{ selectedVenta.consulta.especialista.cedula }}</span>
+                  <span class="detalle-valor">{{ getCedulaEspecialistaConsulta(selectedVenta.consulta) }}</span>
                 </div>
-                <div class="detalle-fila" *ngIf="selectedVenta.consulta.esFormulaExterna">
-                  <span class="detalle-label">Origen:</span>
-                  <span class="detalle-valor">Fórmula externa</span>
+                <div class="detalle-fila" *ngIf="getLugarEspecialistaConsulta(selectedVenta.consulta)">
+                  <span class="detalle-label">Consultorio:</span>
+                  <span class="detalle-valor">{{ getLugarEspecialistaConsulta(selectedVenta.consulta) }}</span>
                 </div>
               </div>
 
@@ -902,6 +910,16 @@
                 <div class="producto-titulo">
                   <span class="producto-nombre">{{producto.nombre}}</span>
                   <span class="producto-codigo">{{producto.codigo}}</span>
+                </div>
+              </div>
+
+              <div class="detalle-traslado-resumen" *ngIf="producto.solicitudTraslado">
+                <span class="traslado-pill-icon">
+                  <i class="bi bi-truck"></i>
+                  Traslado
+                </span>
+                <div class="traslado-pill-content">
+                  <span class="traslado-pill-text">{{ getTextoTrasladoDetalle(producto.solicitudTraslado) }}</span>
                 </div>
               </div>
 
@@ -1298,14 +1316,13 @@
         </div>
       </div>
 
-      <!-- Observaciones -->
-      <div class="info-card observaciones" *ngIf="selectedVenta?.observaciones">
+      <div class="info-card observaciones" *ngIf="getObservacionesGenerales(selectedVenta)">
         <div class="card-header-detalle">
           <i class="bi bi-chat-left-text"></i>
           <span>Observaciones</span>
         </div>
         <div class="card-body-detalle">
-          <p class="observaciones-text">{{selectedVenta?.observaciones}}</p>
+          <p class="observaciones-text">{{ getObservacionesGenerales(selectedVenta) }}</p>
         </div>
       </div>
     </div>

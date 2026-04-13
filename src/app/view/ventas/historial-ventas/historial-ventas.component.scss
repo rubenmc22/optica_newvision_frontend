@@ -2233,6 +2233,43 @@
     margin: 0;
     line-height: 1.6;
     color: #495057;
+    white-space: pre-line;
+}
+
+.traslado-info-card {
+    .card-header-detalle i {
+        color: #2563eb;
+    }
+}
+
+.traslado-card-body {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.traslado-resumen {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e40af;
+}
+
+.traslado-linea {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.9rem;
+    border-radius: 10px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e3a8a;
+    font-size: 0.9rem;
+    line-height: 1.45;
+
+    i {
+        margin-top: 0.1rem;
+        color: #2563eb;
+    }
 }
 
 // Footer del Modal
@@ -11949,6 +11986,50 @@ form {
         i {
             font-size: 0.85rem;
             margin-top: 0.125rem;
+        }
+    }
+
+    .detalle-traslado-resumen {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        padding: 0.75rem 0.85rem;
+        background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+        border: 1px solid #d6e6ff;
+        border-radius: 12px;
+        margin: -0.1rem 0 0.85rem;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+
+        .traslado-pill-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex: 0 0 auto;
+            padding: 0.28rem 0.55rem;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+
+            i {
+                font-size: 0.8rem;
+            }
+        }
+
+        .traslado-pill-content {
+            display: grid;
+            gap: 0.25rem;
+            min-width: 0;
+        }
+
+        .traslado-pill-text {
+            color: #1e3a8a;
+            font-size: 0.83rem;
+            line-height: 1.4;
+            font-weight: 600;
         }
     }
 

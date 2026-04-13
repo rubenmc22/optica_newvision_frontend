@@ -740,6 +740,12 @@ $surface-shadow: 0 24px 50px rgba(15, 23, 42, 0.12);
   color: #26425f;
 }
 
+:host-context(body.modal-open) .app-footer {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .app-footer__meta {
   display: flex;
   flex-wrap: wrap;
