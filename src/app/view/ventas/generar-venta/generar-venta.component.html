@@ -1689,14 +1689,14 @@
                                                     [ngClass]="{'campo-invalido': necesitaBancoReceptor(metodo.tipo) && !metodo.bancoReceptorObject}">
 
                                                     <ng-template ng-label-tmp let-item="item">
-                                                        <span *ngIf="item">{{ item?.displayText }}</span>
+                                                        <span *ngIf="item">{{ item.nombre }} - {{ item.accountDescription || item.ownerName || item.ownerId }}</span>
                                                         <span *ngIf="!item">Seleccionar cuenta receptora...</span>
                                                     </ng-template>
 
                                                     <ng-template ng-option-tmp let-item="item">
                                                         <div class="banco-option" *ngIf="item">
-                                                            <div class="banco-codigo">{{ item.nombre }}</div>
-                                                            <div class="banco-nombre">{{ item.accountDescription || item.ownerName || item.ownerId }}</div>
+                                                            <div class="banco-codigo">{{ item.displayTitle || item.nombre }}</div>
+                                                            <div class="banco-nombre">{{ item.displaySubtitle || item.accountDescription || item.ownerName || item.ownerId }}</div>
                                                         </div>
                                                     </ng-template>
                                                 </ng-select>

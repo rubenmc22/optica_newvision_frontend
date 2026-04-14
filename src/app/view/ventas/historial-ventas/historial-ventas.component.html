@@ -1657,10 +1657,13 @@
                                     [compareWith]="compararCuentaReceptora" [searchable]="true" [clearable]="true"
                                     [placeholder]="getPlaceholderCuentaReceptora(metodoControl.get('tipo')?.value)"
                                     [class.ng-select-invalid]="metodoControl.get('bancoReceptorObject')?.invalid && metodoControl.get('bancoReceptorObject')?.touched">
+                                    <ng-template ng-label-tmp let-item="item">
+                                      <span *ngIf="item">{{ item.nombre }} - {{ item.accountDescription || item.ownerName || item.ownerId }}</span>
+                                    </ng-template>
                                     <ng-template ng-option-tmp let-item="item">
                                       <div class="banco-option" *ngIf="item">
-                                        <div class="banco-codigo">{{ item.nombre }}</div>
-                                        <div class="banco-nombre">{{ item.accountDescription || item.ownerName || item.ownerId }}</div>
+                                        <div class="banco-codigo">{{ item.displayTitle || item.nombre }}</div>
+                                        <div class="banco-nombre">{{ item.displaySubtitle || item.accountDescription || item.ownerName || item.ownerId }}</div>
                                       </div>
                                     </ng-template>
                                   </ng-select>
@@ -1920,183 +1923,276 @@
               </div>
               <div class="header-actions">
                 <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()" title="Agregar método"
-                  [disabled]="metodosPagoArray.length >= 3">
+                  [disabled]="metodosPagoArray.length >= 5">
                   <i class="bi bi-plus-circle"></i>
                   Agregar Método
+                  <span *ngIf="metodosPagoArray.length > 0" class="ms-1">
+                    ({{metodosPagoArray.length}}/5)
+                  </span>
                 </button>
               </div>
             </div>
 
-            <!-- Sección de Métodos de Pago Mejorada y Compacta -->
-            <div class="metodos-pago-compact">
-
-              <!-- Contador de métodos y estado -->
-              <div class="metodos-info-bar" *ngIf="metodosPagoArray.length > 0">
-                <div class="metodos-count">
-                  <span class="badge bg-primary">{{ metodosPagoArray.length }}</span>
-                  <span class="metodos-count-text">{{ metodosPagoArray.length === 1 ? 'Método' : 'Métodos' }}
-                    configurado{{ metodosPagoArray.length > 1 ? 's' : '' }}</span>
+            <!-- Contenido de métodos de pago -->
+            <div class="metodos-pago-section">
+                <div class="metodos-counter" *ngIf="metodosPagoArray.length > 0">
+                    <i class="bi bi-list-check text-primary"></i>
+                    <span>{{ metodosPagoArray.length }} método{{ metodosPagoArray.length > 1 ? 's' : '' }} configurado{{
+                        metodosPagoArray.length > 1 ? 's' : '' }}</span>
                 </div>
-                <div class="metodos-status" [class.status-valid]="validarPagoCompleto()"
-                  [class.status-invalid]="!validarPagoCompleto()">
-                  <i class="bi" [class.bi-check-circle]="validarPagoCompleto()"
-                    [class.bi-exclamation-circle]="!validarPagoCompleto()"></i>
-                  <span>{{ validarPagoCompleto() ? 'Montos coinciden' : 'Ajustar montos' }}</span>
-                </div>
-              </div>
 
-              <!-- Grid de métodos de pago -->
-              <div formArrayName="metodosPago" class="metodos-grid-compact" *ngIf="metodosPagoArray.length > 0">
-                <div *ngFor="let metodoControl of metodosPagoArray.controls; let i = index" [formGroupName]="i"
-                  class="metodo-card-compact">
+                <div formArrayName="metodosPago" class="metodos-grid" *ngIf="metodosPagoArray.length > 0">
+                    <div *ngFor="let metodoControl of metodosPagoArray.controls; let i = index" [formGroupName]="i"
+                        class="metodo-card">
 
-                  <!-- Cabecera compacta -->
-                  <div class="metodo-card-header-compact">
-                    <div class="metodo-header-left">
-                      <span class="metodo-indice">#{{ i + 1 }}</span>
-                      <div class="metodo-completitud" [class.completo]="metodoEstaCompleto(metodoControl)"
-                        [class.incompleto]="!metodoEstaCompleto(metodoControl)"
-                        title="{{ metodoEstaCompleto(metodoControl) ? 'Completo' : 'Incompleto' }}">
-                        <i class="bi" [class.bi-check]="metodoEstaCompleto(metodoControl)"
-                          [class.bi-dash]="!metodoEstaCompleto(metodoControl)"></i>
-                      </div>
-                    </div>
-
-                    <div class="metodo-header-right">
-                      <button type="button" class="btn btn-sm btn-icon-compact" (click)="removerMetodoPago(i)"
-                        *ngIf="metodosPagoArray.length > 1" title="Eliminar método">
-                        <i class="bi bi-x"></i>
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Cuerpo compacto -->
-                  <div class="metodo-card-body-compact">
-
-                    <!-- Selector de tipo -->
-                    <div class="metodo-tipo-wrapper">
-                      <select class="form-select-compact" formControlName="tipo" (change)="onMetodoPagoChange(i)">
-                        <option value="" disabled selected>Tipo de pago</option>
-                        <option *ngFor="let tipo of tiposPago" [value]="tipo.value">{{ tipo.label }}</option>
-                      </select>
-                    </div>
-
-                    <!-- Campos dinámicos (se muestran solo si hay tipo seleccionado) -->
-                    <div *ngIf="metodoControl.get('tipo')?.value" class="metodo-campos-wrapper">
-
-                      <!-- Moneda para efectivo -->
-                      <div *ngIf="metodoControl.get('tipo')?.value === 'efectivo'" class="moneda-selector-compact">
-                        <div class="moneda-buttons-compact">
-                          <button type="button" class="moneda-btn-compact"
-                            [class.active]="metodoControl.get('monedaEfectivo')?.value === 'USD'"
-                            (click)="seleccionarMonedaEfectivo(i, 'usd')">
-                            <span class="moneda-simbolo">$</span>
-                            <span class="moneda-nombre">USD</span>
-                          </button>
-                          <button type="button" class="moneda-btn-compact"
-                            [class.active]="metodoControl.get('monedaEfectivo')?.value === 'EUR'"
-                            (click)="seleccionarMonedaEfectivo(i, 'eur')">
-                            <span class="moneda-simbolo">€</span>
-                            <span class="moneda-nombre">EUR</span>
-                          </button>
-                          <button type="button" class="moneda-btn-compact"
-                            [class.active]="metodoControl.get('monedaEfectivo')?.value === 'Bs'"
-                            (click)="seleccionarMonedaEfectivo(i, 'bs')">
-                            <span class="moneda-simbolo">Bs</span>
-                            <span class="moneda-nombre">VES</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <!-- Banco (si aplica) -->
-                      <div *ngIf="necesitaBanco(metodoControl.get('tipo')?.value)" class="campo-compact">
-                        <ng-select [items]="getBancosDisponiblesPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText"
-                          bindValue="codigo" formControlName="bancoObject" (change)="onBancoChange($event, i)"
-                          [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
-                          [placeholder]="getPlaceholderBancoPrincipal(metodoControl.get('tipo')?.value)">
-                        </ng-select>
-                      </div>
-
-                      <div *ngIf="necesitaBancoReceptor(metodoControl.get('tipo')?.value)" class="campo-compact">
-                        <ng-select [items]="getCuentasReceptorasPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText"
-                          formControlName="bancoReceptorObject" (change)="onBancoReceptorChange($event, i)"
-                          [compareWith]="compararCuentaReceptora" [searchable]="true" [clearable]="true"
-                          [placeholder]="getPlaceholderCuentaReceptora(metodoControl.get('tipo')?.value)">
-                          <ng-template ng-option-tmp let-item="item">
-                            <div class="banco-option" *ngIf="item">
-                              <div class="banco-codigo">{{ item.nombre }}</div>
-                              <div class="banco-nombre">{{ item.accountDescription || item.ownerName || item.ownerId }}</div>
+                        <div class="metodo-card-header">
+                            <div class="metodo-number">
+                                <i class="bi bi-123 text-secondary"></i>
+                                <span>Método #{{ i + 1 }}</span>
+                                <span class="estado-metodo" [ngClass]="{
+                                    'estado-vacio': metodoEstaVacio(metodoControl),
+                                    'estado-incompleto': metodoTieneDatosParciales(metodoControl),
+                                    'estado-completo': metodoEstaCompleto(metodoControl)
+                                }">
+                                    <i class="bi" [class.bi-dash-circle-fill]="metodoEstaVacio(metodoControl)"
+                                        [class.bi-exclamation-circle-fill]="metodoTieneDatosParciales(metodoControl)"
+                                        [class.bi-check-circle-fill]="metodoEstaCompleto(metodoControl)"></i>
+                                    {{
+                                    metodoEstaVacio(metodoControl) ? 'Vacío' :
+                                    metodoTieneDatosParciales(metodoControl) ? 'Incompleto' :
+                                    'Completo'
+                                    }}
+                                </span>
                             </div>
-                          </ng-template>
-                        </ng-select>
-                      </div>
-
-                      <!-- Referencia (si aplica) -->
-                      <div *ngIf="necesitaReferencia(metodoControl.get('tipo')?.value)" class="campo-compact">
-                        <input type="text" class="form-control-compact" formControlName="referencia"
-                          [placeholder]="getPlaceholderReferencia(metodoControl.get('tipo')?.value)">
-                      </div>
-
-                      <div *ngIf="mostrarNotaPago(metodoControl.get('tipo')?.value)" class="campo-compact">
-                        <input type="text" class="form-control-compact" formControlName="notaPago"
-                          placeholder="Nota del pago">
-                      </div>
-
-                      <!-- Monto (siempre visible) -->
-                      <div class="campo-compact monto-wrapper">
-                        <div class="monto-input-compact">
-                          <input type="text" class="form-control-compact" [value]="montosTemporalesMetodos[i] || ''"
-                            inputmode="decimal" placeholder="0,00" (focus)="onMontoMetodoFocus(i)"
-                            (input)="onMontoMetodoInput(i, $event)" (blur)="onMontoMetodoBlur(i)">
-                          <span class="monto-currency">{{ getSimboloParaMetodo(i) }}</span>
+                            <button class="btn btn-remove" (click)="removerMetodoPago(i)" title="Eliminar método"
+                                [disabled]="metodosPagoArray.length === 1">
+                                <i class="bi bi-trash text-danger"></i>
+                            </button>
                         </div>
-                        <small class="monto-conversion" *ngIf="metodoControl.get('monto')?.value">
-                          {{ metodoControl.get('monto')?.value | number:'1.2-2' }} {{ getSimboloParaMetodo(i) }}
-                          <span *ngIf="mostrarConversionParaMetodo(i)" class="conversion-venta">
-                            ≈ {{ getMontoMetodoEnMonedaVenta(i) | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
-                          </span>
-                          <span *ngIf="getMonedaParaMetodo(i) !== 'bolivar'" class="conversion-venta">
-                            · {{ getConversionBs(metodoControl.get('monto')?.value, getMonedaParaMetodo(i)) | number:'1.2-2' }} Bs
-                          </span>
-                        </small>
-                      </div>
 
+                        <div class="metodo-content">
+                            <div class="campo-principal">
+                                <label class="form-label compact-label">
+                                    <i class="bi bi-credit-card text-primary"></i>
+                                    Tipo de Pago
+                                </label>
+                                <select class="form-select modern-select" formControlName="tipo" (change)="onMetodoPagoChange(i)"
+                                    [ngClass]="{'campo-invalido': metodoControl.get('tipo')?.invalid && metodoControl.get('tipo')?.touched}">
+                                    <option value="" disabled selected>Elige un método de pago</option>
+                                  <option *ngFor="let tipo of tiposPago" [value]="tipo.value">{{ tipo.label }}</option>
+                                </select>
+                                <small *ngIf="metodoControl.get('tipo')?.invalid && metodoControl.get('tipo')?.touched"
+                                    class="text-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> Campo requerido
+                                </small>
+                            </div>
+
+                            <div class="campos-condicionales" *ngIf="metodoControl.get('tipo')?.value">
+                                <div *ngIf="metodoControl.get('tipo')?.value === 'efectivo'"
+                                    class="campo-adicional moneda-selector">
+                                    <div class="moneda-header">
+                                        <i class="bi bi-currency-exchange text-success"></i>
+                                        <span class="moneda-label">Moneda del Efectivo</span>
+                                    </div>
+                                    <div class="moneda-buttons-compact">
+                                        <button type="button" class="moneda-btn-compact"
+                                            [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'USD'"
+                                            (click)="seleccionarMonedaEfectivo(i, 'usd')" title="Dólar Americano">
+                                            <span class="moneda-symbol-compact">$</span>
+                                            <span class="moneda-text-compact">USD</span>
+                                        </button>
+                                        <button type="button" class="moneda-btn-compact"
+                                            [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'EUR'"
+                                            (click)="seleccionarMonedaEfectivo(i, 'eur')" title="Euro">
+                                            <span class="moneda-symbol-compact">€</span>
+                                            <span class="moneda-text-compact">EUR</span>
+                                        </button>
+                                        <button type="button" class="moneda-btn-compact"
+                                            [class.moneda-btn-active]="metodoControl.get('monedaEfectivo')?.value === 'Bs'"
+                                            (click)="seleccionarMonedaEfectivo(i, 'bs')" title="Bolívar">
+                                            <span class="moneda-symbol-compact">Bs</span>
+                                            <span class="moneda-text-compact">VES</span>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted" style="font-size: 11px; display: block; margin-top: 3px;">
+                                        <i class="bi bi-info-circle"></i> Selecciona la moneda del efectivo
+                                    </small>
+                                </div>
+
+                                <div *ngIf="necesitaBanco(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                    <label class="form-label compact-label">
+                                        <i class="bi bi-bank"></i>
+                                    {{ getEtiquetaBancoPrincipal(metodoControl.get('tipo')?.value) }}
+                                    </label>
+                                  <ng-select [items]="getBancosDisponiblesPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText" bindValue="codigo"
+                                        formControlName="bancoObject" (change)="onBancoChange($event, i)"
+                                        [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
+                                    [placeholder]="getPlaceholderBancoPrincipal(metodoControl.get('tipo')?.value)"
+                                        [class.ng-select-invalid]="metodoControl.get('bancoObject')?.invalid && metodoControl.get('bancoObject')?.touched">
+                                    </ng-select>
+                                    <small
+                                        *ngIf="metodoControl.get('bancoObject')?.invalid && metodoControl.get('bancoObject')?.touched"
+                                        class="text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i> Selecciona un banco
+                                    </small>
+                                </div>
+
+                                <div *ngIf="necesitaBancoReceptor(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                  <label class="form-label compact-label">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    Cuenta receptora
+                                  </label>
+                                  <ng-select [items]="getCuentasReceptorasPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText"
+                                    formControlName="bancoReceptorObject" (change)="onBancoReceptorChange($event, i)"
+                                    [compareWith]="compararCuentaReceptora" [searchable]="true" [clearable]="true"
+                                    [placeholder]="getPlaceholderCuentaReceptora(metodoControl.get('tipo')?.value)"
+                                    [class.ng-select-invalid]="metodoControl.get('bancoReceptorObject')?.invalid && metodoControl.get('bancoReceptorObject')?.touched">
+                                    <ng-template ng-label-tmp let-item="item">
+                                      <span *ngIf="item">{{ item.nombre }} - {{ item.accountDescription || item.ownerName || item.ownerId }}</span>
+                                    </ng-template>
+                                    <ng-template ng-option-tmp let-item="item">
+                                      <div class="banco-option" *ngIf="item">
+                                        <div class="banco-codigo">{{ item.displayTitle || item.nombre }}</div>
+                                        <div class="banco-nombre">{{ item.displaySubtitle || item.accountDescription || item.ownerName || item.ownerId }}</div>
+                                      </div>
+                                    </ng-template>
+                                  </ng-select>
+                                  <small *ngIf="getCuentasReceptorasPorMetodo(metodoControl.get('tipo')?.value).length === 0"
+                                    class="text-warning">
+                                    <i class="bi bi-info-circle"></i> No hay cuentas receptoras configuradas para este método
+                                  </small>
+                                  <small
+                                    *ngIf="metodoControl.get('bancoReceptorObject')?.invalid && metodoControl.get('bancoReceptorObject')?.touched"
+                                    class="text-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> Selecciona la cuenta receptora
+                                  </small>
+                                </div>
+
+                                <div *ngIf="necesitaReferencia(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                    <label class="form-label compact-label">
+                                        <i class="bi bi-hash"></i>
+                                        N° de Referencia
+                                    </label>
+                                    <input type="text" class="form-control modern-input" formControlName="referencia"
+                                        [placeholder]="getPlaceholderReferencia(metodoControl.get('tipo')?.value)" maxlength="20"
+                                        [class.campo-invalido]="metodoControl.get('referencia')?.invalid && metodoControl.get('referencia')?.touched" />
+                                    <small
+                                        *ngIf="metodoControl.get('referencia')?.invalid && metodoControl.get('referencia')?.touched"
+                                        class="text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i> Ingresa el número de referencia
+                                    </small>
+                                </div>
+
+                                <div *ngIf="mostrarNotaPago(metodoControl.get('tipo')?.value)" class="campo-adicional">
+                                  <label class="form-label compact-label">
+                                    <i class="bi bi-journal-text"></i>
+                                    Nota del pago
+                                  </label>
+                                  <input type="text" class="form-control modern-input" formControlName="notaPago"
+                                    placeholder="Ej: Pago desde otra cuenta o detalle adicional" maxlength="120" />
+                                </div>
+
+                                <div class="campo-monto">
+                                    <label class="form-label compact-label">
+                                        <i class="bi bi-cash-stack"></i>
+                                        Monto recibido ({{ getSimboloParaMetodo(i) }})
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">{{ getSimboloParaMetodo(i) }}</span>
+                                        <input type="text" class="form-control modern-input"
+                                          [value]="montosTemporalesMetodos[i] || ''" inputmode="decimal" placeholder="0,00"
+                                            (focus)="onMontoMetodoFocus(i)" (input)="onMontoMetodoInput(i, $event)"
+                                            (blur)="onMontoMetodoBlur(i)"
+                                            [class.campo-invalido]="metodoControl.get('monto')?.invalid && metodoControl.get('monto')?.touched" />
+                                    </div>
+
+                                    <small *ngIf="metodoControl.get('monto')?.invalid && metodoControl.get('monto')?.touched" class="text-danger">
+                                        <i class="bi bi-exclamation-triangle"></i>
+                                        <span *ngIf="metodoControl.get('monto')?.errors?.['required']">Ingresa un monto válido</span>
+                                        <span *ngIf="metodoControl.get('monto')?.errors?.['min']">El monto debe ser mayor a 0</span>
+                                        <span *ngIf="metodoControl.get('monto')?.errors?.['max']">El monto excede el máximo permitido</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="metodo-footer" *ngIf="metodoControl.get('tipo')?.value">
+                            <div class="footer-info">
+                                <span class="maximo-text">
+                                    <i class="bi bi-graph-up text-info"></i>
+                              Máx. disponible: {{ getMontoMaximoParaMetodo(i) | number:'1.2-2' }} {{ getSimboloParaMetodo(i) }}
+                                </span>
+
+                                <span *ngIf="mostrarConversionABolivares() && metodoControl.get('monto')?.value && metodoControl.get('monto')?.value > 0"
+                                    class="conversion-text">
+                                    <i class="bi bi-calculator text-primary"></i>
+                              Equivale a {{ getMontoMetodoEnMonedaVenta(i) | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                              <span *ngIf="getMonedaParaMetodo(i) !== 'bolivar'" class="conversion-moneda-venta">
+                                · {{ getConversionBs(metodoControl.get('monto')?.value, getMonedaParaMetodo(i)) | number:'1.2-2' }} Bs
+                              </span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="metodo-empty" *ngIf="!metodoControl.get('tipo')?.value">
+                            <i class="bi bi-credit-card-2-front text-muted"></i>
+                            <span>Selecciona un tipo de pago para continuar</span>
+                        </div>
                     </div>
-                  </div>
                 </div>
-              </div>
 
-              <!-- Estado vacío compacto -->
-              <div class="empty-compact" *ngIf="metodosPagoArray.length === 0">
-                <div class="empty-icon-compact">
-                  <i class="bi bi-credit-card"></i>
+                <div class="empty-state" *ngIf="metodosPagoArray.length === 0">
+                    <div class="empty-icon">
+                        <i class="bi bi-wallet text-muted"></i>
+                    </div>
+                    <h5>No hay métodos de pago</h5>
+                    <p>Agrega al menos un método de pago para continuar con el pago</p>
+                    <button type="button" class="btn btn-add-method" (click)="agregarMetodoPago()">
+                        <i class="bi bi-plus-circle"></i>
+                        Agregar Primer Método
+                    </button>
                 </div>
-                <div class="empty-text-compact">
-                  <p class="mb-1">No hay métodos de pago</p>
-                  <small class="text-muted">Haz clic en "Agregar Método" para comenzar</small>
-                </div>
-              </div>
 
-              <!-- Resumen ultra compacto -->
-              <div *ngIf="metodosPagoArray.length > 0" class="resumen-compact">
-                <div class="resumen-row">
-                  <span class="resumen-label">Total métodos:</span>
-                  <span class="resumen-value">{{ calcularTotalMetodosPagoEnMonedaVenta() | number:'1.2-2' }} {{
-                    getSimboloMonedaVenta() }}</span>
-                </div>
-                <div class="resumen-row">
-                  <span class="resumen-label">Deuda total:</span>
-                  <span class="resumen-value destacado">{{ calcularMontoDeuda() | number:'1.2-2' }} {{
-                    getSimboloMonedaVenta() }}</span>
-                </div>
-                <div class="resumen-row" *ngIf="!validarPagoCompleto()">
-                  <span class="resumen-label text-warning">Diferencia:</span>
-                  <span class="resumen-value text-warning">
-                    {{ calcularDiferenciaMetodos() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
-                  </span>
-                </div>
-              </div>
+                <div *ngIf="metodosPagoArray.length > 0" class="resumen-pagos-elegante">
+                    <div class="resumen-header">
+                        <div class="resumen-icon">
+                            <i class="bi bi-calculator"></i>
+                        </div>
+                        <div class="resumen-title">
+                            <h6>Resumen de Pagos</h6>
+                            <small>Total en {{getMonedaVentaDisplay()}}</small>
+                        </div>
+                    </div>
 
+                    <div class="resumen-body">
+                        <div class="resumen-item">
+                            <span class="resumen-label">Total métodos:</span>
+                            <span class="resumen-value total-methods">
+                                {{ calcularTotalMetodosPagoEnMonedaVenta() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                            </span>
+                        </div>
+
+                        <div class="resumen-item" [class.has-difference]="!validarPagoCompleto()">
+                            <span class="resumen-label">Diferencia:</span>
+                            <span class="resumen-value difference">
+                                {{ calcularDiferenciaMetodos() | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                                <i *ngIf="!validarPagoCompleto()" class="bi bi-exclamation-triangle warning-icon"></i>
+                            </span>
+                        </div>
+
+                        <div class="resumen-item total">
+                            <span class="resumen-label">Monto a pagar:</span>
+                            <span class="resumen-value grand-total">
+                                {{ editarVentaForm.get('montoAbonado')?.value || 0 | number:'1.2-2' }} {{ getSimboloMonedaVenta() }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div *ngIf="!validarPagoCompleto()" class="resumen-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <span>Los métodos de pago no coinciden con el monto a pagar</span>
+                    </div>
+                </div>
             </div>
           </div>
 

@@ -2137,3 +2137,121 @@ CONFIGURACION GENERAL - CIERRE DE CAJA
     }
 }
 
+//REALICE ABONOS (nueva estructura)
+
+{
+    "montoAbonado": 50,
+    "ordenTrabajo": true,
+    "metodosPago": [
+        {
+            "tipo": "punto",
+            "monto": 11881.3,
+            "moneda": "bolivar",
+            "referencia": null,
+            "cuentaEmisora": null,
+            "cuentaReceptora": {
+                "bancoCodigo": "0172",
+                "bancoNombre": "Bancamiga",
+                "descripcionCuenta": "Punto de venta interno - Óptica Principal"
+            },
+            "notaPago": null,
+            "montoEnMonedaVenta": 24.88
+        },
+        {
+            "tipo": "pagomovil",
+            "monto": 12000,
+            "moneda": "bolivar",
+            "referencia": "212121212",
+            "cuentaEmisora": {
+                "bancoCodigo": "0108",
+                "bancoNombre": "Banco Provincial"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0108",
+                "bancoNombre": "Banco Provincial",
+                "titular": "Ruben Martinez",
+                "cedulaRif": "24367965",
+                "telefono": "04123920817",
+                "descripcionCuenta": "Cuenta personal de Ruben"
+            },
+            "notaPago": "test",
+            "montoEnMonedaVenta": 25.12
+        }
+    ],
+    "observaciones": ""
+}
+
+
+//REALICE PAGOS  (nueva estructura)
+{
+    "montoAbonado": 1055.15,
+    "ordenTrabajo": true,
+    "metodosPago": [
+        {
+            "tipo": "efectivo",
+            "monto": 291.02,
+            "moneda": "euro",
+            "referencia": null,
+            "cuentaEmisora": null,
+            "cuentaReceptora": null,
+            "notaPago": null,
+            "montoEnMonedaVenta": 340.73
+        },
+        {
+            "tipo": "punto",
+            "monto": 149999.36,
+            "moneda": "bolivar",
+            "referencia": null,
+            "cuentaEmisora": null,
+            "cuentaReceptora": {
+                "bancoCodigo": "0172",
+                "bancoNombre": "Bancamiga",
+                "descripcionCuenta": "Punto de venta interno - Óptica Principal"
+            },
+            "notaPago": null,
+            "montoEnMonedaVenta": 314.05
+        },
+        {
+            "tipo": "pagomovil",
+            "monto": 100000,
+            "moneda": "bolivar",
+            "referencia": "1212121",
+            "cuentaEmisora": {
+                "bancoCodigo": "0102",
+                "bancoNombre": "Banco de Venezuela"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0172",
+                "bancoNombre": "Bancamiga",
+                "titular": "Ender",
+                "cedulaRif": "12345678",
+                "telefono": "041245789658",
+                "descripcionCuenta": "Cuenta de ender"
+            },
+            "notaPago": "aadasdas",
+            "montoEnMonedaVenta": 209.37
+        },
+        {
+            "tipo": "zelle",
+            "monto": 191,
+            "moneda": "dolar",
+            "referencia": "43534534534",
+            "cuentaEmisora": {
+                "bancoCodigo": "CHASUS33",
+                "bancoNombre": "JPMorgan Chase Bank"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "BOFAUS3N",
+                "bancoNombre": "Bank of America (BOFA)",
+                "titular": "Ruben Perez",
+                "cedulaRif": "V-12345678",
+                "telefono": "+15875551234",
+                "correo": "ruben.perez@email.com",
+                "descripcionCuenta": "Cuenta personal de Ruben (Zelle)"
+            },
+            "notaPago": null,
+            "montoEnMonedaVenta": 191
+        }
+    ],
+    "observaciones": "sdadsadsa"
+}

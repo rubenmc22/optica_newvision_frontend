@@ -519,8 +519,11 @@ export class HistorialVentasComponent implements OnInit {
     const monto = this.parsearMontoTexto(input.value);
     control?.setValue(monto, { emitEvent: false });
 
-    if (monto !== null) {
-      this.validarMontoMetodoPago(index);
+    this.recalcularMontosMetodosPago(index, true);
+
+    const montoNormalizado = Number(control?.value || 0);
+    if (monto !== null && Math.abs(montoNormalizado - monto) > 0.009) {
+      this.montosTemporalesMetodos[index] = this.formatearNumeroEditable(montoNormalizado);
     }
   }
 
@@ -530,10 +533,27 @@ export class HistorialVentasComponent implements OnInit {
 
     const monto = this.parsearMontoTexto(this.montosTemporalesMetodos[index]);
     control?.setValue(monto, { emitEvent: false });
-    this.validarMontoMetodoPago(index);
+    this.recalcularMontosMetodosPago();
 
     const montoFinal = Number(control?.value || 0);
     this.montosTemporalesMetodos[index] = montoFinal > 0 ? this.formatearNumeroVisual(montoFinal) : '';
+    this.cdRef.detectChanges();
+  }
+
+  private recalcularMontosMetodosPago(indexActivo?: number, preservarValorTemporalActivo: boolean = false): void {
+    this.metodosPagoArray.controls.forEach((_, index) => {
+      this.validarMontoMetodoPago(index);
+    });
+
+    this.metodosPagoArray.controls.forEach((control, index) => {
+      if (preservarValorTemporalActivo && index === indexActivo) {
+        return;
+      }
+
+      const monto = Number(control.get('monto')?.value || 0);
+      this.montosTemporalesMetodos[index] = monto > 0 ? this.formatearNumeroVisual(monto) : '';
+    });
+
     this.cdRef.detectChanges();
   }
 
@@ -1841,6 +1861,8 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   private manejarRespuestaAbono(response: any, modal: any): void {
+    const esPagoCompleto = this.tipoOperacionPago === 'pago-completo';
+
     if (response.success || response.message === 'ok') {
       // Mostrar resumen del abono procesado
       this.mostrarResumenAbonoProcesado(response);
@@ -1856,8 +1878,10 @@ export class HistorialVentasComponent implements OnInit {
 
       setTimeout(() => {
         this.swalService.showSuccess(
-          '✅ Abono registrado',
-          'El abono se ha registrado correctamente.'
+          esPagoCompleto ? '✅ Pago registrado' : '✅ Abono registrado',
+          esPagoCompleto
+            ? 'El pago se ha registrado correctamente.'
+            : 'El abono se ha registrado correctamente.'
         );
       }, 150);
 
@@ -1867,7 +1891,8 @@ export class HistorialVentasComponent implements OnInit {
       }, 500);
 
     } else {
-      const mensajeError = response.message || response.error || 'No se pudo registrar el abono.';
+      const mensajeError = response.message || response.error ||
+        (esPagoCompleto ? 'No se pudo registrar el pago.' : 'No se pudo registrar el abono.');
       this.swalService.showError('❌ Error', mensajeError);
     }
   }
@@ -1875,14 +1900,15 @@ export class HistorialVentasComponent implements OnInit {
   private mostrarResumenAbonoProcesado(response: any): void {
     if (!response.venta) return;
 
+    const esPagoCompleto = this.tipoOperacionPago === 'pago-completo';
     const venta = response.venta;
     const metodosRegistrados = venta.metodosPago || [];
 
-    let resumen = '<strong>✅ Abono procesado correctamente</strong><br><br>';
+    let resumen = `<strong>✅ ${esPagoCompleto ? 'Pago' : 'Abono'} procesado correctamente</strong><br><br>`;
     resumen += `<strong>Venta:</strong> ${venta.venta?.numero_venta || 'N/A'}<br>`;
     resumen += `<strong>Total venta:</strong> ${this.formatearMoneda(venta.totales?.total)}<br>`;
     resumen += `<strong>Total abonado anterior:</strong> ${this.formatearMoneda(this.selectedVenta?.montoAbonado || 0)}<br>`;
-    resumen += `<strong>Nuevo abono:</strong> ${this.formatearMoneda(this.editarVentaForm?.get('montoAbonado')?.value || 0)}<br>`;
+    resumen += `<strong>${esPagoCompleto ? 'Pago registrado' : 'Nuevo abono'}:</strong> ${this.formatearMoneda(this.editarVentaForm?.get('montoAbonado')?.value || 0)}<br>`;
     resumen += `<strong>Total abonado ahora:</strong> ${this.formatearMoneda(venta.totales?.totalPagado || 0)}<br>`;
     resumen += `<strong>Deuda pendiente:</strong> ${this.formatearMoneda(venta.formaPago?.deudaPendiente || 0)}<br><br>`;
 
@@ -2085,9 +2111,7 @@ export class HistorialVentasComponent implements OnInit {
 
 
   ajustarMontosMetodosPago(): void {
-    this.metodosPagoArray.controls.forEach((control, index) => {
-      this.validarMontoMetodoPago(index);
-    });
+    this.recalcularMontosMetodosPago();
   }
 
   abrirModalEdicion(venta: any) {
@@ -2213,6 +2237,10 @@ export class HistorialVentasComponent implements OnInit {
       if (value !== null && value !== undefined) {
         this.validarMontoMetodoPago(index);
       }
+    });
+
+    setTimeout(() => {
+      this.recalcularMontosMetodosPago();
     });
   }
 
@@ -2666,8 +2694,7 @@ export class HistorialVentasComponent implements OnInit {
 
     // Forzar recálculo después del cambio
     setTimeout(() => {
-      this.validarMontoMetodoPago(index);
-      this.sincronizarMontosMetodosTemporales();
+      this.recalcularMontosMetodosPago();
     });
   }
 

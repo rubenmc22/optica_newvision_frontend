@@ -135,6 +135,34 @@
     overflow: hidden;
 }
 
+.banco-option {
+    display: block;
+    min-width: 0;
+    padding: 0.45rem 0.5rem;
+    line-height: 1.25;
+
+    .banco-codigo {
+        display: block;
+        font-weight: 600;
+        color: #2c5aa0;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .banco-nombre {
+        display: -webkit-box;
+        color: #495057;
+        font-size: 0.82rem;
+        margin-top: 0.15rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+}
+
 // Header modernizado
 .card-header-moderno {
     background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%) !important;

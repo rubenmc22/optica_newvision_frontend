@@ -43,6 +43,8 @@ export interface VentaReceiverAccountOption {
   walletAddress?: string;
   methodValue: VentaPaymentMethodValue;
   configKey?: string;
+  displayTitle: string;
+  displaySubtitle: string;
   displayText: string;
 }
 
@@ -226,6 +228,22 @@ function mapReceiverAccountOption(
   const nombre = `${account.bank || catalogBank?.nombre || codigo || 'Banco no identificado'}`.trim();
   const descripcion = `${account.accountDescription || account.ownerName || account.ownerId || account.phone || 'Cuenta receptora'}`.trim();
   const id = `${account.id || `${configKey}-${codigo}-${descripcion}`}`.trim();
+  const ownerId = `${account.ownerId || ''}`.trim();
+  const phone = `${account.phone || ''}`.trim();
+  const detalles: string[] = [];
+
+  if (phone) {
+    detalles.push(`Telf. ${phone}`);
+  }
+
+  if (ownerId) {
+    detalles.push(`CI. ${ownerId}`);
+  }
+
+  const displayTitle = detalles.length > 0
+    ? `${nombre} (${detalles.join(' - ')})`
+    : nombre;
+  const displaySubtitle = descripcion;
 
   if (!id) {
     return null;
@@ -236,14 +254,16 @@ function mapReceiverAccountOption(
     codigo,
     nombre,
     ownerName: `${account.ownerName || ''}`.trim(),
-    ownerId: `${account.ownerId || ''}`.trim(),
-    phone: `${account.phone || ''}`.trim(),
+    ownerId,
+    phone,
     accountDescription: `${account.accountDescription || ''}`.trim(),
     email: account.email?.trim(),
     walletAddress: account.walletAddress?.trim(),
     methodValue,
     configKey,
-    displayText: `${nombre} - ${descripcion}`
+    displayTitle,
+    displaySubtitle,
+    displayText: `${displayTitle} - ${displaySubtitle}`
   };
 }
 
