@@ -149,6 +149,8 @@ export class HistorialVentasComponent implements OnInit {
   // Nuevas propiedades para edición de ventas
   editarVentaForm!: FormGroup;
   monedaEfectivo: string = 'USD';
+  montoAbonadoTemporal: string = '';
+  montosTemporalesMetodos: string[] = [];
 
   // Propiedades para tasas de cambio
   tasasPorId: { [key: string]: number } = {};
@@ -393,6 +395,146 @@ export class HistorialVentasComponent implements OnInit {
   // Getter para el FormArray de métodos de pago
   get metodosPagoArray(): FormArray {
     return this.editarVentaForm.get('metodosPago') as FormArray;
+  }
+
+  private sincronizarVisualizacionMontos(): void {
+    this.sincronizarMontoAbonadoTemporal();
+    this.sincronizarMontosMetodosTemporales();
+  }
+
+  private sincronizarMontoAbonadoTemporal(): void {
+    const monto = Number(this.editarVentaForm?.get('montoAbonado')?.value || 0);
+    this.montoAbonadoTemporal = monto > 0 ? this.formatearNumeroVisual(monto) : '';
+  }
+
+  private sincronizarMontosMetodosTemporales(): void {
+    this.montosTemporalesMetodos = this.metodosPagoArray.controls.map((control) => {
+      const monto = Number(control.get('monto')?.value || 0);
+      return monto > 0 ? this.formatearNumeroVisual(monto) : '';
+    });
+  }
+
+  private formatearNumeroVisual(valor: number): string {
+    if (!Number.isFinite(valor) || valor <= 0) {
+      return '';
+    }
+
+    const [parteEntera, parteDecimal] = this.redondear(valor, 2).toFixed(2).split('.');
+    return `${parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${parteDecimal}`;
+  }
+
+  private formatearNumeroEditable(valor: number): string {
+    if (!Number.isFinite(valor) || valor <= 0) {
+      return '';
+    }
+
+    return this.redondear(valor, 2).toFixed(2).replace('.', ',');
+  }
+
+  private parsearMontoTexto(valor: string | null | undefined): number | null {
+    if (!valor) {
+      return null;
+    }
+
+    const limpio = valor.replace(/[^\d,.-]/g, '').trim();
+    if (!limpio) {
+      return null;
+    }
+
+    const textoSinSigno = limpio.replace(/-/g, '');
+    const ultimaComa = textoSinSigno.lastIndexOf(',');
+    const ultimoPunto = textoSinSigno.lastIndexOf('.');
+    const separadorDecimal = Math.max(ultimaComa, ultimoPunto);
+
+    let normalizado = textoSinSigno;
+    if (separadorDecimal >= 0) {
+      const parteEntera = textoSinSigno.slice(0, separadorDecimal).replace(/[.,]/g, '');
+      const parteDecimal = textoSinSigno.slice(separadorDecimal + 1).replace(/[.,]/g, '').slice(0, 2);
+      normalizado = `${parteEntera || '0'}.${parteDecimal}`;
+    } else {
+      normalizado = textoSinSigno.replace(/[.,]/g, '');
+    }
+
+    const monto = Number(normalizado);
+    if (!Number.isFinite(monto)) {
+      return null;
+    }
+
+    return this.redondear(Math.max(0, monto), 2);
+  }
+
+  onMontoAbonadoFocus(): void {
+    const control = this.editarVentaForm?.get('montoAbonado');
+    control?.markAsTouched();
+
+    const monto = Number(control?.value || 0);
+    this.montoAbonadoTemporal = this.formatearNumeroEditable(monto);
+  }
+
+  onMontoAbonadoInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const control = this.editarVentaForm?.get('montoAbonado');
+
+    this.montoAbonadoTemporal = input.value;
+    control?.markAsTouched();
+
+    const monto = this.parsearMontoTexto(input.value);
+    control?.setValue(monto ?? '', { emitEvent: false });
+
+    if (monto !== null) {
+      this.onMontoAbonadoChange(false);
+    }
+  }
+
+  onMontoAbonadoBlur(): void {
+    const control = this.editarVentaForm?.get('montoAbonado');
+    control?.markAsTouched();
+
+    const monto = this.parsearMontoTexto(this.montoAbonadoTemporal);
+    control?.setValue(monto ?? '', { emitEvent: false });
+
+    if (monto !== null) {
+      this.onMontoAbonadoChange(true);
+    }
+
+    this.sincronizarMontoAbonadoTemporal();
+    this.cdRef.detectChanges();
+  }
+
+  onMontoMetodoFocus(index: number): void {
+    const control = this.metodosPagoArray.at(index)?.get('monto');
+    control?.markAsTouched();
+
+    const monto = Number(control?.value || 0);
+    this.montosTemporalesMetodos[index] = this.formatearNumeroEditable(monto);
+  }
+
+  onMontoMetodoInput(index: number, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const control = this.metodosPagoArray.at(index)?.get('monto');
+
+    this.montosTemporalesMetodos[index] = input.value;
+    control?.markAsTouched();
+
+    const monto = this.parsearMontoTexto(input.value);
+    control?.setValue(monto, { emitEvent: false });
+
+    if (monto !== null) {
+      this.validarMontoMetodoPago(index);
+    }
+  }
+
+  onMontoMetodoBlur(index: number): void {
+    const control = this.metodosPagoArray.at(index)?.get('monto');
+    control?.markAsTouched();
+
+    const monto = this.parsearMontoTexto(this.montosTemporalesMetodos[index]);
+    control?.setValue(monto, { emitEvent: false });
+    this.validarMontoMetodoPago(index);
+
+    const montoFinal = Number(control?.value || 0);
+    this.montosTemporalesMetodos[index] = montoFinal > 0 ? this.formatearNumeroVisual(montoFinal) : '';
+    this.cdRef.detectChanges();
   }
 
   private cargarDatosIniciales(): void {
@@ -1249,15 +1391,19 @@ export class HistorialVentasComponent implements OnInit {
       size: 'lg',
       backdrop: 'static'
     });
+
+    this.sincronizarVisualizacionMontos();
   }
 
   removerMetodoPago(index: number): void {
     this.metodosPagoArray.removeAt(index);
+    this.montosTemporalesMetodos.splice(index, 1);
 
     setTimeout(() => {
       this.metodosPagoArray.controls.forEach((control, i) => {
         this.validarMontoMetodoPago(i);
       });
+      this.sincronizarMontosMetodosTemporales();
     });
   }
 
@@ -1431,39 +1577,13 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   guardarEdicionVenta(modal: any): void {
-
-    // Verificar que haya al menos un método válido
-    const metodosValidos = this.metodosPagoArray.controls.filter(control =>
-      this.metodoTieneDatos(control)
-    );
-
-    if (metodosValidos.length === 0) {
-      this.swalService.showWarning('Advertencia', 'Debe agregar al menos un método de pago válido.');
+    const confirmacion = this.prepararConfirmacionAbono();
+    if (!confirmacion) {
       return;
     }
 
-    // Ahora validar
-    if (!this.validarAntesDeGuardar()) {
-      return;
-    }
-    // Continuar con el proceso normal...
-    const formValue = this.editarVentaForm.value;
-    const metodosPago = this.prepararMetodosPagoParaAPI();
-
-    // Validar métodos antes de enviar
-    if (!this.validarMetodosPagoAntesDeEnviar(metodosPago)) {
-      return;
-    }
-
-    // Mostrar confirmación detallada
-    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
-    const nuevoAbono = formValue.montoAbonado;
-    const totalAbonado = montoAbonadoAnterior + nuevoAbono;
-
-    const totalVenta = this.selectedVenta.total || 0;
-    const nuevaDeudaPendiente = Math.max(0, totalVenta - totalAbonado);
-
-    let mensajeConfirmacion = `
+    const { formValue, nuevoAbono, totalAbonado, totalVenta, nuevaDeudaPendiente } = confirmacion;
+    const mensajeConfirmacion = `
     <strong>📋 Confirmar abono de ${this.formatearMoneda(nuevoAbono)}</strong><br><br>
     
     <strong>Resumen de la venta:</strong><br>
@@ -1472,15 +1592,104 @@ export class HistorialVentasComponent implements OnInit {
     • Nueva deuda: ${this.formatearMoneda(nuevaDeudaPendiente)}<br><br>
     `;
 
-    this.swalService.showConfirm(
+    this.mostrarConfirmacionDesdeModal(
+      modal,
       'Confirmar Abono Completo',
       mensajeConfirmacion,
       '✅ Sí, Registrar Abono',
+      () => this.procesarAbono(null, formValue)
+    );
+  }
+
+  private prepararConfirmacionAbono(): {
+    formValue: any;
+    nuevoAbono: number;
+    totalAbonado: number;
+    totalVenta: number;
+    nuevaDeudaPendiente: number;
+  } | null {
+    const metodosValidos = this.metodosPagoArray.controls.filter(control =>
+      this.metodoTieneDatos(control)
+    );
+
+    if (metodosValidos.length === 0) {
+      this.swalService.showWarning('Advertencia', 'Debe agregar al menos un método de pago válido.');
+      return null;
+    }
+
+    if (!this.validarAntesDeGuardar()) {
+      return null;
+    }
+
+    const formValue = this.editarVentaForm.value;
+    const metodosPago = this.prepararMetodosPagoParaAPI();
+
+    if (!this.validarMetodosPagoAntesDeEnviar(metodosPago)) {
+      return null;
+    }
+
+    const montoAbonadoAnterior = this.selectedVenta.montoAbonado || 0;
+    const nuevoAbono = Number(formValue.montoAbonado || 0);
+    const totalAbonado = montoAbonadoAnterior + nuevoAbono;
+    const totalVenta = this.selectedVenta.total || 0;
+    const nuevaDeudaPendiente = Math.max(0, totalVenta - totalAbonado);
+
+    return {
+      formValue,
+      nuevoAbono,
+      totalAbonado,
+      totalVenta,
+      nuevaDeudaPendiente
+    };
+  }
+
+  private cerrarModalParaConfirmacion(modal: any): void {
+    if (modal?.close) {
+      modal.close('confirmacion');
+    } else if (modal?.dismiss) {
+      modal.dismiss('confirmacion');
+    }
+
+    this.modalService.dismissAll();
+  }
+
+  private reabrirModalOperacionActual(): void {
+    const template = this.tipoOperacionPago === 'pago-completo'
+      ? this.realizarPagoModal
+      : this.editarVentaModal;
+
+    setTimeout(() => {
+      this.modalService.open(template, {
+        centered: true,
+        size: 'lg',
+        backdrop: 'static'
+      });
+
+      this.sincronizarVisualizacionMontos();
+    }, 120);
+  }
+
+  private mostrarConfirmacionDesdeModal(
+    modal: any,
+    titulo: string,
+    mensaje: string,
+    textoConfirmar: string,
+    onConfirm: () => void
+  ): void {
+    this.cerrarModalParaConfirmacion(modal);
+
+    this.swalService.showConfirm(
+      titulo,
+      mensaje,
+      textoConfirmar,
       '❌ Cancelar'
     ).then((result) => {
       if (result.isConfirmed) {
-        this.procesarAbono(modal, formValue);
+        onConfirm();
+        return;
       }
+
+      this.reabrirModalOperacionActual();
     });
   }
 
@@ -1636,16 +1845,21 @@ export class HistorialVentasComponent implements OnInit {
       // Mostrar resumen del abono procesado
       this.mostrarResumenAbonoProcesado(response);
 
-      this.swalService.showSuccess(
-        '✅ Abono registrado',
-        'El abono se ha registrado correctamente.'
-      );
-
       // Actualizar la venta localmente con los datos del backend
       this.actualizarVentaDespuesAbono(response.ventaActualizada || response.data);
 
-      // Cerrar el modal
-      modal.close();
+      // Cerrar primero el modal para evitar que el backdrop tape el Swal
+      if (modal?.close) {
+        modal.close();
+      }
+      this.modalService.dismissAll();
+
+      setTimeout(() => {
+        this.swalService.showSuccess(
+          '✅ Abono registrado',
+          'El abono se ha registrado correctamente.'
+        );
+      }, 150);
 
       // Recargar la lista de ventas
       setTimeout(() => {
@@ -1709,9 +1923,9 @@ export class HistorialVentasComponent implements OnInit {
     return this.calcularMontoDeuda();
   }
 
-  onMontoAbonadoChange() {
+  onMontoAbonadoChange(mostrarAdvertencia: boolean = true) {
     // Validar el monto ingresado
-    this.validarMontoAbono(true);
+    this.validarMontoAbono(mostrarAdvertencia);
 
     // Ajustar montos de métodos de pago si hay un valor válido
     const montoAbonado = this.editarVentaForm?.get('montoAbonado')?.value;
@@ -1730,6 +1944,7 @@ export class HistorialVentasComponent implements OnInit {
     }, { emitEvent: false });
 
     this.ajustarMontosMetodosPago();
+    this.sincronizarMontoAbonadoTemporal();
     this.cdRef.detectChanges();
   }
 
@@ -1793,6 +2008,7 @@ export class HistorialVentasComponent implements OnInit {
     setTimeout(() => {
       this.validarMontoMetodoPago(index);
       this.ajustarMontosMetodosPago();
+      this.sincronizarMontosMetodosTemporales();
     });
   }
 
@@ -1893,6 +2109,7 @@ export class HistorialVentasComponent implements OnInit {
     });
 
     this.agregarMetodoPago();
+    this.sincronizarVisualizacionMontos();
 
     this.editarVentaForm.get('montoAbonado')?.valueChanges.subscribe(value => {
       this.validarMontoMaximo(value);
@@ -1929,6 +2146,7 @@ export class HistorialVentasComponent implements OnInit {
     });
 
     this.metodosPagoArray.push(metodoGroup);
+    this.montosTemporalesMetodos.push('');
 
     const index = this.metodosPagoArray.length - 1;
 
@@ -2183,6 +2401,7 @@ export class HistorialVentasComponent implements OnInit {
 
       // Limpiar métodos de pago
       this.metodosPagoArray.clear();
+  this.montosTemporalesMetodos = [];
       this.agregarMetodoPago();
 
       if (this.selectedVenta.metodosPago && this.selectedVenta.metodosPago.length > 0) {
@@ -2199,6 +2418,7 @@ export class HistorialVentasComponent implements OnInit {
       Validators.max(montoDeuda)
     ]);
     this.editarVentaForm.get('montoAbonado')?.updateValueAndValidity({ emitEvent: false });
+    this.sincronizarVisualizacionMontos();
   }
 
   validarMontoMaximo(value: number) {
@@ -2212,6 +2432,7 @@ export class HistorialVentasComponent implements OnInit {
       this.editarVentaForm.patchValue({
         montoAbonado: montoDeuda
       }, { emitEvent: false });
+      this.sincronizarMontoAbonadoTemporal();
     }
   }
 
@@ -2429,6 +2650,7 @@ export class HistorialVentasComponent implements OnInit {
       bancoReceptorObject: null,
       notaPago: ''
     });
+    this.montosTemporalesMetodos[index] = '';
 
     // Si se cambia a efectivo, establecer moneda por defecto
     if (tipoNuevo === 'efectivo') {
@@ -2445,6 +2667,7 @@ export class HistorialVentasComponent implements OnInit {
     // Forzar recálculo después del cambio
     setTimeout(() => {
       this.validarMontoMetodoPago(index);
+      this.sincronizarMontosMetodosTemporales();
     });
   }
 
@@ -7862,9 +8085,11 @@ export class HistorialVentasComponent implements OnInit {
     this.editarVentaForm.patchValue({
       montoAbonado: deudaTotal
     });
+    this.sincronizarMontoAbonadoTemporal();
 
     // Limpiar y agregar método de pago
     this.metodosPagoArray.clear();
+    this.montosTemporalesMetodos = [];
     this.agregarMetodoPago();
 
     // Abrir modal
@@ -7873,6 +8098,8 @@ export class HistorialVentasComponent implements OnInit {
       size: 'lg',
       backdrop: 'static'
     });
+
+    this.sincronizarVisualizacionMontos();
   }
 
   guardarPagoCompleto(modal: any): void {
@@ -7886,7 +8113,11 @@ export class HistorialVentasComponent implements OnInit {
       return;
     }
 
-    // Usar el mismo método de guardar pero con mensaje diferente
+    const confirmacion = this.prepararConfirmacionAbono();
+    if (!confirmacion) {
+      return;
+    }
+
     const mensajeConfirmacion = `
     <strong>💰 Confirmar pago completo de ${this.formatearMoneda(montoAbonado)}</strong><br><br>
     
@@ -7898,23 +8129,13 @@ export class HistorialVentasComponent implements OnInit {
     <strong>⚠️ IMPORTANTE:</strong> Este es un pago único. La venta quedará totalmente saldada.
   `;
 
-    this.swalService.showConfirm(
+    this.mostrarConfirmacionDesdeModal(
+      modal,
       'Confirmar Pago Completo',
       mensajeConfirmacion,
       '✅ Sí, Registrar Pago',
-      '❌ Cancelar'
-    ).then((result) => {
-      if (result.isConfirmed) {
-        // Re-habilitar el control antes de guardar
-        const montoControl = this.editarVentaForm.get('montoAbonado');
-        if (montoControl) {
-          montoControl.enable();
-        }
-
-        // Usar el mismo método de guardar abono
-        this.guardarEdicionVenta(modal);
-      }
-    });
+      () => this.procesarAbono(null, confirmacion.formValue)
+    );
   }
 
   // Método para mostrar botón de abono (ajustado)

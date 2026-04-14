@@ -1454,9 +1454,9 @@
                   </button>
                 </div>
                 <div class="input-group-compact">
-                  <input type="number" class="form-control form-control-compact" formControlName="montoAbonado"
-                    step="0.01" min="0" [max]="getMontoMaximoPermitido()" placeholder="0.00"
-                    (input)="onMontoAbonadoChange()">
+                  <input type="text" class="form-control form-control-compact" [value]="montoAbonadoTemporal"
+                    inputmode="decimal" placeholder="0,00" (focus)="onMontoAbonadoFocus()"
+                    (input)="onMontoAbonadoInput($event)" (blur)="onMontoAbonadoBlur()">
                   <span class="input-suffix">{{ getSimboloMonedaVenta() }}</span>
                 </div>
                 <!-- Mostrar la conversión como hint si hay un valor ingresado -->
@@ -1708,9 +1708,10 @@
                                     </label>
                                     <div class="input-group">
                                         <span class="input-group-text">{{ getSimboloParaMetodo(i) }}</span>
-                                        <input type="number" class="form-control modern-input" formControlName="monto" step="0.01"
-                                          min="0.01" [max]="getMontoMaximoParaMetodo(i)" placeholder="0.00"
-                                            (input)="validarMontoMetodoPago(i)"
+                                        <input type="text" class="form-control modern-input"
+                                          [value]="montosTemporalesMetodos[i] || ''" inputmode="decimal" placeholder="0,00"
+                                            (focus)="onMontoMetodoFocus(i)" (input)="onMontoMetodoInput(i, $event)"
+                                            (blur)="onMontoMetodoBlur(i)"
                                             [class.campo-invalido]="metodoControl.get('monto')?.invalid && metodoControl.get('monto')?.touched" />
                                     </div>
                                                                    
@@ -2044,9 +2045,9 @@
                       <!-- Monto (siempre visible) -->
                       <div class="campo-compact monto-wrapper">
                         <div class="monto-input-compact">
-                          <input type="number" class="form-control-compact" formControlName="monto" step="0.01"
-                            min="0.01" [max]="getMontoMaximoParaMetodo(i)" placeholder="0.00"
-                            (input)="validarMontoMetodoPago(i)">
+                          <input type="text" class="form-control-compact" [value]="montosTemporalesMetodos[i] || ''"
+                            inputmode="decimal" placeholder="0,00" (focus)="onMontoMetodoFocus(i)"
+                            (input)="onMontoMetodoInput(i, $event)" (blur)="onMontoMetodoBlur(i)">
                           <span class="monto-currency">{{ getSimboloParaMetodo(i) }}</span>
                         </div>
                         <small class="monto-conversion" *ngIf="metodoControl.get('monto')?.value">
