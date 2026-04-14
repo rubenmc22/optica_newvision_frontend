@@ -461,6 +461,56 @@
     }
 }
 
+.header-subtitle {
+    .subtitle-meta {
+        color: #475569;
+        font-weight: 500;
+    }
+}
+
+.total-resumen,
+.total-stack,
+.monto-celda {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.total-resumen,
+.total-stack {
+    align-items: flex-end;
+    text-align: right;
+}
+
+.monto-celda {
+    align-items: flex-end;
+}
+
+.monto-celda--compacta {
+    justify-content: center;
+}
+
+.referencia-bs {
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.spin {
+    display: inline-block;
+    animation: presupuesto-spin 0.9s linear infinite;
+}
+
+@keyframes presupuesto-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
     .header-content {

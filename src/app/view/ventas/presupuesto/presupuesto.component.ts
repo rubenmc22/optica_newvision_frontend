@@ -1,7 +1,12 @@
 import { Component, OnDestroy, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { ClienteService } from './../../clientes/clientes.services';
+import { ProductoService } from './../../productos/producto.service';
+import { Producto } from './../../productos/producto.model';
+import { ProductoConversionService } from './../../productos/productos-list/producto-conversion.service';
+import { SystemConfigService } from './../../system-config/system-config.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ExcelExportService } from './../../../core/services/excel-export/excel-export.service';
 import { PRESUPUESTO_VENTA_STORAGE_KEY, PresupuestoVentaDraft } from '../shared/presupuesto-venta-handoff.util';
@@ -86,6 +91,14 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   presupuestosVigentes: any[] = [];
   presupuestosVencidos: any[] = [];
   productosDisponibles: any[] = [];
+  productosDisponiblesBase: Producto[] = [];
+  productosCargando: boolean = false;
+
+  monedaSistema: 'USD' | 'EUR' | 'VES' = 'USD';
+  simboloMonedaSistema: string = '$';
+  ivaPorcentaje: number = 16;
+
+  private configSubscription?: Subscription;
 
   // Estadísticas
   estadisticas = {
@@ -101,6 +114,9 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   constructor(
     private clienteService: ClienteService,
+    private productoService: ProductoService,
+    private productoConversionService: ProductoConversionService,
+    private systemConfigService: SystemConfigService,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
     private excelExportService: ExcelExportService,
@@ -109,6 +125,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
+    this.obtenerConfiguracionSistema();
+    this.suscribirCambiosConfiguracion();
     this.cargarDatos();
     this.inicializarNuevoPresupuesto();
     this.diasVencimientoSeleccionado = 7;
@@ -120,7 +138,26 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       clearTimeout(this.timeoutCerrarMenu);
     }
 
+    if (this.configSubscription) {
+      this.configSubscription.unsubscribe();
+    }
+
     document.body.classList.remove('modal-open');
+  }
+
+  private obtenerConfiguracionSistema(): void {
+    this.monedaSistema = this.normalizarCodigoMoneda(this.systemConfigService.getMonedaPrincipal());
+    this.simboloMonedaSistema = this.systemConfigService.getSimboloMonedaPrincipal();
+  }
+
+  private suscribirCambiosConfiguracion(): void {
+    this.configSubscription = this.systemConfigService.config$.subscribe((config) => {
+      this.monedaSistema = this.normalizarCodigoMoneda(config.monedaPrincipal);
+      this.simboloMonedaSistema = config.simboloMoneda;
+      this.reaplicarMonedaActualEnProductosDisponibles();
+      this.reaplicarMonedaActualEnPresupuestoActivo();
+      this.cdr.detectChanges();
+    });
   }
 
   inicializarPresupuestosFiltrados() {
@@ -1017,16 +1054,27 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   cargarProductos() {
-    // Simular productos disponibles
-    this.productosDisponibles = [
-      { id: 1, codigo: '758684-RETRO-0', descripcion: '758684-RETRO-0', precio: 1108.23, categoria: 'Lentes' },
-      { id: 2, codigo: 'PR-000001', descripcion: 'Lente Progresivo Essilor', precio: 850.00, categoria: 'Lentes' },
-      { id: 3, codigo: 'PR-000042', descripcion: 'Armazón Ray-Ban', precio: 320.50, categoria: 'Armazones' },
-      { id: 4, codigo: 'PR-000027', descripcion: 'Lente Fotocromático', precio: 720.00, categoria: 'Lentes' },
-      { id: 5, codigo: 'PR-000045', descripcion: 'Armazón Oakley', precio: 450.00, categoria: 'Armazones' },
-      { id: 6, codigo: 'PR-000038', descripcion: 'Lente Blue Filter', precio: 380.00, categoria: 'Lentes' },
-      { id: 7, codigo: 'PR-000015', descripcion: 'Lente Antirreflejo', precio: 550.00, categoria: 'Lentes' }
-    ];
+    this.productosCargando = true;
+
+    this.productoService.getProductos().subscribe({
+      next: ({ iva, productos }) => {
+        this.ivaPorcentaje = iva ?? this.ivaPorcentaje;
+        this.productosDisponiblesBase = productos.filter((producto) => producto.activo !== false);
+        this.reaplicarMonedaActualEnProductosDisponibles();
+        this.productosCargando = false;
+      },
+      error: (error) => {
+        console.error('Error al cargar productos reales para presupuesto:', error);
+        this.productosDisponiblesBase = [];
+        this.productosDisponibles = [];
+        this.productosFiltrados = [];
+        this.productosCargando = false;
+        this.snackBar.open('No se pudieron cargar los productos reales para presupuesto', 'Cerrar', {
+          duration: 3500,
+          panelClass: ['snackbar-warning']
+        });
+      }
+    });
   }
 
   // ========== MÉTODOS PARA PRODUCTOS ==========
@@ -1614,7 +1662,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.presupuestoSeleccionado.subtotal = this.presupuestoSeleccionado.productos.reduce((sum: number, producto: any) =>
       sum + producto.total, 0);
 
-    this.presupuestoSeleccionado.iva = this.presupuestoSeleccionado.subtotal * 0.16;
+    this.presupuestoSeleccionado.iva = this.presupuestoSeleccionado.subtotal * this.getIvaFactor();
     this.presupuestoSeleccionado.total = this.presupuestoSeleccionado.subtotal + this.presupuestoSeleccionado.iva;
   }
 
@@ -1628,6 +1676,9 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
     // Calcular subtotal neto
     const subtotalNeto = presupuesto.subtotal - presupuesto.descuentoTotal;
+    const referenciaBsTotal = this.debeMostrarReferenciaBs()
+      ? this.formatMoneda(this.obtenerReferenciaBs(presupuesto.total), 'VES')
+      : '';
 
     // Formatear fechas
     const fechaActual = new Date().toLocaleDateString('es-ES', {
@@ -2213,13 +2264,19 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
                     </div>
                     ` : ''}
                     <div class="total-line">
-                        <span class="total-label">IVA (16%):</span>
+                      <span class="total-label">${this.getEtiquetaIva()}:</span>
                         <span class="total-valor">${this.formatMoneda(presupuesto.iva)}</span>
                     </div>
                     <div class="total-final total-line">
                         <span class="total-label">TOTAL A PAGAR:</span>
                         <span class="total-valor">${this.formatMoneda(presupuesto.total)}</span>
                     </div>
+                    ${referenciaBsTotal ? `
+                    <div class="total-line">
+                      <span class="total-label">REF. EN BS:</span>
+                      <span class="total-valor">${referenciaBsTotal}</span>
+                    </div>
+                    ` : ''}
                 </div>
                 
                 <div class="info-lateral">
@@ -2231,7 +2288,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
                         <strong>Productos:</strong> ${presupuesto.productos.length}
                     </div>
                     <div class="info-item">
-                        <strong>Incluye IVA :</strong> 16%
+                      <strong>Incluye IVA :</strong> ${this.ivaPorcentaje}%
                     </div>
                 </div>
             </div>
@@ -2335,13 +2392,29 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   }
 
   // Método para formatear moneda (ya existe, pero lo incluyo por referencia)
-  formatMoneda(valor: number): string {
-    return new Intl.NumberFormat('es-ES', {
+  formatMoneda(valor: number | null | undefined, moneda: string = this.monedaSistema): string {
+    return new Intl.NumberFormat('es-VE', {
       style: 'currency',
-      currency: 'USD',
+      currency: this.normalizarCodigoMoneda(moneda),
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }).format(valor);
+    }).format(Number(valor || 0));
+  }
+
+  debeMostrarReferenciaBs(moneda: string = this.monedaSistema): boolean {
+    return this.normalizarCodigoMoneda(moneda) !== 'VES';
+  }
+
+  obtenerReferenciaBs(monto: number | null | undefined, moneda: string = this.monedaSistema): number {
+    if (!monto) {
+      return 0;
+    }
+
+    return this.systemConfigService.convertirMonto(Number(monto), moneda, 'VES');
+  }
+
+  getTextoMonedaActual(): string {
+    return `${this.simboloMonedaSistema} ${this.monedaSistema}`;
   }
 
   agregarProducto(producto: any) {
@@ -2359,6 +2432,10 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
         codigo: producto.codigo,
         descripcion: producto.descripcion,
         precio: producto.precio,
+        precioOriginal: producto.precioOriginal ?? producto.precio,
+        moneda: producto.moneda ?? this.monedaSistema,
+        monedaOriginal: producto.monedaOriginal ?? producto.moneda ?? this.monedaSistema,
+        tasaConversion: producto.tasaConversion ?? 1,
         cantidad: 1,
         descuento: 0,
         total: producto.precio
@@ -2423,8 +2500,100 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       .reduce((sum, producto) => sum + (producto.precio * producto.cantidad * (producto.descuento / 100)), 0);
 
     const baseImponible = this.nuevoPresupuesto.subtotal - this.nuevoPresupuesto.descuentoTotal;
-    this.nuevoPresupuesto.iva = baseImponible * 0.16;
+    this.nuevoPresupuesto.iva = baseImponible * this.getIvaFactor();
     this.nuevoPresupuesto.total = baseImponible + this.nuevoPresupuesto.iva;
+  }
+
+  getEtiquetaIva(): string {
+    return `IVA (${this.ivaPorcentaje}%)`;
+  }
+
+  private getIvaFactor(): number {
+    return (this.ivaPorcentaje || 0) / 100;
+  }
+
+  private reaplicarMonedaActualEnProductosDisponibles(): void {
+    if (!this.productosDisponiblesBase.length) {
+      this.productosDisponibles = [];
+      this.productosFiltrados = [];
+      return;
+    }
+
+    const productosConvertidos = this.productoConversionService.convertirListaProductosAmonedaSistema(this.productosDisponiblesBase);
+    this.productosDisponibles = productosConvertidos.map((producto) => this.mapearProductoDisponible(producto));
+
+    if (this.terminoBusqueda) {
+      this.filtrarProductos();
+    }
+  }
+
+  private reaplicarMonedaActualEnPresupuestoActivo(): void {
+    if (this.nuevoPresupuesto.productos.length > 0) {
+      this.nuevoPresupuesto.productos = this.convertirProductosPresupuesto(this.nuevoPresupuesto.productos);
+      this.calcularTotales();
+    }
+
+    if (this.presupuestoSeleccionado?.productos?.length) {
+      this.presupuestoSeleccionado.productos = this.convertirProductosPresupuesto(this.presupuestoSeleccionado.productos);
+      this.calcularTotalesDetalle();
+    }
+  }
+
+  private convertirProductosPresupuesto(productos: any[]): any[] {
+    return productos.map((producto) => {
+      const productoConvertido = this.productoConversionService.convertirProductoAmonedaSistema({
+        precio: producto.precioOriginal ?? producto.precio,
+        precioOriginal: producto.precioOriginal ?? producto.precio,
+        moneda: producto.monedaOriginal ?? producto.moneda ?? this.monedaSistema,
+        monedaOriginal: producto.monedaOriginal ?? producto.moneda ?? this.monedaSistema,
+        precioConIva: producto.precioConIva,
+        aplicaIva: producto.aplicaIva
+      });
+
+      const cantidad = Number(producto.cantidad || 1);
+      const descuento = Number(producto.descuento || 0);
+      const total = productoConvertido.precio * cantidad * (1 - descuento / 100);
+
+      return {
+        ...producto,
+        precio: productoConvertido.precio,
+        precioOriginal: productoConvertido.precioOriginal ?? producto.precioOriginal ?? producto.precio,
+        moneda: productoConvertido.moneda,
+        monedaOriginal: productoConvertido.monedaOriginal ?? producto.monedaOriginal ?? producto.moneda ?? this.monedaSistema,
+        tasaConversion: productoConvertido.tasaConversion ?? producto.tasaConversion ?? 1,
+        total
+      };
+    });
+  }
+
+  private mapearProductoDisponible(producto: Producto): any {
+    return {
+      id: producto.id,
+      codigo: producto.codigo,
+      descripcion: producto.descripcion || producto.nombre,
+      precio: producto.precio,
+      precioOriginal: producto.precioOriginal ?? producto.precio,
+      moneda: this.normalizarCodigoMoneda(producto.moneda),
+      monedaOriginal: this.normalizarCodigoMoneda(producto.monedaOriginal || producto.moneda),
+      categoria: producto.categoria,
+      stock: producto.stock,
+      aplicaIva: producto.aplicaIva,
+      tasaConversion: producto.tasaConversion ?? 1
+    };
+  }
+
+  private normalizarCodigoMoneda(moneda: string | null | undefined): 'USD' | 'EUR' | 'VES' {
+    const monedaNormalizada = String(moneda || '').trim().toLowerCase();
+
+    if (['usd', 'dolar', '$'].includes(monedaNormalizada)) {
+      return 'USD';
+    }
+
+    if (['eur', 'euro', '€'].includes(monedaNormalizada)) {
+      return 'EUR';
+    }
+
+    return 'VES';
   }
 
   // En el método verDetallePresupuesto, agregar:

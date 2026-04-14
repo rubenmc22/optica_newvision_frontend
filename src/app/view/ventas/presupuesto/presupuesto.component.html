@@ -6,7 +6,11 @@
                 <i class="bi bi-file-earmark-text"></i>
                 <div class="header-text">
                     <h1>Presupuestos</h1>
-                    <div class="header-subtitle">Consulta y gestiona todos tus presupuestos activos</div>
+                    <div class="header-subtitle">
+                        Consulta y gestiona todos tus presupuestos activos
+                        <span class="subtitle-meta">• Moneda actual: {{ getTextoMonedaActual() }}</span>
+                        <span class="subtitle-meta" *ngIf="debeMostrarReferenciaBs()">• Referencias en Bs con tasa actual</span>
+                    </div>
                 </div>
             </div>
             <div class="header-actions">
@@ -149,7 +153,12 @@
 
                     <div class="presupuesto-totales">
                         <div class="total-label">Total:</div>
-                        <div class="total-valor">{{ formatMoneda(presupuesto.total) }}</div>
+                        <div class="total-resumen">
+                            <div class="total-valor">{{ formatMoneda(presupuesto.total) }}</div>
+                            <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                Ref. {{ formatMoneda(obtenerReferenciaBs(presupuesto.total), 'VES') }}
+                            </small>
+                        </div>
                     </div>
 
                     <div class="presupuesto-actions">
@@ -242,7 +251,12 @@
 
                     <div class="presupuesto-totales">
                         <div class="total-label">Total:</div>
-                        <div class="total-valor">{{ formatMoneda(presupuesto.total) }}</div>
+                        <div class="total-resumen">
+                            <div class="total-valor">{{ formatMoneda(presupuesto.total) }}</div>
+                            <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                Ref. {{ formatMoneda(obtenerReferenciaBs(presupuesto.total), 'VES') }}
+                            </small>
+                        </div>
                     </div>
 
                     <div class="presupuesto-actions">
@@ -559,7 +573,10 @@
                     <div class="producto-item" *ngFor="let producto of productosFiltrados">
                         <div class="producto-info">
                             <strong>{{ producto.descripcion }}</strong>
-                            <small>{{ producto.codigo }} • {{ formatMoneda(producto.precio) }}</small>
+                            <small>
+                                <span>{{ producto.codigo }} • {{ formatMoneda(producto.precio) }}</span>
+                                <span *ngIf="debeMostrarReferenciaBs()">• Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}</span>
+                            </small>
                         </div>
                         <button class="btn-agregar" (click)="agregarProducto(producto)">
                             <i class="bi bi-plus"></i>
@@ -567,8 +584,13 @@
                     </div>
                 </div>
 
+                <div class="empty-state" *ngIf="terminoBusqueda && productosCargando">
+                    <i class="bi bi-arrow-repeat spin"></i>
+                    <p>Cargando productos reales...</p>
+                </div>
+
                 <!-- Estado vacío -->
-                <div class="empty-state" *ngIf="terminoBusqueda && productosFiltrados.length === 0">
+                <div class="empty-state" *ngIf="terminoBusqueda && !productosCargando && productosFiltrados.length === 0">
                     <i class="bi bi-search"></i>
                     <p>No se encontraron productos</p>
                 </div>
@@ -596,8 +618,13 @@
                                 </div>
                             </td>
                             <td>
-                                <input type="number" [(ngModel)]="producto.precio" (change)="actualizarProducto(i)"
-                                    min="0" step="0.01" class="precio-input">
+                                <div class="monto-celda">
+                                    <input type="number" [(ngModel)]="producto.precio" (change)="actualizarProducto(i)"
+                                        min="0" step="0.01" class="precio-input">
+                                    <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                        Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}
+                                    </small>
+                                </div>
                             </td>
                             <td>
                                 <div class="cantidad-control">
@@ -619,7 +646,12 @@
                                 </small>
                             </td>
                             <td class="total-columna">
-                                {{ formatMoneda(producto.total) }}
+                                <div class="monto-celda monto-celda--compacta">
+                                    <span>{{ formatMoneda(producto.total) }}</span>
+                                    <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                        Ref. {{ formatMoneda(obtenerReferenciaBs(producto.total), 'VES') }}
+                                    </small>
+                                </div>
                             </td>
                             <td>
                                 <button class="btn-eliminar" (click)="eliminarProducto(i)" title="Eliminar producto">
@@ -635,19 +667,39 @@
             <div class="totales-section" *ngIf="nuevoPresupuesto.productos.length > 0">
                 <div class="total-row">
                     <span>Subtotal:</span>
-                    <span>{{ formatMoneda(nuevoPresupuesto.subtotal) }}</span>
+                    <div class="total-stack">
+                        <span>{{ formatMoneda(nuevoPresupuesto.subtotal) }}</span>
+                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                            Ref. {{ formatMoneda(obtenerReferenciaBs(nuevoPresupuesto.subtotal), 'VES') }}
+                        </small>
+                    </div>
                 </div>
                 <div class="total-row">
                     <span>Descuento total:</span>
-                    <span class="descuento-total">{{ formatMoneda(nuevoPresupuesto.descuentoTotal) }}</span>
+                    <div class="total-stack">
+                        <span class="descuento-total">{{ formatMoneda(nuevoPresupuesto.descuentoTotal) }}</span>
+                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                            Ref. {{ formatMoneda(obtenerReferenciaBs(nuevoPresupuesto.descuentoTotal), 'VES') }}
+                        </small>
+                    </div>
                 </div>
                 <div class="total-row">
-                    <span>IVA (16%):</span>
-                    <span>{{ formatMoneda(nuevoPresupuesto.iva) }}</span>
+                    <span>{{ getEtiquetaIva() }}:</span>
+                    <div class="total-stack">
+                        <span>{{ formatMoneda(nuevoPresupuesto.iva) }}</span>
+                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                            Ref. {{ formatMoneda(obtenerReferenciaBs(nuevoPresupuesto.iva), 'VES') }}
+                        </small>
+                    </div>
                 </div>
                 <div class="total-row total-final">
                     <strong>Total:</strong>
-                    <strong>{{ formatMoneda(nuevoPresupuesto.total) }}</strong>
+                    <div class="total-stack">
+                        <strong>{{ formatMoneda(nuevoPresupuesto.total) }}</strong>
+                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                            Ref. {{ formatMoneda(obtenerReferenciaBs(nuevoPresupuesto.total), 'VES') }}
+                        </small>
+                    </div>
                 </div>
             </div>
 
@@ -856,7 +908,14 @@
                                     </div>
                                 </td>
                                 <td class="text-center">{{ producto.codigo }}</td>
-                                <td class="text-center">{{ formatMoneda(producto.precio) }}</td>
+                                <td class="text-center">
+                                    <div class="monto-celda monto-celda--compacta">
+                                        <span>{{ formatMoneda(producto.precio) }}</span>
+                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                            Ref. {{ formatMoneda(obtenerReferenciaBs(producto.precio), 'VES') }}
+                                        </small>
+                                    </div>
+                                </td>
                                 <td class="text-center">{{ producto.cantidad }}</td>
                                 <td class="text-center">
                                     <span *ngIf="producto.descuento > 0" class="descuento-badge">
@@ -864,7 +923,14 @@
                                     </span>
                                     <span *ngIf="producto.descuento === 0" class="descuento-badge">-</span>
                                 </td>
-                                <td class="total-producto text-center">{{ formatMoneda(producto.total) }}</td>
+                                <td class="total-producto text-center">
+                                    <div class="monto-celda monto-celda--compacta">
+                                        <span>{{ formatMoneda(producto.total) }}</span>
+                                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                                            Ref. {{ formatMoneda(obtenerReferenciaBs(producto.total), 'VES') }}
+                                        </small>
+                                    </div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -899,22 +965,42 @@
             <div class="totales-section">
                 <div class="total-row">
                     <span>Subtotal:</span>
-                    <span>{{ formatMoneda(presupuestoSeleccionado.subtotal) }}</span>
+                    <div class="total-stack">
+                        <span>{{ formatMoneda(presupuestoSeleccionado.subtotal) }}</span>
+                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.subtotal), 'VES') }}
+                        </small>
+                    </div>
                 </div>
 
                 <div class="total-row" *ngIf="presupuestoSeleccionado.descuentoTotal > 0">
                     <span>Descuento total:</span>
-                    <span class="descuento-total">- {{ formatMoneda(presupuestoSeleccionado.descuentoTotal) }}</span>
+                    <div class="total-stack">
+                        <span class="descuento-total">- {{ formatMoneda(presupuestoSeleccionado.descuentoTotal) }}</span>
+                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.descuentoTotal), 'VES') }}
+                        </small>
+                    </div>
                 </div>
 
                 <div class="total-row">
-                    <span>IVA (16%):</span>
-                    <span>{{ formatMoneda(presupuestoSeleccionado.iva) }}</span>
+                    <span>{{ getEtiquetaIva() }}:</span>
+                    <div class="total-stack">
+                        <span>{{ formatMoneda(presupuestoSeleccionado.iva) }}</span>
+                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.iva), 'VES') }}
+                        </small>
+                    </div>
                 </div>
 
                 <div class="total-row total-final">
                     <strong>Total:</strong>
-                    <strong>{{ formatMoneda(presupuestoSeleccionado.total) }}</strong>
+                    <div class="total-stack">
+                        <strong>{{ formatMoneda(presupuestoSeleccionado.total) }}</strong>
+                        <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                            Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoSeleccionado.total), 'VES') }}
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -968,6 +1054,7 @@
                     <strong>{{ presupuestoAEliminar?.codigo }}</strong>
                     <small>{{ presupuestoAEliminar?.cliente.nombreCompleto }}</small>
                     <small>Total: {{ formatMoneda(presupuestoAEliminar?.total) }}</small>
+                    <small *ngIf="debeMostrarReferenciaBs()">Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoAEliminar?.total), 'VES') }}</small>
                 </div>
                 <p class="text-danger"><strong>Esta acción no se puede deshacer.</strong></p>
             </div>

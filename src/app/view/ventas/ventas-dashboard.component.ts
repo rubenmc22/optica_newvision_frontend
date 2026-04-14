@@ -4,10 +4,6 @@ import { Subscription, interval } from 'rxjs';
 import { AuthService } from '../../core/services/auth/auth.service';
 import { UserStateService } from '../../core/services/userState/user-state-service';
 import { SedeCompleta } from '../../view/login/login-interface';
-import { GenerarVentaComponent } from './generar-venta/generar-venta.component';
-import { PresupuestoComponent } from './presupuesto/presupuesto.component';
-import { HistorialVentasComponent } from './historial-ventas/historial-ventas.component';
-import { CierreCajaComponent } from './cierre-caja/cierre-caja.component';
 
 type VistaVentas = 'generacion-de-ventas' | 'presupuestos' | 'historial-de-ventas' | 'cierre-de-caja';
 
@@ -19,10 +15,6 @@ type VistaVentas = 'generacion-de-ventas' | 'presupuestos' | 'historial-de-venta
 })
 export class VentasDashboardComponent implements OnInit, OnDestroy {
     vista: VistaVentas = 'generacion-de-ventas';
-    readonly generarVentaComponent = GenerarVentaComponent;
-    readonly presupuestoComponent = PresupuestoComponent;
-    readonly historialVentasComponent = HistorialVentasComponent;
-    readonly cierreCajaComponent = CierreCajaComponent;
     vistasInstanciadas: Record<VistaVentas, boolean> = {
         'generacion-de-ventas': true,
         'presupuestos': false,
