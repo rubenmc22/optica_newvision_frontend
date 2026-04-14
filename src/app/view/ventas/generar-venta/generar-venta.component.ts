@@ -36,6 +36,7 @@ import {
     VentaPaymentMethodValue,
     VentaReceiverAccountOption
 } from '../shared/payment-catalog.util';
+import { PRESUPUESTO_VENTA_STORAGE_KEY, PresupuestoVentaDraft } from '../shared/presupuesto-venta-handoff.util';
 
 // Constantes
 import {
@@ -82,6 +83,7 @@ type ProductoBusquedaOption = Producto & {
 
 export class GenerarVentaComponent implements OnInit, OnDestroy {
     private readonly FILTRO_TODAS_SEDES = 'todas';
+    private readonly presupuestoVentaStorageKey = PRESUPUESTO_VENTA_STORAGE_KEY;
     private paymentCatalogSubscription?: Subscription;
 
     @ViewChild('productoSelect', { static: false }) productoSelect!: NgSelectComponent;
@@ -114,6 +116,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // Tipo de venta 
     tipoVenta: 'solo_consulta' | 'consulta_productos' | 'solo_productos' = 'solo_consulta';
+    presupuestoOrigenVenta: PresupuestoVentaDraft['origen'] | null = null;
 
     // Control de montos de consulta
     montoConsulta: number = 0;
@@ -443,7 +446,114 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.tasasPorId = Object.fromEntries(tasas.map(t => [t.id, t.valor]));
 
             this.actualizarProductosConDetalle();
+            this.cargarPresupuestoPendienteSiExiste();
             this.completarTarea();
+        });
+    }
+
+    private cargarPresupuestoPendienteSiExiste(): void {
+        const draftRaw = sessionStorage.getItem(this.presupuestoVentaStorageKey);
+        if (!draftRaw) {
+            return;
+        }
+
+        let draft: PresupuestoVentaDraft | null = null;
+
+        try {
+            draft = JSON.parse(draftRaw) as PresupuestoVentaDraft;
+        } catch {
+            sessionStorage.removeItem(this.presupuestoVentaStorageKey);
+            return;
+        }
+
+        if (!draft || !Array.isArray(draft.productos) || draft.productos.length === 0) {
+            sessionStorage.removeItem(this.presupuestoVentaStorageKey);
+            return;
+        }
+
+        this.aplicarPresupuestoComoVentaEditable(draft);
+        sessionStorage.removeItem(this.presupuestoVentaStorageKey);
+    }
+
+    private aplicarPresupuestoComoVentaEditable(draft: PresupuestoVentaDraft): void {
+        this.seleccionarTipoVenta('solo_productos');
+        this.presupuestoOrigenVenta = draft.origen;
+
+        this.clienteSinPaciente = {
+            tipoPersona: draft.cliente.tipoPersona === 'juridica' ? 'juridica' : 'natural',
+            nombreCompleto: draft.cliente.nombreCompleto || '',
+            cedula: draft.cliente.cedula || '',
+            telefono: draft.cliente.telefono || '',
+            email: draft.cliente.email || ''
+        };
+
+        const observacionesOrigen = [`Presupuesto origen: ${draft.origen.codigo}`];
+        if (draft.observaciones?.trim()) {
+            observacionesOrigen.push(draft.observaciones.trim());
+        }
+        this.venta.observaciones = observacionesOrigen.join(' | ');
+
+        let productosCargados = 0;
+        let productosOmitidos = 0;
+
+        draft.productos.forEach((productoDraft) => {
+            const productoCatalogo = this.buscarProductoParaPresupuesto(productoDraft);
+
+            if (!productoCatalogo) {
+                productosOmitidos++;
+                return;
+            }
+
+            this.agregarProductoAlCarrito(productoCatalogo);
+
+            const itemVenta = this.venta.productos.find((item) => item.id === productoCatalogo.id) as ItemCarrito | undefined;
+            if (!itemVenta) {
+                productosOmitidos++;
+                return;
+            }
+
+            const cantidad = Math.max(1, Number(productoDraft.cantidad || 1));
+            const descuento = Math.max(0, Number(productoDraft.descuento || 0));
+            const precioBase = Number(productoDraft.precioUnitario || 0);
+            const precioConDescuento = this.redondear(precioBase * (1 - (descuento / 100)));
+            const precioAplicado = precioConDescuento > 0 ? precioConDescuento : precioBase;
+
+            itemVenta.cantidad = cantidad;
+            itemVenta.precio = precioAplicado;
+            itemVenta.precioConIva = itemVenta.aplicaIva
+                ? this.redondear(precioAplicado * (1 + (this.ivaPorcentaje / 100)))
+                : precioAplicado;
+            itemVenta.descripcion = productoDraft.descripcion || itemVenta.descripcion;
+            productosCargados++;
+        });
+
+        this.actualizarProductosConDetalle();
+        this.cdr.detectChanges();
+
+        if (productosCargados === 0) {
+            this.presupuestoOrigenVenta = null;
+            this.snackBar.open(`No se pudieron cargar los productos del presupuesto ${draft.origen.codigo} en ventas`, 'Cerrar', {
+                duration: 5000,
+                panelClass: ['snackbar-warning']
+            });
+            return;
+        }
+
+        const mensaje = productosOmitidos > 0
+            ? `Presupuesto ${draft.origen.codigo} cargado con ${productosCargados} productos. ${productosOmitidos} no se encontraron en inventario.`
+            : `Presupuesto ${draft.origen.codigo} cargado en ventas. Puedes ajustar cliente, productos y pago antes de guardar.`;
+
+        this.snackBar.open(mensaje, 'Cerrar', {
+            duration: 5000,
+            panelClass: ['snackbar-info']
+        });
+    }
+
+    private buscarProductoParaPresupuesto(productoDraft: PresupuestoVentaDraft['productos'][number]): Producto | undefined {
+        return this.productos.find((producto) => {
+            const coincideId = productoDraft.id !== undefined && String(producto.id) === String(productoDraft.id);
+            const coincideCodigo = !!productoDraft.codigo && producto.codigo === productoDraft.codigo;
+            return coincideId || coincideCodigo;
         });
     }
 
@@ -2605,6 +2715,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // 0. RESTABLECER TIPO DE VENTA (opcional)
         // ============================================
         this.tipoVenta = 'solo_consulta'; // Valor por defecto
+        this.presupuestoOrigenVenta = null;
         this.consultaEnCarrito = false;
         this.intentoGenerar = false;
         this.buscandoPaciente = false;

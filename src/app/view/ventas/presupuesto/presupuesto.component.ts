@@ -1,8 +1,10 @@
-import { Component, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { ClienteService } from './../../clientes/clientes.services';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ExcelExportService } from './../../../core/services/excel-export/excel-export.service';
+import { PRESUPUESTO_VENTA_STORAGE_KEY, PresupuestoVentaDraft } from '../shared/presupuesto-venta-handoff.util';
 
 @Component({
   selector: 'app-presupuesto',
@@ -11,7 +13,7 @@ import { ExcelExportService } from './../../../core/services/excel-export/excel-
   styleUrls: ['./presupuesto.component.scss']
 })
 
-export class PresupuestoComponent implements OnInit {
+export class PresupuestoComponent implements OnInit, OnDestroy {
   @ViewChild('clienteCedulaInput') clienteCedulaInput!: ElementRef;
 
   // Variables principales
@@ -102,6 +104,8 @@ export class PresupuestoComponent implements OnInit {
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
     private excelExportService: ExcelExportService,
+    private router: Router,
+    private route: ActivatedRoute,
   ) { }
 
   ngOnInit() {
@@ -109,6 +113,14 @@ export class PresupuestoComponent implements OnInit {
     this.inicializarNuevoPresupuesto();
     this.diasVencimientoSeleccionado = 7;
     this.inicializarPresupuestosFiltrados();
+  }
+
+  ngOnDestroy() {
+    if (this.timeoutCerrarMenu) {
+      clearTimeout(this.timeoutCerrarMenu);
+    }
+
+    document.body.classList.remove('modal-open');
   }
 
   inicializarPresupuestosFiltrados() {
@@ -1072,15 +1084,13 @@ export class PresupuestoComponent implements OnInit {
   abrirModalNuevoPresupuesto() {
     this.mostrarModalNuevoPresupuesto = true;
     this.inicializarNuevoPresupuesto();
-    // Prevenir scroll del body
-    document.body.classList.add('modal-open');
+    this.sincronizarEstadoBodyModal();
   }
 
   cerrarModalNuevoPresupuesto() {
     this.mostrarModalNuevoPresupuesto = false;
     this.inicializarNuevoPresupuesto();
-    // Restaurar scroll del body
-    document.body.classList.remove('modal-open');
+    this.sincronizarEstadoBodyModal();
   }
 
   abrirModalAgregarProducto() {
@@ -1097,11 +1107,13 @@ export class PresupuestoComponent implements OnInit {
   confirmarEliminarPresupuesto(presupuesto: any) {
     this.presupuestoAEliminar = presupuesto;
     this.mostrarModalEliminar = true;
+    this.sincronizarEstadoBodyModal();
   }
 
   cerrarModalEliminar() {
     this.mostrarModalEliminar = false;
     this.presupuestoAEliminar = null;
+    this.sincronizarEstadoBodyModal();
   }
 
   // Método para calcular descuento total
@@ -1527,20 +1539,38 @@ export class PresupuestoComponent implements OnInit {
     }
   }
 
-  // Limpiar timeout cuando se destruye el componente
-  ngOnDestroy() {
-    if (this.timeoutCerrarMenu) {
-      clearTimeout(this.timeoutCerrarMenu);
-    }
-  }
-
   convertirAVenta(presupuesto: any) {
-    if (confirm(`¿Convertir el presupuesto ${presupuesto.codigo} en una venta/orden de trabajo?`)) {
-      this.snackBar.open(`Presupuesto ${presupuesto.codigo} convertido a venta`, 'Cerrar', {
+    if (!this.puedeConvertirPresupuesto(presupuesto)) {
+      this.snackBar.open(this.obtenerMotivoNoConversion(presupuesto), 'Cerrar', {
         duration: 4000,
-        panelClass: ['snackbar-success']
+        panelClass: ['snackbar-warning']
       });
-      // Aquí redirigir al módulo de ventas
+      return;
+    }
+
+    if (confirm(`¿Convertir el presupuesto ${presupuesto.codigo} en una venta/orden de trabajo?`)) {
+      const borradorVenta = this.mapearPresupuestoParaVenta(presupuesto);
+      sessionStorage.setItem(PRESUPUESTO_VENTA_STORAGE_KEY, JSON.stringify(borradorVenta));
+
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { vista: 'generacion-de-ventas' },
+        queryParamsHandling: 'merge'
+      }).then((navegacionOk) => {
+        if (!navegacionOk) {
+          sessionStorage.removeItem(PRESUPUESTO_VENTA_STORAGE_KEY);
+          this.snackBar.open('No se pudo abrir el módulo de ventas', 'Cerrar', {
+            duration: 3500,
+            panelClass: ['snackbar-warning']
+          });
+          return;
+        }
+
+        this.snackBar.open(`Presupuesto ${presupuesto.codigo} cargado en ventas para continuar`, 'Cerrar', {
+          duration: 4500,
+          panelClass: ['snackbar-success']
+        });
+      });
     }
   }
 
@@ -2403,6 +2433,7 @@ export class PresupuestoComponent implements OnInit {
     this.modoEditable = false; // Siempre empieza en modo vista
     this.diasVencimientoSeleccionado = presupuesto.diasVencimiento || 7;
     this.mostrarModalDetallePresupuesto = true;
+    this.sincronizarEstadoBodyModal();
   }
 
   // Método para seleccionar días de vencimiento en modal de detalle
@@ -2493,6 +2524,80 @@ export class PresupuestoComponent implements OnInit {
     this.mostrarModalDetallePresupuesto = false;
     this.presupuestoSeleccionado = null;
     this.resetearEstadoEdicion();
+    this.sincronizarEstadoBodyModal();
+  }
+
+  puedeConvertirPresupuesto(presupuesto: any): boolean {
+    if (!presupuesto) {
+      return false;
+    }
+
+    if (typeof presupuesto.diasRestantes === 'number') {
+      return presupuesto.diasRestantes >= 0;
+    }
+
+    if (presupuesto.estadoColor) {
+      return presupuesto.estadoColor !== 'vencido';
+    }
+
+    if (!presupuesto.fechaVencimiento) {
+      return false;
+    }
+
+    const fechaVencimiento = new Date(presupuesto.fechaVencimiento);
+    if (Number.isNaN(fechaVencimiento.getTime())) {
+      return false;
+    }
+
+    const finDeVencimiento = new Date(fechaVencimiento);
+    finDeVencimiento.setHours(23, 59, 59, 999);
+
+    return finDeVencimiento.getTime() >= Date.now();
+  }
+
+  obtenerMotivoNoConversion(presupuesto: any): string {
+    if (this.puedeConvertirPresupuesto(presupuesto)) {
+      return 'Convertir a venta';
+    }
+
+    const codigo = presupuesto?.codigo || 'este presupuesto';
+    return `${codigo} está vencido y no puede convertirse en venta.`;
+  }
+
+  private sincronizarEstadoBodyModal(): void {
+    const hayModalAbierto = this.mostrarModalNuevoPresupuesto
+      || this.mostrarModalDetallePresupuesto
+      || this.mostrarModalEliminar;
+
+    document.body.classList.toggle('modal-open', hayModalAbierto);
+  }
+
+  private mapearPresupuestoParaVenta(presupuesto: any): PresupuestoVentaDraft {
+    return {
+      origen: {
+        id: presupuesto.id,
+        codigo: presupuesto.codigo,
+        fechaVencimiento: presupuesto.fechaVencimiento ? new Date(presupuesto.fechaVencimiento).toISOString() : undefined,
+        total: presupuesto.total ?? 0
+      },
+      cliente: {
+        tipoPersona: presupuesto?.cliente?.tipoPersona === 'juridica' ? 'juridica' : 'natural',
+        nombreCompleto: presupuesto?.cliente?.nombreCompleto || '',
+        cedula: presupuesto?.cliente?.cedula || '',
+        telefono: presupuesto?.cliente?.telefono || '',
+        email: presupuesto?.cliente?.email || ''
+      },
+      observaciones: presupuesto?.observaciones || '',
+      productos: (presupuesto?.productos || []).map((producto: any) => ({
+        id: producto?.id,
+        codigo: producto?.codigo,
+        descripcion: producto?.descripcion || producto?.nombre || 'Producto',
+        cantidad: Number(producto?.cantidad || 1),
+        precioUnitario: Number(producto?.precio || 0),
+        descuento: Number(producto?.descuento || 0),
+        totalLinea: Number(producto?.total || 0)
+      }))
+    };
   }
 
   // Método para guardar cambios del presupuesto

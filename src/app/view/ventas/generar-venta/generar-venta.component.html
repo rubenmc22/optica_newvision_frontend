@@ -23,6 +23,24 @@
         </div>
     </div>
 
+    <div class="presupuesto-origen-banner" *ngIf="presupuestoOrigenVenta as presupuestoOrigen">
+        <div class="origen-banner-icon">
+            <i class="bi bi-journal-check"></i>
+        </div>
+        <div class="origen-banner-content">
+            <div class="origen-banner-title">Venta precargada desde presupuesto vigente</div>
+            <div class="origen-banner-meta">
+                <span class="origen-chip">Código: {{ presupuestoOrigen.codigo }}</span>
+                <span class="origen-chip" *ngIf="presupuestoOrigen.fechaVencimiento">Vence: {{ presupuestoOrigen.fechaVencimiento | date:'dd/MM/yyyy' }}</span>
+                <span class="origen-chip" *ngIf="presupuestoOrigen.total !== undefined">Total referencial: {{ presupuestoOrigen.total | number:'1.2-2' }}</span>
+            </div>
+        </div>
+        <div class="origen-banner-status">
+            <i class="bi bi-pencil-square"></i>
+            Editable antes de guardar
+        </div>
+    </div>
+
     <!-- SELECTOR DE TIPO DE VENTA (3 OPCIONES) CON CONTEXTO INTEGRADO -->
     <div class="tipo-venta-selector">
         <div class="selector-header">

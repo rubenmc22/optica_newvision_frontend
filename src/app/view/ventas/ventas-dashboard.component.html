@@ -10,10 +10,10 @@
             <i class="fas fa-cash-register"></i>
           </div>
           <div class="card-info">
-            <div class="card-value">{{ totalVentas }}</div>
+            <div class="card-value">{{ totalVentas !== null ? totalVentas : '—' }}</div>
             <div class="card-label">Generar Venta</div>
             <div class="card-footer">
-              <span class="card-action">Ventas del día</span>
+              <span class="card-action">Carga al abrir módulo</span>
               <i class="fas fa-arrow-right"></i>
             </div>
           </div>
@@ -36,10 +36,10 @@
             <i class="fas fa-file-invoice-dollar"></i>
           </div>
           <div class="card-info">
-            <div class="card-value">{{ totalPresupuestos }}</div>
+            <div class="card-value">{{ totalPresupuestos !== null ? totalPresupuestos : '—' }}</div>
             <div class="card-label">Presupuestos Activos</div>
             <div class="card-footer">
-              <span class="card-action">Presupuestos registrados</span>
+              <span class="card-action">Carga al abrir módulo</span>
               <i class="fas fa-arrow-right"></i>
             </div>
           </div>
@@ -62,10 +62,10 @@
             <i class="fas fa-history"></i>
           </div>
           <div class="card-info">
-            <div class="card-value">{{ totalHistorialVentas }}</div>
+            <div class="card-value">{{ totalHistorialVentas !== null ? totalHistorialVentas : '—' }}</div>
             <div class="card-label">Historial de Ventas</div>
             <div class="card-footer">
-              <span class="card-action">Ventas en historial</span>
+              <span class="card-action">Carga al abrir módulo</span>
               <i class="fas fa-arrow-right"></i>
             </div>
           </div>
@@ -88,10 +88,10 @@
             <i class="fas fa-lock"></i>
           </div>
           <div class="card-info">
-            <div class="card-value">{{ totalCierres }}</div>
+            <div class="card-value">{{ totalCierres !== null ? totalCierres : '—' }}</div>
             <div class="card-label">Cierre de Caja</div>
             <div class="card-footer">
-              <span class="card-action">Cierres registrados</span>
+              <span class="card-action">Carga al abrir módulo</span>
               <i class="fas fa-arrow-right"></i>
             </div>
           </div>
@@ -107,9 +107,17 @@
 
   <!-- Panel dinámico -->
   <div class="card shadow-sm mt-1 mb-5">
-    <app-generar-venta *ngIf="vista === 'generacion-de-ventas'"></app-generar-venta>
-    <app-presupuesto *ngIf="vista === 'presupuestos'"></app-presupuesto>
-    <app-historial-ventas *ngIf="vista === 'historial-de-ventas'"></app-historial-ventas>
-    <ng-container *ngIf="vista === 'cierre-de-caja'" [ngComponentOutlet]="cierreCajaComponent"></ng-container>
+    <div *ngIf="estaVistaInstanciada('generacion-de-ventas')" [style.display]="esVistaActiva('generacion-de-ventas') ? '' : 'none'">
+      <app-generar-venta></app-generar-venta>
+    </div>
+    <div *ngIf="estaVistaInstanciada('presupuestos')" [style.display]="esVistaActiva('presupuestos') ? '' : 'none'">
+      <app-presupuesto></app-presupuesto>
+    </div>
+    <div *ngIf="estaVistaInstanciada('historial-de-ventas')" [style.display]="esVistaActiva('historial-de-ventas') ? '' : 'none'">
+      <app-historial-ventas></app-historial-ventas>
+    </div>
+    <div *ngIf="estaVistaInstanciada('cierre-de-caja')" [style.display]="esVistaActiva('cierre-de-caja') ? '' : 'none'">
+      <app-cierre-caja></app-cierre-caja>
+    </div>
   </div>
 </div>

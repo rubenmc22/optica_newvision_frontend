@@ -1,4 +1,4 @@
-<div class="presupuestos-container">
+<div class="card contenedor-presupuestos presupuestos-container">
     <!-- Header -->
     <div class="presupuestos-header">
         <div class="header-content">
@@ -159,7 +159,9 @@
                         <button class="btn-action" title="Imprimir" (click)="imprimirPresupuesto(presupuesto)">
                             <i class="bi bi-printer"></i>
                         </button>
-                        <button class="btn-action btn-success" title="Convertir a Venta"
+                        <button class="btn-action btn-success"
+                            [disabled]="!puedeConvertirPresupuesto(presupuesto)"
+                            [title]="puedeConvertirPresupuesto(presupuesto) ? 'Convertir a venta' : obtenerMotivoNoConversion(presupuesto)"
                             (click)="convertirAVenta(presupuesto)">
                             <i class="bi bi-cart-check"></i>
                         </button>
@@ -361,7 +363,7 @@
 </div>
 
 <!-- Modal para Nuevo Presupuesto -->
-<div class="modal-backdrop" *ngIf="mostrarModalNuevoPresupuesto" (click)="cerrarModalNuevoPresupuesto()"></div>
+<div class="presupuesto-modal-backdrop" *ngIf="mostrarModalNuevoPresupuesto" (click)="cerrarModalNuevoPresupuesto()"></div>
 <div class="modal-nuevo-presupuesto" *ngIf="mostrarModalNuevoPresupuesto">
     <div class="modal-header">
         <div class="header-left">
@@ -683,7 +685,7 @@
 </div>
 
 <!-- Modal Detalle/Edición Presupuesto -->
-<div class="modal-backdrop" *ngIf="mostrarModalDetallePresupuesto" (click)="cerrarModalDetalle()"></div>
+<div class="presupuesto-modal-backdrop" *ngIf="mostrarModalDetallePresupuesto" (click)="cerrarModalDetalle()"></div>
 <div class="modal-nuevo-presupuesto" *ngIf="mostrarModalDetallePresupuesto && presupuestoSeleccionado">
     <div class="modal-header">
         <div class="header-left">
@@ -930,6 +932,14 @@
             Imprimir
         </button>
 
+        <button *ngIf="!modoEditable" class="btn btn-success"
+            [disabled]="!puedeConvertirPresupuesto(presupuestoSeleccionado)"
+            [title]="puedeConvertirPresupuesto(presupuestoSeleccionado) ? 'Cargar en ventas' : obtenerMotivoNoConversion(presupuestoSeleccionado)"
+            (click)="convertirAVenta(presupuestoSeleccionado)">
+            <i class="bi bi-cart-check"></i>
+            Cargar en Venta
+        </button>
+
         <!-- Botón Guardar Cambios (solo visible en modo edición) -->
         <button *ngIf="modoEditable" class="btn btn-primary" (click)="guardarCambiosPresupuesto()">
             <i class="bi bi-check-circle"></i>
@@ -939,7 +949,7 @@
 </div>
 
 <!-- Modal Eliminar Presupuesto -->
-<div class="modal-backdrop" *ngIf="mostrarModalEliminar" (click)="cerrarModalEliminar()"></div>
+<div class="presupuesto-modal-backdrop" *ngIf="mostrarModalEliminar" (click)="cerrarModalEliminar()"></div>
 <div class="modal-eliminar" *ngIf="mostrarModalEliminar">
         <div class="modal-header">
             <div class="header-left">
