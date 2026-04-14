@@ -1763,3 +1763,377 @@ CONFIGURACION GENERAL - METODOS DE PAGO
     "ultimaActualizacion": "2026-04-11T19:05:00.000Z"
 }
 
+
+CONFIGURACION GENERAL - CIERRE DE CAJA
+
+// [version nueva cierre de caja]
+// nota funcional para backend:
+// - el frontend hoy consolida mucha informacion en memoria para operar la pantalla
+// - para backend se recomienda persistir por funcionalidad y no guardar todo el cierre como un bloque gigante
+// - las ventas del dia deben consultarse desde ventas y solo agregarse en el resumen del cierre
+// - las transacciones manuales deben tener su propia persistencia
+// - el cierre final debe guardar solo la conciliacion, el estado y los totales cerrados
+
+// resumen diario de cierre de caja
+// GET /cierre-caja/resumen?fecha=2026-04-14&sede=guatire
+{
+    "message": "ok",
+    "fecha": "2026-04-14",
+    "sede": "guatire",
+    "monedaPrincipal": "USD",
+    "tasasCambio": {
+        "dolar": 1,
+        "euro": 1.1447,
+        "bolivar": 0.00211
+    },
+    "ventas": [
+        {
+            "key": "venta-001",
+            "numero_venta": "V-000145",
+            "fecha": "2026-04-14T14:10:00.000Z",
+            "moneda": "USD",
+            "total": 140,
+            "total_pagado": 140,
+            "formaPago": "contado",
+            "tipoVenta": "solo_productos",
+            "cliente": {
+                "informacion": {
+                    "nombreCompleto": "Maria Perez",
+                    "cedula": "12345678"
+                }
+            },
+            "asesor": {
+                "nombre": "Ruben Martinez"
+            },
+            "metodosDePago": [
+                {
+                    "tipo": "punto",
+                    "monto": 66580,
+                    "moneda": "bolivar",
+                    "cuentaReceptora": {
+                        "bancoCodigo": "0172",
+                        "bancoNombre": "Bancamiga",
+                        "descripcionCuenta": "Punto principal tienda"
+                    }
+                }
+            ],
+            "formaPagoDetalle": {
+                "tipo": "contado",
+                "montoTotal": 140,
+                "totalPagado": 140,
+                "tasasActuales": [
+                    {
+                        "moneda": "dolar",
+                        "tasa": 474.06,
+                        "valor": 474.06
+                    },
+                    {
+                        "moneda": "euro",
+                        "tasa": 542.64,
+                        "valor": 542.64
+                    },
+                    {
+                        "moneda": "bolivar",
+                        "tasa": 1,
+                        "valor": 1
+                    }
+                ]
+            }
+        }
+    ],
+    "cierreExistente": {
+        "id": "CIERRE-2026-04-14-guatire",
+        "fecha": "2026-04-14T00:00:00.000Z",
+        "estado": "abierto",
+        "sede": "guatire",
+        "usuarioApertura": "Ruben Martinez",
+        "fechaApertura": "2026-04-14T08:01:00.000Z",
+        "monedaPrincipal": "USD",
+        "efectivoInicial": 365,
+        "efectivoInicialDetalle": {
+            "Bs": 1500,
+            "USD": 300,
+            "EUR": 50
+        },
+        "observaciones": "Caja abierta normalmente",
+        "totales": {
+            "ingresos": 840.52,
+            "egresos": 25,
+            "neto": 815.52,
+            "ventasContado": 620.12,
+            "ventasCredito": 120.4,
+            "ventasPendientes": 100
+        }
+    },
+    "estadisticas": {
+        "totalVentas": 840.52,
+        "cantidadVentas": 7
+    }
+}
+
+// apertura de caja
+// POST /cierre-caja/apertura
+{
+    "fecha": "2026-04-14",
+    "sede": "guatire",
+    "usuarioApertura": {
+        "id": 5,
+        "nombre": "Ruben Martinez"
+    },
+    "monedaPrincipal": "USD",
+    "tasasCambio": {
+        "dolar": 1,
+        "euro": 1.1447,
+        "bolivar": 0.00211
+    },
+    "efectivoInicial": {
+        "totalSistema": 365,
+        "detalle": {
+            "Bs": 1500,
+            "USD": 300,
+            "EUR": 50
+        }
+    },
+    "observaciones": "Caja abierta normalmente"
+}
+
+{
+    "message": "ok",
+    "cierre": {
+        "id": "CIERRE-2026-04-14-guatire",
+        "estado": "abierto",
+        "fecha": "2026-04-14T00:00:00.000Z",
+        "fechaApertura": "2026-04-14T08:01:00.000Z",
+        "sede": "guatire",
+        "usuarioApertura": "Ruben Martinez",
+        "monedaPrincipal": "USD"
+    }
+}
+
+// crear transaccion manual de caja
+// POST /cierre-caja/transacciones-manuales
+{
+    "cierreId": "CIERRE-2026-04-14-guatire",
+    "fecha": "2026-04-14T11:42:00.000Z",
+    "tipo": "egreso",
+    "descripcion": "Compra de agua para oficina",
+    "monto": 12.5,
+    "moneda": "USD",
+    "montoSistema": 12.5,
+    "metodoPago": "efectivo",
+    "categoria": "gasto_operativo",
+    "observaciones": "Compra menor de caja",
+    "comprobante": "FACT-00045",
+    "usuario": {
+        "id": 5,
+        "nombre": "Ruben Martinez"
+    },
+    "origen": "manual"
+}
+
+{
+    "message": "ok",
+    "transaccion": {
+        "id": "TRX-1713094920000",
+        "cierreId": "CIERRE-2026-04-14-guatire",
+        "fecha": "2026-04-14T11:42:00.000Z",
+        "tipo": "egreso",
+        "descripcion": "Compra de agua para oficina",
+        "monto": 12.5,
+        "moneda": "USD",
+        "montoSistema": 12.5,
+        "metodoPago": "efectivo",
+        "categoria": "gasto_operativo",
+        "estado": "confirmado"
+    }
+}
+
+// actualizar transaccion manual de caja
+// PUT /cierre-caja/transacciones-manuales/TRX-1713094920000
+{
+    "descripcion": "Compra de agua y cafe para oficina",
+    "monto": 18.75,
+    "moneda": "USD",
+    "montoSistema": 18.75,
+    "metodoPago": "efectivo",
+    "categoria": "gasto_operativo",
+    "observaciones": "Se agrego cafe para recepcion",
+    "comprobante": "FACT-00045-A"
+}
+
+{
+    "message": "ok",
+    "transaccion": {
+        "id": "TRX-1713094920000",
+        "descripcion": "Compra de agua y cafe para oficina",
+        "monto": 18.75,
+        "moneda": "USD",
+        "montoSistema": 18.75,
+        "metodoPago": "efectivo",
+        "categoria": "gasto_operativo",
+        "estado": "confirmado"
+    }
+}
+
+// cierre final de caja
+// POST /cierre-caja/cerrar
+{
+    "cierreId": "CIERRE-2026-04-14-guatire",
+    "fecha": "2026-04-14",
+    "sede": "guatire",
+    "usuarioCierre": {
+        "id": 5,
+        "nombre": "Ruben Martinez"
+    },
+    "monedaPrincipal": "USD",
+    "notasCierre": "Se detecta diferencia por voucher pendiente de conciliacion.",
+    "opciones": {
+        "imprimirResumen": true,
+        "enviarEmail": false,
+        "adjuntarComprobantes": true
+    },
+    "resumen": {
+        "ingresos": 840.52,
+        "egresos": 25,
+        "neto": 815.52,
+        "ventasContado": 620.12,
+        "ventasCredito": 120.4,
+        "ventasPendientes": 100
+    },
+    "efectivo": {
+        "inicial": {
+            "totalSistema": 365,
+            "detalle": {
+                "Bs": 1500,
+                "USD": 300,
+                "EUR": 50
+            }
+        },
+        "teoricoFinal": 905.35,
+        "realFinal": 900.35,
+        "detalleReal": {
+            "usd": 850,
+            "eur": 20,
+            "ves": 1200
+        },
+        "diferencia": -5
+    },
+    "conciliacion": {
+        "punto": [
+            {
+                "banco": "Bancamiga",
+                "bancoCodigo": "0172",
+                "destinoKey": "0172_punto_ves",
+                "destinoLabel": "Bancamiga · Punto principal tienda",
+                "montoSistema": 320,
+                "montoReal": 320,
+                "diferencia": 0,
+                "cantidadSistema": 4,
+                "cantidadReal": 0
+            }
+        ],
+        "transferencia": [
+            {
+                "banco": "Banesco",
+                "bancoCodigo": "0134",
+                "destinoKey": "0134_juridica_ves",
+                "destinoLabel": "Banesco · Cuenta juridica tienda",
+                "montoSistema": 145.12,
+                "montoReal": 145.12,
+                "diferencia": 0,
+                "cantidadSistema": 2,
+                "cantidadReal": 0
+            }
+        ],
+        "pagomovil": [
+            {
+                "banco": "Banco Provincial",
+                "bancoCodigo": "0108",
+                "destinoKey": "0108_ruben_ves",
+                "destinoLabel": "Banco Provincial · Cuenta personal de Ruben",
+                "montoSistema": 90.4,
+                "montoReal": 86.68,
+                "diferencia": -3.72,
+                "cantidadSistema": 3,
+                "cantidadReal": 0
+            }
+        ],
+        "zelle": [
+            {
+                "banco": "Bank of America (BOFA)",
+                "bancoCodigo": "BOFAUS3N",
+                "destinoKey": "bofaus3n_zelle_usd",
+                "destinoLabel": "Bank of America (BOFA) · Cuenta personal de Ruben",
+                "montoSistema": 60,
+                "montoReal": 60,
+                "diferencia": 0,
+                "cantidadSistema": 1,
+                "cantidadReal": 0
+            }
+        ]
+    },
+    "diferenciaTotal": -8.72,
+    "estadoConciliacion": "diferencia"
+}
+
+{
+    "message": "ok",
+    "cierre": {
+        "id": "CIERRE-2026-04-14-guatire",
+        "estado": "cerrado",
+        "fechaCierre": "2026-04-14T18:30:00.000Z",
+        "usuarioCierre": "Ruben Martinez",
+        "diferencia": -8.72,
+        "notasCierre": "Se detecta diferencia por voucher pendiente de conciliacion."
+    }
+}
+
+// historial de cierres
+// GET /cierre-caja/historial?fechaInicio=2026-04-01&fechaFin=2026-04-14&sede=guatire
+{
+    "message": "ok",
+    "cierres": [
+        {
+            "id": "CIERRE-2026-04-13-guatire",
+            "fecha": "2026-04-13T00:00:00.000Z",
+            "sede": "guatire",
+            "estado": "cerrado",
+            "usuarioApertura": "Ruben Martinez",
+            "usuarioCierre": "Ruben Martinez",
+            "fechaApertura": "2026-04-13T08:00:00.000Z",
+            "fechaCierre": "2026-04-13T18:15:00.000Z",
+            "monedaPrincipal": "USD",
+            "efectivoInicial": 350,
+            "ventasEfectivo": 440.5,
+            "efectivoFinalReal": 789.9,
+            "diferencia": -0.6,
+            "totales": {
+                "ingresos": 910.3,
+                "egresos": 20,
+                "neto": 890.3,
+                "ventasContado": 700.3,
+                "ventasCredito": 110,
+                "ventasPendientes": 100
+            },
+            "observaciones": "Caja abierta normalmente",
+            "notasCierre": "Pequena diferencia por redondeo bancario"
+        }
+    ]
+}
+
+// anular cierre de caja
+// POST /cierre-caja/anular/CIERRE-2026-04-13-guatire
+{
+    "motivo": "Se requiere recalcular la conciliacion de punto por voucher duplicado."
+}
+
+{
+    "message": "ok",
+    "cierre": {
+        "id": "CIERRE-2026-04-13-guatire",
+        "estado": "revisado",
+        "motivoAnulacion": "Se requiere recalcular la conciliacion de punto por voucher duplicado.",
+        "fechaRevision": "2026-04-14T09:15:00.000Z"
+    }
+}
+
