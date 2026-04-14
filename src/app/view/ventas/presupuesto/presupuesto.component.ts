@@ -8,7 +8,11 @@ import { Producto } from './../../productos/producto.model';
 import { ProductoConversionService } from './../../productos/productos-list/producto-conversion.service';
 import { SystemConfigService } from './../../system-config/system-config.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
 import { ExcelExportService } from './../../../core/services/excel-export/excel-export.service';
+import { UserStateService } from './../../../core/services/userState/user-state-service';
+import { Empleado, User } from './../../../Interfaces/models-interface';
+import { SedeCompleta } from './../../login/login-interface';
 import { PRESUPUESTO_VENTA_STORAGE_KEY, PresupuestoVentaDraft } from '../shared/presupuesto-venta-handoff.util';
 
 @Component({
@@ -19,12 +23,16 @@ import { PRESUPUESTO_VENTA_STORAGE_KEY, PresupuestoVentaDraft } from '../shared/
 })
 
 export class PresupuestoComponent implements OnInit, OnDestroy {
+  private readonly PRESUPUESTOS_STORAGE_KEY = 'optica_presupuestos_locales';
+
   @ViewChild('clienteCedulaInput') clienteCedulaInput!: ElementRef;
 
   // Variables principales
   mostrarModalNuevoPresupuesto: boolean = false;
   mostrarModalDetallePresupuesto: boolean = false;
   mostrarModalEliminar: boolean = false;
+  mostrarModalConversionPresupuesto: boolean = false;
+  mostrarModalRenovarPresupuesto: boolean = false;
   modoEditable: boolean = false;
   filtroBusqueda: string = '';
   filtroEstado: string = '';
@@ -78,6 +86,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   // Presupuesto seleccionado para detalle/edición
   presupuestoSeleccionado: any = null;
   presupuestoAEliminar: any = null;
+  presupuestoParaConvertir: any = null;
+  presupuestoParaRenovar: any = null;
 
   // Opciones
   opcionesVencimiento = [
@@ -97,6 +107,9 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   monedaSistema: 'USD' | 'EUR' | 'VES' = 'USD';
   simboloMonedaSistema: string = '$';
   ivaPorcentaje: number = 16;
+  usuarioActual: User | null = null;
+  sedeActual: SedeCompleta | null = null;
+  empleadosDisponibles: Empleado[] = [];
 
   private configSubscription?: Subscription;
 
@@ -119,16 +132,20 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     private systemConfigService: SystemConfigService,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef,
+    private empleadosService: EmpleadosService,
     private excelExportService: ExcelExportService,
+    private userStateService: UserStateService,
     private router: Router,
     private route: ActivatedRoute,
   ) { }
 
   ngOnInit() {
+    this.sincronizarContextoUsuario();
     this.obtenerConfiguracionSistema();
     this.suscribirCambiosConfiguracion();
     this.cargarDatos();
     this.inicializarNuevoPresupuesto();
+    void this.cargarAsesores();
     this.diasVencimientoSeleccionado = 7;
     this.inicializarPresupuestosFiltrados();
   }
@@ -160,6 +177,24 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     });
   }
 
+  private sincronizarContextoUsuario(): void {
+    this.usuarioActual = this.userStateService.getCurrentUser();
+    this.sedeActual = this.userStateService.getSedeActual();
+
+    if (!this.sedeActual && this.usuarioActual?.sede) {
+      this.sedeActual = this.userStateService.getSedePorKey(this.usuarioActual.sede);
+    }
+  }
+
+  private async cargarAsesores(): Promise<void> {
+    try {
+      const empleados = await lastValueFrom(this.empleadosService.getAllEmpleados());
+      this.empleadosDisponibles = Array.isArray(empleados) ? empleados : [];
+    } catch {
+      this.empleadosDisponibles = [];
+    }
+  }
+
   inicializarPresupuestosFiltrados() {
     // Inicializar con todos los presupuestos
     if (this.presupuestosVigentes) {
@@ -188,14 +223,160 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     };
   }
 
+  private obtenerPresupuestosLocales(): any[] | null {
+    const data = localStorage.getItem(this.PRESUPUESTOS_STORAGE_KEY);
+
+    if (data === null) {
+      return null;
+    }
+
+    try {
+      const presupuestos = JSON.parse(data);
+
+      if (!Array.isArray(presupuestos)) {
+        return null;
+      }
+
+      return presupuestos.map((presupuesto) => this.normalizarPresupuestoPersistido(presupuesto));
+    } catch (error) {
+      console.warn('No se pudieron leer los presupuestos locales, se usarán los datos semilla:', error);
+      return null;
+    }
+  }
+
+  private persistirPresupuestosLocales(): void {
+    localStorage.setItem(this.PRESUPUESTOS_STORAGE_KEY, JSON.stringify(this.obtenerTodosLosPresupuestos()));
+  }
+
+  private obtenerTodosLosPresupuestos(): any[] {
+    return [...this.presupuestosVigentes, ...this.presupuestosVencidos];
+  }
+
+  private aplicarPresupuestosDesdeFuente(presupuestos: any[]): void {
+    const normalizados = presupuestos.map((presupuesto) => this.normalizarPresupuestoPersistido(presupuesto));
+
+    this.presupuestosVigentes = normalizados.filter((presupuesto) => presupuesto.estadoColor !== 'vencido');
+    this.presupuestosVencidos = normalizados.filter((presupuesto) => presupuesto.estadoColor === 'vencido');
+
+    this.actualizarDiasRestantesDinamicos();
+    this.inicializarPresupuestosFiltrados();
+    this.filtrarPresupuestos();
+    this.calcularEstadisticas();
+    this.persistirPresupuestosLocales();
+  }
+
+  private normalizarPresupuestoPersistido(presupuesto: any): any {
+    const fechaCreacion = presupuesto?.fechaCreacion ? new Date(presupuesto.fechaCreacion) : new Date();
+    const fechaVencimiento = presupuesto?.fechaVencimiento ? new Date(presupuesto.fechaVencimiento) : new Date();
+    const productos = Array.isArray(presupuesto?.productos)
+      ? presupuesto.productos.map((producto: any) => ({
+        ...producto,
+        id: producto?.id,
+        precio: Number(producto?.precio || 0),
+        precioOriginal: Number(producto?.precioOriginal ?? producto?.precio ?? 0),
+        cantidad: Number(producto?.cantidad || 1),
+        descuento: Number(producto?.descuento || 0),
+        total: Number(producto?.total || 0),
+        moneda: producto?.moneda ?? this.monedaSistema,
+        monedaOriginal: producto?.monedaOriginal ?? producto?.moneda ?? this.monedaSistema,
+        tasaConversion: Number(producto?.tasaConversion ?? 1)
+      }))
+      : [];
+
+    const subtotal = Number(presupuesto?.subtotal || 0);
+    const descuentoTotal = Number(presupuesto?.descuentoTotal || 0);
+    const iva = Number(presupuesto?.iva || 0);
+    const total = Number(presupuesto?.total || 0);
+
+    return {
+      ...presupuesto,
+      id: Number(presupuesto?.id || 0),
+      codigo: presupuesto?.codigo || this.obtenerSiguienteCodigoPresupuesto(),
+      cliente: {
+        ...this.getClienteVacio(),
+        ...(presupuesto?.cliente || {})
+      },
+      fechaCreacion,
+      fechaVencimiento,
+      diasVencimiento: Number(presupuesto?.diasVencimiento || 7),
+      productos,
+      subtotal,
+      descuentoTotal,
+      iva,
+      total,
+      observaciones: presupuesto?.observaciones || '',
+      estado: presupuesto?.estado || 'vigente',
+      estadoColor: presupuesto?.estadoColor || 'vigente',
+      diasRestantes: Number(presupuesto?.diasRestantes ?? 0)
+    };
+  }
+
+  private obtenerSiguienteIdPresupuesto(): number {
+    return this.obtenerTodosLosPresupuestos().reduce((maximo, presupuesto) => {
+      return Math.max(maximo, Number(presupuesto?.id || 0));
+    }, 0) + 1;
+  }
+
+  private obtenerSiguienteCodigoPresupuesto(): string {
+    const year = new Date().getFullYear();
+    const ultimoCorrelativo = this.obtenerTodosLosPresupuestos().reduce((maximo, presupuesto) => {
+      const codigo = String(presupuesto?.codigo || '');
+      const match = codigo.match(/^P-(\d{4})-(\d+)$/i);
+
+      if (!match || Number(match[1]) !== year) {
+        return maximo;
+      }
+
+      return Math.max(maximo, Number(match[2] || 0));
+    }, 0);
+
+    return `P-${year}-${String(ultimoCorrelativo + 1).padStart(3, '0')}`;
+  }
+
+  private crearSnapshotPresupuestoNuevo(): any {
+    const fechaCreacion = new Date(this.nuevoPresupuesto.fechaCreacion || new Date());
+    const fechaVencimiento = new Date(this.nuevoPresupuesto.fechaVencimiento || new Date());
+    const diasRestantes = this.calcularDiasRestantesParaFecha(fechaVencimiento);
+
+    return {
+      ...this.nuevoPresupuesto,
+      id: this.obtenerSiguienteIdPresupuesto(),
+      codigo: this.obtenerSiguienteCodigoPresupuesto(),
+      cliente: { ...this.nuevoPresupuesto.cliente },
+      fechaCreacion,
+      fechaVencimiento,
+      diasVencimiento: Number(this.nuevoPresupuesto.diasVencimiento || 7),
+      productos: this.nuevoPresupuesto.productos.map((producto: any) => ({ ...producto })),
+      subtotal: Number(this.nuevoPresupuesto.subtotal || 0),
+      descuentoTotal: Number(this.nuevoPresupuesto.descuentoTotal || 0),
+      iva: Number(this.nuevoPresupuesto.iva || 0),
+      total: Number(this.nuevoPresupuesto.total || 0),
+      estado: diasRestantes < 0 ? 'vencido' : 'vigente',
+      estadoColor: this.getEstadoColor(diasRestantes),
+      diasRestantes
+    };
+  }
+
+  private calcularDiasRestantesParaFecha(fecha: Date): number {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const fechaComparar = new Date(fecha);
+    fechaComparar.setHours(0, 0, 0, 0);
+
+    return Math.ceil((fechaComparar.getTime() - hoy.getTime()) / (1000 * 3600 * 24));
+  }
+
   inicializarNuevoPresupuesto() {
+    this.sincronizarContextoUsuario();
+
     this.nuevoPresupuesto = {
       codigo: '',
       cliente: this.getClienteVacio(),
       fechaCreacion: new Date(),
       fechaVencimiento: new Date(),
       diasVencimiento: 7,
-      vendedor: '',
+      vendedor: this.usuarioActual?.nombre?.trim() || '',
       productos: [],
       subtotal: 0,
       iva: 0,
@@ -531,6 +712,13 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   cargarPresupuestos() {
     // Simular carga de datos
     setTimeout(() => {
+      const presupuestosLocales = this.obtenerPresupuestosLocales();
+
+      if (presupuestosLocales !== null) {
+        this.aplicarPresupuestosDesdeFuente(presupuestosLocales);
+        return;
+      }
+
       const hoy = new Date();
       hoy.setHours(0, 0, 0, 0); // Establecer hora a medianoche para cálculos precisos
 
@@ -980,11 +1168,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
         }
       ];
 
-      // Llamar al método para calcular días restantes dinámicamente
-      this.actualizarDiasRestantesDinamicos();
-      this.inicializarPresupuestosFiltrados();
-      this.filtrarPresupuestos();
-      this.calcularEstadisticas();
+      this.aplicarPresupuestosDesdeFuente([...this.presupuestosVigentes, ...this.presupuestosVencidos]);
     }, 500);
   }
 
@@ -1164,6 +1348,84 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.sincronizarEstadoBodyModal();
   }
 
+  estaModalAccionPresupuestoAbierto(): boolean {
+    return this.mostrarModalEliminar || this.mostrarModalRenovarPresupuesto;
+  }
+
+  getPresupuestoModalAccion(): any {
+    return this.mostrarModalEliminar ? this.presupuestoAEliminar : this.presupuestoParaRenovar;
+  }
+
+  esModalEliminarActivo(): boolean {
+    return this.mostrarModalEliminar;
+  }
+
+  esModalRenovarActivo(): boolean {
+    return this.mostrarModalRenovarPresupuesto;
+  }
+
+  cerrarModalAccionPresupuesto(): void {
+    if (this.mostrarModalEliminar) {
+      this.cerrarModalEliminar();
+      return;
+    }
+
+    if (this.mostrarModalRenovarPresupuesto) {
+      this.cerrarModalRenovarPresupuesto();
+    }
+  }
+
+  confirmarModalAccionPresupuesto(): void {
+    if (this.mostrarModalEliminar) {
+      this.eliminarPresupuesto();
+      return;
+    }
+
+    if (this.mostrarModalRenovarPresupuesto) {
+      this.confirmarRenovacionPresupuesto();
+    }
+  }
+
+  getTituloModalAccionPresupuesto(): string {
+    return this.esModalEliminarActivo() ? 'Eliminar Presupuesto' : 'Renovar Presupuesto';
+  }
+
+  getIconoModalAccionPresupuesto(): string {
+    return this.esModalEliminarActivo() ? 'bi-trash' : 'bi-arrow-repeat';
+  }
+
+  getTituloHeroModalAccionPresupuesto(): string {
+    return this.esModalEliminarActivo()
+      ? 'Se eliminará el presupuesto de forma permanente'
+      : 'Se reactivará el presupuesto por 7 días adicionales';
+  }
+
+  getDescripcionModalAccionPresupuesto(): string {
+    return this.esModalEliminarActivo()
+      ? 'Este presupuesto dejará de estar disponible en el módulo y también será removido del almacenamiento local de pruebas.'
+      : 'El presupuesto volverá al listado de vigentes con una nueva fecha de vencimiento para que puedas retomarlo y convertirlo más adelante si lo necesitas.';
+  }
+
+  getClaseHeroModalAccionPresupuesto(): string {
+    return this.esModalEliminarActivo() ? 'conversion-hero conversion-hero--danger' : 'conversion-hero conversion-hero--warning';
+  }
+
+  getClaseIconoModalAccionPresupuesto(): string {
+    return this.esModalEliminarActivo() ? 'conversion-icon conversion-icon--danger' : 'conversion-icon conversion-icon--warning';
+  }
+
+  getTextoEtiquetaFechaModalAccion(): string {
+    return this.esModalEliminarActivo() ? 'Vence' : 'Vencimiento anterior';
+  }
+
+  getTextoBotonModalAccionPresupuesto(): string {
+    return this.esModalEliminarActivo() ? 'Eliminar Permanentemente' : 'Renovar 7 Días';
+  }
+
+  getClaseBotonModalAccionPresupuesto(): string {
+    return this.esModalEliminarActivo() ? 'btn btn-danger' : 'btn btn-warning';
+  }
+
   // Método para calcular descuento total
   calcularDescuentoTotalPresupuesto(): number {
     if (!this.presupuestoSeleccionado) return 0;
@@ -1183,7 +1445,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       this.presupuestosVencidos = this.presupuestosVencidos.filter(p => p.id !== this.presupuestoAEliminar.id);
     }
 
-    this.calcularEstadisticas();
+    this.aplicarPresupuestosDesdeFuente(this.obtenerTodosLosPresupuestos());
     this.cerrarModalEliminar();
     this.snackBar.open('Presupuesto eliminado correctamente', 'Cerrar', {
       duration: 3000,
@@ -1222,17 +1484,12 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Generar código
-    const nuevoCodigo = `P-${new Date().getFullYear()}-${(this.presupuestosVigentes.length + this.presupuestosVencidos.length + 1).toString().padStart(3, '0')}`;
-    this.nuevoPresupuesto.codigo = nuevoCodigo;
-    this.nuevoPresupuesto.id = this.presupuestosVigentes.length + 1;
-
-    // Agregar a la lista
-    this.presupuestosVigentes.push({ ...this.nuevoPresupuesto });
-    this.calcularEstadisticas();
+    const presupuestoNuevo = this.crearSnapshotPresupuestoNuevo();
+    this.presupuestosVigentes.push(presupuestoNuevo);
+    this.aplicarPresupuestosDesdeFuente(this.obtenerTodosLosPresupuestos());
     this.cerrarModalNuevoPresupuesto();
 
-    this.snackBar.open(`Presupuesto ${nuevoCodigo} generado exitosamente`, 'Cerrar', {
+    this.snackBar.open(`Presupuesto ${presupuestoNuevo.codigo} generado exitosamente`, 'Cerrar', {
       duration: 4000,
       panelClass: ['snackbar-success']
     });
@@ -1596,47 +1853,103 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (confirm(`¿Convertir el presupuesto ${presupuesto.codigo} en una venta/orden de trabajo?`)) {
-      const borradorVenta = this.mapearPresupuestoParaVenta(presupuesto);
-      sessionStorage.setItem(PRESUPUESTO_VENTA_STORAGE_KEY, JSON.stringify(borradorVenta));
+    this.presupuestoParaConvertir = JSON.parse(JSON.stringify(presupuesto));
+    this.mostrarModalConversionPresupuesto = true;
+    this.sincronizarEstadoBodyModal();
+    this.cdr.detectChanges();
+  }
 
-      this.router.navigate([], {
-        relativeTo: this.route,
-        queryParams: { vista: 'generacion-de-ventas' },
-        queryParamsHandling: 'merge'
-      }).then((navegacionOk) => {
-        if (!navegacionOk) {
-          sessionStorage.removeItem(PRESUPUESTO_VENTA_STORAGE_KEY);
-          this.snackBar.open('No se pudo abrir el módulo de ventas', 'Cerrar', {
-            duration: 3500,
-            panelClass: ['snackbar-warning']
-          });
-          return;
-        }
+  cerrarModalConversionPresupuesto(): void {
+    this.mostrarModalConversionPresupuesto = false;
+    this.presupuestoParaConvertir = null;
+    this.sincronizarEstadoBodyModal();
+  }
 
-        this.snackBar.open(`Presupuesto ${presupuesto.codigo} cargado en ventas para continuar`, 'Cerrar', {
-          duration: 4500,
-          panelClass: ['snackbar-success']
-        });
-      });
+  confirmarConversionPresupuesto(): void {
+    if (!this.presupuestoParaConvertir) {
+      return;
     }
+
+    const presupuesto = this.presupuestoParaConvertir;
+    this.cerrarModalConversionPresupuesto();
+
+    const borradorVenta = this.mapearPresupuestoParaVenta(presupuesto);
+    sessionStorage.setItem(PRESUPUESTO_VENTA_STORAGE_KEY, JSON.stringify(borradorVenta));
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { vista: 'generacion-de-ventas' },
+      queryParamsHandling: 'merge'
+    }).then((navegacionOk) => {
+      if (!navegacionOk) {
+        sessionStorage.removeItem(PRESUPUESTO_VENTA_STORAGE_KEY);
+        this.snackBar.open('No se pudo abrir el módulo de ventas', 'Cerrar', {
+          duration: 3500,
+          panelClass: ['snackbar-warning']
+        });
+        return;
+      }
+
+      this.snackBar.open(`Presupuesto ${presupuesto.codigo} cargado en ventas para continuar`, 'Cerrar', {
+        duration: 4500,
+        panelClass: ['snackbar-success']
+      });
+    });
   }
 
   renovarPresupuesto(presupuesto: any) {
-    if (confirm(`¿Renovar el presupuesto ${presupuesto.codigo} por 7 días más?`)) {
-      // Mover de vencidos a vigentes
-      this.presupuestosVencidos = this.presupuestosVencidos.filter(p => p.id !== presupuesto.id);
-      presupuesto.fechaVencimiento = new Date(new Date().setDate(new Date().getDate() + 7));
-      presupuesto.diasRestantes = 7;
-      presupuesto.estadoColor = 'vigente';
-      this.presupuestosVigentes.push(presupuesto);
+    this.presupuestoParaRenovar = JSON.parse(JSON.stringify(presupuesto));
+    this.mostrarModalRenovarPresupuesto = true;
+    this.sincronizarEstadoBodyModal();
+  }
 
-      this.calcularEstadisticas();
-      this.snackBar.open(`Presupuesto ${presupuesto.codigo} renovado por 7 días`, 'Cerrar', {
-        duration: 4000,
-        panelClass: ['snackbar-success']
-      });
+  cerrarModalRenovarPresupuesto(): void {
+    this.mostrarModalRenovarPresupuesto = false;
+    this.presupuestoParaRenovar = null;
+    this.sincronizarEstadoBodyModal();
+  }
+
+  confirmarRenovacionPresupuesto(): void {
+    if (!this.presupuestoParaRenovar) {
+      return;
     }
+
+    const presupuesto = this.presupuestoParaRenovar;
+    this.cerrarModalRenovarPresupuesto();
+
+    this.presupuestosVencidos = this.presupuestosVencidos.filter(p => p.id !== presupuesto.id);
+    presupuesto.fechaVencimiento = new Date(new Date().setDate(new Date().getDate() + 7));
+    presupuesto.diasRestantes = 7;
+    presupuesto.diasVencimiento = 7;
+    presupuesto.estado = 'vigente';
+    presupuesto.estadoColor = 'vigente';
+    this.presupuestosVigentes.push(presupuesto);
+
+    if (this.presupuestoSeleccionado?.id === presupuesto.id) {
+      this.presupuestoSeleccionado = JSON.parse(JSON.stringify(presupuesto));
+      this.diasVencimientoSeleccionado = presupuesto.diasVencimiento || 7;
+    }
+
+    this.aplicarPresupuestosDesdeFuente(this.obtenerTodosLosPresupuestos());
+    this.snackBar.open(`Presupuesto ${presupuesto.codigo} renovado por 7 días`, 'Cerrar', {
+      duration: 4000,
+      panelClass: ['snackbar-success']
+    });
+  }
+
+  getFechaRenovacionPresupuesto(presupuesto: any): Date | null {
+    if (!presupuesto) {
+      return null;
+    }
+
+    const fecha = new Date();
+    fecha.setDate(fecha.getDate() + 7);
+    return fecha;
+  }
+
+  getTextoFechaRenovacionPresupuesto(presupuesto: any): string {
+    const fechaRenovacion = this.getFechaRenovacionPresupuesto(presupuesto);
+    return fechaRenovacion ? this.formatFecha(fechaRenovacion) : 'N/A';
   }
 
   // Agregar estos métodos al componente
@@ -1666,8 +1979,17 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
     this.presupuestoSeleccionado.total = this.presupuestoSeleccionado.subtotal + this.presupuestoSeleccionado.iva;
   }
 
-  imprimirPresupuesto(presupuesto: any) {
+  async imprimirPresupuesto(presupuesto: any) {
     console.log('🖨️ Imprimiendo presupuesto:', presupuesto);
+
+    this.sincronizarContextoUsuario();
+
+    if (!this.empleadosDisponibles.length) {
+      await this.cargarAsesores();
+    }
+
+    const datosSede = this.obtenerDatosSedeImpresion();
+    const nombreAsesor = this.obtenerNombreAsesor(presupuesto?.vendedor);
 
     // Calcular descuento total si no existe
     if (!presupuesto.descuentoTotal) {
@@ -2156,13 +2478,14 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
             <!-- ENCABEZADO COMPACTO -->
             <div class="header-compact">
                 <div class="empresa-info-compact">
-                    <div class="empresa-nombre-compact">NEW VISION LENS 2020</div>
+                <div class="empresa-nombre-compact">${this.escaparHtml(datosSede.nombreOptica)}</div>
                     <div class="empresa-datos-compact">
-                        Calle Confecio CC Candelaria Plaza PB Local PB<br>
-                        📞 022.365.394.2 | ✉️ newvisionlens2020@email.com
+                  ${datosSede.rif ? `RIF: ${this.escaparHtml(datosSede.rif)}<br>` : ''}
+                  ${this.escaparHtml(datosSede.direccion)}<br>
+                  📞 ${this.escaparHtml(datosSede.telefono)} | ✉️ ${this.escaparHtml(datosSede.email)}
                     </div>
                 </div>
-                <div class="logo-mini">NVL</div>
+              <div class="logo-mini">${this.escaparHtml(datosSede.iniciales)}</div>
             </div>
             
             <!-- TÍTULO PRINCIPAL -->
@@ -2182,7 +2505,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
                 </div>
                 <div class="metadata-card">
                     <span class="metadata-label">VENDEDOR</span>
-                    <span class="metadata-valor">${presupuesto.vendedor || 'N/A'}</span>
+                  <span class="metadata-valor">${this.escaparHtml(nombreAsesor)}</span>
                 </div>
                 <div class="metadata-card">
                     <span class="metadata-label">ESTADO</span>
@@ -2201,19 +2524,19 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
                 <div class="cliente-grid">
                     <div class="cliente-item">
                         <span class="cliente-label">Nombre:</span>
-                        <span class="cliente-valor">${presupuesto.cliente.nombreCompleto}</span>
+                      <span class="cliente-valor">${this.escaparHtml(presupuesto.cliente.nombreCompleto)}</span>
                     </div>
                     <div class="cliente-item">
                         <span class="cliente-label">${presupuesto.cliente.tipoPersona === 'juridica' ? 'RIF:' : 'Cédula:'}</span>
-                        <span class="cliente-valor">${presupuesto.cliente.cedula}</span>
+                      <span class="cliente-valor">${this.escaparHtml(presupuesto.cliente.cedula)}</span>
                     </div>
                     <div class="cliente-item">
                         <span class="cliente-label">Teléfono:</span>
-                        <span class="cliente-valor">${presupuesto.cliente.telefono || 'N/A'}</span>
+                      <span class="cliente-valor">${this.escaparHtml(presupuesto.cliente.telefono || 'N/A')}</span>
                     </div>
                     <div class="cliente-item">
                         <span class="cliente-label">Email:</span>
-                        <span class="cliente-valor">${presupuesto.cliente.email || 'N/A'}</span>
+                      <span class="cliente-valor">${this.escaparHtml(presupuesto.cliente.email || 'N/A')}</span>
                     </div>
                 </div>
             </div>
@@ -2235,8 +2558,8 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
                     ${presupuesto.productos.map((p: any, i: number) => `
                     <tr>
                         <td>${i + 1}</td>
-                        <td class="descripcion" title="${p.descripcion}">${p.descripcion}</td>
-                        <td>${p.codigo || '-'}</td>
+                      <td class="descripcion" title="${this.escaparHtml(p.descripcion)}">${this.escaparHtml(p.descripcion)}</td>
+                      <td>${this.escaparHtml(p.codigo || '-')}</td>
                         <td class="precio">${this.formatMoneda(p.precio)}</td>
                         <td class="cantidad">${p.cantidad}</td>
                         <td>${p.descuento > 0 ? p.descuento + '%' : '-'}</td>
@@ -2298,7 +2621,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
                 <div class="obs-section">
                     <h4>OBSERVACIONES</h4>
                     <div class="obs-content">
-                        ${presupuesto.observaciones || 'Sin observaciones adicionales.'}
+                    ${this.escaparHtml(presupuesto.observaciones || 'Sin observaciones adicionales.')}
                     </div>
                 </div>
                 
@@ -2393,12 +2716,114 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
 
   // Método para formatear moneda (ya existe, pero lo incluyo por referencia)
   formatMoneda(valor: number | null | undefined, moneda: string = this.monedaSistema): string {
-    return new Intl.NumberFormat('es-VE', {
-      style: 'currency',
-      currency: this.normalizarCodigoMoneda(moneda),
+    const monto = Number(valor || 0);
+    const codigoMoneda = this.normalizarCodigoMoneda(moneda);
+    const simbolo = this.obtenerSimboloMoneda(codigoMoneda);
+    const valorFormateado = new Intl.NumberFormat('es-VE', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }).format(Number(valor || 0));
+    }).format(Math.abs(monto));
+
+    return `${monto < 0 ? '-' : ''}${simbolo} ${valorFormateado}`;
+  }
+
+  private obtenerSimboloMoneda(moneda: string): string {
+    const codigoMoneda = this.normalizarCodigoMoneda(moneda);
+
+    if (codigoMoneda === this.monedaSistema && this.simboloMonedaSistema?.trim()) {
+      return this.simboloMonedaSistema.trim();
+    }
+
+    switch (codigoMoneda) {
+      case 'USD':
+        return '$';
+      case 'EUR':
+        return '€';
+      default:
+        return 'Bs.';
+    }
+  }
+
+  private obtenerNombreAsesor(vendedor: unknown): string {
+    const vendedorNormalizado = String(vendedor || '').trim();
+
+    if (!vendedorNormalizado) {
+      return this.usuarioActual?.nombre?.trim() || 'N/A';
+    }
+
+    const vendedorLower = vendedorNormalizado.toLowerCase();
+    const empleado = this.empleadosDisponibles.find((item) => {
+      const id = String(item.id || '').trim().toLowerCase();
+      const cedula = String(item.cedula || '').trim().toLowerCase();
+      const nombre = String(item.nombre || '').trim().toLowerCase();
+
+      return vendedorLower === id || vendedorLower === cedula || vendedorLower === nombre;
+    });
+
+    if (empleado?.nombre?.trim()) {
+      return empleado.nombre.trim();
+    }
+
+    const usuarioActual = this.usuarioActual?.nombre?.trim();
+    if (usuarioActual) {
+      const usuarioId = String(this.usuarioActual?.id || '').trim().toLowerCase();
+      const usuarioCedula = String(this.usuarioActual?.cedula || '').trim().toLowerCase();
+      const usuarioNombre = usuarioActual.toLowerCase();
+
+      if ([usuarioId, usuarioCedula, usuarioNombre].includes(vendedorLower) || /^\d+$/.test(vendedorNormalizado)) {
+        return usuarioActual;
+      }
+    }
+
+    return vendedorNormalizado;
+  }
+
+  private obtenerDatosSedeImpresion(): {
+    nombreOptica: string;
+    rif: string;
+    direccion: string;
+    telefono: string;
+    email: string;
+    iniciales: string;
+  } {
+    const sede = this.sedeActual || (this.usuarioActual?.sede ? this.userStateService.getSedePorKey(this.usuarioActual.sede) : null);
+    const nombreOptica = sede?.nombre_optica?.trim() || sede?.nombre?.trim() || this.usuarioActual?.sedeNombre?.trim() || 'New Vision Lens 2020';
+    const rif = sede?.rif?.trim() || '';
+    const direccion = sede?.direccion_fiscal?.trim() || sede?.direccion?.trim() || 'Dirección no disponible';
+    const telefono = sede?.telefono?.trim() || 'Sin teléfono';
+    const email = sede?.email?.trim() || 'Sin correo';
+
+    return {
+      nombreOptica,
+      rif,
+      direccion,
+      telefono,
+      email,
+      iniciales: this.obtenerInicialesMarca(nombreOptica)
+    };
+  }
+
+  private obtenerInicialesMarca(nombre: string): string {
+    const palabras = String(nombre || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 3);
+
+    if (!palabras.length) {
+      return 'NV';
+    }
+
+    return palabras.map((palabra) => palabra.charAt(0).toUpperCase()).join('');
+  }
+
+  private escaparHtml(valor: unknown): string {
+    return String(valor ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   debeMostrarReferenciaBs(moneda: string = this.monedaSistema): boolean {
@@ -2736,7 +3161,9 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
   private sincronizarEstadoBodyModal(): void {
     const hayModalAbierto = this.mostrarModalNuevoPresupuesto
       || this.mostrarModalDetallePresupuesto
-      || this.mostrarModalEliminar;
+      || this.mostrarModalEliminar
+      || this.mostrarModalConversionPresupuesto
+      || this.mostrarModalRenovarPresupuesto;
 
     document.body.classList.toggle('modal-open', hayModalAbierto);
   }
@@ -2811,7 +3238,7 @@ export class PresupuestoComponent implements OnInit, OnDestroy {
       }
 
       // Recalcular estadísticas
-      this.calcularEstadisticas();
+      this.aplicarPresupuestosDesdeFuente(this.obtenerTodosLosPresupuestos());
 
       // Mostrar mensaje de éxito
       this.snackBar.open('Presupuesto actualizado correctamente', 'Cerrar', {

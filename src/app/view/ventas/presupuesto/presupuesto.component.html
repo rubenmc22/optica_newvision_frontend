@@ -8,8 +8,6 @@
                     <h1>Presupuestos</h1>
                     <div class="header-subtitle">
                         Consulta y gestiona todos tus presupuestos activos
-                        <span class="subtitle-meta">• Moneda actual: {{ getTextoMonedaActual() }}</span>
-                        <span class="subtitle-meta" *ngIf="debeMostrarReferenciaBs()">• Referencias en Bs con tasa actual</span>
                     </div>
                 </div>
             </div>
@@ -132,7 +130,7 @@
                                 <i class="bi bi-calendar"></i>
                                 Vence: {{ formatFecha(presupuesto.fechaVencimiento) }}
                                 <span *ngIf="presupuesto.diasRestantes >= 0" class="dias-restantes">
-                                    {{ getTextoDiasRestantes() }}
+                                    {{ getTextoDiasRestantesParaPresupuesto(presupuesto) }}
                                 </span>
                             </small>
                         </div>
@@ -162,20 +160,23 @@
                     </div>
 
                     <div class="presupuesto-actions">
-                        <button class="btn-action" title="Ver/Editar" (click)="verDetallePresupuesto(presupuesto)">
+                        <button class="btn-action" type="button" title="Ver/Editar"
+                            (click)="$event.stopPropagation(); verDetallePresupuesto(presupuesto)">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn-action" title="Imprimir" (click)="imprimirPresupuesto(presupuesto)">
+                        <button class="btn-action" type="button" title="Imprimir"
+                            (click)="$event.stopPropagation(); imprimirPresupuesto(presupuesto)">
                             <i class="bi bi-printer"></i>
                         </button>
                         <button class="btn-action btn-success"
+                            type="button"
                             [disabled]="!puedeConvertirPresupuesto(presupuesto)"
                             [title]="puedeConvertirPresupuesto(presupuesto) ? 'Convertir a venta' : obtenerMotivoNoConversion(presupuesto)"
-                            (click)="convertirAVenta(presupuesto)">
+                            (click)="$event.stopPropagation(); convertirAVenta(presupuesto)">
                             <i class="bi bi-cart-check"></i>
                         </button>
-                        <button class="btn-action btn-danger" title="Eliminar"
-                            (click)="confirmarEliminarPresupuesto(presupuesto)">
+                        <button class="btn-action btn-danger" type="button" title="Eliminar"
+                            (click)="$event.stopPropagation(); confirmarEliminarPresupuesto(presupuesto)">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -260,15 +261,16 @@
                     </div>
 
                     <div class="presupuesto-actions">
-                        <button class="btn-action" title="Ver/Editar" (click)="verDetallePresupuesto(presupuesto)">
+                        <button class="btn-action" type="button" title="Ver/Editar"
+                            (click)="$event.stopPropagation(); verDetallePresupuesto(presupuesto)">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn-action btn-warning" title="Renovar"
-                            (click)="renovarPresupuesto(presupuesto)">
+                        <button class="btn-action btn-warning" type="button" title="Renovar"
+                            (click)="$event.stopPropagation(); renovarPresupuesto(presupuesto)">
                             <i class="bi bi-arrow-clockwise"></i>
                         </button>
-                        <button class="btn-action btn-danger" title="Eliminar"
-                            (click)="confirmarEliminarPresupuesto(presupuesto)">
+                        <button class="btn-action btn-danger" type="button" title="Eliminar"
+                            (click)="$event.stopPropagation(); confirmarEliminarPresupuesto(presupuesto)">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -1006,65 +1008,221 @@
         </div>
     </div>
 
+    <div class="modal-actions detail-modal-actions">
+        <div class="detail-modal-actions__secondary">
+            <button class="btn btn-secondary" type="button" (click)="cerrarModalDetalle()">
+                <i class="bi bi-x-circle"></i>
+                Cancelar
+            </button>
+
+            <button *ngIf="!modoEditable" class="btn btn-info" type="button"
+                (click)="imprimirPresupuesto(presupuestoSeleccionado)">
+                <i class="bi bi-printer"></i>
+                Imprimir
+            </button>
+
+            <button *ngIf="!modoEditable && presupuestoSeleccionado?.estadoColor === 'vencido'" class="btn btn-warning"
+                type="button" (click)="renovarPresupuesto(presupuestoSeleccionado)">
+                <i class="bi bi-arrow-repeat"></i>
+                Renovar
+            </button>
+        </div>
+
+        <div class="detail-modal-actions__primary">
+            <button *ngIf="!modoEditable" class="btn btn-success" type="button"
+                [disabled]="!puedeConvertirPresupuesto(presupuestoSeleccionado)"
+                [title]="puedeConvertirPresupuesto(presupuestoSeleccionado) ? 'Cargar en ventas' : obtenerMotivoNoConversion(presupuestoSeleccionado)"
+                (click)="convertirAVenta(presupuestoSeleccionado)">
+                <i class="bi bi-cart-check"></i>
+                Cargar en Venta
+            </button>
+
+            <button *ngIf="modoEditable" class="btn btn-primary" type="button" (click)="guardarCambiosPresupuesto()">
+                <i class="bi bi-check-circle"></i>
+                Actualizar Presupuesto
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Conversión Presupuesto -->
+<div class="presupuesto-modal-backdrop presupuesto-modal-backdrop--conversion"
+    *ngIf="mostrarModalConversionPresupuesto"
+    (click)="cerrarModalConversionPresupuesto()"></div>
+<div class="modal-conversion-presupuesto"
+    *ngIf="mostrarModalConversionPresupuesto && presupuestoParaConvertir as presupuestoConversion">
+    <div class="modal-header">
+        <div class="header-left">
+            <h2>
+                <i class="bi bi-cart-check"></i>
+                Convertir a Venta
+            </h2>
+        </div>
+        <div class="header-right">
+            <button class="btn-close-modal" type="button" (click)="cerrarModalConversionPresupuesto()" aria-label="Cerrar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-body">
+        <div class="conversion-hero">
+            <div class="conversion-icon">
+                <i class="bi bi-cart-check"></i>
+            </div>
+            <div class="conversion-copy">
+                <h4>Preparar presupuesto para venta</h4>
+                <p>Se cargarán los datos del presupuesto en generación de ventas para que puedas revisar, editar y continuar el proceso.</p>
+            </div>
+        </div>
+
+        <div class="conversion-summary">
+            <div class="summary-item">
+                <span class="summary-label">Presupuesto</span>
+                <strong class="summary-value">{{ presupuestoConversion.codigo }}</strong>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Cliente</span>
+                <strong class="summary-value">{{ presupuestoConversion.cliente?.nombreCompleto }}</strong>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Vencimiento</span>
+                <strong class="summary-value">{{ formatFecha(presupuestoConversion.fechaVencimiento) }}</strong>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Total</span>
+                <strong class="summary-value">{{ formatMoneda(presupuestoConversion.total) }}</strong>
+                <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                    Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoConversion.total), 'VES') }}
+                </small>
+            </div>
+        </div>
+
+        <div class="conversion-highlights">
+            <div class="highlight-item">
+                <i class="bi bi-pencil-square"></i>
+                <span>Podrás ajustar productos, cantidades y condiciones antes de cerrar la venta.</span>
+            </div>
+            <div class="highlight-item">
+                <i class="bi bi-person-badge"></i>
+                <span>Se conservarán cliente, artículos y observaciones del presupuesto actual.</span>
+            </div>
+            <div class="highlight-item">
+                <i class="bi bi-lightning-charge"></i>
+                <span>La carga se hará en la pantalla de ventas sin tocar backend.</span>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-actions">
-        <button class="btn btn-secondary" (click)="cerrarModalDetalle()">
-            <i class="bi bi-x-circle"></i>
+        <button class="btn btn-secondary" type="button" (click)="cerrarModalConversionPresupuesto()">
+            <i class="bi bi-arrow-left"></i>
             Cancelar
         </button>
-
-        <!-- Botón Imprimir (solo visible en modo vista) -->
-        <button *ngIf="!modoEditable" class="btn btn-info" (click)="imprimirPresupuesto(presupuestoSeleccionado)">
-            <i class="bi bi-printer"></i>
-            Imprimir
-        </button>
-
-        <button *ngIf="!modoEditable" class="btn btn-success"
-            [disabled]="!puedeConvertirPresupuesto(presupuestoSeleccionado)"
-            [title]="puedeConvertirPresupuesto(presupuestoSeleccionado) ? 'Cargar en ventas' : obtenerMotivoNoConversion(presupuestoSeleccionado)"
-            (click)="convertirAVenta(presupuestoSeleccionado)">
+        <button class="btn btn-success" type="button" (click)="confirmarConversionPresupuesto()">
             <i class="bi bi-cart-check"></i>
             Cargar en Venta
-        </button>
-
-        <!-- Botón Guardar Cambios (solo visible en modo edición) -->
-        <button *ngIf="modoEditable" class="btn btn-primary" (click)="guardarCambiosPresupuesto()">
-            <i class="bi bi-check-circle"></i>
-            Actualizar Presupuesto
         </button>
     </div>
 </div>
 
-<!-- Modal Eliminar Presupuesto -->
-<div class="presupuesto-modal-backdrop" *ngIf="mostrarModalEliminar" (click)="cerrarModalEliminar()"></div>
-<div class="modal-eliminar" *ngIf="mostrarModalEliminar">
-        <div class="modal-header">
-            <div class="header-left">
-                <h2>
-                    <i class="bi bi-exclamation-triangle text-danger"></i>
-                Eliminar Presupuesto
-                </h2>
+<!-- Modal Acción Presupuesto -->
+<div class="presupuesto-modal-backdrop presupuesto-modal-backdrop--accion" *ngIf="estaModalAccionPresupuestoAbierto()" (click)="cerrarModalAccionPresupuesto()"></div>
+<div class="modal-accion-presupuesto" *ngIf="estaModalAccionPresupuestoAbierto() && getPresupuestoModalAccion() as presupuestoAccion">
+    <div class="modal-header">
+        <div class="header-left">
+            <h2>
+                <i class="bi" [class.bi-trash]="esModalEliminarActivo()" [class.bi-arrow-repeat]="esModalRenovarActivo()"></i>
+                {{ getTituloModalAccionPresupuesto() }}
+            </h2>
+        </div>
+        <div class="header-right">
+            <button class="btn-close-modal" (click)="cerrarModalAccionPresupuesto()" aria-label="Cerrar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-body">
+        <div class="conversion-hero" [class.conversion-hero--danger]="esModalEliminarActivo()" [class.conversion-hero--warning]="esModalRenovarActivo()">
+            <div class="conversion-icon" [class.conversion-icon--danger]="esModalEliminarActivo()" [class.conversion-icon--warning]="esModalRenovarActivo()">
+                <i class="bi" [class.bi-trash]="esModalEliminarActivo()" [class.bi-arrow-repeat]="esModalRenovarActivo()"></i>
+            </div>
+            <div class="conversion-copy">
+                <h4>{{ getTituloHeroModalAccionPresupuesto() }}</h4>
+                <p>{{ getDescripcionModalAccionPresupuesto() }}</p>
             </div>
         </div>
-        <div class="modal-body">
-            <div class="warning-message">
-                <i class="bi bi-trash"></i>
-                <h4>¿Está seguro de eliminar este presupuesto?</h4>
-                <p>Esta acción eliminará permanentemente el presupuesto:</p>
-                <div class="presupuesto-info">
-                    <strong>{{ presupuestoAEliminar?.codigo }}</strong>
-                    <small>{{ presupuestoAEliminar?.cliente.nombreCompleto }}</small>
-                    <small>Total: {{ formatMoneda(presupuestoAEliminar?.total) }}</small>
-                    <small *ngIf="debeMostrarReferenciaBs()">Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoAEliminar?.total), 'VES') }}</small>
+
+        <div class="conversion-summary">
+            <div class="summary-item">
+                <span class="summary-label">Presupuesto</span>
+                <strong class="summary-value">{{ presupuestoAccion.codigo }}</strong>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Cliente</span>
+                <strong class="summary-value">{{ presupuestoAccion.cliente?.nombreCompleto }}</strong>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">{{ getTextoEtiquetaFechaModalAccion() }}</span>
+                <strong class="summary-value">{{ formatFecha(presupuestoAccion.fechaVencimiento) }}</strong>
+            </div>
+            <div class="summary-item" *ngIf="esModalRenovarActivo(); else resumenAccionTotal">
+                <span class="summary-label">Nuevo vencimiento</span>
+                <strong class="summary-value">{{ getTextoFechaRenovacionPresupuesto(presupuestoAccion) }}</strong>
+            </div>
+            <ng-template #resumenAccionTotal>
+                <div class="summary-item">
+                    <span class="summary-label">Total</span>
+                    <strong class="summary-value">{{ formatMoneda(presupuestoAccion.total) }}</strong>
+                    <small class="referencia-bs" *ngIf="debeMostrarReferenciaBs()">
+                        Ref. {{ formatMoneda(obtenerReferenciaBs(presupuestoAccion.total), 'VES') }}
+                    </small>
                 </div>
-                <p class="text-danger"><strong>Esta acción no se puede deshacer.</strong></p>
+            </ng-template>
+        </div>
+
+        <div class="conversion-highlights" *ngIf="esModalRenovarActivo(); else highlightsEliminar">
+            <div class="highlight-item">
+                <i class="bi bi-calendar-plus"></i>
+                <span>La nueva vigencia será de 7 días a partir de hoy</span>
+            </div>
+            <div class="highlight-item">
+                <i class="bi bi-stars"></i>
+                <span>El presupuesto volverá automáticamente a la bandeja de vigentes</span>
+            </div>
+            <div class="highlight-item">
+                <i class="bi bi-database-check"></i>
+                <span>El cambio también quedará guardado en el almacenamiento local de pruebas</span>
             </div>
         </div>
-        <div class="modal-actions">
-            <button class="btn btn-secondary" (click)="cerrarModalEliminar()">
-                <i class="bi bi-x-circle"></i> Cancelar
-            </button>
-            <button class="btn btn-danger" (click)="eliminarPresupuesto()">
-                <i class="bi bi-trash"></i> Eliminar Permanentemente
-            </button>
-        </div>
+
+        <ng-template #highlightsEliminar>
+            <div class="conversion-highlights">
+                <div class="highlight-item highlight-item--danger">
+                    <i class="bi bi-trash3"></i>
+                    <span>El presupuesto será removido del listado actual y del almacenamiento local</span>
+                </div>
+                <div class="highlight-item highlight-item--danger">
+                    <i class="bi bi-exclamation-octagon"></i>
+                    <span>Esta acción no se puede deshacer desde el módulo</span>
+                </div>
+                <div class="highlight-item highlight-item--danger">
+                    <i class="bi bi-archive"></i>
+                    <span>Si lo necesitas de nuevo tendrás que crear un presupuesto nuevo</span>
+                </div>
+            </div>
+        </ng-template>
+    </div>
+
+    <div class="modal-actions">
+        <button class="btn btn-secondary" (click)="cerrarModalAccionPresupuesto()">
+            <i class="bi bi-arrow-left"></i>
+            Cancelar
+        </button>
+        <button [class]="getClaseBotonModalAccionPresupuesto()" (click)="confirmarModalAccionPresupuesto()">
+            <i class="bi" [class.bi-trash]="esModalEliminarActivo()" [class.bi-arrow-repeat]="esModalRenovarActivo()"></i>
+            {{ getTextoBotonModalAccionPresupuesto() }}
+        </button>
+    </div>
 </div>
