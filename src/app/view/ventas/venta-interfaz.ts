@@ -84,13 +84,23 @@ export interface MetodoPago {
     bancoCodigo?: string;
     bancoNombre?: string;
     banco?: string;
-    bancoObject?: { codigo: string; nombre: string };
+    bancoObject?: { codigo: string; nombre: string; displayText?: string };
     bancoReceptorCodigo?: string;
     bancoReceptorNombre?: string;
     bancoReceptor?: string;
-    bancoReceptorObject?: { codigo: string; nombre: string };
+    bancoReceptorObject?: {
+        id?: string;
+        codigo: string;
+        nombre: string;
+        displayText?: string;
+        ownerName?: string;
+        ownerId?: string;
+        phone?: string;
+        accountDescription?: string;
+        email?: string;
+        walletAddress?: string;
+    };
     moneda?: string;
-    bancoPunto?: string;
     notaPago?: string;
 }
 

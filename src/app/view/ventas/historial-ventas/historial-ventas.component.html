@@ -1585,11 +1585,7 @@
                                 <select class="form-select modern-select" formControlName="tipo" (change)="onMetodoPagoChange(i)"
                                     [ngClass]="{'campo-invalido': metodoControl.get('tipo')?.invalid && metodoControl.get('tipo')?.touched}">
                                     <option value="" disabled selected>Elige un método de pago</option>
-                                    <option value="efectivo">💵 Efectivo</option>
-                                    <option value="punto">💳 Punto de Venta</option>
-                                    <option value="pagomovil">📱 Pago Móvil</option>
-                                    <option value="transferencia">🏦 Transferencia</option>
-                                    <option value="zelle">🌐 Zelle</option>
+                                  <option *ngFor="let tipo of tiposPago" [value]="tipo.value">{{ tipo.label }}</option>
                                 </select>
                                 <small *ngIf="metodoControl.get('tipo')?.invalid && metodoControl.get('tipo')?.touched"
                                     class="text-danger">
@@ -1654,18 +1650,28 @@
                                 <div *ngIf="necesitaBancoReceptor(metodoControl.get('tipo')?.value)" class="campo-adicional">
                                   <label class="form-label compact-label">
                                     <i class="bi bi-arrow-left-right"></i>
-                                    Banco receptor
+                                    Cuenta receptora
                                   </label>
-                                  <ng-select [items]="bancosDisponibles" bindLabel="displayText" bindValue="codigo"
+                                  <ng-select [items]="getCuentasReceptorasPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText"
                                     formControlName="bancoReceptorObject" (change)="onBancoReceptorChange($event, i)"
-                                    [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
-                                    placeholder="Buscar banco receptor..."
+                                    [compareWith]="compararCuentaReceptora" [searchable]="true" [clearable]="true"
+                                    [placeholder]="getPlaceholderCuentaReceptora(metodoControl.get('tipo')?.value)"
                                     [class.ng-select-invalid]="metodoControl.get('bancoReceptorObject')?.invalid && metodoControl.get('bancoReceptorObject')?.touched">
+                                    <ng-template ng-option-tmp let-item="item">
+                                      <div class="banco-option" *ngIf="item">
+                                        <div class="banco-codigo">{{ item.nombre }}</div>
+                                        <div class="banco-nombre">{{ item.accountDescription || item.ownerName || item.ownerId }}</div>
+                                      </div>
+                                    </ng-template>
                                   </ng-select>
+                                  <small *ngIf="getCuentasReceptorasPorMetodo(metodoControl.get('tipo')?.value).length === 0"
+                                    class="text-warning">
+                                    <i class="bi bi-info-circle"></i> No hay cuentas receptoras configuradas para este método
+                                  </small>
                                   <small
                                     *ngIf="metodoControl.get('bancoReceptorObject')?.invalid && metodoControl.get('bancoReceptorObject')?.touched"
                                     class="text-danger">
-                                    <i class="bi bi-exclamation-triangle"></i> Selecciona el banco receptor
+                                    <i class="bi bi-exclamation-triangle"></i> Selecciona la cuenta receptora
                                   </small>
                                 </div>
 
@@ -1970,11 +1976,7 @@
                     <div class="metodo-tipo-wrapper">
                       <select class="form-select-compact" formControlName="tipo" (change)="onMetodoPagoChange(i)">
                         <option value="" disabled selected>Tipo de pago</option>
-                        <option value="efectivo">💵 Efectivo</option>
-                        <option value="punto">💳 Punto de Venta</option>
-                        <option value="pagomovil">📱 Pago Móvil</option>
-                        <option value="transferencia">🏦 Transferencia</option>
-                        <option value="zelle">🌐 Zelle</option>
+                        <option *ngFor="let tipo of tiposPago" [value]="tipo.value">{{ tipo.label }}</option>
                       </select>
                     </div>
 
@@ -2015,10 +2017,16 @@
                       </div>
 
                       <div *ngIf="necesitaBancoReceptor(metodoControl.get('tipo')?.value)" class="campo-compact">
-                        <ng-select [items]="bancosDisponibles" bindLabel="displayText" bindValue="codigo"
+                        <ng-select [items]="getCuentasReceptorasPorMetodo(metodoControl.get('tipo')?.value)" bindLabel="displayText"
                           formControlName="bancoReceptorObject" (change)="onBancoReceptorChange($event, i)"
-                          [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
-                          placeholder="Banco receptor">
+                          [compareWith]="compararCuentaReceptora" [searchable]="true" [clearable]="true"
+                          [placeholder]="getPlaceholderCuentaReceptora(metodoControl.get('tipo')?.value)">
+                          <ng-template ng-option-tmp let-item="item">
+                            <div class="banco-option" *ngIf="item">
+                              <div class="banco-codigo">{{ item.nombre }}</div>
+                              <div class="banco-nombre">{{ item.accountDescription || item.ownerName || item.ownerId }}</div>
+                            </div>
+                          </ng-template>
                         </ng-select>
                       </div>
 

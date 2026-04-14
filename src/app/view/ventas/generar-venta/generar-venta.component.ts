@@ -29,6 +29,13 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { generateUnifiedReceiptHTML, ReceiptViewMode } from '../shared/receipt-html.util';
+import {
+    buildVentaPaymentCatalog,
+    VentaBankOption,
+    VentaPaymentMethodOption,
+    VentaPaymentMethodValue,
+    VentaReceiverAccountOption
+} from '../shared/payment-catalog.util';
 
 // Constantes
 import {
@@ -75,6 +82,7 @@ type ProductoBusquedaOption = Producto & {
 
 export class GenerarVentaComponent implements OnInit, OnDestroy {
     private readonly FILTRO_TODAS_SEDES = 'todas';
+    private paymentCatalogSubscription?: Subscription;
 
     @ViewChild('productoSelect', { static: false }) productoSelect!: NgSelectComponent;
     @ViewChild('selectorPaciente', { static: false }) selectorPaciente!: NgSelectComponent;
@@ -281,6 +289,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         this.registrarTarea();
         this.obtenerConfiguracionSistema();
         this.suscribirCambiosConfiguracion();
+        this.cargarCatalogosPago();
         this.cargarDatosIniciales();
 
         // SUSCRIBIRSE A LA SEDE DESDE UserStateService (ya cargada por el dashboard)
@@ -304,6 +313,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         if (this.configSubscription) {
             this.configSubscription.unsubscribe();
         }
+
+        if (this.paymentCatalogSubscription) {
+            this.paymentCatalogSubscription.unsubscribe();
+        }
     }
 
     // === MÉTODOS DE INICIALIZACIÓN ===
@@ -319,6 +332,61 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.simboloMonedaSistema = config.simboloMoneda;
             this.venta.moneda = this.normalizarMonedaParaVenta(this.monedaSistema);
             this.actualizarProductosConDetalle();
+        });
+    }
+
+    private cargarCatalogosPago(): void {
+        this.paymentCatalogSubscription = this.systemConfigService.obtenerMetodosPagoConfigurables().subscribe({
+            next: ({ paymentMethods }) => this.aplicarCatalogosPago(paymentMethods),
+            error: () => this.aplicarCatalogosPago(null)
+        });
+    }
+
+    private aplicarCatalogosPago(paymentMethods: unknown): void {
+        const catalogo = buildVentaPaymentCatalog(paymentMethods as any);
+        this.tiposPago = catalogo.tiposPago;
+        this.bancosDisponibles = catalogo.bancosNacionales;
+        this.bancosUsaDisponibles = catalogo.bancosInternacionales;
+        this.cuentasReceptorasPorMetodo = catalogo.cuentasReceptorasPorMetodo;
+        this.sincronizarMetodosPagoConCatalogo();
+        this.cdr.detectChanges();
+    }
+
+    private sincronizarMetodosPagoConCatalogo(): void {
+        this.venta.metodosDePago.forEach((metodo) => {
+            if (metodo.bancoCodigo) {
+                const bancoPrincipal = this.getBancosDisponiblesPorMetodo(metodo.tipo).find((banco) => banco.codigo === metodo.bancoCodigo);
+                if (bancoPrincipal) {
+                    metodo.bancoObject = bancoPrincipal;
+                    metodo.bancoNombre = bancoPrincipal.nombre;
+                    metodo.banco = `${bancoPrincipal.codigo} - ${bancoPrincipal.nombre}`;
+                }
+            }
+
+            if (metodo.bancoReceptorCodigo) {
+                const cuentaReceptora = this.getCuentasReceptorasPorMetodo(metodo.tipo).find((cuenta) => {
+                    if (metodo.bancoReceptorObject?.id) {
+                        return cuenta.id === metodo.bancoReceptorObject.id;
+                    }
+
+                    if (metodo.bancoReceptor) {
+                        return cuenta.displayText === metodo.bancoReceptor;
+                    }
+
+                    return cuenta.codigo === metodo.bancoReceptorCodigo;
+                });
+
+                if (cuentaReceptora) {
+                    metodo.bancoReceptorObject = cuentaReceptora;
+                    metodo.bancoReceptorNombre = cuentaReceptora.nombre;
+                    metodo.bancoReceptor = cuentaReceptora.displayText;
+                } else if (this.necesitaBancoReceptor(metodo.tipo)) {
+                    metodo.bancoReceptorCodigo = '';
+                    metodo.bancoReceptorNombre = '';
+                    metodo.bancoReceptor = '';
+                    metodo.bancoReceptorObject = null;
+                }
+            }
         });
     }
 
@@ -2194,6 +2262,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     private getMonedaDefectoParaMetodo(tipoMetodo: string): string {
+        const monedaConfigurada = this.tiposPago.find((tipo) => tipo.value === (tipoMetodo as VentaPaymentMethodValue))?.defaultMoneda;
+        if (monedaConfigurada) {
+            return monedaConfigurada;
+        }
+
         const monedasPorMetodo: { [key: string]: string } = {
             'efectivo': 'dolar',
             'punto': 'bolivar',
@@ -2214,6 +2287,13 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     esMetodoEnBolivares(tipoMetodo: string): boolean {
+        if (tipoMetodo !== 'efectivo') {
+            const monedaConfigurada = this.tiposPago.find((tipo) => tipo.value === (tipoMetodo as VentaPaymentMethodValue))?.defaultMoneda;
+            if (monedaConfigurada) {
+                return monedaConfigurada === 'bolivar';
+            }
+        }
+
         const metodosEnBs = ['debito', 'credito', 'pagomovil', 'transferencia'];
         return metodosEnBs.includes(tipoMetodo);
     }
@@ -2735,26 +2815,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         metodo.bancoReceptorObject = null;
         metodo.notaPago = '';
 
-        // Limpiar banco de punto si existe
-        if (metodo.bancoPunto) {
-            metodo.bancoPunto = '';
-        }
-
         this.onMetodoPagoChange(index);
-    }
-
-    onBancoPuntoChange(metodo: any): void {
-        if (metodo.bancoPunto) {
-            const bancoSeleccionado = this.bancosPuntoVenta.find(b => b.id === metodo.bancoPunto);
-            if (bancoSeleccionado) {
-                // Guardar AMBOS: código y nombre
-                metodo.bancoCodigo = bancoSeleccionado.codigo; // ← '0114' o '0108'
-                metodo.bancoNombre = bancoSeleccionado.nombre; // ← 'BNC' o 'Provincial'
-            }
-        } else {
-            metodo.bancoCodigo = '';
-            metodo.bancoNombre = '';
-        }
     }
 
     agregarMetodo(): void {
@@ -2771,7 +2832,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             bancoReceptorNombre: '',
             bancoReceptor: '',
             bancoReceptorObject: null,
-            bancoPunto: '', // ← Nuevo campo para punto de venta
             moneda: '',
             notaPago: ''
         });
@@ -2904,77 +2964,31 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     // En tu componente, modifica las opciones disponibles
-    tiposPago = [
-        { value: 'efectivo', label: '💵 Efectivo', icon: 'bi-cash' },
-        { value: 'punto', label: '💳 Punto de Venta', icon: 'bi-credit-card' },
-        { value: 'pagomovil', label: '📱 Pago Móvil', icon: 'bi-phone' },
-        { value: 'transferencia', label: '🏦 Transferencia', icon: 'bi-bank' },
-        { value: 'zelle', label: '🌐 Zelle', icon: 'bi-globe' }
-    ];
+    tiposPago: VentaPaymentMethodOption[] = buildVentaPaymentCatalog().tiposPago;
 
-    // Bancos disponibles para punto de venta
-    bancosPuntoVenta = [
-        { id: 'bnc', nombre: 'BNC', codigo: '0114' },
-        { id: 'provincial', nombre: 'Provincial', codigo: '0108' },
-        { id: 'bancamiga', nombre: 'Bancamiga', codigo: '0172' }
-    ];
+    bancosDisponibles: VentaBankOption[] = buildVentaPaymentCatalog().bancosNacionales;
 
-    // Agrega este método en tu componente GenerarVentaComponent
-    getNombreBancoPunto(bancoId: string): string {
-        const banco = this.bancosPuntoVenta.find(b => b.id === bancoId);
-        return banco ? `${banco.nombre} (${banco.codigo})` : 'Banco no especificado';
-    }
+    bancosUsaDisponibles: VentaBankOption[] = buildVentaPaymentCatalog().bancosInternacionales;
 
-
-    bancosDisponibles: Array<{ codigo: string; nombre: string }> = [
-        { codigo: '0102', nombre: 'Banco de Venezuela' },
-        { codigo: '0134', nombre: 'Banesco' },
-        { codigo: '0104', nombre: 'Venezolano de Crédito' },
-        { codigo: '0105', nombre: 'Mercantil' },
-        { codigo: '0114', nombre: 'Bancaribe' },
-        { codigo: '0115', nombre: 'BOD' },
-        { codigo: '0116', nombre: 'Banco Plaza' },
-        { codigo: '0128', nombre: 'Banco Caribe' },
-        { codigo: '0108', nombre: 'Banco Provincial' },
-        { codigo: '0118', nombre: 'Banco del Sur' },
-        { codigo: '0121', nombre: 'Bancamiga' },
-        { codigo: '0151', nombre: '100% Banco' },
-        { codigo: '0156', nombre: 'Banco del Tesoro' },
-        { codigo: '0157', nombre: 'Banco Bicentenario' },
-        { codigo: '0163', nombre: 'Banco Fondo Común' },
-        { codigo: '0166', nombre: 'Banco Agrícola de Venezuela' },
-        { codigo: '0168', nombre: 'Bancrecer' },
-        { codigo: '0169', nombre: 'Mi Banco' },
-        { codigo: '0171', nombre: 'Banco Activo' },
-        { codigo: '0172', nombre: 'Bancamiga' },
-        { codigo: '0173', nombre: 'Banco Internacional de Desarrollo' },
-        { codigo: '0174', nombre: 'Banco Plaza' },
-        { codigo: '0175', nombre: 'Banco de la Fuerza Armada Nacional Bolivariana' },
-        { codigo: '0177', nombre: 'Banco del Tesoro' },
-        { codigo: '0191', nombre: 'Banco Nacional de Crédito' },
-        { codigo: '0000', nombre: 'Otro' }
-    ];
-
-    bancosUsaDisponibles: Array<{ codigo: string; nombre: string }> = [
-        { codigo: 'BOFA', nombre: 'Bank of America' },
-        { codigo: 'CHASE', nombre: 'Chase' },
-        { codigo: 'WF', nombre: 'Wells Fargo' },
-        { codigo: 'CITI', nombre: 'Citibank' },
-        { codigo: 'CAP1', nombre: 'Capital One' },
-        { codigo: 'PNC', nombre: 'PNC Bank' },
-        { codigo: 'TD', nombre: 'TD Bank' },
-        { codigo: 'US', nombre: 'U.S. Bank' },
-        { codigo: 'NAVY', nombre: 'Navy Federal' },
-        { codigo: 'OTRO', nombre: 'Otro banco USA' }
-    ];
+    cuentasReceptorasPorMetodo: Record<VentaPaymentMethodValue, VentaReceiverAccountOption[]> = buildVentaPaymentCatalog().cuentasReceptorasPorMetodo;
 
     compararBanco = (a: any, b: any): boolean => {
         if (!a || !b) return a === b;
         return a.codigo === b.codigo;
     };
 
-    getBancosDisponiblesPorMetodo(tipoMetodo: string): Array<{ codigo: string; nombre: string }> {
+    compararCuentaReceptora = (a: any, b: any): boolean => {
+        if (!a || !b) return a === b;
+        return a.id === b.id;
+    };
+
+    getBancosDisponiblesPorMetodo(tipoMetodo: string): VentaBankOption[] {
         return tipoMetodo === 'zelle' ? this.bancosUsaDisponibles : this.bancosDisponibles;
+    }
+
+    getCuentasReceptorasPorMetodo(tipoMetodo: string): VentaReceiverAccountOption[] {
+        const methodValue = tipoMetodo as VentaPaymentMethodValue;
+        return this.cuentasReceptorasPorMetodo[methodValue] || [];
     }
 
     getEtiquetaBancoPrincipal(tipoMetodo: string): string {
@@ -3001,6 +3015,53 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return 'Buscar banco por código o nombre...';
     }
 
+    getPlaceholderCuentaReceptora(tipoMetodo: string): string {
+        return this.getCuentasReceptorasPorMetodo(tipoMetodo).length > 0
+            ? 'Selecciona una cuenta receptora...'
+            : 'No hay cuentas receptoras configuradas';
+    }
+
+    private construirCuentaEmisoraPayload(metodo: any): any {
+        if (!metodo || !this.necesitaBanco(metodo.tipo)) {
+            return undefined;
+        }
+
+        const bancoCodigo = metodo.bancoCodigo?.trim();
+        const bancoNombre = metodo.bancoNombre?.trim();
+
+        if (!bancoCodigo && !bancoNombre) {
+            return undefined;
+        }
+
+        return {
+            bancoCodigo: bancoCodigo || undefined,
+            bancoNombre: bancoNombre || undefined
+        };
+    }
+
+    private construirCuentaReceptoraPayload(cuenta?: VentaReceiverAccountOption | null): any {
+        if (!cuenta) {
+            return undefined;
+        }
+
+        const payload = {
+            bancoCodigo: cuenta.codigo || undefined,
+            bancoNombre: cuenta.nombre || undefined,
+            titular: cuenta.ownerName || undefined,
+            cedulaRif: cuenta.ownerId || undefined,
+            telefono: cuenta.phone || undefined,
+            correo: cuenta.email || undefined,
+            direccionWallet: cuenta.walletAddress || undefined,
+            descripcionCuenta: cuenta.accountDescription || undefined
+        };
+
+        const payloadFiltrado = Object.fromEntries(
+            Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== '')
+        );
+
+        return Object.keys(payloadFiltrado).length > 0 ? payloadFiltrado : undefined;
+    }
+
     onBancoChange(banco: any, index: number): void {
         const metodo = this.venta.metodosDePago[index];
 
@@ -3018,10 +3079,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         metodo.bancoObject = banco;
     }
 
-    onBancoReceptorChange(banco: any, index: number): void {
+    onBancoReceptorChange(cuenta: VentaReceiverAccountOption | null, index: number): void {
         const metodo = this.venta.metodosDePago[index];
 
-        if (!banco) {
+        if (!cuenta) {
             metodo.bancoReceptorCodigo = '';
             metodo.bancoReceptorNombre = '';
             metodo.bancoReceptor = '';
@@ -3029,10 +3090,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             return;
         }
 
-        metodo.bancoReceptorCodigo = banco.codigo;
-        metodo.bancoReceptorNombre = banco.nombre;
-        metodo.bancoReceptor = `${banco.codigo} - ${banco.nombre}`;
-        metodo.bancoReceptorObject = banco;
+        metodo.bancoReceptorCodigo = cuenta.codigo;
+        metodo.bancoReceptorNombre = cuenta.nombre;
+        metodo.bancoReceptor = cuenta.displayText;
+        metodo.bancoReceptorObject = cuenta;
     }
 
 
@@ -3051,7 +3112,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     necesitaBancoReceptor(tipoMetodo: string): boolean {
-        return tipoMetodo === 'pagomovil' || tipoMetodo === 'transferencia';
+        return this.getCuentasReceptorasPorMetodo(tipoMetodo).length > 0;
     }
 
     mostrarNotaPago(tipoMetodo: string): boolean {
@@ -3076,11 +3137,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     metodoCompleto(metodo: any): boolean {
         if (!metodo.tipo) return false;
         if (!metodo.monto || metodo.monto <= 0) return false;
-
-        // Validar punto de venta
-        if (metodo.tipo === 'punto') {
-            return !!metodo.bancoPunto; // Solo necesita banco, no referencia
-        }
 
         // Validar efectivo (solo monto)
         if (metodo.tipo === 'efectivo') {
@@ -3240,13 +3296,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             tipo: metodo.tipo,
             monto: metodo.monto || 0,
             referencia: metodo.referencia || undefined,
-            bancoCodigo: metodo.bancoCodigo || undefined,
-            bancoNombre: metodo.bancoNombre || undefined,
-            bancoReceptorCodigo: metodo.bancoReceptorCodigo || undefined,
-            bancoReceptorNombre: metodo.bancoReceptorNombre || undefined,
-            bancoReceptor: metodo.bancoReceptor || undefined,
+            cuentaEmisora: this.construirCuentaEmisoraPayload(metodo),
+            cuentaReceptora: this.construirCuentaReceptoraPayload(
+                metodo.bancoReceptorObject as VentaReceiverAccountOption | null
+            ),
             moneda: metodo.moneda || this.getMonedaParaMetodo(metodo.tipo, metodo),
-            bancoPunto: metodo.bancoPunto || undefined,
             notaPago: metodo.notaPago?.trim() || undefined
         }));
 

@@ -1643,27 +1643,6 @@
                                                 </div>
                                             </div>
 
-                                            <!-- Banco para Punto de Venta -->
-                                            <div *ngIf="metodo.tipo === 'punto'" class="campo-adicional">
-                                                <label class="form-label compact-label">
-                                                    <i class="bi bi-bank"></i>
-                                                    Banco del Punto de Venta <span class="required">*</span>
-                                                </label>
-                                                <select class="form-select modern-select"
-                                                    [(ngModel)]="metodo.bancoPunto"
-                                                    (change)="onBancoPuntoChange(metodo)"
-                                                    [ngClass]="{'campo-invalido': !metodo.bancoPunto}">
-                                                    <option value="" disabled selected>Seleccione el banco</option>
-                                                    <option *ngFor="let banco of bancosPuntoVenta" [value]="banco.id">
-                                                        {{ banco.nombre }} ({{ banco.codigo }})
-                                                    </option>
-                                                </select>
-                                                <small *ngIf="!metodo.bancoPunto" class="text-danger">
-                                                    <i class="bi bi-exclamation-triangle"></i> Selecciona el banco del
-                                                    punto de venta
-                                                </small>
-                                            </div>
-
                                             <!-- Banco para otros métodos -->
                                             <div *ngIf="necesitaBanco(metodo.tipo) && metodo.tipo !== 'punto'"
                                                 class="campo-adicional">
@@ -1700,30 +1679,34 @@
                                             <div *ngIf="necesitaBancoReceptor(metodo.tipo)" class="campo-adicional">
                                                 <label class="form-label compact-label">
                                                     <i class="bi bi-bank2"></i>
-                                                    Banco receptor <span class="required">*</span>
+                                                    Cuenta receptora <span class="required">*</span>
                                                 </label>
-                                                <ng-select [items]="bancosDisponibles" bindLabel="nombre"
+                                                <ng-select [items]="getCuentasReceptorasPorMetodo(metodo.tipo)" bindLabel="displayText"
                                                     [(ngModel)]="metodo.bancoReceptorObject"
                                                     (ngModelChange)="onBancoReceptorChange($event, i)"
-                                                    [compareWith]="compararBanco" [searchable]="true" [clearable]="true"
-                                                    placeholder="Buscar banco receptor..."
+                                                    [compareWith]="compararCuentaReceptora" [searchable]="true" [clearable]="true"
+                                                    [placeholder]="getPlaceholderCuentaReceptora(metodo.tipo)"
                                                     [ngClass]="{'campo-invalido': necesitaBancoReceptor(metodo.tipo) && !metodo.bancoReceptorObject}">
 
                                                     <ng-template ng-label-tmp let-item="item">
-                                                        <span *ngIf="item">{{ item?.codigo }} - {{ item?.nombre }}</span>
-                                                        <span *ngIf="!item">Seleccionar banco receptor...</span>
+                                                        <span *ngIf="item">{{ item?.displayText }}</span>
+                                                        <span *ngIf="!item">Seleccionar cuenta receptora...</span>
                                                     </ng-template>
 
                                                     <ng-template ng-option-tmp let-item="item">
                                                         <div class="banco-option" *ngIf="item">
-                                                            <div class="banco-codigo">{{ item.codigo }}</div>
-                                                            <div class="banco-nombre">{{ item.nombre }}</div>
+                                                            <div class="banco-codigo">{{ item.nombre }}</div>
+                                                            <div class="banco-nombre">{{ item.accountDescription || item.ownerName || item.ownerId }}</div>
                                                         </div>
                                                     </ng-template>
                                                 </ng-select>
+                                                <small *ngIf="necesitaBancoReceptor(metodo.tipo) && getCuentasReceptorasPorMetodo(metodo.tipo).length === 0"
+                                                    class="text-warning">
+                                                    <i class="bi bi-info-circle"></i> No hay cuentas receptoras configuradas para este método
+                                                </small>
                                                 <small *ngIf="necesitaBancoReceptor(metodo.tipo) && !metodo.bancoReceptorObject"
                                                     class="text-danger">
-                                                    <i class="bi bi-exclamation-triangle"></i> Selecciona el banco receptor
+                                                    <i class="bi bi-exclamation-triangle"></i> Selecciona una cuenta receptora
                                                 </small>
                                             </div>
 
@@ -1781,13 +1764,6 @@
                                                 <i class="bi bi-graph-up"></i>
                                                 Máx. disponible: {{ formatearMoneda(getMontoRestanteParaMetodo(i),
                                                 getMonedaParaMetodo(metodo.tipo, metodo)) }}
-                                            </span>
-
-                                            <!-- Mostrar banco seleccionado para punto de venta -->
-                                            <span *ngIf="metodo.tipo === 'punto' && metodo.bancoPunto"
-                                                class="banco-seleccionado">
-                                                <i class="bi bi-bank2"></i>
-                                                {{ getNombreBancoPunto(metodo.bancoPunto) }}
                                             </span>
 
                                             <!-- Mostrar conversión clara -->

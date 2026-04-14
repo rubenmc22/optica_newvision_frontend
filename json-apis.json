@@ -1,396 +1,6 @@
-/**
- * PACIENTES
- */
-//Add paciente
-{
-    "informacionPersonal": {
-        "nombreCompleto": "maria perez",
-        "cedula": "100000",
-        "telefono": "04124454544",
-        "email": "rubemm18@gmail.com",
-        "fechaNacimiento": "2023-06-06",
-        "ocupacion": "maestra",
-        "genero": "f",
-        "direccion": "test",
-        "esMenorSinCedula": false
-    },
-    "redesSociales": [],
-    "informacionEmpresa": null,
-    "historiaClinica": {
-        "usuarioLentes": "No",
-        "fotofobia": "Sí",
-        "usoDispositivo": "Sí, Menos de 1 hora",
-        "traumatismoOcular": "Sí",
-        "traumatismoOcularDescripcion": "tesrt",
-        "cirugiaOcular": "Sí",
-        "cirugiaOcularDescripcion": "test",
-        "alergicoA": "polvo, tierra",
-        "antecedentesPersonales": [
-            "Diabetes",
-            "Hipertensión"
-        ],
-        "antecedentesFamiliares": [
-            "Migraña",
-            "Hipertensión"
-        ],
-        "patologias": "paciente renal, diabetes, dolor de cabeza"
-    }
-}
-//add historial medico
-{
-    "pacienteId": "c16a5320fa475530d9583c34fd356ef5",
-    "datosConsulta": {
-        "motivo": [
-            "Fatiga visual"
-        ],
-        "otroMotivo": "",
-        "tipoCristalActual": "MONOFOCAL_DIGITAL",
-        "tipoLentesContacto": "",
-        "fechaUltimaGraduacion": null,
-        "medico": "8759927",
-        "medicoReferido": "Raul morales",
-        "lugarConsultorio": "Caracas",
-        "formulaExterna": true,
-        "pagoPendiente": false
-    },
-    "examenOcular": {
-        "lensometria": {
-            "esf_od": "",
-            "cil_od": "",
-            "eje_od": "",
-            "add_od": "",
-            "av_lejos_od": "",
-            "av_cerca_od": "",
-            "av_lejos_bi": "",
-            "esf_oi": "",
-            "cil_oi": "",
-            "eje_oi": "",
-            "add_oi": "",
-            "av_lejos_oi": "",
-            "av_cerca_oi": "",
-            "av_cerca_bi": ""
-        },
-        "refraccion": {
-            "esf_od": "",
-            "cil_od": "",
-            "eje_od": "",
-            "add_od": "",
-            "avccl_od": "",
-            "avccc_od": "",
-            "avccl_bi": "",
-            "avccc_bi": "",
-            "esf_oi": "",
-            "cil_oi": "",
-            "eje_oi": "",
-            "add_oi": "",
-            "avccl_oi": "",
-            "avccc_oi": ""
-        },
-        "refraccionFinal": {
-            "esf_od": "+0.50",
-            "cil_od": "-0.50",
-            "eje_od": 3,
-            "add_od": "+1.25",
-            "alt_od": "1",
-            "dp_od": "2",
-            "esf_oi": "+0.50",
-            "cil_oi": "-0.50",
-            "eje_oi": 3,
-            "add_oi": "+1.25",
-            "alt_oi": "1",
-            "dp_oi": "2"
-        },
-        "avsc_avae_otros": {
-            "avsc_lejos_od": "",
-            "avsc_cerca_od": "",
-            "avae_od": "",
-            "otros_od": "",
-            "avsc_lejos_oi": "",
-            "avsc_cerca_oi": "",
-            "avae_oi": "",
-            "otros_oi": ""
-        }
-    },
-    "diagnosticoTratamiento": {
-        "diagnostico": "TEST",
-        "tratamiento": "TEST"
-    },
-    "recomendaciones": [
-        {
-            "cristal": "Monofocal visión sencilla",
-            "material": [
-                "POLICARBONATO"
-            ],
-            "montura": "",
-            "observaciones": "",
-            "tipoLentesContacto": "",
-            "medidaHorizontal": "",
-            "medidaVertical": "",
-            "medidaDiagonal": "",
-            "medidaPuente": ""
-        }
-    ],
-    "conformidad": {
-        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
-    }
-}
-//get historial
-{
-    "id": 61,
-    "nHistoria": "H-20260220-002",
-    "pacienteId": "28acbaf873ad2772e216895c44281940",
-    "datosConsulta": {
-        "motivo": [
-            "Molestia ocular"
-        ],
-        "otroMotivo": "",
-        "tipoCristalActual": "LENTES_CONTACTO",
-        "fechaUltimaGraduacion": "2026-02-09",
-        // Información del especialista que realiza la consulta (siempre presente)
-        "especialista": {
-            "tipo": "OFTALMOLOGO" | "OPTOMETRISTA" | "EXTERNO",
-            // Si es interno (OFTALMOLOGO u OPTOMETRISTA)
-            "id": 5,
-            "cedula": "8759927",
-            "nombre": "Gerardo Martinez",
-            "cargo": "Oftalmólogo",
-            // Si es externo (tipo: "EXTERNO")
-            "externo": {
-                "nombre": "Dr. Carlos Rodríguez",
-                "lugarConsultorio": "Clínica Avila",
-            }
-        },
-        // Información de la fórmula original (solo si formulaExterna = true)
-        "formulaOriginal": {
-            "medicoOrigen": {
-                "tipo": "EXTERNO", // Siempre EXTERNO para la fórmula original
-                "nombre": "Dr. Juan Perez",
-                "lugarConsultorio": "Centro Médico Caracas",
-            }
-        },
-        // Flags importantes
-        "formulaExterna": true, // Indica si la fórmula viene de fuera
-        "pagoPendiente": true
-    },
-    "examenOcular": {
-        "lensometria": {
-            "esf_od": "",
-            "cil_od": "",
-            "eje_od": "",
-            "add_od": "",
-            "av_lejos_od": "",
-            "av_cerca_od": "",
-            "av_lejos_bi": "",
-            "esf_oi": "",
-            "cil_oi": "",
-            "eje_oi": "",
-            "add_oi": "",
-            "av_lejos_oi": "",
-            "av_cerca_oi": "",
-            "av_cerca_bi": ""
-        },
-        "refraccion": {
-            "esf_od": "",
-            "cil_od": "",
-            "eje_od": "",
-            "add_od": "",
-            "avccl_od": "",
-            "avccc_od": "",
-            "avccl_bi": "",
-            "avccc_bi": "",
-            "esf_oi": "",
-            "cil_oi": "",
-            "eje_oi": "",
-            "add_oi": "",
-            "avccl_oi": "",
-            "avccc_oi": ""
-        },
-        "refraccionFinal": {
-            "esf_od": "+0.50",
-            "cil_od": "-0.50",
-            "eje_od": 3,
-            "add_od": "+1.25",
-            "alt_od": "2",
-            "dp_od": "2",
-            "esf_oi": "+0.50",
-            "cil_oi": "-0.50",
-            "eje_oi": 3,
-            "add_oi": "+1.25",
-            "alt_oi": "2",
-            "dp_oi": "2"
-        },
-        "avsc_avae_otros": {
-            "avsc_lejos_od": "",
-            "avsc_cerca_od": "",
-            "avae_od": "",
-            "otros_od": "",
-            "avsc_lejos_oi": "",
-            "avsc_cerca_oi": "",
-            "avae_oi": "",
-            "otros_oi": ""
-        }
-    },
-    "diagnosticoTratamiento": {
-        "diagnostico": "test",
-        "tratamiento": "test"
-    },
-    "recomendaciones": [
-        {
-            "cristal": "Bifocal",
-            "material": [
-                "HI_INDEX_156"
-            ],
-            "montura": "test",
-            "observaciones": "test",
-            "tipoLentesContacto": "",
-            "medidaHorizontal": "",
-            "medidaVertical": "",
-            "medidaDiagonal": "",
-            "medidaPuente": ""
-        }
-    ],
-    "conformidad": {
-        "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION  REALIZADA POR EL ASESOR SOBRE LAS VENTAJAS Y DESVENTAJAS DE LOS DIFERENTES TIPOS DE CRISTALES Y MATERIAL DE MONTURA, NO SE ACEPTARAN MODIFICACIONES LUEGO DE HABER RECIBIDO LA INFORMACION Y FIRMADA LA HISTORIA POR EL PACIENTE."
-    },
-    "auditoria": {
-        "fechaCreacion": "2026-03-19T00:33:48.000Z",
-        "fechaActualizacion": "2026-03-19T00:33:48.000Z",
-        "creadoPor": {
-            "cedula": "24367965",
-            "nombre": "Ruben Dario Martinez Castro",
-            "cargo": "Gerente"
-        },
-        "actualizadoPor": {
-            "cedula": "24367965",
-            "nombre": "Ruben Dario Martinez Castro",
-            "cargo": "Gerente"
-        }
-    }
-}
-//getVentas
-{
-    "message": "ok",
-    "ventas": [
-        {
-            "venta": {
-                "key": "1cc93777-f1a4-4084-9a04-309c2dbefdda",
-                "numero_venta": "V-000099",
-                "numero_recibo": "R-000099",
-                "fecha": "2026-02-20T19:27:28.000Z",
-                "estatus_venta": "completada",
-                "estatus_pago": "pendiente",
-                "formaPago": "de_contado-pendiente",
-                "moneda": "dolar",
-                "observaciones": null,
-                "impuesto": 16,
-                "motivo_cancelacion": null
-            },
-            "totales": {
-                "descuento": 68.13,
-                "subtotal": 681.26,
-                "iva": 93.51,
-                "total": 706.64,
-                "totalPagado": 0
-            },
-            "cliente": {
-                "historiaMedica": "H-20260216-005",
-                "tipo": "paciente",
-                "informacion": {
-                    "tipoPersona": "natural",
-                    "nombreCompleto": "Dario Castro",
-                    "cedula": "8759927",
-                    "telefono": "04123920817",
-                    "email": "rubemm18@gmail.com"
-                },
-                "especialista": {
-                    "id": 47,
-                    "cedula": "8759927",
-                    "nombre": "Gerardo Martinez"
-                },
-                "informacionEmpresa": {
-                    "referidoEmpresa": true,
-                    "empresaNombre": "Hebe  Shop CA",
-                    "empresaRif": "J-12345678",
-                    "empresaTelefono": "02123440533",
-                    "empresaDireccion": "Caracas, los ruices",
-                    "empresaCorreo": null
-                }
-            },
-            "asesor": {
-                "id": 5,
-                "cedula": "24367965",
-                "nombre": "Ruben Dario Martinez Castro"
-            },
-            "productos": [
-                {
-                    "cantidad": 1,
-                    "precio_unitario_sin_iva": 31.86,
-                    "tiene_iva": 0,
-                    "precio_unitario": 31.86,
-                    "total": 31.86,
-                    "datos": {
-                        "id": 17,
-                        "nombre": "Lentes de prueba",
-                        "marca": "Palazzo",
-                        "color": "Gris",
-                        "codigo": "PR-000017",
-                        "material": "Metal",
-                        "categoria": "Monturas",
-                        "modelo": "Premium"
-                    }
-                },
-                {
-                    "cantidad": 1,
-                    "precio_unitario_sin_iva": 649.4,
-                    "tiene_iva": 1,
-                    "precio_unitario": 753.3,
-                    "total": 753.3,
-                    "datos": {
-                        "id": 26,
-                        "nombre": "Laptop ",
-                        "marca": "HP",
-                        "color": null,
-                        "codigo": "PR-000026",
-                        "material": "Metal",
-                        "categoria": "Misceláneos",
-                        "modelo": "Intel"
-                    }
-                }
-            ],
-            "metodosPago": [
-                {
-                    "numero_pago": 1,
-                    "montoAbonado": 0,
-                    "metodosPago": [],
-                    "observaciones": null
-                }
-            ],
-            "formaPago": {
-                "tipo": "de_contado-pendiente",
-                "montoTotal": 706.64,
-                "cuotasAdelantadas": 0,
-                "montoAdelantado": 0,
-                "deudaPendiente": 0,
-                "nivel": null,
-                "montoInicial": 0,
-                "cantidadCuotas": 0,
-                "montoPorCuota": 0,
-                "totalPagadoAhora": 0,
-                "cuotas": []
-            },
-            "auditoria": {
-                "usuarioCreacion": {
-                    "id": 5,
-                    "cedula": "24367965",
-                    "nombre": "Ruben Dario Martinez Castro"
-                },
-                "fechaCreacion": "2026-02-20T15:27:28.000Z",
-                "fechaModificacion": "2026-02-20T15:27:28.000Z"
-            }
-        },
-    ]
-}
+// [version nueva con metodos de pago]
 //crear venta - solo productos 
+
 {
     "tipoVenta": "solo_productos",
     "moneda": "dolar",
@@ -456,6 +66,7 @@
         }
     ]
 }
+// [version nueva con metodos de pago]
 //crear venta - solo consulta 
 {
     "tipoCliente": "cliente_paciente",
@@ -517,6 +128,7 @@
         "montoOriginal": 60
     }
 }
+// [version nueva con metodos de pago]
 //crear venta - consulta + productos
 {
     "tipoVenta": "consulta_productos",
@@ -534,25 +146,47 @@
         {
             "tipo": "punto",
             "monto": 15000,
-            "bancoCodigo": "0114",
-            "bancoNombre": "BNC",
-            "moneda": "bolivar",
-            "bancoPunto": "bnc"
+            "cuentaReceptora": {
+                "bancoCodigo": "0108",
+                "bancoNombre": "Banco Provincial",
+                "descripcionCuenta": "Cuenta jurídica tienda"
+            },
+            "moneda": "bolivar"
         },
         {
             "tipo": "pagomovil",
             "monto": 10000,
             "referencia": "12121212",
-            "bancoCodigo": "0102",
-            "bancoNombre": "Banco de Venezuela",
+            "cuentaEmisora": {
+                "bancoCodigo": "0102",
+                "bancoNombre": "Banco de Venezuela"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0108",
+                "bancoNombre": "Banco Provincial",
+                "titular": "Ender Rojas",
+                "cedulaRif": "V-19876543",
+                "telefono": "04125554444",
+                "descripcionCuenta": "Cuenta personal Ender"
+            },
             "moneda": "bolivar"
         },
         {
             "tipo": "transferencia",
             "monto": 2639.34,
             "referencia": "12121212",
-            "bancoCodigo": "0102",
-            "bancoNombre": "Banco de Venezuela",
+            "cuentaEmisora": {
+                "bancoCodigo": "0102",
+                "bancoNombre": "Banco de Venezuela"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0134",
+                "bancoNombre": "Banesco",
+                "titular": "Optica New Vision C.A.",
+                "cedulaRif": "J-12345678-9",
+                "telefono": "04126667777",
+                "descripcionCuenta": "Cuenta jurídica tienda"
+            },
             "moneda": "bolivar"
         }
     ],
@@ -615,6 +249,7 @@
         "montoOriginal": 60
     }
 }
+// [version nueva con metodos de pago]
 //Crear venta - de contado
 {
     "tipoVenta": "consulta_productos",
@@ -689,6 +324,7 @@
         "montoOriginal": 60
     }
 }
+// [version nueva con metodos de pago]
 //Crear venta - cashea
 {
     "tipoVenta": "consulta_productos",
@@ -793,6 +429,7 @@
         "montoOriginal": 60
     }
 }
+// [version nueva con metodos de pago]
 //Crear venta - abono
 {
     "tipoVenta": "consulta_productos",
@@ -868,6 +505,7 @@
         "montoOriginal": 60
     }
 }
+// [version nueva con metodos de pago]
 //Crear venta - de contado pendiente por pago
 {
     "tipoVenta": "consulta_productos",
@@ -1596,26 +1234,11 @@
 }
 
 
-Transacciones{
-
-    ventas:{
-        api ventas
-
-    },
-
-    transacciones_adicionales:{
-        egresos:{
-            api 
-        }
-
-        ingresos{
-
-        }
-    },
-
-}
 
 
+// [version nueva con metodos de pago]
+// cuentaEmisora solo se envia cuando el metodo requiere banco emisor
+// cuentaReceptora solo envia campos utiles y no vacios segun la configuracion del metodo
 nuevo crear venta
 {
     "tipoVenta": "consulta_productos",
@@ -1639,11 +1262,18 @@ nuevo crear venta
             "tipo": "pagomovil",
             "monto": 10000,
             "referencia": "1212121",
-            "bancoCodigo": "0102",
-            "bancoNombre": "Banco de Venezuela",
-            "bancoReceptorCodigo": "0134",
-            "bancoReceptorNombre": "Banesco",
-            "bancoReceptor": "0134 - Banesco",
+            "cuentaEmisora": {
+                "bancoCodigo": "0102",
+                "bancoNombre": "Banco de Venezuela"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0134",
+                "bancoNombre": "Banesco",
+                "titular": "Ender Rojas",
+                "cedulaRif": "V-19876543",
+                "telefono": "04125554444",
+                "descripcionCuenta": "Cuenta personal Ender"
+            },
             "moneda": "bolivar",
             "notaPago": "pago a cuenta de ender"
         },
@@ -1651,19 +1281,37 @@ nuevo crear venta
             "tipo": "zelle",
             "monto": 10,
             "referencia": "1212112",
-            "bancoCodigo": "BOFA",
-            "bancoNombre": "Bank of America",
+            "cuentaEmisora": {
+                "bancoCodigo": "BOFA",
+                "bancoNombre": "Bank of America"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "BOFAUS3N",
+                "bancoNombre": "Bank of America (BOFA)",
+                "titular": "Ruben Perez",
+                "cedulaRif": "V-12345678",
+                "telefono": "+15875551234",
+                "correo": "ruben.perez@email.com",
+                "descripcionCuenta": "Cuenta personal de Ruben (Zelle)"
+            },
             "moneda": "dolar"
         },
         {
             "tipo": "transferencia",
             "monto": 8241.46,
             "referencia": "45545454",
-            "bancoCodigo": "0102",
-            "bancoNombre": "Banco de Venezuela",
-            "bancoReceptorCodigo": "0114",
-            "bancoReceptorNombre": "Bancaribe",
-            "bancoReceptor": "0114 - Bancaribe",
+            "cuentaEmisora": {
+                "bancoCodigo": "0102",
+                "bancoNombre": "Banco de Venezuela"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0114",
+                "bancoNombre": "Bancaribe",
+                "titular": "Rommy Perez",
+                "cedulaRif": "V-17654321",
+                "telefono": "04123332211",
+                "descripcionCuenta": "Cuenta jurídica tienda"
+            },
             "moneda": "bolivar",
             "notaPago": "cuenta de rommy"
         }
@@ -1731,6 +1379,9 @@ nuevo crear venta
     }
 }
 
+// [version nueva con metodos de pago]
+// cuentaEmisora solo se envia cuando el metodo requiere banco emisor
+// cuentaReceptora solo envia campos utiles y no vacios segun la configuracion del metodo
 nuevo realice abono
 {
     "montoAbonado": 100,
@@ -1741,11 +1392,18 @@ nuevo realice abono
             "monto": 19995.97,
             "moneda": "bolivar",
             "referencia": "1212121",
-            "bancoCodigo": "0134",
-            "bancoNombre": "Banesco",
-            "bancoReceptorCodigo": "0104",
-            "bancoReceptorNombre": "Venezolano de Crédito",
-            "bancoReceptor": "0104 - Venezolano de Crédito",
+            "cuentaEmisora": {
+                "bancoCodigo": "0134",
+                "bancoNombre": "Banesco"
+            },
+            "cuentaReceptora": {
+                "bancoCodigo": "0104",
+                "bancoNombre": "Venezolano de Crédito",
+                "titular": "Jeffe Ortega",
+                "cedulaRif": "V-14567890",
+                "telefono": "04124443322",
+                "descripcionCuenta": "Cuenta jurídica tienda"
+            },
             "notaPago": "pago cuenta de jeffe",
             "montoEnMonedaVenta": 42.01
         },
@@ -1754,11 +1412,8 @@ nuevo realice abono
             "monto": 50.1,
             "moneda": "euro",
             "referencia": null,
-            "bancoCodigo": null,
-            "bancoNombre": null,
-            "bancoReceptorCodigo": null,
-            "bancoReceptorNombre": null,
-            "bancoReceptor": null,
+            "cuentaEmisora": null,
+            "cuentaReceptora": null,
             "notaPago": null,
             "montoEnMonedaVenta": 57.99
         }

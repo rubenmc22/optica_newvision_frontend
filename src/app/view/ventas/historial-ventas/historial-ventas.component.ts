@@ -17,6 +17,13 @@ import { ExcelExportService } from '../../../core/services/excel-export/excel-ex
 import { EstadisticasVentas, ResumenFiltros, FiltrosVentas } from '../venta-interfaz';
 import { Chart, registerables } from 'chart.js';
 import { Sede, SedeCompleta } from '../../../view/login/login-interface';
+import {
+  buildVentaPaymentCatalog,
+  VentaBankOption,
+  VentaPaymentMethodOption,
+  VentaPaymentMethodValue,
+  VentaReceiverAccountOption
+} from '../shared/payment-catalog.util';
 
 
 @Component({
@@ -27,6 +34,7 @@ import { Sede, SedeCompleta } from '../../../view/login/login-interface';
 })
 
 export class HistorialVentasComponent implements OnInit {
+  private paymentCatalogSubscription?: Subscription;
 
   @ViewChild('cancelarVentaModal') cancelarVentaModal!: TemplateRef<any>;
   @ViewChild('detalleVentaModal') detalleVentaModal!: TemplateRef<any>;
@@ -153,6 +161,8 @@ export class HistorialVentasComponent implements OnInit {
   monedaSistema: string = 'USD';
   simboloMonedaSistema: string = '$';
   private configSubscription!: Subscription;
+  tiposPago: VentaPaymentMethodOption[] = buildVentaPaymentCatalog().tiposPago;
+  cuentasReceptorasPorMetodo: Record<VentaPaymentMethodValue, VentaReceiverAccountOption[]> = buildVentaPaymentCatalog().cuentasReceptorasPorMetodo;
 
   // Propiedades para el modal de recibo
   mostrarModalRecibo: boolean = false;
@@ -183,47 +193,9 @@ export class HistorialVentasComponent implements OnInit {
     tipoVenta: ''
   };
 
-  bancosDisponibles: Array<{ codigo: string; nombre: string; displayText: string }> = [
-    { codigo: '0102', nombre: 'Banco de Venezuela', displayText: '0102 - Banco de Venezuela' },
-    { codigo: '0134', nombre: 'Banesco', displayText: '0134 - Banesco' },
-    { codigo: '0104', nombre: 'Venezolano de Crédito', displayText: '0104 - Venezolano de Crédito' },
-    { codigo: '0105', nombre: 'Mercantil', displayText: '0105 - Mercantil' },
-    { codigo: '0114', nombre: 'Bancaribe', displayText: '0114 - Bancaribe' },
-    { codigo: '0115', nombre: 'BOD', displayText: '0115 - BOD' },
-    { codigo: '0116', nombre: 'Banco Plaza', displayText: '0116 - Banco Plaza' },
-    { codigo: '0128', nombre: 'Banco Caribe', displayText: '0128 - Banco Caribe' },
-    { codigo: '0108', nombre: 'Banco Provincial', displayText: '0108 - Banco Provincial' },
-    { codigo: '0118', nombre: 'Banco del Sur', displayText: '0118 - Banco del Sur' },
-    { codigo: '0121', nombre: 'Bancamiga', displayText: '0121 - Bancamiga' },
-    { codigo: '0151', nombre: '100% Banco', displayText: '0151 - 100% Banco' },
-    { codigo: '0156', nombre: 'Banco del Tesoro', displayText: '0156 - Banco del Tesoro' },
-    { codigo: '0157', nombre: 'Banco Bicentenario', displayText: '0157 - Banco Bicentenario' },
-    { codigo: '0163', nombre: 'Banco Fondo Común', displayText: '0163 - Banco Fondo Común' },
-    { codigo: '0166', nombre: 'Banco Agrícola de Venezuela', displayText: '0166 - Banco Agrícola de Venezuela' },
-    { codigo: '0168', nombre: 'Bancrecer', displayText: '0168 - Bancrecer' },
-    { codigo: '0169', nombre: 'Mi Banco', displayText: '0169 - Mi Banco' },
-    { codigo: '0171', nombre: 'Banco Activo', displayText: '0171 - Banco Activo' },
-    { codigo: '0172', nombre: 'Bancamiga', displayText: '0172 - Bancamiga' },
-    { codigo: '0173', nombre: 'Banco Internacional de Desarrollo', displayText: '0173 - Banco Internacional de Desarrollo' },
-    { codigo: '0174', nombre: 'Banco Plaza', displayText: '0174 - Banco Plaza' },
-    { codigo: '0175', nombre: 'Banco de la Fuerza Armada Nacional Bolivariana', displayText: '0175 - Banco de la Fuerza Armada Nacional Bolivariana' },
-    { codigo: '0177', nombre: 'Banco del Tesoro', displayText: '0177 - Banco del Tesoro' },
-    { codigo: '0191', nombre: 'Banco Nacional de Crédito', displayText: '0191 - Banco Nacional de Crédito' },
-    { codigo: '0000', nombre: 'Otro', displayText: '0000 - Otro' }
-  ];
+  bancosDisponibles: Array<VentaBankOption & { displayText: string }> = this.mapearBancosConDisplay(buildVentaPaymentCatalog().bancosNacionales);
 
-  bancosUsaDisponibles: Array<{ codigo: string; nombre: string; displayText: string }> = [
-    { codigo: 'BOFA', nombre: 'Bank of America', displayText: 'BOFA - Bank of America' },
-    { codigo: 'CHASE', nombre: 'Chase', displayText: 'CHASE - Chase' },
-    { codigo: 'WF', nombre: 'Wells Fargo', displayText: 'WF - Wells Fargo' },
-    { codigo: 'CITI', nombre: 'Citibank', displayText: 'CITI - Citibank' },
-    { codigo: 'CAP1', nombre: 'Capital One', displayText: 'CAP1 - Capital One' },
-    { codigo: 'PNC', nombre: 'PNC Bank', displayText: 'PNC - PNC Bank' },
-    { codigo: 'TD', nombre: 'TD Bank', displayText: 'TD - TD Bank' },
-    { codigo: 'US', nombre: 'U.S. Bank', displayText: 'US - U.S. Bank' },
-    { codigo: 'NAVY', nombre: 'Navy Federal', displayText: 'NAVY - Navy Federal' },
-    { codigo: 'OTRO', nombre: 'Otro banco USA', displayText: 'OTRO - Otro banco USA' }
-  ];
+  bancosUsaDisponibles: Array<VentaBankOption & { displayText: string }> = this.mapearBancosConDisplay(buildVentaPaymentCatalog().bancosInternacionales);
 
   // Paginación
   paginacion = {
@@ -274,6 +246,7 @@ export class HistorialVentasComponent implements OnInit {
   ngOnInit() {
     this.obtenerConfiguracionSistema();
     this.suscribirCambiosConfiguracion();
+    this.cargarCatalogosPago();
     this.cargarDatosIniciales();
     this.setMaxDate();
 
@@ -305,6 +278,10 @@ export class HistorialVentasComponent implements OnInit {
 
     if (this.configSubscription) {
       this.configSubscription.unsubscribe();
+    }
+
+    if (this.paymentCatalogSubscription) {
+      this.paymentCatalogSubscription.unsubscribe();
     }
 
     // Limpiar el subject
@@ -954,12 +931,13 @@ export class HistorialVentasComponent implements OnInit {
       tasaUsada: tasaHistorica,
       tasaUasada: tasaHistorica,
       referencia: metodo?.referencia || null,
-      bancoCodigo: metodo?.bancoCodigo || null,
-      bancoNombre: metodo?.bancoNombre || null,
-      banco: metodo?.banco || metodo?.bancoNombre || null,
-      bancoReceptorCodigo: metodo?.bancoReceptorCodigo || null,
-      bancoReceptorNombre: metodo?.bancoReceptorNombre || null,
-      bancoReceptor: metodo?.bancoReceptor || metodo?.bancoReceptorNombre || null,
+      bancoCodigo: metodo?.bancoCodigo || metodo?.cuentaEmisora?.bancoCodigo || null,
+      bancoNombre: metodo?.bancoNombre || metodo?.cuentaEmisora?.bancoNombre || null,
+      banco: metodo?.banco || metodo?.bancoNombre || metodo?.cuentaEmisora?.bancoNombre || null,
+      bancoReceptorCodigo: metodo?.bancoReceptorCodigo || metodo?.cuentaReceptora?.bancoCodigo || null,
+      bancoReceptorNombre: metodo?.bancoReceptorNombre || metodo?.cuentaReceptora?.bancoNombre || null,
+      bancoReceptor: metodo?.bancoReceptor || metodo?.cuentaReceptora?.descripcionCuenta || metodo?.cuentaReceptora?.bancoNombre || null,
+      cuentaReceptora: metodo?.cuentaReceptora || null,
       notaPago: metodo?.notaPago || null,
       fechaRegistro: fechaRegistro || metodo?.fechaRegistro || venta?.auditoria?.fechaCreacion || venta?.fecha || null
     };
@@ -1364,11 +1342,12 @@ export class HistorialVentasComponent implements OnInit {
         monto: this.redondear(montoEnMonedaMetodo),
         moneda: monedaMetodo,
         referencia: metodo.referencia?.trim() || null,
-        bancoCodigo: bancoCodigo?.trim() || null,
-        bancoNombre: bancoNombre?.trim() || null,
-        bancoReceptorCodigo: metodo.bancoReceptorCodigo?.trim() || null,
-        bancoReceptorNombre: metodo.bancoReceptorNombre?.trim() || null,
-        bancoReceptor: metodo.bancoReceptor?.trim() || null,
+        cuentaEmisora: this.construirCuentaEmisoraPayload({
+          tipo: tipoPago,
+          bancoCodigo,
+          bancoNombre
+        }),
+        cuentaReceptora: this.construirCuentaReceptoraPayload(metodo.bancoReceptorObject),
         notaPago: metodo.notaPago?.trim() || null,
         montoEnMonedaVenta: this.redondear(montoEnMonedaVenta)
       };
@@ -1571,11 +1550,8 @@ export class HistorialVentasComponent implements OnInit {
         monto: Number(metodo.monto) || 0,
         moneda: metodo.moneda || 'dolar',
         referencia: metodo.referencia || null,
-        bancoCodigo: metodo.bancoCodigo || null,
-        bancoNombre: metodo.bancoNombre || null,
-        bancoReceptorCodigo: metodo.bancoReceptorCodigo || null,
-        bancoReceptorNombre: metodo.bancoReceptorNombre || null,
-        bancoReceptor: metodo.bancoReceptor || null,
+        cuentaEmisora: metodo.cuentaEmisora || this.construirCuentaEmisoraPayload(metodo),
+        cuentaReceptora: metodo.cuentaReceptora || null,
         notaPago: metodo.notaPago || null,
 
         // Información adicional para el backend (opcional)
@@ -2646,6 +2622,29 @@ export class HistorialVentasComponent implements OnInit {
       // Si necesitas recargar datos cuando cambia la moneda, puedes hacerlo aquí
       // this.recargarDatosConNuevaMoneda();
     });
+  }
+
+  private cargarCatalogosPago(): void {
+    this.paymentCatalogSubscription = this.systemConfigService.obtenerMetodosPagoConfigurables().subscribe({
+      next: ({ paymentMethods }) => this.aplicarCatalogosPago(paymentMethods),
+      error: () => this.aplicarCatalogosPago(null)
+    });
+  }
+
+  private aplicarCatalogosPago(paymentMethods: unknown): void {
+    const catalogo = buildVentaPaymentCatalog(paymentMethods as any);
+    this.tiposPago = catalogo.tiposPago;
+    this.bancosDisponibles = this.mapearBancosConDisplay(catalogo.bancosNacionales);
+    this.bancosUsaDisponibles = this.mapearBancosConDisplay(catalogo.bancosInternacionales);
+    this.cuentasReceptorasPorMetodo = catalogo.cuentasReceptorasPorMetodo;
+    this.cdRef.detectChanges();
+  }
+
+  private mapearBancosConDisplay(bancos: VentaBankOption[]): Array<VentaBankOption & { displayText: string }> {
+    return bancos.map((banco) => ({
+      ...banco,
+      displayText: `${banco.codigo} - ${banco.nombre}`
+    }));
   }
 
   private normalizarMonedaParaVenta(monedaSistema: string): string {
@@ -6010,7 +6009,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   necesitaBanco(tipoPago: string): boolean {
-    return ['transferencia', 'pagomovil', 'punto', 'zelle'].includes(tipoPago);
+    return ['transferencia', 'pagomovil', 'zelle'].includes(tipoPago);
   }
 
   necesitaReferencia(tipoPago: string): boolean {
@@ -6018,7 +6017,7 @@ export class HistorialVentasComponent implements OnInit {
   }
 
   necesitaBancoReceptor(tipoPago: string): boolean {
-    return tipoPago === 'pagomovil' || tipoPago === 'transferencia';
+    return this.getCuentasReceptorasPorMetodo(tipoPago).length > 0;
   }
 
   necesitaNotaPago(tipoPago: string): boolean {
@@ -6029,8 +6028,13 @@ export class HistorialVentasComponent implements OnInit {
     return this.necesitaNotaPago(tipoPago);
   }
 
-  getBancosDisponiblesPorMetodo(tipoMetodo: string): Array<{ codigo: string; nombre: string; displayText?: string }> {
+  getBancosDisponiblesPorMetodo(tipoMetodo: string): Array<VentaBankOption & { displayText?: string }> {
     return tipoMetodo === 'zelle' ? this.bancosUsaDisponibles : this.bancosDisponibles;
+  }
+
+  getCuentasReceptorasPorMetodo(tipoMetodo: string): VentaReceiverAccountOption[] {
+    const methodValue = tipoMetodo as VentaPaymentMethodValue;
+    return this.cuentasReceptorasPorMetodo[methodValue] || [];
   }
 
   getEtiquetaBancoPrincipal(tipoMetodo: string): string {
@@ -6095,6 +6099,10 @@ export class HistorialVentasComponent implements OnInit {
     return banco1 && banco2 ? banco1.codigo === banco2.codigo : banco1 === banco2;
   }
 
+  compararCuentaReceptora(cuenta1: any, cuenta2: any): boolean {
+    return cuenta1 && cuenta2 ? cuenta1.id === cuenta2.id : cuenta1 === cuenta2;
+  }
+
   // Método para manejar cambio de banco
   onBancoChange(bancoObject: any, index: number): void {
     const metodoControl = this.metodosPagoArray.at(index);
@@ -6115,15 +6123,15 @@ export class HistorialVentasComponent implements OnInit {
     }
   }
 
-  onBancoReceptorChange(bancoObject: any, index: number): void {
+  onBancoReceptorChange(cuentaReceptora: VentaReceiverAccountOption | null, index: number): void {
     const metodoControl = this.metodosPagoArray.at(index);
 
-    if (bancoObject) {
+    if (cuentaReceptora) {
       metodoControl.patchValue({
-        bancoReceptorCodigo: bancoObject.codigo,
-        bancoReceptorNombre: bancoObject.nombre,
-        bancoReceptor: `${bancoObject.codigo} - ${bancoObject.nombre}`,
-        bancoReceptorObject: bancoObject
+        bancoReceptorCodigo: cuentaReceptora.codigo,
+        bancoReceptorNombre: cuentaReceptora.nombre,
+        bancoReceptor: cuentaReceptora.displayText,
+        bancoReceptorObject: cuentaReceptora
       });
       return;
     }
@@ -6134,6 +6142,53 @@ export class HistorialVentasComponent implements OnInit {
       bancoReceptor: '',
       bancoReceptorObject: null
     });
+  }
+
+  getPlaceholderCuentaReceptora(tipoMetodo: string): string {
+    return this.getCuentasReceptorasPorMetodo(tipoMetodo).length > 0
+      ? 'Selecciona una cuenta receptora...'
+      : 'No hay cuentas receptoras configuradas';
+  }
+
+  private construirCuentaEmisoraPayload(metodo: any): any {
+    if (!metodo || !this.necesitaBanco(metodo.tipo)) {
+      return null;
+    }
+
+    const bancoCodigo = metodo.bancoCodigo?.trim();
+    const bancoNombre = metodo.bancoNombre?.trim();
+
+    if (!bancoCodigo && !bancoNombre) {
+      return null;
+    }
+
+    return {
+      bancoCodigo: bancoCodigo || null,
+      bancoNombre: bancoNombre || null
+    };
+  }
+
+  private construirCuentaReceptoraPayload(cuenta?: VentaReceiverAccountOption | null): any {
+    if (!cuenta) {
+      return null;
+    }
+
+    const payload = {
+      bancoCodigo: cuenta.codigo || null,
+      bancoNombre: cuenta.nombre || null,
+      titular: cuenta.ownerName || null,
+      cedulaRif: cuenta.ownerId || null,
+      telefono: cuenta.phone || null,
+      correo: cuenta.email || null,
+      direccionWallet: cuenta.walletAddress || null,
+      descripcionCuenta: cuenta.accountDescription || null
+    };
+
+    const payloadFiltrado = Object.fromEntries(
+      Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    );
+
+    return Object.keys(payloadFiltrado).length > 0 ? payloadFiltrado : null;
   }
 
   // Función para marcar todos los controles como tocados
