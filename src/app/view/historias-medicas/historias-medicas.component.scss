@@ -2578,28 +2578,25 @@
 .campo-activo {
   position: relative;
   z-index: 1000 !important;
-
-  /* Para inputs normales */
-  //border: 2px solid #3498db !important;
-  //box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3) !important;
-  background-color: #e3f2fd !important;
-
-  /* Animación sutil */
-  animation: pulse-highlight 1.5s ease-in-out infinite alternate;
+  background-color: #ffffff !important;
+  border-color: #7cb4ff !important;
+  box-shadow: 0 0 0 3px rgba(84, 143, 255, 0.18), 0 8px 20px rgba(39, 82, 163, 0.12) !important;
+  animation: none !important;
+  outline: none !important;
 }
 
 /* Para ng-select resaltado */
 .ng-select-container.campo-activo {
-  //order-color: #3498db !important;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3) !important;
-  background-color: #e3f2fd !important;
+  background-color: #ffffff !important;
+  border-color: #7cb4ff !important;
+  box-shadow: 0 0 0 3px rgba(84, 143, 255, 0.18), 0 8px 20px rgba(39, 82, 163, 0.12) !important;
 }
 
 /* Para los ng-select dentro de las tablas */
 .lensometria-moderna .campo-select .ng-select.campo-activo .ng-select-container {
-  // border-color: #3498db !important;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3) !important;
-  background-color: #e3f2fd !important;
+  background-color: #ffffff !important;
+  border-color: #7cb4ff !important;
+  box-shadow: 0 0 0 3px rgba(84, 143, 255, 0.18), 0 8px 20px rgba(39, 82, 163, 0.12) !important;
 }
 
 /* Animación de pulso para el campo activo */
@@ -2615,7 +2612,7 @@
 
 /* Indicador visual para el campo actual */
 .campo-activo::after {
-  content: '✓';
+  content: none;
   position: absolute;
   top: -8px;
   right: -8px;
@@ -2644,7 +2641,7 @@
 
 /* Para ng-select, poner el indicador en el contenedor */
 .ng-select-container.campo-activo::after {
-  content: '✓';
+  content: none;
   position: absolute;
   top: -6px;
   right: -6px;
@@ -2863,8 +2860,8 @@ html {
 
 /* Indicador para teclado navigation (solo para navegación por teclado) */
 body:not(.using-mouse) .campo-activo {
-  outline: 2px solid #0056b3 !important;
-  outline-offset: 2px !important;
+  outline: none !important;
+  outline-offset: 0 !important;
 }
 
 /* =============================================

@@ -1207,7 +1207,7 @@
                     <div class="campo-select">
                       <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                         formControlName="avsc_lejos_od" placeholder="AVSC Lejos" [searchable]="true"
-                        class="ng-select-moderno">
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
                       </ng-select>
                     </div>
 
@@ -1215,21 +1215,22 @@
                     <div class="campo-select">
                       <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                         formControlName="avsc_cerca_od" placeholder="AVSC Cerca" [searchable]="true"
-                        class="ng-select-moderno">
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
                       </ng-select>
                     </div>
 
                     <!-- AVAE -->
                     <div class="campo-select">
                       <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
-                        formControlName="avae_od" placeholder="AVAE" [searchable]="true" class="ng-select-moderno">
+                        formControlName="avae_od" placeholder="AVAE" [searchable]="true" class="ng-select-moderno"
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
                       </ng-select>
                     </div>
 
                     <!-- OTROS OD -->
                     <div class="campo-input">
                       <input type="text" class="form-control-small" formControlName="otros_od"
-                        placeholder="Observaciones">
+                        placeholder="Observaciones" (keydown)="handleKeydown($event)">
                     </div>
                   </div>
 
@@ -1243,7 +1244,7 @@
                     <div class="campo-select">
                       <ng-select [items]="opcionesAV['lejos']" bindLabel="label" bindValue="value"
                         formControlName="avsc_lejos_oi" placeholder="AVSC Lejos" [searchable]="true"
-                        class="ng-select-moderno">
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
                       </ng-select>
                     </div>
 
@@ -1251,21 +1252,22 @@
                     <div class="campo-select">
                       <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
                         formControlName="avsc_cerca_oi" placeholder="AVSC Cerca" [searchable]="true"
-                        class="ng-select-moderno">
+                        class="ng-select-moderno" (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
                       </ng-select>
                     </div>
 
                     <!-- AVAE OI -->
                     <div class="campo-select">
                       <ng-select [items]="opcionesAV['cerca']" bindLabel="label" bindValue="value"
-                        formControlName="avae_oi" placeholder="AVAE" [searchable]="true" class="ng-select-moderno">
+                        formControlName="avae_oi" placeholder="AVAE" [searchable]="true" class="ng-select-moderno"
+                        (keydown)="handleKeydown($event)" (open)="fixSelectOverflow()">
                       </ng-select>
                     </div>
 
                     <!-- OTROS OI -->
                     <div class="campo-input">
                       <input type="text" class="form-control-small" formControlName="otros_oi"
-                        placeholder="Observaciones">
+                        placeholder="Observaciones" (keydown)="handleKeydown($event)">
                     </div>
                   </div>
                 </div>

@@ -87,10 +87,10 @@ export class HistoriasMedicasComponent implements OnInit {
   horaEvaluacion: string = '';
   mostrarBotonVolver = false;
   private boundHandleKeydown: any;
-  private navigationMap: { [key: string]: string } = {};
+  private boundMouseDownHandler: (() => void) | null = null;
+  private boundKeyboardModeHandler: (() => void) | null = null;
   private isNavigating = false;
-  private currentRowMap: { [key: string]: string[] } = {};
-  private columnMap: { [key: string]: string[] } = {};
+  private navigationRows: string[][] = [];
 
   // Formulario
   historiaForm: FormGroup;
@@ -866,10 +866,14 @@ export class HistoriasMedicasComponent implements OnInit {
   private prepararNuevaHistoria(): void {
     if (this.modoEdicion) return;
 
+    const pacienteInicial = this.pacienteSeleccionado ?? this.pacienteParaNuevaHistoria ?? null;
+
     this.historiaForm.reset();
     this.resetearCamposSelectDeHistoria();
-    this.historiaForm.patchValue({ paciente: null }, { emitEvent: false });
+    this.historiaForm.patchValue({ paciente: pacienteInicial }, { emitEvent: false });
     this.recomendaciones.clear();
+
+    this.pacienteParaNuevaHistoria = pacienteInicial;
 
     // Agregar una recomendación vacía
     this.agregarRecomendacion();
@@ -1780,6 +1784,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
     if (!siguePresente) {
       this.pacienteSeleccionado = null;
+      this.pacienteParaNuevaHistoria = null;
     }
   }
 
@@ -1928,6 +1933,7 @@ export class HistoriasMedicasComponent implements OnInit {
 
   limpiarDatos(): void {
     this.pacienteSeleccionado = null;
+    this.pacienteParaNuevaHistoria = null;
     this.historial = [];
     this.historiaSeleccionada = null;
     this.mostrarElementos = false;
@@ -3241,60 +3247,112 @@ export class HistoriasMedicasComponent implements OnInit {
 }
 
   handleKeydown(event: KeyboardEvent): void {
-    const isInsideDropdown = (event.target as HTMLElement).closest('.ng-dropdown-panel');
-    if (isInsideDropdown) {
+    if (event.ctrlKey || event.metaKey || (event.altKey && event.key !== 'ArrowDown')) {
       return;
     }
 
-    const activeElement = document.activeElement as HTMLElement;
-    const isInExamen = activeElement.closest('.lensometria-moderna');
+    const targetElement = event.target as HTMLElement | null;
+    const isInsideDropdown = targetElement?.closest('.ng-dropdown-panel');
+    if (isInsideDropdown && !this.isSideNavigationKey(event)) {
+      return;
+    }
 
-    if (!isInExamen) return;
+    const activeElement = document.activeElement as HTMLElement | null;
+    if (!activeElement) {
+      return;
+    }
 
-    // Obtener el control name
-    const controlName = this.getControlNameFromElement(activeElement);
-    if (!controlName) return;
+    const controlName =
+      (targetElement ? this.getControlNameFromElement(targetElement) : null)
+      || this.getControlNameFromElement(activeElement);
 
-    // Manejar teclas
+    if (!controlName || !this.isNavigableExamField(controlName)) return;
+
+    const selectElement = this.getNgSelectElement(targetElement || activeElement);
+    const isSelectOpen = !!selectElement?.classList.contains('ng-select-opened');
+
+    if (selectElement && isSelectOpen) {
+      if (event.key === 'ArrowRight' || (event.key === 'Tab' && !event.shiftKey)) {
+        this.preventNavigationEvent(event);
+        this.closeNgSelect(selectElement);
+        this.navigateToNextField(controlName);
+      } else if (event.key === 'ArrowLeft' || (event.key === 'Tab' && event.shiftKey)) {
+        this.preventNavigationEvent(event);
+        this.closeNgSelect(selectElement);
+        this.navigateToPreviousField(controlName);
+      }
+
+      return;
+    }
+
+    if (selectElement && this.shouldOpenSelectWithKeyboard(event)) {
+      this.preventNavigationEvent(event);
+      this.openNgSelect(selectElement);
+      return;
+    }
+
     switch (event.key) {
       case 'Enter':
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        this.navigateToNextField(controlName);
+        this.preventNavigationEvent(event);
+        if (selectElement) {
+          this.openNgSelect(selectElement);
+        } else {
+          this.navigateToNextField(controlName);
+        }
         break;
 
       case 'ArrowRight':
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
+        this.preventNavigationEvent(event);
         this.navigateToNextField(controlName);
         break;
 
       case 'ArrowLeft':
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
+        this.preventNavigationEvent(event);
         this.navigateToPreviousField(controlName);
         break;
 
+      case 'ArrowDown':
+        this.preventNavigationEvent(event);
+        this.navigateDown(controlName);
+        break;
+
+      case 'ArrowUp':
+        this.preventNavigationEvent(event);
+        this.navigateUp(controlName);
+        break;
+
       case 'Tab':
+        this.preventNavigationEvent(event);
         if (event.shiftKey) {
-          event.preventDefault();
-          event.stopPropagation();
-          event.stopImmediatePropagation();
           this.navigateToPreviousField(controlName);
         } else {
-          event.preventDefault();
-          event.stopPropagation();
-          event.stopImmediatePropagation();
           this.navigateToNextField(controlName);
         }
         break;
     }
   }
 
+  private preventNavigationEvent(event: KeyboardEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+  }
+
+  private isSideNavigationKey(event: KeyboardEvent): boolean {
+    return event.key === 'ArrowLeft'
+      || event.key === 'ArrowRight'
+      || event.key === 'Tab';
+  }
+
   private getControlNameFromElement(element: HTMLElement): string | null {
+    const ngSelectElement = this.getNgSelectElement(element);
+    if (ngSelectElement) {
+      const controlName = ngSelectElement.getAttribute('formControlName');
+      if (controlName) {
+        return controlName;
+      }
+    }
+
     // Caso 1: Input directo
     if (element.getAttribute('formControlName')) {
       return element.getAttribute('formControlName');
@@ -3329,6 +3387,51 @@ export class HistoriasMedicasComponent implements OnInit {
     }
 
     return null;
+  }
+
+  private getNgSelectElement(element: HTMLElement | null): HTMLElement | null {
+    if (!element) {
+      return null;
+    }
+
+    if (element.classList.contains('ng-select')) {
+      return element;
+    }
+
+    return element.closest('.ng-select');
+  }
+
+  private shouldOpenSelectWithKeyboard(event: KeyboardEvent): boolean {
+    return event.key === ' ' || event.key === 'Spacebar' || event.key === 'F4'
+      || (event.altKey && event.key === 'ArrowDown');
+  }
+
+  private openNgSelect(selectElement: HTMLElement): void {
+    if (selectElement.classList.contains('ng-select-opened')) {
+      return;
+    }
+
+    const container = selectElement.querySelector('.ng-select-container') as HTMLElement | null;
+    container?.click();
+
+    setTimeout(() => {
+      const searchInput = selectElement.querySelector('input') as HTMLInputElement | null;
+      searchInput?.focus();
+      this.fixSelectOverflow();
+    }, 0);
+  }
+
+  private closeNgSelect(selectElement: HTMLElement): void {
+    if (!selectElement.classList.contains('ng-select-opened')) {
+      return;
+    }
+
+    const container = selectElement.querySelector('.ng-select-container') as HTMLElement | null;
+    container?.click();
+  }
+
+  private isNavigableExamField(controlName: string): boolean {
+    return this.getNavigationPosition(controlName) !== null;
   }
 
   private focusOnField(fieldName: string): void {
@@ -3370,6 +3473,14 @@ export class HistoriasMedicasComponent implements OnInit {
       }
 
       if (element) {
+        const relatedSelect = element.classList.contains('ng-select-container')
+          ? element.closest('.ng-select') as HTMLElement | null
+          : this.getNgSelectElement(element);
+
+        if (relatedSelect) {
+          this.closeNgSelect(relatedSelect);
+        }
+
         if (element.tagName === 'INPUT') {
           element.focus();
           (element as HTMLInputElement).select();
@@ -3414,38 +3525,7 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   private focusByFallback(fieldName: string): void {
-    // Mapear todos los campos en orden
-    const allFields = [
-      // Lensometría OD
-      'len_esf_od', 'len_cil_od', 'len_eje_od', 'len_add_od',
-      'len_av_lejos_od', 'len_av_cerca_od',
-
-      // Lensometría OI
-      'len_esf_oi', 'len_cil_oi', 'len_eje_oi', 'len_add_oi',
-      'len_av_lejos_oi', 'len_av_cerca_oi',
-
-      // Refracción OD
-      'ref_esf_od', 'ref_cil_od', 'ref_eje_od', 'ref_add_od',
-      'ref_avccl_od', 'ref_avccc_od',
-
-      // Refracción OI
-      'ref_esf_oi', 'ref_cil_oi', 'ref_eje_oi', 'ref_add_oi',
-      'ref_avccl_oi', 'ref_avccc_oi',
-
-      // Refracción Final OD
-      'ref_final_esf_od', 'ref_final_cil_od', 'ref_final_eje_od', 'ref_final_add_od',
-      'ref_final_alt_od', 'ref_final_dp_od',
-
-      // Refracción Final OI
-      'ref_final_esf_oi', 'ref_final_cil_oi', 'ref_final_eje_oi', 'ref_final_add_oi',
-      'ref_final_alt_oi', 'ref_final_dp_oi',
-
-      // AVSC/AVAE/OTROS OD
-      'avsc_od', 'avae_od', 'otros_od',
-
-      // AVSC/AVAE/OTROS OI
-      'avsc_oi', 'avae_oi', 'otros_oi'
-    ];
+    const allFields = this.navigationRows.flat();
 
     const currentIndex = allFields.indexOf(fieldName);
     if (currentIndex === -1) return;
@@ -3482,134 +3562,58 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   setupGlobalKeyListeners(): void {
-    // Remover listeners anteriores
     document.removeEventListener('keydown', this.boundHandleKeydown);
-
-    // Crear método bound
-    this.boundHandleKeydown = this.handleKeydown.bind(this);
-
-    // Agregar listener global
-    document.addEventListener('keydown', this.boundHandleKeydown, true);
-
-    // También agregar al modal específicamente
-    const modal = document.getElementById('historiaModal');
-    if (modal) {
-      modal.addEventListener('keydown', this.boundHandleKeydown, true);
+    if (this.boundMouseDownHandler) {
+      document.removeEventListener('mousedown', this.boundMouseDownHandler);
+    }
+    if (this.boundKeyboardModeHandler) {
+      document.removeEventListener('keydown', this.boundKeyboardModeHandler);
     }
 
-    // Detectar mouse vs teclado
-    document.addEventListener('mousedown', () => {
+    this.boundHandleKeydown = this.handleKeydown.bind(this);
+    this.boundMouseDownHandler = () => {
       document.body.classList.add('using-mouse');
-    });
-
-    document.addEventListener('keydown', () => {
+    };
+    this.boundKeyboardModeHandler = () => {
       document.body.classList.remove('using-mouse');
-    }, { once: true });
+    };
+
+    document.addEventListener('keydown', this.boundHandleKeydown, true);
+    document.addEventListener('mousedown', this.boundMouseDownHandler);
+    document.addEventListener('keydown', this.boundKeyboardModeHandler, true);
+
+    const modal = document.getElementById('historiaModal');
+    if (modal) {
+      modal.removeEventListener('keydown', this.boundHandleKeydown, true);
+      modal.addEventListener('keydown', this.boundHandleKeydown, true);
+    }
   }
 
 
 
   // Métodos para navegación por teclado
   private initializeNavigationMaps(): void {
-    // Mapa principal para navegación horizontal (Enter/→)
-    this.navigationMap = {
-      // Lensometría - Fila OD
-      'len_esf_od': 'len_cil_od',
-      'len_cil_od': 'len_eje_od',
-      'len_eje_od': 'len_add_od',
-      'len_add_od': 'len_av_lejos_od',
-      'len_av_lejos_od': 'len_av_cerca_od',
-      'len_av_cerca_od': 'len_av_lejos_bi',
-
-      // Lensometría - Fila OI (después de binocular OD)
-      'len_esf_oi': 'len_cil_oi',
-      'len_cil_oi': 'len_eje_oi',
-      'len_eje_oi': 'len_add_oi',
-      'len_add_oi': 'len_av_lejos_oi',
-      'len_av_lejos_oi': 'len_av_cerca_oi',
-      'len_av_cerca_oi': 'len_av_cerca_bi',
-
-      // Refracción - Fila OD (después de binocular OI)
-      'len_av_cerca_bi': 'ref_esf_od',
-      'ref_esf_od': 'ref_cil_od',
-      'ref_cil_od': 'ref_eje_od',
-      'ref_eje_od': 'ref_add_od',
-      'ref_add_od': 'ref_avccl_od',
-      'ref_avccl_od': 'ref_avccc_od',
-      'ref_avccc_od': 'ref_avccl_bi',
-      'ref_avccl_bi': 'ref_avccc_bi',
-
-      // Refracción - Fila OI (después de binocular)
-      'ref_avccc_bi': 'ref_esf_oi',
-      'ref_esf_oi': 'ref_cil_oi',
-      'ref_cil_oi': 'ref_eje_oi',
-      'ref_eje_oi': 'ref_add_oi',
-      'ref_add_oi': 'ref_avccl_oi',
-      'ref_avccl_oi': 'ref_avccc_oi',
-
-      // Refracción Final - Fila OD
-      'ref_avccc_oi': 'ref_final_esf_od',
-      'ref_final_esf_od': 'ref_final_cil_od',
-      'ref_final_cil_od': 'ref_final_eje_od',
-      'ref_final_eje_od': 'ref_final_add_od',
-      'ref_final_add_od': 'ref_final_alt_od',
-      'ref_final_alt_od': 'ref_final_dp_od',
-
-      // Refracción Final - Fila OI
-      'ref_final_dp_od': 'ref_final_esf_oi',
-      'ref_final_esf_oi': 'ref_final_cil_oi',
-      'ref_final_cil_oi': 'ref_final_eje_oi',
-      'ref_final_eje_oi': 'ref_final_add_oi',
-      'ref_final_add_oi': 'ref_final_alt_oi',
-      'ref_final_alt_oi': 'ref_final_dp_oi',
-
-      // AVSC/AVAE/OTROS - Fila OD
-      'ref_final_dp_oi': 'avsc_od',
-      'avsc_od': 'avae_od',
-      'avae_od': 'otros_od',
-
-      // AVSC/AVAE/OTROS - Fila OI
-      'otros_od': 'avsc_oi',
-      'avsc_oi': 'avae_oi',
-      'avae_oi': 'otros_oi',
-    };
-
-    // Mapa de filas para navegación vertical (↑/↓)
-    this.currentRowMap = {
-      'len_esf_od': ['len_esf_od', 'len_cil_od', 'len_eje_od', 'len_add_od', 'len_av_lejos_od', 'len_av_cerca_od'],
-      'len_esf_oi': ['len_esf_oi', 'len_cil_oi', 'len_eje_oi', 'len_add_oi', 'len_av_lejos_oi', 'len_av_cerca_oi'],
-
-      'ref_esf_od': ['ref_esf_od', 'ref_cil_od', 'ref_eje_od', 'ref_add_od', 'ref_avccl_od', 'ref_avccc_od'],
-      'ref_esf_oi': ['ref_esf_oi', 'ref_cil_oi', 'ref_eje_oi', 'ref_add_oi', 'ref_avccl_oi', 'ref_avccc_oi'],
-
-      'ref_final_esf_od': ['ref_final_esf_od', 'ref_final_cil_od', 'ref_final_eje_od', 'ref_final_add_od', 'ref_final_alt_od', 'ref_final_dp_od'],
-      'ref_final_esf_oi': ['ref_final_esf_oi', 'ref_final_cil_oi', 'ref_final_eje_oi', 'ref_final_add_oi', 'ref_final_alt_oi', 'ref_final_dp_oi'],
-
-      'avsc_od': ['avsc_od', 'avae_od', 'otros_od'],
-      'avsc_oi': ['avsc_oi', 'avae_oi', 'otros_oi'],
-    };
-
-    // Mapa de columnas para navegación entre tablas similares
-    this.columnMap = {
-      'esfera': ['len_esf_od', 'len_esf_oi', 'ref_esf_od', 'ref_esf_oi', 'ref_final_esf_od', 'ref_final_esf_oi'],
-      'cilindro': ['len_cil_od', 'len_cil_oi', 'ref_cil_od', 'ref_cil_oi', 'ref_final_cil_od', 'ref_final_cil_oi'],
-      'eje': ['len_eje_od', 'len_eje_oi', 'ref_eje_od', 'ref_eje_oi', 'ref_final_eje_od', 'ref_final_eje_oi'],
-      'add': ['len_add_od', 'len_add_oi', 'ref_add_od', 'ref_add_oi', 'ref_final_add_od', 'ref_final_add_oi'],
-      'av_lejos': ['len_av_lejos_od', 'len_av_lejos_oi', 'ref_avccl_od', 'ref_avccl_oi'],
-      'av_cerca': ['len_av_cerca_od', 'len_av_cerca_oi', 'ref_avccc_od', 'ref_avccc_oi'],
-      'avsc': ['avsc_od', 'avsc_oi'],
-      'avae': ['avae_od', 'avae_oi'],
-      'alt': ['ref_final_alt_od', 'ref_final_alt_oi'],
-      'dp': ['ref_final_dp_od', 'ref_final_dp_oi'],
-      'otros': ['otros_od', 'otros_oi']
-    };
+    this.navigationRows = [
+      ['len_esf_od', 'len_cil_od', 'len_eje_od', 'len_add_od', 'len_av_lejos_od', 'len_av_cerca_od'],
+      ['len_esf_oi', 'len_cil_oi', 'len_eje_oi', 'len_add_oi', 'len_av_lejos_oi', 'len_av_cerca_oi'],
+      ['len_av_lejos_bi', 'len_av_cerca_bi'],
+      ['avsc_lejos_od', 'avsc_cerca_od', 'avae_od', 'otros_od'],
+      ['avsc_lejos_oi', 'avsc_cerca_oi', 'avae_oi', 'otros_oi'],
+      ['ref_esf_od', 'ref_cil_od', 'ref_eje_od', 'ref_add_od', 'ref_avccl_od', 'ref_avccc_od'],
+      ['ref_esf_oi', 'ref_cil_oi', 'ref_eje_oi', 'ref_add_oi', 'ref_avccl_oi', 'ref_avccc_oi'],
+      ['ref_avccl_bi', 'ref_avccc_bi'],
+      ['ref_final_esf_od', 'ref_final_cil_od', 'ref_final_eje_od', 'ref_final_add_od', 'ref_final_alt_od', 'ref_final_dp_od'],
+      ['ref_final_esf_oi', 'ref_final_cil_oi', 'ref_final_eje_oi', 'ref_final_add_oi', 'ref_final_alt_oi', 'ref_final_dp_oi']
+    ];
   }
 
   // Navegar al siguiente campo (Enter/→)
   private navigateToNextField(currentField: string): void {
     this.isNavigating = true;
 
-    const nextField = this.navigationMap[currentField];
+    const position = this.getNavigationPosition(currentField);
+    const nextField = position ? this.resolveFieldAt(position.rowIndex, position.columnIndex + 1, 'next') : null;
+
     if (nextField) {
       setTimeout(() => {
         this.focusOnField(nextField);
@@ -3624,23 +3628,12 @@ export class HistoriasMedicasComponent implements OnInit {
   private navigateToPreviousField(currentField: string): void {
     this.isNavigating = true;
 
-    // Buscar inversamente en el mapa de navegación
-    for (const [fromField, toField] of Object.entries(this.navigationMap)) {
-      if (toField === currentField) {
-        setTimeout(() => {
-          this.focusOnField(fromField);
-          this.isNavigating = false;
-        }, 50);
-        return;
-      }
-    }
+    const position = this.getNavigationPosition(currentField);
+    const previousField = position ? this.resolveFieldAt(position.rowIndex, position.columnIndex - 1, 'previous') : null;
 
-    // Si no se encontró, intentar buscar en la misma fila
-    const currentFieldPosition = this.findFieldPosition(currentField);
-    if (currentFieldPosition.row && currentFieldPosition.index > 0) {
-      const prevInRow = this.currentRowMap[currentFieldPosition.row][currentFieldPosition.index - 1];
+    if (previousField) {
       setTimeout(() => {
-        this.focusOnField(prevInRow);
+        this.focusOnField(previousField);
         this.isNavigating = false;
       }, 50);
     } else {
@@ -3652,72 +3645,92 @@ export class HistoriasMedicasComponent implements OnInit {
   private navigateDown(currentField: string): void {
     this.isNavigating = true;
 
-    // Primero intentar navegar verticalmente dentro de la misma tabla
-    const currentPosition = this.findFieldPosition(currentField);
+    const position = this.getNavigationPosition(currentField);
+    const nextField = position ? this.resolveFieldAt(position.rowIndex + 1, position.columnIndex, 'down') : null;
 
-    if (currentPosition.row && currentPosition.columnType) {
-      // Encontrar el siguiente campo en la misma columna
-      const columnFields = this.columnMap[currentPosition.columnType] || [];
-      const currentIndex = columnFields.indexOf(currentField);
-
-      if (currentIndex !== -1 && currentIndex < columnFields.length - 1) {
-        const nextField = columnFields[currentIndex + 1];
-        setTimeout(() => {
-          this.focusOnField(nextField);
-          this.isNavigating = false;
-        }, 50);
-        return;
-      }
+    if (nextField) {
+      setTimeout(() => {
+        this.focusOnField(nextField);
+        this.isNavigating = false;
+      }, 50);
+      return;
     }
 
-    // Si no hay campo abajo, ir al siguiente en la fila
-    this.navigateToNextField(currentField);
+    this.isNavigating = false;
   }
 
   // Navegar hacia arriba (↑)
   private navigateUp(currentField: string): void {
     this.isNavigating = true;
 
-    // Buscar campo arriba en la misma columna
-    const currentPosition = this.findFieldPosition(currentField);
+    const position = this.getNavigationPosition(currentField);
+    const previousField = position ? this.resolveFieldAt(position.rowIndex - 1, position.columnIndex, 'up') : null;
 
-    if (currentPosition.columnType) {
-      const columnFields = this.columnMap[currentPosition.columnType] || [];
-      const currentIndex = columnFields.indexOf(currentField);
-
-      if (currentIndex > 0) {
-        const prevField = columnFields[currentIndex - 1];
-        setTimeout(() => {
-          this.focusOnField(prevField);
-          this.isNavigating = false;
-        }, 50);
-        return;
-      }
+    if (previousField) {
+      setTimeout(() => {
+        this.focusOnField(previousField);
+        this.isNavigating = false;
+      }, 50);
+      return;
     }
 
-    // Si no hay campo arriba, ir al anterior en la fila
-    this.navigateToPreviousField(currentField);
+    this.isNavigating = false;
   }
 
-  // Encontrar la posición del campo en los mapas
-  private findFieldPosition(fieldName: string): { row: string | null, columnType: string | null, index: number } {
-    // Buscar en qué fila está
-    for (const [row, fields] of Object.entries(this.currentRowMap)) {
-      const index = fields.indexOf(fieldName);
-      if (index !== -1) {
-        // Determinar el tipo de columna
-        let columnType = null;
-        for (const [type, columns] of Object.entries(this.columnMap)) {
-          if (columns.includes(fieldName)) {
-            columnType = type;
-            break;
-          }
-        }
-        return { row, columnType, index };
+  private getNavigationPosition(fieldName: string): { rowIndex: number, columnIndex: number } | null {
+    for (let rowIndex = 0; rowIndex < this.navigationRows.length; rowIndex++) {
+      const columnIndex = this.navigationRows[rowIndex].indexOf(fieldName);
+      if (columnIndex !== -1) {
+        return { rowIndex, columnIndex };
       }
     }
 
-    return { row: null, columnType: null, index: -1 };
+    return null;
+  }
+
+  private resolveFieldAt(
+    rowIndex: number,
+    columnIndex: number,
+    direction: 'next' | 'previous' | 'up' | 'down'
+  ): string | null {
+    if (direction === 'next') {
+      if (rowIndex < 0 || rowIndex >= this.navigationRows.length) {
+        return null;
+      }
+
+      const currentRow = this.navigationRows[rowIndex];
+      if (columnIndex < currentRow.length) {
+        return currentRow[columnIndex];
+      }
+
+      const nextRow = this.navigationRows[rowIndex + 1];
+      return nextRow?.[0] ?? null;
+    }
+
+    if (direction === 'previous') {
+      if (rowIndex < 0 || rowIndex >= this.navigationRows.length) {
+        return null;
+      }
+
+      if (columnIndex >= 0) {
+        return this.navigationRows[rowIndex][columnIndex] ?? null;
+      }
+
+      const previousRow = this.navigationRows[rowIndex - 1];
+      return previousRow?.[previousRow.length - 1] ?? null;
+    }
+
+    if (rowIndex < 0 || rowIndex >= this.navigationRows.length) {
+      return null;
+    }
+
+    const targetRow = this.navigationRows[rowIndex];
+    if (!targetRow?.length) {
+      return null;
+    }
+
+    const safeColumnIndex = Math.min(columnIndex, targetRow.length - 1);
+    return targetRow[safeColumnIndex] ?? null;
   }
 
   // Cerrar dropdowns abiertos
@@ -3801,8 +3814,8 @@ export class HistoriasMedicasComponent implements OnInit {
       'ref_final_esf_oi', 'ref_final_cil_oi', 'ref_final_eje_oi', 'ref_final_add_oi', 'ref_final_alt_oi', 'ref_final_dp_oi',
 
       // AVSC/AVAE/OTROS
-      'avsc_od', 'avae_od', 'otros_od',
-      'avsc_oi', 'avae_oi', 'otros_oi'
+      'avsc_lejos_od', 'avsc_cerca_od', 'avae_od', 'otros_od',
+      'avsc_lejos_oi', 'avsc_cerca_oi', 'avae_oi', 'otros_oi'
     ];
 
     for (const field of fieldOrder) {
@@ -3834,15 +3847,24 @@ export class HistoriasMedicasComponent implements OnInit {
 
   // En el método onModalHidden():
   onModalHidden(): void {
-    // Limpiar event listeners
-    document.removeEventListener('keydown', this.handleKeydown.bind(this));
-    window.removeEventListener('resize', this.fixSelectOverflow.bind(this));
+    document.removeEventListener('keydown', this.boundHandleKeydown, true);
 
-    // Limpiar resaltado
+    const modal = document.getElementById('historiaModal');
+    if (modal) {
+      modal.removeEventListener('keydown', this.boundHandleKeydown, true);
+    }
+
+    if (this.boundMouseDownHandler) {
+      document.removeEventListener('mousedown', this.boundMouseDownHandler);
+    }
+
+    if (this.boundKeyboardModeHandler) {
+      document.removeEventListener('keydown', this.boundKeyboardModeHandler, true);
+    }
+
     const activeFields = document.querySelectorAll('.campo-activo');
     activeFields.forEach(field => field.classList.remove('campo-activo'));
 
-    // Limpiar clase using-mouse
     document.body.classList.remove('using-mouse');
   }
 
