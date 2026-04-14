@@ -36,7 +36,6 @@ import { TasaCambiariaService } from './../../core/services/tasaCambiaria/tasaCa
 export class SystemConfigService {
   private readonly CONFIG_KEY = 'opticlass_system_config';
   private readonly NOTIFICATION_EMAILS_KEY = 'opticlass_notification_emails';
-  private readonly PAYMENT_METHODS_KEY = 'opticlass_payment_methods_settings';
 
   // Configuración por defecto
   private defaultConfig: SystemConfig = {
@@ -125,7 +124,7 @@ export class SystemConfigService {
    * Indica si la configuración de métodos de pago ya fue persistida localmente
    */
   tieneMetodosPagoPersistidos(): boolean {
-    return !!localStorage.getItem(this.PAYMENT_METHODS_KEY);
+    return false;
   }
 
   /**
@@ -175,7 +174,11 @@ export class SystemConfigService {
    * Obtiene los métodos de pago configurables persistidos localmente
    */
   obtenerMetodosPagoConfigurables(): Observable<PaymentMethodsGetResponse> {
-    const localSettings = this.getPaymentMethodsSettings();
+    const fallbackSettings = this.normalizePaymentMethodsSettings({
+      bankCatalog: [],
+      methods: [],
+      ultimaActualizacion: new Date().toISOString()
+    });
 
     return forkJoin({
       banksResponse: this.obtenerCatalogoBancosReceptores().pipe(
@@ -194,9 +197,9 @@ export class SystemConfigService {
       map(({ banksResponse, methodsResponse }) => {
         const hasBackendMethods = !!methodsResponse && Array.isArray(methodsResponse.metodos) && methodsResponse.metodos.length > 0;
         const paymentMethods = this.normalizePaymentMethodsSettings({
-          bankCatalog: banksResponse ? this.adaptarBancosDesdeBackend(banksResponse.bancos) : localSettings.bankCatalog,
-          methods: methodsResponse?.metodos ?? [],
-          ultimaActualizacion: methodsResponse?.ultimaActualizacion || new Date().toISOString()
+          bankCatalog: banksResponse ? this.adaptarBancosDesdeBackend(banksResponse.bancos) : fallbackSettings.bankCatalog,
+          methods: methodsResponse?.metodos ?? fallbackSettings.methods,
+          ultimaActualizacion: methodsResponse?.ultimaActualizacion || fallbackSettings.ultimaActualizacion
         });
 
         let message = 'ok';
@@ -218,8 +221,7 @@ export class SystemConfigService {
           paymentMethods,
           persisted
         };
-      }),
-      tap(({ paymentMethods }) => this.savePaymentMethodsSettings(paymentMethods))
+      })
     );
   }
 
@@ -257,6 +259,46 @@ export class SystemConfigService {
     return this.persistirMetodosPagoConfigurables(payload, 'Los métodos de pago fueron actualizados correctamente.');
   }
 
+  crearBancoCatalogo(banco: PaymentMethodBank): Observable<PaymentMethodBank> {
+    return this.crearBancoReceptor(banco).pipe(
+      map((response) => ({
+        code: `${response.banco?.codigo || banco.code}`.trim().toUpperCase(),
+        name: `${response.banco?.nombre || banco.name}`.trim(),
+        scope: response.banco?.scope === 'international' ? 'international' : 'national',
+        active: response.banco?.activo !== false
+      }))
+    );
+  }
+
+  actualizarBancoCatalogo(banco: PaymentMethodBank): Observable<PaymentMethodBank> {
+    return this.actualizarBancoReceptor(banco).pipe(
+      map((response) => ({
+        code: `${response.banco?.codigo || banco.code}`.trim().toUpperCase(),
+        name: `${response.banco?.nombre || banco.name}`.trim(),
+        scope: response.banco?.scope === 'international' ? 'international' : 'national',
+        active: response.banco?.activo !== false
+      }))
+    );
+  }
+
+  crearMetodoPagoCatalogo(metodo: PaymentMethodConfig): Observable<PaymentMethodBackendResponse> {
+    return this.crearMetodoPago(metodo).pipe(
+      map((response) => ({
+        ...response,
+        metodo: this.normalizePaymentMethod(response.metodo || metodo, [])
+      }))
+    );
+  }
+
+  actualizarMetodoPagoCatalogo(metodo: PaymentMethodConfig): Observable<PaymentMethodBackendResponse> {
+    return this.actualizarMetodoPago(metodo).pipe(
+      map((response) => ({
+        ...response,
+        metodo: this.normalizePaymentMethod(response.metodo || metodo, [])
+      }))
+    );
+  }
+
   /**
   * Persiste la configuración de correos y devuelve la estructura esperada por la vista
    */
@@ -276,31 +318,6 @@ export class SystemConfigService {
       message,
       correos: config
     }).pipe(delay(350));
-  }
-
-  /**
-   * Obtiene la configuración local de métodos de pago
-   */
-  private getPaymentMethodsSettings(): PaymentMethodsSettings {
-    const saved = localStorage.getItem(this.PAYMENT_METHODS_KEY);
-    if (!saved) {
-      return this.clonePaymentMethodsSettings(this.defaultPaymentMethodsSettings);
-    }
-
-    try {
-      return this.normalizePaymentMethodsSettings(JSON.parse(saved) as PaymentMethodsSettings);
-    } catch (error) {
-      console.warn('No se pudo leer la configuración local de métodos de pago:', error);
-      return this.clonePaymentMethodsSettings(this.defaultPaymentMethodsSettings);
-    }
-  }
-
-  /**
-   * Guarda la configuración local de métodos de pago
-   */
-  private savePaymentMethodsSettings(config: PaymentMethodsSettings): PaymentMethodsSettings {
-    localStorage.setItem(this.PAYMENT_METHODS_KEY, JSON.stringify(config));
-    return config;
   }
 
   /**
@@ -341,36 +358,46 @@ export class SystemConfigService {
       methods: payload.methods,
       ultimaActualizacion: new Date().toISOString()
     });
-    const baseline = this.getPaymentMethodsSettings();
-    const syncOperations = [
-      ...this.construirOperacionesBancos(baseline.bankCatalog, normalizedTarget.bankCatalog),
-      ...this.construirOperacionesMetodos(baseline.methods, normalizedTarget.methods)
-    ];
-
-    const sync$ = syncOperations.length ? forkJoin(syncOperations) : of([]);
-
-    return sync$.pipe(
-      switchMap(() => this.refrescarMetodosPagoDesdeBackend(normalizedTarget)),
-      map((paymentMethods) => ({
-        message: successMessage,
-        paymentMethods
+    return forkJoin({
+      banksResponse: this.obtenerCatalogoBancosReceptores(),
+      methodsResponse: this.obtenerMetodosPagoDesdeBackend()
+    }).pipe(
+      map(({ banksResponse, methodsResponse }) => this.normalizePaymentMethodsSettings({
+        bankCatalog: this.adaptarBancosDesdeBackend(banksResponse.bancos),
+        methods: methodsResponse.metodos || [],
+        ultimaActualizacion: methodsResponse.ultimaActualizacion || new Date().toISOString()
       })),
-      tap(({ paymentMethods }) => this.savePaymentMethodsSettings(paymentMethods))
+      switchMap((baseline) => {
+        const syncOperations = [
+          ...this.construirOperacionesBancos(baseline.bankCatalog, normalizedTarget.bankCatalog),
+          ...this.construirOperacionesMetodos(baseline.methods, normalizedTarget.methods)
+        ];
+
+        const sync$ = syncOperations.length ? forkJoin(syncOperations) : of([]);
+
+        return sync$.pipe(
+          switchMap(() => this.refrescarMetodosPagoDesdeBackend()),
+          map((paymentMethods) => ({
+            message: successMessage,
+            paymentMethods
+          }))
+        );
+      })
     );
   }
 
   /**
    * Refresca la configuración agregada desde backend usando fallback local si una de las colecciones falla.
    */
-  private refrescarMetodosPagoDesdeBackend(fallback: PaymentMethodsSettings): Observable<PaymentMethodsSettings> {
+  private refrescarMetodosPagoDesdeBackend(): Observable<PaymentMethodsSettings> {
     return forkJoin({
-      banksResponse: this.obtenerCatalogoBancosReceptores().pipe(catchError(() => of(null))),
-      methodsResponse: this.obtenerMetodosPagoDesdeBackend().pipe(catchError(() => of(null)))
+      banksResponse: this.obtenerCatalogoBancosReceptores(),
+      methodsResponse: this.obtenerMetodosPagoDesdeBackend()
     }).pipe(
       map(({ banksResponse, methodsResponse }) => this.normalizePaymentMethodsSettings({
-        bankCatalog: banksResponse ? this.adaptarBancosDesdeBackend(banksResponse.bancos) : fallback.bankCatalog,
-        methods: methodsResponse?.metodos || fallback.methods,
-        ultimaActualizacion: methodsResponse?.ultimaActualizacion || fallback.ultimaActualizacion || new Date().toISOString()
+        bankCatalog: this.adaptarBancosDesdeBackend(banksResponse.bancos),
+        methods: methodsResponse.metodos || [],
+        ultimaActualizacion: methodsResponse.ultimaActualizacion || new Date().toISOString()
       }))
     );
   }
@@ -570,14 +597,14 @@ export class SystemConfigService {
    * Normaliza la estructura de métodos de pago antes de persistirla
    */
   private normalizePaymentMethodsSettings(settings: PaymentMethodsSettings): PaymentMethodsSettings {
-    const bankCatalogSource = Array.isArray(settings?.bankCatalog) && settings.bankCatalog.length
+    const bankCatalogSource = Array.isArray(settings?.bankCatalog)
       ? settings.bankCatalog
-      : this.defaultPaymentMethodBanks;
+      : [];
     const bankCatalog = this.normalizePaymentMethodBanks(bankCatalogSource);
 
     const methodSource = Array.isArray(settings?.methods)
       ? settings.methods
-      : this.defaultPaymentMethodsSettings.methods;
+      : [];
 
     return {
       bankCatalog,
@@ -773,13 +800,6 @@ export class SystemConfigService {
    */
   private generateLocalId(prefix: string): string {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  }
-
-  /**
-   * Crea una copia profunda de la configuración local de métodos de pago
-   */
-  private clonePaymentMethodsSettings(settings: PaymentMethodsSettings): PaymentMethodsSettings {
-    return JSON.parse(JSON.stringify(settings)) as PaymentMethodsSettings;
   }
 
   /**

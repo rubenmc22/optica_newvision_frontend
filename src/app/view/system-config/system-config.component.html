@@ -344,19 +344,19 @@
                   <div class="payment-method-fields">
                     <label class="payment-field">
                       <span>Nombre visible</span>
-                      <input type="text" [(ngModel)]="metodo.label">
+                      <input type="text" [(ngModel)]="metodo.label" (blur)="persistirMetodoPago(metodo.key)">
                     </label>
 
                     <label class="payment-field">
                       <span>Moneda operativa</span>
-                      <select [(ngModel)]="metodo.currency">
+                      <select [(ngModel)]="metodo.currency" (ngModelChange)="persistirMetodoPago(metodo.key)">
                         <option *ngFor="let moneda of getOpcionesMonedaOperativa()" [ngValue]="moneda">{{ formatearMonedaMetodo(moneda) }}</option>
                       </select>
                     </label>
 
                     <label class="payment-field payment-field--wide">
                       <span>Descripción operativa</span>
-                      <input type="text" [(ngModel)]="metodo.description">
+                      <input type="text" [(ngModel)]="metodo.description" (blur)="persistirMetodoPago(metodo.key)">
                     </label>
                   </div>
 
@@ -393,32 +393,32 @@
 
                         <label class="payment-field" *ngIf="requiereTitularCuenta(metodo)">
                           <span>Titular</span>
-                          <input type="text" [(ngModel)]="cuenta.ownerName">
+                          <input type="text" [(ngModel)]="cuenta.ownerName" (blur)="persistirMetodoPago(metodo.key)">
                         </label>
 
                         <label class="payment-field" *ngIf="requiereDocumentoCuenta(metodo)">
                           <span>Cédula o RIF</span>
-                          <input type="text" [(ngModel)]="cuenta.ownerId">
+                          <input type="text" [(ngModel)]="cuenta.ownerId" (blur)="persistirMetodoPago(metodo.key)">
                         </label>
 
                         <label class="payment-field" *ngIf="requiereTelefonoCuenta(metodo)">
                           <span>Teléfono</span>
-                          <input type="tel" [(ngModel)]="cuenta.phone">
+                          <input type="tel" [(ngModel)]="cuenta.phone" (blur)="persistirMetodoPago(metodo.key)">
                         </label>
 
                         <label class="payment-field" *ngIf="requiereEmailCuenta(metodo)">
                           <span>Correo receptor</span>
-                          <input type="email" [(ngModel)]="cuenta.email">
+                          <input type="email" [(ngModel)]="cuenta.email" (blur)="persistirMetodoPago(metodo.key)">
                         </label>
 
                         <label class="payment-field payment-field--wide" *ngIf="requiereWalletCuenta(metodo)">
                           <span>Dirección wallet</span>
-                          <input type="text" [(ngModel)]="cuenta.walletAddress">
+                          <input type="text" [(ngModel)]="cuenta.walletAddress" (blur)="persistirMetodoPago(metodo.key)">
                         </label>
 
                         <label class="payment-field payment-field--wide">
                           <span>Descripción de cuenta</span>
-                          <input type="text" [(ngModel)]="cuenta.accountDescription">
+                          <input type="text" [(ngModel)]="cuenta.accountDescription" (blur)="persistirMetodoPago(metodo.key)">
                         </label>
                       </div>
 
@@ -632,12 +632,12 @@
         </div>
 
         <div class="config-modal__footer">
-          <button class="btn-secondary-modern" type="button" (click)="cerrarModalNuevoMetodo()">
+          <button class="btn-secondary-modern" type="button" [disabled]="isSavingPaymentMethods" (click)="cerrarModalNuevoMetodo()">
             Cancelar
           </button>
 
-          <button class="btn-primary-modern" type="button" (click)="confirmarNuevoMetodo()">
-            <i class="bi bi-plus-circle"></i>
+          <button class="btn-primary-modern" type="button" [disabled]="isSavingPaymentMethods" (click)="confirmarNuevoMetodo()">
+            <i class="bi" [ngClass]="isSavingPaymentMethods ? 'bi-arrow-repeat spinning' : 'bi-plus-circle'"></i>
             Guardar método
           </button>
         </div>
@@ -680,12 +680,12 @@
         </div>
 
         <div class="config-modal__footer">
-          <button class="btn-secondary-modern" type="button" (click)="cerrarModalNuevoBanco()">
+          <button class="btn-secondary-modern" type="button" [disabled]="isSavingBankCatalog" (click)="cerrarModalNuevoBanco()">
             Cancelar
           </button>
 
-          <button class="btn-primary-modern" type="button" (click)="confirmarNuevoBanco()">
-            <i class="bi bi-building-add"></i>
+          <button class="btn-primary-modern" type="button" [disabled]="isSavingBankCatalog" (click)="confirmarNuevoBanco()">
+            <i class="bi" [ngClass]="isSavingBankCatalog ? 'bi-arrow-repeat spinning' : 'bi-building-add'"></i>
             Guardar banco
           </button>
         </div>
@@ -698,6 +698,17 @@
         <h3>Configuración Avanzada</h3>
         <p>Opciones avanzadas estarán disponibles en futuras actualizaciones</p>
       </div>
+    </div>
+
+    <div
+      class="payment-save-feedback"
+      *ngIf="paymentConfigNotice as aviso"
+      [class.payment-save-feedback--saving]="aviso.tone === 'saving'"
+      [class.payment-save-feedback--success]="aviso.tone === 'success'"
+      aria-live="polite"
+      aria-atomic="true">
+      <i class="bi" [ngClass]="aviso.tone === 'saving' ? 'bi-arrow-repeat spinning' : 'bi-check2-circle'"></i>
+      <span>{{ aviso.message }}</span>
     </div>
 
   </div>

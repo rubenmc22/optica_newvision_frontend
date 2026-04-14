@@ -1,5 +1,6 @@
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { forkJoin } from 'rxjs';
 import { SystemConfigService } from './system-config.service';
 import {
   MonedaBaseResponse,
@@ -29,6 +30,7 @@ function correosDebenSerDistintos(control: AbstractControl): ValidationErrors | 
 }
 
 type GeneralSectionKey = 'monedaPrincipal' | 'metodosPago' | 'correos';
+type PaymentConfigNoticeTone = 'saving' | 'success';
 
 @Component({
   selector: 'app-system-config',
@@ -37,13 +39,14 @@ type GeneralSectionKey = 'monedaPrincipal' | 'metodosPago' | 'correos';
   styleUrls: ['./system-config.component.scss']
 })
 
-export class SystemConfigComponent implements OnInit {
+export class SystemConfigComponent implements OnInit, OnDestroy {
   config: SystemConfig;
   isLoading = false;
   isNotificationsLoading = false;
   isSavingNotifications = false;
   isPaymentMethodsLoading = false;
   isSavingPaymentMethods = false;
+  isSavingBankCatalog = false;
   activeTab: 'general' | 'avanzada' = 'general';
   correosConfig: NotificationEmailSettings | null = null;
   tieneCorreosPersistidos = false;
@@ -55,6 +58,7 @@ export class SystemConfigComponent implements OnInit {
   mostrarModalNuevoBanco = false;
   modalBancoScope: PaymentMethodBankScope = 'national';
   tasasActuales = { usd: 0, eur: 0 };
+  paymentConfigNotice: { tone: PaymentConfigNoticeTone; message: string } | null = null;
   notificationForm!: FormGroup;
   seccionesGeneralesExpandidas = {
     monedaPrincipal: false,
@@ -76,6 +80,13 @@ export class SystemConfigComponent implements OnInit {
     name: '',
     scope: 'national' as PaymentMethodBankScope
   };
+  private operacionesMetodosPendientes = 0;
+  private operacionesBancosPendientes = 0;
+  private paymentConfigNoticeTimeoutId: number | null = null;
+  private readonly methodAutosaveDebounceMs = 700;
+  private readonly methodSaveTimers = new Map<string, number>();
+  private readonly methodSaveInFlight = new Set<string>();
+  private readonly methodSaveQueued = new Set<string>();
   
   monedas = [
     { codigo: 'USD', nombre: 'Dólar Americano', simbolo: '$' },
@@ -121,6 +132,10 @@ export class SystemConfigComponent implements OnInit {
     this.notificationForm.get('habilitado')?.valueChanges.subscribe(habilitado => {
       this.configurarValidadoresNotificaciones(!!habilitado);
     });
+  }
+
+  ngOnDestroy(): void {
+    this.limpiarAvisosYTemporizadoresPago();
   }
 
   seleccionarTab(tab: 'general' | 'avanzada'): void {
@@ -332,6 +347,8 @@ export class SystemConfigComponent implements OnInit {
       metodo.accounts.push(this.crearCuentaReceptoraVacia());
       this.metodoPagoExpandido = metodo.key;
     }
+
+    this.guardarMetodoPagoEnBackend(metodo.key);
   }
 
   agregarCuentaReceptora(metodoKey: string): void {
@@ -342,6 +359,7 @@ export class SystemConfigComponent implements OnInit {
 
     metodo.accounts.push(this.crearCuentaReceptoraVacia());
     this.metodoPagoExpandido = metodoKey;
+    this.guardarMetodoPagoEnBackend(metodoKey);
   }
 
   eliminarCuentaReceptora(metodoKey: string, cuentaId: string): void {
@@ -351,6 +369,7 @@ export class SystemConfigComponent implements OnInit {
     }
 
     metodo.accounts = metodo.accounts.filter(cuenta => cuenta.id !== cuentaId);
+    this.guardarMetodoPagoEnBackend(metodoKey);
   }
 
   actualizarBancoCuenta(metodoKey: string, cuentaId: string, bankCode: string): void {
@@ -365,16 +384,22 @@ export class SystemConfigComponent implements OnInit {
     if (!banco) {
       cuenta.bankCode = '';
       cuenta.bank = '';
+      this.guardarMetodoPagoEnBackend(metodoKey);
       return;
     }
 
     cuenta.bankCode = banco.code;
     cuenta.bank = banco.name;
+    this.guardarMetodoPagoEnBackend(metodoKey);
   }
 
-  agregarNuevoMetodoPago(): void {
+  persistirMetodoPago(metodoKey: string): void {
+    this.guardarMetodoPagoEnBackend(metodoKey);
+  }
+
+  private construirNuevoMetodoPago(): PaymentMethodConfig | null {
     if (!this.metodosPagoDraft) {
-      return;
+      return null;
     }
 
     const label = this.nuevoMetodoPago.label.trim();
@@ -385,11 +410,11 @@ export class SystemConfigComponent implements OnInit {
         'Datos incompletos',
         'Debes indicar el nombre visible y la descripción del nuevo método antes de agregarlo.'
       );
-      return;
+      return null;
     }
 
     const key = this.generarClaveMetodo(label);
-    const nuevoMetodo: PaymentMethodConfig = {
+    return {
       key,
       label,
       description,
@@ -399,10 +424,6 @@ export class SystemConfigComponent implements OnInit {
       isCustom: true,
       accounts: this.nuevoMetodoPago.requiresReceiverAccount ? [this.crearCuentaReceptoraVacia()] : []
     };
-
-    this.metodosPagoDraft.methods = [...this.metodosPagoDraft.methods, nuevoMetodo];
-    this.metodoPagoExpandido = key;
-    this.reiniciarFormularioNuevoMetodo();
   }
 
   abrirModalNuevoMetodo(): void {
@@ -416,17 +437,36 @@ export class SystemConfigComponent implements OnInit {
   }
 
   confirmarNuevoMetodo(): void {
-    const totalPrevio = this.metodosPagoDraft?.methods.length || 0;
-    this.agregarNuevoMetodoPago();
-
-    if ((this.metodosPagoDraft?.methods.length || 0) > totalPrevio) {
-      this.cerrarModalNuevoMetodo();
+    const nuevoMetodo = this.construirNuevoMetodoPago();
+    if (!nuevoMetodo) {
+      return;
     }
+
+    this.iniciarGuardadoMetodosPago();
+
+    this.configService.crearMetodoPagoCatalogo(nuevoMetodo).subscribe({
+      next: ({ metodo, ultimaActualizacion }) => {
+        this.actualizarMetodoPersistidoEnEstado(metodo, ultimaActualizacion);
+        this.tieneMetodosPagoPersistidos = true;
+        this.metodoPagoExpandido = metodo.key;
+        this.finalizarGuardadoMetodosPago();
+        this.cerrarModalNuevoMetodo();
+        this.mostrarAvisoConfiguracionPago(`Método ${metodo.label} agregado correctamente.`, 'success');
+      },
+      error: (error) => {
+        console.error('Error guardando método de pago:', error);
+        this.finalizarGuardadoMetodosPago();
+        this.swalService.showError(
+          'No se pudo guardar',
+          'Ocurrió un problema al intentar registrar el método de pago.'
+        );
+      }
+    });
   }
 
-  agregarBancoCatalogo(): boolean {
+  private construirNuevoBancoCatalogo(): PaymentMethodBank | null {
     if (!this.metodosPagoDraft) {
-      return false;
+      return null;
     }
 
     const code = this.nuevoBancoCatalogo.code.trim().toUpperCase();
@@ -437,15 +477,16 @@ export class SystemConfigComponent implements OnInit {
         'Datos incompletos',
         'Debes indicar el código y el nombre del banco antes de agregarlo al catálogo.'
       );
-      return false;
+      return null;
     }
 
-    const claveNuevoBanco = this.getClaveAgrupacionBanco({
+    const nuevoBanco: PaymentMethodBank = {
       code,
       name,
       scope: this.nuevoBancoCatalogo.scope,
       active: true
-    });
+    };
+    const claveNuevoBanco = this.getClaveAgrupacionBanco(nuevoBanco);
     const duplicado = this.metodosPagoDraft.bankCatalog.some(banco =>
       banco.code === code || this.getClaveAgrupacionBanco(banco) === claveNuevoBanco
     );
@@ -454,21 +495,10 @@ export class SystemConfigComponent implements OnInit {
         'Banco duplicado',
         'Ya existe un banco registrado con ese código o con ese mismo nombre en el catálogo.'
       );
-      return false;
+      return null;
     }
 
-    this.metodosPagoDraft.bankCatalog = [
-      ...this.metodosPagoDraft.bankCatalog,
-      {
-        code,
-        name,
-        scope: this.nuevoBancoCatalogo.scope,
-        active: true
-      }
-    ].sort((actual, siguiente) => actual.name.localeCompare(siguiente.name));
-
-    this.reiniciarFormularioNuevoBanco();
-    return true;
+    return nuevoBanco;
   }
 
   abrirModalNuevoBanco(scope: PaymentMethodBankScope): void {
@@ -495,13 +525,46 @@ export class SystemConfigComponent implements OnInit {
   }
 
   confirmarNuevoBanco(): void {
-    if (this.agregarBancoCatalogo()) {
-      this.cerrarModalNuevoBanco();
+    const nuevoBanco = this.construirNuevoBancoCatalogo();
+    if (!nuevoBanco || !this.metodosPagoConfig || !this.metodosPagoDraft) {
+      return;
     }
+
+    this.iniciarGuardadoBancos();
+
+    this.configService.crearBancoCatalogo(nuevoBanco).subscribe({
+      next: (bancoPersistido) => {
+        const updatedAt = new Date().toISOString();
+
+        this.metodosPagoConfig = {
+          ...this.metodosPagoConfig,
+          bankCatalog: this.ordenarCatalogoBancos([...this.metodosPagoConfig.bankCatalog, bancoPersistido]),
+          ultimaActualizacion: updatedAt
+        };
+
+        this.metodosPagoDraft = {
+          ...this.metodosPagoDraft,
+          bankCatalog: this.ordenarCatalogoBancos([...this.metodosPagoDraft.bankCatalog, bancoPersistido])
+        };
+
+        this.tieneMetodosPagoPersistidos = true;
+        this.finalizarGuardadoBancos();
+        this.cerrarModalNuevoBanco();
+        this.mostrarAvisoConfiguracionPago(`Banco ${bancoPersistido.name} agregado al catálogo.`, 'success');
+      },
+      error: (error) => {
+        console.error('Error guardando banco receptor:', error);
+        this.finalizarGuardadoBancos();
+        this.swalService.showError(
+          'No se pudo guardar',
+          'Ocurrió un problema al intentar registrar el banco en el catálogo.'
+        );
+      }
+    });
   }
 
   alternarEstadoBancoCatalogo(code: string): void {
-    if (!this.metodosPagoDraft) {
+    if (!this.metodosPagoDraft || !this.metodosPagoConfig) {
       return;
     }
 
@@ -516,6 +579,35 @@ export class SystemConfigComponent implements OnInit {
     this.metodosPagoDraft.bankCatalog.forEach(item => {
       if (this.getClaveAgrupacionBanco(item) === claveGrupo) {
         item.active = siguienteEstado;
+      }
+    });
+
+    const bancosActualizados = this.metodosPagoDraft.bankCatalog
+      .filter(item => this.getClaveAgrupacionBanco(item) === claveGrupo)
+      .filter(item => this.bancoTieneCambios(item));
+
+    if (!bancosActualizados.length) {
+      return;
+    }
+
+    const codigos = bancosActualizados.map(item => item.code);
+    const mensajeExitoBanco = `${banco.name} ${siguienteEstado ? 'activado' : 'desactivado'} en el catálogo.`;
+    this.iniciarGuardadoBancos();
+
+    forkJoin(bancosActualizados.map(item => this.configService.actualizarBancoCatalogo(item))).subscribe({
+      next: (bancosPersistidos) => {
+        this.actualizarBancosPersistidosEnEstado(bancosPersistidos);
+        this.finalizarGuardadoBancos();
+        this.mostrarAvisoConfiguracionPago(mensajeExitoBanco, 'success');
+      },
+      error: (error) => {
+        console.error('Error actualizando estado del banco:', error);
+        this.restaurarBancosEnDraft(codigos);
+        this.finalizarGuardadoBancos();
+        this.swalService.showError(
+          'No se pudo actualizar',
+          'Ocurrió un problema al intentar actualizar el estado del banco en el servidor.'
+        );
       }
     });
   }
@@ -684,6 +776,42 @@ export class SystemConfigComponent implements OnInit {
     return cuenta.id;
   }
 
+  private iniciarGuardadoMetodosPago(): void {
+    if (this.operacionesMetodosPendientes === 0) {
+      this.mostrarAvisoConfiguracionPago('Guardando cambios...', 'saving', 0);
+    }
+
+    this.operacionesMetodosPendientes += 1;
+    this.isSavingPaymentMethods = true;
+  }
+
+  private finalizarGuardadoMetodosPago(): void {
+    this.operacionesMetodosPendientes = Math.max(0, this.operacionesMetodosPendientes - 1);
+    this.isSavingPaymentMethods = this.operacionesMetodosPendientes > 0;
+
+    if (!this.isSavingPaymentMethods && this.paymentConfigNotice?.tone === 'saving') {
+      this.paymentConfigNotice = null;
+    }
+  }
+
+  private iniciarGuardadoBancos(): void {
+    if (this.operacionesBancosPendientes === 0 && !this.isSavingPaymentMethods) {
+      this.mostrarAvisoConfiguracionPago('Guardando cambios...', 'saving', 0);
+    }
+
+    this.operacionesBancosPendientes += 1;
+    this.isSavingBankCatalog = true;
+  }
+
+  private finalizarGuardadoBancos(): void {
+    this.operacionesBancosPendientes = Math.max(0, this.operacionesBancosPendientes - 1);
+    this.isSavingBankCatalog = this.operacionesBancosPendientes > 0;
+
+    if (!this.isSavingBankCatalog && !this.isSavingPaymentMethods && this.paymentConfigNotice?.tone === 'saving') {
+      this.paymentConfigNotice = null;
+    }
+  }
+
   puedeGuardarCorreos(): boolean {
     return this.notificationForm.valid && this.notificationForm.dirty && !this.isSavingNotifications;
   }
@@ -706,6 +834,93 @@ export class SystemConfigComponent implements OnInit {
 
   private obtenerMetodoPagoDraft(metodoKey: string): PaymentMethodConfig | undefined {
     return this.metodosPagoDraft?.methods.find(metodo => metodo.key === metodoKey);
+  }
+
+  private obtenerMetodoPagoPersistido(metodoKey: string): PaymentMethodConfig | undefined {
+    return this.metodosPagoConfig?.methods.find(metodo => metodo.key === metodoKey);
+  }
+
+  private guardarMetodoPagoEnBackend(metodoKey: string): void {
+    this.programarGuardadoMetodoPago(metodoKey);
+  }
+
+  private programarGuardadoMetodoPago(metodoKey: string): void {
+    const metodoDraft = this.obtenerMetodoPagoDraft(metodoKey);
+    if (!metodoDraft) {
+      return;
+    }
+
+    if (!this.metodoTieneCambios(metodoDraft)) {
+      this.cancelarGuardadoMetodoProgramado(metodoKey);
+      return;
+    }
+
+    if (this.methodSaveInFlight.has(metodoKey)) {
+      this.methodSaveQueued.add(metodoKey);
+      return;
+    }
+
+    this.cancelarGuardadoMetodoProgramado(metodoKey);
+    const timeoutId = window.setTimeout(() => {
+      this.methodSaveTimers.delete(metodoKey);
+      this.ejecutarGuardadoMetodoPago(metodoKey);
+    }, this.methodAutosaveDebounceMs);
+
+    this.methodSaveTimers.set(metodoKey, timeoutId);
+  }
+
+  private ejecutarGuardadoMetodoPago(metodoKey: string): void {
+    const metodoDraft = this.obtenerMetodoPagoDraft(metodoKey);
+    if (!metodoDraft || !this.metodoTieneCambios(metodoDraft) || this.methodSaveInFlight.has(metodoKey)) {
+      return;
+    }
+
+    const metodoParaGuardar = this.clonarMetodosPago(metodoDraft);
+    const snapshotEnviado = JSON.stringify(this.normalizarMetodoSnapshot(metodoParaGuardar));
+    const metodoPersistido = this.obtenerMetodoPagoPersistido(metodoKey);
+    const request$ = metodoPersistido
+      ? this.configService.actualizarMetodoPagoCatalogo(metodoParaGuardar)
+      : this.configService.crearMetodoPagoCatalogo(metodoParaGuardar);
+
+    this.methodSaveInFlight.add(metodoKey);
+    this.iniciarGuardadoMetodosPago();
+
+    request$.subscribe({
+      next: ({ metodo, ultimaActualizacion }) => {
+        const draftActual = this.obtenerMetodoPagoDraft(metodoKey);
+        const draftCoincideConEnvio = !!draftActual &&
+          JSON.stringify(this.normalizarMetodoSnapshot(draftActual)) === snapshotEnviado;
+
+        this.actualizarMetodoPersistidoEnEstado(metodo, ultimaActualizacion, draftCoincideConEnvio);
+        this.tieneMetodosPagoPersistidos = true;
+        this.methodSaveInFlight.delete(metodoKey);
+        this.finalizarGuardadoMetodosPago();
+
+        if (this.debeReprogramarGuardadoMetodo(metodoKey)) {
+          this.programarGuardadoMetodoPago(metodoKey);
+          return;
+        }
+
+        this.mostrarAvisoConfiguracionPago(`Cambios guardados en ${metodo.label}.`, 'success');
+      },
+      error: (error) => {
+        console.error('Error persistiendo método de pago:', error);
+        const draftActual = this.obtenerMetodoPagoDraft(metodoKey);
+        const draftCoincideConEnvio = !!draftActual &&
+          JSON.stringify(this.normalizarMetodoSnapshot(draftActual)) === snapshotEnviado;
+
+        if (draftCoincideConEnvio) {
+          this.restaurarMetodoEnDraft(metodoKey);
+        }
+
+        this.methodSaveInFlight.delete(metodoKey);
+        this.finalizarGuardadoMetodosPago();
+        this.swalService.showError(
+          'No se pudo guardar',
+          'Ocurrió un problema al sincronizar el método de pago con el servidor.'
+        );
+      }
+    });
   }
 
   private crearCuentaReceptoraVacia(): PaymentMethodAccount {
@@ -843,34 +1058,167 @@ export class SystemConfigComponent implements OnInit {
     return JSON.stringify(this.normalizarSnapshotMetodosPago(actual)) === JSON.stringify(this.normalizarSnapshotMetodosPago(draft));
   }
 
+  private metodoTieneCambios(metodo: PaymentMethodConfig): boolean {
+    const metodoPersistido = this.obtenerMetodoPagoPersistido(metodo.key);
+    if (!metodoPersistido) {
+      return true;
+    }
+
+    return JSON.stringify(this.normalizarMetodoSnapshot(metodoPersistido)) !== JSON.stringify(this.normalizarMetodoSnapshot(metodo));
+  }
+
+  private bancoTieneCambios(banco: PaymentMethodBank): boolean {
+    const bancoPersistido = this.metodosPagoConfig?.bankCatalog.find(item => item.code === banco.code);
+    if (!bancoPersistido) {
+      return true;
+    }
+
+    return JSON.stringify(this.normalizarBancoSnapshot(bancoPersistido)) !== JSON.stringify(this.normalizarBancoSnapshot(banco));
+  }
+
   private normalizarSnapshotMetodosPago(settings: PaymentMethodsSettings): unknown {
     return {
-      bankCatalog: settings.bankCatalog.map(banco => ({
-        code: banco.code.trim(),
-        name: banco.name.trim(),
-        scope: banco.scope,
-        active: this.esBancoActivo(banco)
-      })),
-      methods: settings.methods.map(metodo => ({
-        key: metodo.key,
-        label: metodo.label.trim(),
-        description: metodo.description.trim(),
-        enabled: !!metodo.enabled,
-        currency: metodo.currency,
-        requiresReceiverAccount: !!metodo.requiresReceiverAccount,
-        isCustom: !!metodo.isCustom,
-        accounts: metodo.accounts.map(cuenta => ({
-          bank: cuenta.bank.trim(),
-          bankCode: cuenta.bankCode.trim(),
-          ownerName: cuenta.ownerName.trim(),
-          ownerId: cuenta.ownerId.trim(),
-          phone: cuenta.phone.trim(),
-          email: cuenta.email?.trim().toLowerCase() || '',
-          walletAddress: cuenta.walletAddress?.trim() || '',
-          accountDescription: cuenta.accountDescription.trim()
-        }))
+      bankCatalog: settings.bankCatalog.map(banco => this.normalizarBancoSnapshot(banco)),
+      methods: settings.methods.map(metodo => this.normalizarMetodoSnapshot(metodo))
+    };
+  }
+
+  private normalizarBancoSnapshot(banco: PaymentMethodBank): unknown {
+    return {
+      code: banco.code.trim(),
+      name: banco.name.trim(),
+      scope: banco.scope,
+      active: this.esBancoActivo(banco)
+    };
+  }
+
+  private normalizarMetodoSnapshot(metodo: PaymentMethodConfig): unknown {
+    return {
+      key: metodo.key,
+      label: metodo.label.trim(),
+      description: metodo.description.trim(),
+      enabled: !!metodo.enabled,
+      currency: metodo.currency,
+      requiresReceiverAccount: !!metodo.requiresReceiverAccount,
+      isCustom: !!metodo.isCustom,
+      accounts: metodo.accounts.map(cuenta => ({
+        bank: cuenta.bank.trim(),
+        bankCode: cuenta.bankCode.trim(),
+        ownerName: cuenta.ownerName.trim(),
+        ownerId: cuenta.ownerId.trim(),
+        phone: cuenta.phone.trim(),
+        email: cuenta.email?.trim().toLowerCase() || '',
+        walletAddress: cuenta.walletAddress?.trim() || '',
+        accountDescription: cuenta.accountDescription.trim()
       }))
     };
+  }
+
+  private actualizarMetodoPersistidoEnEstado(
+    metodo: PaymentMethodConfig,
+    ultimaActualizacion?: string,
+    sincronizarDraft: boolean = true
+  ): void {
+    const updatedAt = ultimaActualizacion || new Date().toISOString();
+    const metodoPersistido = this.clonarMetodosPago(metodo);
+
+    if (this.metodosPagoConfig) {
+      this.metodosPagoConfig = {
+        ...this.metodosPagoConfig,
+        methods: this.reemplazarMetodoEnColeccion(this.metodosPagoConfig.methods, metodoPersistido),
+        ultimaActualizacion: updatedAt
+      };
+    }
+
+    if (this.metodosPagoDraft && sincronizarDraft) {
+      this.metodosPagoDraft = {
+        ...this.metodosPagoDraft,
+        methods: this.reemplazarMetodoEnColeccion(this.metodosPagoDraft.methods, metodoPersistido),
+        ultimaActualizacion: updatedAt
+      };
+    }
+  }
+
+  private actualizarBancosPersistidosEnEstado(bancos: PaymentMethodBank[]): void {
+    const updatedAt = new Date().toISOString();
+
+    if (this.metodosPagoConfig) {
+      let bankCatalog = [...this.metodosPagoConfig.bankCatalog];
+      bancos.forEach((banco) => {
+        bankCatalog = this.reemplazarBancoEnColeccion(bankCatalog, banco);
+      });
+
+      this.metodosPagoConfig = {
+        ...this.metodosPagoConfig,
+        bankCatalog: this.ordenarCatalogoBancos(bankCatalog),
+        ultimaActualizacion: updatedAt
+      };
+    }
+
+    if (this.metodosPagoDraft) {
+      let bankCatalog = [...this.metodosPagoDraft.bankCatalog];
+      bancos.forEach((banco) => {
+        bankCatalog = this.reemplazarBancoEnColeccion(bankCatalog, banco);
+      });
+
+      this.metodosPagoDraft = {
+        ...this.metodosPagoDraft,
+        bankCatalog: this.ordenarCatalogoBancos(bankCatalog),
+        ultimaActualizacion: updatedAt
+      };
+    }
+  }
+
+  private restaurarMetodoEnDraft(metodoKey: string): void {
+    const metodoPersistido = this.obtenerMetodoPagoPersistido(metodoKey);
+    if (!metodoPersistido || !this.metodosPagoDraft) {
+      return;
+    }
+
+    this.metodosPagoDraft = {
+      ...this.metodosPagoDraft,
+      methods: this.reemplazarMetodoEnColeccion(this.metodosPagoDraft.methods, metodoPersistido)
+    };
+  }
+
+  private restaurarBancosEnDraft(codigos: string[]): void {
+    if (!this.metodosPagoConfig || !this.metodosPagoDraft) {
+      return;
+    }
+
+    let bankCatalog = [...this.metodosPagoDraft.bankCatalog];
+    this.metodosPagoConfig.bankCatalog
+      .filter((banco) => codigos.includes(banco.code))
+      .forEach((bancoPersistido) => {
+        bankCatalog = this.reemplazarBancoEnColeccion(bankCatalog, bancoPersistido);
+      });
+
+    this.metodosPagoDraft = {
+      ...this.metodosPagoDraft,
+      bankCatalog: this.ordenarCatalogoBancos(bankCatalog)
+    };
+  }
+
+  private reemplazarMetodoEnColeccion(methods: PaymentMethodConfig[], metodo: PaymentMethodConfig): PaymentMethodConfig[] {
+    const metodoClonado = this.clonarMetodosPago(metodo);
+    const existe = methods.some((item) => item.key === metodo.key);
+
+    if (!existe) {
+      return [...methods, metodoClonado];
+    }
+
+    return methods.map((item) => item.key === metodo.key ? metodoClonado : item);
+  }
+
+  private reemplazarBancoEnColeccion(bankCatalog: PaymentMethodBank[], banco: PaymentMethodBank): PaymentMethodBank[] {
+    const bancoClonado = this.clonarMetodosPago(banco);
+    const existe = bankCatalog.some((item) => item.code === banco.code);
+
+    if (!existe) {
+      return [...bankCatalog, bancoClonado];
+    }
+
+    return bankCatalog.map((item) => item.code === banco.code ? bancoClonado : item);
   }
 
   private generarClaveMetodo(label: string): string {
@@ -894,6 +1242,60 @@ export class SystemConfigComponent implements OnInit {
 
   private generarIdLocal(prefix: string): string {
     return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  private ordenarCatalogoBancos(bankCatalog: PaymentMethodBank[]): PaymentMethodBank[] {
+    return [...bankCatalog].sort((actual, siguiente) => actual.name.localeCompare(siguiente.name));
+  }
+
+  private mostrarAvisoConfiguracionPago(
+    message: string,
+    tone: PaymentConfigNoticeTone = 'success',
+    autoHideMs: number = 2400
+  ): void {
+    this.limpiarTemporizadorAvisoConfiguracionPago();
+    this.paymentConfigNotice = { tone, message };
+
+    if (tone === 'success' && autoHideMs > 0) {
+      this.paymentConfigNoticeTimeoutId = window.setTimeout(() => {
+        this.paymentConfigNotice = null;
+        this.paymentConfigNoticeTimeoutId = null;
+      }, autoHideMs);
+    }
+  }
+
+  private limpiarTemporizadorAvisoConfiguracionPago(): void {
+    if (this.paymentConfigNoticeTimeoutId === null) {
+      return;
+    }
+
+    clearTimeout(this.paymentConfigNoticeTimeoutId);
+    this.paymentConfigNoticeTimeoutId = null;
+  }
+
+  private cancelarGuardadoMetodoProgramado(metodoKey: string): void {
+    const timeoutId = this.methodSaveTimers.get(metodoKey);
+    if (timeoutId === undefined) {
+      return;
+    }
+
+    clearTimeout(timeoutId);
+    this.methodSaveTimers.delete(metodoKey);
+  }
+
+  private debeReprogramarGuardadoMetodo(metodoKey: string): boolean {
+    const habiaCambiosEnCola = this.methodSaveQueued.delete(metodoKey);
+    const metodoDraft = this.obtenerMetodoPagoDraft(metodoKey);
+
+    return habiaCambiosEnCola || (!!metodoDraft && this.metodoTieneCambios(metodoDraft));
+  }
+
+  private limpiarAvisosYTemporizadoresPago(): void {
+    this.limpiarTemporizadorAvisoConfiguracionPago();
+    this.methodSaveTimers.forEach((timeoutId) => clearTimeout(timeoutId));
+    this.methodSaveTimers.clear();
+    this.methodSaveQueued.clear();
+    this.methodSaveInFlight.clear();
   }
 
   private configurarValidadoresNotificaciones(habilitado: boolean): void {
