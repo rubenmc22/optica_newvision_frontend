@@ -162,7 +162,7 @@
 
             <div class="producto-imagen-container">
               <img [src]="producto.imagenUrl" (error)="onImageError($event)" class="producto-imagen"
-                [alt]="producto.nombre" />
+                [alt]="getNombreProductoDisplay(producto)" />
 
               <div class="producto-overlay">
                 <span>Ver detalles</span>
@@ -170,7 +170,7 @@
 
               <div class="producto-badges">
                 <span class="badge estado-badge" [ngClass]="{
-          'estado-activo': producto.activo && producto.stock > 0,
+          'estado-activo': producto.activo,
           'estado-inactivo': !producto.activo
         }">
                   {{ producto.activo ? 'Activo' : 'Inactivo' }}
@@ -183,7 +183,7 @@
 
             <div class="producto-content">
               <h6 class="producto-nombre">
-                {{ producto.marca }} · {{ producto.nombre }}
+                {{ getNombreProductoDisplay(producto) }}
               </h6>
 
               <div class="producto-meta-row">
@@ -208,7 +208,7 @@
 
               </div>
 
-              <div class="producto-stock">
+              <div class="producto-stock" *ngIf="controlaStockProducto(producto); else sinControlStockTpl">
                 <i class="bi bi-box"></i>
                 <span class="stock-cantidad" [ngClass]="{
           'stock-alto': producto.stock > 5,
@@ -224,6 +224,13 @@
                   Agotado
                 </span>
               </div>
+
+              <ng-template #sinControlStockTpl>
+                <div class="producto-stock producto-stock--informativo">
+                  <i class="bi bi-box-seam"></i>
+                  <span class="stock-cantidad">Sin control de stock</span>
+                </div>
+              </ng-template>
 
               <div class="producto-actions" *ngIf="producto.sede === sedeActiva">
                 <button class="btn btn-editar" (click)="abrirModal('editar', producto); $event.stopPropagation()">
@@ -293,7 +300,7 @@
 <!-- Modal Agregar/Ver/Editar Modernizado -->
 <div class="modal-overlay modal-catalogo" *ngIf="mostrarModal">
   <div class="modal d-block" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered modal-producto-dialog">
 
       <form #formProducto="ngForm" class="modal-content modal-moderna" (ngSubmit)="guardarProducto()">
 
@@ -338,47 +345,59 @@
               <div class="section-content">
                 <div class="campos-principales-grid">
 
-                  <!-- Sección de imagen -->
-                  <div class="seccion-imagen">
-                    <div class="avatar-widget">
-                      <img [src]="getProfileImage()" (error)="handleImageError($event)" class="avatar-img"
-                        alt="Imagen del producto" />
-                      <div class="avatar-overlay show-on-hover" *ngIf="modoModal !== 'ver'">
-                        <label for="avatarUpload" class="btn-imagen">
-                          <i class="bi bi-camera"></i>
-                        </label>
-                        <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
-                          (change)="onFileSelected($event)" />
+                  <div class="seccion-imagen-card">
+                    <div class="seccion-imagen-card__header">
+                      <div class="seccion-imagen-card__copy">
+                        <h6 class="seccion-imagen-card__title">Imagen del producto</h6>
+                        <p class="seccion-imagen-card__subtitle">Vista principal para inventario y consulta rápida</p>
+                      </div>
+                      <span class="seccion-imagen-card__badge" *ngIf="modoModal !== 'ver'">Editable</span>
+                    </div>
+
+                    <div class="seccion-imagen">
+                      <div class="avatar-widget">
+                        <img [src]="getProfileImage()" (error)="handleImageError($event)" class="avatar-img"
+                          alt="Imagen del producto" />
+                        <div class="avatar-overlay show-on-hover" *ngIf="modoModal !== 'ver'">
+                          <label for="avatarUpload" class="btn-imagen">
+                            <i class="bi bi-camera"></i>
+                          </label>
+                          <input type="file" id="avatarUpload" accept="image/*" style="display: none;"
+                            (change)="onFileSelected($event)" />
+                        </div>
                       </div>
                     </div>
-                    <small class="text-muted text-center">Imagen del producto</small>
+
+                    <div class="seccion-imagen-card__footer">
+                      <span class="seccion-imagen-card__hint">Usa una foto limpia y centrada para identificar mejor el producto.</span>
+                    </div>
                   </div>
 
                   <!-- Sección de campos principales -->
                   <div class="seccion-campos-principales">
+                    <div class="seccion-campos-principales__header">
+                      <h6 class="seccion-campos-principales__title">Datos principales</h6>
+                      <p class="seccion-campos-principales__subtitle">Nombre generado, disponibilidad y precio base del producto</p>
+                    </div>
 
-                    <!-- Fila 1: Nombre y Stock en línea -->
-                    <div class="fila-nombre-stock">
-
-                      <!-- Nombre del producto -->
+                    <!-- Fila 1: Nombre autogenerado y stock condicional -->
+                    <div class="fila-nombre-stock" [class.fila-nombre-stock--solo]="!mostrarCampoStock">
                       <div class="form-group-moderno">
                         <label class="form-label-moderno">
                           <i class="bi bi-tag"></i>
-                          Nombre del Producto <span class="required">*</span>
+                          Nombre del producto
                         </label>
-                        <input type="text" class="form-control-moderno" [(ngModel)]="producto.nombre" name="nombre"
-                          required [disabled]="esSoloLectura" placeholder="Ingrese el nombre del producto">
+                        <input type="text" class="form-control-moderno" [ngModel]="producto.nombre || ''" name="nombre"
+                          [disabled]="true" [placeholder]="placeholderNombreProducto" readonly>
                       </div>
 
-                      <!-- Stock -->
-                      <div class="form-group-moderno">
+                      <div class="form-group-moderno" *ngIf="mostrarCampoStock">
                         <label class="form-label-moderno">
                           <i class="bi bi-box"></i>
-                          Stock <span class="required">*</span>
+                          Stock disponible <span class="required" *ngIf="stockEsObligatorio">*</span>
                         </label>
-                        <!-- Campo Stock mejorado -->
                         <input type="text" class="form-control-moderno" [(ngModel)]="producto.stock" name="stock"
-                          required min="0" [disabled]="esSoloLectura" placeholder="0" (input)="soloNumerosStock($event)"
+                          [required]="stockEsObligatorio" min="0" [disabled]="esSoloLectura" [placeholder]="placeholderStockCategoria" (input)="soloNumerosStock($event)"
                           (blur)="formatearStock($event)">
                       </div>
                     </div>
@@ -505,6 +524,7 @@
                       </label>
                       <input *ngIf="mostrarCampoModeloTexto" type="text" class="form-control-moderno"
                         [(ngModel)]="producto.modelo" name="modelo" [disabled]="esSoloLectura"
+                        (ngModelChange)="onModeloTextoProductoChange($event)"
                         [placeholder]="placeholderModeloCategoria">
 
                       <ng-select *ngIf="usaSelectorMaterialCategoria" [items]="opcionesMaterialCategoria" bindLabel="label"

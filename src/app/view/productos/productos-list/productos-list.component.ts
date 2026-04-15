@@ -290,11 +290,15 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     get totalProductosConAlerta(): number {
-        return this.productos.filter(producto => (producto.stock ?? 0) <= this.STOCK_BAJO_LIMITE).length;
+        return this.productos.filter(producto =>
+            this.controlaStockProducto(producto) && (producto.stock ?? 0) <= this.STOCK_BAJO_LIMITE
+        ).length;
     }
 
     get totalProductosAgotados(): number {
-        return this.productos.filter(producto => (producto.stock ?? 0) === 0).length;
+        return this.productos.filter(producto =>
+            this.controlaStockProducto(producto) && (producto.stock ?? 0) === 0
+        ).length;
     }
 
     esMonedaBolivar(moneda: string): boolean {
@@ -499,7 +503,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         if (msg.includes('Ya existe un producto con el mismo nombre')) {
             this.swalService.showWarning(
                 'Duplicado',
-                'Ya existe un producto con este nombre. Cambia el nombre e intenta nuevamente.'
+                'Ya existe un producto con una configuracion similar. Ajusta la categoria, marca o referencia e intenta nuevamente.'
             );
         } else {
             const titulo = operacion === 'agregar' ? 'No se pudo agregar el producto' : 'No se pudo actualizar el producto';
@@ -524,7 +528,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         const productosValidos = Array.isArray(this.productos) ? this.productos : [];
 
         const filtrados = productosValidos.filter(p => {
-            const nombre = p.nombre?.toLowerCase() ?? '';
+            const nombre = this.getNombreProductoDisplay(p).toLowerCase();
             const codigo = p.codigo?.toLowerCase() ?? '';
             const categoria = p.categoria?.toLowerCase() ?? '';
             const marca = p.marca?.toLowerCase() ?? '';
@@ -596,11 +600,16 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     get productoSeguro(): Producto {
         const base = this.normalizarCamposSegunCategoria(this.producto ?? this.crearProductoVacio());
         const clasificacion = normalizarClasificacionProducto(base);
+        const controlaStock = this.categoriaControlaStock(base.categoria);
+        const stockNormalizado = controlaStock ? Math.max(Number(base.stock ?? 0), 0) : 0;
+        const nombreResuelto = this.resolverNombreProducto(base);
 
         return {
             ...base,
             ...clasificacion,
             id: base.id || crypto.randomUUID(),
+            nombre: nombreResuelto,
+            stock: stockNormalizado,
             moneda: base.moneda || this.monedaSistema,
             fechaIngreso: base.fechaIngreso || new Date().toISOString().split('T')[0],
             imagenUrl: this.avatarPreview || base.imagenUrl || ''
@@ -673,7 +682,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     formularioValido(): boolean {
-        const camposObligatorios = ['nombre', 'activo', 'categoria', 'stock', 'precio', 'moneda'];
+        const camposObligatorios = ['activo', 'categoria', 'precio', 'moneda'];
+
+        if (this.stockEsObligatorio) {
+            camposObligatorios.push('stock');
+        }
 
         if (this.marcaEsObligatoria) {
             camposObligatorios.push('marca');
@@ -888,33 +901,12 @@ export class ProductosListComponent implements OnInit, OnDestroy {
 
     private appendClasificacionProductoToFormData(formData: FormData, producto: Producto): void {
         const clasificacion = normalizarClasificacionProducto(producto);
-        const camposCamelCase: Record<string, string> = {
-            tipoItem: clasificacion.tipoItem,
-            requiereFormula: String(clasificacion.requiereFormula),
-            requierePaciente: String(clasificacion.requierePaciente),
-            requiereHistoriaMedica: String(clasificacion.requiereHistoriaMedica),
-            permiteFormulaExterna: String(clasificacion.permiteFormulaExterna),
-            requiereItemPadre: String(clasificacion.requiereItemPadre),
-            requiereProcesoTecnico: String(clasificacion.requiereProcesoTecnico),
-            origenClasificacion: clasificacion.origenClasificacion,
-            esClasificacionConfiable: String(clasificacion.esClasificacionConfiable),
-            clasificacionManual: String(clasificacion.clasificacionManual)
-        };
-
-        const camposSnakeCase: Record<string, string> = {
-            tipo_item: clasificacion.tipoItem,
+        const camposFuncionales: Record<string, string> = {
             requiere_formula: String(clasificacion.requiereFormula),
-            requiere_paciente: String(clasificacion.requierePaciente),
-            requiere_historia_medica: String(clasificacion.requiereHistoriaMedica),
-            permite_formula_externa: String(clasificacion.permiteFormulaExterna),
-            requiere_item_padre: String(clasificacion.requiereItemPadre),
-            requiere_proceso_tecnico: String(clasificacion.requiereProcesoTecnico),
-            origen_clasificacion: clasificacion.origenClasificacion,
-            es_clasificacion_confiable: String(clasificacion.esClasificacionConfiable),
-            clasificacion_manual: String(clasificacion.clasificacionManual)
+            requiere_item_padre: String(clasificacion.requiereItemPadre)
         };
 
-        [...Object.entries(camposCamelCase), ...Object.entries(camposSnakeCase)].forEach(([clave, valor]) => {
+        Object.entries(camposFuncionales).forEach(([clave, valor]) => {
             formData.append(clave, valor);
         });
     }
@@ -965,8 +957,16 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         return ['monturas', 'lentes de contacto', 'accesorios'].includes(this.categoriaProductoActual);
     }
 
+    get mostrarCampoStock(): boolean {
+        return this.categoriaControlaStock(this.categoriaProductoActual);
+    }
+
     get marcaEsObligatoria(): boolean {
         return ['monturas', 'lentes de contacto', 'liquidos', 'líquidos', 'estuches', 'accesorios'].includes(this.categoriaProductoActual);
+    }
+
+    get stockEsObligatorio(): boolean {
+        return this.mostrarCampoStock;
     }
 
     get materialEsObligatorio(): boolean {
@@ -998,6 +998,10 @@ export class ProductosListComponent implements OnInit, OnDestroy {
 
     get placeholderCategoriaProducto(): string {
         return 'Elige la familia comercial del producto';
+    }
+
+    get placeholderNombreProducto(): string {
+        return 'Se genera automaticamente segun la categoria y el tipo';
     }
 
     get placeholderModeloCategoria(): string {
@@ -1096,6 +1100,23 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         }
     }
 
+    get placeholderStockCategoria(): string {
+        switch (this.categoriaProductoActual) {
+            case 'monturas':
+                return 'Ej. 12 unidades disponibles';
+            case 'lentes de contacto':
+                return 'Ej. 24 cajas disponibles';
+            case 'liquidos':
+            case 'líquidos':
+                return 'Ej. 18 unidades disponibles';
+            case 'estuches':
+            case 'accesorios':
+                return 'Ej. 10 unidades disponibles';
+            default:
+                return '0';
+        }
+    }
+
     get opcionesTipoCategoria(): OpcionSelect[] {
         switch (this.categoriaProductoActual) {
             case 'cristales':
@@ -1114,44 +1135,71 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         return this.usaSelectorMaterialCategoria ? this.materialesDisponibles : [];
     }
 
-    onCategoriaProductoModelChange(valor: string | null): void {
-        if (!this.producto) {
-            return;
-        }
-
-        this.producto = this.normalizarCamposSegunCategoria({
-            ...this.producto,
-            categoria: valor ?? ''
-        });
+    getNombreProductoDisplay(producto: Partial<Producto> | null | undefined): string {
+        return this.resolverNombreProducto(producto);
     }
 
-    onModeloProductoModelChange(valor: string | null): void {
-        if (!this.producto) {
-            return;
-        }
-
-        this.producto = this.normalizarCamposSegunCategoria({
-            ...this.producto,
-            modelo: valor ?? ''
-        });
+    controlaStockProducto(producto: Partial<Producto> | null | undefined): boolean {
+        return this.categoriaControlaStock(producto?.categoria ?? '');
     }
 
-    onMaterialProductoModelChange(valor: string | null): void {
+    onCategoriaProductoModelChange(valor: string | null | Event): void {
         if (!this.producto) {
             return;
         }
 
-        this.producto = this.normalizarCamposSegunCategoria({
+        const categoria = typeof valor === 'string' || valor === null ? valor : null;
+
+        this.producto = this.sincronizarNombreProducto(this.normalizarCamposSegunCategoria({
             ...this.producto,
-            material: valor ?? ''
-        });
+            categoria: categoria ?? ''
+        }));
+    }
+
+    onModeloProductoModelChange(valor: string | null | Event): void {
+        if (!this.producto) {
+            return;
+        }
+
+        const modelo = typeof valor === 'string' || valor === null ? valor : null;
+
+        this.producto = this.sincronizarNombreProducto(this.normalizarCamposSegunCategoria({
+            ...this.producto,
+            modelo: modelo ?? ''
+        }));
+    }
+
+    onMaterialProductoModelChange(valor: string | null | Event): void {
+        if (!this.producto) {
+            return;
+        }
+
+        const material = typeof valor === 'string' || valor === null ? valor : null;
+
+        this.producto = this.sincronizarNombreProducto(this.normalizarCamposSegunCategoria({
+            ...this.producto,
+            material: material ?? ''
+        }));
     }
 
     onCategoriaProductoChange(): void {
-        this.producto = this.normalizarCamposSegunCategoria({
+        this.producto = this.sincronizarNombreProducto(this.normalizarCamposSegunCategoria({
             ...this.producto,
             categoria: this.producto?.categoria ?? ''
-        });
+        }));
+    }
+
+    onModeloTextoProductoChange(valor: string | null | Event): void {
+        if (!this.producto) {
+            return;
+        }
+
+        const modelo = typeof valor === 'string' || valor === null ? valor : null;
+
+        this.producto = this.sincronizarNombreProducto(this.normalizarCamposSegunCategoria({
+            ...this.producto,
+            modelo: modelo ?? ''
+        }));
     }
 
     private normalizarCamposSegunCategoria(producto: Producto): Producto {
@@ -1186,7 +1234,51 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             siguiente.color = '';
         }
 
+        if (!this.categoriaControlaStock(categoria)) {
+            siguiente.stock = 0;
+        }
+
         return siguiente;
+    }
+
+    private sincronizarNombreProducto(producto: Producto): Producto {
+        return {
+            ...producto,
+            nombre: this.resolverNombreProducto(producto)
+        };
+    }
+
+    private resolverNombreProducto(producto: Partial<Producto> | null | undefined): string {
+        const categoria = producto?.categoria?.trim() ?? '';
+        if (!categoria) {
+            return '';
+        }
+
+        const categoriaNormalizada = normalizarTextoClasificacion(categoria);
+        const tipo = this.obtenerTipoParaNombre(producto, categoriaNormalizada);
+
+        return [categoria, tipo].filter(Boolean).join(' - ');
+    }
+
+    private categoriaControlaStock(categoria: string): boolean {
+        const categoriaNormalizada = normalizarTextoClasificacion(categoria);
+        return ['monturas', 'lentes de contacto', 'liquidos', 'líquidos', 'estuches', 'accesorios'].includes(categoriaNormalizada);
+    }
+
+    private obtenerTipoParaNombre(producto: Partial<Producto> | null | undefined, categoria: string): string {
+        if (!producto) {
+            return '';
+        }
+
+        if (this.categoriaUsaSelectorModelo(categoria)) {
+            return producto.modelo?.trim() ?? '';
+        }
+
+        if (this.categoriaUsaSelectorMaterial(categoria)) {
+            return producto.material?.trim() ?? '';
+        }
+
+        return producto.modelo?.trim() ?? '';
     }
 
     private categoriaUsaSelectorModelo(categoria: string): boolean {

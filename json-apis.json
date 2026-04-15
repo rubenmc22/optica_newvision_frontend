@@ -2255,3 +2255,163 @@ CONFIGURACION GENERAL - CIERRE DE CAJA
     ],
     "observaciones": "sdadsadsa"
 }
+
+
+INVENTARIO - CONTRATO PROPUESTO CON MEJORAS
+
+// nota funcional para backend:
+// - el frontend envia multipart/form-data, pero este es el contrato equivalente en json
+// - nombre se genera automaticamente con categoria + tipo/modelo
+// - stock solo aplica a categorias inventariables
+// - campos funcionales nuevos: requiere_formula y requiere_item_padre
+
+// obtener inventario
+// GET /producto-get
+{
+    "message": "ok",
+    "iva": 16,
+    "productos": [
+        {
+            "id": 41,
+            "sede_id": "guatire",
+            "nombre": "Cristales - Monofocal visión sencilla",
+            "codigo": "PR-000041",
+            "marca": "",
+            "color": null,
+            "material": "",
+            "proveedor": null,
+            "categoria": "Cristales",
+            "modelo": "Monofocal visión sencilla",
+            "stock": 0,
+            "precio": 10,
+            "aplicaIva": false,
+            "precioConIva": 10,
+            "moneda": "dolar",
+            "activo": true,
+            "descripcion": "Cristal base monofocal para visión sencilla.",
+            "imagen_url": "/public/images/product-1744740000000.webp",
+            "created_at": "2026-04-15T14:20:00.000Z",
+            "requiere_formula": true,
+            "requiere_item_padre": false
+        },
+        {
+            "id": 42,
+            "sede_id": "guatire",
+            "nombre": "Filtros - Luz azul",
+            "codigo": "PR-000042",
+            "marca": "",
+            "color": null,
+            "material": "",
+            "proveedor": null,
+            "categoria": "Filtros",
+            "modelo": "Luz azul",
+            "stock": 0,
+            "precio": 15,
+            "aplicaIva": false,
+            "precioConIva": 15,
+            "moneda": "dolar",
+            "activo": true,
+            "descripcion": "Filtro adicional para protección frente a pantallas.",
+            "imagen_url": null,
+            "created_at": "2026-04-15T14:30:00.000Z",
+            "requiere_formula": false,
+            "requiere_item_padre": true
+        },
+        {
+            "id": 43,
+            "sede_id": "guatire",
+            "nombre": "Monturas - Carrera 8847",
+            "codigo": "PR-000043",
+            "marca": "Carrera",
+            "color": "Negro mate",
+            "material": "Acetato",
+            "proveedor": "Distribuidor oficial",
+            "categoria": "Monturas",
+            "modelo": "Carrera 8847",
+            "stock": 12,
+            "precio": 85,
+            "aplicaIva": true,
+            "precioConIva": 98.6,
+            "moneda": "dolar",
+            "activo": true,
+            "descripcion": "Montura completa disponible para venta directa.",
+            "imagen_url": "/public/images/product-1744740100000.webp",
+            "created_at": "2026-04-15T14:40:00.000Z",
+            "requiere_formula": false,
+            "requiere_item_padre": false
+        }
+    ]
+}
+
+// crear producto inventario
+// POST /producto-add
+{
+    "nombre": "Cristales - Monofocal visión sencilla",
+    "marca": "",
+    "modelo": "Monofocal visión sencilla",
+    "color": "",
+    "material": "",
+    "proveedor": "",
+    "categoria": "Cristales",
+    "stock": 0,
+    "moneda": "USD",
+    "activo": true,
+    "descripcion": "Cristal base monofocal para visión sencilla.",
+    "fechaIngreso": "2026-04-15",
+    "aplicaIva": false,
+    "precio": 10,
+    "requiere_formula": true,
+    "requiere_item_padre": false
+}
+
+{
+    "message": "Producto agregado correctamente",
+    "producto": {
+        "id": 41,
+        "nombre": "Cristales - Monofocal visión sencilla",
+        "categoria": "Cristales",
+        "modelo": "Monofocal visión sencilla",
+        "stock": 0,
+        "precio": 10,
+        "activo": true,
+        "requiere_formula": true,
+        "requiere_item_padre": false
+    }
+}
+
+// actualizar producto inventario
+// PUT /producto-update/41
+{
+    "nombre": "Cristales - Monofocal visión sencilla",
+    "marca": "",
+    "modelo": "Monofocal visión sencilla",
+    "color": "",
+    "material": "",
+    "proveedor": "Laboratorio principal",
+    "categoria": "Cristales",
+    "stock": 0,
+    "moneda": "USD",
+    "activo": true,
+    "descripcion": "Cristal monofocal actualizado con proveedor principal.",
+    "fechaIngreso": "2026-04-15",
+    "aplicaIva": false,
+    "precio": 12,
+    "requiere_formula": true,
+    "requiere_item_padre": false
+}
+
+{
+    "message": "Producto actualizado correctamente",
+    "producto": {
+        "id": 41,
+        "nombre": "Cristales - Monofocal visión sencilla",
+        "categoria": "Cristales",
+        "modelo": "Monofocal visión sencilla",
+        "proveedor": "Laboratorio principal",
+        "stock": 0,
+        "precio": 12,
+        "activo": true,
+        "requiere_formula": true,
+        "requiere_item_padre": false
+    }
+}
