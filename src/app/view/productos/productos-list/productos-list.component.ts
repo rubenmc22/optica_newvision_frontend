@@ -24,6 +24,9 @@ import { MATERIALES, OpcionSelect, TIPOS_CRISTALES, TIPOS_LENTES_CONTACTO, TRATA
 export class ProductosListComponent implements OnInit, OnDestroy {
     @Output() onCerrar = new EventEmitter<void>();
 
+    private readonly CATEGORIA_FILTROS_ADITIVOS = 'Filtro/Aditivos';
+    private readonly CATEGORIA_FILTROS_ADITIVOS_NORMALIZADA = 'filtros/aditivos';
+
     // CONSTANTES
     readonly PRODUCTOS_POR_PAGINA = 12;
     readonly RANGO_PAGINACION = 3;
@@ -54,7 +57,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     ordenStockAscendente: boolean = true;
 
     // CATÁLOGO
-    categoriasProducto: string[] = ['Monturas', 'Cristales', 'Filtros', 'Aditivos', 'Materiales', 'Lentes de contacto', 'Líquidos', 'Estuches', 'Accesorios'];
+    categoriasProducto: string[] = ['Monturas', 'Cristales', 'Filtro/Aditivos', 'Materiales', 'Lentes de contacto', 'Líquidos', 'Estuches', 'Accesorios'];
     moneda: MonedaVisual[] = [];
     tiposCristalesDisponibles: OpcionSelect[] = TIPOS_CRISTALES.filter(item => item.value !== 'LENTES_CONTACTO');
     tiposLentesContactoDisponibles: OpcionSelect[] = TIPOS_LENTES_CONTACTO;
@@ -164,9 +167,9 @@ export class ProductosListComponent implements OnInit, OnDestroy {
                 })
             )
         }).subscribe(({ productosResponse, sedes, user }) => {
-            this.productos = this.productoConversionService.convertirListaProductosAmonedaSistema(
-                productosResponse.productos ?? []
-            );
+            this.productos = this.productoConversionService
+                .convertirListaProductosAmonedaSistema(productosResponse.productos ?? [])
+                .map(producto => this.prepararProductoParaEdicion(producto));
 
             this.corregirProductosInconsistentes();
 
@@ -388,6 +391,10 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     guardarProducto(): void {
+        if (this.botonGuardarDeshabilitado()) {
+            return;
+        }
+
         if (this.modoModal === 'agregar') {
             this.agregarProductoFlow();
         } else {
@@ -430,7 +437,9 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             })
         ).subscribe({
             next: ({ productos }) => {
-                this.productos = this.productoConversionService.convertirListaProductosAmonedaSistema(productos);
+                this.productos = this.productoConversionService
+                    .convertirListaProductosAmonedaSistema(productos)
+                    .map(item => this.prepararProductoParaEdicion(item));
                 this.corregirProductosInconsistentes();
                 this.cargando = false;
                 this.cerrarModal();
@@ -484,7 +493,9 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             })
         ).subscribe({
             next: ({ productos }) => {
-                this.productos = this.productoConversionService.convertirListaProductosAmonedaSistema(productos);
+                this.productos = this.productoConversionService
+                    .convertirListaProductosAmonedaSistema(productos)
+                    .map(item => this.prepararProductoParaEdicion(item));
                 this.corregirProductosInconsistentes();
                 this.cargando = false;
                 this.cerrarModal();
@@ -671,17 +682,18 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     formularioModificado(): boolean {
         if (!this.productoOriginal || !this.producto) return false;
 
-        const productoActual = { ...this.producto };
-        const productoBase = { ...this.productoOriginal };
-
-        delete productoActual.imagenUrl;
-        delete productoBase.imagenUrl;
+        const productoActual = this.obtenerProductoComparable(this.producto);
+        const productoBase = this.obtenerProductoComparable(this.productoOriginal);
 
         const imagenCambiada = this.imagenSeleccionada !== null;
         return JSON.stringify(productoActual) !== JSON.stringify(productoBase) || imagenCambiada;
     }
 
     formularioValido(): boolean {
+        if (!this.producto) {
+            return false;
+        }
+
         const camposObligatorios = ['activo', 'categoria', 'precio', 'moneda'];
 
         if (this.stockEsObligatorio) {
@@ -705,13 +717,14 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         const valido = camposObligatorios.every(campo => {
             const valor = this.producto?.[campo];
             if (typeof valor === 'boolean') return true;
+            if (campo === 'precio') return this.precioFormularioCompleto();
             if (typeof valor === 'number') return valor >= 0;
             return valor !== undefined && valor !== null && `${valor}`.trim().length > 0;
         });
 
         if (this.producto.aplicaIva) {
             return valido
-                && (this.producto.precioConIva !== undefined && this.producto.precioConIva >= 0)
+                && this.precioFormularioCompleto()
                 && this.validarCamposCondicionalesProducto();
         }
 
@@ -724,6 +737,21 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             return !this.formularioModificado() || !this.formularioValido();
         }
         return !this.formularioValido();
+    }
+
+    private precioFormularioCompleto(): boolean {
+        const precioActual = this.producto?.aplicaIva ? this.producto?.precioConIva : this.producto?.precio;
+        return typeof precioActual === 'number' && !isNaN(precioActual) && precioActual > 0;
+    }
+
+    private obtenerProductoComparable(producto: Producto | null | undefined): Partial<Producto> | null {
+        if (!producto) {
+            return null;
+        }
+
+        const comparable = { ...this.prepararProductoParaEdicion(producto) };
+        delete comparable.imagenUrl;
+        return comparable;
     }
 
     actualizarPacientesPorSede(): void {
@@ -893,9 +921,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     private prepararProductoParaEdicion(producto: Producto): Producto {
+        const productoNormalizado = this.sincronizarNombreProducto(this.normalizarCamposSegunCategoria(producto));
+
         return {
-            ...this.normalizarCamposSegunCategoria(producto),
-            ...normalizarClasificacionProducto(this.normalizarCamposSegunCategoria(producto))
+            ...productoNormalizado,
+            ...normalizarClasificacionProducto(productoNormalizado)
         };
     }
 
@@ -930,11 +960,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     get categoriaProductoActual(): string {
-        return normalizarTextoClasificacion(this.producto?.categoria);
+        return this.normalizarCategoriaProducto(this.producto?.categoria);
     }
 
     get usaSelectorTipoCategoria(): boolean {
-        return ['cristales', 'filtros', 'aditivos', 'lentes de contacto'].includes(this.categoriaProductoActual);
+        return ['cristales', this.CATEGORIA_FILTROS_ADITIVOS_NORMALIZADA, 'lentes de contacto'].includes(this.categoriaProductoActual);
     }
 
     get mostrarCampoModeloTexto(): boolean {
@@ -946,11 +976,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     get mostrarCampoMarca(): boolean {
-        return !['cristales', 'filtros', 'aditivos', 'materiales'].includes(this.categoriaProductoActual);
+        return !['cristales', this.CATEGORIA_FILTROS_ADITIVOS_NORMALIZADA, 'materiales'].includes(this.categoriaProductoActual);
     }
 
     get mostrarCampoMaterial(): boolean {
-        return ['monturas', 'materiales', 'accesorios', 'estuches', 'liquidos', 'líquidos'].includes(this.categoriaProductoActual);
+        return ['monturas', 'materiales', 'accesorios', 'estuches', 'liquidos'].includes(this.categoriaProductoActual);
     }
 
     get mostrarCampoColor(): boolean {
@@ -962,7 +992,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     get marcaEsObligatoria(): boolean {
-        return ['monturas', 'lentes de contacto', 'liquidos', 'líquidos', 'estuches', 'accesorios'].includes(this.categoriaProductoActual);
+        return ['monturas', 'lentes de contacto', 'liquidos', 'estuches', 'accesorios'].includes(this.categoriaProductoActual);
     }
 
     get stockEsObligatorio(): boolean {
@@ -981,10 +1011,8 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         switch (this.categoriaProductoActual) {
             case 'cristales':
                 return 'Tipo de cristal';
-            case 'filtros':
-                return 'Tipo de filtro';
-            case 'aditivos':
-                return 'Tipo de aditivo';
+            case 'filtros/aditivos':
+                return 'Tipo de filtro o aditivo';
             case 'lentes de contacto':
                 return 'Tipo de lente';
             default:
@@ -1009,7 +1037,6 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             case 'monturas':
                 return 'Ej. Carrera 8847, Ray-Ban Erika';
             case 'liquidos':
-            case 'líquidos':
                 return 'Ej. Solución 120 ml, kit de limpieza';
             case 'estuches':
             case 'accesorios':
@@ -1023,10 +1050,8 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         switch (this.categoriaProductoActual) {
             case 'cristales':
                 return 'Selecciona el tipo';
-            case 'filtros':
-                return 'Selecciona el filtro';
-            case 'aditivos':
-                return 'Selecciona el aditivo';
+            case 'filtros/aditivos':
+                return 'Selecciona el filtro o aditivo';
             case 'lentes de contacto':
                 return 'Selecciona el tipo';
             default:
@@ -1041,7 +1066,6 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             case 'lentes de contacto':
                 return 'Ej. Biomedics, Evolution';
             case 'liquidos':
-            case 'líquidos':
                 return 'Ej. Renu, Opti-Free';
             case 'estuches':
             case 'accesorios':
@@ -1092,8 +1116,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
                 return 'Añade observaciones útiles como rango, proveedor o notas comerciales.';
             case 'monturas':
                 return 'Describe talla, estilo, detalles visuales o referencia interna.';
-            case 'filtros':
-            case 'aditivos':
+            case 'filtros/aditivos':
                 return 'Resume el uso técnico o comercial de este complemento.';
             default:
                 return 'Agrega detalles útiles para identificar el producto más rápido.';
@@ -1107,7 +1130,6 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             case 'lentes de contacto':
                 return 'Ej. 24 cajas disponibles';
             case 'liquidos':
-            case 'líquidos':
                 return 'Ej. 18 unidades disponibles';
             case 'estuches':
             case 'accesorios':
@@ -1121,8 +1143,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         switch (this.categoriaProductoActual) {
             case 'cristales':
                 return this.tiposCristalesDisponibles;
-            case 'filtros':
-            case 'aditivos':
+            case 'filtros/aditivos':
                 return this.tratamientosDisponibles;
             case 'lentes de contacto':
                 return this.tiposLentesContactoDisponibles;
@@ -1203,8 +1224,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     private normalizarCamposSegunCategoria(producto: Producto): Producto {
-        const categoria = normalizarTextoClasificacion(producto?.categoria);
-        const siguiente = { ...producto };
+        const categoria = this.normalizarCategoriaProducto(producto?.categoria);
+        const siguiente = {
+            ...producto,
+            categoria: this.obtenerCategoriaVisual(producto?.categoria)
+        };
 
         if (!this.debeMostrarMarcaSegunCategoria(categoria)) {
             siguiente.marca = '';
@@ -1249,20 +1273,20 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     private resolverNombreProducto(producto: Partial<Producto> | null | undefined): string {
-        const categoria = producto?.categoria?.trim() ?? '';
+        const categoria = this.obtenerCategoriaVisual(producto?.categoria);
         if (!categoria) {
             return '';
         }
 
-        const categoriaNormalizada = normalizarTextoClasificacion(categoria);
+        const categoriaNormalizada = this.normalizarCategoriaProducto(categoria);
         const tipo = this.obtenerTipoParaNombre(producto, categoriaNormalizada);
 
         return [categoria, tipo].filter(Boolean).join(' - ');
     }
 
     private categoriaControlaStock(categoria: string): boolean {
-        const categoriaNormalizada = normalizarTextoClasificacion(categoria);
-        return ['monturas', 'lentes de contacto', 'liquidos', 'líquidos', 'estuches', 'accesorios'].includes(categoriaNormalizada);
+        const categoriaNormalizada = this.normalizarCategoriaProducto(categoria);
+        return ['monturas', 'lentes de contacto', 'liquidos', 'estuches', 'accesorios'].includes(categoriaNormalizada);
     }
 
     private obtenerTipoParaNombre(producto: Partial<Producto> | null | undefined, categoria: string): string {
@@ -1282,7 +1306,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     private categoriaUsaSelectorModelo(categoria: string): boolean {
-        return ['cristales', 'filtros', 'aditivos', 'lentes de contacto'].includes(categoria);
+        return ['cristales', this.CATEGORIA_FILTROS_ADITIVOS_NORMALIZADA, 'lentes de contacto'].includes(categoria);
     }
 
     private categoriaUsaSelectorMaterial(categoria: string): boolean {
@@ -1290,7 +1314,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     private debeMostrarMarcaSegunCategoria(categoria: string): boolean {
-        return !['cristales', 'filtros', 'aditivos', 'materiales'].includes(categoria);
+        return !['cristales', this.CATEGORIA_FILTROS_ADITIVOS_NORMALIZADA, 'materiales'].includes(categoria);
     }
 
     private debeMostrarModeloTextoSegunCategoria(categoria: string): boolean {
@@ -1298,7 +1322,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     private debeMostrarMaterialSegunCategoria(categoria: string): boolean {
-        return ['monturas', 'materiales', 'accesorios', 'estuches', 'liquidos', 'líquidos'].includes(categoria);
+        return ['monturas', 'materiales', 'accesorios', 'estuches', 'liquidos'].includes(categoria);
     }
 
     private debeMostrarColorSegunCategoria(categoria: string): boolean {
@@ -1309,14 +1333,37 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         switch (categoria) {
             case 'cristales':
                 return this.tiposCristalesDisponibles;
-            case 'filtros':
-            case 'aditivos':
+            case 'filtros/aditivos':
                 return this.tratamientosDisponibles;
             case 'lentes de contacto':
                 return this.tiposLentesContactoDisponibles;
             default:
                 return [];
         }
+    }
+
+    private normalizarCategoriaProducto(categoria: unknown): string {
+        const categoriaNormalizada = normalizarTextoClasificacion(categoria);
+
+        if (['filtro', 'filtros', 'aditivo', 'aditivos', 'filtro/aditivos', 'filtros/aditivos'].includes(categoriaNormalizada)) {
+            return this.CATEGORIA_FILTROS_ADITIVOS_NORMALIZADA;
+        }
+
+        return categoriaNormalizada;
+    }
+
+    private obtenerCategoriaVisual(categoria: unknown): string {
+        const categoriaNormalizada = this.normalizarCategoriaProducto(categoria);
+
+        if (!categoriaNormalizada) {
+            return '';
+        }
+
+        if (categoriaNormalizada === this.CATEGORIA_FILTROS_ADITIVOS_NORMALIZADA) {
+            return this.CATEGORIA_FILTROS_ADITIVOS;
+        }
+
+        return String(categoria ?? '').trim();
     }
 
     private valorPerteneceAOpciones(valor: string | undefined, opciones: OpcionSelect[]): boolean {
