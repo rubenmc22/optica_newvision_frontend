@@ -461,34 +461,57 @@
                         <i class="bi bi-grid"></i>
                         Categoría <span class="required">*</span>
                       </label>
-                      <ng-select [items]="categoriasProducto" [(ngModel)]="producto.categoria" name="categoria"
-                        [searchable]="true" [disabled]="esSoloLectura" placeholder="Seleccione categoría"
+                      <ng-select [items]="categoriasProducto" [ngModel]="producto.categoria || null" name="categoria"
+                        (ngModelChange)="onCategoriaProductoModelChange($event)" [searchable]="true"
+                        [disabled]="esSoloLectura" [placeholder]="placeholderCategoriaProducto"
+                        class="ng-select-moderno">
+                      </ng-select>
+                    </div>
+                  </div>
+
+                  <!-- Tipo dinámico por categoría -->
+                  <div class="col-md-4" *ngIf="usaSelectorTipoCategoria">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-diagram-3"></i>
+                        {{ etiquetaTipoCategoria }} <span class="required">*</span>
+                      </label>
+                      <ng-select [items]="opcionesTipoCategoria" bindLabel="label" bindValue="label"
+                        [ngModel]="producto.modelo || null" name="modelo"
+                        (ngModelChange)="onModeloProductoModelChange($event)" [searchable]="true" [clearable]="false"
+                        [disabled]="esSoloLectura" [placeholder]="placeholderTipoCategoria"
                         class="ng-select-moderno">
                       </ng-select>
                     </div>
                   </div>
 
                   <!-- Marca -->
-                  <div class="col-md-4">
+                  <div class="col-md-4" *ngIf="mostrarCampoMarca">
                     <div class="form-group-moderno">
                       <label class="form-label-moderno">
                         <i class="bi bi-building"></i>
-                        Marca <span class="required">*</span>
+                        Marca <span class="required" *ngIf="marcaEsObligatoria">*</span>
                       </label>
-                      <input type="text" class="form-control-moderno" [(ngModel)]="producto.marca" name="marca" required
-                        [disabled]="esSoloLectura" placeholder="Marca del producto">
+                      <input type="text" class="form-control-moderno" [(ngModel)]="producto.marca" name="marca"
+                        [disabled]="esSoloLectura" [required]="marcaEsObligatoria" [placeholder]="placeholderMarcaCategoria">
                     </div>
                   </div>
 
-                  <!-- Modelo -->
-                  <div class="col-md-4">
+                  <div class="col-md-4" *ngIf="mostrarCampoModeloTexto || usaSelectorMaterialCategoria">
                     <div class="form-group-moderno">
                       <label class="form-label-moderno">
                         <i class="bi bi-cpu"></i>
-                        Modelo
+                        {{ usaSelectorMaterialCategoria ? etiquetaMaterialCategoria : 'Modelo' }}
                       </label>
-                      <input type="text" class="form-control-moderno" [(ngModel)]="producto.modelo" name="modelo"
-                        [disabled]="esSoloLectura" placeholder="Modelo del producto">
+                      <input *ngIf="mostrarCampoModeloTexto" type="text" class="form-control-moderno"
+                        [(ngModel)]="producto.modelo" name="modelo" [disabled]="esSoloLectura"
+                        [placeholder]="placeholderModeloCategoria">
+
+                      <ng-select *ngIf="usaSelectorMaterialCategoria" [items]="opcionesMaterialCategoria" bindLabel="label"
+                        bindValue="label" [ngModel]="producto.material || null" name="material"
+                        (ngModelChange)="onMaterialProductoModelChange($event)" [searchable]="true" [clearable]="false" [disabled]="esSoloLectura"
+                        [placeholder]="placeholderMaterialCategoria" class="ng-select-moderno">
+                      </ng-select>
                     </div>
                   </div>
 
@@ -500,31 +523,32 @@
                         Proveedor
                       </label>
                       <input type="text" class="form-control-moderno" [(ngModel)]="producto.proveedor" name="proveedor"
-                        [disabled]="esSoloLectura" placeholder="Proveedor del producto">
+                        [disabled]="esSoloLectura" [placeholder]="placeholderProveedorCategoria">
                     </div>
                   </div>
 
                   <!-- Material -->
-                  <div class="col-md-4">
+                  <div class="col-md-4" *ngIf="mostrarCampoMaterial && !usaSelectorMaterialCategoria">
                     <div class="form-group-moderno">
                       <label class="form-label-moderno">
                         <i class="bi bi-palette"></i>
-                        Material <span class="required">*</span>
+                        {{ etiquetaMaterialCategoria }} <span class="required" *ngIf="materialEsObligatorio">*</span>
                       </label>
                       <input type="text" class="form-control-moderno" [(ngModel)]="producto.material" name="material"
-                        required [disabled]="esSoloLectura" placeholder="Material del producto">
+                        [required]="materialEsObligatorio" [disabled]="esSoloLectura"
+                        [placeholder]="placeholderMaterialCategoria">
                     </div>
                   </div>
 
                   <!-- Color -->
-                  <div class="col-md-4">
+                  <div class="col-md-4" *ngIf="mostrarCampoColor">
                     <div class="form-group-moderno">
                       <label class="form-label-moderno">
                         <i class="bi bi-droplet"></i>
                         Color
                       </label>
                       <input type="text" class="form-control-moderno" [(ngModel)]="producto.color" name="color"
-                        [disabled]="esSoloLectura" placeholder="Color del producto">
+                        [disabled]="esSoloLectura" [placeholder]="placeholderColorCategoria">
                     </div>
                   </div>
 
@@ -537,7 +561,7 @@
                       </label>
                       <textarea class="form-control-moderno" rows="3" [(ngModel)]="producto.descripcion"
                         name="descripcion" [disabled]="esSoloLectura"
-                        placeholder="Descripción detallada del producto..."></textarea>
+                        [placeholder]="placeholderDescripcionCategoria"></textarea>
                     </div>
                   </div>
                 </div>

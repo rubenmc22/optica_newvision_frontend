@@ -12,6 +12,8 @@ import { AuthService } from '../../../core/services/auth/auth.service';
 import { UserStateService } from '../../../core/services/userState/user-state-service';
 import { ProductoConversionService } from './producto-conversion.service';
 import { SystemConfigService } from '../../system-config/system-config.service';
+import { normalizarClasificacionProducto, normalizarTextoClasificacion } from '../producto-classification.catalog';
+import { MATERIALES, OpcionSelect, TIPOS_CRISTALES, TIPOS_LENTES_CONTACTO, TRATAMIENTOS_ADITIVOS } from '../../../shared/constants/historias-medicas';
 
 @Component({
     selector: 'app-productos-list',
@@ -52,8 +54,12 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     ordenStockAscendente: boolean = true;
 
     // CATÁLOGO
-    categoriasProducto: string[] = ['Monturas', 'Lentes', 'Líquidos', 'Estuches', 'Misceláneos', 'Lentes de contacto'];
+    categoriasProducto: string[] = ['Monturas', 'Cristales', 'Filtros', 'Aditivos', 'Materiales', 'Lentes de contacto', 'Líquidos', 'Estuches', 'Accesorios'];
     moneda: MonedaVisual[] = [];
+    tiposCristalesDisponibles: OpcionSelect[] = TIPOS_CRISTALES.filter(item => item.value !== 'LENTES_CONTACTO');
+    tiposLentesContactoDisponibles: OpcionSelect[] = TIPOS_LENTES_CONTACTO;
+    materialesDisponibles: OpcionSelect[] = MATERIALES;
+    tratamientosDisponibles: OpcionSelect[] = TRATAMIENTOS_ADITIVOS;
 
     // MODAL
     avatarPreview: string | null = null;
@@ -348,9 +354,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             id: base.id ?? crypto.randomUUID(),
         };
 
-        this.producto = { ...productoFinal };
-        this.productoOriginal = modo === 'editar' ? { ...productoFinal } : null;
-        this.productoSeleccionado = modo === 'editar' ? { ...productoFinal } : undefined;
+        const productoPreparado = this.prepararProductoParaEdicion(productoFinal);
+
+        this.producto = productoPreparado;
+        this.productoOriginal = modo === 'editar' ? { ...productoPreparado } : null;
+        this.productoSeleccionado = modo === 'editar' ? { ...productoPreparado } : undefined;
         this.modoModal = modo;
         this.esSoloLectura = modo === 'ver';
         this.mostrarModal = true;
@@ -405,6 +413,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         formData.append('fechaIngreso', producto.fechaIngreso);
         formData.append('aplicaIva', producto.aplicaIva.toString());
         formData.append('precio', precioPersistencia.toString());
+        this.appendClasificacionProductoToFormData(formData, producto);
 
         if (this.imagenSeleccionada) {
             formData.append('imagen', this.imagenSeleccionada);
@@ -451,6 +460,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         formData.append('fechaIngreso', producto.fechaIngreso ?? '');
         formData.append('aplicaIva', producto.aplicaIva.toString());
         formData.append('precio', precioPersistencia.toString());
+        this.appendClasificacionProductoToFormData(formData, producto);
 
         if (this.imagenSeleccionada) {
             formData.append('imagen', this.imagenSeleccionada);
@@ -584,10 +594,12 @@ export class ProductosListComponent implements OnInit, OnDestroy {
 
     // =========== UTILIDADES ===========
     get productoSeguro(): Producto {
-        const base = this.producto ?? this.crearProductoVacio();
+        const base = this.normalizarCamposSegunCategoria(this.producto ?? this.crearProductoVacio());
+        const clasificacion = normalizarClasificacionProducto(base);
 
         return {
             ...base,
+            ...clasificacion,
             id: base.id || crypto.randomUUID(),
             moneda: base.moneda || this.monedaSistema,
             fechaIngreso: base.fechaIngreso || new Date().toISOString().split('T')[0],
@@ -596,7 +608,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     private crearProductoVacio(): Producto {
-        return {
+        const productoBase: Producto = {
             id: crypto.randomUUID(),
             sede: '',
             nombre: '',
@@ -606,7 +618,7 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             material: '',
             modelo: '',
             proveedor: '',
-            categoria: null as any,
+            categoria: '',
             stock: 0,
             aplicaIva: false,
             precio: 0,
@@ -616,6 +628,11 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             descripcion: '',
             imagenUrl: '',
             fechaIngreso: new Date().toISOString().split('T')[0]
+        };
+
+        return {
+            ...productoBase,
+            ...normalizarClasificacionProducto(productoBase)
         };
     }
 
@@ -656,10 +673,21 @@ export class ProductosListComponent implements OnInit, OnDestroy {
     }
 
     formularioValido(): boolean {
-        const camposObligatorios = [
-            'nombre', 'activo', 'marca', 'categoria',
-            'material', 'stock', 'precio', 'moneda'
-        ];
+        const camposObligatorios = ['nombre', 'activo', 'categoria', 'stock', 'precio', 'moneda'];
+
+        if (this.marcaEsObligatoria) {
+            camposObligatorios.push('marca');
+        }
+
+        if (this.usaSelectorTipoCategoria || this.mostrarCampoModeloTexto) {
+            if (this.tipoCategoriaEsObligatorio) {
+                camposObligatorios.push('modelo');
+            }
+        }
+
+        if (this.materialEsObligatorio) {
+            camposObligatorios.push('material');
+        }
 
         const valido = camposObligatorios.every(campo => {
             const valor = this.producto?.[campo];
@@ -669,10 +697,12 @@ export class ProductosListComponent implements OnInit, OnDestroy {
         });
 
         if (this.producto.aplicaIva) {
-            return valido && (this.producto.precioConIva !== undefined && this.producto.precioConIva >= 0);
+            return valido
+                && (this.producto.precioConIva !== undefined && this.producto.precioConIva >= 0)
+                && this.validarCamposCondicionalesProducto();
         }
 
-        return valido;
+        return valido && this.validarCamposCondicionalesProducto();
     }
 
     botonGuardarDeshabilitado(): boolean {
@@ -847,5 +877,361 @@ export class ProductosListComponent implements OnInit, OnDestroy {
             setTimeout(() => this.loader.hide(), 300);
             this.dataIsReady = true;
         }
+    }
+
+    private prepararProductoParaEdicion(producto: Producto): Producto {
+        return {
+            ...this.normalizarCamposSegunCategoria(producto),
+            ...normalizarClasificacionProducto(this.normalizarCamposSegunCategoria(producto))
+        };
+    }
+
+    private appendClasificacionProductoToFormData(formData: FormData, producto: Producto): void {
+        const clasificacion = normalizarClasificacionProducto(producto);
+        const camposCamelCase: Record<string, string> = {
+            tipoItem: clasificacion.tipoItem,
+            requiereFormula: String(clasificacion.requiereFormula),
+            requierePaciente: String(clasificacion.requierePaciente),
+            requiereHistoriaMedica: String(clasificacion.requiereHistoriaMedica),
+            permiteFormulaExterna: String(clasificacion.permiteFormulaExterna),
+            requiereItemPadre: String(clasificacion.requiereItemPadre),
+            requiereProcesoTecnico: String(clasificacion.requiereProcesoTecnico),
+            origenClasificacion: clasificacion.origenClasificacion,
+            esClasificacionConfiable: String(clasificacion.esClasificacionConfiable),
+            clasificacionManual: String(clasificacion.clasificacionManual)
+        };
+
+        const camposSnakeCase: Record<string, string> = {
+            tipo_item: clasificacion.tipoItem,
+            requiere_formula: String(clasificacion.requiereFormula),
+            requiere_paciente: String(clasificacion.requierePaciente),
+            requiere_historia_medica: String(clasificacion.requiereHistoriaMedica),
+            permite_formula_externa: String(clasificacion.permiteFormulaExterna),
+            requiere_item_padre: String(clasificacion.requiereItemPadre),
+            requiere_proceso_tecnico: String(clasificacion.requiereProcesoTecnico),
+            origen_clasificacion: clasificacion.origenClasificacion,
+            es_clasificacion_confiable: String(clasificacion.esClasificacionConfiable),
+            clasificacion_manual: String(clasificacion.clasificacionManual)
+        };
+
+        [...Object.entries(camposCamelCase), ...Object.entries(camposSnakeCase)].forEach(([clave, valor]) => {
+            formData.append(clave, valor);
+        });
+    }
+
+    private validarCamposCondicionalesProducto(): boolean {
+        if (this.usaSelectorTipoCategoria && this.tipoCategoriaEsObligatorio) {
+            const valor = this.producto?.modelo;
+            if (!valor || !String(valor).trim()) {
+                return false;
+            }
+        }
+
+        if (this.materialEsObligatorio) {
+            const valor = this.producto?.material;
+            if (!valor || !String(valor).trim()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    get categoriaProductoActual(): string {
+        return normalizarTextoClasificacion(this.producto?.categoria);
+    }
+
+    get usaSelectorTipoCategoria(): boolean {
+        return ['cristales', 'filtros', 'aditivos', 'lentes de contacto'].includes(this.categoriaProductoActual);
+    }
+
+    get mostrarCampoModeloTexto(): boolean {
+        return !this.usaSelectorTipoCategoria && this.categoriaProductoActual !== 'materiales';
+    }
+
+    get usaSelectorMaterialCategoria(): boolean {
+        return this.categoriaProductoActual === 'materiales';
+    }
+
+    get mostrarCampoMarca(): boolean {
+        return !['cristales', 'filtros', 'aditivos', 'materiales'].includes(this.categoriaProductoActual);
+    }
+
+    get mostrarCampoMaterial(): boolean {
+        return ['monturas', 'materiales', 'accesorios', 'estuches', 'liquidos', 'líquidos'].includes(this.categoriaProductoActual);
+    }
+
+    get mostrarCampoColor(): boolean {
+        return ['monturas', 'lentes de contacto', 'accesorios'].includes(this.categoriaProductoActual);
+    }
+
+    get marcaEsObligatoria(): boolean {
+        return ['monturas', 'lentes de contacto', 'liquidos', 'líquidos', 'estuches', 'accesorios'].includes(this.categoriaProductoActual);
+    }
+
+    get materialEsObligatorio(): boolean {
+        return ['monturas', 'materiales'].includes(this.categoriaProductoActual);
+    }
+
+    get tipoCategoriaEsObligatorio(): boolean {
+        return this.usaSelectorTipoCategoria;
+    }
+
+    get etiquetaTipoCategoria(): string {
+        switch (this.categoriaProductoActual) {
+            case 'cristales':
+                return 'Tipo de cristal';
+            case 'filtros':
+                return 'Tipo de filtro';
+            case 'aditivos':
+                return 'Tipo de aditivo';
+            case 'lentes de contacto':
+                return 'Tipo de lente';
+            default:
+                return 'Tipo';
+        }
+    }
+
+    get etiquetaMaterialCategoria(): string {
+        return this.usaSelectorMaterialCategoria ? 'Tipo de material' : 'Material';
+    }
+
+    get placeholderCategoriaProducto(): string {
+        return 'Elige la familia comercial del producto';
+    }
+
+    get placeholderModeloCategoria(): string {
+        switch (this.categoriaProductoActual) {
+            case 'monturas':
+                return 'Ej. Carrera 8847, Ray-Ban Erika';
+            case 'liquidos':
+            case 'líquidos':
+                return 'Ej. Solución 120 ml, kit de limpieza';
+            case 'estuches':
+            case 'accesorios':
+                return 'Ej. Estuche rígido negro, cordón deportivo';
+            default:
+                return 'Ingresa una referencia reconocible para inventario';
+        }
+    }
+
+    get placeholderTipoCategoria(): string {
+        switch (this.categoriaProductoActual) {
+            case 'cristales':
+                return 'Selecciona el tipo';
+            case 'filtros':
+                return 'Selecciona el filtro';
+            case 'aditivos':
+                return 'Selecciona el aditivo';
+            case 'lentes de contacto':
+                return 'Selecciona el tipo';
+            default:
+                return 'Selecciona una opción';
+        }
+    }
+
+    get placeholderMarcaCategoria(): string {
+        switch (this.categoriaProductoActual) {
+            case 'monturas':
+                return 'Ej. Ray-Ban, Vogue, Calvin Klein';
+            case 'lentes de contacto':
+                return 'Ej. Biomedics, Evolution';
+            case 'liquidos':
+            case 'líquidos':
+                return 'Ej. Renu, Opti-Free';
+            case 'estuches':
+            case 'accesorios':
+                return 'Ej. Genérico, Vision Case';
+            default:
+                return 'Marca comercial';
+        }
+    }
+
+    get placeholderProveedorCategoria(): string {
+        switch (this.categoriaProductoActual) {
+            case 'cristales':
+                return 'Ej. Laboratorio principal';
+            case 'monturas':
+                return 'Ej. Distribuidor oficial o importadora';
+            default:
+                return 'Nombre del proveedor o distribuidor';
+        }
+    }
+
+    get placeholderMaterialCategoria(): string {
+        switch (this.categoriaProductoActual) {
+            case 'monturas':
+                return 'Ej. Acetato, metal, titanio';
+            case 'materiales':
+                return 'Selecciona un material estandarizado';
+            case 'accesorios':
+                return 'Ej. Silicona, microfibra, plástico';
+            default:
+                return 'Material del producto';
+        }
+    }
+
+    get placeholderColorCategoria(): string {
+        switch (this.categoriaProductoActual) {
+            case 'monturas':
+                return 'Ej. Negro mate, carey, dorado';
+            case 'lentes de contacto':
+                return 'Ej. Azul, miel, verde';
+            default:
+                return 'Color o acabado visible';
+        }
+    }
+
+    get placeholderDescripcionCategoria(): string {
+        switch (this.categoriaProductoActual) {
+            case 'cristales':
+                return 'Añade observaciones útiles como rango, proveedor o notas comerciales.';
+            case 'monturas':
+                return 'Describe talla, estilo, detalles visuales o referencia interna.';
+            case 'filtros':
+            case 'aditivos':
+                return 'Resume el uso técnico o comercial de este complemento.';
+            default:
+                return 'Agrega detalles útiles para identificar el producto más rápido.';
+        }
+    }
+
+    get opcionesTipoCategoria(): OpcionSelect[] {
+        switch (this.categoriaProductoActual) {
+            case 'cristales':
+                return this.tiposCristalesDisponibles;
+            case 'filtros':
+            case 'aditivos':
+                return this.tratamientosDisponibles;
+            case 'lentes de contacto':
+                return this.tiposLentesContactoDisponibles;
+            default:
+                return [];
+        }
+    }
+
+    get opcionesMaterialCategoria(): OpcionSelect[] {
+        return this.usaSelectorMaterialCategoria ? this.materialesDisponibles : [];
+    }
+
+    onCategoriaProductoModelChange(valor: string | null): void {
+        if (!this.producto) {
+            return;
+        }
+
+        this.producto = this.normalizarCamposSegunCategoria({
+            ...this.producto,
+            categoria: valor ?? ''
+        });
+    }
+
+    onModeloProductoModelChange(valor: string | null): void {
+        if (!this.producto) {
+            return;
+        }
+
+        this.producto = this.normalizarCamposSegunCategoria({
+            ...this.producto,
+            modelo: valor ?? ''
+        });
+    }
+
+    onMaterialProductoModelChange(valor: string | null): void {
+        if (!this.producto) {
+            return;
+        }
+
+        this.producto = this.normalizarCamposSegunCategoria({
+            ...this.producto,
+            material: valor ?? ''
+        });
+    }
+
+    onCategoriaProductoChange(): void {
+        this.producto = this.normalizarCamposSegunCategoria({
+            ...this.producto,
+            categoria: this.producto?.categoria ?? ''
+        });
+    }
+
+    private normalizarCamposSegunCategoria(producto: Producto): Producto {
+        const categoria = normalizarTextoClasificacion(producto?.categoria);
+        const siguiente = { ...producto };
+
+        if (!this.debeMostrarMarcaSegunCategoria(categoria)) {
+            siguiente.marca = '';
+        }
+
+        if (this.categoriaUsaSelectorModelo(categoria)) {
+            if (!this.valorPerteneceAOpciones(siguiente.modelo, this.obtenerOpcionesModeloPorCategoria(categoria))) {
+                siguiente.modelo = '';
+            }
+        }
+
+        if (!this.debeMostrarModeloTextoSegunCategoria(categoria) && !this.categoriaUsaSelectorModelo(categoria)) {
+            siguiente.modelo = '';
+        }
+
+        if (this.categoriaUsaSelectorMaterial(categoria)) {
+            if (!this.valorPerteneceAOpciones(siguiente.material, this.materialesDisponibles)) {
+                siguiente.material = '';
+            }
+        }
+
+        if (!this.debeMostrarMaterialSegunCategoria(categoria) && !this.categoriaUsaSelectorMaterial(categoria)) {
+            siguiente.material = '';
+        }
+
+        if (!this.debeMostrarColorSegunCategoria(categoria)) {
+            siguiente.color = '';
+        }
+
+        return siguiente;
+    }
+
+    private categoriaUsaSelectorModelo(categoria: string): boolean {
+        return ['cristales', 'filtros', 'aditivos', 'lentes de contacto'].includes(categoria);
+    }
+
+    private categoriaUsaSelectorMaterial(categoria: string): boolean {
+        return categoria === 'materiales';
+    }
+
+    private debeMostrarMarcaSegunCategoria(categoria: string): boolean {
+        return !['cristales', 'filtros', 'aditivos', 'materiales'].includes(categoria);
+    }
+
+    private debeMostrarModeloTextoSegunCategoria(categoria: string): boolean {
+        return !this.categoriaUsaSelectorModelo(categoria) && categoria !== 'materiales';
+    }
+
+    private debeMostrarMaterialSegunCategoria(categoria: string): boolean {
+        return ['monturas', 'materiales', 'accesorios', 'estuches', 'liquidos', 'líquidos'].includes(categoria);
+    }
+
+    private debeMostrarColorSegunCategoria(categoria: string): boolean {
+        return ['monturas', 'lentes de contacto', 'accesorios'].includes(categoria);
+    }
+
+    private obtenerOpcionesModeloPorCategoria(categoria: string): OpcionSelect[] {
+        switch (categoria) {
+            case 'cristales':
+                return this.tiposCristalesDisponibles;
+            case 'filtros':
+            case 'aditivos':
+                return this.tratamientosDisponibles;
+            case 'lentes de contacto':
+                return this.tiposLentesContactoDisponibles;
+            default:
+                return [];
+        }
+    }
+
+    private valorPerteneceAOpciones(valor: string | undefined, opciones: OpcionSelect[]): boolean {
+        if (!valor) {
+            return false;
+        }
+
+        return opciones.some(opcion => opcion.label === valor || String(opcion.value) === valor);
     }
 }

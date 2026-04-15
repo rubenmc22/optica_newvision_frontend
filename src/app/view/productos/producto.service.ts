@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, timeout, catchError, map } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { ErrorHandlerService } from './../../core/services/errorHandlerService';
+import { normalizarClasificacionProducto } from './producto-classification.catalog';
 
 @Injectable({ providedIn: 'root' })
 export class ProductoService {
@@ -75,7 +76,7 @@ export class ProductoService {
    * Utilidades
    ======================== */
   private mapProductoDtoToProducto(dto: ProductoDto): Producto {
-    return {
+    const productoBase: Producto = {
       id: dto.id.toString(),
       sede: dto.sede_id,
       nombre: dto.nombre,
@@ -93,11 +94,55 @@ export class ProductoService {
       precio: dto.precio,
       activo: dto.activo,
       descripcion: dto.descripcion,
+      precioOriginal: dto.precioOriginal,
+      monedaOriginal: dto.monedaOriginal,
+      tasaConversion: dto.tasaConversion,
+      fechaConversion: dto.fechaConversion,
+      tipoItem: dto.tipo_item,
+      requiereFormula: this.normalizarBoolean(dto.requiere_formula),
+      requierePaciente: this.normalizarBoolean(dto.requiere_paciente),
+      requiereHistoriaMedica: this.normalizarBoolean(dto.requiere_historia_medica),
+      permiteFormulaExterna: this.normalizarBoolean(dto.permite_formula_externa),
+      requiereItemPadre: this.normalizarBoolean(dto.requiere_item_padre),
+      requiereProcesoTecnico: this.normalizarBoolean(dto.requiere_proceso_tecnico),
+      origenClasificacion: dto.origen_clasificacion,
+      esClasificacionConfiable: this.normalizarBoolean(dto.es_clasificacion_confiable),
+      clasificacionManual: this.normalizarBoolean(dto.clasificacion_manual),
       imagenUrl: dto.imagen_url?.startsWith('/public/')
         ? `${environment.baseUrl}${dto.imagen_url}`
         : 'assets/avatar-placeholder.avif',
       fechaIngreso: dto.created_at?.split('T')[0] ?? ''
     };
+
+    return {
+      ...productoBase,
+      ...normalizarClasificacionProducto(productoBase)
+    };
+  }
+
+  private normalizarBoolean(valor: unknown): boolean | undefined {
+    if (valor === null || valor === undefined || valor === '') {
+      return undefined;
+    }
+
+    if (typeof valor === 'boolean') {
+      return valor;
+    }
+
+    if (typeof valor === 'number') {
+      return valor === 1;
+    }
+
+    const texto = String(valor).trim().toLowerCase();
+    if (['true', '1', 'si', 'sí', 'yes'].includes(texto)) {
+      return true;
+    }
+
+    if (['false', '0', 'no'].includes(texto)) {
+      return false;
+    }
+
+    return undefined;
   }
 
   private normalizarMoneda(moneda: string | null | undefined): 'usd' | 'eur' | 'bs' {

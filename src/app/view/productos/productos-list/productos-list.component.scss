@@ -273,9 +273,10 @@
     }
 
     &::placeholder {
-        color: #adb5bd;
+        color: #94a3b8;
         font-size: 0.85rem;
         font-weight: 400;
+        opacity: 1;
     }
 
     &:hover {
@@ -1129,7 +1130,18 @@ textarea.form-control-moderno {
 
         .ng-value-container {
             padding: 0 !important;
+            display: flex;
             align-items: center;
+
+            .ng-placeholder {
+                display: flex;
+                align-items: center;
+                min-height: 100%;
+                color: #94a3b8 !important;
+                font-size: 0.85rem;
+                font-weight: 400;
+                opacity: 1;
+            }
 
             .ng-value {
                 background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
@@ -1147,6 +1159,14 @@ textarea.form-control-moderno {
             .ng-arrow {
                 border-color: #6c757d transparent transparent;
                 border-width: 5px 5px 2.5px;
+            }
+
+            .ng-input input {
+                &::placeholder {
+                    color: #94a3b8 !important;
+                    font-weight: 400;
+                    opacity: 1;
+                }
             }
         }
     }
@@ -1970,8 +1990,9 @@ textarea.form-control-moderno {
 
 /* Placeholder mejorado */
 .form-control-moderno::placeholder {
-    color: #adb5bd;
+    color: #94a3b8;
     font-weight: 400;
+    opacity: 1;
 }
 
 /* Estados de carga */
