@@ -616,7 +616,7 @@
                         <div class="recomendacion-body">
                           <div class="recomendacion-item">
                             <label>Tipo de cristal</label>
-                            <div class="dato-valor">{{ getTipoCristalRecomendado(rec.cristal) }}</div>
+                            <div class="dato-valor">{{ getCristalRecomendadoLabel(rec) }}</div>
                           </div>
 
                           <!-- AGREGAR TIPO DE LENTES DE CONTACTO -->
@@ -627,11 +627,16 @@
 
                           <div class="recomendacion-item">
                             <label>Material</label>
-                            <div class="dato-valor">{{ getMaterialLabel(rec.material) }}</div>
+                            <div class="dato-valor">{{ getMaterialesRecomendadosLabel(rec) }}</div>
                           </div>
                           <div class="recomendacion-item">
                             <label>Montura sugerida</label>
-                            <div class="dato-valor">{{ rec.montura || 'No especificada' }}</div>
+                            <div class="dato-valor">{{ getMonturaRecomendadaLabel(rec) }}</div>
+                          </div>
+                          <div class="recomendacion-item"
+                            *ngIf="rec.seleccionProductos?.filtrosAditivos && rec.seleccionProductos?.filtrosAditivos?.length">
+                            <label>Filtros/Aditivos</label>
+                            <div class="dato-valor">{{ getFiltrosAditivosRecomendadosLabel(rec) }}</div>
                           </div>
 
                           <!-- AGREGAR CAMPOS DE MEDIDAS SI EXISTEN -->
@@ -1599,56 +1604,88 @@
 
                   <div class="recomendacion-body">
                     <div class="row g-3">
-                      <!-- Tipo de cristal -->
-                      <div class="col-md-4">
+                      <div class="col-md-5">
                         <div class="form-group-moderno">
-                          <label class="form-label-moderno">Tipo de cristal <span class="required">*</span></label>
-                          <ng-select [items]="tiposCristales" bindLabel="label" bindValue="label"
-                            formControlName="cristal" placeholder="Seleccione el cristal..." [searchable]="true"
-                            (change)="onCristalChange($event, i)" class="ng-select-moderno">
+                          <label class="form-label-moderno">{{ getEtiquetaProductoPrincipalRecomendacion(i) }} <span class="required">*</span></label>
+                          <ng-select [items]="productosCristalesDisponibles" bindLabel="displayText"
+                            formControlName="cristalProducto" [placeholder]="getPlaceholderProductoPrincipalRecomendacion(i)" [searchable]="true"
+                            [compareWith]="compararProductoRecomendacion" (change)="onProductoCristalRecomendacionChange(i)"
+                            class="ng-select-moderno">
                           </ng-select>
                         </div>
                       </div>
 
-                      <!-- Tipo de Lentes de Contacto -->
-                      <div class="col-md-4" *ngIf="mostrarTipoLentesContacto[i]">
+                      <div class="col-md-7" *ngIf="!tieneProductoPrincipalRecomendacion(i)">
+                        <div class="recomendacion-contexto recomendacion-contexto--espera">
+                          <i class="bi bi-arrow-left-circle"></i>
+                          <div>
+                            <strong>Selecciona primero el producto principal.</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="col-md-7" *ngIf="mostrarTipoLentesContacto[i]">
                         <div class="form-group-moderno">
-                          <label class="form-label-moderno">
-                            Tipo de Lentes de Contacto <span class="required">*</span>
-                          </label>
-                          <ng-select [items]="tiposLentesContacto" bindLabel="label" bindValue="label"
-                            formControlName="tipoLentesContacto" [placeholder]="'Seleccione el tipo...'"
-                            [searchable]="true" [clearable]="false" class="ng-select-moderno">
+                          <label class="form-label-moderno">Modelo lente de contacto</label>
+                          <ng-select [items]="productosLentesContactoDisponibles" bindLabel="displayText"
+                            formControlName="lenteContactoProducto" placeholder="Seleccione el modelo desde inventario..."
+                            [searchable]="true" [compareWith]="compararProductoRecomendacion"
+                            (change)="onModeloLenteContactoRecomendacionChange(i)" class="ng-select-moderno">
                           </ng-select>
                         </div>
                       </div>
 
-                      <!-- Material -->
-                      <div class="col-md-4">
-                        <div class="form-group-moderno">
-                          <label class="form-label-moderno">Material <span class="required">*</span></label>
-                          <ng-select [items]="materiales" bindLabel="label" [multiple]="true" bindValue="value"
-                            formControlName="material" [searchable]="true" placeholder="Seleccione un material..."
-                            (change)="verificarMaterialOtro(i)" class="ng-select-moderno">
-                          </ng-select>
+                      <ng-container *ngIf="mostrarConfiguracionOpticaRecomendacion(i)">
+                        <div class="col-12">
+                          <div class="recomendacion-contexto recomendacion-contexto--activo">
+                            <i class="bi bi-sliders"></i>
+                            <div>
+                              <strong>Configuración óptica</strong>
+                              <span>Completa materiales, montura y filtros compatibles con este cristal.</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
 
-                      <!-- Campo para material personalizado -->
-                      <div class="col-md-4" *ngIf="mostrarMaterialPersonalizado[i]">
-                        <div class="form-group-moderno">
-                          <label class="form-label-moderno">Otro material <span class="required">*</span></label>
-                          <input type="text" class="form-control-moderno" [formControlName]="'materialPersonalizado'"
-                            placeholder="Ingrese el material..." />
+                        <div class="col-md-4">
+                          <div class="form-group-moderno">
+                            <label class="form-label-moderno">Montura sugerida</label>
+                            <ng-select [items]="productosMonturasDisponibles" bindLabel="displayText"
+                              formControlName="monturaProducto" placeholder="Seleccione la montura..." [searchable]="true"
+                              [compareWith]="compararProductoRecomendacion" class="ng-select-moderno">
+                            </ng-select>
+                          </div>
                         </div>
-                      </div>
 
-                      <!-- Montura -->
-                      <div class="col-md-4">
-                        <div class="form-group-moderno">
-                          <label class="form-label-moderno">Tipo de Montura sugerida</label>
-                          <input type="text" class="form-control-moderno" formControlName="montura"
-                            placeholder="Ej: Rectangular metálica" />
+                        <div class="col-md-4">
+                          <div class="form-group-moderno">
+                            <label class="form-label-moderno">Materiales</label>
+                            <ng-select [items]="productosMaterialesDisponibles" bindLabel="displayText" [multiple]="true"
+                              formControlName="materialesProductos" [searchable]="true" [closeOnSelect]="false"
+                              placeholder="Seleccione materiales del inventario..."
+                              [compareWith]="compararProductoRecomendacion" class="ng-select-moderno">
+                            </ng-select>
+                          </div>
+                        </div>
+
+                        <div class="col-md-4">
+                          <div class="form-group-moderno">
+                            <label class="form-label-moderno">Filtros/Aditivos</label>
+                            <ng-select [items]="productosFiltrosAditivosDisponibles" bindLabel="displayText" [multiple]="true"
+                              formControlName="filtrosAditivosProductos" [searchable]="true" [closeOnSelect]="false"
+                              placeholder="Seleccione filtros o aditivos del inventario..."
+                              [compareWith]="compararProductoRecomendacion" class="ng-select-moderno">
+                            </ng-select>
+                          </div>
+                        </div>
+                      </ng-container>
+
+                      <div class="col-12" *ngIf="esRecomendacionLentesContacto(i)">
+                        <div class="recomendacion-contexto recomendacion-contexto--contacto">
+                          <i class="bi bi-droplet-half"></i>
+                          <div>
+                            <strong>Recomendación para lente de contacto</strong>
+                            <span>Selecciona el modelo exacto desde inventario. Montura, materiales y filtros se omiten porque el precio depende del producto específico.</span>
+                          </div>
                         </div>
                       </div>
 

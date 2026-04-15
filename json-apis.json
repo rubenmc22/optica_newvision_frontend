@@ -2264,6 +2264,7 @@ INVENTARIO - CONTRATO PROPUESTO CON MEJORAS
 // - nombre se genera automaticamente con categoria + tipo/modelo
 // - stock solo aplica a categorias inventariables
 // - campos funcionales nuevos: requiere_formula y requiere_item_padre
+// - la familia Filtros y Aditivos se consolida en una sola categoria canonica: Filtro/Aditivos
 
 // obtener inventario
 // GET /producto-get
@@ -2297,13 +2298,13 @@ INVENTARIO - CONTRATO PROPUESTO CON MEJORAS
         {
             "id": 42,
             "sede_id": "guatire",
-            "nombre": "Filtros - Luz azul",
+            "nombre": "Filtro/Aditivos - Luz azul",
             "codigo": "PR-000042",
             "marca": "",
             "color": null,
             "material": "",
             "proveedor": null,
-            "categoria": "Filtros",
+            "categoria": "Filtro/Aditivos",
             "modelo": "Luz azul",
             "stock": 0,
             "precio": 15,

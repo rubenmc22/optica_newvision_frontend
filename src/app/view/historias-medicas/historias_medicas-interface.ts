@@ -185,15 +185,39 @@ export interface HistorialResponse {
   historiales_medicos: HistoriaMedica[];
 }
 
+export interface ProductoRecomendadoHistoria {
+  id: string;
+  nombre: string;
+  codigo: string;
+  categoria: string;
+  modelo?: string;
+  marca?: string;
+  material?: string;
+  color?: string;
+  moneda?: string;
+  precio?: number;
+  precioConIva?: number;
+  aplicaIva?: boolean;
+  sede?: string;
+}
+
+export interface SeleccionProductosRecomendacion {
+  cristal?: ProductoRecomendadoHistoria | null;
+  materiales?: ProductoRecomendadoHistoria[];
+  montura?: ProductoRecomendadoHistoria | null;
+  filtrosAditivos?: ProductoRecomendadoHistoria[];
+}
+
 
 // Interfaz para recomendaciones
 export interface Recomendaciones {
-  cristal: typeof TIPOS_CRISTALES[0] | null;
-  material: TipoMaterial | TipoMaterial[];
+  cristal: typeof TIPOS_CRISTALES[0] | string | null;
+  material: TipoMaterial | TipoMaterial[] | string | string[];
   tipoLentesContacto?: string;
   montura: string;
   cristalSugerido?: string;
   observaciones?: string;
+  seleccionProductos?: SeleccionProductosRecomendacion;
 
   medidaHorizontal?: string;
   medidaVertical?: string;

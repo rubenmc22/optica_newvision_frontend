@@ -1648,6 +1648,68 @@
     }
   }
 
+  .recomendacion-contexto {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    border-radius: 14px;
+    padding: 0.95rem 1rem;
+    border: 1px solid transparent;
+
+    i {
+      font-size: 1.1rem;
+      margin-top: 0.1rem;
+    }
+
+    strong,
+    span {
+      display: block;
+    }
+
+    strong {
+      font-size: 0.92rem;
+      color: #24405a;
+      margin-bottom: 0.2rem;
+    }
+
+    span {
+      font-size: 0.84rem;
+      color: #58708a;
+      line-height: 1.45;
+    }
+
+    &--espera {
+      background: linear-gradient(135deg, #f8fbff 0%, #eef5fb 100%);
+      border-color: #d8e7f4;
+
+      i {
+        color: #3d7fb3;
+      }
+    }
+
+    &--activo {
+      background: linear-gradient(135deg, #f5fbf7 0%, #ebf6ef 100%);
+      border-color: #d5eadb;
+
+      i {
+        color: #2f8f5b;
+      }
+    }
+
+    &--contacto {
+      background: linear-gradient(135deg, #fffaf0 0%, #fff4dd 100%);
+      border-color: #f1dfb0;
+
+      i {
+        color: #c28817;
+      }
+    }
+
+    @media (max-width: 768px) {
+      padding: 0.85rem;
+    }
+  }
+
   .recomendacion-item {
     &.full-width {
       grid-column: 1 / -1;
