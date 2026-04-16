@@ -6,7 +6,7 @@ import {
   PaymentMethodBankScope
 } from '../../system-config/system-config.interface';
 
-export type VentaPaymentMethodValue = 'efectivo' | 'punto' | 'pagomovil' | 'transferencia' | 'zelle';
+export type VentaPaymentMethodValue = string;
 export type VentaPaymentMethodCurrency = 'dolar' | 'euro' | 'bolivar';
 
 export interface VentaPaymentMethodOption {
@@ -48,12 +48,14 @@ export interface VentaReceiverAccountOption {
   displayText: string;
 }
 
+export type VentaReceiverAccountsMap = Record<string, VentaReceiverAccountOption[]>;
+
 export interface VentaPaymentCatalog {
   tiposPago: VentaPaymentMethodOption[];
   bancosNacionales: VentaBankOption[];
   bancosInternacionales: VentaBankOption[];
   bancosPuntoVenta: VentaPuntoBankOption[];
-  cuentasReceptorasPorMetodo: Record<VentaPaymentMethodValue, VentaReceiverAccountOption[]>;
+  cuentasReceptorasPorMetodo: VentaReceiverAccountsMap;
 }
 
 type SupportedMethodDefinition = {
@@ -72,12 +74,13 @@ const SUPPORTED_PAYMENT_METHODS: SupportedMethodDefinition[] = [
   { value: 'zelle', aliases: ['zelle'], fallbackLabel: 'Zelle', icon: 'bi-globe', defaultMoneda: 'dolar' }
 ];
 
-const METHOD_EMOJI: Record<VentaPaymentMethodValue, string> = {
+const METHOD_EMOJI: Record<string, string> = {
   efectivo: '💵',
   punto: '💳',
   pagomovil: '📱',
   transferencia: '🏦',
-  zelle: '🌐'
+  zelle: '🌐',
+  binance: '🪙'
 };
 
 const FALLBACK_BANKS: Array<{ codigo: string; nombre: string; scope: PaymentMethodBankScope }> = [
@@ -135,27 +138,36 @@ export function buildVentaPaymentCatalog(settings?: PaymentMethodsSettings | nul
 }
 
 function buildVentaPaymentMethods(settings?: PaymentMethodsSettings | null): VentaPaymentMethodOption[] {
-  const settingsMethods = Array.isArray(settings?.methods) ? settings.methods : [];
+  const settingsMethods = Array.isArray(settings?.methods)
+    ? settings.methods.filter((method) => method.enabled !== false)
+    : [];
 
-  const configuredSupportedMethods = SUPPORTED_PAYMENT_METHODS.reduce<VentaPaymentMethodOption[]>((acc, methodDefinition) => {
-    const methodConfig = findConfiguredMethod(methodDefinition, settingsMethods);
-    if (!methodConfig || methodConfig.enabled === false) {
+  if (settingsMethods.length > 0) {
+    const metodosConfigurados = settingsMethods.reduce<VentaPaymentMethodOption[]>((acc, methodConfig) => {
+      const methodValue = normalizeConfiguredMethodValue(methodConfig.key);
+      const supportedMethod = findSupportedMethodDefinition(methodValue);
+
+      if (acc.some((method) => method.value === methodValue)) {
+        return acc;
+      }
+
+      acc.push({
+        value: methodValue,
+        label: `${getPaymentMethodEmoji(methodValue, methodConfig)} ${methodConfig.label?.trim() || supportedMethod?.fallbackLabel || formatMethodLabel(methodValue)}`.trim(),
+        icon: supportedMethod?.icon || getPaymentMethodIcon(methodValue, methodConfig),
+        defaultMoneda: mapPaymentCurrencyToVentaCurrency(
+          methodConfig.currency,
+          supportedMethod?.defaultMoneda || inferFallbackCurrency(methodValue)
+        ),
+        configKey: methodConfig.key
+      });
+
       return acc;
+    }, []);
+
+    if (metodosConfigurados.length > 0) {
+      return metodosConfigurados;
     }
-
-    acc.push({
-      value: methodDefinition.value,
-      label: `${METHOD_EMOJI[methodDefinition.value]} ${methodConfig.label?.trim() || methodDefinition.fallbackLabel}`,
-      icon: methodDefinition.icon,
-      defaultMoneda: mapPaymentCurrencyToVentaCurrency(methodConfig.currency, methodDefinition.defaultMoneda),
-      configKey: methodConfig.key
-    });
-
-    return acc;
-  }, []);
-
-  if (configuredSupportedMethods.length > 0) {
-    return configuredSupportedMethods;
   }
 
   return SUPPORTED_PAYMENT_METHODS.map((methodDefinition) => ({
@@ -188,17 +200,19 @@ function buildVentaBankCatalog(settings?: PaymentMethodsSettings | null): VentaB
 function buildReceiverAccountsByMethod(
   settings: PaymentMethodsSettings | null | undefined,
   bankCatalog: VentaBankOption[]
-): Record<VentaPaymentMethodValue, VentaReceiverAccountOption[]> {
+): VentaReceiverAccountsMap {
   const cuentasPorMetodo = createEmptyReceiverAccountMap();
-  const settingsMethods = Array.isArray(settings?.methods) ? settings.methods : [];
+  const settingsMethods = Array.isArray(settings?.methods)
+    ? settings.methods.filter((method) => method.enabled !== false)
+    : [];
 
-  for (const methodDefinition of SUPPORTED_PAYMENT_METHODS) {
-    const methodConfig = findConfiguredMethod(methodDefinition, settingsMethods);
-    if (!methodConfig || methodConfig.enabled === false) {
+  for (const methodConfig of settingsMethods) {
+    const methodValue = normalizeConfiguredMethodValue(methodConfig.key);
+    if (!methodValue) {
       continue;
     }
 
-    cuentasPorMetodo[methodDefinition.value] = buildReceiverAccountOptions(methodConfig, methodDefinition.value, bankCatalog);
+    cuentasPorMetodo[methodValue] = buildReceiverAccountOptions(methodConfig, methodValue, bankCatalog);
   }
 
   return cuentasPorMetodo;
@@ -224,12 +238,16 @@ function mapReceiverAccountOption(
   bankCatalog: VentaBankOption[]
 ): VentaReceiverAccountOption | null {
   const codigo = `${account.bankCode || ''}`.trim();
-  const catalogBank = bankCatalog.find((bank) => bank.codigo === codigo);
-  const nombre = `${account.bank || catalogBank?.nombre || codigo || 'Banco no identificado'}`.trim();
-  const descripcion = `${account.accountDescription || account.ownerName || account.ownerId || account.phone || 'Cuenta receptora'}`.trim();
-  const id = `${account.id || `${configKey}-${codigo}-${descripcion}`}`.trim();
+  const bankName = `${account.bank || ''}`.trim();
+  const ownerName = `${account.ownerName || ''}`.trim();
   const ownerId = `${account.ownerId || ''}`.trim();
   const phone = `${account.phone || ''}`.trim();
+  const email = `${account.email || ''}`.trim();
+  const walletAddress = `${account.walletAddress || ''}`.trim();
+  const catalogBank = bankCatalog.find((bank) => bank.codigo === codigo);
+  const descripcion = `${account.accountDescription || walletAddress || email || ownerName || ownerId || phone || 'Cuenta receptora'}`.trim();
+  const nombre = bankName || catalogBank?.nombre || ownerName || email || abbreviateWalletAddress(walletAddress) || descripcion || 'Cuenta receptora';
+  const id = `${account.id || `${configKey}-${codigo}-${descripcion}`}`.trim();
   const detalles: string[] = [];
 
   if (phone) {
@@ -240,9 +258,14 @@ function mapReceiverAccountOption(
     detalles.push(`CI. ${ownerId}`);
   }
 
-  const displayTitle = detalles.length > 0
-    ? `${nombre} (${detalles.join(' - ')})`
-    : nombre;
+  if (!bankName && email) {
+    detalles.push(email);
+  }
+
+  const walletLabel = walletAddress ? abbreviateWalletAddress(walletAddress) : '';
+  const displayTitle = bankName || catalogBank?.nombre
+    ? (detalles.length > 0 ? `${nombre} (${detalles.join(' - ')})` : nombre)
+    : [nombre, walletLabel && walletLabel !== nombre ? `(${walletLabel})` : ''].filter(Boolean).join(' ');
   const displaySubtitle = descripcion;
 
   if (!id) {
@@ -257,13 +280,15 @@ function mapReceiverAccountOption(
     ownerId,
     phone,
     accountDescription: `${account.accountDescription || ''}`.trim(),
-    email: account.email?.trim(),
-    walletAddress: account.walletAddress?.trim(),
+    email: email || undefined,
+    walletAddress: walletAddress || undefined,
     methodValue,
     configKey,
     displayTitle,
     displaySubtitle,
-    displayText: `${displayTitle} - ${displaySubtitle}`
+    displayText: displaySubtitle && displaySubtitle !== displayTitle
+      ? `${displayTitle} - ${displaySubtitle}`
+      : displayTitle
   };
 }
 
@@ -272,6 +297,15 @@ function findConfiguredMethod(
   configuredMethods: PaymentMethodConfig[]
 ): PaymentMethodConfig | undefined {
   return configuredMethods.find((method) => methodDefinition.aliases.includes(normalizeMethodKey(method.key)));
+}
+
+function findSupportedMethodDefinition(methodValue: string): SupportedMethodDefinition | undefined {
+  return SUPPORTED_PAYMENT_METHODS.find((method) => method.value === methodValue || method.aliases.includes(methodValue));
+}
+
+function normalizeConfiguredMethodValue(value: string | undefined): string {
+  const normalizedKey = normalizeMethodKey(value);
+  return findSupportedMethodDefinition(normalizedKey)?.value || normalizedKey;
 }
 
 function normalizeMethodKey(value: string | undefined): string {
@@ -295,17 +329,74 @@ function mapPaymentCurrencyToVentaCurrency(
       return 'euro';
     case 'VES':
       return 'bolivar';
+    case 'CRYPTO':
+    case 'USDT':
+    case 'BTC':
+    case 'ETH':
+      return 'dolar';
     default:
       return fallback;
   }
 }
 
-function createEmptyReceiverAccountMap(): Record<VentaPaymentMethodValue, VentaReceiverAccountOption[]> {
-  return {
-    efectivo: [],
-    punto: [],
-    pagomovil: [],
-    transferencia: [],
-    zelle: []
-  };
+function createEmptyReceiverAccountMap(): VentaReceiverAccountsMap {
+  return {};
+}
+
+function inferFallbackCurrency(methodValue: string): VentaPaymentMethodCurrency {
+  if (methodValue === 'punto' || methodValue === 'pagomovil' || methodValue === 'transferencia') {
+    return 'bolivar';
+  }
+
+  if (methodValue === 'zelle' || methodValue.includes('crypto') || methodValue.includes('binance')) {
+    return 'dolar';
+  }
+
+  return 'dolar';
+}
+
+function getPaymentMethodEmoji(methodValue: string, methodConfig: PaymentMethodConfig): string {
+  if (METHOD_EMOJI[methodValue]) {
+    return METHOD_EMOJI[methodValue];
+  }
+
+  if (['CRYPTO', 'USDT', 'BTC', 'ETH'].includes(methodConfig.currency)) {
+    return '🪙';
+  }
+
+  if (methodConfig.requiresReceiverAccount) {
+    return '🏧';
+  }
+
+  return '💳';
+}
+
+function getPaymentMethodIcon(methodValue: string, methodConfig: PaymentMethodConfig): string {
+  if (methodValue.includes('binance') || ['CRYPTO', 'USDT', 'BTC', 'ETH'].includes(methodConfig.currency)) {
+    return 'bi-currency-bitcoin';
+  }
+
+  if (methodConfig.requiresReceiverAccount) {
+    return 'bi-wallet2';
+  }
+
+  return 'bi-credit-card-2-front';
+}
+
+function formatMethodLabel(methodValue: string): string {
+  return `${methodValue || ''}`
+    .split('_')
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ')
+    .trim() || 'Metodo de pago';
+}
+
+function abbreviateWalletAddress(value: string): string {
+  const walletAddress = `${value || ''}`.trim();
+  if (walletAddress.length <= 18) {
+    return walletAddress;
+  }
+
+  return `${walletAddress.slice(0, 10)}...${walletAddress.slice(-6)}`;
 }
