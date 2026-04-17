@@ -11,7 +11,7 @@ import { CierreDiario, Transaccion, TasasCambio } from './cierre-caja.interfaz';
 })
 export class CierreCajaService {
     private apiUrl = environment.apiUrl;
-    private usarDummy: boolean = (environment as any)?.cierreCajaUsarDummy ?? true;
+    private usarDummy: boolean = (environment as any)?.cierreCajaUsarDummy ?? false;
     private cierres: Map<string, CierreDiario> = new Map();
     private ventas: any[] = [];
     private readonly tasasDummyBase = {
@@ -26,6 +26,10 @@ export class CierreCajaService {
 
     setUsarDummy(valor: boolean): void {
         this.usarDummy = valor;
+    }
+
+    estaUsandoDummy(): boolean {
+        return this.usarDummy;
     }
 
     private formatearFechaYYYYMMDD(fecha: Date): string {
@@ -465,6 +469,36 @@ export class CierreCajaService {
         };
     }
 
+    private normalizarTransaccionManualApi(transaccion: any): Transaccion {
+        const moneda = this.obtenerCodigoMoneda(transaccion?.moneda || 'USD');
+
+        return {
+            id: transaccion?.id || `TRX-${Date.now()}`,
+            tipo: transaccion?.tipo || 'ingreso',
+            descripcion: transaccion?.descripcion || 'Transacción manual',
+            monto: Number(transaccion?.montoSistema ?? transaccion?.monto ?? 0),
+            montoSistema: Number(transaccion?.montoSistema ?? transaccion?.monto ?? 0),
+            montoOriginal: Number(transaccion?.monto ?? transaccion?.montoSistema ?? 0),
+            fecha: transaccion?.fecha ? new Date(transaccion.fecha) : new Date(),
+            metodoPago: transaccion?.metodoPago || 'efectivo',
+            moneda,
+            monedaOriginal: moneda,
+            usuario: transaccion?.usuario || 'Usuario',
+            estado: transaccion?.estado || 'confirmado',
+            categoria: transaccion?.categoria || 'ajuste',
+            observaciones: transaccion?.observaciones || '',
+            comprobante: transaccion?.comprobante || '',
+            detalleMetodosPago: [
+                {
+                    tipo: transaccion?.metodoPago || 'efectivo',
+                    monto: Number(transaccion?.monto ?? transaccion?.montoSistema ?? 0),
+                    moneda,
+                    montoEnMonedaSistema: Number(transaccion?.montoSistema ?? transaccion?.monto ?? 0)
+                }
+            ]
+        };
+    }
+
     private normalizarCierreApi(cierre: any): CierreDiario {
         const monedaPrincipal = this.obtenerCodigoMoneda(cierre?.monedaPrincipal || cierre?.moneda || 'USD');
 
@@ -499,8 +533,7 @@ export class CierreCajaService {
                 punto: { total: 0, porBanco: [], cantidad: 0 },
                 pagomovil: { total: 0, cantidad: 0, porBanco: [] },
                 transferencia: { total: 0, cantidad: 0, porBanco: [] },
-                zelle: { total: 0, cantidad: 0, porBanco: [] },
-                mixto: { total: 0, cantidad: 0 }
+                zelle: { total: 0, cantidad: 0, porBanco: [] }
             },
             formasPago: cierre?.formasPago || {
                 contado: { cantidad: 0, total: 0 },
@@ -532,11 +565,15 @@ export class CierreCajaService {
         const ventasApi = Array.isArray(resumen?.ventas) ? resumen.ventas : [];
         const ventas = ventasApi.map((venta: any) => this.adaptarVentaApi(venta));
         const cierreExistente = resumen?.cierreExistente ? this.normalizarCierreApi(resumen.cierreExistente) : null;
+        const transaccionesManuales = Array.isArray(resumen?.transaccionesManuales)
+            ? resumen.transaccionesManuales.map((transaccion: any) => this.normalizarTransaccionManualApi(transaccion))
+            : [];
 
         return {
             ...resumen,
             ventas,
             cierreExistente,
+            transaccionesManuales,
             estadisticas: {
                 totalVentas: ventas.reduce((sum: number, venta: any) => sum + Number(venta?.total || 0), 0),
                 cantidadVentas: ventas.length,
@@ -836,8 +873,7 @@ export class CierreCajaService {
             punto: { total: 0, porBanco: [] as any[], cantidad: 0 },
             pagomovil: { total: 0, cantidad: 0, porBanco: [] as any[] },
             transferencia: { total: 0, cantidad: 0, porBanco: [] as any[] },
-            zelle: { total: 0, cantidad: 0, porBanco: [] as any[] },
-            mixto: { total: 0, cantidad: 0 }
+            zelle: { total: 0, cantidad: 0, porBanco: [] as any[] }
         };
 
         ventas.forEach(v => {
@@ -1053,7 +1089,7 @@ export class CierreCajaService {
             montoPagado: v.total_pagado || 0,
             deudaPendiente: Math.max(0, (v.total || 0) - (v.total_pagado || 0)),
             fecha: new Date(v.fecha),
-            metodoPago: v.metodosDePago?.length === 1 ? v.metodosDePago[0].tipo : 'mixto',
+            metodoPago: v.metodosDePago?.length ? v.metodosDePago[0].tipo : 'pendiente',
             moneda: v.moneda,
             monedaOriginal: v.moneda,
             tasasHistoricas: v?.formaPagoDetalle?.tasasActuales || v?.formaPago?.tasasActuales || [],
@@ -1099,7 +1135,7 @@ export class CierreCajaService {
         }
         return this.http.get(`${this.apiUrl}/cierre-caja/resumen`, {
             params: {
-                fecha: fecha.toISOString().split('T')[0],
+                fecha: this.formatearFechaYYYYMMDD(fecha),
                 sede: sede
             }
         }).pipe(
@@ -1107,12 +1143,82 @@ export class CierreCajaService {
         );
     }
 
+    abrirCaja(payload: {
+        fecha: Date;
+        sede: string;
+        efectivoInicial: {
+            totalSistema: number;
+            detalle: {
+                Bs: number;
+                USD: number;
+                EUR: number;
+            };
+        };
+        tasasCambio: TasasCambio;
+        observaciones?: string;
+    }): Observable<any> {
+        if (this.usarDummy) {
+            return of({ message: 'ok' }).pipe(delay(500));
+        }
+
+        return this.http.post(`${this.apiUrl}/cierre-caja/apertura`, {
+            ...payload,
+            fecha: this.formatearFechaYYYYMMDD(payload.fecha)
+        });
+    }
+
+    crearTransaccionManual(cierreId: string, payload: Partial<Transaccion>): Observable<any> {
+        if (this.usarDummy) {
+            return of({ message: 'ok' }).pipe(delay(300));
+        }
+
+        return this.http.post(`${this.apiUrl}/cierre-caja/transacciones-manuales`, {
+            cierreId,
+            fecha: payload.fecha instanceof Date ? payload.fecha.toISOString() : payload.fecha,
+            tipo: payload.tipo,
+            descripcion: payload.descripcion,
+            monto: Number(payload.montoOriginal ?? payload.monto ?? 0),
+            moneda: payload.monedaOriginal || payload.moneda || 'USD',
+            montoSistema: Number(payload.montoSistema ?? payload.monto ?? 0),
+            metodoPago: payload.metodoPago,
+            categoria: payload.categoria,
+            observaciones: payload.observaciones,
+            comprobante: payload.comprobante
+        });
+    }
+
+    actualizarTransaccionManual(transaccionId: string, payload: Partial<Transaccion>): Observable<any> {
+        if (this.usarDummy) {
+            return of({ message: 'ok' }).pipe(delay(300));
+        }
+
+        return this.http.put(`${this.apiUrl}/cierre-caja/transacciones-manuales/${transaccionId}`, {
+            descripcion: payload.descripcion,
+            monto: Number(payload.montoOriginal ?? payload.monto ?? 0),
+            moneda: payload.monedaOriginal || payload.moneda || 'USD',
+            montoSistema: Number(payload.montoSistema ?? payload.monto ?? 0),
+            metodoPago: payload.metodoPago,
+            categoria: payload.categoria,
+            observaciones: payload.observaciones,
+            comprobante: payload.comprobante
+        });
+    }
+
+    cerrarCaja(payload: any): Observable<any> {
+        if (this.usarDummy) {
+            this.cierres.set(payload.cierreId, payload);
+            return of({ message: 'ok', cierre: payload }).pipe(delay(500));
+        }
+
+        return this.http.post(`${this.apiUrl}/cierre-caja/cerrar`, payload);
+    }
+
     guardarCierre(cierre: CierreDiario): Observable<any> {
         if (this.usarDummy) {
             this.cierres.set(cierre.id, cierre);
             return of({ message: 'ok', cierre: cierre }).pipe(delay(500));
         }
-        return this.http.post(`${this.apiUrl}/cierre-caja`, cierre);
+        return throwError(() => new Error('El backend no expone un guardado parcial del cierre. Usa el cierre final para persistir la conciliación.'));
     }
 
     obtenerHistorialCierres(fechaInicio: Date, fechaFin: Date, sede: string): Observable<CierreDiario[]> {

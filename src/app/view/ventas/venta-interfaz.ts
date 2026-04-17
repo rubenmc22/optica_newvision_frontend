@@ -67,6 +67,11 @@ export interface ItemCarrito extends ProductoVentaDto {
         requiereTraslado?: boolean;
         sedeOrigen?: string;
         sedeDestino?: string;
+        origenHistoriaMedica?: boolean;
+        historiaIdOrigen?: string;
+        historiaNumero?: string;
+        recomendacionIndex?: number;
+        recomendacionCampo?: 'cristal' | 'materiales' | 'montura' | 'filtrosAditivos';
         // Podrías agregar estos campos si los necesitas:
         nHistoria?: string;                                   // Para referencia rápida
         medicoId?: string;                                    // Para trazabilidad

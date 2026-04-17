@@ -18,13 +18,11 @@ import {
   ExamenOcular,
   Medico,
   DatosConsulta,
-  ProductoRecomendadoHistoria,
-  SeleccionProductosRecomendacion
+  ProductoRecomendadoHistoria
 } from './historias_medicas-interface';
 import { Empleado } from '../../Interfaces/models-interface';
 import { Sede, SedeCompleta } from '../../view/login/login-interface';
 import { LoaderService } from './../../shared/loader/loader.service';
-import { Producto } from '../productos/producto.model';
 
 // Constantes
 import {
@@ -44,12 +42,6 @@ import { PacientesService } from '../../core/services/pacientes/pacientes.servic
 import { AuthService } from '../../core/services/auth/auth.service';
 import { UserStateService } from '../../core/services/userState/user-state-service';
 import { EmpleadosService } from './../../core/services/empleados/empleados.service';
-import { ProductoService } from '../productos/producto.service';
-
-interface ProductoRecomendacionOption extends ProductoRecomendadoHistoria {
-  displayText: string;
-  categoriaNormalizada: string;
-}
 
 
 @Component({
@@ -85,12 +77,6 @@ export class HistoriasMedicasComponent implements OnInit {
   employees: any[] = [];
   medicoTratante: any[] = [];
   filteredEmployees: any[] = [];
-  productosInventario: ProductoRecomendacionOption[] = [];
-  productosCristalesDisponibles: ProductoRecomendacionOption[] = [];
-  productosLentesContactoDisponibles: ProductoRecomendacionOption[] = [];
-  productosMaterialesDisponibles: ProductoRecomendacionOption[] = [];
-  productosMonturasDisponibles: ProductoRecomendacionOption[] = [];
-  productosFiltrosAditivosDisponibles: ProductoRecomendacionOption[] = [];
 
   panelSuperiorColapsado = false;
   panelInferiorColapsado = false;
@@ -177,7 +163,6 @@ export class HistoriasMedicasComponent implements OnInit {
     private snackBar: MatSnackBar,
     private empleadosService: EmpleadosService,
     private authService: AuthService,
-    private productoService: ProductoService,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
     private router: Router,
@@ -407,19 +392,8 @@ export class HistoriasMedicasComponent implements OnInit {
           });
           return of({ sedes: [] }); // Retorna estructura con array vacío
         })
-      ),
-      productos: this.productoService.getProductos().pipe(
-        take(1),
-        catchError(error => {
-          console.error('Error al cargar productos para recomendaciones:', error);
-          this.snackBar.open('⚠️ No se pudo cargar el inventario para recomendaciones. Algunas opciones estarán limitadas.', 'Cerrar', {
-            duration: 5000,
-            panelClass: ['snackbar-warning']
-          });
-          return of({ productos: [] });
-        })
       )
-    }).subscribe(({ user, sedes, productos }) => {
+    }).subscribe(({ user, sedes }) => {
       // Tu lógica original sigue igual aquí
       this.sedesDisponibles = (sedes.sedes ?? [])
         .map(s => ({
@@ -445,7 +419,6 @@ export class HistoriasMedicasComponent implements OnInit {
 
       this.sedeActiva = sedeValida ? sedeUsuario : '';
       this.sedeFiltro = this.sedeActiva;
-      this.actualizarCatalogosProductosRecomendacion(productos.productos ?? []);
 
       this.tareaFinalizada(); // forkJoin terminado
 
@@ -755,17 +728,16 @@ export class HistoriasMedicasComponent implements OnInit {
       h.recomendaciones.forEach((r, index) => {
         const grupo = this.crearRecomendacion(r);
         this.recomendaciones.push(grupo);
-        const productoCristal = this.hidratarProductoRecomendacion(r.seleccionProductos?.cristal);
-        const valorCristal = productoCristal?.nombre || this.obtenerValorCristalComoString(r.cristal);
+        const valorCristal = this.obtenerValorCristalComoString(this.obtenerCristalRecomendacionInicial(r));
 
         // Establecer visibilidad basada en los datos precargados
-        const esProgresivo = this.esCristalProgresivo(valorCristal) || this.requiereMedidasPorProducto(productoCristal);
+        const esProgresivo = this.esCristalProgresivo(valorCristal);
         const esMonofocalDigital = this.esMonofocalDigital(valorCristal);
         const mostrarMedidas = esProgresivo || esMonofocalDigital;
 
         this.mostrarMedidasProgresivo[index] = mostrarMedidas;
-        this.mostrarTipoLentesContacto[index] = this.esLentesContacto(valorCristal) || this.esCategoriaLentesContacto(productoCristal?.categoria);
-        this.mostrarMaterialPersonalizado[index] = false;
+        this.mostrarTipoLentesContacto[index] = this.esLentesContacto(valorCristal);
+        this.mostrarMaterialPersonalizado[index] = this.obtenerMaterialesRecomendacionInicial(r).includes('OTRO');
       });
 
       this.normalizarControlesNgSelectVacios();
@@ -1617,21 +1589,11 @@ export class HistoriasMedicasComponent implements OnInit {
   }
 
   crearRecomendacion(rec?: Recomendaciones): FormGroup {
-    const productoCristal = this.hidratarProductoRecomendacion(rec?.seleccionProductos?.cristal) || null;
-    const productoLenteContacto = this.esCategoriaLentesContacto(rec?.seleccionProductos?.cristal?.categoria)
-      ? productoCristal
-      : null;
-
     return this.fb.group({
-      cristal: [rec?.cristal || null],
-      material: [rec?.material || []],
-      cristalProducto: [productoCristal, Validators.required],
-      lenteContactoProducto: [productoLenteContacto],
-      materialesProductos: [this.hidratarProductosRecomendacion(rec?.seleccionProductos?.materiales || [])],
-      monturaProducto: [this.hidratarProductoRecomendacion(rec?.seleccionProductos?.montura) || null],
-      filtrosAditivosProductos: [this.hidratarProductosRecomendacion(rec?.seleccionProductos?.filtrosAditivos || [])],
-      materialPersonalizado: [rec?.materialPersonalizado || ''],
-      montura: [rec?.montura || ''],
+      cristal: [this.obtenerCristalRecomendacionInicial(rec), Validators.required],
+      material: [this.obtenerMaterialesRecomendacionInicial(rec)],
+      materialPersonalizado: [this.obtenerMaterialPersonalizadoInicial(rec)],
+      montura: [this.obtenerMonturaRecomendacionInicial(rec)],
       observaciones: [rec?.observaciones || ''],
 
       medidaHorizontal: [rec?.medidaHorizontal || ''],
@@ -1639,7 +1601,7 @@ export class HistoriasMedicasComponent implements OnInit {
       medidaDiagonal: [rec?.medidaDiagonal || ''],
       medidaPuente: [rec?.medidaPuente || ''],
 
-      tipoLentesContacto: [rec?.tipoLentesContacto || null]
+      tipoLentesContacto: [this.obtenerTipoLentesContactoRecomendacionInicial(rec)]
     });
   }
 
@@ -1666,31 +1628,15 @@ export class HistoriasMedicasComponent implements OnInit {
   private mapRecomendaciones(): Recomendaciones[] {
     return this.recomendaciones.controls.map(control => {
       const grupo = control as FormGroup;
-      const cristalProductoSeleccionado = this.crearSnapshotProductoRecomendacion(grupo.get('cristalProducto')?.value);
-      const lenteContactoProducto = this.crearSnapshotProductoRecomendacion(grupo.get('lenteContactoProducto')?.value);
-      const cristalProducto = lenteContactoProducto && this.esCategoriaLentesContacto(lenteContactoProducto.categoria)
-        ? lenteContactoProducto
-        : cristalProductoSeleccionado;
-      const materialesProductos = this.crearSnapshotsProductoRecomendacion(grupo.get('materialesProductos')?.value || []);
-      const monturaProducto = this.crearSnapshotProductoRecomendacion(grupo.get('monturaProducto')?.value);
-      const filtrosAditivosProductos = this.crearSnapshotsProductoRecomendacion(grupo.get('filtrosAditivosProductos')?.value || []);
-      const tipoLentesContacto = cristalProducto && this.esCategoriaLentesContacto(cristalProducto.categoria)
-        ? (cristalProducto.modelo || cristalProducto.nombre || '')
-        : (grupo.get('tipoLentesContacto')?.value || '');
-      const materialResumen = materialesProductos.map(producto => producto.nombre);
+      const material = grupo.get('material')?.value || [];
 
       return {
-        cristal: cristalProducto?.nombre || grupo.get('cristal')?.value || '',
-        material: materialResumen,
-        montura: monturaProducto?.nombre || grupo.get('montura')?.value || '',
+        cristal: grupo.get('cristal')?.value || '',
+        material: Array.isArray(material) ? material : (material ? [material] : []),
+        materialPersonalizado: String(grupo.get('materialPersonalizado')?.value || '').trim(),
+        montura: grupo.get('montura')?.value || '',
         observaciones: grupo.get('observaciones')?.value || '',
-        tipoLentesContacto: tipoLentesContacto,
-        seleccionProductos: {
-          cristal: cristalProducto,
-          materiales: materialesProductos,
-          montura: monturaProducto,
-          filtrosAditivos: filtrosAditivosProductos
-        },
+        tipoLentesContacto: grupo.get('tipoLentesContacto')?.value || '',
         medidaHorizontal: grupo.get('medidaHorizontal')?.value || '',
         medidaVertical: grupo.get('medidaVertical')?.value || '',
         medidaDiagonal: grupo.get('medidaDiagonal')?.value || '',
@@ -1699,106 +1645,38 @@ export class HistoriasMedicasComponent implements OnInit {
     });
   }
 
-  private actualizarCatalogosProductosRecomendacion(productos: Producto[]): void {
-    const productosBase = (productos || [])
-      .filter(producto => producto?.activo)
-      .map(producto => this.normalizarProductoRecomendacion(producto));
-
-    this.productosInventario = productosBase;
-    this.productosCristalesDisponibles = productosBase.filter(producto => ['cristales', 'lentes de contacto'].includes(producto.categoriaNormalizada));
-    this.productosLentesContactoDisponibles = productosBase.filter(producto => producto.categoriaNormalizada === 'lentes de contacto');
-    this.productosMaterialesDisponibles = productosBase.filter(producto => producto.categoriaNormalizada === 'materiales');
-    this.productosMonturasDisponibles = productosBase.filter(producto => producto.categoriaNormalizada === 'monturas');
-    this.productosFiltrosAditivosDisponibles = productosBase.filter(producto => producto.categoriaNormalizada === 'filtro/aditivos');
-  }
-
-  private normalizarProductoRecomendacion(producto: Producto | ProductoRecomendadoHistoria): ProductoRecomendacionOption {
-    const nombre = String(producto?.nombre || '').trim();
-    const codigo = String(producto?.codigo || '').trim();
-
-    return {
-      id: String(producto?.id || ''),
-      nombre,
-      codigo,
-      categoria: String(producto?.categoria || '').trim(),
-      modelo: producto?.modelo || '',
-      marca: producto?.marca || '',
-      material: producto?.material || '',
-      color: producto?.color || '',
-      moneda: producto?.moneda || '',
-      precio: Number(producto?.precio || 0),
-      precioConIva: Number((producto as Producto)?.precioConIva || 0),
-      aplicaIva: Boolean((producto as Producto)?.aplicaIva),
-      sede: producto?.sede || '',
-      categoriaNormalizada: this.normalizarCategoriaProductoRecomendacion(producto?.categoria),
-      displayText: codigo ? `${nombre} (${codigo})` : nombre
-    };
-  }
-
-  private hidratarProductoRecomendacion(producto: ProductoRecomendadoHistoria | null | undefined): ProductoRecomendacionOption | null {
-    if (!producto) {
-      return null;
+  private obtenerCristalRecomendacionInicial(rec?: Recomendaciones): string | null {
+    if (rec?.cristal) {
+      return this.obtenerValorCristalComoString(rec.cristal);
     }
 
-    const coincidencia = this.productosInventario.find(item => item.id === String(producto.id) || (!!producto.codigo && item.codigo === producto.codigo));
-    return coincidencia || this.normalizarProductoRecomendacion(producto);
+    return rec?.seleccionProductos?.cristal?.nombre || null;
   }
 
-  private hidratarProductosRecomendacion(productos: ProductoRecomendadoHistoria[]): ProductoRecomendacionOption[] {
-    return (productos || [])
-      .map(producto => this.hidratarProductoRecomendacion(producto))
-      .filter((producto): producto is ProductoRecomendacionOption => !!producto);
-  }
+  private obtenerMaterialesRecomendacionInicial(rec?: Recomendaciones): string[] {
+    const material = rec?.material;
 
-  private crearSnapshotProductoRecomendacion(producto: ProductoRecomendacionOption | ProductoRecomendadoHistoria | null | undefined): ProductoRecomendadoHistoria | null {
-    if (!producto?.id) {
-      return null;
+    if (Array.isArray(material)) {
+      return material.map(valor => String(valor)).filter(Boolean);
     }
 
-    return {
-      id: String(producto.id),
-      nombre: producto.nombre || '',
-      codigo: producto.codigo || '',
-      categoria: producto.categoria || '',
-      modelo: producto.modelo || '',
-      marca: producto.marca || '',
-      material: producto.material || '',
-      color: producto.color || '',
-      moneda: producto.moneda || '',
-      precio: Number(producto.precio || 0),
-      precioConIva: Number((producto as ProductoRecomendacionOption).precioConIva || 0),
-      aplicaIva: Boolean((producto as ProductoRecomendacionOption).aplicaIva),
-      sede: producto.sede || ''
-    };
-  }
-
-  private crearSnapshotsProductoRecomendacion(productos: Array<ProductoRecomendacionOption | ProductoRecomendadoHistoria>): ProductoRecomendadoHistoria[] {
-    return (productos || [])
-      .map(producto => this.crearSnapshotProductoRecomendacion(producto))
-      .filter((producto): producto is ProductoRecomendadoHistoria => !!producto);
-  }
-
-  private normalizarCategoriaProductoRecomendacion(categoria: unknown): string {
-    const categoriaNormalizada = String(categoria || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-
-    if (['filtro', 'filtros', 'aditivo', 'aditivos', 'filtro/aditivos', 'filtros/aditivos'].includes(categoriaNormalizada)) {
-      return 'filtro/aditivos';
+    if (material) {
+      return [String(material)];
     }
 
-    return categoriaNormalizada;
+    return [];
   }
 
-  private esCategoriaLentesContacto(categoria: string | undefined | null): boolean {
-    return this.normalizarCategoriaProductoRecomendacion(categoria) === 'lentes de contacto';
+  private obtenerMaterialPersonalizadoInicial(rec?: Recomendaciones): string {
+    return String(rec?.materialPersonalizado || '').trim();
   }
 
-  private requiereMedidasPorProducto(producto: ProductoRecomendacionOption | ProductoRecomendadoHistoria | null | undefined): boolean {
-    const nombrePlano = `${producto?.nombre || ''} ${producto?.modelo || ''}`.toLowerCase();
-    return nombrePlano.includes('progresivo');
+  private obtenerMonturaRecomendacionInicial(rec?: Recomendaciones): string {
+    return String(rec?.montura || rec?.seleccionProductos?.montura?.nombre || '').trim();
+  }
+
+  private obtenerTipoLentesContactoRecomendacionInicial(rec?: Recomendaciones): string | null {
+    return String(rec?.tipoLentesContacto || rec?.seleccionProductos?.cristal?.modelo || '').trim() || null;
   }
 
   private mapExamenOcular(): ExamenOcular {
@@ -4378,7 +4256,22 @@ export class HistoriasMedicasComponent implements OnInit {
       return this.getProductosRecomendadosLabel(materiales);
     }
 
-    return this.getMaterialLabel(recomendacion?.material || []);
+    const materialLabel = this.getMaterialLabel(recomendacion?.material || []);
+    const materialPersonalizado = String(recomendacion?.materialPersonalizado || '').trim();
+
+    if (!materialPersonalizado) {
+      return materialLabel;
+    }
+
+    if (materialLabel === 'No especificado') {
+      return materialPersonalizado;
+    }
+
+    if (materialLabel.toUpperCase().includes('OTRO')) {
+      return `${materialLabel}: ${materialPersonalizado}`;
+    }
+
+    return `${materialLabel}, ${materialPersonalizado}`;
   }
 
   getMonturaRecomendadaLabel(recomendacion: Recomendaciones | null | undefined): string {
@@ -4466,124 +4359,9 @@ export class HistoriasMedicasComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  compararProductoRecomendacion = (
-    productoActual: ProductoRecomendacionOption | ProductoRecomendadoHistoria | null,
-    productoSeleccionado: ProductoRecomendacionOption | ProductoRecomendadoHistoria | null
-  ): boolean => {
-    if (!productoActual && !productoSeleccionado) {
-      return true;
-    }
-
-    if (!productoActual || !productoSeleccionado) {
-      return false;
-    }
-
-    return String(productoActual.id) === String(productoSeleccionado.id);
-  };
-
-  onProductoCristalRecomendacionChange(index: number): void {
-    const recomendacionGroup = this.recomendaciones.at(index) as FormGroup;
-    const cristalProducto = recomendacionGroup.get('cristalProducto')?.value as ProductoRecomendacionOption | null;
-    const lenteContactoProductoControl = recomendacionGroup.get('lenteContactoProducto');
-    const nombreCristal = cristalProducto?.nombre || '';
-    const requiereMedidas = this.requiereMedidasPorProducto(cristalProducto) || this.esCristalProgresivo(nombreCristal) || this.esMonofocalDigital(nombreCristal);
-    const esLentesContacto = this.esCategoriaLentesContacto(cristalProducto?.categoria) || this.esLentesContacto(nombreCristal);
-    const materialesControl = recomendacionGroup.get('materialesProductos');
-    const monturaProductoControl = recomendacionGroup.get('monturaProducto');
-    const filtrosAditivosControl = recomendacionGroup.get('filtrosAditivosProductos');
-
-    this.mostrarMedidasProgresivo[index] = requiereMedidas;
-    this.mostrarTipoLentesContacto[index] = esLentesContacto;
-
-    recomendacionGroup.get('cristal')?.setValue(nombreCristal || null, { emitEvent: false });
-
-    const tipoLentesControl = recomendacionGroup.get('tipoLentesContacto');
-    const medidaHorizontalControl = recomendacionGroup.get('medidaHorizontal');
-    const medidaVerticalControl = recomendacionGroup.get('medidaVertical');
-    const medidaDiagonalControl = recomendacionGroup.get('medidaDiagonal');
-    const medidaPuenteControl = recomendacionGroup.get('medidaPuente');
-
-    if (esLentesContacto) {
-      materialesControl?.setValue([], { emitEvent: false });
-      monturaProductoControl?.setValue(null, { emitEvent: false });
-      filtrosAditivosControl?.setValue([], { emitEvent: false });
-      recomendacionGroup.get('material')?.setValue([], { emitEvent: false });
-      recomendacionGroup.get('montura')?.setValue('', { emitEvent: false });
-      lenteContactoProductoControl?.setValue(cristalProducto, { emitEvent: false });
-      tipoLentesControl?.setValue(cristalProducto?.modelo || cristalProducto?.nombre || '', { emitEvent: false });
-    } else {
-      lenteContactoProductoControl?.setValue(null, { emitEvent: false });
-      tipoLentesControl?.setValue('', { emitEvent: false });
-      recomendacionGroup.get('montura')?.setValue((monturaProductoControl?.value as ProductoRecomendacionOption | null)?.nombre || '', { emitEvent: false });
-    }
-
-    if (requiereMedidas) {
-      medidaHorizontalControl?.setValidators([Validators.required]);
-      medidaVerticalControl?.setValidators([Validators.required]);
-      medidaDiagonalControl?.setValidators([Validators.required]);
-      medidaPuenteControl?.setValidators([Validators.required]);
-    } else {
-      medidaHorizontalControl?.clearValidators();
-      medidaVerticalControl?.clearValidators();
-      medidaDiagonalControl?.clearValidators();
-      medidaPuenteControl?.clearValidators();
-      medidaHorizontalControl?.setValue('');
-      medidaVerticalControl?.setValue('');
-      medidaDiagonalControl?.setValue('');
-      medidaPuenteControl?.setValue('');
-    }
-
-    medidaHorizontalControl?.updateValueAndValidity({ emitEvent: false });
-    medidaVerticalControl?.updateValueAndValidity({ emitEvent: false });
-    medidaDiagonalControl?.updateValueAndValidity({ emitEvent: false });
-    medidaPuenteControl?.updateValueAndValidity({ emitEvent: false });
-
-    this.cdr.detectChanges();
-  }
-
-  onModeloLenteContactoRecomendacionChange(index: number): void {
-    const recomendacionGroup = this.recomendaciones.at(index) as FormGroup;
-    const productoSeleccionado = recomendacionGroup.get('lenteContactoProducto')?.value as ProductoRecomendacionOption | null;
-
-    if (!productoSeleccionado) {
-      recomendacionGroup.get('tipoLentesContacto')?.setValue('', { emitEvent: false });
-      return;
-    }
-
-    recomendacionGroup.get('cristalProducto')?.setValue(productoSeleccionado, { emitEvent: false });
-    recomendacionGroup.get('cristal')?.setValue(productoSeleccionado.nombre || null, { emitEvent: false });
-    recomendacionGroup.get('tipoLentesContacto')?.setValue(productoSeleccionado.modelo || productoSeleccionado.nombre || '', { emitEvent: false });
-
-    this.onProductoCristalRecomendacionChange(index);
-  }
-
-  getProductoPrincipalRecomendacion(index: number): ProductoRecomendacionOption | null {
-    return (this.recomendaciones.at(index) as FormGroup)?.get('cristalProducto')?.value as ProductoRecomendacionOption | null;
-  }
-
-  tieneProductoPrincipalRecomendacion(index: number): boolean {
-    return !!this.getProductoPrincipalRecomendacion(index)?.id;
-  }
-
   esRecomendacionLentesContacto(index: number): boolean {
-    const producto = this.getProductoPrincipalRecomendacion(index);
-    const nombreProducto = producto?.nombre || '';
-
-    return this.esCategoriaLentesContacto(producto?.categoria) || this.esLentesContacto(nombreProducto);
-  }
-
-  mostrarConfiguracionOpticaRecomendacion(index: number): boolean {
-    return this.tieneProductoPrincipalRecomendacion(index) && !this.esRecomendacionLentesContacto(index);
-  }
-
-  getEtiquetaProductoPrincipalRecomendacion(index: number): string {
-    return this.esRecomendacionLentesContacto(index) ? 'Tipo de lente' : 'Cristal';
-  }
-
-  getPlaceholderProductoPrincipalRecomendacion(index: number): string {
-    return this.esRecomendacionLentesContacto(index)
-      ? 'Seleccione el lente de contacto...'
-      : 'Seleccione el cristal...';
+    const cristal = (this.recomendaciones.at(index) as FormGroup)?.get('cristal')?.value;
+    return this.esLentesContacto(this.obtenerValorCristalComoString(cristal));
   }
 
   get medicoTratanteConExterno(): any[] {

@@ -1,427 +1,437 @@
-# Propuesta funcional: Presupuesto -> Venta con validacion clinica condicional
+# Planificacion funcional: cambio de modelo para cristales formulados
 
 ## Objetivo
 
-Definir un flujo de conversion desde Presupuestos hacia Generar Venta que permita:
+Definir la afectacion funcional de cambiar el manejo de cristales para que ya no se traten como productos separados dentro del inventario, sino como un cristal configurable cuyo precio depende del laboratorio, la combinacion elegida y el rango de formula del paciente.
 
-- convertir directamente presupuestos comerciales simples
-- exigir soporte clinico cuando el presupuesto incluya productos que requieran formulacion
-- soportar distintos origenes de formula sin obligar historia medica en todos los casos
-- preparar una estructura segura para que luego backend reciba contratos claros y consistentes
+La meta es alinear el sistema con la operacion real del negocio y evitar que materiales, filtros o tratamientos se manejen como productos independientes cuando en la practica forman parte de un solo cristal final.
 
-## Problema actual
+## Cambio de enfoque
 
-Hoy la conversion desde Presupuesto hacia Generar Venta se comporta como una venta de `solo_productos`.
+### Modelo actual
 
-Eso tiene dos efectos no deseados:
+Hoy el sistema parte de esta logica:
 
-1. No se selecciona paciente ni historia medica aunque el presupuesto lo necesite.
-2. La venta puede intentar continuar sin contexto clinico aunque haya cristales, lentes formulados o productos que deban generar orden tecnica.
+- cristal por separado
+- material por separado
+- blue block por separado
+- fotocromatico por separado
+- otros tratamientos por separado
 
-## Principio rector
+Eso funciona como inventario de componentes, pero no representa correctamente como compra y vende el laboratorio.
 
-La conversion no debe decidirse por el origen `presupuesto`, sino por el contenido del presupuesto.
+### Modelo propuesto
 
-Regla central:
+El nuevo enfoque seria:
 
-- si el presupuesto no requiere formulacion, puede convertirse directo a venta
-- si el presupuesto requiere formulacion, debe pasar por validacion clinica antes de quedar listo para venta/orden de trabajo
+- el cristal se maneja como un producto configurable, no como piezas comerciales separadas
+- material y tratamientos pasan a ser opciones del cristal
+- el precio sale de la combinacion completa y del laboratorio
+- la formula del paciente cambia el precio por rangos tarifarios
 
-La necesidad de laboratorio no se maneja como bandera primaria separada. Debe tratarse como una consecuencia operativa de ciertos items formulados ya validados.
+Ejemplo de como deberia entenderse:
 
-## Motor de decision
+- cristal vision sencilla
+- material policarbonato
+- tratamientos blue block y fotocromatico
+- rango de formula o formula del paciente
+- precio final del cristal
 
-Cada item del presupuesto debe poder evaluarse con un conjunto pequeno y estable de atributos:
+## Principio funcional
 
-- `tipoItem`
-- `requiereFormula`
-- `requierePaciente`
-- `requiereHistoriaMedica`
-- `permiteFormulaExterna`
-- `requiereItemPadre` solo para addons tecnicos
+Para cristales formulados, el sistema no deberia vender material, blue block, fotocromatico o antirreflejo como lineas separadas. Deberia registrar un cristal configurado como una unidad comercial compuesta.
 
-Regla de mejores practicas:
+Segun la respuesta del dueño, comercialmente lo usual es vender el par, pero operativamente conviene trabajarlo de forma individual. Eso significa que para una venta con montura el sistema deberia poder reflejar algo equivalente a:
 
-- `requiereFormula` es la bandera principal de negocio
-- `requiereLaboratorio` no debe ser una bandera maestra adicional en esta fase
-- si en el futuro se necesita exponer `requiereOrdenTrabajo`, debe derivarse del `tipoItem` y del estado de soporte clinico, no duplicarse como verdad paralela
+- 2 cristales configurados
+- 1 montura
 
-Reglas sugeridas:
+La idea no es separar tratamientos como productos, sino permitir que el cristal conserve su configuracion completa y que el sistema pueda mostrar o controlar que el par representa dos unidades fisicas.
 
-1. Items comerciales inventariables como monturas, accesorios, repuestos, liquidos o estuches:
-   - `tipoItem = inventariable`
-   - `requiereFormula = false`
-   - `requierePaciente = false` por defecto
-   - `requiereHistoriaMedica = false`
+## Reglas del negocio ya confirmadas
 
-2. Items base que representan un producto formulado para fabricar, adaptar o parametrizar:
-   - `tipoItem = base_formulado`
-   - `requiereFormula = true`
-   - `requierePaciente = true`
-   - `requiereHistoriaMedica = false` si existe formula manual o externa valida
-   - `permiteFormulaExterna = true`
+Con la respuesta del dueño ya quedaron claras estas definiciones:
 
-3. Items tecnicos seleccionables como tratamientos, filtros, materiales o acabados:
-   - `tipoItem = addon_tecnico`
-   - `requiereFormula = false` por si mismo
-   - `requiereItemPadre = true`
-   - no deben venderse solos si dependen de un item base formulado
+- la venta de cristales normalmente se hace por par
+- el sistema debe poder trabajar el cristal de forma individual para reflejar 2 cristales dentro de una misma venta
+- el precio depende de laboratorio, material, tratamiento y formula
+- la formula se clasifica por rangos tarifarios y no solo caso a caso
+- los tratamientos casi siempre vienen anclados al precio final del cristal
+- algunos tratamientos especiales pueden cobrarse como extra, pero son excepciones
+- existen varios laboratorios con tarifas distintas
+- en un sistema administrativo completo conviene guardar costo laboratorio y precio de venta
+- todos los cristales se pueden manejar por stock dentro del sistema
+- para los cristales de baja rotacion o bajo pedido se puede usar un stock alto o de referencia para no bloquear la venta
+- adicionalmente conviene marcar cuales configuraciones son bajo pedido para fines operativos y de seguimiento
+- bajo pedido debe tratarse como una condicion interna de disponibilidad o abastecimiento, sin mezclarla con reglas de entrega al paciente
 
-4. Si al menos un item requiere formula:
-   - la conversion completa pasa a modo `venta con soporte clinico`
+Los productos que si existen por unidad fisica y con stock seguirian en inventario normal, por ejemplo:
 
-5. Si un item llega sin clasificacion confiable:
-   - no debe asumirse como venta comercial directa
-   - debe pasar a revision manual antes de habilitar conversion automatica
+- monturas
+- lentes de contacto por modelo
+- soluciones
+- accesorios
+- otros productos de tienda
 
-## Estructura maestra segura de inventario y venta
+## Alcance del cambio
 
-La propuesta segura no depende solo de la categoria visual del producto. Depende de una clasificacion funcional reusable entre inventario, presupuesto, venta y orden tecnica.
+Este cambio afecta principalmente la forma en que se modelan, recomiendan, cotizan, venden y envian a laboratorio los cristales formulados.
 
-### 1. Tipos maestros de item
+No implica cambiar toda la logica del sistema. Implica rediseñar especificamente el flujo de cristales.
 
-#### `inventariable`
+## Modulos afectados
 
-Uso:
+### 1. Inventario
 
-- productos que pueden venderse de forma independiente
-- no necesitan formula
-- no dependen de otro item
+Nivel de afectacion: alto
+
+Impacto funcional:
+
+- los cristales dejarian de manejarse como productos simples de inventario por componentes
+- materiales y tratamientos dejarian de ser productos vendibles por separado en el flujo de cristales
+- esos elementos pasarian a ser catalogos u opciones de configuracion dentro de un tarifario
+- las categorias actuales relacionadas con materiales y filtros tendrian que revisarse
+- debe definirse un unico esquema de stock para todos los cristales, con apoyo de banderas operativas para bajo pedido
+- la bandera de bajo pedido debe servir para clasificar disponibilidad dentro del sistema, sin meter al modulo en logica de tiempos de entrega
+
+Decisiones necesarias:
+
+- que categorias se mantienen como inventario real
+- que categorias pasan a ser solo catalogos
+- que se hace con los productos de cristales ya creados
+- como se definira el stock de referencia o stock alto para cristales bajo pedido
+- como se marcara operativamente que una configuracion requiere pedido a laboratorio
+- como se mostrara la disponibilidad de esas configuraciones al momento de vender
+
+### 2. Historial medico
+
+Nivel de afectacion: medio-alto
+
+Impacto funcional:
+
+- la recomendacion ya no deberia pensar en productos separados para cristal, material y tratamientos
+- deberia sugerir una configuracion de cristal
+- la formula del paciente se vuelve parte importante del proceso porque afecta el precio final
+
+Decisiones necesarias:
+
+- si desde historial medico solo se sugiere la configuracion
+- o si tambien se debe precargar una cotizacion aproximada
+
+### 3. Generar venta
+
+Nivel de afectacion: muy alto
+
+Impacto funcional:
+
+- ya no se venderia cristal base mas tratamientos como lineas separadas
+- se venderia un bloque comercial de cristal configurado, usualmente equivalente a un par
+- el sistema deberia poder reflejar operativamente 2 cristales cuando aplique
+- el precio no saldria de sumar varios productos
+- el sistema tendria que guardar el detalle tecnico y tarifario del cristal que se esta vendiendo
+
+Decisiones necesarias:
+
+- como se arma la seleccion del cristal en pantalla
+- cuando se calcula el precio
+- como se muestra el detalle al asesor y al paciente
+- si en pantalla se mostrara como par, como 2 unidades o ambas vistas
+
+### 4. Orden de trabajo
+
+Nivel de afectacion: muy alto
+
+Impacto funcional:
+
+- la orden debe reflejar exactamente lo que se enviara al laboratorio
+- debe guardar laboratorio, marca o linea de lente, material, tratamientos y rango de formula
+- debe diferenciar claramente lo vendido al paciente de lo solicitado al laboratorio
+- debe contemplar que varios laboratorios pueden tener tarifas distintas para configuraciones parecidas
+
+Decisiones necesarias:
+
+- que campos tecnicos deben verse en la orden
+- como se selecciona el laboratorio
+- si se guardara costo laboratorio, precio de venta o ambos
+
+### 5. Historial de ventas
+
+Nivel de afectacion: medio
+
+Impacto funcional:
+
+- las ventas nuevas de cristales ya no se verian como varias lineas separadas
+- deberian verse como una sola linea con detalle de configuracion
+- el detalle historico debe seguir siendo entendible
+
+Decisiones necesarias:
+
+- si el detalle mostrado incluira material y tratamientos como parte de la descripcion
+- si se mostraran tambien los valores clinicos o solo el resumen comercial
+
+### 6. Reportes y cierres
+
+Nivel de afectacion: medio
+
+Impacto funcional:
+
+- ya no tendria sentido reportar blue block o fotocromatico como productos independientes dentro del flujo de cristales
+- si se quiere medir uso de tratamientos, deberia hacerse como caracteristicas del cristal y no como productos sueltos
+- los reportes deberian permitir ver ventas por laboratorio, linea de lente, material y rango de formula
+
+Decisiones necesarias:
+
+- como se reportaran los cristales vendidos
+- si los tratamientos se mediran como atributos o como categorias comerciales
+
+### 7. Datos ya cargados
+
+Nivel de afectacion: alto
+
+Impacto funcional:
+
+- hay productos ya creados bajo el modelo anterior
+- puede haber historias medicas, ventas y ordenes registradas con esa estructura
+
+Recomendacion funcional:
+
+- no modificar ventas historicas cerradas
+- aplicar el nuevo modelo solo a operaciones nuevas
+- migrar catalogos solo si hace falta, no rehacer historicos
+
+## Impacto resumido por modulo
+
+- inventario: alto
+- historial medico: medio-alto
+- generar venta: muy alto
+- orden de trabajo: muy alto
+- historial de ventas: medio
+- reportes: medio
+- datos historicos: alto
+- capacitacion de usuarios: medio-alto
+
+## Nuevo modelo funcional propuesto
+
+### 1. Inventario real
+
+Se mantiene para productos fisicos independientes con stock.
 
 Ejemplos:
 
 - monturas
-- liquidos
-- estuches
-- panos
+- lentes de contacto por modelo
+- soluciones
 - accesorios
 
-#### `base_formulado`
+Para cristales formulados debe existir una regla adicional:
 
-Uso:
+- todos los cristales se manejaran dentro del esquema de stock
+- los cristales de alta rotacion pueden usar stock real controlado
+- los cristales bajo pedido pueden usar stock alto o stock de referencia para permitir la operacion comercial
+- ademas conviene una marca operativa para indicar que requieren solicitud a laboratorio
+- esa marca sirve para distinguir inventario disponible inmediato de configuraciones que dependen de reposicion o solicitud interna
 
-- item principal que representa lo que se formula, adapta o manda a proceso tecnico
-- concentra la necesidad de soporte clinico
-- puede tener addons tecnicos asociados
+Eso permite mantener una sola logica de inventario sin convertir el cristal en servicio ni separar dos modelos tecnicos distintos.
 
-Ejemplos:
+### 2. Configurador de cristales
 
-- cristal monofocal
-- cristal bifocal
-- cristal progresivo
-- lente de contacto formulado
+Se crea una logica separada para cristales formulados.
 
-#### `addon_tecnico`
+Cada cristal deberia poder configurarse con elementos como:
 
-Uso:
+- laboratorio
+- marca o linea del lente
+- tipo de cristal
+- material
+- tratamientos
+- formula o rango de formula
+- si se vende como par con reflejo operativo de 2 unidades
+- si la configuracion es stock regular o bajo pedido
+- costo laboratorio y precio final, cuando aplique
 
-- opcion tecnica seleccionable que complementa a un `base_formulado`
-- no debe existir como linea autonoma de venta operativa cuando depende del item base
-- puede ser visible al usuario como producto seleccionable, pero siempre ligado a una linea padre
+### 3. Tarifario de cristales
 
-Ejemplos:
+El precio del cristal no deberia salir de sumar productos sueltos. Deberia salir de una tarifa o una cotizacion basada en:
 
-- blue block
-- fotocromatico
-- antirreflejo
-- material CR-39
-- policarbonato
+- laboratorio
+- marca o linea de lente
+- combinacion del cristal
+- complejidad o rango de formula
+- extras puntuales, solo si el laboratorio los cobra por separado
 
-### 2. Reglas de modelado seguras
+## Formas posibles de manejar el precio
 
-1. Una familia comercial no define por si sola si un item requiere formula.
-2. La misma familia puede tener variantes formuladas y no formuladas.
-3. Los lentes de contacto deben permitir ambos casos:
-   - variante comercial sin formula
-   - variante formulada con soporte clinico
-4. Los tratamientos y materiales no deben obligar a crear un producto final por cada combinacion posible.
-5. El sistema debe componer una linea tecnica a partir de:
-   - un `base_formulado`
-   - cero o mas `addon_tecnico`
-6. Si el negocio quiere mostrar filtros o materiales como items independientes en UI, internamente deben quedar vinculados a un item padre.
+### Opcion 1. Tarifa por laboratorio, combinacion y rango
 
-### 3. Estructura funcional minima por linea de venta
+Cada laboratorio define una tarifa por linea de lente, material, tratamientos integrados y rango de formula.
 
-Cada linea que viaje desde presupuesto hacia venta deberia poder expresar, como minimo:
+Ventaja:
 
-- `lineaKey`
-- `productoId`
-- `descripcion`
-- `tipoItem`
-- `requiereFormula`
-- `cantidad`
-- `precioUnitario`
-- `lineaPadreKey` opcional
-- `configuracionTecnica` opcional
-- `origenClinico` opcional
+- se parece a como ya trabaja el negocio
+- permite automatizar sin perder precision
 
-Con esto se cubren dos escenarios reales sin inflar el modelo:
+Limite:
 
-- linea comercial simple
-- linea tecnica compuesta por un item base mas addons asociados
+- requiere carga y mantenimiento del tarifario por laboratorio
 
-## Estados funcionales de conversion
+### Opcion 2. Tarifa base mas extras excepcionales
 
-### 1. Venta comercial
+La mayoria del precio viene cerrada en la tarifa principal, pero ciertos tratamientos especiales se agregan como extra solo cuando aplique.
 
-Aplica cuando ningun item requiere formula.
+Ventaja:
 
-Comportamiento:
+- respeta que la mayoria de tratamientos vienen incluidos
+- deja margen para laboratorios que si cobran extras puntuales
 
-- convierte directo a Generar Venta
-- no exige paciente
-- no exige historia medica
-- mantiene cliente y productos del presupuesto
+Limite:
 
-### 2. Venta con soporte clinico
+- exige definir claramente que entra en tarifa y que va como adicional
 
-Aplica cuando existe al menos un item con formula.
+### Opcion 3. Precio manual o cotizacion manual
 
-Comportamiento:
+El asesor o encargado coloca el precio del cristal segun el caso.
 
-- no puede quedar lista sin origen de formula valido
-- debe asociar paciente si la operacion lo requiere
-- debe definir si existe historia medica o formula valida externa/manual
-- debe habilitar orden de trabajo/proceso tecnico solo cuando el soporte clinico este completo
+Ventaja:
 
-## Origenes de formula permitidos
+- flexible para excepciones
 
-El sistema debe manejar estos origenes de formula:
+Limite:
 
-1. `historia_interna_optometrista`
-2. `historia_interna_oftalmologo`
-3. `formula_manual_desde_lente_actual`
-4. `formula_externa`
+- depende demasiado del usuario
+- dificulta control y estandarizacion
 
-## Reglas por escenario de negocio
+### Recomendacion funcional
 
-### Escenario 1: Consulta gratis con optometrista en tienda
+La mejor opcion parece ser una mezcla de:
 
-Condicion:
+- configuracion de cristal
+- tarifario por laboratorio, combinacion y rango
+- extras solo para excepciones muy puntuales
+- ajuste por rango de formula
+- precio manual solo para excepciones
 
-- el paciente ya fue atendido en tienda
-- existe historia medica interna
+## Fases de trabajo sugeridas
 
-Regla:
+### Fase 1. Validacion del modelo con el dueno
 
-- convertir con paciente sugerido
-- cargar historias del paciente
-- sugerir la historia mas reciente con formula completa
-- permitir cambio manual de historia si hay varias
+Objetivo:
 
-### Escenario 2: Consulta pagada con oftalmologo en tienda
+Confirmar exactamente como se compra y vende el cristal en la operacion diaria.
 
-Condicion:
+Entregable:
 
-- el paciente ya fue atendido por oftalmologo
-- existe historia medica interna
+- definicion clara del nuevo modelo de cristales
 
-Regla:
+Resultado de esta fase con la respuesta recibida:
 
-- mismo flujo que escenario 1
-- adicionalmente, si el negocio lo necesita, puede validarse estado de pago o estatus de consulta antes de habilitar el proceso tecnico
+- la venta se maneja principalmente por par
+- la operacion debe poder reflejar 2 cristales por venta
+- la formula afecta el precio por rangos
+- los tratamientos normalmente vienen integrados
+- existen varios laboratorios con tarifas distintas
+- todos los cristales se pueden manejar bajo stock en sistema
+- los casos bajo pedido deben resolverse con stock de referencia y marca operativa
+- guardar costo es deseable si el sistema sera administrativo completo
 
-### Escenario 3: El asesor lee la formula desde el lente/cristal actual
+### Fase 2. Redefinicion de catalogos
 
-Condicion:
+Objetivo:
 
-- no necesariamente existe historia medica interna
-- la formula es capturada desde lo que porta el paciente
+Separar lo que es inventario real de lo que sera configuracion de cristales.
 
-Regla:
+Entregable:
 
-- permitir venta con soporte clinico sin historia interna obligatoria
-- exigir captura manual de formula
-- marcar el origen como `manual`
-- no registrar esto automaticamente como historia medica formal
+- lista de categorias que siguen como inventario
+- lista de catalogos de cristales, materiales y tratamientos
+- regla de stock de referencia para configuraciones bajo pedido
+- criterio operativo para marcar configuraciones bajo pedido
+- forma de mostrar disponibilidad al usuario de venta sin mezclarlo con logistica posterior
 
-### Escenario 4: Formula externa de otro medico
+### Fase 3. Diseno del flujo operativo
 
-Condicion:
+Objetivo:
 
-- la prescripcion no proviene del sistema interno
+Definir como viaja la informacion desde historia medica hasta venta y orden de trabajo.
 
-Regla:
+Entregable:
 
-- permitir venta con soporte clinico sin historia interna obligatoria
-- exigir captura de formula externa
-- guardar metadatos minimos:
-  - nombre del medico o centro
-  - fecha de formula si existe
-  - observacion opcional
-  - adjunto opcional en fase posterior
+- flujo aprobado para recomendacion, cotizacion, venta y orden de trabajo
 
-## Flujo recomendado al pulsar "Convertir a venta"
+### Fase 4. Diseno del tarifario
 
-### Caso A: Presupuesto comercial
+Objetivo:
 
-1. El usuario pulsa `Convertir a venta`.
-2. El sistema detecta que no hay productos formulados.
-3. Navega directo a Generar Venta.
-4. Precarga cliente y productos.
+Definir como se obtendra el precio del cristal.
 
-### Caso B: Presupuesto con requerimiento clinico
+Entregable:
 
-1. El usuario pulsa `Convertir a venta`.
-2. El sistema detecta items con formula.
-3. Se abre un paso intermedio `Validacion clinica para venta`.
-4. El usuario selecciona el origen de formula.
-5. Segun la opcion elegida:
-   - historia interna: paciente + historia sugerida/seleccionada
-   - formula manual: captura manual
-   - formula externa: captura externa
-6. Solo despues de completar esto se navega a Generar Venta.
+- regla clara de precio automatico
+- casos de excepcion para precio manual
+- definicion de unidad comercial: par con reflejo operativo individual
 
-## Comportamiento esperado en Generar Venta
+### Fase 5. Rediseño funcional de modulos
 
-### Si la conversion es comercial
+Objetivo:
 
-- abrir en modo equivalente a `solo_productos`
-- precargar cliente y productos
-- no mostrar bloqueo por historia medica
+Precisar que debe cambiar en cada pantalla o proceso.
 
-### Si la conversion requiere soporte clinico
+Entregable:
 
-- no abrir como `solo_productos` puro
-- debe llegar con uno de estos estados:
-  - paciente + historia sugerida
-  - paciente + historias para elegir
-  - formula manual pendiente/completada
-  - formula externa pendiente/completada
+- lista de ajustes funcionales por modulo
 
-### Regla de habilitacion
+### Fase 6. Plan de transicion
 
-La orden de trabajo/proceso tecnico solo puede habilitarse cuando:
+Objetivo:
 
-- exista formula valida para los productos que la exigen
-- existan datos minimos operativos para ejecutar el proceso tecnico
+Evitar romper historicos o afectar la operacion actual.
 
-## Contrato funcional minimo entre Presupuesto y Generar Venta
+Entregable:
 
-El draft de conversion ya no deberia enviar solo cliente y productos. Debe incluir contexto clinico suficiente y clasificacion funcional consistente.
+- plan de entrada en vigencia
+- reglas para convivir con datos anteriores
 
-Campos sugeridos:
+## Riesgos funcionales
 
-- `origenPresupuesto`
-- `cliente`
-- `lineas`
-- `requiereSoporteClinico`
-- `requiereProcesoTecnico`
-- `pacienteId` opcional
-- `pacienteCedula` opcional
-- `historiaId` opcional
-- `origenFormula` opcional
-- `formulaManual` opcional
-- `formulaExterna` opcional
-- `observaciones`
-- `lineasConRequerimientoClinico`
-- `estadoValidacionClinica`
+- seguir mezclando inventario fisico con configuracion de laboratorio
+- no definir bien como se calcula el precio
+- usar stock sin una regla clara para diferenciar disponibilidad comercial y requerimiento real de pedido a laboratorio
+- marcar demasiadas configuraciones como bajo pedido sin una regla clara de disponibilidad y generar ruido operativo innecesario
+- querer automatizar el precio sin tener reglas claras del negocio
+- afectar ventas historicas o reportes ya cerrados
+- que el asesor no entienda cuando vende inventario normal y cuando vende un cristal configurado
 
-Nota de implementacion:
+## Decisiones que deben cerrarse antes de implementar
 
-- `requiereProcesoTecnico` debe calcularse a partir de las lineas clasificadas y no depender de texto libre o de categorias legacy
-- los contratos JSON exactos pueden definirse despues, cuando esta estructura quede aprobada
+1. Como se modelaran exactamente los rangos de formula.
+2. Si la unidad comercial se mostrara como par, como 2 cristales o en doble vista.
+3. Que tratamientos pueden cobrarse como extra y cuales siempre van integrados.
+4. Como se registrara el laboratorio en venta y orden de trabajo.
+5. Como se definira el stock de referencia para cristales bajo pedido.
+6. Como se mostrara la disponibilidad de un cristal bajo pedido dentro del sistema de venta.
+7. Si costo laboratorio sera obligatorio u opcional.
+8. Desde que fecha aplicara el nuevo modelo.
 
-## UX sugerida
+## Recomendacion final
 
-### Modal de conversion
+La recomendacion funcional es esta:
 
-Si el presupuesto no requiere formula:
+1. Mantener inventario normal solo para productos fisicos independientes.
+2. Sacar cristales del esquema de inventario por componentes.
+3. Manejar los cristales como un producto configurable con unidad comercial por par y reflejo operativo individual.
+4. Crear un tarifario por laboratorio, combinacion y rango de formula.
+5. Registrar en venta y orden de trabajo toda la configuracion del cristal sin separar tratamientos como productos.
+6. Manejar todos los cristales bajo una sola logica de stock, con marca operativa para bajo pedido.
+7. Tratar el bajo pedido como una condicion interna de disponibilidad, no como una regla de tiempos dentro de este alcance.
 
-- mensaje: `Este presupuesto puede cargarse directamente a venta.`
+## Siguiente paso sugerido
 
-Si el presupuesto requiere formula:
+Antes de programar cualquier cambio, hace falta una validacion funcional corta con el dueno para confirmar:
 
-- mensaje: `Este presupuesto incluye items que requieren formulacion. Antes de continuar debes indicar el origen de la formula.`
+- que sigue siendo inventario real
+- que pasa a ser configuracion de cristal
+- como se modelaran los rangos de formula
+- como se definira la regla de stock alto o stock de referencia para configuraciones bajo pedido
+- como se mostrara la disponibilidad de un cristal bajo pedido dentro del proceso de venta
+- desde donde se armara el cristal: historial medico, venta o ambos
 
-Opciones del modal/paso:
-
-1. `Usar historia clinica existente`
-2. `Registrar formula externa`
-3. `Capturar formula manual desde lente actual`
-
-### Banner en Generar Venta
-
-Si llega sin soporte clinico resuelto y lo necesita:
-
-- mostrar alerta superior fija
-- texto sugerido: `Esta venta incluye items formulados. Debes completar el soporte clinico antes de generar orden de trabajo.`
-
-## Reglas de bloqueo
-
-### Bloquear conversion directa a venta completa cuando:
-
-- el presupuesto requiere formula y no existe origen de formula definido
-- hay paciente requerido pero no identificado
-- hay historia interna requerida pero ninguna historia valida disponible
-- existen addons tecnicos sin item padre valido
-
-### Permitir continuar con advertencia cuando:
-
-- la venta es comercial y no necesita proceso tecnico
-- la formula manual o externa esta completa aunque no exista historia interna
-
-## Mejores practicas de implementacion
-
-1. Centralizar la clasificacion funcional en una sola utilidad compartida entre presupuesto y venta.
-2. No decidir comportamiento clinico leyendo nombres de categoria renderizados en pantalla.
-3. Mantener compatibilidad hacia atras mediante adaptadores mientras el backend siga plano.
-4. Validar en modo defensivo: si falta clasificacion, no habilitar conversion automatica plena.
-5. Evitar duplicar verdad entre `producto`, `linea de venta` y `draft de conversion`; la linea derivada debe ser la fuente operativa.
-6. Separar claramente reglas de negocio de reglas de UI para que el flujo sea testeable.
-7. Tratar `addon_tecnico` como hijo de un `base_formulado`, aunque en interfaz se seleccione como item independiente.
-8. Introducir la estructura por fases, sin reventar primero la compatibilidad del flujo comercial simple.
-
-## Recomendacion de implementacion por fases
-
-### Fase 0
-
-- definir tabla maestra de clasificacion funcional
-- mapear categorias actuales a `tipoItem` y `requiereFormula`
-- identificar productos ambiguos que requieran revision manual
-
-### Fase 1
-
-- mover la deteccion a una utilidad compartida
-- ampliar draft entre modulos con `lineas` y estado clinico minimo
-- mantener compatibilidad con el flujo actual de venta comercial
-
-### Fase 2
-
-- agregar paso intermedio de validacion clinica
-- soportar historia interna, formula manual y formula externa
-- soportar lineas padre/hijo para addons tecnicos
-
-### Fase 3
-
-- adjuntos para formula externa
-- reglas mas finas por categoria de producto
-- sugerencia automatica de paciente por cedula
-- sugerencia automatica de historia mas reciente valida
-
-### Fase 4
-
-- trazabilidad completa proceso tecnico -> origen de formula
-- reportes de ventas comerciales vs ventas clinicas
-- definicion final de contratos JSON para backend
-
-## Decision recomendada
-
-Implementar la opcion 2: `conversion inteligente con fallback`, con una compuerta clinica condicional.
-
-Resumen:
-
-- Presupuesto sin productos formulados: conversion directa
-- Presupuesto con productos formulados: conversion asistida con validacion clinica
-- Historia medica no obligatoria en todos los casos
-- Formula valida si obligatoria para cualquier item `base_formulado`
-- Tratamientos y materiales modelados como `addon_tecnico`, no como producto final combinado
-
-## Resultado esperado
-
-Con este enfoque se logra:
-
-- menos friccion para presupuestos simples
-- control operativo para el proceso tecnico
-- coherencia entre venta comercial y venta clinica
-- soporte real para los 4 escenarios del negocio
+Una vez eso quede aprobado, ya se puede convertir esta planificacion en un plan de implementacion por etapas.

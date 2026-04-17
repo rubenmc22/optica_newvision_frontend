@@ -1,10 +1,12 @@
 import { Component, OnInit, OnDestroy, HostListener, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DecimalPipe, DatePipe } from '@angular/common';
-import { Subject, forkJoin } from 'rxjs';
+import { Subject } from 'rxjs';
 import { takeUntil, debounceTime } from 'rxjs/operators';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { CierreCajaService } from './cierre-caja.service';
-import { HistorialVentaService } from '../../ventas/historial-ventas/historial-ventas.service';
+import { ExcelExportService } from '../../../core/services/excel-export/excel-export.service';
 import { SystemConfigService } from './../../system-config/system-config.service';
 import { TasaCambiariaService } from './../../../core/services/tasaCambiaria/tasaCambiaria.service';
 import { UserStateService } from './../../../core/services/userState/user-state-service';
@@ -12,6 +14,8 @@ import { Sede, SedeCompleta } from '../../../view/login/login-interface';
 import { CierreDiario, Transaccion, ResumenMetodoPago, TasasCambio } from './cierre-caja.interfaz';
 import { User, Rol, AuthData, AuthResponse, Cargo } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
+import { GenerarVentaService } from '../generar-venta/generar-venta.service';
+import { buildVentaPaymentCatalog, VentaReceiverAccountOption } from '../shared/payment-catalog.util';
 import * as bootstrap from 'bootstrap';
 
 
@@ -63,6 +67,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   hayDiferencia: boolean = false;
   comentarioRequerido: boolean = false;
   historialCierres: CierreDiario[] = [];
+  bloqueoOperativoActual: any = null;
   private actualizandoValidaciones: boolean = false;
   private recalculando: boolean = false;
   private suscripcionesFormularioCierreInicializadas: boolean = false;
@@ -92,14 +97,12 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     pagomovil: { total: number; cantidad: number; porBanco: any[] };
     transferencia: { total: number; cantidad: number; porBanco: any[] };
     zelle: { total: number; cantidad: number; porBanco: any[] };
-    mixto: { total: number; cantidad: number };
   } = {
       efectivo: { total: 0, porMoneda: { dolar: 0, euro: 0, bolivar: 0 }, cantidad: 0 },
       punto: { total: 0, porBanco: [], cantidad: 0 },
       pagomovil: { total: 0, cantidad: 0, porBanco: [] },
       transferencia: { total: 0, cantidad: 0, porBanco: [] },
-      zelle: { total: 0, cantidad: 0, porBanco: [] },
-      mixto: { total: 0, cantidad: 0 }
+      zelle: { total: 0, cantidad: 0, porBanco: [] }
     };
 
   analisisFormasPago: {
@@ -115,6 +118,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     };
 
   analisisVentasPendientes: any[] = [];
+  cuentasReceptorasConfiguradasPorMetodo: Record<string, VentaReceiverAccountOption[]> = buildVentaPaymentCatalog().cuentasReceptorasPorMetodo;
 
   // Métodos de pago disponibles
   metodosPago = [
@@ -124,8 +128,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     { valor: 'debito', label: 'Débito', icono: 'bi-credit-card-2-back', color: '#0ea5e9' },
     { valor: 'credito', label: 'Crédito', icono: 'bi-credit-card-2-front', color: '#f59e0b' },
     { valor: 'pagomovil', label: 'Pago Móvil', icono: 'bi-phone', color: '#ec4899' },
-    { valor: 'zelle', label: 'Zelle', icono: 'bi-globe-americas', color: '#8b5cf6' },
-    { valor: 'mixto', label: 'Mixto', icono: 'bi-wallet2', color: '#f59e0b' }
+    { valor: 'zelle', label: 'Zelle', icono: 'bi-globe-americas', color: '#8b5cf6' }
   ];
 
   // Tipos de transacción
@@ -148,6 +151,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   mostrarModalCierre = false;
   mostrarHistorial = false;
   transaccionEditando: Transaccion | null = null;
+  usaModoDummy = false;
 
   // Estados de carga
   cargandoDatos: boolean = false;
@@ -161,15 +165,17 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     private decimalPipe: DecimalPipe,
     private datePipe: DatePipe,
     private cierreCajaService: CierreCajaService,
-    private historialVentaService: HistorialVentaService,
     private cdr: ChangeDetectorRef,
     private systemConfigService: SystemConfigService,
     private tasaCambiariaService: TasaCambiariaService, // Nuevo
     private userStateService: UserStateService,
+    private generarVentaService: GenerarVentaService,
+    private excelExportService: ExcelExportService,
     private swalService: SwalService
   ) {
     this.inicializarForms();
     this.checkMobile();
+    this.usaModoDummy = this.cierreCajaService.estaUsandoDummy();
 
     // Inicializar fechas del historial AQUÍ en el constructor
     const fechaFin = new Date();
@@ -187,11 +193,44 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.obtenerConfiguracionSistema();
+    this.cargarCuentasReceptorasConfiguradas();
     this.obtenerUsuarioYSede();
-    this.cargarDatosFecha();
-    this.iniciarActualizacionAutomatica();
+    this.suscribirVentasGeneradas();
     this.configurarSuscripciones();
 
+  }
+
+  private cargarCuentasReceptorasConfiguradas(): void {
+    this.systemConfigService.obtenerMetodosPagoConfigurables()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: ({ paymentMethods }) => {
+          const catalogo = buildVentaPaymentCatalog(paymentMethods);
+          this.cuentasReceptorasConfiguradasPorMetodo = catalogo.cuentasReceptorasPorMetodo;
+
+          if (!this.transacciones.length) {
+            return;
+          }
+
+          this.calcularAnalisisDesdeTransacciones();
+          this.limpiarControlesBancos();
+          this.agregarControlesBancos();
+
+          if (this.cierreActual?.detalleCierreReal) {
+            this.precargarValoresReales();
+          }
+
+          if (this.cierreActual) {
+            this.actualizarResumen();
+          }
+
+          this.filtrarTransacciones();
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.warn('No se pudieron cargar las cuentas receptoras configuradas para cierre de caja:', error);
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -466,6 +505,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       return 0;
     }
 
+    const montoSistemaPersistido = Number(metodo.montoEnMonedaSistema ?? metodo.montoMonedaSistema);
+    if (Number.isFinite(montoSistemaPersistido) && montoSistemaPersistido > 0) {
+      return this.redondearMonto(montoSistemaPersistido);
+    }
+
     return this.convertirMontoTransaccion(
       transaccion,
       Number(metodo.monto || 0),
@@ -511,9 +555,13 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   getTextoMontoOriginalBanco(banco: any): string {
     const montoOriginal = Number(banco?.totalOriginal || 0);
-    const monedaOriginal = banco?.monedaOriginal || 'VES';
+    const monedaOriginal = this.obtenerCodigoMoneda(banco?.monedaOriginal || 'VES');
 
     if (!montoOriginal) {
+      return '';
+    }
+
+    if (monedaOriginal === this.obtenerCodigoMoneda(this.monedaSistema)) {
       return '';
     }
 
@@ -528,6 +576,215 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   getDestinosMetodo(tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle'): any[] {
     return this.analisisMetodosPago?.[tipo]?.porBanco || [];
+  }
+
+  private limpiarTextoDestino(valor: unknown): string | null {
+    const texto = (valor || '').toString().replace(/\s+/g, ' ').trim();
+    return texto || null;
+  }
+
+  private limpiarReferenciaDestino(valor: string | null): string | null {
+    if (!valor) {
+      return null;
+    }
+
+    const partes = valor
+      .split(/\s+-\s+/)
+      .map((parte) => parte.trim())
+      .filter((parte) => parte && !parte.includes('@'));
+
+    return partes.length ? partes.join(' - ') : null;
+  }
+
+  private extraerBancoDesdeDescripcion(descripcion: string | null): string | null {
+    const texto = this.limpiarTextoDestino(descripcion);
+
+    if (!texto) {
+      return null;
+    }
+
+    return texto.split(/\s+\(|\s+-\s+/)[0]?.trim() || null;
+  }
+
+  private extraerTelefonoDesdeDescripcion(descripcion: string | null): string | null {
+    const texto = this.limpiarTextoDestino(descripcion);
+    const match = texto?.match(/Telf\.\s*([^\-)]+)/i);
+    return this.limpiarTextoDestino(match?.[1] || null);
+  }
+
+  private extraerDocumentoDesdeDescripcion(descripcion: string | null): string | null {
+    const texto = this.limpiarTextoDestino(descripcion);
+    const match = texto?.match(/CI\.\s*([^\-)]+)/i);
+    return this.limpiarTextoDestino(match?.[1] || null);
+  }
+
+  private extraerCorreoDesdeDescripcion(descripcion: string | null): string | null {
+    const texto = this.limpiarTextoDestino(descripcion);
+    const match = texto?.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    return this.limpiarTextoDestino(match?.[0] || null)?.toLowerCase() || null;
+  }
+
+  private normalizarComparacionCuenta(valor: unknown): string {
+    return `${valor || ''}`
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private resolverCuentaReceptoraConfigurada(metodo: any, tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle'): VentaReceiverAccountOption | null {
+    const cuentas = this.cuentasReceptorasConfiguradasPorMetodo?.[tipo] || [];
+
+    if (!cuentas.length) {
+      return null;
+    }
+
+    const cuentaReceptoraId = this.limpiarTextoDestino(metodo?.cuentaReceptoraId || null);
+    if (cuentaReceptoraId) {
+      const cuentaPorId = cuentas.find((cuenta) => cuenta.id === cuentaReceptoraId);
+      if (cuentaPorId) {
+        return cuentaPorId;
+      }
+    }
+
+    const bancoCodigo = this.limpiarTextoDestino(metodo?.bancoReceptorCodigo || metodo?.bancoCodigo || null);
+    const bancoNombre = this.limpiarTextoDestino(metodo?.bancoReceptorNombre || metodo?.bancoNombre || this.extraerBancoDesdeDescripcion(metodo?.bancoReceptor || null));
+    const telefono = this.limpiarTextoDestino(metodo?.cuentaReceptoraTelefono || this.extraerTelefonoDesdeDescripcion(metodo?.bancoReceptor || null));
+    const documento = this.limpiarTextoDestino(metodo?.cuentaReceptoraDocumento || this.extraerDocumentoDesdeDescripcion(metodo?.bancoReceptor || null));
+    const correo = this.limpiarTextoDestino(metodo?.cuentaReceptoraEmail || this.extraerCorreoDesdeDescripcion(metodo?.bancoReceptor || null))?.toLowerCase() || null;
+    const descripcion = this.normalizarComparacionCuenta(
+      metodo?.cuentaReceptoraDescripcion
+      || metodo?.cuentaReceptoraAlias
+      || this.extraerDatosBancoReceptor(metodo?.bancoReceptor || null, bancoNombre).detalleCuenta
+    );
+
+    let candidatas = cuentas.filter((cuenta) => {
+      if (bancoCodigo && cuenta.codigo !== bancoCodigo) {
+        return false;
+      }
+
+      if (bancoNombre && cuenta.nombre && this.normalizarComparacionCuenta(cuenta.nombre) !== this.normalizarComparacionCuenta(bancoNombre)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    if (!candidatas.length && bancoCodigo) {
+      candidatas = cuentas.filter((cuenta) => cuenta.codigo === bancoCodigo);
+    }
+
+    if (!candidatas.length && bancoNombre) {
+      candidatas = cuentas.filter((cuenta) => this.normalizarComparacionCuenta(cuenta.nombre) === this.normalizarComparacionCuenta(bancoNombre));
+    }
+
+    const coincidenciaExacta = candidatas.find((cuenta) => {
+      const coincideTelefono = telefono && cuenta.phone && this.normalizarComparacionCuenta(cuenta.phone) === this.normalizarComparacionCuenta(telefono);
+      const coincideDocumento = documento && cuenta.ownerId && this.normalizarComparacionCuenta(cuenta.ownerId) === this.normalizarComparacionCuenta(documento);
+      const coincideCorreo = correo && cuenta.email && this.normalizarComparacionCuenta(cuenta.email) === this.normalizarComparacionCuenta(correo);
+
+      return (coincideTelefono && coincideDocumento) || coincideCorreo;
+    });
+
+    if (coincidenciaExacta) {
+      return coincidenciaExacta;
+    }
+
+    const coincidenciaPorContacto = candidatas.find((cuenta) => {
+      const coincideTelefono = telefono && cuenta.phone && this.normalizarComparacionCuenta(cuenta.phone) === this.normalizarComparacionCuenta(telefono);
+      const coincideDocumento = documento && cuenta.ownerId && this.normalizarComparacionCuenta(cuenta.ownerId) === this.normalizarComparacionCuenta(documento);
+      return !!coincideTelefono || !!coincideDocumento;
+    });
+
+    if (coincidenciaPorContacto) {
+      return coincidenciaPorContacto;
+    }
+
+    if (descripcion) {
+      const coincidenciaPorDescripcion = candidatas.find((cuenta) => this.normalizarComparacionCuenta(cuenta.accountDescription) === descripcion);
+      if (coincidenciaPorDescripcion) {
+        return coincidenciaPorDescripcion;
+      }
+    }
+
+    return candidatas.length === 1 ? candidatas[0] : null;
+  }
+
+  private extraerDatosBancoReceptor(descripcion: string | null, bancoNombre: string | null): { detalleCuenta: string | null; referenciaCuenta: string | null } {
+    const texto = this.limpiarTextoDestino(descripcion);
+    const banco = this.limpiarTextoDestino(bancoNombre);
+
+    if (!texto) {
+      return { detalleCuenta: null, referenciaCuenta: null };
+    }
+
+    if (banco && texto === banco) {
+      return { detalleCuenta: null, referenciaCuenta: null };
+    }
+
+    if (banco && texto.startsWith(`${banco} (`)) {
+      const resto = texto.slice(banco.length).trim();
+      const matchConReferencia = resto.match(/^\((.+)\)\s-\s(.+)$/);
+      if (matchConReferencia) {
+        return {
+          detalleCuenta: this.limpiarTextoDestino(matchConReferencia[2]),
+          referenciaCuenta: this.limpiarReferenciaDestino(matchConReferencia[1])
+        };
+      }
+
+      const matchSoloDetalle = resto.match(/^\((.+)\)$/);
+      if (matchSoloDetalle) {
+        return {
+          detalleCuenta: this.limpiarTextoDestino(matchSoloDetalle[1]),
+          referenciaCuenta: null
+        };
+      }
+
+      if (resto.startsWith('- ')) {
+        return {
+          detalleCuenta: this.limpiarTextoDestino(resto.slice(2)),
+          referenciaCuenta: null
+        };
+      }
+    }
+
+    if (banco && texto.startsWith(`${banco} - `)) {
+      return {
+        detalleCuenta: this.limpiarTextoDestino(texto.slice(banco.length + 3)),
+        referenciaCuenta: null
+      };
+    }
+
+    const indiceSeparador = texto.lastIndexOf(' - ');
+    if (indiceSeparador > -1) {
+      const encabezado = texto.slice(0, indiceSeparador).trim();
+      const detalle = texto.slice(indiceSeparador + 3).trim();
+      const ultimoParentesis = encabezado.lastIndexOf('(');
+
+      if (ultimoParentesis > -1 && encabezado.endsWith(')')) {
+        return {
+          detalleCuenta: this.limpiarTextoDestino(detalle),
+          referenciaCuenta: this.limpiarReferenciaDestino(encabezado.slice(ultimoParentesis + 1, -1))
+        };
+      }
+
+      return {
+        detalleCuenta: this.limpiarTextoDestino(detalle),
+        referenciaCuenta: null
+      };
+    }
+
+    return {
+      detalleCuenta: texto,
+      referenciaCuenta: null
+    };
+  }
+
+  private ordenarTransaccionesPorFechaDesc(transacciones: Transaccion[]): Transaccion[] {
+    return [...transacciones].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
   }
 
   private normalizarClaveControlBanco(valor: string): string {
@@ -558,18 +815,55 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   private obtenerInfoDestinoMetodo(metodo: any, tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle'): any {
+    const cuentaConfigurada = this.resolverCuentaReceptoraConfigurada(metodo, tipo);
+    const bancoPuntoDesdeDescripcion = this.extraerBancoDesdeDescripcion(metodo?.bancoReceptor || null);
     const bancoBase = tipo === 'punto'
-      ? (metodo?.bancoNombre || metodo?.banco || 'Otro')
-      : (metodo?.bancoReceptorNombre || metodo?.bancoReceptor || metodo?.bancoNombre || metodo?.banco || (tipo === 'zelle' ? 'Cuenta Zelle principal' : 'Destino sin identificar'));
+      ? (cuentaConfigurada?.nombre || metodo?.bancoNombre || metodo?.bancoReceptorNombre || metodo?.cuentaReceptora?.bancoNombre || metodo?.banco || bancoPuntoDesdeDescripcion || 'Otro')
+      : (cuentaConfigurada?.nombre || metodo?.bancoReceptorNombre || metodo?.bancoReceptor || metodo?.bancoNombre || metodo?.banco || (tipo === 'zelle' ? 'Cuenta Zelle principal' : 'Destino sin identificar'));
     const bancoCodigo = tipo === 'punto'
-      ? (metodo?.bancoCodigo || this.normalizarClaveControlBanco(bancoBase).toUpperCase())
-      : (metodo?.bancoReceptorCodigo || metodo?.bancoCodigo || this.normalizarClaveControlBanco(bancoBase).toUpperCase());
-    const cuentaAlias = metodo?.cuentaReceptoraAlias || metodo?.cuentaReceptoraEmail || metodo?.cuentaReceptoraUltimos4 || null;
-    const cuentaId = metodo?.cuentaReceptoraId || null;
-    const destinoLabel = cuentaAlias && cuentaAlias !== bancoBase
-      ? `${bancoBase} · ${cuentaAlias}`
+      ? (cuentaConfigurada?.codigo || metodo?.bancoCodigo || metodo?.bancoReceptorCodigo || metodo?.cuentaReceptora?.bancoCodigo || this.normalizarClaveControlBanco(bancoBase).toUpperCase())
+      : (cuentaConfigurada?.codigo || metodo?.bancoReceptorCodigo || metodo?.bancoCodigo || this.normalizarClaveControlBanco(bancoBase).toUpperCase());
+    const datosBancoReceptor = this.extraerDatosBancoReceptor(metodo?.bancoReceptor || null, bancoBase);
+    const cuentaCorreo = this.limpiarTextoDestino(
+      cuentaConfigurada?.email
+      || metodo?.cuentaReceptoraEmail
+      || metodo?.cuentaReceptora?.correo
+      || metodo?.cuentaReceptora?.email
+      || this.extraerCorreoDesdeDescripcion(metodo?.bancoReceptor || null)
+    )?.toLowerCase() || null;
+    const cuentaAlias = cuentaConfigurada?.accountDescription
+      || metodo?.cuentaReceptoraAlias
+      || metodo?.cuentaReceptoraDescripcion
+      || metodo?.cuentaReceptoraDetalle
+      || datosBancoReceptor.detalleCuenta
+      || metodo?.cuentaReceptora?.descripcionCuenta
+      || metodo?.cuentaReceptora?.titular
+      || cuentaCorreo
+      || metodo?.cuentaReceptora?.ultimos4
+      || null;
+    const cuentaId = cuentaConfigurada?.id || metodo?.cuentaReceptoraId || null;
+    const cuentaTitular = cuentaConfigurada?.ownerName || metodo?.cuentaReceptoraTitular || metodo?.cuentaReceptora?.titular || metodo?.cuentaReceptora?.ownerName || null;
+    const cuentaDocumento = cuentaConfigurada?.ownerId || metodo?.cuentaReceptoraDocumento || metodo?.cuentaReceptoraCedulaRif || metodo?.cuentaReceptora?.cedulaRif || metodo?.cuentaReceptora?.ownerId || null;
+    const cuentaTelefono = cuentaConfigurada?.phone || metodo?.cuentaReceptoraTelefono || metodo?.cuentaReceptora?.telefono || metodo?.cuentaReceptora?.phone || null;
+    const detalleCuenta = cuentaAlias && cuentaAlias !== bancoBase
+      ? cuentaAlias
+      : (cuentaTitular && cuentaTitular !== bancoBase ? cuentaTitular : null);
+    const referenciaCuenta = [
+      cuentaTelefono ? `Telf. ${cuentaTelefono}` : null,
+      cuentaDocumento ? `CI. ${cuentaDocumento}` : null
+    ].filter(Boolean).join(' - ') || datosBancoReceptor.referenciaCuenta || null;
+    const destinoLabel = detalleCuenta
+      ? `${bancoBase} (${detalleCuenta})`
       : bancoBase;
-    const destinoKey = this.normalizarClaveControlBanco(`${bancoCodigo}_${cuentaId || cuentaAlias || bancoBase}_${metodo?.moneda || this.monedaSistema}`);
+    const identidadZelle = cuentaId
+      || cuentaCorreo
+      || [cuentaTelefono, cuentaDocumento].filter(Boolean).join('_')
+      || cuentaAlias
+      || cuentaTitular
+      || bancoBase;
+    const destinoKey = tipo === 'zelle'
+      ? this.normalizarClaveControlBanco(`zelle_${identidadZelle}`)
+      : this.normalizarClaveControlBanco(`${bancoCodigo}_${cuentaId || cuentaAlias || bancoBase}_${metodo?.moneda || this.monedaSistema}`);
 
     return {
       banco: bancoBase,
@@ -578,8 +872,29 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       destinoLabel,
       cuentaAlias,
       cuentaId,
+      detalleCuenta,
+      referenciaCuenta,
+      cuentaTitular,
+      cuentaDocumento,
+      cuentaTelefono,
       monedaOriginal: this.obtenerCodigoMoneda(metodo?.moneda || this.monedaSistema)
     };
+  }
+
+  getTituloDestino(item: any): string {
+    return item?.destinoLabel || item?.banco || 'Destino sin identificar';
+  }
+
+  getDetalleDestino(item: any): string | null {
+    if (item?.destinoLabel && item?.detalleCuenta) {
+      return null;
+    }
+
+    return item?.detalleCuenta || null;
+  }
+
+  getReferenciaDestino(item: any): string | null {
+    return item?.referenciaCuenta || null;
   }
 
   getMontoRealMetodoPorDestino(tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle', item: any): number {
@@ -659,7 +974,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       pagomovilRealTotal: [null, [Validators.required, Validators.min(0)]],
       zelleReal: [null],
       notasCierre: [''],
-      imprimirResumen: [true],
+      imprimirResumen: [false],
       enviarEmail: [false],
       adjuntarComprobantes: [true]
     });
@@ -687,13 +1002,13 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     if (this.getDestinosMetodo('transferencia').length) {
       controles.push(...this.getDestinosMetodo('transferencia').map((item) => this.getNombreControlMetodo('transferencia', item)));
-    } else {
+    } else if ((this.analisisMetodosPago?.transferencia?.total || 0) > 0) {
       controles.push('transferenciaRealTotal');
     }
 
     if (this.getDestinosMetodo('pagomovil').length) {
       controles.push(...this.getDestinosMetodo('pagomovil').map((item) => this.getNombreControlMetodo('pagomovil', item)));
-    } else {
+    } else if ((this.analisisMetodosPago?.pagomovil?.total || 0) > 0) {
       controles.push('pagomovilRealTotal');
     }
 
@@ -728,6 +1043,10 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         control.setValidators([Validators.required, Validators.min(0)]);
       } else {
         control.clearValidators();
+
+        if (control.value === null || control.value === undefined || control.value === '') {
+          control.setValue(0, { emitEvent: false });
+        }
       }
 
       control.updateValueAndValidity({ emitEvent: false });
@@ -772,8 +1091,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       punto: { total: 0, porBanco: [], cantidad: 0 },
       pagomovil: { total: 0, cantidad: 0, porBanco: [] },
       transferencia: { total: 0, cantidad: 0, porBanco: [] },
-      zelle: { total: 0, cantidad: 0, porBanco: [] },
-      mixto: { total: 0, cantidad: 0 }
+      zelle: { total: 0, cantidad: 0, porBanco: [] }
     };
 
     this.analisisFormasPago = {
@@ -943,11 +1261,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       }
     });
 
-    if (trans.detalleMetodosPago.length > 1) {
-      const montoTotalEnMonedaSistema = this.getMontoTransaccionSistema(trans);
-      this.analisisMetodosPago.mixto.total += montoTotalEnMonedaSistema;
-      this.analisisMetodosPago.mixto.cantidad++;
-    }
   }
 
   private procesarFormasPago(trans: Transaccion): void {
@@ -1017,6 +1330,20 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   private obtenerUsuarioYSede(): void {
+    const usuarioInicial = this.userStateService.getCurrentUser();
+    if (usuarioInicial) {
+      this.currentUser = usuarioInicial;
+      this.transaccionForm.patchValue({
+        usuario: usuarioInicial.nombre
+      });
+    }
+
+    const sedeInicial = this.userStateService.getSedeActual();
+    if (sedeInicial?.key) {
+      this.sedeActual = sedeInicial;
+      this.cargarDatosFecha();
+    }
+
     this.userStateService.currentUser$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(user => {
@@ -1032,7 +1359,12 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.userStateService.sedeActual$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(sede => {
+      const sedeCambio = sede?.key && sede?.key !== this.sedeActual?.key;
       this.sedeActual = sede;
+
+      if (sedeCambio) {
+        this.cargarDatosFecha();
+      }
     });
   }
 
@@ -1058,13 +1390,42 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     });
   }
 
+  private formatearFechaLocal(fecha: Date): string {
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private esMismaFechaCalendario(fechaA: Date | string, fechaB: Date | string): boolean {
+    return this.formatearFechaLocal(new Date(fechaA)) === this.formatearFechaLocal(new Date(fechaB));
+  }
+
+  private suscribirVentasGeneradas(): void {
+    this.generarVentaService.ventaCreada$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((payload: any) => {
+        const sedeEvento = String(payload?.sede || '').trim().toLowerCase();
+        const sedeActual = String(this.sedeActual?.key || '').trim().toLowerCase();
+
+        if (!sedeEvento || !sedeActual || sedeEvento !== sedeActual) {
+          return;
+        }
+
+        if (!this.esMismaFechaCalendario(payload?.fecha || new Date(), this.fechaSeleccionada)) {
+          return;
+        }
+
+        this.cargarDatosFecha();
+      });
+  }
+
   private checkMobile(): void {
     this.isMobile = window.innerWidth < 768;
   }
 
   cargarDatosFecha(): void {
     if (!this.sedeActual) {
-      this.swalService.showWarning('Sede no seleccionada', 'Selecciona una sede para continuar.');
       return;
     }
 
@@ -1094,7 +1455,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     const filtros = this.filtroForm.value;
 
-    this.transaccionesFiltradas = this.transacciones.filter(trans => {
+    this.transaccionesFiltradas = this.ordenarTransaccionesPorFechaDesc(this.transacciones.filter(trans => {
       // Filtrar por tipo
       if (filtros.tipo !== 'todos' && trans.tipo !== filtros.tipo) {
         return false;
@@ -1137,10 +1498,12 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       }
 
       return true;
-    });
+    }));
   }
 
   private procesarResumenDiario(resumen: any): void {
+    this.bloqueoOperativoActual = resumen?.bloqueoOperativo || null;
+
     // 1. Procesar ventas como transacciones
     if (resumen.ventas && Array.isArray(resumen.ventas)) {
       this.procesarVentasParaTransacciones(resumen.ventas);
@@ -1158,6 +1521,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       // NO crear cierre automáticamente
       this.cierreActual = null;
       console.log('📭 No hay cierre para este día');
+    }
+
+    if (resumen.transaccionesManuales && Array.isArray(resumen.transaccionesManuales) && resumen.transaccionesManuales.length) {
+      this.transacciones = this.ordenarTransaccionesPorFechaDesc([...this.transacciones, ...resumen.transaccionesManuales]);
+      this.calcularAnalisisDesdeTransacciones();
     }
 
     // 3. Limpiar y reconstruir controles dinámicos del formulario
@@ -1291,29 +1659,45 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       const tasasHistoricas = venta.formaPagoDetalle?.tasasActuales || venta.formaPago?.tasasActuales || [];
       const monedaVenta = venta.moneda || 'USD';
       const totalOriginal = Number(venta.total || 0);
-      const pagadoOriginal = Number(venta.total_pagado || 0);
+      const pagadoOriginal = Number(venta.formaPagoDetalle?.totalPagado ?? venta.total_pagado ?? 0);
       const deudaOriginal = Number(venta.formaPagoDetalle?.deuda ?? Math.max(0, totalOriginal - pagadoOriginal));
       const totalSistema = this.convertirMontoConTasas(totalOriginal, monedaVenta, this.monedaSistema, tasasHistoricas);
-      const pagadoSistema = this.convertirMontoConTasas(pagadoOriginal || totalOriginal, monedaVenta, this.monedaSistema, tasasHistoricas);
+      const pagadoSistema = this.convertirMontoConTasas(pagadoOriginal, monedaVenta, this.monedaSistema, tasasHistoricas);
       const deudaSistema = this.convertirMontoConTasas(deudaOriginal, monedaVenta, this.monedaSistema, tasasHistoricas);
 
       // Extraer información de consulta si existe
       const tieneConsulta = venta.consulta && (venta.consulta.pagoMedico > 0 || venta.consulta.pagoOptica > 0);
       const tieneProductos = venta.productos && venta.productos.length > 0;
 
-      // Crear detalle de métodos de pago enriquecido
-      const detalleMetodos = venta.metodosDePago?.map(m => ({
+      const metodosVenta = Array.isArray(venta.metodosDePago) ? venta.metodosDePago : [];
+      const metodosAbonos = (venta.formaPagoDetalle?.abonos || []).flatMap((abono: any) =>
+        Array.isArray(abono?.metodosDePago) ? abono.metodosDePago : []
+      );
+
+      // Crear detalle de métodos de pago enriquecido incluyendo abonos del día
+      const detalleMetodos = [...metodosVenta, ...metodosAbonos].map(m => ({
         tipo: m.tipo,
         monto: m.monto,
         moneda: m.moneda || venta.moneda || 'USD',
         montoEnBolivar: m.montoEnBolivar,
         montoEnMonedaVenta: m.montoEnMonedaVenta,
-        montoEnMonedaSistema: this.convertirMontoConTasas(Number(m.monto || 0), m.moneda || venta.moneda || 'USD', this.monedaSistema, tasasHistoricas),
+        montoEnMonedaSistema: Number(m.montoEnMonedaSistema ?? m.montoMonedaSistema ?? this.convertirMontoConTasas(Number(m.monto || 0), m.moneda || venta.moneda || 'USD', this.monedaSistema, tasasHistoricas)),
         tasaUsada: m.tasaUsada,
         referencia: m.referencia,
         banco: m.bancoNombre || m.banco,           // ← Incluir banco
         bancoNombre: m.bancoNombre,                 // ← Incluir bancoNombre
-        bancoCodigo: m.bancoCodigo                  // ← Incluir bancoCodigo
+        bancoCodigo: m.bancoCodigo,                 // ← Incluir bancoCodigo
+        bancoReceptorCodigo: m.bancoReceptorCodigo || m.cuentaReceptora?.bancoCodigo,
+        bancoReceptorNombre: m.bancoReceptorNombre || m.cuentaReceptora?.bancoNombre,
+        bancoReceptor: m.bancoReceptor || m.cuentaReceptora?.descripcionCuenta || m.cuentaReceptora?.bancoNombre,
+        cuentaReceptoraId: m.cuentaReceptoraId || m.cuentaReceptora?.id,
+        cuentaReceptoraAlias: m.cuentaReceptoraAlias || m.cuentaReceptora?.alias,
+        cuentaReceptoraUltimos4: m.cuentaReceptoraUltimos4 || m.cuentaReceptora?.ultimos4,
+        cuentaReceptoraEmail: m.cuentaReceptoraEmail || m.cuentaReceptora?.correo || m.cuentaReceptora?.email,
+        cuentaReceptoraTitular: m.cuentaReceptoraTitular || m.cuentaReceptora?.titular || m.cuentaReceptora?.ownerName,
+        cuentaReceptoraDocumento: m.cuentaReceptoraDocumento || m.cuentaReceptora?.cedulaRif || m.cuentaReceptora?.ownerId,
+        cuentaReceptoraTelefono: m.cuentaReceptoraTelefono || m.cuentaReceptora?.telefono || m.cuentaReceptora?.phone,
+        cuentaReceptoraDescripcion: m.cuentaReceptoraDescripcion || m.cuentaReceptora?.descripcionCuenta
       })) || [];
 
       const transaccionVenta: Transaccion = {
@@ -1327,7 +1711,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         montoPagado: pagadoSistema,
         deudaPendiente: deudaSistema,
         fecha: new Date(venta.fecha),
-        metodoPago: this.determinarMetodoPagoPrincipal(venta.metodosDePago),
+        metodoPago: this.determinarMetodoPagoPrincipal(detalleMetodos),
         moneda: this.obtenerCodigoMoneda(venta.moneda),
         monedaOriginal: this.obtenerCodigoMoneda(venta.moneda),
         tasasHistoricas: tasasHistoricas,
@@ -1355,6 +1739,8 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
       this.transacciones.push(transaccionVenta);
     });
+
+    this.transacciones = this.ordenarTransaccionesPorFechaDesc(this.transacciones);
 
     // Recalcular análisis cada vez que cambian las transacciones
     this.calcularAnalisisDesdeTransacciones();
@@ -1395,7 +1781,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       this.cierreActual.totales.neto = this.getNetoDia();
       this.cierreActual.totales.ventasContado = this.analisisFormasPago.contado.total;
       this.cierreActual.totales.ventasCredito = this.analisisFormasPago.abono.deudaPendiente + this.analisisFormasPago.cashea.deudaPendiente;
-      this.cierreActual.totales.ventasPendientes = this.analisisFormasPago.deContadoPendiente.total;
+      this.cierreActual.totales.ventasPendientes = this.getDeudaTotalDelDia();
     }
 
     this.ultimaActualizacion = new Date();
@@ -1406,12 +1792,8 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       return 'pendiente';
     }
 
-    if (metodosDePago.length === 1) {
-      const tipo = metodosDePago[0].tipo;
-      return tipo === 'punto' ? 'punto' : tipo;
-    }
-
-    return 'mixto';
+    const tipo = metodosDePago[0].tipo;
+    return tipo === 'punto' ? 'punto' : tipo;
   }
 
   getTotalMetodoPago(metodo: string): number {
@@ -1578,6 +1960,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   iniciarCaja(): void {
+    if (this.tieneBloqueoPorCierrePendienteAnterior()) {
+      this.mostrarAvisoCierrePendienteAnterior();
+      return;
+    }
+
     if (this.inicioCajaForm.invalid || !this.sedeActual || !this.currentUser) return;
 
     const formValue = this.inicioCajaForm.value;
@@ -1586,63 +1973,41 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     const totalEfectivoInicial = this.calcularTotalEfectivoInicialDesdeDetalle(efectivoInicialDetalle);
     const descripcionApertura = (formValue.observaciones || '').trim();
 
-    this.cierreActual = {
-      id: `CIERRE-${this.datePipe.transform(new Date(), 'yyyy-MM-dd')}-${this.sedeActual.key}`,
-      fecha: new Date(),
-      descripcion: descripcionApertura,
-      efectivoInicial: totalEfectivoInicial,
-      efectivoInicialDetalle: efectivoInicialDetalle,
+    this.guardandoCierre = true;
 
-      ventasEfectivo: 0,
-      ventasTarjeta: 0,
-      ventasTransferencia: 0,
-      ventasDebito: 0,
-      ventasCredito: 0,
-      ventasPagomovil: 0,
-      ventasZelle: 0,
-
-      ventasPorTipo: { ...this.analisisVentas },
-      metodosPago: JSON.parse(JSON.stringify(this.analisisMetodosPago)),
-      formasPago: JSON.parse(JSON.stringify(this.analisisFormasPago)),
-      ventasPendientes: [...this.analisisVentasPendientes],
-
-      totales: {
-        ingresos: this.getTotalIngresos(),
-        egresos: this.getTotalEgresos(),
-        neto: this.getNetoDia(),
-        ventasContado: this.analisisFormasPago.contado.total,
-        ventasCredito: this.analisisFormasPago.abono.deudaPendiente + this.analisisFormasPago.cashea.deudaPendiente,
-        ventasPendientes: this.analisisFormasPago.deContadoPendiente.total
-      },
-
-      otrosIngresos: this.transacciones.filter(t => t.tipo === 'ingreso').reduce((sum, t) => sum + t.monto, 0),
-      egresos: this.getTotalEgresos(),
-      efectivoFinalTeorico: totalEfectivoInicial + this.analisisMetodosPago.efectivo.total,
-      efectivoFinalReal: 0,
-      diferencia: 0,
-      observaciones: descripcionApertura,
-      estado: 'abierto',
-      usuarioApertura: this.currentUser.nombre,
-      usuarioCierre: '',
-      fechaApertura: new Date(),
-      transacciones: [...this.transacciones],
-      notasCierre: '',
-      archivosAdjuntos: [],
+    this.cierreCajaService.abrirCaja({
+      fecha: this.fechaSeleccionada,
       sede: this.sedeActual.key,
-      monedaPrincipal: this.monedaSistema,
+      efectivoInicial: {
+        totalSistema: totalEfectivoInicial,
+        detalle: efectivoInicialDetalle
+      },
       tasasCambio: this.tasasCambio,
-      metodosPagoDetallados: this.calcularMetodosPagoDetallados()
-    };
+      observaciones: descripcionApertura
+    }).subscribe({
+      next: () => {
+        this.guardandoCierre = false;
+        this.cerrarModal('inicioCajaModal');
+        this.cargarDatosFecha();
 
-    // Cerrar modal
-    this.cerrarModal('inicioCajaModal');
-
-    const mensajeDetalle = `Total en ${this.simboloMonedaSistema}: ${totalEfectivoInicial.toFixed(2)} | Bs. ${bs} | USD $${usd} | EUR €${eur}`;
-    this.swalService.showSuccess('Caja iniciada', `Caja iniciada con: ${mensajeDetalle}`);
+        const mensajeDetalle = `Total en ${this.simboloMonedaSistema}: ${totalEfectivoInicial.toFixed(2)} | Bs. ${bs} | USD $${usd} | EUR €${eur}`;
+        this.swalService.showSuccess('Caja iniciada', `Caja iniciada con: ${mensajeDetalle}`);
+      },
+      error: (error) => {
+        this.guardandoCierre = false;
+        console.error('Error al iniciar caja:', error);
+        this.swalService.showError('Error', error?.error?.message || 'No se pudo iniciar la caja.');
+      }
+    });
   }
 
   guardarTransaccion(): void {
     if (this.transaccionForm.invalid) return;
+
+    if (!this.cierreActual || this.cierreActual.estado !== 'abierto') {
+      this.swalService.showWarning('Caja cerrada', 'Debes tener una caja abierta para registrar transacciones manuales.');
+      return;
+    }
 
     const formValue = this.transaccionForm.value;
     const nuevaTransaccion: Transaccion = {
@@ -1650,8 +2015,12 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       tipo: formValue.tipo,
       descripcion: formValue.descripcion,
       monto: parseFloat(formValue.monto),
+      montoOriginal: parseFloat(formValue.monto),
+      montoSistema: this.redondearMonto(parseFloat(formValue.monto)),
       fecha: new Date(),
       metodoPago: formValue.metodoPago,
+      moneda: this.obtenerCodigoMoneda(this.monedaSistema),
+      monedaOriginal: this.obtenerCodigoMoneda(this.monedaSistema),
       usuario: this.currentUser?.nombre || 'Usuario',
       estado: 'confirmado',
       categoria: formValue.categoria,
@@ -1660,25 +2029,41 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     };
 
     if (this.transaccionEditando) {
-      const index = this.transacciones.findIndex(t => t.id === this.transaccionEditando?.id);
-      if (index !== -1) {
-        this.transacciones[index] = nuevaTransaccion;
-      }
+      this.cierreCajaService.actualizarTransaccionManual(this.transaccionEditando.id, nuevaTransaccion).subscribe({
+        next: () => {
+          this.cerrarModal('transaccionModal');
+          this.transaccionEditando = null;
+          this.cargarDatosFecha();
+          this.swalService.showSuccess('Transacción guardada', 'La transacción se ha actualizado correctamente.');
+        },
+        error: (error) => {
+          console.error('Error al actualizar transacción:', error);
+          this.swalService.showError('Error', error?.error?.message || 'No se pudo actualizar la transacción.');
+        }
+      });
     } else {
-      this.transacciones.unshift(nuevaTransaccion);
+      this.cierreCajaService.crearTransaccionManual(this.cierreActual.id, nuevaTransaccion).subscribe({
+        next: () => {
+          this.cerrarModal('transaccionModal');
+          this.transaccionEditando = null;
+          this.cargarDatosFecha();
+          this.swalService.showSuccess('Transacción guardada', 'La transacción se ha registrado correctamente.');
+        },
+        error: (error) => {
+          console.error('Error al crear transacción:', error);
+          this.swalService.showError('Error', error?.error?.message || 'No se pudo registrar la transacción.');
+        }
+      });
     }
-
-    this.actualizarResumen();
-    this.filtrarTransacciones();
-
-    // Cerrar modal usando nuestro método
-    this.cerrarModal('transaccionModal');
-    this.transaccionEditando = null;
-
-    this.swalService.showSuccess('Transacción guardada', 'La transacción se ha registrado correctamente.');
   }
 
   guardarCierre(): void {
+    if (!this.usaModoDummy) {
+      this.cargarDatosFecha();
+      this.swalService.showInfo('Sincronizado', 'Las transacciones manuales se guardan al registrarlas. El cierre final se persiste al cerrar la caja.');
+      return;
+    }
+
     if (!this.cierreActual) {
       this.swalService.showError('Error', 'No hay cierre de caja activo.');
       return;
@@ -1704,9 +2089,40 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
       this.guardandoCierre = true;
 
-      this.cierreCajaService.guardarCierre(this.cierreActual).subscribe({
+      const formValue = this.cierreForm.getRawValue();
+      const payload = {
+        cierreId: this.cierreActual.id,
+        fecha: this.datePipe.transform(this.fechaSeleccionada, 'yyyy-MM-dd'),
+        efectivo: {
+          teoricoFinal: this.getEfectivoFinalTeorico(),
+          realFinal: this.getEfectivoRealTotal(),
+          diferencia: this.getDiferenciaEfectivo(),
+          detalleReal: {
+            usd: Number(formValue.efectivoRealUSD || 0),
+            eur: Number(formValue.efectivoRealEUR || 0),
+            ves: Number(formValue.efectivoRealVES || 0)
+          }
+        },
+        conciliacion: {
+          punto: this.construirDetalleMetodoReal('punto'),
+          transferencia: this.construirDetalleMetodoReal('transferencia'),
+          pagomovil: this.construirDetalleMetodoReal('pagomovil'),
+          zelle: this.construirDetalleMetodoReal('zelle')
+        },
+        diferenciaTotal: this.getDiferenciaTotal(),
+        estadoConciliacion: Math.abs(this.getDiferenciaTotal()) > 0.01 ? 'diferencia' : 'cuadrado',
+        notasCierre: formValue.notasCierre || '',
+        opciones: {
+          imprimirResumen: !!formValue.imprimirResumen,
+          enviarEmail: !!formValue.enviarEmail,
+          adjuntarComprobantes: !!formValue.adjuntarComprobantes
+        }
+      };
+
+      this.cierreCajaService.cerrarCaja(payload).subscribe({
         next: () => {
           this.guardandoCierre = false;
+          this.cargarDatosFecha();
           resolve();
         },
         error: (error) => {
@@ -1762,7 +2178,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       'pagomovil': 'PAGO MÓVIL',
       'transferencia': 'TRANSFERENCIA',
       'zelle': 'ZELLE',
-      'mixto': 'MIXTO',
       'tarjeta': 'TARJETA',
       'contado': 'CONTADO',
       'abono': 'ABONO',
@@ -1773,26 +2188,73 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return tipos[tipo.toLowerCase()] || tipo.toUpperCase();
   }
 
-  getEstadoClass(estado: string): string {
+  private normalizarEstadoVisual(estado: string, fecha?: Date | string): string {
+    const estadoNormalizado = String(estado || '').trim().toLowerCase();
+    const fechaReferencia = fecha || this.fechaSeleccionada;
+
+    if (['abierto', 'revisado'].includes(estadoNormalizado) && fechaReferencia && !this.esMismaFechaCalendario(fechaReferencia, new Date())) {
+      return 'pendiente-cierre';
+    }
+
+    return estadoNormalizado;
+  }
+
+  esCierrePendienteVisual(cierre: { estado?: string; fecha?: Date | string } | null | undefined): boolean {
+    if (!cierre) {
+      return false;
+    }
+
+    return this.normalizarEstadoVisual(cierre.estado || '', cierre.fecha) === 'pendiente-cierre';
+  }
+
+  getEstadoClass(estado: string, fecha?: Date | string): string {
+    const estadoVisual = this.normalizarEstadoVisual(estado, fecha);
     const clases: { [key: string]: string } = {
       abierto: 'estado-abierto',
       cerrado: 'estado-cerrado',
       revisado: 'estado-revisado',
       conciliado: 'estado-conciliado',
+      'pendiente-cierre': 'estado-pendiente-cierre',
       'sin-iniciar': 'estado-sin-iniciar',
       'sin-cierre': 'estado-sin-cierre'
     };
-    return clases[estado] || 'estado-default';
+    return clases[estadoVisual] || 'estado-default';
   }
 
-  getEstadoTexto(estado: string): string {
+  getEstadoTexto(estado: string, fecha?: Date | string): string {
+    const estadoVisual = this.normalizarEstadoVisual(estado, fecha);
     const estados: { [key: string]: string } = {
       abierto: 'Caja Abierta',
       cerrado: 'Caja Cerrada',
       revisado: 'Revisado',
-      conciliado: 'Conciliado'
+      conciliado: 'Conciliado',
+      'pendiente-cierre': 'Pendiente por cerrar'
     };
-    return estados[estado] || 'Sin estado';
+    return estados[estadoVisual] || 'Sin estado';
+  }
+
+  getEstadoIconClass(estado: string, fecha?: Date | string): string {
+    const estadoVisual = this.normalizarEstadoVisual(estado, fecha);
+    const iconos: { [key: string]: string } = {
+      abierto: 'bi-play-circle-fill',
+      cerrado: 'bi-lock-fill',
+      revisado: 'bi-check-circle-fill',
+      conciliado: 'bi-arrow-repeat',
+      'pendiente-cierre': 'bi-exclamation-triangle-fill'
+    };
+
+    return iconos[estadoVisual] || 'bi-circle-fill';
+  }
+
+  getTextoReferenciaFecha(): string {
+    const fechaTexto = this.datePipe.transform(this.fechaSeleccionada, 'dd/MM/yyyy');
+    if (!fechaTexto) {
+      return '';
+    }
+
+    return this.esCierrePendienteVisual(this.cierreActual)
+      ? `Caja pendiente del ${fechaTexto}`
+      : `Cierre del ${fechaTexto}`;
   }
 
   exportarReporte(): void {
@@ -1836,84 +2298,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   imprimirResumen(): void {
-    // Crear contenido para imprimir
-    const contenido = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Cierre de Caja - ${this.datePipe.transform(this.fechaSeleccionada, 'dd/MM/yyyy')}</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          h1 { color: #333; }
-          .resumen { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f4f4f4; }
-          .total { font-weight: bold; }
-          .diferencia { color: ${this.getDiferencia() >= 0 ? 'green' : 'red'}; }
-          @media print {
-            body { margin: 0; }
-            .no-print { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <h1>Cierre de Caja - ${this.sedeActual?.nombre || 'Óptica'}</h1>
-        <p>Fecha: ${this.datePipe.transform(this.fechaSeleccionada, 'dd/MM/yyyy')}</p>
-        <p>Sede: ${this.sedeActual?.nombre || ''}</p>
-        
-        <div class="resumen">
-          <h2>Resumen del Día</h2>
-          <p>Efectivo Inicial: ${this.decimalPipe.transform(this.cierreActual?.efectivoInicial, '1.2-2')}</p>
-          <p>Ventas Efectivo: ${this.decimalPipe.transform(this.cierreActual?.ventasEfectivo, '1.2-2')}</p>
-          <p>Ventas Tarjeta: ${this.decimalPipe.transform(this.cierreActual?.ventasTarjeta, '1.2-2')}</p>
-          <p>Ventas Transferencia: ${this.decimalPipe.transform(this.cierreActual?.ventasTransferencia, '1.2-2')}</p>
-          <p>Total Ventas: ${this.decimalPipe.transform(this.getTotalVentas(), '1.2-2')}</p>
-          <p>Egresos: ${this.decimalPipe.transform(this.cierreActual?.egresos, '1.2-2')}</p>
-          <p class="diferencia">Diferencia: ${this.decimalPipe.transform(this.getDiferencia(), '1.2-2')}</p>
-        </div>
-        
-        <h2>Transacciones (${this.transaccionesFiltradas.length})</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Descripción</th>
-              <th>Tipo</th>
-              <th>Método Pago</th>
-              <th>Monto</th>
-              <th>Usuario</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${this.transaccionesFiltradas.map(t => `
-              <tr>
-                <td>${t.descripcion}</td>
-                <td>${t.tipo}</td>
-                <td>${t.metodoPago}</td>
-                <td>${this.decimalPipe.transform(t.monto, '1.2-2')}</td>
-                <td>${t.usuario}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        
-        <p class="no-print" style="margin-top: 30px; color: #666;">
-          Impreso el: ${this.datePipe.transform(new Date(), 'dd/MM/yyyy HH:mm')}
-        </p>
-      </body>
-      </html>
-    `;
-
-    // Abrir ventana de impresión
-    const ventana = window.open('', '_blank');
-    if (ventana) {
-      ventana.document.write(contenido);
-      ventana.document.close();
-      setTimeout(() => {
-        ventana.print();
-        ventana.close();
-      }, 500);
-    }
+    this.abrirVentanaReporte(true);
   }
 
   cambiarFecha(dias: number): void {
@@ -1983,12 +2368,12 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return this.datePipe.transform(date, 'dd/MM/yyyy HH:mm') || '';
   }
 
-  // === ACTUALIZACIÓN AUTOMÁTICA ===
+  refrescarTransaccionesDia(): void {
+    if (this.cargandoDatos) {
+      return;
+    }
 
-  private iniciarActualizacionAutomatica(): void {
-    setInterval(() => {
-      this.ultimaActualizacion = new Date();
-    }, 60000); // Actualizar cada minuto
+    this.cargarDatosFecha();
   }
 
   cargarHistorialCierres(): void {
@@ -2088,6 +2473,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.tieneBloqueoPorCierrePendienteAnterior()) {
+      this.mostrarAvisoCierrePendienteAnterior();
+      return;
+    }
+
     this.inicioCajaForm.patchValue({
       efectivoInicial: 0,
       observaciones: 'Caja abierta normalmente',
@@ -2099,6 +2489,33 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       const modal = new bootstrap.Modal(modalElement);
       modal.show();
     }
+  }
+
+  tieneBloqueoPorCierrePendienteAnterior(): boolean {
+    return !!this.bloqueoOperativoActual?.cierrePendienteAnterior;
+  }
+
+  get mensajeBloqueoCierrePendienteAnterior(): string {
+    const fecha = this.bloqueoOperativoActual?.cierrePendienteAnterior?.fechaFormateada;
+    if (!fecha) {
+      return 'Existe una caja pendiente de un día anterior. Debe conciliarse y cerrarse antes de iniciar una nueva jornada.';
+    }
+
+    return `Existe una caja pendiente del ${fecha}. Debe conciliarse y cerrarse antes de iniciar una nueva jornada.`;
+  }
+
+  private mostrarAvisoCierrePendienteAnterior(): void {
+    this.swalService.showWarning(
+      'Cierre pendiente',
+      `
+      <div style="text-align:left">
+        <p style="margin-bottom:12px">${this.mensajeBloqueoCierrePendienteAnterior}</p>
+        <p style="margin-bottom:0">Debes cerrar la caja pendiente desde este módulo antes de abrir la caja del día actual.</p>
+      </div>
+      `,
+      true,
+      7000
+    );
   }
 
   abrirModalCierre(): void {
@@ -2116,7 +2533,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       pagomovilRealTotal: 0,
       zelleReal: 0,
       notasCierre: '',
-      imprimirResumen: true
+      imprimirResumen: false
     }, { emitEvent: false });
 
     // Limpiar y reconstruir controles de bancos
@@ -2144,6 +2561,16 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   private _suscripcionFormulario: boolean = false;
 
   abrirModalTransaccion(transaccion?: Transaccion): void {
+    if ((!this.cierreActual || this.cierreActual.estado !== 'abierto') && !transaccion) {
+      this.swalService.showWarning('Caja no disponible', 'Debes iniciar una caja antes de registrar transacciones manuales.');
+      return;
+    }
+
+    if ((!this.cierreActual || this.cierreActual.estado !== 'abierto') && transaccion) {
+      this.swalService.showWarning('Caja cerrada', 'Solo puedes editar transacciones manuales mientras la caja esté abierta.');
+      return;
+    }
+
     if (transaccion && transaccion.numeroVenta) {
       this.swalService.showInfo(
         'Venta registrada',
@@ -2167,7 +2594,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       });
     } else {
       this.transaccionForm.reset({
-        tipo: 'venta',
+        tipo: 'ingreso',
         metodoPago: 'efectivo',
         categoria: 'venta_lentes',
         monto: 0
@@ -2226,8 +2653,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       'punto': '#8b5cf6',
       'transferencia': '#3b82f6',
       'pagomovil': '#ec4899',
-      'zelle': '#8b5cf6',
-      'mixto': '#f59e0b'
+      'zelle': '#8b5cf6'
     };
     return colores[metodo] || '#64748b';
   }
@@ -2239,8 +2665,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       'punto': 'bi-credit-card',
       'transferencia': 'bi-bank',
       'pagomovil': 'bi-phone',
-      'zelle': 'bi-globe2',
-      'mixto': 'bi-wallet2'
+      'zelle': 'bi-globe2'
     };
     return iconos[metodo] || 'bi-receipt';
   }
@@ -2298,7 +2723,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   get totalPendientes(): number {
-    return this.analisisFormasPago?.deContadoPendiente?.total || 0;
+    return this.getDeudaTotalDelDia();
   }
 
   get ventasPendientesLista(): any[] {
@@ -2316,11 +2741,17 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   get totalPendientesKPI(): number {
-    return this.analisisFormasPago.deContadoPendiente.total;
+    return this.getDeudaTotalDelDia();
   }
 
   get netoDiaKPI(): number {
     return this.getTotalIngresos() - this.getTotalEgresos();
+  }
+
+  getDeudaTotalDelDia(): number {
+    return (this.analisisFormasPago.abono.deudaPendiente || 0)
+      + (this.analisisFormasPago.cashea.deudaPendiente || 0)
+      + (this.analisisFormasPago.deContadoPendiente.deudaPendiente || 0);
   }
 
   get efectivoInicial(): number {
@@ -2587,117 +3018,537 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     }
   }
 
-  exportarReportePDF(): void {
+  async exportarReportePDF(): Promise<void> {
     this.mostrarMenuExport = false;
 
-    // Reutilizar el método de impresión existente, pero con opción de guardar como PDF
-    const contenido = this.generarContenidoReporte();
+    if (!this.hayDatosParaExportar()) {
+      this.swalService.showWarning('Sin datos', 'No hay datos para exportar a PDF');
+      return;
+    }
 
-    // Crear una ventana para imprimir/guardar como PDF
-    const ventana = window.open('', '_blank');
-    if (ventana) {
-      ventana.document.write(contenido);
-      ventana.document.close();
-      setTimeout(() => {
-        ventana.print();
-        // No cerramos automáticamente para permitir guardar como PDF
-        // ventana.close();
-      }, 500);
+    const reporte = this.construirReporteEstructurado();
+    const contenedor = this.crearContenedorTemporalReporte(reporte);
+
+    this.swalService.showLoadingAlert('Generando PDF...');
+
+    try {
+      document.body.appendChild(contenedor);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      const canvas = await html2canvas(contenedor, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: Math.ceil(contenedor.scrollWidth),
+        height: Math.ceil(contenedor.scrollHeight),
+        windowWidth: Math.ceil(contenedor.scrollWidth),
+        windowHeight: Math.ceil(contenedor.scrollHeight)
+      });
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let remainingHeight = imgHeight;
+      let offsetY = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, offsetY, imgWidth, imgHeight, undefined, 'FAST');
+      remainingHeight -= pageHeight;
+
+      while (remainingHeight > 0.1) {
+        offsetY = remainingHeight - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, offsetY, imgWidth, imgHeight, undefined, 'FAST');
+        remainingHeight -= pageHeight;
+      }
+
+      pdf.save(`${this.obtenerNombreBaseReporte()}.pdf`);
+      this.swalService.showSuccess('Exportado', 'Reporte exportado a PDF correctamente');
+    } catch (error) {
+      console.error('Error al exportar reporte a PDF:', error);
+      this.swalService.showError('Error', 'No se pudo exportar el reporte a PDF.');
+    } finally {
+      if (contenedor.parentNode) {
+        contenedor.parentNode.removeChild(contenedor);
+      }
+      this.swalService.closeLoading();
     }
   }
 
-  // Método auxiliar para generar el contenido del reporte
-  private generarContenidoReporte(): string {
+  private abrirVentanaReporte(cerrarDespuesDeImprimir: boolean): void {
+    const contenido = this.generarContenidoReporte();
+    const ventana = window.open('', '_blank');
+
+    if (!ventana) {
+      this.swalService.showWarning('Ventana bloqueada', 'Habilita las ventanas emergentes para imprimir el reporte.');
+      return;
+    }
+
+    ventana.document.write(contenido);
+    ventana.document.close();
+
+    if (cerrarDespuesDeImprimir) {
+      ventana.onafterprint = () => ventana.close();
+    }
+
+    setTimeout(() => {
+      ventana.focus();
+      ventana.print();
+    }, 350);
+  }
+
+  private hayDatosParaExportar(): boolean {
+    return !!(this.cierreActual || this.transacciones.length || this.transaccionesFiltradas.length);
+  }
+
+  private escapeHtml(value: unknown): string {
+    return (value ?? '')
+      .toString()
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  private obtenerTransaccionesReporte(): Transaccion[] {
+    const lista = this.transacciones.length ? this.transacciones : this.transaccionesFiltradas;
+    return this.ordenarTransaccionesPorFechaDesc(lista);
+  }
+
+  private obtenerDetalleRealMetodoReporte(tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle', item?: any): any | null {
+    const detalleMetodo = this.cierreActual?.detalleCierreReal?.[tipo];
+    const registros = Array.isArray(detalleMetodo)
+      ? detalleMetodo
+      : tipo === 'zelle' && typeof detalleMetodo === 'number'
+        ? [{
+          banco: 'Zelle',
+          destinoLabel: 'Total general',
+          montoReal: detalleMetodo,
+          montoSistema: this.analisisMetodosPago.zelle.total,
+          diferencia: Number(detalleMetodo) - Number(this.analisisMetodosPago.zelle.total || 0)
+        }]
+        : [];
+
+    if (!registros.length) {
+      return null;
+    }
+
+    if (!item) {
+      return registros[0];
+    }
+
+    return registros.find((registro: any) => {
+      if (registro?.destinoKey && item?.destinoKey) {
+        return registro.destinoKey === item.destinoKey;
+      }
+
+      if (registro?.destinoLabel && item?.destinoLabel) {
+        return registro.destinoLabel === item.destinoLabel;
+      }
+
+      if (registro?.bancoCodigo && item?.bancoCodigo && registro?.banco) {
+        return registro.bancoCodigo === item.bancoCodigo && registro.banco === item.banco;
+      }
+
+      return registro?.banco === item?.banco;
+    }) || null;
+  }
+
+  private construirSeccionMetodoReporte(tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle', titulo: string): any | null {
+    const analisisMetodo = this.analisisMetodosPago?.[tipo];
+    const totalMetodo = Number(analisisMetodo?.total || 0);
+
+    if (!totalMetodo) {
+      return null;
+    }
+
+    const destinos = this.getDestinosMetodo(tipo);
+    const filas = (destinos.length ? destinos : [null]).map((destino) => {
+      const detalleReal = this.obtenerDetalleRealMetodoReporte(tipo, destino);
+      const diferencia = Number(detalleReal?.diferencia || 0);
+
+      return {
+        destino: destino ? this.getTituloDestino(destino) : 'Total general',
+        detalle: destino ? this.getDetalleDestino(destino) : null,
+        referencia: destino ? this.getReferenciaDestino(destino) : null,
+        montoOriginal: destino ? this.getTextoMontoOriginalBanco(destino) : 'N/A',
+        sistema: destino ? Number(destino?.total || 0) : totalMetodo,
+        real: detalleReal ? Number(detalleReal?.montoReal || 0) : null,
+        diferencia,
+        operaciones: destino ? Number(destino?.cantidad || 0) : Number(analisisMetodo?.cantidad || 0)
+      };
+    });
+
+    return {
+      tipo,
+      titulo,
+      total: totalMetodo,
+      filas
+    };
+  }
+
+  private construirReporteEstructurado(): any {
+    const detalleInicial = this.cierreActual?.efectivoInicialDetalle;
+    const mostrarConciliacion = !!this.cierreActual?.detalleCierreReal;
+    const diferenciaTotal = this.getDiferenciaTotal();
+    const transacciones = this.obtenerTransaccionesReporte().map((transaccion) => ({
+      hora: this.datePipe.transform(transaccion.fecha, 'HH:mm') || '',
+      descripcion: transaccion.descripcion,
+      tipo: transaccion.tipo,
+      metodo: this.formatearTipoPago(transaccion.metodoPago),
+      monto: Number(transaccion.monto || 0),
+      usuario: transaccion.usuario || '',
+      numeroVenta: transaccion.numeroVenta || '',
+      cliente: transaccion.cliente?.nombre || ''
+    }));
+
+    const metodos = [
+      this.construirSeccionMetodoReporte('punto', 'Punto de venta'),
+      this.construirSeccionMetodoReporte('transferencia', 'Transferencias'),
+      this.construirSeccionMetodoReporte('pagomovil', 'Pago móvil'),
+      this.construirSeccionMetodoReporte('zelle', 'Zelle')
+    ].filter(Boolean);
+
+    return {
+      sede: this.sedeActual?.nombre || 'Óptica',
+      fecha: this.datePipe.transform(this.fechaSeleccionada, 'dd/MM/yyyy') || '',
+      fechaArchivo: this.datePipe.transform(this.fechaSeleccionada, 'yyyy-MM-dd') || '',
+      generadoEn: this.datePipe.transform(new Date(), 'dd/MM/yyyy HH:mm') || '',
+      estado: this.getEstadoTexto(this.cierreActual?.estado || '', this.cierreActual?.fecha),
+      monedaSistema: this.monedaSistema,
+      mostrarConciliacion,
+      notaFinal: `Documento generado desde el módulo de cierre de caja. Los montos están expresados en ${this.monedaSistema}${mostrarConciliacion ? ' e incluyen conciliación real guardada al cierre.' : '.'}`,
+      kpis: [
+        { label: 'Efectivo Inicial', value: this.efectivoInicial },
+        { label: 'Total Ventas', value: this.totalVentasKPI },
+        { label: 'Total Pendiente', value: this.totalPendientesKPI },
+        { label: 'Neto del Día', value: this.netoDiaKPI },
+        { label: 'Diferencia Total', value: diferenciaTotal, clase: diferenciaTotal > 0 ? 'positive' : diferenciaTotal < 0 ? 'negative' : '' }
+      ],
+      resumenOperativo: [
+        { label: 'Transacciones del día', value: transacciones.length },
+        { label: 'Ventas pendientes', value: this.analisisVentasPendientes.length },
+        { label: 'Egresos registrados', value: this.getTotalEgresos(), format: 'currency' },
+        { label: 'Cobrado e ingresos netos', value: this.netoDiaKPI, format: 'currency' },
+        { label: 'Notas de cierre', value: this.cierreActual?.notasCierre || this.cierreActual?.detalleCierreReal?.notasCierre || 'Sin observaciones', format: 'text' }
+      ],
+      conciliacion: [
+        { label: 'Efectivo teórico final', value: this.getEfectivoFinalTeorico(), format: 'currency' },
+        { label: 'Efectivo real contado', value: this.getEfectivoRealTotal(), format: 'currency' },
+        { label: 'Diferencia total', value: diferenciaTotal, format: 'currency', clase: diferenciaTotal > 0 ? 'positive' : diferenciaTotal < 0 ? 'negative' : '' },
+        { label: 'Usuario apertura', value: this.cierreActual?.usuarioApertura || 'N/A', format: 'text' },
+        { label: 'Usuario cierre', value: this.cierreActual?.usuarioCierre || 'N/A', format: 'text' }
+      ],
+      efectivoPorMoneda: [
+        { moneda: 'USD', inicial: Number(detalleInicial?.USD || 0), ventas: Number(this.analisisMetodosPago.efectivo.porMoneda.dolar || 0), real: Number(this.cierreActual?.detalleCierreReal?.efectivo?.usd || 0) },
+        { moneda: 'EUR', inicial: Number(detalleInicial?.EUR || 0), ventas: Number(this.analisisMetodosPago.efectivo.porMoneda.euro || 0), real: Number(this.cierreActual?.detalleCierreReal?.efectivo?.eur || 0) },
+        { moneda: 'VES', inicial: Number(detalleInicial?.Bs || 0), ventas: Number(this.analisisMetodosPago.efectivo.porMoneda.bolivar || 0), real: Number(this.cierreActual?.detalleCierreReal?.efectivo?.ves || 0) }
+      ],
+      formasPago: [
+        { forma: 'Contado', total: Number(this.analisisFormasPago.contado.total || 0), deudaPendiente: 0, cantidad: Number(this.analisisFormasPago.contado.cantidad || 0) },
+        { forma: 'Abono', total: Number(this.analisisFormasPago.abono.total || 0), deudaPendiente: Number(this.analisisFormasPago.abono.deudaPendiente || 0), cantidad: Number(this.analisisFormasPago.abono.cantidad || 0) },
+        { forma: 'Cashea', total: Number(this.analisisFormasPago.cashea.total || 0), deudaPendiente: Number(this.analisisFormasPago.cashea.deudaPendiente || 0), cantidad: Number(this.analisisFormasPago.cashea.cantidad || 0) },
+        { forma: 'Pendiente por pago', total: Number(this.analisisFormasPago.deContadoPendiente.total || 0), deudaPendiente: Number(this.analisisFormasPago.deContadoPendiente.deudaPendiente || 0), cantidad: Number(this.analisisFormasPago.deContadoPendiente.cantidad || 0) }
+      ],
+      metodos,
+      transacciones
+    };
+  }
+
+  private obtenerEstilosReporte(): string {
     return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Cierre de Caja - ${this.datePipe.transform(this.fechaSeleccionada, 'dd/MM/yyyy')}</title>
-      <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        h1 { color: #333; }
-        .resumen { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f4f4f4; }
-        .total { font-weight: bold; }
-        .diferencia { color: ${this.getDiferenciaTotal() >= 0 ? 'green' : 'red'}; }
-        .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
-        .kpi-card { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
-        .kpi-value { font-size: 24px; font-weight: bold; color: #667eea; }
-        .kpi-label { font-size: 12px; color: #666; }
-        @media print {
-          body { margin: 0; }
-          .no-print { display: none; }
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>Cierre de Caja</h1>
-        <p>${this.sedeActual?.nombre || 'Óptica'} - ${this.datePipe.transform(this.fechaSeleccionada, 'dd/MM/yyyy')}</p>
-      </div>
-      
-      <div class="kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-value">${this.formatCurrency(this.efectivoInicial)}</div>
-          <div class="kpi-label">Efectivo Inicial</div>
+      :root { color-scheme: light; }
+      .report-root, .report-root * { box-sizing: border-box; }
+      .report-root { font-family: 'Segoe UI', Arial, sans-serif; margin: 24px; color: #1f2937; }
+      .report-root h1, .report-root h2, .report-root h3, .report-root p { margin: 0; }
+      .report-root .header { background: linear-gradient(135deg, #0f4c81, #2b7a78); color: #fff; padding: 24px; border-radius: 14px; margin-bottom: 18px; }
+      .report-root .header-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+      .report-root .header-title { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+      .report-root .header-meta { font-size: 13px; opacity: 0.92; line-height: 1.5; }
+      .report-root .badge { display: inline-block; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.24); padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+      .report-root .kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
+      .report-root .kpi-card { background: #f8fafc; border: 1px solid #e5e7eb; padding: 14px; border-radius: 12px; }
+      .report-root .kpi-label { display: block; color: #64748b; font-size: 12px; margin-bottom: 6px; }
+      .report-root .kpi-value { font-size: 22px; font-weight: 700; color: #0f172a; }
+      .report-root .layout-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; margin-bottom: 18px; }
+      .report-root .panel { border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px; background: #fff; }
+      .report-root .panel h2 { font-size: 16px; margin-bottom: 14px; color: #0f172a; }
+      .report-root .summary-list { display: grid; gap: 10px; }
+      .report-root .summary-item { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed #e5e7eb; padding-bottom: 8px; }
+      .report-root .summary-item:last-child { border-bottom: 0; padding-bottom: 0; }
+      .report-root .summary-label { color: #475569; }
+      .report-root .summary-value { font-weight: 700; text-align: right; }
+      .report-root .section-block { margin-bottom: 18px; }
+      .report-root .section-title-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 10px; }
+      .report-root .section-title-row h3 { font-size: 15px; color: #0f172a; }
+      .report-root .section-total { font-size: 13px; font-weight: 700; color: #0f4c81; }
+      .report-root table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+      .report-root th, .report-root td { border: 1px solid #e5e7eb; padding: 9px 10px; text-align: left; vertical-align: top; font-size: 12px; }
+      .report-root th { background: #f8fafc; color: #334155; font-weight: 700; }
+      .report-root .muted { color: #64748b; font-size: 11px; margin-top: 3px; }
+      .report-root .positive { color: #047857; font-weight: 700; }
+      .report-root .negative { color: #b91c1c; font-weight: 700; }
+      .report-root .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .report-root .note-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; font-size: 12px; color: #475569; }
+      .report-root .footer-note { margin-top: 16px; color: #64748b; font-size: 11px; }
+      @media print {
+        body { margin: 12px; }
+        .report-root .panel, .report-root .kpi-card, .report-root .header { break-inside: avoid; }
+      }
+    `;
+  }
+
+  private formatearValorReporte(item: any, incluirMoneda: boolean = true): string {
+    if (item?.format === 'currency') {
+      return `${this.formatCurrency(Number(item?.value || 0))}${incluirMoneda ? ` ${this.escapeHtml(this.monedaSistema)}` : ''}`;
+    }
+
+    return this.escapeHtml(item?.value ?? '');
+  }
+
+  private generarBloqueMetodoReporte(seccion: any, mostrarConciliacion: boolean): string {
+    return `
+      <section class="section-block">
+        <div class="section-title-row">
+          <h3>${this.escapeHtml(seccion.titulo)}</h3>
+          <span class="section-total">${this.formatCurrency(seccion.total)} ${this.escapeHtml(this.monedaSistema)}</span>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-value">${this.formatCurrency(this.totalVentasKPI)}</div>
-          <div class="kpi-label">Total Ventas</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-value">${this.formatCurrency(this.totalPendientesKPI)}</div>
-          <div class="kpi-label">Total Pendiente</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-value">${this.formatCurrency(this.netoDiaKPI)}</div>
-          <div class="kpi-label">Neto del Día</div>
-        </div>
-      </div>
-      
-      <div class="resumen">
-        <h2>Resumen del Día</h2>
-        <p><strong>Estado:</strong> ${this.getEstadoTexto(this.cierreActual?.estado)}</p>
-        <p><strong>Efectivo Inicial:</strong> ${this.formatCurrency(this.cierreActual?.efectivoInicial)}</p>
-        <p><strong>Ventas Efectivo:</strong> ${this.formatCurrency(this.cierreActual?.ventasEfectivo)}</p>
-        <p><strong>Total Ventas:</strong> ${this.formatCurrency(this.getTotalVentas())}</p>
-        <p><strong>Egresos:</strong> ${this.formatCurrency(this.cierreActual?.egresos)}</p>
-        <p class="diferencia"><strong>Diferencia:</strong> ${this.formatCurrency(this.getDiferenciaTotal())}</p>
-      </div>
-      
-      <h2>Transacciones (${this.transaccionesFiltradas.length})</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Descripción</th>
-            <th>Tipo</th>
-            <th>Método Pago</th>
-            <th>Monto</th>
-            <th>Usuario</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${this.transaccionesFiltradas.map(t => `
+        <table>
+          <thead>
             <tr>
-              <td>${t.descripcion}</td>
-              <td>${t.tipo}</td>
-              <td>${t.metodoPago}</td>
-              <td>${this.formatCurrency(t.monto)}</td>
-              <td>${t.usuario}</td>
+              <th>Banco receptor / destino</th>
+              <th>Monto original</th>
+              <th>Sistema</th>
+              ${mostrarConciliacion ? '<th>Real</th><th>Diferencia</th>' : ''}
+              <th>Ops</th>
             </tr>
+          </thead>
+          <tbody>
+            ${seccion.filas.map((fila: any) => `
+              <tr>
+                <td>
+                  <strong>${this.escapeHtml(fila.destino)}</strong>
+                  ${fila.detalle ? `<div class="muted">${this.escapeHtml(fila.detalle)}</div>` : ''}
+                  ${fila.referencia ? `<div class="muted">${this.escapeHtml(fila.referencia)}</div>` : ''}
+                </td>
+                <td>${this.escapeHtml(fila.montoOriginal || 'N/A')}</td>
+                <td>${this.formatCurrency(fila.sistema)} ${this.escapeHtml(this.monedaSistema)}</td>
+                ${mostrarConciliacion ? `<td>${fila.real !== null ? `${this.formatCurrency(fila.real)} ${this.escapeHtml(this.monedaSistema)}` : 'N/A'}</td>` : ''}
+                ${mostrarConciliacion ? `<td class="${fila.diferencia > 0 ? 'positive' : fila.diferencia < 0 ? 'negative' : ''}">${fila.real !== null ? `${this.formatCurrency(fila.diferencia)} ${this.escapeHtml(this.monedaSistema)}` : 'N/A'}</td>` : ''}
+                <td>${fila.operaciones}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </section>
+    `;
+  }
+
+  private generarCuerpoReporte(reporte: any): string {
+    return `
+      <div class="report-root">
+        <div class="header">
+          <div class="header-top">
+            <div>
+              <div class="header-title">Cierre de Caja Diario</div>
+              <div class="header-meta">
+                ${this.escapeHtml(reporte.sede)}<br>
+                Fecha: ${this.escapeHtml(reporte.fecha)}<br>
+                Generado: ${this.escapeHtml(reporte.generadoEn)}
+              </div>
+            </div>
+            <span class="badge">${this.escapeHtml(reporte.estado)}</span>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          ${reporte.kpis.map((kpi: any) => `
+            <div class="kpi-card">
+              <div class="kpi-label">${this.escapeHtml(kpi.label)}</div>
+              <div class="kpi-value ${this.escapeHtml(kpi.clase || '')}">${this.formatCurrency(Number(kpi.value || 0))}</div>
+            </div>
           `).join('')}
-        </tbody>
-      </table>
-      
-      <p class="no-print" style="margin-top: 30px; color: #666;">
-        Generado el: ${this.datePipe.transform(new Date(), 'dd/MM/yyyy HH:mm')}
-      </p>
-    </body>
-    </html>
-  `;
+        </div>
+
+        <div class="layout-grid">
+          <div class="panel">
+            <h2>Resumen operativo</h2>
+            <div class="summary-list">
+              ${reporte.resumenOperativo.map((item: any) => `
+                <div class="summary-item">
+                  <span class="summary-label">${this.escapeHtml(item.label)}</span>
+                  <span class="summary-value ${this.escapeHtml(item.clase || '')}">${this.formatearValorReporte(item)}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Conciliación de efectivo</h2>
+            <div class="summary-list">
+              ${reporte.conciliacion.map((item: any) => `
+                <div class="summary-item">
+                  <span class="summary-label">${this.escapeHtml(item.label)}</span>
+                  <span class="summary-value ${this.escapeHtml(item.clase || '')}">${this.formatearValorReporte(item)}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <h2>Efectivo por moneda</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Moneda</th>
+                  <th>Inicial</th>
+                  <th>Ventas</th>
+                  ${reporte.mostrarConciliacion ? '<th>Real contado</th>' : ''}
+                </tr>
+              </thead>
+              <tbody>
+                ${reporte.efectivoPorMoneda.map((fila: any) => `
+                  <tr>
+                    <td>${this.escapeHtml(fila.moneda)}</td>
+                    <td>${this.formatCurrency(fila.inicial)}</td>
+                    <td>${this.formatCurrency(fila.ventas)}</td>
+                    ${reporte.mostrarConciliacion ? `<td>${this.formatCurrency(fila.real)}</td>` : ''}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="panel">
+            <h2>Formas de pago</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Forma</th>
+                  <th>Total</th>
+                  <th>Deuda pendiente</th>
+                  <th>Cantidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${reporte.formasPago.map((fila: any) => `
+                  <tr>
+                    <td>${this.escapeHtml(fila.forma)}</td>
+                    <td>${this.formatCurrency(fila.total)}</td>
+                    <td>${this.formatCurrency(fila.deudaPendiente)}</td>
+                    <td>${fila.cantidad}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        ${reporte.metodos.length
+          ? reporte.metodos.map((seccion: any) => this.generarBloqueMetodoReporte(seccion, reporte.mostrarConciliacion)).join('')
+          : '<section class="section-block"><div class="note-box">No hay métodos electrónicos con desglose por banco receptor para este día.</div></section>'}
+
+        <section class="section-block">
+          <div class="section-title-row">
+            <h3>Transacciones del día</h3>
+            <span class="section-total">${reporte.transacciones.length} registros</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Descripción</th>
+                <th>Tipo</th>
+                <th>Método</th>
+                <th>Monto</th>
+                <th>Usuario</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reporte.transacciones.map((fila: any) => `
+                <tr>
+                  <td>${this.escapeHtml(fila.hora)}</td>
+                  <td>
+                    <strong>${this.escapeHtml(fila.descripcion)}</strong>
+                    ${fila.numeroVenta ? `<div class="muted">Venta #${this.escapeHtml(fila.numeroVenta)}${fila.cliente ? ` · ${this.escapeHtml(fila.cliente)}` : ''}</div>` : ''}
+                  </td>
+                  <td>${this.escapeHtml(fila.tipo)}</td>
+                  <td>${this.escapeHtml(fila.metodo)}</td>
+                  <td>${this.formatCurrency(fila.monto)} ${this.escapeHtml(reporte.monedaSistema)}</td>
+                  <td>${this.escapeHtml(fila.usuario)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </section>
+
+        <div class="footer-note">${this.escapeHtml(reporte.notaFinal)}</div>
+      </div>
+    `;
+  }
+
+  private generarContenidoReporte(): string {
+    const reporte = this.construirReporteEstructurado();
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Cierre de Caja - ${this.escapeHtml(reporte.fecha)}</title>
+        <style>${this.obtenerEstilosReporte()}</style>
+      </head>
+      <body>
+        ${this.generarCuerpoReporte(reporte)}
+      </body>
+      </html>
+    `;
+  }
+
+  private crearContenedorTemporalReporte(reporte: any): HTMLDivElement {
+    const contenedor = document.createElement('div');
+    contenedor.style.position = 'fixed';
+    contenedor.style.left = '-10000px';
+    contenedor.style.top = '0';
+    contenedor.style.width = '1120px';
+    contenedor.style.background = '#ffffff';
+    contenedor.style.zIndex = '-1';
+    contenedor.innerHTML = `<style>${this.obtenerEstilosReporte()}</style>${this.generarCuerpoReporte(reporte)}`;
+    return contenedor;
+  }
+
+  private normalizarTextoArchivo(valor: string): string {
+    return (valor || 'reporte')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'reporte';
+  }
+
+  private obtenerNombreBaseReporte(): string {
+    const sede = this.normalizarTextoArchivo(this.sedeActual?.nombre || 'general');
+    const fecha = this.datePipe.transform(this.fechaSeleccionada, 'yyyy-MM-dd') || this.normalizarTextoArchivo(new Date().toISOString().split('T')[0]);
+    return `cierre-caja-${sede}-${fecha}`;
+  }
+
+  private obtenerNombreHojaExcel(titulo: string): string {
+    const limpio = titulo
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^A-Za-z0-9]+/g, ' ')
+      .trim();
+
+    return (limpio || 'Hoja').slice(0, 31);
   }
 
   exportarReporteJSON(): void {
@@ -2707,89 +3558,81 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   // Método para exportar a Excel
   exportarExcel(): void {
-    if (!this.cierreActual && this.transaccionesFiltradas.length === 0) {
+    this.mostrarMenuExport = false;
+
+    if (!this.hayDatosParaExportar()) {
       this.swalService.showWarning('Sin datos', 'No hay datos para exportar a Excel');
       return;
     }
 
-    // Preparar datos para Excel
-    const datosExcel = {
-      resumen: {
-        fecha: this.fechaSeleccionada,
-        sede: this.sedeActual?.nombre,
-        estado: this.cierreActual?.estado || 'Sin cierre',
-        efectivoInicial: this.efectivoInicial,
-        totalVentas: this.totalVentasKPI,
-        totalPendiente: this.totalPendientesKPI,
-        netoDia: this.netoDiaKPI,
-        diferencia: this.getDiferenciaTotal()
+    const reporte = this.construirReporteEstructurado();
+    const hojas = [
+      {
+        data: [
+          ...reporte.kpis.map((item: any) => ({ Seccion: 'KPI', Indicador: item.label, Valor: item.value, Moneda: reporte.monedaSistema })),
+          ...reporte.resumenOperativo.map((item: any) => ({ Seccion: 'Resumen operativo', Indicador: item.label, Valor: item.value, Moneda: item.format === 'currency' ? reporte.monedaSistema : '' })),
+          ...reporte.conciliacion.map((item: any) => ({ Seccion: 'Conciliación de efectivo', Indicador: item.label, Valor: item.value, Moneda: item.format === 'currency' ? reporte.monedaSistema : '' }))
+        ],
+        sheetName: 'Resumen',
+        columnWidths: { A: 24, B: 30, C: 18, D: 12 }
       },
-      ventasPorTipo: {
-        soloConsulta: {
-          cantidad: this.analisisVentas.soloConsulta.cantidad,
-          total: this.analisisVentas.soloConsulta.total
-        },
-        consultaProductos: {
-          cantidad: this.analisisVentas.consultaProductos.cantidad,
-          total: this.analisisVentas.consultaProductos.total
-        },
-        soloProductos: {
-          cantidad: this.analisisVentas.soloProductos.cantidad,
-          total: this.analisisVentas.soloProductos.total
-        }
+      {
+        data: reporte.efectivoPorMoneda.map((fila: any) => ({
+          Moneda: fila.moneda,
+          Inicial: fila.inicial,
+          Ventas: fila.ventas,
+          RealContado: reporte.mostrarConciliacion ? fila.real : null
+        })),
+        sheetName: 'Efectivo',
+        columnWidths: { A: 12, B: 16, C: 16, D: 18 }
       },
-      metodosPago: this.analisisMetodosPago,
-      formasPago: this.analisisFormasPago,
-      transacciones: this.transaccionesFiltradas.map(t => ({
-        descripcion: t.descripcion,
-        tipo: t.tipo,
-        metodoPago: t.metodoPago,
-        monto: t.monto,
-        usuario: t.usuario,
-        fecha: t.fecha,
-        numeroVenta: t.numeroVenta || '',
-        cliente: t.cliente?.nombre || ''
-      }))
-    };
-
-    // Convertir a CSV para Excel
-    const convertToCSV = (data: any[]): string => {
-      const headers = Object.keys(data[0]);
-      const csvRows = [];
-      csvRows.push(headers.join(','));
-
-      for (const row of data) {
-        const values = headers.map(header => {
-          const value = row[header];
-          if (value === null || value === undefined) return '';
-          if (typeof value === 'string') return `"${value.replace(/"/g, '""')}"`;
-          if (value instanceof Date) return `"${value.toLocaleString()}"`;
-          return value;
-        });
-        csvRows.push(values.join(','));
+      {
+        data: reporte.formasPago.map((fila: any) => ({
+          Forma: fila.forma,
+          Total: fila.total,
+          DeudaPendiente: fila.deudaPendiente,
+          Cantidad: fila.cantidad
+        })),
+        sheetName: 'FormasPago',
+        columnWidths: { A: 24, B: 16, C: 18, D: 12 }
+      },
+      ...reporte.metodos.map((seccion: any) => ({
+        data: seccion.filas.map((fila: any) => ({
+          Destino: fila.destino,
+          Detalle: fila.detalle || '',
+          Referencia: fila.referencia || '',
+          MontoOriginal: fila.montoOriginal || '',
+          Sistema: fila.sistema,
+          Real: reporte.mostrarConciliacion ? fila.real : null,
+          Diferencia: reporte.mostrarConciliacion ? fila.diferencia : null,
+          Operaciones: fila.operaciones
+        })),
+        sheetName: this.obtenerNombreHojaExcel(seccion.titulo),
+        columnWidths: { A: 28, B: 28, C: 22, D: 18, E: 16, F: 16, G: 16, H: 12 }
+      })),
+      {
+        data: reporte.transacciones.map((fila: any) => ({
+          Hora: fila.hora,
+          Descripcion: fila.descripcion,
+          Tipo: fila.tipo,
+          Metodo: fila.metodo,
+          Monto: fila.monto,
+          Usuario: fila.usuario,
+          NumeroVenta: fila.numeroVenta,
+          Cliente: fila.cliente
+        })),
+        sheetName: 'Transacciones',
+        columnWidths: { A: 10, B: 36, C: 14, D: 18, E: 16, F: 28, G: 16, H: 24 }
       }
+    ];
 
-      return csvRows.join('\n');
-    };
-
-    // Crear archivo CSV
-    const transaccionesCSV = convertToCSV(datosExcel.transacciones);
-    const resumenCSV = `Resumen,Cierre de Caja\nFecha,${this.datePipe.transform(this.fechaSeleccionada, 'dd/MM/yyyy')}\nSede,${this.sedeActual?.nombre}\nEstado,${this.cierreActual?.estado || 'Sin cierre'}\nEfectivo Inicial,${this.efectivoInicial}\nTotal Ventas,${this.totalVentasKPI}\nTotal Pendiente,${this.totalPendientesKPI}\nNeto Día,${this.netoDiaKPI}\nDiferencia,${this.getDiferenciaTotal()}\n\n`;
-
-    const contenidoCompleto = resumenCSV + '\n\nTRANSACCIONES\n' + transaccionesCSV;
-
-    // Crear blob y descargar
-    const blob = new Blob(["\uFEFF" + contenidoCompleto], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `cierre-caja-${this.datePipe.transform(this.fechaSeleccionada, 'yyyy-MM-dd')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    this.swalService.showSuccess('Exportado', 'Reporte exportado a Excel correctamente');
+    try {
+      this.excelExportService.exportMultipleSheets(hojas, this.obtenerNombreBaseReporte());
+      this.swalService.showSuccess('Exportado', 'Reporte exportado a Excel correctamente');
+    } catch (error) {
+      console.error('Error al exportar reporte a Excel:', error);
+      this.swalService.showError('Error', 'No se pudo exportar el reporte a Excel.');
+    }
   }
 
   importarRespaldo(): void {

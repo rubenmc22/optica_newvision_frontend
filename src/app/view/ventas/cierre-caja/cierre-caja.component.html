@@ -10,18 +10,17 @@
           <h1>Cierre de Caja Diario</h1>
           <div class="header-subtitle">
             <!-- Estado badge integrado como subtítulo -->
-            <span class="estado-badge estado-sin-iniciar" *ngIf="!cierreActual && esDiaActual">
+            <span class="estado-badge estado-sin-iniciar" *ngIf="!cierreActual && esDiaActual && !tieneBloqueoPorCierrePendienteAnterior()">
               <i class="bi bi-exclamation-circle"></i>
               Caja sin iniciar
             </span>
-            <span class="estado-badge" [ngClass]="getEstadoClass(cierreActual?.estado)" *ngIf="cierreActual">
-              <i class="bi" [ngClass]="{
-                'bi-play-circle-fill': cierreActual?.estado === 'abierto',
-                'bi-lock-fill': cierreActual?.estado === 'cerrado',
-                'bi-check-circle-fill': cierreActual?.estado === 'revisado',
-                'bi-arrow-repeat': cierreActual?.estado === 'conciliado'
-              }"></i>
-              {{ getEstadoTexto(cierreActual?.estado) }}
+            <span class="estado-badge estado-sin-cierre" *ngIf="!cierreActual && esDiaActual && tieneBloqueoPorCierrePendienteAnterior()">
+              <i class="bi bi-exclamation-triangle"></i>
+              Cierre pendiente anterior
+            </span>
+            <span class="estado-badge" [ngClass]="getEstadoClass(cierreActual?.estado, cierreActual?.fecha)" *ngIf="cierreActual">
+              <i class="bi" [ngClass]="getEstadoIconClass(cierreActual?.estado, cierreActual?.fecha)"></i>
+              {{ getEstadoTexto(cierreActual?.estado, cierreActual?.fecha) }}
             </span>
             <span class="estado-badge estado-sin-cierre" *ngIf="!cierreActual && !esDiaActual">
               <i class="bi bi-calendar-x"></i>
@@ -52,7 +51,9 @@
         <div class="actions-group">
           <!-- Botones de acción -->
           <div class="acciones-principales">
-            <button class="btn-moderno btn-primary" (click)="abrirModalInicioCaja()" *ngIf="!cierreActual && esDiaActual">
+            <button class="btn-moderno btn-primary" (click)="abrirModalInicioCaja()" *ngIf="!cierreActual && esDiaActual"
+              [disabled]="tieneBloqueoPorCierrePendienteAnterior()"
+              [title]="tieneBloqueoPorCierrePendienteAnterior() ? mensajeBloqueoCierrePendienteAnterior : 'Iniciar caja del día'">
               <i class="bi bi-play-circle"></i>
               <span>Iniciar Caja</span>
             </button>
@@ -63,9 +64,9 @@
               <span>Cerrar Caja</span>
             </button>
 
-            <div class="info-mensaje" *ngIf="cierreActual && !esDiaActual">
+            <div class="info-mensaje" [class.warning]="esCierrePendienteVisual(cierreActual)" *ngIf="cierreActual && !esDiaActual">
               <i class="bi bi-info-circle"></i>
-              <span>Cierre del {{ fechaSeleccionada | date:'dd/MM/yyyy' }}</span>
+              <span>{{ getTextoReferenciaFecha() }}</span>
             </div>
 
             <div class="info-mensaje warning" *ngIf="!cierreActual && !esDiaActual">
@@ -144,7 +145,7 @@
       <div class="kpi-content">
         <span class="kpi-label">Neto del Día</span>
         <span class="kpi-value">{{ netoDiaKPI | currency }}</span>
-        <span class="kpi-trend">Ingresos - Egresos</span>
+        <span class="kpi-trend">Cobrado e ingresos - egresos</span>
       </div>
     </div>
   </div>
@@ -161,6 +162,9 @@
             <h3>Transacciones del Día</h3>
           </div>
           <div class="panel-actions">
+            <button class="btn-icon" (click)="refrescarTransaccionesDia()" [disabled]="cargandoDatos" title="Actualizar transacciones">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
             <button class="btn-icon" (click)="abrirModalTransaccion()" title="Nueva transacción">
               <i class="bi bi-plus-circle"></i>
             </button>
@@ -239,7 +243,7 @@
                   title="Editar">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn-action" (click)="eliminarTransaccion(trans)" *ngIf="!trans.numeroVenta"
+                <button class="btn-action" (click)="eliminarTransaccion(trans)" *ngIf="!trans.numeroVenta && usaModoDummy"
                   title="Eliminar">
                   <i class="bi bi-trash"></i>
                 </button>
@@ -259,18 +263,14 @@
           <div class="panel-title">
             <i class="bi bi-safe"></i>
             <h3>Estado de Caja</h3>
-            <span class="badge-estado" [ngClass]="getEstadoClass(cierreActual.estado)">
-              <i class="bi" [ngClass]="{
-                'bi-play-circle-fill': cierreActual.estado === 'abierto',
-                'bi-lock-fill': cierreActual.estado === 'cerrado',
-                'bi-check-circle-fill': cierreActual.estado === 'revisado'
-              }"></i>
-              {{ getEstadoTexto(cierreActual.estado) }}
+            <span class="badge-estado" [ngClass]="getEstadoClass(cierreActual.estado, cierreActual.fecha)">
+              <i class="bi" [ngClass]="getEstadoIconClass(cierreActual.estado, cierreActual.fecha)"></i>
+              {{ getEstadoTexto(cierreActual.estado, cierreActual.fecha) }}
             </span>
           </div>
           <div class="panel-actions" *ngIf="cierreActual.estado === 'abierto'">
             <button class="btn-sm btn-outline" (click)="abrirModalCierre()">
-              <i class="bi bi-lock"></i> Cerrar Caja
+              <i class="bi bi-lock"></i> {{ esCierrePendienteVisual(cierreActual) ? 'Conciliar y cerrar' : 'Cerrar Caja' }}
             </button>
           </div>
         </div>
@@ -432,15 +432,22 @@
               <h3>Estado de Caja</h3>
             </div>
             <div class="panel-actions">
-              <button class="btn-sm btn-primary" (click)="abrirModalInicioCaja()">
+              <button class="btn-sm btn-primary" (click)="abrirModalInicioCaja()"
+                [disabled]="tieneBloqueoPorCierrePendienteAnterior()"
+                [title]="tieneBloqueoPorCierrePendienteAnterior() ? mensajeBloqueoCierrePendienteAnterior : 'Iniciar caja'">
                 <i class="bi bi-play-circle"></i> Iniciar Caja
               </button>
             </div>
           </div>
           <div class="cierre-detalle text-center">
             <i class="bi bi-cash-stack" style="font-size: 3rem; color: #94a3b8;"></i>
-            <h4>Caja no iniciada</h4>
-            <p>Haz clic en "Iniciar Caja" para comenzar la jornada</p>
+            <h4>{{ tieneBloqueoPorCierrePendienteAnterior() ? 'Cierre pendiente anterior' : 'Caja no iniciada' }}</h4>
+            <p *ngIf="tieneBloqueoPorCierrePendienteAnterior(); else mensajeInicioCaja">
+              {{ mensajeBloqueoCierrePendienteAnterior }}
+            </p>
+            <ng-template #mensajeInicioCaja>
+              <p>Haz clic en "Iniciar Caja" para comenzar la jornada.</p>
+            </ng-template>
           </div>
         </div>
       </ng-template>
@@ -562,10 +569,15 @@
                   analisisMetodosPago.punto.total | currency }}</span></h4>
               <div class="bancos-grid">
                 <div class="banco-card" *ngFor="let banco of analisisMetodosPago.punto.porBanco">
-                  <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco
-                      }}</span>
+                  <div class="banco-header">
+                    <i class="bi bi-bank"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(banco) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(banco)">{{ getDetalleDestino(banco) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(banco)">{{ getReferenciaDestino(banco) }}</span>
+                    </div>
                   </div>
-                  <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
+                  <div class="banco-body banco-body-resumen"><span class="banco-monto">{{ banco.total | currency }}</span><span
                       class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
                 </div>
               </div>
@@ -576,10 +588,15 @@
                   analisisMetodosPago.pagomovil.total | currency }}</span></h4>
               <div class="bancos-grid">
                 <div class="banco-card" *ngFor="let banco of analisisMetodosPago.pagomovil.porBanco">
-                  <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco
-                      }}</span>
+                  <div class="banco-header">
+                    <i class="bi bi-bank"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(banco) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(banco)">{{ getDetalleDestino(banco) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(banco)">{{ getReferenciaDestino(banco) }}</span>
+                    </div>
                   </div>
-                  <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
+                  <div class="banco-body banco-body-resumen"><span class="banco-monto">{{ banco.total | currency }}</span><span
                       class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
                 </div>
               </div>
@@ -590,10 +607,15 @@
                   analisisMetodosPago.transferencia.total | currency }}</span></h4>
               <div class="bancos-grid">
                 <div class="banco-card" *ngFor="let banco of analisisMetodosPago.transferencia.porBanco">
-                  <div class="banco-header"><i class="bi bi-bank"></i><span class="banco-nombre">{{ banco.banco
-                      }}</span>
+                  <div class="banco-header">
+                    <i class="bi bi-bank"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(banco) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(banco)">{{ getDetalleDestino(banco) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(banco)">{{ getReferenciaDestino(banco) }}</span>
+                    </div>
                   </div>
-                  <div class="banco-body"><span class="banco-monto">{{ banco.total | currency }}</span><span
+                  <div class="banco-body banco-body-resumen"><span class="banco-monto">{{ banco.total | currency }}</span><span
                       class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
                 </div>
               </div>
@@ -602,11 +624,20 @@
             <div class="metodo-seccion" *ngIf="analisisMetodosPago.zelle.total > 0">
               <h4 class="seccion-titulo"><i class="bi bi-globe2"></i> Zelle <span class="seccion-total">{{
                   analisisMetodosPago.zelle.total | currency }}</span></h4>
-            </div>
-
-            <div class="metodo-seccion" *ngIf="analisisMetodosPago.mixto.total > 0">
-              <h4 class="seccion-titulo"><i class="bi bi-wallet2"></i> Mixto <span class="seccion-total">{{
-                  analisisMetodosPago.mixto.total | currency }}</span></h4>
+              <div class="bancos-grid" *ngIf="analisisMetodosPago.zelle.porBanco.length > 0">
+                <div class="banco-card" *ngFor="let banco of analisisMetodosPago.zelle.porBanco">
+                  <div class="banco-header">
+                    <i class="bi bi-globe2"></i>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(banco) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(banco)">{{ getDetalleDestino(banco) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(banco)">{{ getReferenciaDestino(banco) }}</span>
+                    </div>
+                  </div>
+                  <div class="banco-body banco-body-resumen"><span class="banco-monto">{{ banco.total | currency }}</span><span
+                      class="banco-cantidad">{{ banco.cantidad }} ops</span></div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -685,7 +716,7 @@
   <div class="cierre-footer">
     <div class="footer-info">
       <i class="bi bi-info-circle"></i>
-      <span>Última actualización: {{ ultimaActualizacion | date:'HH:mm:ss' }}</span>
+      <span>Última sincronización del resumen: {{ ultimaActualizacion | date:'HH:mm:ss' }}</span>
     </div>
 
     <div class="footer-actions">
@@ -693,7 +724,7 @@
         <i class="bi bi-printer"></i> Imprimir
       </button>
 
-      <button class="btn-primary" (click)="guardarCierre()" *ngIf="cierreActual?.estado === 'abierto'">
+      <button class="btn-primary" (click)="guardarCierre()" *ngIf="cierreActual?.estado === 'abierto' && usaModoDummy">
         <i class="bi bi-save"></i> Guardar Cambios
       </button>
 
@@ -954,12 +985,12 @@
               <span>{{ fechaSeleccionada | date:'HH:mm' }}</span>
             </div>
             <div class="chip estado" [ngClass]="{
-              'estado-abierto': cierreActual?.estado === 'abierto',
-              'estado-cerrado': cierreActual?.estado === 'cerrado'
+              'estado-abierto': cierreActual?.estado === 'abierto' && !esCierrePendienteVisual(cierreActual),
+              'estado-cerrado': cierreActual?.estado === 'cerrado',
+              'estado-pendiente-cierre': esCierrePendienteVisual(cierreActual)
             }">
-              <i class="bi" [class.bi-play-circle]="cierreActual?.estado === 'abierto'" 
-                [class.bi-lock]="cierreActual?.estado === 'cerrado'"></i>
-              <span>{{ getEstadoTexto(cierreActual?.estado) }}</span>
+              <i class="bi" [ngClass]="getEstadoIconClass(cierreActual?.estado, cierreActual?.fecha)"></i>
+              <span>{{ getEstadoTexto(cierreActual?.estado, cierreActual?.fecha) }}</span>
             </div>
           </div>
 
@@ -1173,7 +1204,11 @@
                 <div class="banco-card-cierre" *ngFor="let banco of analisisMetodosPago.punto.porBanco">
                   <div class="banco-header">
                     <i class="bi bi-bank"></i>
-                    <span>{{ banco.banco }}</span>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(banco) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(banco)">{{ getDetalleDestino(banco) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(banco)">{{ getReferenciaDestino(banco) }}</span>
+                    </div>
                     <span class="badge-cantidad">{{ banco.cantidad }} ops</span>
                   </div>
                   <div class="banco-body">
@@ -1183,28 +1218,37 @@
                         <span class="input-icon">{{ simboloMonedaSistema }}</span>
                         <input type="number" 
                               class="form-control" 
-                              [formControlName]="'puntoReal_' + banco.bancoCodigo" 
+                              [formControlName]="getNombreControlMetodo('punto', banco)" 
                               step="0.01" 
                               min="0"
                               placeholder="0.00"
                               (focus)="onInputFocus($event)"
                               (blur)="onInputBlur($event)">
                         <button class="btn-auto" type="button" 
-                                (click)="autoCompletarPuntoPorBanco(banco.bancoCodigo, banco.total)"
+                                (click)="autoCompletarMetodoPorDestino('punto', banco)"
                                 title="Auto completar con el monto del sistema">
                           <i class="bi bi-magic"></i>
                         </button>
                       </div>
                     </div>
+                    <div class="conversion-info mt-2 p-2 rounded" style="background: #f0fdf4;">
+                      <small class="text-muted">
+                        <i class="bi bi-currency-exchange"></i>
+                        Equivalente en Bolívares:
+                        <strong class="text-success">
+                          Bs. {{ getMontoSistemaEnBolivar(getMontoRealMetodoPorDestino('punto', banco)) | number:'1.2-2' }}
+                        </strong>
+                      </small>
+                    </div>
                     <div class="info-sistema">
                       <span class="label">Sistema:</span>
-                      <span class="value">{{ banco.total | number:'1.2-2' }} Bs.</span>
-                      <span class="label ms-2">(USD):</span>
-                      <span class="value">{{ banco.total / (1 / (tasasCambio?.bolivar || 0.00211)) | number:'1.2-2' }} USD</span>
+                      <span class="value">{{ banco.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      <span class="label ms-2" *ngIf="getTextoMontoOriginalBanco(banco)">Original:</span>
+                      <span class="value" *ngIf="getTextoMontoOriginalBanco(banco)">{{ getTextoMontoOriginalBanco(banco) }}</span>
                     </div>
-                    <div class="diferencia-info" *ngIf="getDiferenciaPuntoPorBanco(banco.bancoCodigo) !== 0">
-                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaPuntoPorBanco(banco.bancoCodigo))">
-                        Diferencia: {{ getDiferenciaPuntoPorBanco(banco.bancoCodigo) | number:'1.2-2' }} USD
+                    <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('punto', banco) !== 0">
+                      <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('punto', banco))">
+                        Diferencia: {{ getDiferenciaMetodoPorDestino('punto', banco) | number:'1.2-2' }} {{ monedaSistema }}
                       </span>
                     </div>
                   </div>
@@ -1218,7 +1262,11 @@
                 <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('transferencia')">
                   <div class="banco-header">
                     <i class="bi bi-bank2"></i>
-                    <span>{{ destino.destinoLabel || destino.banco }}</span>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(destino) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(destino)">{{ getDetalleDestino(destino) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(destino)">{{ getReferenciaDestino(destino) }}</span>
+                    </div>
                     <span class="badge-cantidad">{{ destino.cantidad }} ops</span>
                   </div>
                   <div class="banco-body">
@@ -1322,7 +1370,11 @@
                 <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('pagomovil')">
                   <div class="banco-header">
                     <i class="bi bi-phone"></i>
-                    <span>{{ destino.destinoLabel || destino.banco }}</span>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(destino) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(destino)">{{ getDetalleDestino(destino) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(destino)">{{ getReferenciaDestino(destino) }}</span>
+                    </div>
                     <span class="badge-cantidad">{{ destino.cantidad }} ops</span>
                   </div>
                   <div class="banco-body">
@@ -1425,7 +1477,11 @@
                 <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('zelle')">
                   <div class="banco-header">
                     <i class="bi bi-globe2"></i>
-                    <span>{{ destino.destinoLabel || destino.banco }}</span>
+                    <div class="banco-titulos">
+                      <span class="banco-nombre">{{ getTituloDestino(destino) }}</span>
+                      <span class="banco-detalle" *ngIf="getDetalleDestino(destino)">{{ getDetalleDestino(destino) }}</span>
+                      <span class="banco-referencia" *ngIf="getReferenciaDestino(destino)">{{ getReferenciaDestino(destino) }}</span>
+                    </div>
                     <span class="badge-cantidad">{{ destino.cantidad }} ops</span>
                   </div>
                   <div class="banco-body">
@@ -1874,14 +1930,9 @@
               <tr *ngFor="let cierre of historialCierres">
                 <td>{{ cierre.fecha | date:'dd/MM/yyyy' }}</td>
                 <td>
-                  <span class="badge" [ngClass]="getEstadoClass(cierre.estado)">
-                    <i class="bi" [ngClass]="{
-                      'bi-play-circle-fill': cierre.estado === 'abierto',
-                      'bi-lock-fill': cierre.estado === 'cerrado',
-                      'bi-check-circle-fill': cierre.estado === 'revisado',
-                      'bi-arrow-repeat': cierre.estado === 'conciliado'
-                    }"></i>
-                    {{ getEstadoTexto(cierre.estado) }}
+                  <span class="badge" [ngClass]="getEstadoClass(cierre.estado, cierre.fecha)">
+                    <i class="bi" [ngClass]="getEstadoIconClass(cierre.estado, cierre.fecha)"></i>
+                    {{ getEstadoTexto(cierre.estado, cierre.fecha) }}
                   </span>
                 </td>
                 <td>{{ cierre.efectivoInicial | currency }}</td>

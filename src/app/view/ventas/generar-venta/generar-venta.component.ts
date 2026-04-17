@@ -166,6 +166,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     maximoCuotasPermitidas = 6;
     cantidadCuotasCashea = 3;
     sedeInfo: SedeCompleta | null = null;
+    cajaDisponibleParaVentas: boolean = true;
+    mensajeBloqueoCaja: string = 'Debes iniciar la caja del día para poder registrar ventas.';
+    private bloqueoPorCierrePendienteAnterior: boolean = false;
+    private popupCajaCerradaMostrado: boolean = false;
 
     productos: Producto[] = [];
     pacientes: any[] = [];
@@ -304,8 +308,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 this.sedeActiva = this.normalizarClaveSede(this.sedeInfo.key);
                 this.sedeFiltro = this.sedeActiva;
                 this.actualizarProductosFiltrados();
+                this.validarCajaAbierta(true);
             }
         });
+
+        const sedeInicial = this.userStateService.getSedeActual();
+        if (sedeInicial?.key) {
+            this.sedeInfo = sedeInicial;
+            this.sedeActiva = this.normalizarClaveSede(sedeInicial.key);
+            this.sedeFiltro = this.sedeActiva;
+            this.validarCajaAbierta(true);
+        }
 
         window.addEventListener('focus', () => {
             //this.recargarPacientes();
@@ -3156,6 +3169,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         }
 
         const payload = {
+            id: cuenta.id || undefined,
             bancoCodigo: cuenta.codigo || undefined,
             bancoNombre: cuenta.nombre || undefined,
             titular: cuenta.ownerName || undefined,
@@ -3296,6 +3310,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     get mensajeEstadoBoton(): string {
+        if (!this.cajaDisponibleParaVentas) {
+            return 'Caja cerrada';
+        }
+
         // Validar items según tipo de venta
         if (this.tipoVenta === 'solo_productos' && this.venta.productos.length === 0) {
             return 'Agrega productos para continuar';
@@ -3720,6 +3738,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // Getter para el botón que ABRE el modal (validación básica)
     get puedeAbrirModal(): boolean {
+        if (!this.cajaDisponibleParaVentas) {
+            return false;
+        }
+
         switch (this.tipoVenta) {
             case 'solo_productos':
                 return this.venta.productos.length > 0;
@@ -3742,6 +3764,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     get puedeGenerarVenta(): boolean {
+        if (!this.cajaDisponibleParaVentas) {
+            return false;
+        }
+
         // 1. Validar que haya items según tipo de venta
         if (this.tipoVenta === 'solo_productos' && this.venta.productos.length === 0) {
             return false;
@@ -3863,6 +3889,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     async generarVenta(): Promise<void> {
 
+        if (!this.cajaDisponibleParaVentas) {
+            this.mostrarPopupCajaCerrada();
+            return;
+        }
+
         // ============================================
         // 1. VALIDAR MÉTODOS DE PAGO
         // ============================================
@@ -3952,6 +3983,11 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
                         // ACTUALIZAR solo el número de venta y mostrar recibo
                         this.actualizarNumeroVentaRecibo(numeroVenta, ventaKey);
+                        this.generarVentaService.notificarVentaCreada({
+                            fecha: new Date(),
+                            sede: this.sedeInfo?.key || this.sedeActiva || this.currentUser?.sede || null,
+                            ventaKey
+                        });
                         this.mostrarReciboAutomatico();
                         this.limpiarSelectProductos();
                         this.resetearVentaCompleta(false);
@@ -4050,6 +4086,81 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
             this.swalService.showError('Error en la transacción', mensajeError);
         }, 1500);
+    }
+
+    private validarCajaAbierta(mostrarPopup: boolean = false): void {
+        const sedeKey = this.normalizarClaveSede(this.sedeInfo?.key || this.sedeActiva || this.currentUser?.sede || '');
+
+        if (!sedeKey) {
+            return;
+        }
+
+        this.generarVentaService.obtenerEstadoCaja(new Date(), sedeKey).pipe(take(1)).subscribe({
+            next: (response: any) => {
+                const cierre = response?.cierreExistente || null;
+                const cierrePendienteAnterior = response?.bloqueoOperativo?.cierrePendienteAnterior || null;
+                const cajaAbierta = cierre?.estado === 'abierto' && !cierrePendienteAnterior;
+
+                this.bloqueoPorCierrePendienteAnterior = !!cierrePendienteAnterior;
+
+                this.cajaDisponibleParaVentas = cajaAbierta;
+                this.mensajeBloqueoCaja = cajaAbierta
+                    ? ''
+                    : this.construirMensajeBloqueoCaja(cierrePendienteAnterior);
+
+                if (cajaAbierta) {
+                    this.popupCajaCerradaMostrado = false;
+                    return;
+                }
+
+                if (mostrarPopup) {
+                    this.mostrarPopupCajaCerrada();
+                }
+            },
+            error: () => {
+                this.bloqueoPorCierrePendienteAnterior = false;
+                this.cajaDisponibleParaVentas = false;
+                this.mensajeBloqueoCaja = 'No fue posible validar el estado de la caja. Por seguridad, la generación de ventas quedó bloqueada.';
+
+                if (mostrarPopup) {
+                    this.mostrarPopupCajaCerrada();
+                }
+            }
+        });
+    }
+
+    revalidarCaja(): void {
+        this.popupCajaCerradaMostrado = false;
+        this.validarCajaAbierta(true);
+    }
+
+    private construirMensajeBloqueoCaja(cierrePendienteAnterior: any): string {
+        if (cierrePendienteAnterior?.fechaFormateada) {
+            return `Existe una caja pendiente del ${cierrePendienteAnterior.fechaFormateada}. Debe conciliarse y cerrarse antes de registrar ventas.`;
+        }
+
+        return 'La caja del día no está iniciada. Debes abrir la caja antes de registrar una venta.';
+    }
+
+    private mostrarPopupCajaCerrada(): void {
+        if (this.popupCajaCerradaMostrado) {
+            return;
+        }
+
+        this.popupCajaCerradaMostrado = true;
+        this.swalService.showWarning(
+            this.bloqueoPorCierrePendienteAnterior ? 'Cierre pendiente' : 'Caja cerrada',
+            `
+            <div style="text-align:left">
+                <p style="margin-bottom:12px">${this.mensajeBloqueoCaja}</p>
+                <p style="margin-bottom:0">${this.bloqueoPorCierrePendienteAnterior
+                    ? 'Debes ingresar al módulo de cierre de caja, conciliar la caja pendiente y cerrarla antes de continuar.'
+                    : 'Solicita al responsable abrir la caja desde el módulo de cierre de caja y luego vuelve a esta pantalla.'}</p>
+            </div>
+            `,
+            true,
+            6000
+        );
     }
 
     private generarReciboHTMLUnificado(datos: any, vista: ReceiptViewMode = 'preview'): string {

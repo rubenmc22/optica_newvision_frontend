@@ -49,6 +49,10 @@ export interface Transaccion {
     cuentaReceptoraAlias?: string;
     cuentaReceptoraUltimos4?: string;
     cuentaReceptoraEmail?: string;
+    cuentaReceptoraTitular?: string;
+    cuentaReceptoraDocumento?: string;
+    cuentaReceptoraTelefono?: string;
+    cuentaReceptoraDescripcion?: string;
   }>;
   productos?: Array<{
     nombre: string;
@@ -129,6 +133,12 @@ export interface CierreDiario {
         bancoCodigo: string;
         total: number;
         cantidad: number;
+        detalleCuenta?: string;
+        referenciaCuenta?: string;
+        cuentaTitular?: string;
+        cuentaDocumento?: string;
+        cuentaTelefono?: string;
+        cuentaCorreo?: string;
       }>;
       cantidad: number;
     };
@@ -144,6 +154,12 @@ export interface CierreDiario {
         monedaOriginal?: string;
         destinoKey?: string;
         destinoLabel?: string;
+        detalleCuenta?: string;
+        referenciaCuenta?: string;
+        cuentaTitular?: string;
+        cuentaDocumento?: string;
+        cuentaTelefono?: string;
+        cuentaCorreo?: string;
       }>;
     };
     transferencia: {
@@ -158,6 +174,12 @@ export interface CierreDiario {
         monedaOriginal?: string;
         destinoKey?: string;
         destinoLabel?: string;
+        detalleCuenta?: string;
+        referenciaCuenta?: string;
+        cuentaTitular?: string;
+        cuentaDocumento?: string;
+        cuentaTelefono?: string;
+        cuentaCorreo?: string;
       }>;
     };
     zelle: {
@@ -172,11 +194,13 @@ export interface CierreDiario {
         monedaOriginal?: string;
         destinoKey?: string;
         destinoLabel?: string;
+        detalleCuenta?: string;
+        referenciaCuenta?: string;
+        cuentaTitular?: string;
+        cuentaDocumento?: string;
+        cuentaTelefono?: string;
+        cuentaCorreo?: string;
       }>;
-    };
-    mixto: {
-      total: number;
-      cantidad: number;
     };
   };
 
