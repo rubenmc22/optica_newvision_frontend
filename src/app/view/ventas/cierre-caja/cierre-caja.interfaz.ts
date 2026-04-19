@@ -415,6 +415,9 @@ export interface CierreDiario {
   efectivoFinalReal: number;
   diferencia: number;
   observaciones: string;
+  estadoConciliacion?: string;
+  fechaRevision?: Date;
+  motivoAnulacion?: string;
   estado: 'abierto' | 'cerrado' | 'revisado' | 'conciliado';
   usuarioApertura: string;
   usuarioCierre: string;

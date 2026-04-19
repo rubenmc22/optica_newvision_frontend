@@ -249,7 +249,7 @@
 
                   <div class="transaccion-subdesc transaccion-subdesc--sale" *ngIf="trans.numeroVenta; else descripcionMovimientoManual">
                     <span>{{ getEtiquetaHistorialTransaccion(trans) }}</span>
-                    <span>{{ getTextoFormaPagoHistorial(trans) }}</span>
+                    <span>{{ getTextoFormaPagoMetodoHistorial(trans) }}</span>
                   </div>
 
                   <ng-template #descripcionMovimientoManual>
@@ -311,7 +311,7 @@
 
                     <div class="transaccion-mobile-card__summary" *ngIf="trans.numeroVenta; else transaccionMobileManualTemplate">
                       <span class="transaccion-mobile-card__chip">{{ getEtiquetaHistorialTransaccion(trans) }}</span>
-                      <span class="transaccion-mobile-card__chip transaccion-mobile-card__chip--soft">{{ getTextoFormaPagoHistorial(trans) }}</span>
+                      <span class="transaccion-mobile-card__chip transaccion-mobile-card__chip--soft">{{ getTextoFormaPagoMetodoHistorial(trans) }}</span>
                     </div>
 
                     <ng-template #transaccionMobileManualTemplate>
@@ -541,21 +541,35 @@
 
             <!-- Comparación con lo REAL contado -->
             <div class="diferencia-destacada" [ngClass]="{
-              'positiva': getDiferencia() > 0,
-              'negativa': getDiferencia() < 0,
-              'cero': getDiferencia() === 0
+              'positiva': getDiferenciaTotal() > 0,
+              'negativa': getDiferenciaTotal() < 0,
+              'cero': getDiferenciaTotal() === 0
             }">
               <div class="diferencia-icon">
                 <i class="bi" [ngClass]="{
-                  'bi-arrow-up-circle': getDiferencia() > 0,
-                  'bi-arrow-down-circle': getDiferencia() < 0,
-                  'bi-check-circle': getDiferencia() === 0
+                  'bi-arrow-up-circle': getDiferenciaTotal() > 0,
+                  'bi-arrow-down-circle': getDiferenciaTotal() < 0,
+                  'bi-check-circle': getDiferenciaTotal() === 0
                 }"></i>
               </div>
               <div class="diferencia-info">
-                <span class="diferencia-label">Diferencia en Efectivo</span>
-                <span class="diferencia-valor">{{ getDiferencia() | currency }}</span>
-                <span class="diferencia-nota">(Real contado - Teórico)</span>
+                <span class="diferencia-label">Diferencia General del Cierre</span>
+                <span class="diferencia-valor">{{ getDiferenciaTotal() | currency }}</span>
+                <span class="diferencia-nota">Incluye efectivo y métodos electrónicos conciliados</span>
+              </div>
+            </div>
+
+            <div class="diferencia-breakdown" *ngIf="getDesgloseDiferenciasActual().length > 0">
+              <span class="diferencia-breakdown__title">Desglose</span>
+              <div class="diferencia-breakdown__chips">
+                <div class="diferencia-breakdown__chip" *ngFor="let item of getDesgloseDiferenciasActual()">
+                  <span class="diferencia-breakdown__label">{{ item.label }}</span>
+                  <span class="diferencia-breakdown__value" [ngClass]="{
+                    'text-success': item.valor > 0,
+                    'text-danger': item.valor < 0,
+                    'text-secondary': item.valor === 0
+                  }">{{ item.valor | currency }}</span>
+                </div>
               </div>
             </div>
 
@@ -2164,124 +2178,226 @@
 </div>
 
 <!-- Modal Historial de Cierres -->
-<div class="modal fade" id="historialCierresModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="bi bi-clock-history text-primary me-2"></i>
-          Historial de Cierres
-        </h5>
+<div class="modal fade historial-cierres-modal" id="historialCierresModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable historial-cierres-modal__dialog">
+    <div class="modal-content historial-cierres-shell">
+      <div class="modal-header historial-cierres-shell__header border-0">
+        <div>
+          <div class="historial-cierres-shell__eyebrow">Control histórico</div>
+          <h5 class="modal-title historial-cierres-shell__title">
+            <i class="bi bi-clock-history me-2"></i>
+            Historial de cierres de caja
+          </h5>
+          <p class="historial-cierres-shell__subtitle">Consulta jornadas anteriores, revisa diferencias y abre una vista previa completa de cada cierre.</p>
+        </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <!-- Filtros -->
-        <div class="row mb-3">
-          <div class="col-md-4">
-            <label class="form-label">Fecha Desde</label>
-            <input type="date" class="form-control" [(ngModel)]="filtroHistorialDesde">
+
+      <div class="modal-body historial-cierres-shell__body">
+        <section class="historial-toolbar-card">
+          <div class="historial-toolbar-card__header">
+            <div>
+              <span class="historial-toolbar-card__eyebrow">Rango de consulta</span>
+              <h6>Semana actual por defecto</h6>
+              <p>Puedes cambiar el período según la necesidad operativa o administrativa.</p>
+            </div>
+            <div class="historial-toolbar-card__actions">
+              <button class="btn btn-outline-secondary btn-sm" (click)="aplicarPresetHistorial('semana')">Semana actual</button>
+              <button class="btn btn-outline-secondary btn-sm" (click)="aplicarPresetHistorial('mes')">Mes actual</button>
+              <button class="btn btn-outline-secondary btn-sm" (click)="aplicarPresetHistorial('30dias')">Últimos 30 días</button>
+            </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label">Fecha Hasta</label>
-            <input type="date" class="form-control" [(ngModel)]="filtroHistorialHasta">
+
+          <div class="historial-toolbar-card__grid">
+            <label class="historial-field">
+              <span>Fecha desde</span>
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="filtroHistorialDesde">
+            </label>
+
+            <label class="historial-field">
+              <span>Fecha hasta</span>
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="filtroHistorialHasta">
+            </label>
+
+            <div class="historial-toolbar-card__cta">
+              <button class="btn btn-sm historial-btn-primary" (click)="cargarHistorialCierres()">
+                <i class="bi bi-search me-2"></i>Actualizar historial
+              </button>
+              <div class="historial-export-dropdown">
+                <button class="btn btn-outline-secondary btn-sm historial-export-dropdown__toggle"
+                  type="button"
+                  (click)="toggleHistorialExportMenu($event)"
+                  [disabled]="!historialCierres.length"
+                  [attr.aria-expanded]="mostrarMenuExportHistorial">
+                  <i class="bi bi-download me-2"></i>Descargar listado
+                  <i class="bi ms-2" [ngClass]="mostrarMenuExportHistorial ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                </button>
+
+                <div class="historial-export-dropdown__menu" *ngIf="mostrarMenuExportHistorial">
+                  <button type="button" class="historial-export-dropdown__item" (click)="exportarHistorial('excel')">
+                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                    <span>Descargar Excel</span>
+                  </button>
+                  <button type="button" class="historial-export-dropdown__item" (click)="exportarHistorial('pdf')">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                    <span>Descargar PDF</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="col-md-4 d-flex align-items-end gap-2">
-            <button class="btn btn-primary w-100" (click)="cargarHistorialCierres()">
-              <i class="bi bi-search"></i> Buscar
-            </button>
-            <button class="btn btn-outline-secondary" (click)="exportarHistorial()">
-              <i class="bi bi-download"></i>
-            </button>
-          </div>
+        </section>
+
+        <section class="historial-resumen-grid" *ngIf="historialCierres.length > 0">
+          <article class="historial-resumen-card">
+            <span class="historial-resumen-card__label">Cierres encontrados</span>
+            <strong>{{ historialCierres.length }}</strong>
+          </article>
+          <article class="historial-resumen-card">
+            <span class="historial-resumen-card__label">Ingresos registrados</span>
+            <strong>{{ formatCurrency(getTotalVentasHistorial()) }} {{ monedaSistema }}</strong>
+          </article>
+          <article class="historial-resumen-card">
+            <span class="historial-resumen-card__label">Promedio operativo</span>
+            <strong>{{ formatCurrency(getTotalVentasHistorial() / historialCierres.length) }} {{ monedaSistema }}</strong>
+          </article>
+          <article class="historial-resumen-card" [class.is-positive]="getDiferenciaTotalHistorial() > 0" [class.is-negative]="getDiferenciaTotalHistorial() < 0">
+            <span class="historial-resumen-card__label">Descuadre acumulado</span>
+            <strong>{{ formatCurrency(getDiferenciaTotalHistorial()) }} {{ monedaSistema }}</strong>
+          </article>
+        </section>
+
+        <div class="historial-loading-state" *ngIf="historialCargando">
+          <div class="spinner-border text-primary" role="status"></div>
+          <span>Cargando historial de cierres...</span>
         </div>
 
-        <!-- Tabla de cierres -->
-        <div class="table-responsive">
-          <table class="table table-hover">
-            <thead class="table-light">
-              <tr>
-                <th>Fecha</th>
-                <th>Estado</th>
-                <th>Efectivo Inicial</th>
-                <th>Ventas Efectivo</th>
-                <th>Total Ventas</th>
-                <th>Efectivo Final</th>
-                <th>Diferencia</th>
-                <th>Usuario</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let cierre of historialCierres">
-                <td>{{ cierre.fecha | date:'dd/MM/yyyy' }}</td>
-                <td>
-                  <span class="badge" [ngClass]="getEstadoClass(cierre.estado, cierre.fecha)">
-                    <i class="bi" [ngClass]="getEstadoIconClass(cierre.estado, cierre.fecha)"></i>
-                    {{ getEstadoTexto(cierre.estado, cierre.fecha) }}
+        <ng-container *ngIf="!historialCargando">
+          <section class="historial-cierres-list" *ngIf="historialCierres.length > 0; else historialVacio">
+            <article class="historial-cierre-card" *ngFor="let cierre of historialCierres">
+              <div class="historial-cierre-card__header">
+                <div class="historial-cierre-card__title-block">
+                  <span class="historial-cierre-card__date">Jornada {{ cierre.fecha | date:'dd/MM/yyyy' }}</span>
+                  <h6>Cierre {{ getFechaOperativaCierre(cierre) }}</h6>
+                  <p>{{ getUsuarioResponsableCierre(cierre) }}</p>
+                </div>
+
+                <div class="historial-cierre-card__header-side">
+                  <div class="historial-cierre-card__status-group">
+                    <span class="historial-chip historial-chip--status" [ngClass]="getEstadoTecnicoHistorialClase(cierre)">
+                      <i class="bi" [ngClass]="getEstadoTecnicoHistorialIcono(cierre)"></i>
+                      {{ getEstadoTecnicoHistorialTexto(cierre) }}
+                    </span>
+                    <span class="historial-chip historial-chip--neutral">
+                      {{ getEstadoAdministrativoHistorialTexto(cierre) }}
+                    </span>
+                  </div>
+                  <div class="historial-cierre-card__actions">
+                    <button class="btn btn-sm historial-btn-primary" (click)="verDetalleCierre(cierre)">
+                      <i class="bi bi-eye me-1"></i>Ver detalle
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning" (click)="anularCierre(cierre)" *ngIf="cierre.estado === 'cerrado'">
+                      <i class="bi bi-x-circle me-1"></i>Anular
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="historial-cierre-card__metrics">
+                <div class="historial-metric-pill">
+                  <span>Ingresos registrados</span>
+                  <strong>{{ formatCurrency(getTotalVentasCierre(cierre)) }} {{ monedaSistema }}</strong>
+                </div>
+                <div class="historial-metric-pill">
+                  <span>Efectivo contado</span>
+                  <strong>{{ formatCurrency(getEfectivoFinalRealCierre(cierre)) }} {{ monedaSistema }}</strong>
+                </div>
+                <div class="historial-metric-pill" [class.is-positive]="getDiferenciaCierre(cierre) > 0" [class.is-negative]="getDiferenciaCierre(cierre) < 0">
+                  <span>Descuadre de caja</span>
+                  <strong>{{ formatCurrency(getDiferenciaCierre(cierre)) }} {{ monedaSistema }}</strong>
+                </div>
+                <div class="historial-metric-pill">
+                  <span>Neto operacional</span>
+                  <strong>{{ formatCurrency(getNetoOperativoCierre(cierre)) }} {{ monedaSistema }}</strong>
+                </div>
+                <div class="historial-metric-pill">
+                  <span>Egresos operativos</span>
+                  <strong>{{ formatCurrency(getEgresosOperativosCierre(cierre)) }} {{ monedaSistema }}</strong>
+                </div>
+              </div>
+
+              <div class="historial-cierre-card__meta">
+                <div class="historial-cierre-card__chips" *ngIf="getResumenMetodosHistorial(cierre).length > 0">
+                  <span class="historial-chip" *ngFor="let metodo of getResumenMetodosHistorial(cierre)">
+                    {{ metodo.label }} · {{ formatCurrency(metodo.total) }} {{ monedaSistema }}
                   </span>
-                </td>
-                <td>{{ cierre.efectivoInicial | currency }}</td>
-                <td class="text-success">{{ cierre.ventasEfectivo | currency }}</td>
-                <td class="fw-bold">{{ getTotalVentasCierre(cierre) | currency }}</td>
-                <td>{{ cierre.efectivoFinalReal | currency }}</td>
-                <td [ngClass]="{
-                  'text-success': cierre.diferencia > 0,
-                  'text-danger': cierre.diferencia < 0,
-                  'text-muted': cierre.diferencia === 0
-                }">
-                  {{ cierre.diferencia | currency }}
-                </td>
-                <td>{{ cierre.usuarioCierre || cierre.usuarioApertura }}</td>
-                <td>
-                  <button class="btn btn-sm btn-outline-primary me-1" (click)="verDetalleCierre(cierre)"
-                    title="Ver detalle">
-                    <i class="bi bi-eye"></i>
-                  </button>
-                  <button class="btn btn-sm btn-outline-warning" (click)="anularCierre(cierre)" title="Anular cierre"
-                    *ngIf="cierre.estado === 'cerrado'">
-                    <i class="bi bi-x-circle"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr *ngIf="historialCierres.length === 0">
-                <td colspan="9" class="text-center py-4">
-                  <i class="bi bi-inbox fs-1 d-block text-muted"></i>
-                  <p class="text-muted">No hay cierres registrados en el rango seleccionado</p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                </div>
 
-        <!-- Resumen de totales -->
-        <div class="bg-light p-3 rounded mt-3" *ngIf="historialCierres.length > 0">
-          <div class="row">
-            <div class="col-md-3">
-              <small class="text-muted">Total Registros</small>
-              <div class="fw-bold">{{ historialCierres.length }}</div>
+                <div class="historial-cierre-card__note">
+                  <span class="historial-cierre-card__note-label">Observaciones</span>
+                  <p>{{ getObservacionHistorialCierre(cierre) }}</p>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <ng-template #historialVacio>
+            <div class="historial-empty-state">
+              <i class="bi bi-inbox"></i>
+              <h6>No hay cierres registrados en este rango</h6>
+              <p>Ajusta las fechas o usa otro rango rápido para consultar jornadas anteriores.</p>
             </div>
-            <div class="col-md-3">
-              <small class="text-muted">Total Ventas</small>
-              <div class="fw-bold">{{ getTotalVentasHistorial() | currency }}</div>
-            </div>
-            <div class="col-md-3">
-              <small class="text-muted">Promedio Diario</small>
-              <div class="fw-bold">{{ getTotalVentasHistorial() / historialCierres.length | currency }}</div>
-            </div>
-            <div class="col-md-3">
-              <small class="text-muted">Diferencia Total</small>
-              <div class="fw-bold" [ngClass]="{
-                'text-success': getDiferenciaTotalHistorial() > 0,
-                'text-danger': getDiferenciaTotalHistorial() < 0
-              }">{{ getDiferenciaTotalHistorial() | currency }}</div>
-            </div>
-          </div>
+          </ng-template>
+        </ng-container>
+      </div>
+
+      <div class="modal-footer historial-cierres-shell__footer border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade historial-detalle-modal" id="historialDetalleModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
+    <div class="modal-content historial-detalle-shell">
+      <div class="modal-header historial-detalle-shell__header border-0">
+        <div class="historial-detalle-shell__headline">
+          <span class="historial-detalle-shell__eyebrow">Reporte del cierre</span>
+          <h5 class="modal-title historial-detalle-shell__title">
+            {{ historialDetalleSeleccionado ? ('Jornada ' + getFechaJornadaHistorial(historialDetalleSeleccionado)) : 'Vista previa del reporte' }}
+          </h5>
+        </div>
+        <div class="historial-detalle-shell__actions">
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="imprimirDetalleHistorial()" [disabled]="historialDetalleCargando || !historialDetallePreviewUrl">
+            <i class="bi bi-printer"></i>
+            Imprimir reporte
+          </button>
+          <button type="button" class="btn-close" aria-label="Close" (click)="cerrarDetalleHistorialModal()"></button>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          Cerrar
-        </button>
+
+      <div class="modal-body historial-detalle-shell__body">
+        <div class="historial-loading-state historial-empty-state--detail" *ngIf="historialDetalleCargando">
+          <div class="spinner-border text-primary" role="status"></div>
+          <span>Preparando reporte...</span>
+        </div>
+
+        <div class="historial-detalle-shell__frame-wrap" *ngIf="!historialDetalleCargando && historialDetallePreviewUrl; else historialDetalleSinVista">
+          <iframe class="historial-detalle-shell__frame" [src]="historialDetallePreviewUrl" title="Reporte del cierre histórico"></iframe>
+        </div>
+
+        <ng-template #historialDetalleSinVista>
+          <div class="historial-empty-state historial-empty-state--detail" *ngIf="!historialDetalleCargando">
+            <i class="bi bi-file-earmark-text"></i>
+            <h6>No se pudo preparar la vista previa</h6>
+            <p>Intenta abrir nuevamente el detalle del cierre seleccionado.</p>
+          </div>
+        </ng-template>
+      </div>
+
+      <div class="modal-footer historial-detalle-shell__footer border-0">
+        <button type="button" class="btn btn-secondary" (click)="cerrarDetalleHistorialModal()">Cerrar vista previa</button>
       </div>
     </div>
   </div>

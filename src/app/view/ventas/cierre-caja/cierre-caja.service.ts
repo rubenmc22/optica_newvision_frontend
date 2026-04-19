@@ -39,6 +39,25 @@ export class CierreCajaService {
         return `${year}-${month}-${day}`;
     }
 
+    private crearFechaOperativaLocal(fechaInput: any): Date {
+        if (fechaInput instanceof Date && !Number.isNaN(fechaInput.getTime())) {
+            return new Date(fechaInput.getFullYear(), fechaInput.getMonth(), fechaInput.getDate(), 12, 0, 0, 0);
+        }
+
+        const texto = String(fechaInput || '').trim();
+        const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+            return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0, 0);
+        }
+
+        const fecha = new Date(fechaInput);
+        if (!Number.isNaN(fecha.getTime())) {
+            return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), 12, 0, 0, 0);
+        }
+
+        return new Date();
+    }
+
     private redondear(valor: number, decimales: number = 2): number {
         if (!Number.isFinite(valor)) {
             return 0;
@@ -530,12 +549,18 @@ export class CierreCajaService {
 
     private normalizarCierreApi(cierre: any): CierreDiario {
         const monedaPrincipal = this.obtenerCodigoMoneda(cierre?.monedaPrincipal || cierre?.moneda || 'USD');
+        const transaccionesHistoricas = Array.isArray(cierre?.transacciones)
+            ? cierre.transacciones
+            : Array.isArray(cierre?.transaccionesManuales)
+                ? cierre.transaccionesManuales
+                : [];
 
         return {
             ...cierre,
-            fecha: cierre?.fecha ? new Date(cierre.fecha) : new Date(),
+            fecha: this.crearFechaOperativaLocal(cierre?.fecha),
             fechaApertura: cierre?.fechaApertura ? new Date(cierre.fechaApertura) : new Date(),
             fechaCierre: cierre?.fechaCierre ? new Date(cierre.fechaCierre) : undefined,
+            fechaRevision: cierre?.fechaRevision ? new Date(cierre.fechaRevision) : undefined,
             monedaPrincipal,
             efectivoInicial: Number(cierre?.efectivoInicial || 0),
             ventasEfectivo: Number(cierre?.ventasEfectivo || 0),
@@ -550,7 +575,9 @@ export class CierreCajaService {
             efectivoFinalTeorico: Number(cierre?.efectivoFinalTeorico || 0),
             efectivoFinalReal: Number(cierre?.efectivoFinalReal || 0),
             diferencia: Number(cierre?.diferencia || 0),
-            transacciones: Array.isArray(cierre?.transacciones) ? cierre.transacciones : [],
+            estadoConciliacion: String(cierre?.estadoConciliacion || cierre?.detalleCierreReal?.estadoConciliacion || '').trim(),
+            motivoAnulacion: cierre?.motivoAnulacion || '',
+            transacciones: transaccionesHistoricas.map((transaccion: any) => this.normalizarTransaccionManualApi(transaccion)),
             tasasCambio: cierre?.tasasCambio || this.construirTasasCambio(monedaPrincipal),
             ventasPorTipo: cierre?.ventasPorTipo || {
                 soloConsulta: { cantidad: 0, total: 0, montoMedico: 0, montoOptica: 0 },
@@ -586,6 +613,7 @@ export class CierreCajaService {
                 ventasCredito: Number(cierre?.totales?.ventasCredito || 0),
                 ventasPendientes: Number(cierre?.totales?.ventasPendientes || 0)
             },
+            detalleCierreReal: cierre?.detalleCierreReal || undefined,
             metodosPagoDetallados: Array.isArray(cierre?.metodosPagoDetallados) ? cierre.metodosPagoDetallados : []
         } as CierreDiario;
     }
@@ -1304,8 +1332,8 @@ export class CierreCajaService {
         }
         return this.http.get<CierreDiario[]>(`${this.apiUrl}/cierre-caja/historial`, {
             params: {
-                fechaInicio: fechaInicio.toISOString().split('T')[0],
-                fechaFin: fechaFin.toISOString().split('T')[0],
+                fechaInicio: this.formatearFechaYYYYMMDD(fechaInicio),
+                fechaFin: this.formatearFechaYYYYMMDD(fechaFin),
                 sede: sede
             }
         }).pipe(
