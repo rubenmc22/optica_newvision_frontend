@@ -1389,14 +1389,13 @@
                   </div>
                   <div class="banco-body">
                     <div class="campo-monto">
-                      <label>Monto Real ({{ simboloMonedaSistema }})</label>
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
                       <div class="input-wrapper">
                         <span class="input-icon">{{ simboloMonedaSistema }}</span>
                         <input type="number" 
                               class="form-control" 
                               [formControlName]="getNombreControlMetodo('punto', banco)" 
                               step="0.01" 
-                              min="0"
                               placeholder="0.00"
                               (focus)="onInputFocus($event)"
                               (blur)="onInputBlur($event)">
@@ -1416,11 +1415,23 @@
                         </strong>
                       </small>
                     </div>
-                    <div class="info-sistema">
-                      <span class="label">Sistema:</span>
-                      <span class="value">{{ banco.total | number:'1.2-2' }} {{ monedaSistema }}</span>
-                      <span class="label ms-2" *ngIf="getTextoMontoOriginalBanco(banco)">Original:</span>
-                      <span class="value" *ngIf="getTextoMontoOriginalBanco(banco)">{{ getTextoMontoOriginalBanco(banco) }}</span>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ banco.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ banco.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="banco.total >= 0" [class.text-danger]="banco.total < 0">{{ banco.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row" *ngIf="getTextoMontoOriginalBanco(banco)">
+                        <span class="info-label">Original neto</span>
+                        <span class="info-value">{{ getTextoMontoOriginalBanco(banco) }}</span>
+                      </div>
                     </div>
                     <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('punto', banco) !== 0">
                       <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('punto', banco))">
@@ -1447,14 +1458,13 @@
                   </div>
                   <div class="banco-body">
                     <div class="campo-monto">
-                      <label>Monto Real ({{ simboloMonedaSistema }})</label>
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
                       <div class="input-wrapper">
                         <span class="input-icon">{{ simboloMonedaSistema }}</span>
                         <input type="number"
                               class="form-control"
                               [formControlName]="getNombreControlMetodo('transferencia', destino)"
                               step="0.01"
-                              min="0"
                               placeholder="0.00"
                               (focus)="onInputFocus($event)"
                               (blur)="onInputBlur($event)">
@@ -1474,11 +1484,23 @@
                         </strong>
                       </small>
                     </div>
-                    <div class="info-sistema">
-                      <span class="label">Sistema:</span>
-                      <span class="value">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
-                      <span class="label ms-2" *ngIf="getTextoMontoOriginalBanco(destino)">Original:</span>
-                      <span class="value" *ngIf="getTextoMontoOriginalBanco(destino)">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ destino.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ destino.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="destino.total >= 0" [class.text-danger]="destino.total < 0">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row" *ngIf="getTextoMontoOriginalBanco(destino)">
+                        <span class="info-label">Original neto</span>
+                        <span class="info-value">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                      </div>
                     </div>
                     <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('transferencia', destino) !== 0">
                       <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('transferencia', destino))">
@@ -1497,14 +1519,13 @@
                   <div class="card-content">
                     <h4>Transferencias Bancarias</h4>
                     <div class="campo-monto">
-                      <label>Monto Real Total ({{ simboloMonedaSistema }})</label>
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
                       <div class="input-wrapper">
                         <span class="input-icon">{{ simboloMonedaSistema }}</span>
                         <input type="number" 
                               class="form-control" 
                               formControlName="transferenciaRealTotal" 
                               step="0.01" 
-                              min="0"
                               placeholder="0.00"
                               (focus)="onInputFocus($event)"
                               (blur)="onInputBlur($event)">
@@ -1524,10 +1545,20 @@
                         </strong>
                       </small>
                     </div>
-                    <div class="info-sistema">
-                      <span class="label">Sistema:</span>
-                      <span class="value">{{ analisisMetodosPago.transferencia.total | number:'1.2-2' }} {{ monedaSistema }}</span>
-                      <span class="badge-cantidad">{{ analisisMetodosPago.transferencia.cantidad }} transferencias</span>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ analisisMetodosPago.transferencia.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ analisisMetodosPago.transferencia.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="analisisMetodosPago.transferencia.total >= 0" [class.text-danger]="analisisMetodosPago.transferencia.total < 0">{{ analisisMetodosPago.transferencia.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                        <span class="badge-cantidad">{{ analisisMetodosPago.transferencia.cantidad }} transferencias</span>
+                      </div>
                     </div>
                     <div class="diferencia-info" *ngIf="getDiferenciaTransferencia() !== 0">
                       <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaTransferencia())">
@@ -1555,14 +1586,13 @@
                   </div>
                   <div class="banco-body">
                     <div class="campo-monto">
-                      <label>Monto Real ({{ simboloMonedaSistema }})</label>
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
                       <div class="input-wrapper">
                         <span class="input-icon">{{ simboloMonedaSistema }}</span>
                         <input type="number"
                               class="form-control"
                               [formControlName]="getNombreControlMetodo('pagomovil', destino)"
                               step="0.01"
-                              min="0"
                               placeholder="0.00"
                               (focus)="onInputFocus($event)"
                               (blur)="onInputBlur($event)">
@@ -1582,11 +1612,23 @@
                         </strong>
                       </small>
                     </div>
-                    <div class="info-sistema">
-                      <span class="label">Sistema:</span>
-                      <span class="value">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
-                      <span class="label ms-2" *ngIf="getTextoMontoOriginalBanco(destino)">Original:</span>
-                      <span class="value" *ngIf="getTextoMontoOriginalBanco(destino)">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ destino.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ destino.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="destino.total >= 0" [class.text-danger]="destino.total < 0">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row" *ngIf="getTextoMontoOriginalBanco(destino)">
+                        <span class="info-label">Original neto</span>
+                        <span class="info-value">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                      </div>
                     </div>
                     <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('pagomovil', destino) !== 0">
                       <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('pagomovil', destino))">
@@ -1605,14 +1647,13 @@
                   <div class="card-content">
                     <h4>Pago Móvil</h4>
                     <div class="campo-monto">
-                      <label>Monto Real Total ({{ simboloMonedaSistema }})</label>
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
                       <div class="input-wrapper">
                         <span class="input-icon">{{ simboloMonedaSistema }}</span>
                         <input type="number" 
                               class="form-control" 
                               formControlName="pagomovilRealTotal" 
                               step="0.01" 
-                              min="0"
                               placeholder="0.00"
                               (focus)="onInputFocus($event)"
                               (blur)="onInputBlur($event)">
@@ -1632,10 +1673,20 @@
                         </strong>
                       </small>
                     </div>
-                    <div class="info-sistema">
-                      <span class="label">Sistema:</span>
-                      <span class="value">{{ analisisMetodosPago.pagomovil.total | number:'1.2-2' }} {{ monedaSistema }}</span>
-                      <span class="badge-cantidad">{{ analisisMetodosPago.pagomovil.cantidad }} operaciones</span>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ analisisMetodosPago.pagomovil.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ analisisMetodosPago.pagomovil.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="analisisMetodosPago.pagomovil.total >= 0" [class.text-danger]="analisisMetodosPago.pagomovil.total < 0">{{ analisisMetodosPago.pagomovil.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                        <span class="badge-cantidad">{{ analisisMetodosPago.pagomovil.cantidad }} operaciones</span>
+                      </div>
                     </div>
                     <div class="diferencia-info" *ngIf="getDiferenciaPagomovil() !== 0">
                       <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaPagomovil())">
@@ -1662,14 +1713,13 @@
                   </div>
                   <div class="banco-body">
                     <div class="campo-monto">
-                      <label>Monto Real ({{ simboloMonedaSistema }})</label>
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
                       <div class="input-wrapper">
                         <span class="input-icon">{{ simboloMonedaSistema }}</span>
                         <input type="number"
                               class="form-control"
                               [formControlName]="getNombreControlMetodo('zelle', destino)"
                               step="0.01"
-                              min="0"
                               placeholder="0.00"
                               (focus)="onInputFocus($event)"
                               (blur)="onInputBlur($event)">
@@ -1689,11 +1739,23 @@
                         </strong>
                       </small>
                     </div>
-                    <div class="info-sistema">
-                      <span class="label">Sistema:</span>
-                      <span class="value">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
-                      <span class="label ms-2" *ngIf="getTextoMontoOriginalBanco(destino)">Original:</span>
-                      <span class="value" *ngIf="getTextoMontoOriginalBanco(destino)">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ destino.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ destino.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="destino.total >= 0" [class.text-danger]="destino.total < 0">{{ destino.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row" *ngIf="getTextoMontoOriginalBanco(destino)">
+                        <span class="info-label">Original neto</span>
+                        <span class="info-value">{{ getTextoMontoOriginalBanco(destino) }}</span>
+                      </div>
                     </div>
                     <div class="diferencia-info" *ngIf="getDiferenciaMetodoPorDestino('zelle', destino) !== 0">
                       <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaMetodoPorDestino('zelle', destino))">
@@ -1712,14 +1774,13 @@
                   <div class="card-content">
                     <h4>Zelle</h4>
                     <div class="campo-monto">
-                      <label>Monto Real Total ({{ simboloMonedaSistema }})</label>
+                      <label>Neto real del día ({{ simboloMonedaSistema }})</label>
                       <div class="input-wrapper">
                         <span class="input-icon">{{ simboloMonedaSistema }}</span>
                         <input type="number" 
                               class="form-control" 
                               formControlName="zelleReal" 
                               step="0.01" 
-                              min="0"
                               placeholder="0.00"
                               (focus)="onInputFocus($event)"
                               (blur)="onInputBlur($event)">
@@ -1730,9 +1791,19 @@
                         </button>
                       </div>
                     </div>
-                    <div class="info-sistema">
-                      <span class="label">Sistema:</span>
-                      <span class="value">{{ analisisMetodosPago.zelle.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                    <div class="ventas-metodos-info">
+                      <div class="info-row">
+                        <span class="info-label">Ingresos sistema</span>
+                        <span class="info-value text-success">{{ analisisMetodosPago.zelle.ingresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row">
+                        <span class="info-label">Egresos sistema</span>
+                        <span class="info-value text-danger">-{{ analisisMetodosPago.zelle.egresos | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
+                      <div class="info-row total">
+                        <span class="info-label">Neto sistema</span>
+                        <span class="info-value" [class.text-success]="analisisMetodosPago.zelle.total >= 0" [class.text-danger]="analisisMetodosPago.zelle.total < 0">{{ analisisMetodosPago.zelle.total | number:'1.2-2' }} {{ monedaSistema }}</span>
+                      </div>
                     </div>
                     <div class="diferencia-info" *ngIf="getDiferenciaZelle() !== 0">
                       <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaZelle())">
@@ -1783,6 +1854,12 @@
                   <span>Resumen General</span>
                 </div>
                 <div class="resultado-cifras">
+                  <div class="cifra" *ngIf="tieneDiferenciaEfectivo()">
+                    <span class="label">Efectivo:</span>
+                    <span class="value" [ngClass]="getDiferenciaTotalClassValor(getDiferenciaEfectivo())">
+                      {{ getDiferenciaEfectivoFormateada() }}
+                    </span>
+                  </div>
                   <div class="cifra" *ngIf="tieneDiferenciaPunto()">
                     <span class="label">Punto:</span>
                     <span class="value" [ngClass]="getDiferenciaTotalClassValor(getDiferenciaPunto())">

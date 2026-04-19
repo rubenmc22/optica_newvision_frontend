@@ -125,16 +125,16 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   analisisMetodosPago: {
     efectivo: { total: number; porMoneda: { dolar: number; euro: number; bolivar: number }; cantidad: number };
-    punto: { total: number; porBanco: any[]; cantidad: number };
-    pagomovil: { total: number; cantidad: number; porBanco: any[] };
-    transferencia: { total: number; cantidad: number; porBanco: any[] };
-    zelle: { total: number; cantidad: number; porBanco: any[] };
+    punto: { total: number; ingresos: number; egresos: number; porBanco: any[]; cantidad: number };
+    pagomovil: { total: number; ingresos: number; egresos: number; cantidad: number; porBanco: any[] };
+    transferencia: { total: number; ingresos: number; egresos: number; cantidad: number; porBanco: any[] };
+    zelle: { total: number; ingresos: number; egresos: number; cantidad: number; porBanco: any[] };
   } = {
       efectivo: { total: 0, porMoneda: { dolar: 0, euro: 0, bolivar: 0 }, cantidad: 0 },
-      punto: { total: 0, porBanco: [], cantidad: 0 },
-      pagomovil: { total: 0, cantidad: 0, porBanco: [] },
-      transferencia: { total: 0, cantidad: 0, porBanco: [] },
-      zelle: { total: 0, cantidad: 0, porBanco: [] }
+      punto: { total: 0, ingresos: 0, egresos: 0, porBanco: [], cantidad: 0 },
+      pagomovil: { total: 0, ingresos: 0, egresos: 0, cantidad: 0, porBanco: [] },
+      transferencia: { total: 0, ingresos: 0, egresos: 0, cantidad: 0, porBanco: [] },
+      zelle: { total: 0, ingresos: 0, egresos: 0, cantidad: 0, porBanco: [] }
     };
 
   analisisFormasPago: {
@@ -1313,7 +1313,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   getDiferenciaMetodoPorDestino(tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle', item: any): number {
-    return this.getMontoRealMetodoPorDestino(tipo, item) - Number(item?.total || 0);
+    return this.redondearMonto(this.getMontoRealMetodoPorDestino(tipo, item) - Number(item?.total || 0));
   }
 
   autoCompletarMetodoPorDestino(tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle', item: any): void {
@@ -1500,10 +1500,10 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     this.analisisMetodosPago = {
       efectivo: { total: 0, porMoneda: { dolar: 0, euro: 0, bolivar: 0 }, cantidad: 0 },
-      punto: { total: 0, porBanco: [], cantidad: 0 },
-      pagomovil: { total: 0, cantidad: 0, porBanco: [] },
-      transferencia: { total: 0, cantidad: 0, porBanco: [] },
-      zelle: { total: 0, cantidad: 0, porBanco: [] }
+      punto: { total: 0, ingresos: 0, egresos: 0, porBanco: [], cantidad: 0 },
+      pagomovil: { total: 0, ingresos: 0, egresos: 0, cantidad: 0, porBanco: [] },
+      transferencia: { total: 0, ingresos: 0, egresos: 0, cantidad: 0, porBanco: [] },
+      zelle: { total: 0, ingresos: 0, egresos: 0, cantidad: 0, porBanco: [] }
     };
 
     this.analisisFormasPago = {
@@ -1603,82 +1603,95 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       }
       else if (tipo === 'punto') {
         this.analisisMetodosPago.punto.total += montoEnMonedaSistema;
+        this.acumularTotalesMetodo(this.analisisMetodosPago.punto, montoEnMonedaSistema);
         this.analisisMetodosPago.punto.cantidad++;
 
         const destino = this.obtenerInfoDestinoMetodo(metodo, 'punto');
         let bancoExistente = this.analisisMetodosPago.punto.porBanco.find(b => b.destinoKey === destino.destinoKey);
         if (!bancoExistente) {
-          bancoExistente = {
-            ...destino,
-            total: 0,
-            totalOriginal: 0,
-            cantidad: 0
-          };
+          bancoExistente = this.crearAcumuladorDestinoMetodo(destino);
           this.analisisMetodosPago.punto.porBanco.push(bancoExistente);
         }
-        bancoExistente.total += montoEnMonedaSistema;
-        bancoExistente.totalOriginal += montoOriginalAjustado;
-        bancoExistente.cantidad++;
+        this.acumularDestinoMetodo(bancoExistente, montoEnMonedaSistema, montoOriginalAjustado);
       }
       else if (tipo === 'pagomovil') {
         this.analisisMetodosPago.pagomovil.total += montoEnMonedaSistema;
+        this.acumularTotalesMetodo(this.analisisMetodosPago.pagomovil, montoEnMonedaSistema);
         this.analisisMetodosPago.pagomovil.cantidad++;
 
         const destino = this.obtenerInfoDestinoMetodo(metodo, 'pagomovil');
         let bancoExistente = this.analisisMetodosPago.pagomovil.porBanco.find(b => b.destinoKey === destino.destinoKey);
         if (!bancoExistente) {
-          bancoExistente = {
-            ...destino,
-            total: 0,
-            totalOriginal: 0,
-            cantidad: 0
-          };
+          bancoExistente = this.crearAcumuladorDestinoMetodo(destino);
           this.analisisMetodosPago.pagomovil.porBanco.push(bancoExistente);
         }
-        bancoExistente.total += montoEnMonedaSistema;
-        bancoExistente.totalOriginal += montoOriginalAjustado;
-        bancoExistente.cantidad++;
+        this.acumularDestinoMetodo(bancoExistente, montoEnMonedaSistema, montoOriginalAjustado);
       }
       else if (tipo === 'transferencia') {
         this.analisisMetodosPago.transferencia.total += montoEnMonedaSistema;
+        this.acumularTotalesMetodo(this.analisisMetodosPago.transferencia, montoEnMonedaSistema);
         this.analisisMetodosPago.transferencia.cantidad++;
 
         const destino = this.obtenerInfoDestinoMetodo(metodo, 'transferencia');
         let bancoExistente = this.analisisMetodosPago.transferencia.porBanco.find(b => b.destinoKey === destino.destinoKey);
         if (!bancoExistente) {
-          bancoExistente = {
-            ...destino,
-            total: 0,
-            totalOriginal: 0,
-            cantidad: 0
-          };
+          bancoExistente = this.crearAcumuladorDestinoMetodo(destino);
           this.analisisMetodosPago.transferencia.porBanco.push(bancoExistente);
         }
-        bancoExistente.total += montoEnMonedaSistema;
-        bancoExistente.totalOriginal += montoOriginalAjustado;
-        bancoExistente.cantidad++;
+        this.acumularDestinoMetodo(bancoExistente, montoEnMonedaSistema, montoOriginalAjustado);
       }
       else if (tipo === 'zelle') {
         this.analisisMetodosPago.zelle.total += montoEnMonedaSistema;
+        this.acumularTotalesMetodo(this.analisisMetodosPago.zelle, montoEnMonedaSistema);
         this.analisisMetodosPago.zelle.cantidad++;
 
         const destino = this.obtenerInfoDestinoMetodo(metodo, 'zelle');
         let bancoExistente = this.analisisMetodosPago.zelle.porBanco.find(b => b.destinoKey === destino.destinoKey);
         if (!bancoExistente) {
-          bancoExistente = {
-            ...destino,
-            total: 0,
-            totalOriginal: 0,
-            cantidad: 0
-          };
+          bancoExistente = this.crearAcumuladorDestinoMetodo(destino);
           this.analisisMetodosPago.zelle.porBanco.push(bancoExistente);
         }
-        bancoExistente.total += montoEnMonedaSistema;
-        bancoExistente.totalOriginal += montoOriginalAjustado;
-        bancoExistente.cantidad++;
+        this.acumularDestinoMetodo(bancoExistente, montoEnMonedaSistema, montoOriginalAjustado);
       }
     });
 
+  }
+
+  private crearAcumuladorDestinoMetodo(destino: any): any {
+    return {
+      ...destino,
+      total: 0,
+      totalOriginal: 0,
+      ingresos: 0,
+      egresos: 0,
+      ingresosOriginal: 0,
+      egresosOriginal: 0,
+      cantidad: 0
+    };
+  }
+
+  private acumularTotalesMetodo(objetivo: { ingresos: number; egresos: number }, montoSistema: number): void {
+    if (montoSistema >= 0) {
+      objetivo.ingresos += montoSistema;
+      return;
+    }
+
+    objetivo.egresos += Math.abs(montoSistema);
+  }
+
+  private acumularDestinoMetodo(destino: any, montoSistema: number, montoOriginal: number): void {
+    destino.total += montoSistema;
+    destino.totalOriginal += montoOriginal;
+
+    if (montoSistema >= 0) {
+      destino.ingresos += montoSistema;
+      destino.ingresosOriginal += Math.abs(montoOriginal);
+    } else {
+      destino.egresos += Math.abs(montoSistema);
+      destino.egresosOriginal += Math.abs(montoOriginal);
+    }
+
+    destino.cantidad++;
   }
 
   private procesarFormasPago(trans: Transaccion): void {
@@ -3801,8 +3814,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   get efectivoFinalTeorico(): number {
-    if (!this.cierreActual) return 0;
-    return this.cierreActual.efectivoInicial + this.analisisMetodosPago.efectivo.total - this.getEgresosEfectivo();
+    return this.getEfectivoFinalTeorico();
   }
 
   getTotalVentasHistorial(): number {
@@ -3856,7 +3868,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       const controlName = this.getNombreControlMetodo('punto', banco);
       const montoReal = Number(this.cierreForm.get(controlName)?.value || 0);
       const montoSistema = Number(banco.total || 0);
-      const diferencia = montoReal - montoSistema;
+      const diferencia = this.redondearMonto(montoReal - montoSistema);
 
       total += diferencia;
 
@@ -3873,7 +3885,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       });
     });
 
-    return { total, porBanco };
+    return { total: this.redondearMonto(total), porBanco };
   }
 
   private construirDetalleMetodoReal(tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle'): any[] {
@@ -3888,7 +3900,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         destinoLabel: item?.destinoLabel,
         montoReal,
         montoSistema,
-        diferencia: montoReal - montoSistema,
+        diferencia: this.redondearMonto(montoReal - montoSistema),
         cantidadSistema: item?.cantidad || 0,
         cantidadReal: 0
       };
@@ -3896,9 +3908,9 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   private getDiferenciaMetodoDesdeDestinos(tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle'): number {
-    return this.getDestinosMetodo(tipo).reduce((sum, item) => {
+    return this.redondearMonto(this.getDestinosMetodo(tipo).reduce((sum, item) => {
       return sum + this.getDiferenciaMetodoPorDestino(tipo, item);
-    }, 0);
+    }, 0));
   }
 
   // Métodos para verificar diferencias
@@ -3908,6 +3920,10 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   tieneDiferenciaTransferencia(): boolean {
     return Math.abs(this.getDiferenciaTransferencia()) > 0.01;
+  }
+
+  tieneDiferenciaEfectivo(): boolean {
+    return Math.abs(this.getDiferenciaEfectivo()) > 0.01;
   }
 
   // Verificar si hay diferencia en pago móvil
@@ -4841,7 +4857,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       // 1. Calcular diferencia de efectivo
       const efectivoReal = this.getEfectivoRealTotal();
       const efectivoTeorico = this.getEfectivoFinalTeorico();
-      const diferenciaEfectivo = efectivoReal - efectivoTeorico;
+      const diferenciaEfectivo = this.redondearMonto(efectivoReal - efectivoTeorico);
 
       // 2. Calcular diferencias por método de pago (YA CONVERTIDAS A USD)
       const diferenciasPunto = this.calcularDiferenciasPunto();
@@ -4850,11 +4866,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       const diferenciaZelle = this.getDiferenciaZelle();
 
       // 3. Calcular diferencia total
-      const diferenciaTotal = diferenciaEfectivo +
+      const diferenciaTotal = this.redondearMonto(diferenciaEfectivo +
         diferenciasPunto.total +
         diferenciaTransferencia +
         diferenciaPagomovil +
-        diferenciaZelle;
+        diferenciaZelle);
 
       // 4. Actualizar el cierre actual
       this.cierreActual.diferencia = diferenciaTotal;
@@ -5015,17 +5031,15 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   getEfectivoFinalTeorico(): number {
     if (!this.cierreActual) return 0;
 
-    // El efectivo inicial YA DEBE ESTAR en moneda del sistema
-    const inicial = this.cierreActual.efectivoInicial || 0;
+    const efectivoEsperadoUSD = this.getTotalEfectivoEsperadoPorMoneda('USD');
+    const efectivoEsperadoEUR = this.getTotalEfectivoEsperadoPorMoneda('EUR');
+    const efectivoEsperadoVES = this.getTotalEfectivoEsperadoPorMoneda('VES');
 
-    // Las ventas en efectivo YA DEBEN ESTAR en moneda del sistema
-    const ventasEfectivo = this.analisisMetodosPago?.efectivo?.total || 0;
-
-    const egresosEfectivo = this.getEgresosEfectivoEnMonedaSistema();
-
-    const teorico = inicial + ventasEfectivo - egresosEfectivo;
-
-    return teorico;
+    return this.redondearMonto(
+      this.convertirMontoConTasas(efectivoEsperadoUSD, 'USD', this.monedaSistema) +
+      this.convertirMontoConTasas(efectivoEsperadoEUR, 'EUR', this.monedaSistema) +
+      this.convertirMontoConTasas(efectivoEsperadoVES, 'VES', this.monedaSistema)
+    );
   }
 
   getEgresosEfectivoEnMonedaSistema(): number {
@@ -5044,7 +5058,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         totalEgresos += montoEnMonedaSistema;
       });
 
-    return totalEgresos;
+    return this.redondearMonto(totalEgresos);
   }
 
   getDiferenciaTotalFormateada(): string {
@@ -5111,8 +5125,9 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     const inicial = this.getEfectivoInicialPorMoneda(moneda);
     const ventas = this.getVentasEfectivoPorMoneda(moneda);
+    const egresos = this.getEgresosEfectivoPorMoneda(moneda);
 
-    return inicial + ventas;
+    return this.redondearMonto(inicial + ventas - egresos);
   }
 
   // Obtener efectivo inicial por moneda
@@ -5143,6 +5158,24 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       default:
         return 0;
     }
+  }
+
+  getEgresosEfectivoPorMoneda(moneda: string): number {
+    const monedaObjetivo = this.obtenerCodigoMoneda(moneda);
+
+    const total = this.transacciones
+      .filter(t => t.tipo === 'egreso' && t.metodoPago === 'efectivo')
+      .reduce((sum, transaccion) => {
+        const monedaTransaccion = this.obtenerCodigoMoneda(transaccion.moneda || this.monedaSistema);
+
+        if (monedaTransaccion !== monedaObjetivo) {
+          return sum;
+        }
+
+        return sum + Number(transaccion.monto || 0);
+      }, 0);
+
+    return this.redondearMonto(total);
   }
 
 
@@ -5330,7 +5363,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     const real = Number(this.cierreForm.get('transferenciaRealTotal')?.value || 0);
     const sistema = Number(this.analisisMetodosPago?.transferencia?.total || 0);
 
-    return real - sistema;
+    return this.redondearMonto(real - sistema);
   }
 
   // Diferencia de pago móvil
@@ -5342,7 +5375,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     const real = Number(this.cierreForm.get('pagomovilRealTotal')?.value || 0);
     const sistema = Number(this.analisisMetodosPago?.pagomovil?.total || 0);
 
-    return real - sistema;
+    return this.redondearMonto(real - sistema);
   }
 
   // Diferencia de Zelle (ya está en USD)
@@ -5354,14 +5387,14 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     const real = Number(this.cierreForm.get('zelleReal')?.value || 0);
     const sistema = Number(this.analisisMetodosPago?.zelle?.total || 0);
 
-    return real - sistema;
+    return this.redondearMonto(real - sistema);
   }
 
   // Diferencia de efectivo
   getDiferenciaEfectivo(): number {
     const real = this.getEfectivoRealTotal();
     const teorico = this.getEfectivoFinalTeorico();
-    return real - teorico;
+    return this.redondearMonto(real - teorico);
   }
 
   // Diferencia total
@@ -5372,7 +5405,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     const diffPagomovil = this.getDiferenciaPagomovil();
     const diffZelle = this.getDiferenciaZelle();
 
-    return diffEfectivo + diffPunto + diffTransferencia + diffPagomovil + diffZelle;
+    return this.redondearMonto(diffEfectivo + diffPunto + diffTransferencia + diffPagomovil + diffZelle);
   }
 
 
