@@ -11,12 +11,43 @@ import { SystemConfigService } from './../../system-config/system-config.service
 import { TasaCambiariaService } from './../../../core/services/tasaCambiaria/tasaCambiaria.service';
 import { UserStateService } from './../../../core/services/userState/user-state-service';
 import { Sede, SedeCompleta } from '../../../view/login/login-interface';
-import { CierreDiario, Transaccion, ResumenMetodoPago, TasasCambio } from './cierre-caja.interfaz';
+import { CierreDiario, Transaccion, ResumenMetodoPago, TasasCambio, TransaccionCobroDia, TransaccionDetalleMetodoPago } from './cierre-caja.interfaz';
 import { User, Rol, AuthData, AuthResponse, Cargo } from '../../../Interfaces/models-interface';
 import { SwalService } from '../../../core/services/swal/swal.service';
 import { GenerarVentaService } from '../generar-venta/generar-venta.service';
-import { buildVentaPaymentCatalog, VentaReceiverAccountOption } from '../shared/payment-catalog.util';
+import {
+  buildVentaPaymentCatalog,
+  VentaPaymentCatalog,
+  VentaPaymentMethodOption,
+  VentaReceiverAccountOption
+} from '../shared/payment-catalog.util';
 import * as bootstrap from 'bootstrap';
+
+
+type ManualTransactionType = 'ingreso' | 'egreso';
+
+interface ManualTransactionOption {
+  valor: ManualTransactionType;
+  label: string;
+  icono: string;
+  color: string;
+  descripcion: string;
+}
+
+interface ManualTransactionCategoryOption {
+  value: string;
+  label: string;
+  icono: string;
+  descripcion: string;
+}
+
+interface ManualPaymentMethodOption {
+  valor: string;
+  label: string;
+  icono: string;
+  color: string;
+  descripcion: string;
+}
 
 
 
@@ -35,6 +66,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   cierreActual: CierreDiario | null = null;
   transacciones: Transaccion[] = [];
   transaccionesFiltradas: Transaccion[] = [];
+  detalleVentaExpandidaId: string | null = null;
   mostrarFiltros = false;
   ultimaActualizacion = new Date();
   isMobile = false;
@@ -118,25 +150,136 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     };
 
   analisisVentasPendientes: any[] = [];
+  private readonly coloresMetodoPago: Record<string, string> = {
+    efectivo: '#16a34a',
+    punto: '#7c3aed',
+    tarjeta: '#7c3aed',
+    debito: '#0f766e',
+    credito: '#d97706',
+    transferencia: '#2563eb',
+    pagomovil: '#db2777',
+    zelle: '#4f46e5',
+    mixto: '#475569',
+    binance: '#f59e0b'
+  };
+  readonly tiposTransaccionManual: ManualTransactionOption[] = [
+    {
+      valor: 'ingreso',
+      label: 'Ingreso manual',
+      icono: 'bi-plus-circle-fill',
+      color: '#2563eb',
+      descripcion: 'Entrada extraordinaria o regularización que no llega desde una venta automática.'
+    },
+    {
+      valor: 'egreso',
+      label: 'Egreso manual',
+      icono: 'bi-dash-circle-fill',
+      color: '#dc2626',
+      descripcion: 'Salida de caja por pago, gasto o devolución que debe impactar el cierre del día.'
+    }
+  ];
+  private readonly categoriasTransaccionManual: Record<ManualTransactionType, ManualTransactionCategoryOption[]> = {
+    ingreso: [
+      {
+        value: 'aporte_caja',
+        label: 'Aporte a caja',
+        icono: 'bi-safe2',
+        descripcion: 'Reposición de fondo o ingreso manual para sostener la operatividad del día.'
+      },
+      {
+        value: 'cobro_saldo_pendiente',
+        label: 'Cobro de saldo pendiente',
+        icono: 'bi-cash-stack',
+        descripcion: 'Regularización manual de un abono o saldo que no entró desde ventas.'
+      },
+      {
+        value: 'reintegro_caja',
+        label: 'Reintegro de caja',
+        icono: 'bi-arrow-counterclockwise',
+        descripcion: 'Devolución de un gasto o reintegro operativo al fondo del día.'
+      },
+      {
+        value: 'ingreso_financiero',
+        label: 'Ingreso financiero',
+        icono: 'bi-bank2',
+        descripcion: 'Intereses, comisiones a favor o ajustes positivos provenientes del banco.'
+      },
+      {
+        value: 'otro_ingreso',
+        label: 'Otro ingreso manual',
+        icono: 'bi-plus-square',
+        descripcion: 'Ingreso excepcional que requiere soporte claro para auditoría.'
+      }
+    ],
+    egreso: [
+      {
+        value: 'pago_proveedor',
+        label: 'Pago a proveedor',
+        icono: 'bi-box-seam',
+        descripcion: 'Pago de mercancía, laboratorio, insumos o servicios de proveedor.'
+      },
+      {
+        value: 'gasto_operativo',
+        label: 'Gasto operativo',
+        icono: 'bi-building-gear',
+        descripcion: 'Papelería, limpieza, agua, café, transporte o gasto corriente del día.'
+      },
+      {
+        value: 'retiro_caja',
+        label: 'Retiro de caja',
+        icono: 'bi-cash-coin',
+        descripcion: 'Retiro programado para resguardo, traslado o control interno.'
+      },
+      {
+        value: 'pago_servicio',
+        label: 'Pago de servicio',
+        icono: 'bi-receipt-cutoff',
+        descripcion: 'Internet, electricidad, agua, telefonía o servicios recurrentes.'
+      },
+      {
+        value: 'nomina_comision',
+        label: 'Nómina o comisión',
+        icono: 'bi-people-fill',
+        descripcion: 'Pago manual a personal, incentivo, comisión o apoyo operativo.'
+      },
+      {
+        value: 'gasto_bancario',
+        label: 'Gasto bancario',
+        icono: 'bi-bank',
+        descripcion: 'Comisiones, cargos, mantenimiento o diferencias bancarias.'
+      },
+      {
+        value: 'reembolso_cliente',
+        label: 'Reembolso al cliente',
+        icono: 'bi-arrow-return-left',
+        descripcion: 'Devolución manual de dinero por anulación, ajuste comercial o garantía.'
+      },
+      {
+        value: 'otro_egreso',
+        label: 'Otro egreso manual',
+        icono: 'bi-dash-square',
+        descripcion: 'Salida extraordinaria que debe quedar plenamente justificada.'
+      }
+    ]
+  };
   cuentasReceptorasConfiguradasPorMetodo: Record<string, VentaReceiverAccountOption[]> = buildVentaPaymentCatalog().cuentasReceptorasPorMetodo;
 
   // Métodos de pago disponibles
-  metodosPago = [
-    { valor: 'efectivo', label: 'Efectivo', icono: 'bi-cash-coin', color: '#10b981' },
-    { valor: 'tarjeta', label: 'Tarjeta', icono: 'bi-credit-card', color: '#8b5cf6' },
-    { valor: 'transferencia', label: 'Transferencia', icono: 'bi-bank', color: '#3b82f6' },
-    { valor: 'debito', label: 'Débito', icono: 'bi-credit-card-2-back', color: '#0ea5e9' },
-    { valor: 'credito', label: 'Crédito', icono: 'bi-credit-card-2-front', color: '#f59e0b' },
-    { valor: 'pagomovil', label: 'Pago Móvil', icono: 'bi-phone', color: '#ec4899' },
-    { valor: 'zelle', label: 'Zelle', icono: 'bi-globe-americas', color: '#8b5cf6' }
-  ];
+  metodosPago: ManualPaymentMethodOption[] = this.construirOpcionesMetodosPago(buildVentaPaymentCatalog().tiposPago);
 
   // Tipos de transacción
   tiposTransaccion = [
     { valor: 'venta', label: 'Venta', icono: 'bi-cart-check', color: '#10b981' },
-    { valor: 'ingreso', label: 'Ingreso', icono: 'bi-plus-circle', color: '#3b82f6' },
+    { valor: 'ingreso', label: 'Ingreso / Abono', icono: 'bi-plus-circle', color: '#3b82f6' },
     { valor: 'egreso', label: 'Egreso', icono: 'bi-dash-circle', color: '#ef4444' },
     { valor: 'ajuste', label: 'Ajuste', icono: 'bi-arrow-left-right', color: '#8b5cf6' }
+  ];
+  readonly opcionesFiltroTipoTransaccion = [
+    { valor: 'venta', label: 'Ventas del dia', icono: 'bi-cart-check', color: '#10b981' },
+    { valor: 'solo_abonos', label: 'Abonos cobrados', icono: 'bi-calendar-check', color: '#0f766e' },
+    { valor: 'ingreso', label: 'Ingresos manuales', icono: 'bi-plus-circle', color: '#3b82f6' },
+    { valor: 'egreso', label: 'Egresos manuales', icono: 'bi-dash-circle', color: '#ef4444' },
+    { valor: 'ajuste', label: 'Ajustes operativos', icono: 'bi-arrow-left-right', color: '#8b5cf6' }
   ];
 
   // Forms
@@ -206,7 +349,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       .subscribe({
         next: ({ paymentMethods }) => {
           const catalogo = buildVentaPaymentCatalog(paymentMethods);
-          this.cuentasReceptorasConfiguradasPorMetodo = catalogo.cuentasReceptorasPorMetodo;
+          this.aplicarCatalogoMetodosPago(catalogo);
 
           if (!this.transacciones.length) {
             return;
@@ -231,6 +374,274 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
           console.warn('No se pudieron cargar las cuentas receptoras configuradas para cierre de caja:', error);
         }
       });
+  }
+
+  private aplicarCatalogoMetodosPago(catalogo: VentaPaymentCatalog): void {
+    this.cuentasReceptorasConfiguradasPorMetodo = catalogo.cuentasReceptorasPorMetodo;
+    this.metodosPago = this.construirOpcionesMetodosPago(catalogo.tiposPago);
+    this.sincronizarFormularioTransaccion();
+  }
+
+  private construirOpcionesMetodosPago(metodos: VentaPaymentMethodOption[]): ManualPaymentMethodOption[] {
+    return metodos.map((metodo) => ({
+      valor: this.normalizarClaveMetodoPago(metodo.value),
+      label: this.limpiarEtiquetaMetodoPago(metodo.label),
+      icono: metodo.icon || 'bi-wallet2',
+      color: this.obtenerColorMetodoPagoConfigurado(metodo.value),
+      descripcion: this.construirDescripcionMetodoPago(metodo)
+    }));
+  }
+
+  private limpiarEtiquetaMetodoPago(label: string): string {
+    return String(label || '')
+      .replace(/^[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9]+/, '')
+      .trim();
+  }
+
+  private obtenerColorMetodoPagoConfigurado(metodo: string): string {
+    return this.coloresMetodoPago[this.normalizarClaveMetodoPago(metodo)] || '#475569';
+  }
+
+  private construirDescripcionMetodoPago(metodo: VentaPaymentMethodOption): string {
+    const clave = this.normalizarClaveMetodoPago(metodo.value);
+    const cuentas = this.cuentasReceptorasConfiguradasPorMetodo?.[clave] || [];
+
+    if (cuentas.length > 0) {
+      return `Usa ${cuentas.length === 1 ? 'la cuenta receptora configurada' : `${cuentas.length} destinos configurados`} del sistema.`;
+    }
+
+    switch (clave) {
+      case 'efectivo':
+        return 'Impacta directamente el efectivo físico disponible para cierre.';
+      case 'punto':
+        return 'Registra pagos electrónicos procesados por punto de venta.';
+      case 'transferencia':
+        return 'Registra movimientos bancarios con soporte y referencia.';
+      case 'pagomovil':
+        return 'Registra pagos móviles usando los bancos receptores configurados.';
+      case 'zelle':
+        return 'Registra ingresos o egresos en USD vía cuenta Zelle.';
+      default:
+        return 'Método configurable tomado desde la parametrización general del sistema.';
+    }
+  }
+
+  private normalizarClaveMetodoPago(valor: string): string {
+    const clave = String(valor || '').trim().toLowerCase();
+
+    if (['tarjeta'].includes(clave)) {
+      return 'punto';
+    }
+
+    return clave;
+  }
+
+  get tipoTransaccionManualActual(): ManualTransactionType {
+    return this.transaccionForm?.get('tipo')?.value === 'egreso' ? 'egreso' : 'ingreso';
+  }
+
+  get categoriasTransaccionDisponibles(): ManualTransactionCategoryOption[] {
+    return this.categoriasTransaccionManual[this.tipoTransaccionManualActual] || [];
+  }
+
+  get categoriaTransaccionActual(): ManualTransactionCategoryOption | null {
+    const categoria = String(this.transaccionForm?.get('categoria')?.value || '').trim();
+    return this.categoriasTransaccionDisponibles.find((item) => item.value === categoria) || null;
+  }
+
+  get metodoPagoSeleccionado(): ManualPaymentMethodOption | null {
+    const metodo = this.normalizarClaveMetodoPago(this.transaccionForm?.get('metodoPago')?.value || '');
+    return this.metodosPago.find((item) => item.valor === metodo) || null;
+  }
+
+  get cuentasReceptorasMetodoSeleccionado(): VentaReceiverAccountOption[] {
+    const metodo = this.normalizarClaveMetodoPago(this.transaccionForm?.get('metodoPago')?.value || '');
+    return this.cuentasReceptorasConfiguradasPorMetodo?.[metodo] || [];
+  }
+
+  get cuentaReceptoraSeleccionada(): VentaReceiverAccountOption | null {
+    const cuentaId = String(this.transaccionForm?.get('cuentaReceptoraId')?.value || '').trim();
+    return this.cuentasReceptorasMetodoSeleccionado.find((item) => item.id === cuentaId) || null;
+  }
+
+  get requiereCuentaReceptora(): boolean {
+    return this.cuentasReceptorasMetodoSeleccionado.length > 0;
+  }
+
+  get mostrarAvisoSinCuentasConfiguradas(): boolean {
+    const metodo = this.normalizarClaveMetodoPago(this.transaccionForm?.get('metodoPago')?.value || '');
+    return metodo !== 'efectivo' && !this.requiereCuentaReceptora;
+  }
+
+  get etiquetaCuentaReceptora(): string {
+    return this.tipoTransaccionManualActual === 'egreso' ? 'Cuenta de salida' : 'Destino configurado';
+  }
+
+  get placeholderCuentaReceptora(): string {
+    return this.tipoTransaccionManualActual === 'egreso'
+      ? 'Selecciona la cuenta o canal desde donde sale el pago'
+      : 'Selecciona el destino operativo';
+  }
+
+  get etiquetaCampoComprobante(): string {
+    return this.normalizarClaveMetodoPago(this.transaccionForm?.get('metodoPago')?.value || '') === 'efectivo'
+      ? 'Soporte o comprobante'
+      : 'Referencia o comprobante';
+  }
+
+  get placeholderCampoComprobante(): string {
+    const metodo = this.normalizarClaveMetodoPago(this.transaccionForm?.get('metodoPago')?.value || '');
+
+    switch (metodo) {
+      case 'pagomovil':
+        return 'Ej. referencia del pago móvil';
+      case 'transferencia':
+        return 'Ej. número de transferencia';
+      case 'zelle':
+        return 'Ej. email, código o soporte Zelle';
+      case 'punto':
+        return 'Ej. lote, voucher o soporte POS';
+      default:
+        return 'Ej. factura, recibo o nota interna';
+    }
+  }
+
+  get placeholderDescripcionTransaccion(): string {
+    const categoria = this.categoriaTransaccionActual?.label?.toLowerCase();
+
+    if (!categoria) {
+      return 'Describe con precisión el movimiento que impacta la caja.';
+    }
+
+    return `Ej. detalle concreto de ${categoria}`;
+  }
+
+  get ayudaObservacionesTransaccion(): string {
+    if (this.categoriaRequiereObservaciones()) {
+      return 'Esta categoría requiere una justificación clara para facilitar el control del cierre.';
+    }
+
+    return 'Agrega contexto útil para auditoría, soporte o validación posterior.';
+  }
+
+  seleccionarTipoTransaccion(tipo: ManualTransactionType): void {
+    this.transaccionForm.patchValue({ tipo });
+    this.sincronizarFormularioTransaccion();
+  }
+
+  seleccionarMetodoPago(metodo: string): void {
+    this.transaccionForm.patchValue({ metodoPago: this.normalizarClaveMetodoPago(metodo) });
+    this.sincronizarFormularioTransaccion();
+  }
+
+  private getCategoriaPredeterminada(tipo: ManualTransactionType): string {
+    return this.categoriasTransaccionManual[tipo]?.[0]?.value || 'otro_ingreso';
+  }
+
+  private getMetodoPagoPredeterminado(): string {
+    return this.metodosPago[0]?.valor || 'efectivo';
+  }
+
+  private sincronizarFormularioTransaccion(): void {
+    if (!this.transaccionForm) {
+      return;
+    }
+
+    const tipoControl = this.transaccionForm.get('tipo');
+    const categoriaControl = this.transaccionForm.get('categoria');
+    const metodoControl = this.transaccionForm.get('metodoPago');
+    const comprobanteControl = this.transaccionForm.get('comprobante');
+    const observacionesControl = this.transaccionForm.get('observaciones');
+    const cuentaControl = this.transaccionForm.get('cuentaReceptoraId');
+
+    const tipoActual = tipoControl?.value === 'egreso' ? 'egreso' : 'ingreso';
+    const categoriasDisponibles = this.categoriasTransaccionManual[tipoActual] || [];
+    const metodosDisponibles = this.metodosPago;
+    const metodoActual = this.normalizarClaveMetodoPago(metodoControl?.value || this.getMetodoPagoPredeterminado());
+
+    if (!metodosDisponibles.some((item) => item.valor === metodoActual)) {
+      metodoControl?.setValue(this.getMetodoPagoPredeterminado(), { emitEvent: false });
+    } else if (metodoActual !== metodoControl?.value) {
+      metodoControl?.setValue(metodoActual, { emitEvent: false });
+    }
+
+    if (!categoriasDisponibles.some((item) => item.value === categoriaControl?.value)) {
+      categoriaControl?.setValue(this.getCategoriaPredeterminada(tipoActual), { emitEvent: false });
+    }
+
+    const cuentas = this.cuentasReceptorasConfiguradasPorMetodo?.[metodoActual] || [];
+    const cuentaActual = String(cuentaControl?.value || '').trim();
+
+    if (cuentas.length) {
+      cuentaControl?.setValidators([Validators.required]);
+
+      if (cuentas.length === 1 && !cuentaActual) {
+        cuentaControl?.setValue(cuentas[0].id, { emitEvent: false });
+      } else if (cuentaActual && !cuentas.some((cuenta) => cuenta.id === cuentaActual)) {
+        cuentaControl?.setValue('', { emitEvent: false });
+      }
+    } else {
+      cuentaControl?.clearValidators();
+      if (cuentaActual) {
+        cuentaControl?.setValue('', { emitEvent: false });
+      }
+    }
+
+    if (this.metodoRequiereComprobante()) {
+      comprobanteControl?.setValidators([Validators.required, Validators.minLength(4)]);
+    } else {
+      comprobanteControl?.clearValidators();
+    }
+
+    if (this.categoriaRequiereObservaciones()) {
+      observacionesControl?.setValidators([Validators.required, Validators.minLength(8)]);
+    } else {
+      observacionesControl?.clearValidators();
+    }
+
+    categoriaControl?.updateValueAndValidity({ emitEvent: false });
+    metodoControl?.updateValueAndValidity({ emitEvent: false });
+    cuentaControl?.updateValueAndValidity({ emitEvent: false });
+    comprobanteControl?.updateValueAndValidity({ emitEvent: false });
+    observacionesControl?.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private metodoRequiereComprobante(): boolean {
+    return this.normalizarClaveMetodoPago(this.transaccionForm?.get('metodoPago')?.value || '') !== 'efectivo';
+  }
+
+  private categoriaRequiereObservaciones(): boolean {
+    const categoria = String(this.transaccionForm?.get('categoria')?.value || '').trim();
+    return ['otro_ingreso', 'otro_egreso', 'retiro_caja', 'reembolso_cliente'].includes(categoria);
+  }
+
+  private construirDetalleMetodoPagoManual(monto: number): Transaccion['detalleMetodosPago'] {
+    const cuenta = this.cuentaReceptoraSeleccionada;
+    const metodo = this.normalizarClaveMetodoPago(this.transaccionForm?.get('metodoPago')?.value || '');
+    const referencia = String(this.transaccionForm?.get('comprobante')?.value || '').trim();
+
+    return [
+      {
+        tipo: metodo,
+        monto: this.redondearMonto(monto),
+        moneda: this.obtenerCodigoMoneda(this.monedaSistema),
+        montoEnMonedaSistema: this.redondearMonto(monto),
+        referencia: referencia || undefined,
+        banco: cuenta?.nombre || undefined,
+        bancoNombre: cuenta?.nombre || undefined,
+        bancoCodigo: cuenta?.codigo || undefined,
+        bancoReceptor: cuenta?.displayText || undefined,
+        bancoReceptorNombre: cuenta?.nombre || undefined,
+        bancoReceptorCodigo: cuenta?.codigo || undefined,
+        cuentaReceptoraId: cuenta?.id || undefined,
+        cuentaReceptoraAlias: cuenta?.displayTitle || undefined,
+        cuentaReceptoraEmail: cuenta?.email || undefined,
+        cuentaReceptoraTitular: cuenta?.ownerName || undefined,
+        cuentaReceptoraDocumento: cuenta?.ownerId || undefined,
+        cuentaReceptoraTelefono: cuenta?.phone || undefined,
+        cuentaReceptoraDescripcion: cuenta?.accountDescription || undefined
+      }
+    ];
   }
 
   ngOnDestroy(): void {
@@ -957,13 +1368,14 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     });
 
     this.transaccionForm = this.fb.group({
-      tipo: ['venta', Validators.required],
+      tipo: ['ingreso', Validators.required],
       descripcion: ['', [Validators.required, Validators.minLength(3)]],
       monto: [0, [Validators.required, Validators.min(0.01)]],
-      metodoPago: ['efectivo', Validators.required],
-      categoria: ['venta_lentes'],
+      metodoPago: [this.getMetodoPagoPredeterminado(), Validators.required],
+      categoria: [this.getCategoriaPredeterminada('ingreso'), Validators.required],
       comprobante: [''],
-      observaciones: ['']
+      observaciones: [''],
+      cuentaReceptoraId: ['']
     });
 
     this.cierreForm = this.fb.group({
@@ -1105,18 +1517,21 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     // Procesar cada transacción
     this.transacciones.forEach(trans => {
+      this.procesarMetodosPago(trans);
+
+      if (trans.categoria === 'abono_venta') {
+        return;
+      }
+
       if (trans.tipo !== 'venta') return;
 
       // 1. Tipos de venta
       this.procesarTipoVenta(trans);
 
-      // 2. Métodos de pago
-      this.procesarMetodosPago(trans);
-
-      // 3. Formas de pago
+      // 2. Formas de pago
       this.procesarFormasPago(trans);
 
-      // 4. Ventas pendientes
+      // 3. Ventas pendientes
       this.procesarVentasPendientes(trans);
     });
 
@@ -1164,23 +1579,26 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   private procesarMetodosPago(trans: Transaccion): void {
     if (!trans.detalleMetodosPago) return;
 
+    const factor = trans.tipo === 'egreso' ? -1 : 1;
+
     trans.detalleMetodosPago.forEach(metodo => {
       const tipo = metodo.tipo;
       const montoOriginal = Number(metodo.monto || 0);
       const moneda = metodo.moneda || trans.monedaOriginal || trans.moneda || 'USD';
       const monedaNormalizada = this.obtenerCodigoMoneda(moneda);
-      const montoEnMonedaSistema = this.getMontoMetodoPagoSistema(metodo, trans);
+      const montoEnMonedaSistema = this.getMontoMetodoPagoSistema(metodo, trans) * factor;
+      const montoOriginalAjustado = montoOriginal * factor;
 
       if (tipo === 'efectivo') {
         this.analisisMetodosPago.efectivo.total += montoEnMonedaSistema;
         this.analisisMetodosPago.efectivo.cantidad++;
 
         if (monedaNormalizada === 'USD') {
-          this.analisisMetodosPago.efectivo.porMoneda.dolar += montoOriginal;
+          this.analisisMetodosPago.efectivo.porMoneda.dolar += montoOriginalAjustado;
         } else if (monedaNormalizada === 'EUR') {
-          this.analisisMetodosPago.efectivo.porMoneda.euro += montoOriginal;
+          this.analisisMetodosPago.efectivo.porMoneda.euro += montoOriginalAjustado;
         } else {
-          this.analisisMetodosPago.efectivo.porMoneda.bolivar += montoOriginal;
+          this.analisisMetodosPago.efectivo.porMoneda.bolivar += montoOriginalAjustado;
         }
       }
       else if (tipo === 'punto') {
@@ -1199,7 +1617,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
           this.analisisMetodosPago.punto.porBanco.push(bancoExistente);
         }
         bancoExistente.total += montoEnMonedaSistema;
-        bancoExistente.totalOriginal += montoOriginal;
+        bancoExistente.totalOriginal += montoOriginalAjustado;
         bancoExistente.cantidad++;
       }
       else if (tipo === 'pagomovil') {
@@ -1218,7 +1636,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
           this.analisisMetodosPago.pagomovil.porBanco.push(bancoExistente);
         }
         bancoExistente.total += montoEnMonedaSistema;
-        bancoExistente.totalOriginal += montoOriginal;
+        bancoExistente.totalOriginal += montoOriginalAjustado;
         bancoExistente.cantidad++;
       }
       else if (tipo === 'transferencia') {
@@ -1237,7 +1655,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
           this.analisisMetodosPago.transferencia.porBanco.push(bancoExistente);
         }
         bancoExistente.total += montoEnMonedaSistema;
-        bancoExistente.totalOriginal += montoOriginal;
+        bancoExistente.totalOriginal += montoOriginalAjustado;
         bancoExistente.cantidad++;
       }
       else if (tipo === 'zelle') {
@@ -1256,7 +1674,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
           this.analisisMetodosPago.zelle.porBanco.push(bancoExistente);
         }
         bancoExistente.total += montoEnMonedaSistema;
-        bancoExistente.totalOriginal += montoOriginal;
+        bancoExistente.totalOriginal += montoOriginalAjustado;
         bancoExistente.cantidad++;
       }
     });
@@ -1267,7 +1685,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     const formaPago = trans.formaPago;
     const total = trans.montoTotal ?? this.getMontoTransaccionSistema(trans);
     const abonado = trans.montoPagado ?? this.getMontoTransaccionSistema(trans);
-    const deuda = trans.deudaPendiente ?? Math.max(0, total - abonado);
+    const deuda = this.obtenerDeudaPendienteAnalisis(trans, total, abonado);
 
     switch (formaPago) {
       case 'contado':
@@ -1290,20 +1708,21 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       case 'de_contado-pendiente':
         this.analisisFormasPago.deContadoPendiente.cantidad++;
         this.analisisFormasPago.deContadoPendiente.total += total;
-        this.analisisFormasPago.deContadoPendiente.deudaPendiente += deuda || total;
+        this.analisisFormasPago.deContadoPendiente.deudaPendiente += deuda;
         break;
     }
   }
 
   private procesarVentasPendientes(trans: Transaccion): void {
     const formaPago = trans.formaPago;
-    const tieneDeuda = formaPago === 'de_contado-pendiente' ||
-      (formaPago === 'abono' && (trans.deudaPendiente || 0) > 0) ||
-      (formaPago === 'cashea' && (trans.deudaPendiente || 0) > 0);
+    const deuda = this.obtenerDeudaPendienteAnalisis(trans);
+    const tieneDeuda = deuda > 0.009 && (
+      formaPago === 'de_contado-pendiente' ||
+      formaPago === 'abono' ||
+      formaPago === 'cashea'
+    );
 
     if (tieneDeuda && trans.numeroVenta) {
-      const deuda = trans.deudaPendiente || 0;
-
       this.analisisVentasPendientes.push({
         numeroVenta: trans.numeroVenta,
         cliente: trans.cliente?.nombre || 'Cliente',
@@ -1316,17 +1735,61 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     }
   }
 
-  getMetodosPagoUnicos(): Array<{ valor: string, label: string }> {
-    const metodos = new Set<string>();
+  private obtenerDeudaPendienteAnalisis(
+    trans: Transaccion,
+    totalCalculado?: number,
+    abonadoCalculado?: number
+  ): number {
+    const total = Number(totalCalculado ?? trans.montoTotal ?? this.getMontoTransaccionSistema(trans) ?? 0);
+    const abonado = Number(abonadoCalculado ?? trans.montoPagado ?? this.getMontoTransaccionSistema(trans) ?? 0);
+    const deudaTransaccion = Number(trans.deudaPendiente ?? NaN);
+    const deudaBase = Number.isFinite(deudaTransaccion)
+      ? deudaTransaccion
+      : Math.max(0, total - abonado);
 
-    this.transacciones.forEach(transaccion => {
-      metodos.add(transaccion.metodoPago);
+    return this.redondearMonto(Math.max(0, deudaBase));
+  }
+
+  getOpcionesFiltroMetodoPago(): Array<{ valor: string, label: string }> {
+    const metodosPresentes = new Set<string>();
+
+    this.transacciones.forEach((transaccion) => {
+      const metodo = this.normalizarClaveMetodoPago(transaccion.metodoPago);
+      if (metodo) {
+        metodosPresentes.add(metodo);
+      }
     });
 
-    return Array.from(metodos).map(metodo => ({
-      valor: metodo,
-      label: this.formatearTipoPago(metodo)
-    }));
+    const opcionesSistema = this.metodosPago
+      .filter((metodo) => metodosPresentes.has(this.normalizarClaveMetodoPago(metodo.valor)))
+      .map((metodo) => ({
+        valor: this.normalizarClaveMetodoPago(metodo.valor),
+        label: this.formatearEtiquetaFiltroMetodo(metodo.valor)
+      }));
+
+    const extras = Array.from(metodosPresentes)
+      .filter((metodo) => !opcionesSistema.some((opcion) => opcion.valor === metodo))
+      .sort((a, b) => a.localeCompare(b))
+      .map((metodo) => ({
+        valor: metodo,
+        label: this.formatearEtiquetaFiltroMetodo(metodo)
+      }));
+
+    return [...opcionesSistema, ...extras];
+  }
+
+  private formatearEtiquetaFiltroMetodo(metodo: string): string {
+    const clave = this.normalizarClaveMetodoPago(metodo);
+
+    if (clave === 'mixto') {
+      return 'Mixto / combinado';
+    }
+
+    if (clave === 'punto') {
+      return 'Punto de venta';
+    }
+
+    return this.formatearTipoPago(clave);
   }
 
   private obtenerUsuarioYSede(): void {
@@ -1388,6 +1851,20 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         this.cierreActual.diferencia = diferencia;
       }
     });
+
+    this.transaccionForm.get('tipo')?.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.sincronizarFormularioTransaccion());
+
+    this.transaccionForm.get('metodoPago')?.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.sincronizarFormularioTransaccion());
+
+    this.transaccionForm.get('categoria')?.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.sincronizarFormularioTransaccion());
+
+    this.sincronizarFormularioTransaccion();
   }
 
   private formatearFechaLocal(fecha: Date): string {
@@ -1457,12 +1934,16 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     this.transaccionesFiltradas = this.ordenarTransaccionesPorFechaDesc(this.transacciones.filter(trans => {
       // Filtrar por tipo
-      if (filtros.tipo !== 'todos' && trans.tipo !== filtros.tipo) {
+      if (filtros.tipo === 'solo_abonos' && trans.categoria !== 'abono_venta') {
+        return false;
+      }
+
+      if (filtros.tipo !== 'todos' && filtros.tipo !== 'solo_abonos' && trans.tipo !== filtros.tipo) {
         return false;
       }
 
       // Filtrar por método de pago
-      if (filtros.metodoPago !== 'todos' && trans.metodoPago !== filtros.metodoPago) {
+      if (filtros.metodoPago !== 'todos' && this.normalizarClaveMetodoPago(trans.metodoPago) !== this.normalizarClaveMetodoPago(filtros.metodoPago)) {
         return false;
       }
 
@@ -1510,6 +1991,10 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     } else {
       console.warn('⚠️ No hay ventas en el resumen');
       this.transacciones = [];
+    }
+
+    if (resumen.abonosDelDia && Array.isArray(resumen.abonosDelDia) && resumen.abonosDelDia.length) {
+      this.agregarAbonosDelDiaComoTransacciones(resumen.abonosDelDia);
     }
 
     // 2. Cargar cierre existente si hay (SOLO para días pasados)
@@ -1652,53 +2137,181 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   }
 
+  private construirDetalleMetodoPagoNormalizado(
+    metodo: any,
+    monedaVenta: string,
+    tasasHistoricas: Array<{ moneda: string; tasa: number; valor?: number }>
+  ): TransaccionDetalleMetodoPago {
+    return {
+      tipo: metodo?.tipo,
+      monto: Number(metodo?.monto || 0),
+      moneda: metodo?.moneda || monedaVenta || 'USD',
+      montoEnBolivar: metodo?.montoEnBolivar,
+      montoEnMonedaVenta: Number(
+        metodo?.montoEnMonedaVenta ??
+        this.convertirMontoConTasas(Number(metodo?.monto || 0), metodo?.moneda || monedaVenta || 'USD', monedaVenta, tasasHistoricas)
+      ),
+      montoEnMonedaSistema: Number(
+        metodo?.montoEnMonedaSistema ??
+        metodo?.montoMonedaSistema ??
+        this.convertirMontoConTasas(Number(metodo?.monto || 0), metodo?.moneda || monedaVenta || 'USD', this.monedaSistema, tasasHistoricas)
+      ),
+      tasaUsada: metodo?.tasaUsada,
+      referencia: metodo?.referencia,
+      banco: metodo?.bancoNombre || metodo?.banco,
+      bancoNombre: metodo?.bancoNombre,
+      bancoCodigo: metodo?.bancoCodigo,
+      bancoReceptorCodigo: metodo?.bancoReceptorCodigo || metodo?.cuentaReceptora?.bancoCodigo,
+      bancoReceptorNombre: metodo?.bancoReceptorNombre || metodo?.cuentaReceptora?.bancoNombre,
+      bancoReceptor: metodo?.bancoReceptor || metodo?.cuentaReceptora?.descripcionCuenta || metodo?.cuentaReceptora?.bancoNombre,
+      cuentaReceptoraId: metodo?.cuentaReceptoraId || metodo?.cuentaReceptora?.id,
+      cuentaReceptoraAlias: metodo?.cuentaReceptoraAlias || metodo?.cuentaReceptora?.alias,
+      cuentaReceptoraUltimos4: metodo?.cuentaReceptoraUltimos4 || metodo?.cuentaReceptora?.ultimos4,
+      cuentaReceptoraEmail: metodo?.cuentaReceptoraEmail || metodo?.cuentaReceptora?.correo || metodo?.cuentaReceptora?.email,
+      cuentaReceptoraTitular: metodo?.cuentaReceptoraTitular || metodo?.cuentaReceptora?.titular || metodo?.cuentaReceptora?.ownerName,
+      cuentaReceptoraDocumento: metodo?.cuentaReceptoraDocumento || metodo?.cuentaReceptora?.cedulaRif || metodo?.cuentaReceptora?.ownerId,
+      cuentaReceptoraTelefono: metodo?.cuentaReceptoraTelefono || metodo?.cuentaReceptora?.telefono || metodo?.cuentaReceptora?.phone,
+      cuentaReceptoraDescripcion: metodo?.cuentaReceptoraDescripcion || metodo?.cuentaReceptora?.descripcionCuenta
+    };
+  }
+
+  private obtenerMontoCobroEnMonedaVenta(
+    metodosDePago: TransaccionDetalleMetodoPago[],
+    monedaVenta: string,
+    montoFallback: number,
+    tasasHistoricas: Array<{ moneda: string; tasa: number; valor?: number }>
+  ): number {
+    if (metodosDePago.length) {
+      return this.redondearMonto(
+        metodosDePago.reduce((sum, metodo) => (
+          sum + Number(
+            metodo.montoEnMonedaVenta ??
+            this.convertirMontoConTasas(Number(metodo.monto || 0), metodo.moneda || monedaVenta, monedaVenta, tasasHistoricas)
+          )
+        ), 0)
+      );
+    }
+
+    return this.redondearMonto(Number(montoFallback || 0));
+  }
+
+  private obtenerMontoCobroEnMonedaSistema(
+    metodosDePago: TransaccionDetalleMetodoPago[],
+    monedaVenta: string,
+    montoFallback: number,
+    tasasHistoricas: Array<{ moneda: string; tasa: number; valor?: number }>
+  ): number {
+    if (metodosDePago.length) {
+      return this.redondearMonto(
+        metodosDePago.reduce((sum, metodo) => (
+          sum + Number(
+            metodo.montoEnMonedaSistema ??
+            this.convertirMontoConTasas(Number(metodo.monto || 0), metodo.moneda || monedaVenta, this.monedaSistema, tasasHistoricas)
+          )
+        ), 0)
+      );
+    }
+
+    return this.redondearMonto(
+      this.convertirMontoConTasas(Number(montoFallback || 0), monedaVenta, this.monedaSistema, tasasHistoricas)
+    );
+  }
+
+  private construirCobrosDelDiaVenta(
+    venta: any,
+    monedaVenta: string,
+    tasasHistoricas: Array<{ moneda: string; tasa: number; valor?: number }>
+  ): TransaccionCobroDia[] {
+    const cobrosDelDia: TransaccionCobroDia[] = [];
+    const metodosVenta = Array.isArray(venta?.metodosDePago) ? venta.metodosDePago : [];
+    const detallePagoInicial = metodosVenta.map((metodo: any) => this.construirDetalleMetodoPagoNormalizado(metodo, monedaVenta, tasasHistoricas));
+    const montoPagoInicial = this.obtenerMontoCobroEnMonedaVenta(
+      detallePagoInicial,
+      monedaVenta,
+      Number(venta?.total_pagado ?? 0),
+      tasasHistoricas
+    );
+    const montoPagoInicialSistema = this.obtenerMontoCobroEnMonedaSistema(
+      detallePagoInicial,
+      monedaVenta,
+      Number(venta?.total_pagado ?? 0),
+      tasasHistoricas
+    );
+
+    if (detallePagoInicial.length && montoPagoInicialSistema > 0) {
+      cobrosDelDia.push({
+        id: `${venta?.key || venta?.numero_venta || Date.now()}-pago-inicial`,
+        tipo: 'pago_inicial',
+        etiqueta: 'Pago inicial',
+        fecha: venta?.fecha ? new Date(venta.fecha) : new Date(),
+        monto: montoPagoInicial,
+        montoSistema: montoPagoInicialSistema,
+        deudaPendiente: Math.max(0, Number(venta?.total || 0) - montoPagoInicial),
+        observaciones: 'Cobro registrado al momento de generar la venta.',
+        metodosDePago: detallePagoInicial
+      });
+    }
+
+    const abonosDelDia = Array.isArray(venta?.formaPagoDetalle?.abonos)
+      ? venta.formaPagoDetalle.abonos.filter((abono: any) => this.esMismaFechaCalendario(abono?.fecha || venta?.fecha, this.fechaSeleccionada))
+      : [];
+
+    abonosDelDia.forEach((abono: any) => {
+      const detalleMetodosAbono = (Array.isArray(abono?.metodosDePago) ? abono.metodosDePago : [])
+        .map((metodo: any) => this.construirDetalleMetodoPagoNormalizado(metodo, monedaVenta, tasasHistoricas));
+      const montoAbono = this.obtenerMontoCobroEnMonedaVenta(
+        detalleMetodosAbono,
+        monedaVenta,
+        Number(abono?.montoAbonado || 0),
+        tasasHistoricas
+      );
+      const montoAbonoSistema = this.obtenerMontoCobroEnMonedaSistema(
+        detalleMetodosAbono,
+        monedaVenta,
+        Number(abono?.montoAbonado || 0),
+        tasasHistoricas
+      );
+
+      cobrosDelDia.push({
+        id: `${venta?.key || venta?.numero_venta || Date.now()}-abono-${abono?.numero || cobrosDelDia.length + 1}`,
+        tipo: 'abono',
+        etiqueta: `Abono #${abono?.numero || cobrosDelDia.length}`,
+        fecha: abono?.fecha ? new Date(abono.fecha) : (venta?.fecha ? new Date(venta.fecha) : new Date()),
+        monto: montoAbono,
+        montoSistema: montoAbonoSistema,
+        deudaPendiente: Number(abono?.deudaPendiente || 0),
+        observaciones: abono?.observaciones || '',
+        metodosDePago: detalleMetodosAbono
+      });
+    });
+
+    return cobrosDelDia;
+  }
+
   private procesarVentasParaTransacciones(ventas: any[]): void {
     this.transacciones = [];
+    this.detalleVentaExpandidaId = null;
 
     ventas.forEach(venta => {
       const tasasHistoricas = venta.formaPagoDetalle?.tasasActuales || venta.formaPago?.tasasActuales || [];
       const monedaVenta = venta.moneda || 'USD';
       const totalOriginal = Number(venta.total || 0);
-      const pagadoOriginal = Number(venta.formaPagoDetalle?.totalPagado ?? venta.total_pagado ?? 0);
-      const deudaOriginal = Number(venta.formaPagoDetalle?.deuda ?? Math.max(0, totalOriginal - pagadoOriginal));
       const totalSistema = this.convertirMontoConTasas(totalOriginal, monedaVenta, this.monedaSistema, tasasHistoricas);
-      const pagadoSistema = this.convertirMontoConTasas(pagadoOriginal, monedaVenta, this.monedaSistema, tasasHistoricas);
-      const deudaSistema = this.convertirMontoConTasas(deudaOriginal, monedaVenta, this.monedaSistema, tasasHistoricas);
 
       // Extraer información de consulta si existe
       const tieneConsulta = venta.consulta && (venta.consulta.pagoMedico > 0 || venta.consulta.pagoOptica > 0);
       const tieneProductos = venta.productos && venta.productos.length > 0;
 
-      const metodosVenta = Array.isArray(venta.metodosDePago) ? venta.metodosDePago : [];
-      const metodosAbonos = (venta.formaPagoDetalle?.abonos || []).flatMap((abono: any) =>
-        Array.isArray(abono?.metodosDePago) ? abono.metodosDePago : []
-      );
-
-      // Crear detalle de métodos de pago enriquecido incluyendo abonos del día
-      const detalleMetodos = [...metodosVenta, ...metodosAbonos].map(m => ({
-        tipo: m.tipo,
-        monto: m.monto,
-        moneda: m.moneda || venta.moneda || 'USD',
-        montoEnBolivar: m.montoEnBolivar,
-        montoEnMonedaVenta: m.montoEnMonedaVenta,
-        montoEnMonedaSistema: Number(m.montoEnMonedaSistema ?? m.montoMonedaSistema ?? this.convertirMontoConTasas(Number(m.monto || 0), m.moneda || venta.moneda || 'USD', this.monedaSistema, tasasHistoricas)),
-        tasaUsada: m.tasaUsada,
-        referencia: m.referencia,
-        banco: m.bancoNombre || m.banco,           // ← Incluir banco
-        bancoNombre: m.bancoNombre,                 // ← Incluir bancoNombre
-        bancoCodigo: m.bancoCodigo,                 // ← Incluir bancoCodigo
-        bancoReceptorCodigo: m.bancoReceptorCodigo || m.cuentaReceptora?.bancoCodigo,
-        bancoReceptorNombre: m.bancoReceptorNombre || m.cuentaReceptora?.bancoNombre,
-        bancoReceptor: m.bancoReceptor || m.cuentaReceptora?.descripcionCuenta || m.cuentaReceptora?.bancoNombre,
-        cuentaReceptoraId: m.cuentaReceptoraId || m.cuentaReceptora?.id,
-        cuentaReceptoraAlias: m.cuentaReceptoraAlias || m.cuentaReceptora?.alias,
-        cuentaReceptoraUltimos4: m.cuentaReceptoraUltimos4 || m.cuentaReceptora?.ultimos4,
-        cuentaReceptoraEmail: m.cuentaReceptoraEmail || m.cuentaReceptora?.correo || m.cuentaReceptora?.email,
-        cuentaReceptoraTitular: m.cuentaReceptoraTitular || m.cuentaReceptora?.titular || m.cuentaReceptora?.ownerName,
-        cuentaReceptoraDocumento: m.cuentaReceptoraDocumento || m.cuentaReceptora?.cedulaRif || m.cuentaReceptora?.ownerId,
-        cuentaReceptoraTelefono: m.cuentaReceptoraTelefono || m.cuentaReceptora?.telefono || m.cuentaReceptora?.phone,
-        cuentaReceptoraDescripcion: m.cuentaReceptoraDescripcion || m.cuentaReceptora?.descripcionCuenta
-      })) || [];
+      const cobrosDelDia = this.construirCobrosDelDiaVenta(venta, monedaVenta, tasasHistoricas);
+      const detalleMetodos = cobrosDelDia.flatMap((cobro) => cobro.metodosDePago || []);
+      const pagadoOriginal = cobrosDelDia.length
+        ? this.redondearMonto(cobrosDelDia.reduce((sum, cobro) => sum + Number(cobro.monto || 0), 0))
+        : Number(venta.formaPagoDetalle?.totalPagado ?? venta.total_pagado ?? 0);
+      const pagadoSistema = cobrosDelDia.length
+        ? this.redondearMonto(cobrosDelDia.reduce((sum, cobro) => sum + Number(cobro.montoSistema || 0), 0))
+        : this.convertirMontoConTasas(pagadoOriginal, monedaVenta, this.monedaSistema, tasasHistoricas);
+      const deudaOriginal = Math.max(0, totalOriginal - pagadoOriginal);
+      const deudaSistema = Math.max(0, totalSistema - pagadoSistema);
 
       const transaccionVenta: Transaccion = {
         id: venta.key || `VENTA-${venta.numero_venta}`,
@@ -1717,8 +2330,10 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         tasasHistoricas: tasasHistoricas,
         usuario: venta.asesor?.nombre || venta.auditoria?.usuarioCreacion?.nombre || 'Usuario',
         estado: 'confirmado',
+        estatusPago: deudaOriginal > 0.009 ? 'pendiente' : 'completado',
         categoria: 'venta',
         numeroVenta: venta.numero_venta,
+        cobrosDelDia,
         cliente: {
           nombre: venta.cliente?.informacion?.nombreCompleto || 'Cliente',
           cedula: venta.cliente?.informacion?.cedula || '',
@@ -1743,6 +2358,82 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.transacciones = this.ordenarTransaccionesPorFechaDesc(this.transacciones);
 
     // Recalcular análisis cada vez que cambian las transacciones
+    this.calcularAnalisisDesdeTransacciones();
+  }
+
+  private agregarAbonosDelDiaComoTransacciones(abonosDelDia: any[]): void {
+    const transaccionesAbono = abonosDelDia.map((abono) => {
+      const tasasHistoricas = Array.isArray(abono?.tasasHistoricas) ? abono.tasasHistoricas : [];
+      const monedaAbono = abono?.moneda || 'USD';
+      const montoAbonadoOriginal = Number(abono?.montoAbonado || 0);
+      const montoAbonadoSistema = this.convertirMontoConTasas(montoAbonadoOriginal, monedaAbono, this.monedaSistema, tasasHistoricas);
+      const deudaPendienteSistema = this.convertirMontoConTasas(Number(abono?.deudaPendiente || 0), monedaAbono, this.monedaSistema, tasasHistoricas);
+      const detalleMetodos = (Array.isArray(abono?.metodosDePago) ? abono.metodosDePago : []).map((m: any) => ({
+        tipo: m.tipo,
+        monto: Number(m.monto || 0),
+        moneda: m.moneda || monedaAbono,
+        montoEnBolivar: m.montoEnBolivar,
+        montoEnMonedaVenta: m.montoEnMonedaVenta,
+        montoEnMonedaSistema: Number(m.montoEnMonedaSistema ?? this.convertirMontoConTasas(Number(m.monto || 0), m.moneda || monedaAbono, this.monedaSistema, tasasHistoricas)),
+        tasaUsada: m.tasaUsada,
+        referencia: m.referencia,
+        banco: m.bancoNombre || m.banco,
+        bancoNombre: m.bancoNombre,
+        bancoCodigo: m.bancoCodigo,
+        bancoReceptorCodigo: m.bancoReceptorCodigo,
+        bancoReceptorNombre: m.bancoReceptorNombre,
+        bancoReceptor: m.bancoReceptor,
+        cuentaReceptoraId: m.cuentaReceptoraId,
+        cuentaReceptoraAlias: m.cuentaReceptoraAlias,
+        cuentaReceptoraUltimos4: m.cuentaReceptoraUltimos4,
+        cuentaReceptoraEmail: m.cuentaReceptoraEmail,
+        cuentaReceptoraTitular: m.cuentaReceptoraTitular,
+        cuentaReceptoraDocumento: m.cuentaReceptoraDocumento,
+        cuentaReceptoraTelefono: m.cuentaReceptoraTelefono,
+        cuentaReceptoraDescripcion: m.cuentaReceptoraDescripcion
+      }));
+      const nombreCliente = abono?.cliente?.informacion?.nombreCompleto || abono?.cliente?.nombre || 'Cliente';
+
+      return {
+        id: abono?.id || `ABONO-${abono?.numeroVenta || Date.now()}`,
+        tipo: 'ingreso',
+        descripcion: `Abono recibido hoy - Venta #${abono?.numeroVenta || 'N/A'} - ${nombreCliente}`,
+        monto: montoAbonadoSistema,
+        montoSistema: montoAbonadoSistema,
+        montoOriginal: montoAbonadoOriginal,
+        montoTotal: montoAbonadoSistema,
+        montoPagado: montoAbonadoSistema,
+        deudaPendiente: deudaPendienteSistema,
+        fecha: abono?.fecha ? new Date(abono.fecha) : new Date(),
+        metodoPago: this.determinarMetodoPagoPrincipal(detalleMetodos),
+        moneda: this.obtenerCodigoMoneda(monedaAbono),
+        monedaOriginal: this.obtenerCodigoMoneda(monedaAbono),
+        tasasHistoricas,
+        usuario: abono?.usuario || abono?.asesor?.nombre || 'Usuario',
+        estado: 'confirmado',
+        estatusPago: deudaPendienteSistema > 0 ? 'pendiente' : 'completado',
+        categoria: 'abono_venta',
+        numeroVenta: abono?.numeroVenta || '',
+        cliente: {
+          nombre: nombreCliente,
+          cedula: abono?.cliente?.informacion?.cedula || abono?.cliente?.cedula || '',
+          telefono: abono?.cliente?.informacion?.telefono || abono?.cliente?.telefono || '',
+          email: abono?.cliente?.informacion?.email || abono?.cliente?.email || ''
+        },
+        formaPago: abono?.formaPago === 'cashea' ? 'cashea' : abono?.formaPago === 'de_contado-pendiente' ? 'de_contado-pendiente' : 'abono',
+        detalleMetodosPago: detalleMetodos,
+        asesor: abono?.asesor?.nombre,
+        sede: abono?.sede,
+        tipoVenta: abono?.tipoVenta
+      } as Transaccion;
+    });
+
+    const mapa = new Map<string, Transaccion>();
+    [...this.transacciones, ...transaccionesAbono].forEach((transaccion) => {
+      mapa.set(transaccion.id, transaccion);
+    });
+
+    this.transacciones = this.ordenarTransaccionesPorFechaDesc(Array.from(mapa.values()));
     this.calcularAnalisisDesdeTransacciones();
   }
 
@@ -1792,20 +2483,30 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       return 'pendiente';
     }
 
-    const tipo = metodosDePago[0].tipo;
-    return tipo === 'punto' ? 'punto' : tipo;
+    const tiposUnicos = Array.from(new Set(
+      metodosDePago
+        .map((metodo) => this.normalizarClaveMetodoPago(String(metodo?.tipo || '')))
+        .filter(Boolean)
+    ));
+
+    if (tiposUnicos.length > 1) {
+      return 'mixto';
+    }
+
+    return tiposUnicos[0] || 'pendiente';
   }
 
   getTotalMetodoPago(metodo: string): number {
     let total = 0;
     this.transacciones.forEach(transaccion => {
-      if (transaccion.tipo === 'venta' || transaccion.tipo === 'ingreso') {
-        if (transaccion.metodoPago === metodo) {
-          total += this.getMontoTransaccionSistema(transaccion);
+      const factor = transaccion.tipo === 'egreso' ? -1 : 1;
+      if (transaccion.tipo === 'venta' || transaccion.tipo === 'ingreso' || transaccion.tipo === 'egreso') {
+        if (transaccion.metodoPago === metodo && (!transaccion.detalleMetodosPago || transaccion.detalleMetodosPago.length === 0)) {
+          total += this.getMontoTransaccionSistema(transaccion) * factor;
         } else if (transaccion.detalleMetodosPago && transaccion.detalleMetodosPago.length > 0) {
           transaccion.detalleMetodosPago.forEach((m: any) => {
             if (m.tipo === metodo) {
-              total += this.getMontoMetodoPagoSistema(m, transaccion);
+              total += this.getMontoMetodoPagoSistema(m, transaccion) * factor;
             }
           });
         }
@@ -2010,22 +2711,24 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     }
 
     const formValue = this.transaccionForm.value;
+    const monto = parseFloat(formValue.monto);
     const nuevaTransaccion: Transaccion = {
       id: this.transaccionEditando?.id || `TRX-${Date.now()}`,
       tipo: formValue.tipo,
       descripcion: formValue.descripcion,
-      monto: parseFloat(formValue.monto),
-      montoOriginal: parseFloat(formValue.monto),
-      montoSistema: this.redondearMonto(parseFloat(formValue.monto)),
+      monto: monto,
+      montoOriginal: monto,
+      montoSistema: this.redondearMonto(monto),
       fecha: new Date(),
-      metodoPago: formValue.metodoPago,
+      metodoPago: this.normalizarClaveMetodoPago(formValue.metodoPago),
       moneda: this.obtenerCodigoMoneda(this.monedaSistema),
       monedaOriginal: this.obtenerCodigoMoneda(this.monedaSistema),
       usuario: this.currentUser?.nombre || 'Usuario',
       estado: 'confirmado',
       categoria: formValue.categoria,
       observaciones: formValue.observaciones,
-      comprobante: formValue.comprobante
+      comprobante: formValue.comprobante,
+      detalleMetodosPago: this.construirDetalleMetodoPagoManual(monto)
     };
 
     if (this.transaccionEditando) {
@@ -2170,7 +2873,175 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return tipoEncontrado ? tipoEncontrado.color : '#64748b';
   }
 
+  esAbonoEnHistorial(transaccion: Transaccion): boolean {
+    return transaccion.categoria === 'abono_venta';
+  }
+
+  getEtiquetaHistorialTransaccion(transaccion: Transaccion): string {
+    if (this.esAbonoEnHistorial(transaccion)) {
+      return 'Abono del dia';
+    }
+
+    if (transaccion.tipo === 'venta') {
+      return 'Venta del dia';
+    }
+
+    if (transaccion.tipo === 'ingreso') {
+      return 'Ingreso manual';
+    }
+
+    if (transaccion.tipo === 'egreso') {
+      return 'Egreso manual';
+    }
+
+    return 'Ajuste';
+  }
+
+  getIconoHistorialTransaccion(transaccion: Transaccion): string {
+    if (this.esAbonoEnHistorial(transaccion)) {
+      return 'bi-calendar-check';
+    }
+
+    if (transaccion.tipo === 'venta') {
+      return 'bi-cart-check';
+    }
+
+    if (transaccion.tipo === 'ingreso') {
+      return 'bi-plus-circle';
+    }
+
+    if (transaccion.tipo === 'egreso') {
+      return 'bi-dash-circle';
+    }
+
+    return 'bi-arrow-left-right';
+  }
+
+  getColorHistorialTransaccion(transaccion: Transaccion): string {
+    if (this.esAbonoEnHistorial(transaccion)) {
+      return '#0f766e';
+    }
+
+    return this.getColorTipoTransaccion(transaccion.tipo);
+  }
+
+  getDescripcionHistorialTransaccion(transaccion: Transaccion): string {
+    if (this.esAbonoEnHistorial(transaccion)) {
+      return 'Cobro aplicado a una venta de una fecha anterior';
+    }
+
+    if (transaccion.tipo === 'venta') {
+      return '';
+    }
+
+    return transaccion.descripcion;
+  }
+
+  getTituloHistorialTransaccion(transaccion: Transaccion): string {
+    if (transaccion.cliente?.nombre) {
+      return transaccion.cliente.nombre;
+    }
+
+    return this.getDescripcionHistorialTransaccion(transaccion);
+  }
+
+  getTextoFormaPagoHistorial(transaccion: Transaccion): string {
+    if (!transaccion.numeroVenta) {
+      return '';
+    }
+
+    if (transaccion.formaPago === 'de_contado-pendiente') {
+      return 'Pendiente por pago';
+    }
+
+    if (transaccion.formaPago === 'abono') {
+      return 'Venta por abonos';
+    }
+
+    if (transaccion.formaPago === 'cashea') {
+      return 'Cashea';
+    }
+
+    if (transaccion.formaPago === 'contado') {
+      return 'Contado';
+    }
+
+    return 'Forma no definida';
+  }
+
+  getTextoEstadoPagoHistorial(transaccion: Transaccion): string {
+    if (!transaccion.numeroVenta) {
+      return '';
+    }
+
+    const estado = String(transaccion.estatusPago || '').trim().toLowerCase();
+    const deudaPendiente = Number(transaccion.deudaPendiente || 0);
+
+    if (estado === 'completado' || estado === 'pagado' || deudaPendiente <= 0.009) {
+      return 'Pago completo';
+    }
+
+    if (estado === 'pendiente' || estado === 'por_pagar' || deudaPendiente > 0) {
+      return 'Pendiente por pago';
+    }
+
+    return 'Estado de pago';
+  }
+
+  getColorEstadoPagoHistorial(transaccion: Transaccion): string {
+    return this.getTextoEstadoPagoHistorial(transaccion) === 'Pago completo' ? '#15803d' : '#b45309';
+  }
+
+  getIconoEstadoPagoHistorial(transaccion: Transaccion): string {
+    return this.getTextoEstadoPagoHistorial(transaccion) === 'Pago completo' ? 'bi-check-circle' : 'bi-hourglass-split';
+  }
+
+  getDetalleAbonoHistorial(transaccion: Transaccion): string {
+    if (!this.esAbonoEnHistorial(transaccion)) {
+      return '';
+    }
+
+    const saldo = Number(transaccion.deudaPendiente || 0);
+    return `Saldo pendiente luego del abono: ${this.decimalPipe.transform(saldo, '1.2-2') || '0.00'} ${this.simboloMonedaSistema}`;
+  }
+
+  puedeExpandirCobrosVenta(transaccion: Transaccion): boolean {
+    return transaccion.tipo === 'venta' && Boolean(transaccion.cobrosDelDia?.some((cobro) => cobro.tipo === 'abono'));
+  }
+
+  toggleDetalleCobrosVenta(transaccion: Transaccion, event?: Event): void {
+    event?.stopPropagation();
+
+    if (!this.puedeExpandirCobrosVenta(transaccion)) {
+      return;
+    }
+
+    this.detalleVentaExpandidaId = this.detalleVentaExpandidaId === transaccion.id ? null : transaccion.id;
+  }
+
+  esDetalleCobrosVentaExpandido(transaccion: Transaccion): boolean {
+    return this.detalleVentaExpandidaId === transaccion.id;
+  }
+
+  getCantidadAbonosCobroDia(transaccion: Transaccion): number {
+    return transaccion.cobrosDelDia?.filter((cobro) => cobro.tipo === 'abono').length || 0;
+  }
+
+  getTextoResumenMetodosCobro(cobro: TransaccionCobroDia): string {
+    const metodosUnicos = Array.from(new Set((cobro.metodosDePago || []).map((metodo) => this.formatearTipoPago(metodo.tipo))));
+    return metodosUnicos.join(' + ') || 'Sin método identificado';
+  }
+
+  getMontoCobroDiaSistema(cobro: TransaccionCobroDia): number {
+    return Number(cobro.montoSistema ?? cobro.monto ?? 0);
+  }
+
   formatearTipoPago(tipo: string): string {
+    const metodoConfigurado = this.metodosPago.find((metodo) => metodo.valor === this.normalizarClaveMetodoPago(tipo));
+    if (metodoConfigurado) {
+      return metodoConfigurado.label;
+    }
+
     const tipos: { [key: string]: string } = {
       'efectivo': 'EFECTIVO',
       'debito': 'T. DÉBITO',
@@ -2178,6 +3049,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       'pagomovil': 'PAGO MÓVIL',
       'transferencia': 'TRANSFERENCIA',
       'zelle': 'ZELLE',
+      'mixto': 'MIXTO',
       'tarjeta': 'TARJETA',
       'contado': 'CONTADO',
       'abono': 'ABONO',
@@ -2583,23 +3455,31 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.transaccionEditando = transaccion || null;
 
     if (transaccion) {
+      const detalleMetodo = transaccion.detalleMetodosPago?.[0];
       this.transaccionForm.patchValue({
-        tipo: transaccion.tipo,
+        tipo: transaccion.tipo === 'egreso' ? 'egreso' : 'ingreso',
         descripcion: transaccion.descripcion,
         monto: transaccion.monto,
-        metodoPago: transaccion.metodoPago,
-        categoria: transaccion.categoria || 'venta_lentes',
+        metodoPago: this.normalizarClaveMetodoPago(transaccion.metodoPago),
+        categoria: transaccion.categoria || this.getCategoriaPredeterminada(transaccion.tipo === 'egreso' ? 'egreso' : 'ingreso'),
         observaciones: transaccion.observaciones || '',
-        comprobante: transaccion.comprobante || ''
+        comprobante: transaccion.comprobante || '',
+        cuentaReceptoraId: detalleMetodo?.cuentaReceptoraId || ''
       });
     } else {
       this.transaccionForm.reset({
         tipo: 'ingreso',
-        metodoPago: 'efectivo',
-        categoria: 'venta_lentes',
-        monto: 0
+        descripcion: '',
+        monto: 0,
+        metodoPago: this.getMetodoPagoPredeterminado(),
+        categoria: this.getCategoriaPredeterminada('ingreso'),
+        comprobante: '',
+        observaciones: '',
+        cuentaReceptoraId: ''
       });
     }
+
+    this.sincronizarFormularioTransaccion();
 
     const modalElement = document.getElementById('transaccionModal');
     if (modalElement) {
@@ -2647,31 +3527,193 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   // Métodos auxiliares
   getColorMetodoPago(metodo: string): string {
-    const colores: { [key: string]: string } = {
-      'efectivo': '#22c55e',
-      'tarjeta': '#8b5cf6',
-      'punto': '#8b5cf6',
-      'transferencia': '#3b82f6',
-      'pagomovil': '#ec4899',
-      'zelle': '#8b5cf6'
-    };
-    return colores[metodo] || '#64748b';
+    const metodoConfigurado = this.metodosPago.find((item) => item.valor === this.normalizarClaveMetodoPago(metodo));
+    if (metodoConfigurado) {
+      return metodoConfigurado.color;
+    }
+
+    return this.coloresMetodoPago[this.normalizarClaveMetodoPago(metodo)] || '#64748b';
   }
 
   getIconoMetodoPago(metodo: string): string {
+    const metodoConfigurado = this.metodosPago.find((item) => item.valor === this.normalizarClaveMetodoPago(metodo));
+    if (metodoConfigurado) {
+      return metodoConfigurado.icono;
+    }
+
     const iconos: { [key: string]: string } = {
       'efectivo': 'bi-cash',
       'tarjeta': 'bi-credit-card',
       'punto': 'bi-credit-card',
+      'debito': 'bi-credit-card-2-back',
+      'credito': 'bi-credit-card-2-front',
       'transferencia': 'bi-bank',
       'pagomovil': 'bi-phone',
-      'zelle': 'bi-globe2'
+      'zelle': 'bi-globe2',
+      'mixto': 'bi-shuffle'
     };
-    return iconos[metodo] || 'bi-receipt';
+    return iconos[this.normalizarClaveMetodoPago(metodo)] || 'bi-receipt';
   }
 
   verDetalleVenta(numeroVenta: string): void {
-    // Aquí puedes navegar al detalle de la venta
+    const numeroVentaNormalizado = String(numeroVenta || '').trim().toLowerCase();
+    const ventaPendiente = this.analisisVentasPendientes.find((venta) => (
+      String(venta?.numeroVenta || '').trim().toLowerCase() === numeroVentaNormalizado
+    ));
+    const transaccionVenta = this.transacciones.find((transaccion) => (
+      transaccion.tipo === 'venta'
+      && String(transaccion.numeroVenta || '').trim().toLowerCase() === numeroVentaNormalizado
+    ));
+
+    if (!ventaPendiente && !transaccionVenta) {
+      this.swalService.showWarning('Detalle no disponible', 'No se encontró la venta dentro del cierre actual.');
+      return;
+    }
+
+    this.swalService.showInfo(
+      `Detalle venta #${this.escapeHtml(numeroVenta)}`,
+      this.construirHtmlDetalleVentaPendiente(transaccionVenta, ventaPendiente),
+      {
+        width: '960px',
+        padding: '0.95rem',
+        heightAuto: false,
+        scrollbarPadding: false,
+        customClass: {
+          popup: 'swal-modern-popup info-popup swal-detail-popup',
+          title: 'swal-modern-title swal-detail-title',
+          htmlContainer: 'swal-modern-content swal-detail-content',
+          confirmButton: 'swal-modern-confirm info-btn',
+          closeButton: 'swal-modern-close'
+        }
+      }
+    );
+  }
+
+  private construirHtmlDetalleVentaPendiente(transaccion: Transaccion | undefined, ventaPendiente?: any): string {
+    const cliente = transaccion?.cliente?.nombre || ventaPendiente?.cliente || 'Cliente no identificado';
+    const total = Number(ventaPendiente?.total ?? transaccion?.montoTotal ?? transaccion?.monto ?? 0);
+    const saldo = Number(ventaPendiente?.deuda ?? transaccion?.deudaPendiente ?? 0);
+    const abonado = Number(transaccion?.montoPagado ?? Math.max(0, total - saldo));
+    const fecha = transaccion?.fecha || ventaPendiente?.fecha;
+    const numeroVenta = transaccion?.numeroVenta || ventaPendiente?.numeroVenta || 'N/A';
+    const formaPago = transaccion ? this.getTextoFormaPagoHistorial(transaccion) : (ventaPendiente?.formaPago || 'Forma no definida');
+    const estadoPago = transaccion ? this.getTextoEstadoPagoHistorial(transaccion) : (saldo > 0.009 ? 'Pendiente por pago' : 'Pago completo');
+    const asesor = transaccion?.usuario || transaccion?.asesor || 'Usuario';
+    const cobrosHtml = transaccion ? this.construirHtmlCobrosVentaPendiente(transaccion) : '';
+
+    return `
+      <div style="text-align:left; display:grid; gap:12px; max-height:min(50vh, 470px); overflow-y:auto; overflow-x:hidden; padding-right:2px;">
+        <div style="display:grid; grid-template-columns:minmax(0, 1.55fr) minmax(270px, 0.95fr); gap:12px; align-items:start;">
+          <div style="padding:14px; border-radius:14px; background:#ffffff; border:1px solid #e2e8f0; display:grid; gap:12px;">
+            <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+              <div style="min-width:0;">
+                <div style="font-size:1.02rem; font-weight:700; color:#0f172a; line-height:1.3;">${this.escapeHtml(cliente)}</div>
+                <div style="font-size:0.82rem; color:#64748b; margin-top:4px;">
+                  Venta #${this.escapeHtml(numeroVenta)} · ${this.escapeHtml(formaPago)} · ${this.escapeHtml(estadoPago)}
+                </div>
+              </div>
+              <div style="padding:0.38rem 0.7rem; border-radius:999px; background:${saldo > 0.009 ? '#fff7ed' : '#f0fdf4'}; border:1px solid ${saldo > 0.009 ? '#fed7aa' : '#bbf7d0'}; color:${saldo > 0.009 ? '#c2410c' : '#166534'}; font-size:0.74rem; font-weight:700; white-space:nowrap;">
+                ${this.escapeHtml(estadoPago)}
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px;">
+              <div style="padding:10px 12px; border-radius:12px; background:#f8fafc; border:1px solid #e2e8f0; min-width:0;">
+                <div style="font-size:0.7rem; color:#64748b; text-transform:uppercase; letter-spacing:0.04em;">Total venta</div>
+                <div style="font-size:0.98rem; font-weight:700; color:#0f172a; margin-top:4px;">${this.formatCurrency(total)} ${this.escapeHtml(this.monedaSistema)}</div>
+              </div>
+              <div style="padding:10px 12px; border-radius:12px; background:#f0fdf4; border:1px solid #bbf7d0; min-width:0;">
+                <div style="font-size:0.7rem; color:#166534; text-transform:uppercase; letter-spacing:0.04em;">Cobrado</div>
+                <div style="font-size:0.98rem; font-weight:700; color:#166534; margin-top:4px;">${this.formatCurrency(abonado)} ${this.escapeHtml(this.monedaSistema)}</div>
+              </div>
+              <div style="padding:10px 12px; border-radius:12px; background:#fff7ed; border:1px solid #fed7aa; min-width:0;">
+                <div style="font-size:0.7rem; color:#9a3412; text-transform:uppercase; letter-spacing:0.04em;">Saldo pendiente</div>
+                <div style="font-size:0.98rem; font-weight:700; color:#c2410c; margin-top:4px;">${this.formatCurrency(saldo)} ${this.escapeHtml(this.monedaSistema)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:14px; border-radius:14px; background:#f8fafc; border:1px solid #e2e8f0; display:grid; gap:8px; align-content:start;">
+            <div style="font-size:0.72rem; color:#64748b; text-transform:uppercase; letter-spacing:0.04em; font-weight:700;">Datos de la venta</div>
+            <div style="font-size:0.8rem; color:#334155;"><strong>Fecha:</strong> ${this.escapeHtml(fecha ? this.formatDate(new Date(fecha)) : 'Sin fecha')}</div>
+            <div style="font-size:0.8rem; color:#334155;"><strong>Asesor:</strong> ${this.escapeHtml(asesor)}</div>
+            ${transaccion?.cliente?.cedula ? `<div style="font-size:0.8rem; color:#334155;"><strong>Cédula:</strong> ${this.escapeHtml(transaccion.cliente.cedula)}</div>` : ''}
+          </div>
+        </div>
+
+        ${cobrosHtml}
+      </div>
+    `;
+  }
+
+  private construirHtmlCobrosVentaPendiente(transaccion: Transaccion): string {
+    const cobros = Array.isArray(transaccion.cobrosDelDia) ? transaccion.cobrosDelDia : [];
+
+    if (!cobros.length) {
+      return '';
+    }
+
+    const items = cobros.map((cobro) => {
+      const fechaCobro = cobro?.fecha ? this.datePipe.transform(cobro.fecha, 'dd/MM/yyyy HH:mm') : 'Sin fecha';
+      const saldoCobro = Number(cobro?.deudaPendiente ?? NaN);
+      const metodosCobroHtml = this.construirHtmlMetodosPorCobroPendiente(cobro);
+
+      return `
+        <li style="margin:0; padding:12px 0; border-top:1px solid #e2e8f0; display:grid; gap:6px;">
+          <div style="display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:12px; align-items:start;">
+            <div style="min-width:0; display:grid; gap:4px;">
+              <strong style="color:#0f172a;">${this.escapeHtml(cobro.etiqueta || 'Cobro')}</strong>
+              <div style="font-size:0.78rem; color:#64748b;">${this.escapeHtml(fechaCobro || '')}</div>
+              <div style="font-size:0.8rem; color:#334155;">${this.escapeHtml(this.getTextoResumenMetodosCobro(cobro))}</div>
+            </div>
+            <span style="font-weight:700; color:#0f766e; white-space:nowrap; align-self:start;">${this.formatCurrency(this.getMontoCobroDiaSistema(cobro))} ${this.escapeHtml(this.monedaSistema)}</span>
+          </div>
+          ${metodosCobroHtml}
+          ${Number.isFinite(saldoCobro) ? `<div style="font-size:0.78rem; color:#9a3412;">Saldo luego de este cobro: ${this.formatCurrency(saldoCobro)} ${this.escapeHtml(transaccion.monedaOriginal || transaccion.moneda || this.monedaSistema)}</div>` : ''}
+        </li>
+      `;
+    }).join('');
+
+    return `
+      <div style="padding:12px 14px; border-radius:14px; background:#ffffff; border:1px solid #e2e8f0; display:grid; gap:4px;">
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap;">
+          <div style="font-size:0.84rem; font-weight:700; color:#0f172a;">Cobros del día aplicados a esta venta</div>
+          <div style="font-size:0.74rem; color:#64748b;">${cobros.length} ${cobros.length === 1 ? 'registro' : 'registros'}</div>
+        </div>
+        <ul style="list-style:none; margin:0; padding:0; display:grid;">${items}</ul>
+      </div>
+    `;
+  }
+
+  private construirHtmlMetodosPorCobroPendiente(cobro: TransaccionCobroDia): string {
+    const metodos = Array.isArray(cobro.metodosDePago) ? cobro.metodosDePago : [];
+
+    if (!metodos.length) {
+      return '';
+    }
+
+    const items = metodos.map((metodo) => {
+      const montoMetodo = Number(
+        metodo.montoEnMonedaSistema
+        ?? metodo.montoEnMonedaVenta
+        ?? metodo.monto
+        ?? 0
+      );
+
+      return `
+        <li style="margin:0; padding:0; display:flex; justify-content:space-between; gap:12px; align-items:flex-start; font-size:0.78rem;">
+          <span style="color:#475569;">${this.escapeHtml(this.formatearTipoPago(metodo.tipo))}</span>
+          <strong style="color:#0f172a; white-space:nowrap;">${this.formatCurrency(montoMetodo)} ${this.escapeHtml(this.monedaSistema)}</strong>
+        </li>
+      `;
+    }).join('');
+
+    return `
+      <div style="margin-top:2px; padding:10px; border-radius:10px; background:#f8fafc; border:1px solid #e2e8f0; display:grid; gap:8px;">
+        <div style="font-size:0.72rem; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:0.04em;">Desglose por método</div>
+        <ul style="list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:6px 12px;">${items}</ul>
+      </div>
+    `;
   }
 
   get totalConsultas(): number {
@@ -2936,65 +3978,40 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   getInfoCardClass(): string {
     const tipo = this.transaccionForm.get('tipo')?.value;
     switch (tipo) {
-      case 'venta':
-        return 'bg-success bg-opacity-10';
       case 'ingreso':
-        return 'bg-info bg-opacity-10';
+        return 'tone-ingreso';
       case 'egreso':
-        return 'bg-danger bg-opacity-10';
-      case 'ajuste':
-        return 'bg-warning bg-opacity-10';
+        return 'tone-egreso';
       default:
-        return 'bg-light';
+        return 'tone-neutral';
     }
   }
 
   getInfoIcon(): string {
-    const tipo = this.transaccionForm.get('tipo')?.value;
-    switch (tipo) {
-      case 'venta':
-        return 'bi-cart-check-fill text-success';
-      case 'ingreso':
-        return 'bi-arrow-up-circle-fill text-info';
-      case 'egreso':
-        return 'bi-arrow-down-circle-fill text-danger';
-      case 'ajuste':
-        return 'bi-arrow-left-right text-warning';
-      default:
-        return 'bi-info-circle-fill text-secondary';
-    }
+    return this.metodoPagoSeleccionado?.icono
+      || (this.transaccionForm.get('tipo')?.value === 'egreso'
+        ? 'bi-arrow-up-right-circle'
+        : 'bi-arrow-down-left-circle');
   }
 
   getInfoTitle(): string {
-    const tipo = this.transaccionForm.get('tipo')?.value;
-    switch (tipo) {
-      case 'venta':
-        return 'Venta registrada:';
-      case 'ingreso':
-        return 'Ingreso extra:';
-      case 'egreso':
-        return 'Egreso/Gasto:';
-      case 'ajuste':
-        return 'Ajuste de caja:';
-      default:
-        return 'Información:';
-    }
+    return this.categoriaTransaccionActual?.label
+      || (this.transaccionForm.get('tipo')?.value === 'egreso' ? 'Egreso manual' : 'Ingreso manual');
   }
 
   getInfoMessage(): string {
-    const tipo = this.transaccionForm.get('tipo')?.value;
-    switch (tipo) {
-      case 'venta':
-        return 'Esta transacción se registrará como una venta normal. Afecta el efectivo teórico.';
-      case 'ingreso':
-        return 'Este ingreso extra se suma al total del día. No afecta el cálculo de efectivo teórico.';
-      case 'egreso':
-        return 'Este egreso resta del efectivo. Asegúrese de registrar el comprobante correspondiente.';
-      case 'ajuste':
-        return 'Este ajuste modifica el saldo de caja. Debe incluir una justificación en observaciones.';
-      default:
-        return 'Complete los campos para registrar la transacción.';
+    const tipo = this.transaccionForm.get('tipo')?.value === 'egreso' ? 'egreso' : 'ingreso';
+    const metodo = this.metodoPagoSeleccionado?.label || 'método seleccionado';
+    const categoria = this.categoriaTransaccionActual?.descripcion || 'Movimiento manual listo para registrarse en el cierre.';
+    const cuenta = this.cuentaReceptoraSeleccionada?.displayTitle
+      ? ` Destino operativo: ${this.cuentaReceptoraSeleccionada.displayTitle}.`
+      : '';
+
+    if (tipo === 'egreso') {
+      return `${categoria} Se registrará como salida de caja usando ${metodo}.${cuenta}`;
     }
+
+    return `${categoria} Se registrará como entrada adicional del día usando ${metodo}.${cuenta}`;
   }
 
   toggleExportMenu(): void {

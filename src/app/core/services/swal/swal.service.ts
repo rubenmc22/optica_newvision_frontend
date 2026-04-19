@@ -120,8 +120,8 @@ export class SwalService {
     return Swal.fire(config);
   }
 
-  showInfo(title: string, text: string): Promise<any> {
-    return Swal.fire({
+  showInfo(title: string, text: string, options: SweetAlertOptions = {}): Promise<any> {
+    const baseConfig: SweetAlertOptions = {
       icon: 'info',
       title: title,
       html: text,
@@ -140,7 +140,35 @@ export class SwalService {
       hideClass: {
         popup: 'animate__animated animate__fadeOutUp animate__faster'
       }
-    });
+    };
+
+    const mergedConfig = {
+      ...baseConfig,
+      ...options
+    } as SweetAlertOptions;
+
+    if (options.customClass) {
+      mergedConfig.customClass = {
+        ...(baseConfig.customClass || {}),
+        ...options.customClass
+      };
+    }
+
+    if (options.showClass) {
+      mergedConfig.showClass = {
+        ...(baseConfig.showClass || {}),
+        ...options.showClass
+      };
+    }
+
+    if (options.hideClass) {
+      mergedConfig.hideClass = {
+        ...(baseConfig.hideClass || {}),
+        ...options.hideClass
+      };
+    }
+
+    return Swal.fire(mergedConfig);
   }
 
   showConfirm(

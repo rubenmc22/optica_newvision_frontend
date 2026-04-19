@@ -375,7 +375,13 @@ export class CierreCajaService {
     private adaptarVentaApi(entrada: any): any {
         const ventaBase = entrada?.venta || entrada || {};
         const totales = entrada?.totales || {};
-        const formaPagoDetalle = entrada?.formaPagoDetalle || entrada?.formaPago || ventaBase?.formaPagoDetalle || entrada?.formaPago || {};
+        const formaPagoDetalleFuente = [
+            entrada?.formaPagoDetalle,
+            ventaBase?.formaPagoDetalle,
+            typeof entrada?.formaPago === 'object' ? entrada.formaPago : null,
+            typeof ventaBase?.formaPago === 'object' ? ventaBase.formaPago : null
+        ].find((item) => item && typeof item === 'object') || {};
+        const formaPagoDetalle = { ...formaPagoDetalleFuente };
         const monedaVenta = this.obtenerCodigoMoneda(ventaBase?.moneda || entrada?.moneda || 'USD');
         const metodosFuente = Array.isArray(entrada?.metodosDePago) || Array.isArray(entrada?.metodosPago)
             ? entrada
@@ -390,6 +396,19 @@ export class CierreCajaService {
                         : []
             );
         const metodosDePago = this.extraerMetodosPagoDeRespuestaApi(metodosFuente, monedaVenta, tasasHistoricas);
+        const abonosNormalizados = Array.isArray(formaPagoDetalleFuente?.abonos)
+            ? formaPagoDetalleFuente.abonos.map((abono: any) => ({
+                ...abono,
+                fecha: abono?.fecha || entrada?.fecha || ventaBase?.fecha,
+                numero: Number(abono?.numero || 0),
+                montoAbonado: Number(abono?.montoAbonado ?? abono?.monto ?? 0),
+                deudaPendiente: Number(abono?.deudaPendiente ?? abono?.deuda ?? 0),
+                observaciones: abono?.observaciones || '',
+                metodosDePago: Array.isArray(abono?.metodosDePago)
+                    ? abono.metodosDePago.map((metodo: any) => this.normalizarMetodoPagoApi(metodo, monedaVenta, tasasHistoricas))
+                    : []
+            }))
+            : [];
         const total = Number(
             totales?.total ??
             entrada?.total ??
@@ -431,7 +450,7 @@ export class CierreCajaService {
             sede: entrada?.sede || ventaBase?.sede || 'guatire',
             total_pagado: totalPagado,
             total: total,
-            estatus_pago: ventaBase?.estatus_pago || entrada?.estatus_pago || (deudaPendiente > 0 ? 'pendiente' : 'completado'),
+            estatus_pago: entrada?.estatus_pago || ventaBase?.estatus_pago || (deudaPendiente > 0 ? 'pendiente' : 'completado'),
             estado: ventaBase?.estatus_venta || entrada?.estado || entrada?.estatus_venta || 'completada',
             formaPago: typeof ventaBase?.formaPago === 'string'
                 ? ventaBase.formaPago
@@ -456,6 +475,7 @@ export class CierreCajaService {
             },
             formaPagoDetalle: {
                 ...formaPagoDetalle,
+                abonos: abonosNormalizados,
                 tipo: formaPagoDetalle?.tipo || ventaBase?.formaPago || 'contado',
                 montoTotal: Number(formaPagoDetalle?.montoTotal ?? total),
                 totalPagado: totalPagado,
@@ -564,6 +584,9 @@ export class CierreCajaService {
     private normalizarResumenBackend(resumen: any): any {
         const ventasApi = Array.isArray(resumen?.ventas) ? resumen.ventas : [];
         const ventas = ventasApi.map((venta: any) => this.adaptarVentaApi(venta));
+        const abonosDelDia = Array.isArray(resumen?.abonosDelDia)
+            ? resumen.abonosDelDia.map((abono: any) => this.normalizarAbonoDelDiaApi(abono))
+            : [];
         const cierreExistente = resumen?.cierreExistente ? this.normalizarCierreApi(resumen.cierreExistente) : null;
         const transaccionesManuales = Array.isArray(resumen?.transaccionesManuales)
             ? resumen.transaccionesManuales.map((transaccion: any) => this.normalizarTransaccionManualApi(transaccion))
@@ -572,6 +595,7 @@ export class CierreCajaService {
         return {
             ...resumen,
             ventas,
+            abonosDelDia,
             cierreExistente,
             transaccionesManuales,
             estadisticas: {
@@ -579,6 +603,42 @@ export class CierreCajaService {
                 cantidadVentas: ventas.length,
                 ...(resumen?.estadisticas || {})
             }
+        };
+    }
+
+    private normalizarAbonoDelDiaApi(abono: any): any {
+        const moneda = this.obtenerCodigoMoneda(abono?.moneda || 'USD');
+        const tasasHistoricas = Array.isArray(abono?.tasasActuales) ? abono.tasasActuales : [];
+
+        return {
+            id: abono?.id || `ABONO-${abono?.ventaKey || Date.now()}`,
+            ventaKey: abono?.ventaKey || null,
+            numeroVenta: abono?.numeroVenta || null,
+            fecha: abono?.fecha ? new Date(abono.fecha) : new Date(),
+            montoAbonado: Number(abono?.montoAbonado || 0),
+            deudaPendiente: Number(abono?.deudaPendiente || 0),
+            observaciones: abono?.observaciones || '',
+            moneda,
+            totalVenta: Number(abono?.totalVenta || 0),
+            formaPago: abono?.formaPago || 'abono',
+            sede: abono?.sede || 'guatire',
+            tipoVenta: abono?.tipoVenta || 'solo_productos',
+            tasasHistoricas,
+            metodosDePago: Array.isArray(abono?.metodosDePago)
+                ? abono.metodosDePago.map((metodo: any) => this.normalizarMetodoPagoApi(metodo, moneda, tasasHistoricas))
+                : [],
+            cliente: {
+                informacion: {
+                    nombreCompleto: abono?.cliente?.nombreCompleto || abono?.cliente?.nombre || 'Cliente',
+                    cedula: abono?.cliente?.cedula || '',
+                    telefono: abono?.cliente?.telefono || '',
+                    email: abono?.cliente?.email || ''
+                }
+            },
+            asesor: typeof abono?.asesor?.nombre === 'string'
+                ? { nombre: abono.asesor.nombre }
+                : { nombre: abono?.asesor?.nombre || abono?.asesor || abono?.usuario || 'Usuario' },
+            usuario: abono?.usuario || abono?.asesor?.nombre || abono?.asesor || 'Usuario'
         };
     }
 

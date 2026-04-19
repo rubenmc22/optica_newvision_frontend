@@ -1,3 +1,40 @@
+export interface TransaccionDetalleMetodoPago {
+  tipo: string;
+  monto: number;
+  moneda: string;
+  montoEnBolivar?: number;
+  montoEnMonedaVenta?: number;
+  montoEnMonedaSistema?: number;
+  tasaUsada?: number;
+  referencia?: string;
+  banco?: string;
+  bancoNombre?: string;
+  bancoCodigo?: string;
+  bancoReceptor?: string;
+  bancoReceptorNombre?: string;
+  bancoReceptorCodigo?: string;
+  cuentaReceptoraId?: string;
+  cuentaReceptoraAlias?: string;
+  cuentaReceptoraUltimos4?: string;
+  cuentaReceptoraEmail?: string;
+  cuentaReceptoraTitular?: string;
+  cuentaReceptoraDocumento?: string;
+  cuentaReceptoraTelefono?: string;
+  cuentaReceptoraDescripcion?: string;
+}
+
+export interface TransaccionCobroDia {
+  id: string;
+  tipo: 'pago_inicial' | 'abono';
+  etiqueta: string;
+  fecha: Date;
+  monto: number;
+  montoSistema?: number;
+  deudaPendiente?: number;
+  observaciones?: string;
+  metodosDePago: TransaccionDetalleMetodoPago[];
+}
+
 export interface Transaccion {
   id: string;
   tipo: 'venta' | 'ingreso' | 'egreso' | 'ajuste';
@@ -19,6 +56,7 @@ export interface Transaccion {
   }>;
   usuario: string;
   estado: 'confirmado' | 'pendiente' | 'anulado' | 'en_proceso';
+  estatusPago?: string;
   categoria: string;
   observaciones?: string;
   comprobante?: string;
@@ -30,30 +68,8 @@ export interface Transaccion {
     email?: string;
   };
   formaPago?: 'contado' | 'abono' | 'cashea' | 'de_contado-pendiente';
-  detalleMetodosPago?: Array<{
-    tipo: string;
-    monto: number;
-    moneda: string;
-    montoEnBolivar?: number;
-    montoEnMonedaVenta?: number;
-    montoEnMonedaSistema?: number;
-    tasaUsada?: number;
-    referencia?: string;
-    banco?: string;
-    bancoNombre?: string;
-    bancoCodigo?: string;
-    bancoReceptor?: string;
-    bancoReceptorNombre?: string;
-    bancoReceptorCodigo?: string;
-    cuentaReceptoraId?: string;
-    cuentaReceptoraAlias?: string;
-    cuentaReceptoraUltimos4?: string;
-    cuentaReceptoraEmail?: string;
-    cuentaReceptoraTitular?: string;
-    cuentaReceptoraDocumento?: string;
-    cuentaReceptoraTelefono?: string;
-    cuentaReceptoraDescripcion?: string;
-  }>;
+  detalleMetodosPago?: TransaccionDetalleMetodoPago[];
+  cobrosDelDia?: TransaccionCobroDia[];
   productos?: Array<{
     nombre: string;
     cantidad: number;

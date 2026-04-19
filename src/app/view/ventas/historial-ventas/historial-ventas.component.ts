@@ -1890,6 +1890,13 @@ export class HistorialVentasComponent implements OnInit {
         this.recargarListaVentas();
       }, 500);
 
+      this.generarVentaService.notificarVentaCreada({
+        sede: this.selectedVenta?.sede,
+        fecha: new Date(),
+        tipo: 'abono',
+        ventaKey: this.selectedVenta?.key
+      });
+
     } else {
       const mensajeError = response.message || response.error ||
         (esPagoCompleto ? 'No se pudo registrar el pago.' : 'No se pudo registrar el abono.');

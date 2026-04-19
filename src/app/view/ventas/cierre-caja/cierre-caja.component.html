@@ -175,19 +175,38 @@
         </div>
 
         <!-- Filtros -->
-        <div class="filtros-panel" *ngIf="mostrarFiltros">
-          <div class="filtros-grid">
-            <select class="filtro-select" formControlName="tipo">
-              <option value="todos">Todos los tipos</option>
-              <option *ngFor="let tipo of tiposTransaccion" [value]="tipo.valor">{{ tipo.label }}</option>
-            </select>
-
-            <select class="filtro-select" formControlName="metodoPago">
-              <option value="todos">Todos los métodos</option>
-              <option *ngFor="let metodo of getMetodosPagoUnicos()" [value]="metodo.valor">{{ metodo.label }}</option>
-            </select>
+        <form class="filtros-panel" *ngIf="mostrarFiltros" [formGroup]="filtroForm">
+          <div class="filtros-panel__header">
+            <div>
+              <span class="filtros-panel__eyebrow">Vista operativa</span>
+              <h4 class="filtros-panel__title">Filtrar movimientos del cierre</h4>
+            </div>
+            <span class="filtros-panel__summary">{{ transaccionesFiltradas.length }} visibles</span>
           </div>
-        </div>
+          <div class="filtros-grid">
+            <label class="filtro-field">
+              <span class="filtro-field__label">
+                <i class="bi bi-diagram-3"></i>
+                Tipo de movimiento
+              </span>
+              <select class="filtro-select" formControlName="tipo">
+                <option value="todos">Todos los movimientos</option>
+                <option *ngFor="let tipo of opcionesFiltroTipoTransaccion" [value]="tipo.valor">{{ tipo.label }}</option>
+              </select>
+            </label>
+
+            <label class="filtro-field">
+              <span class="filtro-field__label">
+                <i class="bi bi-wallet2"></i>
+                Metodo aplicado
+              </span>
+              <select class="filtro-select" formControlName="metodoPago">
+                <option value="todos">Todos los metodos configurados</option>
+                <option *ngFor="let metodo of getOpcionesFiltroMetodoPago()" [value]="metodo.valor">{{ metodo.label }}</option>
+              </select>
+            </label>
+          </div>
+        </form>
 
         <!-- Lista de transacciones con altura dinámica -->
         <div class="transacciones-list-wrapper">
@@ -197,10 +216,12 @@
                 <i class="bi bi-receipt"></i>
               </div>
               <h4>No hay transacciones</h4>
-              <p>Las ventas del día aparecerán aquí automáticamente</p>
+              <p>Los movimientos del dia apareceran aqui automaticamente</p>
             </div>
 
             <div class="transaccion-item" *ngFor="let trans of transaccionesFiltradas"
+              [class.transaccion-item--mobile]="isMobile"
+              [class.transaccion-item--desktop]="!isMobile"
               [ngClass]="{'pendiente': trans.estado === 'pendiente', 'anulado': trans.estado === 'anulado'}">
               <div class="transaccion-icon" [style.background]="getColorTipoTransaccion(trans.tipo) + '20'">
                 <i [class]="getIconoTipoTransaccion(trans.tipo)"
@@ -208,33 +229,188 @@
               </div>
 
               <div class="transaccion-info">
-                <div class="transaccion-header">
-                  <span class="transaccion-desc" [title]="trans.descripcion">{{ trans.descripcion }}</span>
-                  <span class="transaccion-monto" [ngClass]="{
-                      'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
-                      'text-danger': trans.tipo === 'egreso'
-                    }">
-                    {{ (trans.tipo === 'egreso' ? '-' : '+') + (trans.monto | currency) }}
-                  </span>
+                <ng-container *ngIf="!isMobile; else transaccionMobileTemplate">
+                  <div class="transaccion-header">
+                    <div class="transaccion-heading-main">
+                      <span class="transaccion-desc" [title]="getTituloHistorialTransaccion(trans)">{{ getTituloHistorialTransaccion(trans) }}</span>
+                      <span class="badge-estado-pago badge-estado-pago--header" *ngIf="trans.numeroVenta"
+                        [style.background]="getColorEstadoPagoHistorial(trans) + '18'"
+                        [style.color]="getColorEstadoPagoHistorial(trans)">
+                        {{ getTextoEstadoPagoHistorial(trans) }}
+                      </span>
+                    </div>
+                    <span class="transaccion-monto" [ngClass]="{
+                        'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
+                        'text-danger': trans.tipo === 'egreso'
+                      }">
+                      {{ (trans.tipo === 'egreso' ? '-' : '+') + (trans.monto | currency) }}
+                    </span>
+                  </div>
+
+                  <div class="transaccion-subdesc transaccion-subdesc--sale" *ngIf="trans.numeroVenta; else descripcionMovimientoManual">
+                    <span>{{ getEtiquetaHistorialTransaccion(trans) }}</span>
+                    <span>{{ getTextoFormaPagoHistorial(trans) }}</span>
+                  </div>
+
+                  <ng-template #descripcionMovimientoManual>
+                    <div class="transaccion-subdesc" *ngIf="getDescripcionHistorialTransaccion(trans)">
+                      {{ getDescripcionHistorialTransaccion(trans) }}
+                    </div>
+                  </ng-template>
+
+                  <div class="transaccion-meta" *ngIf="!trans.numeroVenta">
+                    <span class="badge-tipo-movimiento" [style.background]="getColorHistorialTransaccion(trans) + '20'"
+                      [style.color]="getColorHistorialTransaccion(trans)">
+                      <i class="bi" [ngClass]="getIconoHistorialTransaccion(trans)"></i>
+                      {{ getEtiquetaHistorialTransaccion(trans) }}
+                    </span>
+                    <span class="badge-metodo" [style.background]="getColorMetodoPago(trans.metodoPago) + '20'"
+                      [style.color]="getColorMetodoPago(trans.metodoPago)">
+                      <i class="bi" [ngClass]="getIconoMetodoPago(trans.metodoPago)"></i>
+                      {{ formatearTipoPago(trans.metodoPago) }}
+                    </span>
+                    <span class="meta-item">
+                      <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
+                    </span>
+                    <span class="meta-item">
+                      <i class="bi bi-person"></i> {{ trans.usuario }}
+                    </span>
+                  </div>
+
+                  <div class="transaccion-detalle" *ngIf="trans.numeroVenta">
+                    <span class="venta-num">Venta #{{ trans.numeroVenta }}</span>
+                    <span class="meta-item meta-item--sale">
+                      <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
+                    </span>
+                    <span class="meta-item meta-item--sale">
+                      <i class="bi bi-person"></i> {{ trans.usuario }}
+                    </span>
+                    <span class="abono-resumen" *ngIf="esAbonoEnHistorial(trans)">{{ getDetalleAbonoHistorial(trans) }}</span>
+                  </div>
+                </ng-container>
+
+                <ng-template #transaccionMobileTemplate>
+                  <div class="transaccion-mobile-card">
+                    <div class="transaccion-mobile-card__top">
+                      <div class="transaccion-mobile-card__title-block">
+                        <span class="transaccion-mobile-card__title" [title]="getTituloHistorialTransaccion(trans)">{{ getTituloHistorialTransaccion(trans) }}</span>
+                        <span class="transaccion-mobile-card__status" *ngIf="trans.numeroVenta"
+                          [style.background]="getColorEstadoPagoHistorial(trans) + '18'"
+                          [style.color]="getColorEstadoPagoHistorial(trans)">
+                          {{ getTextoEstadoPagoHistorial(trans) }}
+                        </span>
+                      </div>
+
+                      <span class="transaccion-mobile-card__amount" [ngClass]="{
+                          'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
+                          'text-danger': trans.tipo === 'egreso'
+                        }">
+                        {{ (trans.tipo === 'egreso' ? '-' : '+') + (trans.monto | currency) }}
+                      </span>
+                    </div>
+
+                    <div class="transaccion-mobile-card__summary" *ngIf="trans.numeroVenta; else transaccionMobileManualTemplate">
+                      <span class="transaccion-mobile-card__chip">{{ getEtiquetaHistorialTransaccion(trans) }}</span>
+                      <span class="transaccion-mobile-card__chip transaccion-mobile-card__chip--soft">{{ getTextoFormaPagoHistorial(trans) }}</span>
+                    </div>
+
+                    <ng-template #transaccionMobileManualTemplate>
+                      <div class="transaccion-mobile-card__summary transaccion-mobile-card__summary--manual" *ngIf="getDescripcionHistorialTransaccion(trans)">
+                        <span class="transaccion-mobile-card__note">{{ getDescripcionHistorialTransaccion(trans) }}</span>
+                      </div>
+
+                      <div class="transaccion-mobile-card__meta" *ngIf="!trans.numeroVenta">
+                        <div class="transaccion-mobile-card__meta-row">
+                          <span class="badge-tipo-movimiento" [style.background]="getColorHistorialTransaccion(trans) + '20'"
+                            [style.color]="getColorHistorialTransaccion(trans)">
+                            <i class="bi" [ngClass]="getIconoHistorialTransaccion(trans)"></i>
+                            {{ getEtiquetaHistorialTransaccion(trans) }}
+                          </span>
+                          <span class="badge-metodo" [style.background]="getColorMetodoPago(trans.metodoPago) + '20'"
+                            [style.color]="getColorMetodoPago(trans.metodoPago)">
+                            <i class="bi" [ngClass]="getIconoMetodoPago(trans.metodoPago)"></i>
+                            {{ formatearTipoPago(trans.metodoPago) }}
+                          </span>
+                        </div>
+
+                        <div class="transaccion-mobile-card__meta-row">
+                          <span class="meta-item">
+                            <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
+                          </span>
+                          <span class="meta-item">
+                            <i class="bi bi-person"></i> {{ trans.usuario }}
+                          </span>
+                        </div>
+                      </div>
+                    </ng-template>
+
+                    <div class="transaccion-mobile-card__detail" *ngIf="trans.numeroVenta">
+                      <span class="venta-num">Venta #{{ trans.numeroVenta }}</span>
+
+                      <div class="transaccion-mobile-card__meta-row">
+                        <span class="meta-item meta-item--sale">
+                          <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
+                        </span>
+                        <span class="meta-item meta-item--sale">
+                          <i class="bi bi-person"></i> {{ trans.usuario }}
+                        </span>
+                      </div>
+
+                      <span class="abono-resumen" *ngIf="esAbonoEnHistorial(trans)">{{ getDetalleAbonoHistorial(trans) }}</span>
+                    </div>
+                  </div>
+                </ng-template>
+
+                <div class="transaccion-actions-row" *ngIf="trans.numeroVenta && puedeExpandirCobrosVenta(trans)">
+                  <button
+                    type="button"
+                    class="btn-toggle-cobros"
+                    (click)="toggleDetalleCobrosVenta(trans, $event)">
+                    <i class="bi" [ngClass]="esDetalleCobrosVentaExpandido(trans) ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    {{ esDetalleCobrosVentaExpandido(trans) ? 'Ocultar cobros del dia' : ('Ver cobros del dia (' + getCantidadAbonosCobroDia(trans) + ')') }}
+                  </button>
                 </div>
 
-                <div class="transaccion-meta">
-                  <span class="badge-metodo" [style.background]="getColorMetodoPago(trans.metodoPago) + '20'"
-                    [style.color]="getColorMetodoPago(trans.metodoPago)">
-                    <i class="bi" [ngClass]="getIconoMetodoPago(trans.metodoPago)"></i>
-                    {{ formatearTipoPago(trans.metodoPago) }}
-                  </span>
-                  <span class="meta-item">
-                    <i class="bi bi-clock"></i> {{ trans.fecha | date:'HH:mm' }}
-                  </span>
-                  <span class="meta-item">
-                    <i class="bi bi-person"></i> {{ trans.usuario }}
-                  </span>
-                </div>
+                <div class="detalle-cobros-dia" *ngIf="esDetalleCobrosVentaExpandido(trans)">
+                  <div class="detalle-cobros-dia__header">
+                    <div>
+                      <span class="detalle-cobros-dia__eyebrow">Detalle del dia</span>
+                      <strong>Cobros aplicados a esta venta durante el cierre</strong>
+                    </div>
+                    <span class="detalle-cobros-dia__total">{{ (trans.montoPagado || trans.monto) | currency }}</span>
+                  </div>
 
-                <div class="transaccion-detalle" *ngIf="trans.numeroVenta">
-                  <span class="venta-num">Venta #{{ trans.numeroVenta }}</span>
-                  <span class="cliente-nom" [title]="trans.cliente?.nombre">{{ trans.cliente?.nombre }}</span>
+                  <div class="detalle-cobros-dia__list">
+                    <div class="detalle-cobro-item" *ngFor="let cobro of trans.cobrosDelDia">
+                      <div class="detalle-cobro-item__icon" [class.is-abono]="cobro.tipo === 'abono'">
+                        <i class="bi" [ngClass]="cobro.tipo === 'abono' ? 'bi-calendar-check' : 'bi-cash-stack'"></i>
+                      </div>
+
+                      <div class="detalle-cobro-item__content">
+                        <div class="detalle-cobro-item__topline">
+                          <strong>{{ cobro.etiqueta }}</strong>
+                          <span>{{ getMontoCobroDiaSistema(cobro) | currency }}</span>
+                        </div>
+
+                        <div class="detalle-cobro-item__meta">
+                          <span>
+                            <i class="bi bi-clock"></i>
+                            {{ cobro.fecha | date:'HH:mm' }}
+                          </span>
+                          <span>
+                            <i class="bi bi-wallet2"></i>
+                            {{ getTextoResumenMetodosCobro(cobro) }}
+                          </span>
+                          <span *ngIf="cobro.deudaPendiente !== undefined && cobro.deudaPendiente !== null">
+                            <i class="bi bi-hourglass-split"></i>
+                            Pendiente: {{ cobro.deudaPendiente | currency:(trans.monedaOriginal || trans.moneda || 'USD'):'symbol':'1.2-2' }}
+                          </span>
+                        </div>
+
+                        <p class="detalle-cobro-item__note" *ngIf="cobro.observaciones">{{ cobro.observaciones }}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1703,174 +1879,183 @@
   </div>
 </div>
 
-<!-- Modal Nueva Transacción - Versión Modernizada (Corregido) -->
 <div class="modal fade" id="transaccionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content border-0 shadow-lg">
-      <!-- Header con gradiente dinámico según tipo de transacción -->
-      <div class="modal-header bg-gradient-primary text-white border-0 py-3">
-        <div class="d-flex align-items-center">
-          <div class="rounded-circle bg-white bg-opacity-25 p-2 me-3">
-            <i class="bi" [ngClass]="transaccionEditando ? 'bi-pencil-fill' : 'bi-plus-circle-fill'" 
-               style="font-size: 1.5rem; color: white;"></i>
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+    <div class="modal-content modal-transaccion-manual border-0 shadow-lg">
+      <div class="modal-header modal-transaccion-header border-0" [ngClass]="getInfoCardClass()">
+        <div class="d-flex align-items-center gap-2">
+          <div class="modal-transaccion-header__icon">
+            <i class="bi" [ngClass]="transaccionEditando ? 'bi-pencil-square' : 'bi-journal-plus'"></i>
           </div>
           <div>
-            <h5 class="modal-title fw-bold mb-0">
-              {{ transaccionEditando ? 'Editar' : 'Nueva' }} Transacción
-            </h5>
-            <small class="text-white-50">
-              {{ transaccionEditando ? 'Modificar transacción existente' : 'Registrar movimiento en caja' }}
-            </small>
+            <h5 class="modal-title fw-bold mb-0">{{ transaccionEditando ? 'Editar' : 'Nueva' }} transacción</h5>
+            <small class="modal-transaccion-header__subtitle">{{ currentUser?.nombre || 'Usuario' }} · {{ fechaSeleccionada | date:'dd/MM/yyyy' }}</small>
           </div>
         </div>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      
+
       <form [formGroup]="transaccionForm" (ngSubmit)="guardarTransaccion()">
-        <div class="modal-body p-4">
-          <!-- Información contextual en cards compactas -->
-          <div class="row g-2 mb-4">
-            <div class="col-md-6">
-              <div class="card border-0 bg-light shadow-sm">
-                <div class="card-body py-2 px-3">
-                  <div class="d-flex align-items-center">
-                    <i class="bi bi-person-circle text-primary me-2" style="font-size: 1.25rem;"></i>
-                    <div>
-                      <small class="text-muted d-block lh-1">Usuario</small>
-                      <span class="fw-semibold small">{{ currentUser?.nombre || 'No identificado' }}</span>
+        <div class="modal-body modal-transaccion-body p-3">
+          <div class="compact-status-row mb-3" [ngClass]="getInfoCardClass()">
+            <i class="bi" [ngClass]="getInfoIcon()"></i>
+            <span>{{ getInfoTitle() }}</span>
+            <strong>{{ (transaccionForm.get('monto')?.value || 0) | currency }}</strong>
+          </div>
+
+          <div class="row g-3 align-items-start">
+            <div class="col-lg-4">
+              <section class="transaccion-section transaccion-section--compact mb-3">
+                <h6 class="section-title">Tipo</h6>
+                <div class="transaccion-choice-grid">
+                  <button
+                    *ngFor="let tipo of tiposTransaccionManual"
+                    type="button"
+                    class="transaccion-choice-card"
+                    [class.is-active]="tipoTransaccionManualActual === tipo.valor"
+                    [style.--accent-color]="tipo.color"
+                    (click)="seleccionarTipoTransaccion(tipo.valor)">
+                    <div class="transaccion-choice-card__icon">
+                      <i class="bi" [ngClass]="tipo.icono"></i>
+                    </div>
+                    <div class="transaccion-choice-card__body">
+                      <strong>{{ tipo.label }}</strong>
+                    </div>
+                  </button>
+                </div>
+              </section>
+
+              <section class="transaccion-section transaccion-section--compact transaccion-section--payments">
+                <div class="section-heading-inline">
+                  <h6 class="section-title mb-0">Tipo de pago</h6>
+                  <span class="section-badge">{{ metodoPagoSeleccionado?.label || 'Sin seleccionar' }}</span>
+                </div>
+                <div class="field-helper field-helper--tight mb-2">
+                  <i class="bi bi-wallet2"></i>
+                  <span>{{ metodosPago.length }} metodo(s) disponibles para este movimiento.</span>
+                </div>
+                <div class="transaccion-choice-grid transaccion-choice-grid--payments">
+                  <button
+                    *ngFor="let metodo of metodosPago"
+                    type="button"
+                    class="transaccion-choice-card transaccion-choice-card--payment"
+                    [class.is-active]="metodoPagoSeleccionado?.valor === metodo.valor"
+                    [style.--accent-color]="metodo.color"
+                    (click)="seleccionarMetodoPago(metodo.valor)">
+                    <div class="transaccion-choice-card__icon">
+                      <i class="bi" [ngClass]="metodo.icono"></i>
+                    </div>
+                    <div class="transaccion-choice-card__body transaccion-choice-card__body--payment">
+                      <strong>{{ metodo.label }}</strong>
+                      <span>
+                        {{ (cuentasReceptorasConfiguradasPorMetodo[metodo.valor] || []).length > 0
+                          ? ((cuentasReceptorasConfiguradasPorMetodo[metodo.valor] || []).length + ' destino(s) configurado(s)')
+                          : 'Sin destino configurado' }}
+                      </span>
+                    </div>
+                    <div class="transaccion-choice-card__side">
+                      <span class="transaccion-choice-card__meta" [class.is-active]="metodoPagoSeleccionado?.valor === metodo.valor">
+                        {{ metodoPagoSeleccionado?.valor === metodo.valor ? 'Activo' : 'Usar' }}
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <div class="col-lg-8">
+              <section class="transaccion-section transaccion-section--compact">
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-cash-stack me-1 text-success"></i>
+                      Monto <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group input-group-modern">
+                      <span class="input-group-text">{{ simboloMonedaSistema }}</span>
+                      <input type="number" class="form-control" formControlName="monto" step="0.01" min="0.01"
+                        (focus)="onInputFocus($event)"
+                        (blur)="onInputBlur($event)"
+                        placeholder="0.00">
+                    </div>
+                  </div>
+
+                  <div class="col-md-8">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-folder2-open me-1 text-warning"></i>
+                      Categoría <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select" formControlName="categoria">
+                      <option *ngFor="let categoria of categoriasTransaccionDisponibles" [value]="categoria.value">
+                        {{ categoria.label }}
+                      </option>
+                    </select>
+                    <div class="field-helper field-helper--tight" *ngIf="categoriaTransaccionActual">
+                      <i class="bi" [ngClass]="categoriaTransaccionActual.icono"></i>
+                      <span>{{ categoriaTransaccionActual.descripcion }}</span>
+                    </div>
+                  </div>
+
+                  <div class="col-md-12">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-card-text me-1"></i>
+                      Descripción <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control" formControlName="descripcion" [placeholder]="placeholderDescripcionTransaccion">
+                  </div>
+
+                  <div class="col-md-12" *ngIf="requiereCuentaReceptora">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-diagram-3 me-1 text-primary"></i>
+                      {{ etiquetaCuentaReceptora }} <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select" formControlName="cuentaReceptoraId">
+                      <option value="">{{ placeholderCuentaReceptora }}</option>
+                      <option *ngFor="let cuenta of cuentasReceptorasMetodoSeleccionado" [value]="cuenta.id">
+                        {{ cuenta.displayText }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-12" *ngIf="mostrarAvisoSinCuentasConfiguradas">
+                    <div class="transaction-inline-alert">
+                      <i class="bi bi-exclamation-triangle"></i>
+                      <span>Este método aún no tiene destinos configurados.</span>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6" *ngIf="transaccionForm.get('metodoPago')?.value">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-receipt me-1"></i>
+                      {{ etiquetaCampoComprobante }} <span class="text-danger" *ngIf="transaccionForm.get('metodoPago')?.value !== 'efectivo'">*</span>
+                    </label>
+                    <input type="text" class="form-control" formControlName="comprobante" [placeholder]="placeholderCampoComprobante">
+                  </div>
+
+                  <div class="col-md-12">
+                    <label class="form-label fw-semibold mb-2">
+                      <i class="bi bi-chat-left-text me-1"></i>
+                      Observaciones
+                    </label>
+                    <textarea class="form-control" formControlName="observaciones" rows="2"
+                      placeholder="Motivo o soporte adicional..."></textarea>
+                    <div class="field-helper field-helper--tight">
+                      <i class="bi bi-info-circle"></i>
+                      <span>{{ ayudaObservacionesTransaccion }}</span>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card border-0 bg-light shadow-sm">
-                <div class="card-body py-2 px-3">
-                  <div class="d-flex align-items-center">
-                    <i class="bi bi-calendar3 text-success me-2" style="font-size: 1.25rem;"></i>
-                    <div>
-                      <small class="text-muted d-block lh-1">Fecha</small>
-                      <span class="fw-semibold small">{{ fechaSeleccionada | date:'dd/MM/yyyy HH:mm' }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Campos principales en grid de 2 columnas -->
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label fw-semibold mb-2">
-                <i class="bi bi-tag me-1 text-primary"></i>
-                Tipo <span class="text-danger">*</span>
-              </label>
-              <select class="form-select" formControlName="tipo">
-                <option value="venta">💵 Venta</option>
-                <option value="ingreso">📈 Ingreso Extra</option>
-                <option value="egreso">📉 Egreso/Gasto</option>
-                <option value="ajuste">🔄 Ajuste</option>
-              </select>
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label fw-semibold mb-2">
-                <i class="bi bi-credit-card me-1 text-info"></i>
-                Método de Pago <span class="text-danger">*</span>
-              </label>
-              <select class="form-select" formControlName="metodoPago">
-                <option value="efectivo">💵 Efectivo</option>
-                <option value="tarjeta">💳 Tarjeta</option>
-                <option value="transferencia">🏦 Transferencia</option>
-                <option value="debito">💳 Débito</option>
-                <option value="credito">💳 Crédito</option>
-                <option value="pagomovil">📱 Pago Móvil</option>
-                <option value="zelle">🌐 Zelle</option>
-              </select>
-            </div>
-
-            <div class="col-md-12">
-              <label class="form-label fw-semibold mb-2">
-                <i class="bi bi-card-text me-1"></i>
-                Descripción <span class="text-danger">*</span>
-              </label>
-              <input type="text" class="form-control" formControlName="descripcion"
-                placeholder="Ej: Pago a proveedor, Venta mostrador, etc.">
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label fw-semibold mb-2">
-                <i class="bi bi-cash-stack me-1 text-success"></i>
-                Monto <span class="text-danger">*</span>
-              </label>
-              <div class="input-group">
-                <span class="input-group-text bg-light border-0">{{ simboloMonedaSistema }}</span>
-                <input type="number" class="form-control" formControlName="monto" step="0.01" min="0.01"
-                  (focus)="onInputFocus($event)"
-                  (blur)="onInputBlur($event)"
-                  placeholder="0.00">
-              </div>
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label fw-semibold mb-2">
-                <i class="bi bi-folder2 me-1 text-warning"></i>
-                Categoría
-              </label>
-              <select class="form-select" formControlName="categoria">
-                <option value="venta_lentes">👓 Venta de Lentes</option>
-                <option value="venta_accesorios">🕶️ Venta de Accesorios</option>
-                <option value="consulta">🏥 Consulta</option>
-                <option value="proveedor">📦 Pago a Proveedor</option>
-                <option value="gasto_operativo">⚙️ Gasto Operativo</option>
-                <option value="retiro">🏧 Retiro de Caja</option>
-                <option value="otro">📝 Otro</option>
-              </select>
-            </div>
-
-            <!-- Campo de referencia para transferencias/pago móvil -->
-            <div class="col-md-12"
-              *ngIf="transaccionForm.get('metodoPago')?.value === 'transferencia' || transaccionForm.get('metodoPago')?.value === 'pagomovil'">
-              <label class="form-label fw-semibold mb-2">
-                <i class="bi bi-receipt me-1"></i>
-                Número de Referencia
-              </label>
-              <input type="text" class="form-control" formControlName="comprobante"
-                placeholder="N° de comprobante o referencia">
-            </div>
-
-            <div class="col-md-12">
-              <label class="form-label fw-semibold mb-2">
-                <i class="bi bi-chat-text me-1"></i>
-                Observaciones
-              </label>
-              <textarea class="form-control" formControlName="observaciones" rows="2"
-                placeholder="Detalles adicionales..."></textarea>
-            </div>
-          </div>
-
-          <!-- Card de información adicional según el tipo -->
-          <div class="mt-4">
-            <div class="card border-0" [ngClass]="getInfoCardClass()">
-              <div class="card-body py-2 px-3">
-                <div class="d-flex align-items-center">
-                  <i class="bi" [ngClass]="getInfoIcon()" style="font-size: 1.25rem; margin-right: 0.75rem;"></i>
-                  <div>
-                    <span class="fw-semibold small">{{ getInfoTitle() }}</span>
-                    <span class="small text-muted ms-2">{{ getInfoMessage() }}</span>
-                  </div>
-                </div>
-              </div>
+              </section>
             </div>
           </div>
         </div>
-        
-        <div class="modal-footer bg-light border-0 py-3">
-          <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+
+        <div class="modal-footer modal-footer-transaccion border-0 py-2 px-3">
+          <button type="button" class="btn btn-footer-system btn-footer-system--neutral" data-bs-dismiss="modal">
             <i class="bi bi-x-circle me-2"></i>Cancelar
           </button>
-          <button type="submit" class="btn btn-primary px-4" [disabled]="transaccionForm.invalid">
-            <i class="bi bi-check-circle me-2"></i>Guardar
+          <button type="submit" class="btn btn-footer-system btn-footer-system--success" [disabled]="transaccionForm.invalid">
+            <i class="bi bi-check-circle me-2"></i>{{ transaccionEditando ? 'Actualizar' : 'Guardar' }} transacción
           </button>
         </div>
       </form>
