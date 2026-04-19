@@ -3983,8 +3983,13 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   getMensajeDiferencia(): string {
     const diff = this.getDiferenciaTotal();
     if (Math.abs(diff) < 0.01) {
+      if (this.tieneAjusteCambiarioEfectivo()) {
+        return 'Arqueo cuadrado. La variación visible corresponde a referencia cambiaria del efectivo y no a un sobrante o faltante operativo.';
+      }
+
       return '¡Perfecto! Todos los montos coinciden con el sistema.';
     }
+
     return diff > 0
       ? 'Sobrante en caja. Verifique si hubo ingresos no registrados.'
       : 'Faltante en caja. Verifique egresos o errores en el conteo.';
@@ -5102,6 +5107,30 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return this.getTotalEfectivoEsperadoPorMoneda(moneda);
   }
 
+  getValorHistoricoMovimientosEfectivo(): number {
+    return this.redondearMonto(this.analisisMetodosPago?.efectivo?.total || 0);
+  }
+
+  getValorActualMovimientosEfectivo(): number {
+    const usd = this.getMovimientoNetoEfectivoPorMoneda('USD');
+    const eur = this.getMovimientoNetoEfectivoPorMoneda('EUR');
+    const ves = this.getMovimientoNetoEfectivoPorMoneda('VES');
+
+    return this.redondearMonto(
+      this.convertirMontoConTasas(usd, 'USD', this.monedaSistema) +
+      this.convertirMontoConTasas(eur, 'EUR', this.monedaSistema) +
+      this.convertirMontoConTasas(ves, 'VES', this.monedaSistema)
+    );
+  }
+
+  getAjusteCambiarioEfectivo(): number {
+    return this.redondearMonto(this.getValorActualMovimientosEfectivo() - this.getValorHistoricoMovimientosEfectivo());
+  }
+
+  tieneAjusteCambiarioEfectivo(): boolean {
+    return Math.abs(this.getAjusteCambiarioEfectivo()) > 0.01;
+  }
+
 
 
 
@@ -5124,10 +5153,9 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     if (!this.cierreActual) return 0;
 
     const inicial = this.getEfectivoInicialPorMoneda(moneda);
-    const ventas = this.getVentasEfectivoPorMoneda(moneda);
-    const egresos = this.getEgresosEfectivoPorMoneda(moneda);
+    const movimientosNetos = this.getMovimientoNetoEfectivoPorMoneda(moneda);
 
-    return this.redondearMonto(inicial + ventas - egresos);
+    return this.redondearMonto(inicial + movimientosNetos);
   }
 
   // Obtener efectivo inicial por moneda
@@ -5147,35 +5175,17 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   // Obtener ventas en efectivo por moneda
-  getVentasEfectivoPorMoneda(moneda: string): number {
+  getMovimientoNetoEfectivoPorMoneda(moneda: string): number {
     switch (moneda) {
       case 'USD':
-        return this.analisisMetodosPago?.efectivo?.porMoneda?.dolar || 0;
+        return this.redondearMonto(this.analisisMetodosPago?.efectivo?.porMoneda?.dolar || 0);
       case 'EUR':
-        return this.analisisMetodosPago?.efectivo?.porMoneda?.euro || 0;
+        return this.redondearMonto(this.analisisMetodosPago?.efectivo?.porMoneda?.euro || 0);
       case 'VES':
-        return this.analisisMetodosPago?.efectivo?.porMoneda?.bolivar || 0;
+        return this.redondearMonto(this.analisisMetodosPago?.efectivo?.porMoneda?.bolivar || 0);
       default:
         return 0;
     }
-  }
-
-  getEgresosEfectivoPorMoneda(moneda: string): number {
-    const monedaObjetivo = this.obtenerCodigoMoneda(moneda);
-
-    const total = this.transacciones
-      .filter(t => t.tipo === 'egreso' && t.metodoPago === 'efectivo')
-      .reduce((sum, transaccion) => {
-        const monedaTransaccion = this.obtenerCodigoMoneda(transaccion.moneda || this.monedaSistema);
-
-        if (monedaTransaccion !== monedaObjetivo) {
-          return sum;
-        }
-
-        return sum + Number(transaccion.monto || 0);
-      }, 0);
-
-    return this.redondearMonto(total);
   }
 
 

@@ -1234,7 +1234,7 @@
                               (blur)="onInputBlur($event)">
                         <button class="btn-auto" type="button" 
                                 (click)="autoCompletarEfectivoPorMoneda('USD')"
-                                title="Auto completar con el total esperado (inicial + ventas)">
+                          title="Auto completar con el total esperado en caja física">
                           <i class="bi bi-magic"></i>
                         </button>
                       </div>
@@ -1247,12 +1247,12 @@
                       </small>
                       <small class="d-block text-muted" style="font-size: 0.65rem;">
                         (Inicial: {{ cierreActual?.efectivoInicialDetalle?.USD | number:'1.2-2' }} + 
-                        Ventas: {{ analisisMetodosPago.efectivo.porMoneda.dolar | number:'1.2-2' }})
+                        Movimientos netos: {{ getMovimientoNetoEfectivoPorMoneda('USD') | number:'1.2-2' }})
                       </small>
                     </div>
                     <div class="info-sistema">
-                      <span class="label">Sistema (solo ventas):</span>
-                      <span class="value">{{ analisisMetodosPago.efectivo.porMoneda.dolar | number:'1.2-2' }} USD</span>
+                      <span class="label">Sistema (movimiento neto):</span>
+                      <span class="value">{{ getMovimientoNetoEfectivoPorMoneda('USD') | number:'1.2-2' }} USD</span>
                     </div>
                     <div class="diferencia-info" *ngIf="getDiferenciaPorMoneda('USD') !== 0">
                       <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaPorMoneda('USD'))">
@@ -1289,7 +1289,7 @@
                               (blur)="onInputBlur($event)">
                         <button class="btn-auto" type="button" 
                                 (click)="autoCompletarEfectivoPorMoneda('EUR')"
-                                title="Auto completar con el total esperado (inicial + ventas)">
+                          title="Auto completar con el total esperado en caja física">
                           <i class="bi bi-magic"></i>
                         </button>
                       </div>
@@ -1302,12 +1302,12 @@
                       </small>
                       <small class="d-block text-muted" style="font-size: 0.65rem;">
                         (Inicial: {{ cierreActual?.efectivoInicialDetalle?.EUR | number:'1.2-2' }} + 
-                        Ventas: {{ analisisMetodosPago.efectivo.porMoneda.euro | number:'1.2-2' }})
+                        Movimientos netos: {{ getMovimientoNetoEfectivoPorMoneda('EUR') | number:'1.2-2' }})
                       </small>
                     </div>
                     <div class="info-sistema">
-                      <span class="label">Sistema (solo ventas):</span>
-                      <span class="value">{{ analisisMetodosPago.efectivo.porMoneda.euro | number:'1.2-2' }} EUR</span>
+                      <span class="label">Sistema (movimiento neto):</span>
+                      <span class="value">{{ getMovimientoNetoEfectivoPorMoneda('EUR') | number:'1.2-2' }} EUR</span>
                     </div>
                     <div class="diferencia-info" *ngIf="getDiferenciaPorMoneda('EUR') !== 0">
                       <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaPorMoneda('EUR'))">
@@ -1344,7 +1344,7 @@
                               (blur)="onInputBlur($event)">
                         <button class="btn-auto" type="button" 
                                 (click)="autoCompletarEfectivoPorMoneda('VES')"
-                                title="Auto completar con el total esperado (inicial + ventas)">
+                          title="Auto completar con el total esperado en caja física">
                           <i class="bi bi-magic"></i>
                         </button>
                       </div>
@@ -1357,12 +1357,12 @@
                       </small>
                       <small class="d-block text-muted" style="font-size: 0.65rem;">
                         (Inicial: {{ cierreActual?.efectivoInicialDetalle?.Bs | number:'1.2-2' }} + 
-                        Ventas: {{ analisisMetodosPago.efectivo.porMoneda.bolivar | number:'1.2-2' }})
+                        Movimientos netos: {{ getMovimientoNetoEfectivoPorMoneda('VES') | number:'1.2-2' }})
                       </small>
                     </div>
                     <div class="info-sistema">
-                      <span class="label">Sistema (solo ventas):</span>
-                      <span class="value">{{ analisisMetodosPago.efectivo.porMoneda.bolivar | number:'1.2-2' }} VES</span>
+                      <span class="label">Sistema (movimiento neto):</span>
+                      <span class="value">{{ getMovimientoNetoEfectivoPorMoneda('VES') | number:'1.2-2' }} VES</span>
                     </div>
                     <div class="diferencia-info" *ngIf="getDiferenciaPorMoneda('VES') !== 0">
                       <span class="badge" [ngClass]="getDiferenciaBadgeClass(getDiferenciaPorMoneda('VES'))">
@@ -1829,21 +1829,44 @@
               <div class="resultado-card">
                 <div class="resultado-titulo">
                   <i class="bi bi-cash-stack"></i>
-                  <span>Efectivo ({{ simboloMonedaSistema }})</span>
+                  <span>Arqueo de Efectivo ({{ simboloMonedaSistema }})</span>
                 </div>
                 <div class="resultado-cifras">
                   <div class="cifra">
-                    <span class="label">Teórico:</span>
+                    <span class="label">Teórico caja física:</span>
                     <span class="value">{{ getEfectivoTeoricoFormateado() }}</span>
                   </div>
                   <div class="cifra">
-                    <span class="label">Real:</span>
+                    <span class="label">Real contado:</span>
                     <span class="value">{{ getEfectivoRealTotalFormateado() }}</span>
                   </div>
                   <div class="cifra diferencia" [ngClass]="getDiferenciaTotalClass()">
-                    <span class="label">Diferencia:</span>
+                    <span class="label">Diferencia de arqueo:</span>
                     <span class="value">{{ getDiferenciaEfectivoFormateada() }}</span>
                   </div>
+                </div>
+                <div class="resultado-referencia-historica">
+                  <div class="resultado-referencia-historica__title">Referencia financiera</div>
+                  <div class="resultado-cifras">
+                    <div class="cifra">
+                      <span class="label">Mov. día a histórico:</span>
+                      <span class="value">{{ getValorHistoricoMovimientosEfectivo() | number:'1.2-2' }} {{ simboloMonedaSistema }}</span>
+                    </div>
+                    <div class="cifra">
+                      <span class="label">Mov. día a tasa cierre:</span>
+                      <span class="value">{{ getValorActualMovimientosEfectivo() | number:'1.2-2' }} {{ simboloMonedaSistema }}</span>
+                    </div>
+                    <div class="cifra" *ngIf="tieneAjusteCambiarioEfectivo()">
+                      <span class="label">Ajuste cambiario:</span>
+                      <span class="value" [ngClass]="getDiferenciaTotalClassValor(getAjusteCambiarioEfectivo())">
+                        {{ getAjusteCambiarioEfectivo() > 0 ? '+' : '' }}{{ getAjusteCambiarioEfectivo() | number:'1.2-2' }} {{ simboloMonedaSistema }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mensaje-alerta alert-success">
+                  <i class="bi bi-info-circle-fill"></i>
+                  <span>El cierre usa arqueo físico por moneda. La referencia histórica se muestra aparte para no mezclar caja real con valorización cambiaria.</span>
                 </div>
               </div>
 

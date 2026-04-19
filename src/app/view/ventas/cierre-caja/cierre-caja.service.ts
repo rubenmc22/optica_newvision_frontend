@@ -397,17 +397,26 @@ export class CierreCajaService {
             );
         const metodosDePago = this.extraerMetodosPagoDeRespuestaApi(metodosFuente, monedaVenta, tasasHistoricas);
         const abonosNormalizados = Array.isArray(formaPagoDetalleFuente?.abonos)
-            ? formaPagoDetalleFuente.abonos.map((abono: any) => ({
-                ...abono,
-                fecha: abono?.fecha || entrada?.fecha || ventaBase?.fecha,
-                numero: Number(abono?.numero || 0),
-                montoAbonado: Number(abono?.montoAbonado ?? abono?.monto ?? 0),
-                deudaPendiente: Number(abono?.deudaPendiente ?? abono?.deuda ?? 0),
-                observaciones: abono?.observaciones || '',
-                metodosDePago: Array.isArray(abono?.metodosDePago)
-                    ? abono.metodosDePago.map((metodo: any) => this.normalizarMetodoPagoApi(metodo, monedaVenta, tasasHistoricas))
-                    : []
-            }))
+                ? formaPagoDetalleFuente.abonos.map((abono: any) => {
+                    const tasasHistoricasAbono = Array.isArray(abono?.tasasActuales) && abono.tasasActuales.length
+                        ? abono.tasasActuales
+                        : this.extraerTasasHistoricasDesdeMetodos(Array.isArray(abono?.metodosDePago) ? abono.metodosDePago : []);
+
+                    const tasasNormalizadasAbono = tasasHistoricasAbono.length ? tasasHistoricasAbono : tasasHistoricas;
+
+                    return {
+                        ...abono,
+                        fecha: abono?.fecha || entrada?.fecha || ventaBase?.fecha,
+                        numero: Number(abono?.numero || 0),
+                        montoAbonado: Number(abono?.montoAbonado ?? abono?.monto ?? 0),
+                        deudaPendiente: Number(abono?.deudaPendiente ?? abono?.deuda ?? 0),
+                        observaciones: abono?.observaciones || '',
+                        tasasActuales: tasasNormalizadasAbono,
+                        metodosDePago: Array.isArray(abono?.metodosDePago)
+                            ? abono.metodosDePago.map((metodo: any) => this.normalizarMetodoPagoApi(metodo, monedaVenta, tasasNormalizadasAbono))
+                            : []
+                    };
+                })
             : [];
         const total = Number(
             totales?.total ??
@@ -608,7 +617,9 @@ export class CierreCajaService {
 
     private normalizarAbonoDelDiaApi(abono: any): any {
         const moneda = this.obtenerCodigoMoneda(abono?.moneda || 'USD');
-        const tasasHistoricas = Array.isArray(abono?.tasasActuales) ? abono.tasasActuales : [];
+        const tasasHistoricas = Array.isArray(abono?.tasasActuales) && abono.tasasActuales.length
+            ? abono.tasasActuales
+            : this.extraerTasasHistoricasDesdeMetodos(Array.isArray(abono?.metodosDePago) ? abono.metodosDePago : []);
 
         return {
             id: abono?.id || `ABONO-${abono?.ventaKey || Date.now()}`,

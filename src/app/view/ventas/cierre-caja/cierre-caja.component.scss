@@ -5363,6 +5363,21 @@ textarea.form-control {
         }
       }
     }
+
+    .resultado-referencia-historica {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed #cbd5e1;
+
+      .resultado-referencia-historica__title {
+        margin-bottom: 0.5rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+    }
     
     .progress-bar-custom {
       height: 4px;
