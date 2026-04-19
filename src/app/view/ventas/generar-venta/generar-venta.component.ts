@@ -3842,7 +3842,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 return false;
         }
 
-        console.log('Todo válido - se puede generar');
         return true;
     }
 
@@ -6768,8 +6767,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             // Obtener costos reales del backend
             this.generarVentaService.getCostosConsulta(historia.id).pipe(take(1)).subscribe({
                 next: (costos) => {
-                    console.log('💰 Costos recibidos:', costos);
-
                     const totalConsulta = parseFloat(costos.totalConsulta) || 0;
                     const costoMedico = parseFloat(costos.costoMedico) || 0;
                     const costoOptica = parseFloat(costos.costoOptica) || 0;
@@ -6788,12 +6785,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
                     this.montoConsultaOriginal = totalConsulta;
                     this.consultaEnCarrito = true;
-
-                    console.log('✅ Valores asignados:', {
-                        pagoMedico: this.pagoMedico,
-                        pagoOptica: this.pagoOptica,
-                        montoConsulta: this.montoConsulta
-                    });
 
                     this.cdr.detectChanges();
 
@@ -7399,10 +7390,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                 return false;
             });
 
-            console.log('Historias para solo consulta:', historiasBase.length);
             historiasBase.forEach(h => {
                 const especialista = h.datosConsulta?.especialista;
-                console.log(`- ${h.nHistoria}: ${especialista?.tipo}, formulaExterna: ${h.formulaExterna}`);
             });
 
         } else {
@@ -7621,16 +7610,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const formulaExterna = datosConsulta?.formulaExterna === true;
         const tieneFormulaOriginal = !!datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
 
-        console.log('Determinando tipo:', {
-            especialistaTipo: especialista?.tipo,
-            esOftalmologo,
-            esOptometrista,
-            esExterno,
-            pagoPendiente,
-            formulaExterna,
-            tieneFormulaOriginal
-        });
-
         // Caso 1: Oftalmólogo interno (no externa)
         if (esOftalmologo && !formulaExterna) {
             return pagoPendiente ? 'oftalmologo_pendiente' : 'oftalmologo_pagado';
@@ -7665,9 +7644,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     }
 
     seleccionarHistoria(historia: any): void {
-        console.log('📋 seleccionarHistoria llamado');
-        console.log('Historia:', historia);
-
         if (this.historiaSeleccionadaId === historia.id) {
             return;
         }
@@ -7683,12 +7659,6 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const tieneFormulaOriginal = !!datosConsulta?.formulaOriginal?.medicoOrigen?.nombre;
 
         const tipo = this.determinarTipoHistoria(historia);
-
-        console.log('Tipo determinado:', tipo);
-        console.log('¿Pago pendiente?:', pagoPendiente);
-        console.log('¿Es oftalmólogo?:', esOftalmologo);
-        console.log('¿Es externa?:', formulaExterna);
-        console.log('¿Tiene fórmula original?:', tieneFormulaOriginal);
 
         // ============================================
         // CASO: SOLO CONSULTA

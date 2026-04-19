@@ -4,8 +4,8 @@ import { DecimalPipe, DatePipe } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subject, forkJoin, of } from 'rxjs';
 import { takeUntil, debounceTime, catchError, map } from 'rxjs/operators';
-import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { CierreCajaService } from './cierre-caja.service';
 import { ExcelExportService } from '../../../core/services/excel-export/excel-export.service';
 import { SystemConfigService } from './../../system-config/system-config.service';
@@ -364,11 +364,23 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.obtenerConfiguracionSistema();
+    this.obtenerTasaCambio();
     this.cargarCuentasReceptorasConfiguradas();
     this.obtenerUsuarioYSede();
     this.suscribirVentasGeneradas();
     this.configurarSuscripciones();
 
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private obtenerConfiguracionSistema(): void {
+    this.systemConfigService.obtenerConfigDesdeBackend();
+    this.monedaSistema = this.systemConfigService.getMonedaPrincipal() || 'USD';
+    this.simboloMonedaSistema = this.systemConfigService.getSimboloMonedaPrincipal() || '$';
   }
 
   private cargarCuentasReceptorasConfiguradas(): void {
@@ -457,8 +469,12 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   private normalizarClaveMetodoPago(valor: string): string {
     const clave = String(valor || '').trim().toLowerCase();
 
-    if (['tarjeta'].includes(clave)) {
+    if (['tarjeta', 'punto_de_venta'].includes(clave)) {
       return 'punto';
+    }
+
+    if (['pago_movil'].includes(clave)) {
+      return 'pagomovil';
     }
 
     return clave;
@@ -643,106 +659,42 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return ['otro_ingreso', 'otro_egreso', 'retiro_caja', 'reembolso_cliente'].includes(categoria);
   }
 
-  private construirDetalleMetodoPagoManual(monto: number): Transaccion['detalleMetodosPago'] {
+  private construirDetalleMetodoPagoManual(monto: number): TransaccionDetalleMetodoPago[] {
+    const metodo = this.normalizarClaveMetodoPago(this.transaccionForm?.get('metodoPago')?.value || 'efectivo');
+    const moneda = this.obtenerCodigoMoneda(this.monedaSistema);
     const cuenta = this.cuentaReceptoraSeleccionada;
-    const metodo = this.normalizarClaveMetodoPago(this.transaccionForm?.get('metodoPago')?.value || '');
-    const referencia = String(this.transaccionForm?.get('comprobante')?.value || '').trim();
+    const comprobante = String(this.transaccionForm?.get('comprobante')?.value || '').trim();
 
-    return [
-      {
-        tipo: metodo,
-        monto: this.redondearMonto(monto),
-        moneda: this.obtenerCodigoMoneda(this.monedaSistema),
-        montoEnMonedaSistema: this.redondearMonto(monto),
-        referencia: referencia || undefined,
-        banco: cuenta?.nombre || undefined,
-        bancoNombre: cuenta?.nombre || undefined,
-        bancoCodigo: cuenta?.codigo || undefined,
-        bancoReceptor: cuenta?.displayText || undefined,
-        bancoReceptorNombre: cuenta?.nombre || undefined,
-        bancoReceptorCodigo: cuenta?.codigo || undefined,
-        cuentaReceptoraId: cuenta?.id || undefined,
-        cuentaReceptoraAlias: cuenta?.displayTitle || undefined,
-        cuentaReceptoraEmail: cuenta?.email || undefined,
-        cuentaReceptoraTitular: cuenta?.ownerName || undefined,
-        cuentaReceptoraDocumento: cuenta?.ownerId || undefined,
-        cuentaReceptoraTelefono: cuenta?.phone || undefined,
-        cuentaReceptoraDescripcion: cuenta?.accountDescription || undefined
-      }
-    ];
+    return [{
+      tipo: metodo,
+      monto,
+      moneda,
+      montoEnMonedaSistema: this.redondearMonto(monto),
+      referencia: comprobante || undefined,
+      banco: cuenta?.nombre,
+      bancoNombre: cuenta?.nombre,
+      bancoReceptor: cuenta?.accountDescription,
+      bancoReceptorNombre: cuenta?.nombre,
+      cuentaReceptoraId: cuenta?.id,
+      cuentaReceptoraAlias: cuenta?.displayTitle,
+      cuentaReceptoraUltimos4: cuenta?.codigo,
+      cuentaReceptoraEmail: cuenta?.email,
+      cuentaReceptoraTitular: cuenta?.ownerName,
+      cuentaReceptoraDocumento: cuenta?.ownerId,
+      cuentaReceptoraTelefono: cuenta?.phone,
+      cuentaReceptoraDescripcion: cuenta?.accountDescription
+    }];
   }
 
-  ngOnDestroy(): void {
-    this.limpiarVistaPreviaHistorial();
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
+  private obtenerTasaCambio(): void {
+    this.tasaCambiariaService.getTasaActual().pipe(takeUntil(this.destroy$)).subscribe({
+      next: (res: any) => {
+        const tasas = Array.isArray(res?.tasas) ? res.tasas : [];
+        const dolar = tasas.find((t: any) => t?.id === 'dolar');
+        const euro = tasas.find((t: any) => t?.id === 'euro');
 
-  // === INICIALIZACIÓN ===
-  private obtenerConfiguracionSistema(): void {
-    this.monedaSistema = this.systemConfigService.getMonedaPrincipal();
-    this.simboloMonedaSistema = this.systemConfigService.getSimboloMonedaPrincipal();
-
-    this.inicioCajaForm.patchValue({
-      moneda: this.monedaSistema
-    });
-
-    // Obtener tasas de cambio
-    this.tasaCambiariaService.getTasaActual().subscribe({
-      next: (response: any) => {
-
-        // Extraer las tasas del array
-        const tasasArray = response?.tasas || [];
-        const tasasCache = this.tasaCambiariaService.getTasaActualValor();
-
-        // Buscar cada tasa por su id
-        const tasaDolar = Number(tasasArray.find((t: any) => t.id === 'dolar')?.valor || tasasCache?.usd || this.tasasReferenciaBolivar.dolar || 1);
-        const tasaEuro = Number(tasasArray.find((t: any) => t.id === 'euro')?.valor || tasasCache?.eur || this.tasasReferenciaBolivar.euro || 1);
-        const tasaBolivar = tasasArray.find((t: any) => t.id === 'bolivar')?.valor || 1;
-
-        this.tasasReferenciaBolivar = {
-          dolar: tasaDolar,
-          euro: tasaEuro,
-          bolivar: tasaBolivar
-        };
-
-        // Configurar tasas según la moneda del sistema
-        if (this.monedaSistema === 'USD') {
-          // Convertir todo a USD
-          // 1 USD = 1 USD
-          // 1 EUR = tasaEuro / tasaDolar USD
-          // 1 VES = 1 / tasaDolar USD
-          this.tasasCambio = {
-            dolar: 1,
-            euro: tasaEuro / tasaDolar,  // Ej: 542.64 / 474.06 = 1.1447
-            bolivar: 1 / tasaDolar       // Ej: 1 / 474.06 = 0.00211
-          };
-        }
-        else if (this.monedaSistema === 'EUR') {
-          // Convertir todo a EUR
-          this.tasasCambio = {
-            dolar: tasaDolar / tasaEuro,  // Ej: 474.06 / 542.64 = 0.8737
-            euro: 1,
-            bolivar: 1 / tasaEuro         // Ej: 1 / 542.64 = 0.00184
-          };
-        }
-        else { // VES o Bs.
-          // Convertir todo a VES
-          this.tasasCambio = {
-            dolar: tasaDolar,   // Ej: 474.06
-            euro: tasaEuro,     // Ej: 542.64
-            bolivar: 1
-          };
-        }
-
-        this.calcularTotalEfectivoInicial();
-        this.refrescarAnalisisMonetario();
-      },
-      error: (error) => {
-        console.error('Error al cargar tasas:', error);
-        const tasasCache = this.tasaCambiariaService.getTasaActualValor();
-        const tasaDolar = Number(tasasCache?.usd || this.tasasReferenciaBolivar.dolar || 1);
-        const tasaEuro = Number(tasasCache?.eur || this.tasasReferenciaBolivar.euro || 1);
+        const tasaDolar = Number(dolar?.valor || this.tasasReferenciaBolivar.dolar || 1);
+        const tasaEuro = Number(euro?.valor || this.tasasReferenciaBolivar.euro || 1);
 
         this.tasasReferenciaBolivar = {
           dolar: tasaDolar,
@@ -750,7 +702,8 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
           bolivar: 1
         };
 
-        // Valores por defecto según moneda del sistema
+        this.tasaCambiariaService.setTasas(tasaDolar, tasaEuro);
+
         if (this.monedaSistema === 'USD') {
           this.tasasCambio = {
             dolar: 1,
@@ -770,6 +723,42 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
             bolivar: 1
           };
         }
+
+        this.calcularTotalEfectivoInicial();
+        this.refrescarAnalisisMonetario();
+      },
+      error: (error) => {
+        console.error('Error al cargar tasas:', error);
+        const tasasCache = this.tasaCambiariaService.getTasaActualValor();
+        const tasaDolar = Number(tasasCache?.usd || this.tasasReferenciaBolivar.dolar || 1);
+        const tasaEuro = Number(tasasCache?.eur || this.tasasReferenciaBolivar.euro || 1);
+
+        this.tasasReferenciaBolivar = {
+          dolar: tasaDolar,
+          euro: tasaEuro,
+          bolivar: 1
+        };
+
+        if (this.monedaSistema === 'USD') {
+          this.tasasCambio = {
+            dolar: 1,
+            euro: tasaDolar > 0 ? (tasaEuro / tasaDolar) : 1,
+            bolivar: tasaDolar > 0 ? (1 / tasaDolar) : 1
+          };
+        } else if (this.monedaSistema === 'EUR') {
+          this.tasasCambio = {
+            dolar: tasaEuro > 0 ? (tasaDolar / tasaEuro) : 1,
+            euro: 1,
+            bolivar: tasaEuro > 0 ? (1 / tasaEuro) : 1
+          };
+        } else {
+          this.tasasCambio = {
+            dolar: tasaDolar,
+            euro: tasaEuro,
+            bolivar: 1
+          };
+        }
+
         this.calcularTotalEfectivoInicial();
         this.refrescarAnalisisMonetario();
       }
@@ -1014,8 +1003,51 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return bancos.reduce((sum: number, banco: any) => sum + Number(banco?.totalOriginal || 0), 0);
   }
 
+  private tieneActividadDestinoMetodo(item: any): boolean {
+    return Math.abs(Number(item?.total || 0)) > 0.01
+      || Math.abs(Number(item?.ingresos || 0)) > 0.01
+      || Math.abs(Number(item?.egresos || 0)) > 0.01
+      || Math.abs(Number(item?.totalOriginal || 0)) > 0.01
+      || Number(item?.cantidad || 0) > 0;
+  }
+
   getDestinosMetodo(tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle'): any[] {
-    return this.analisisMetodosPago?.[tipo]?.porBanco || [];
+    const destinos = this.analisisMetodosPago?.[tipo]?.porBanco || [];
+    return destinos.filter((item: any) => this.tieneActividadDestinoMetodo(item));
+  }
+
+  tieneMovimientosMetodoCierre(tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle'): boolean {
+    const metodo = this.analisisMetodosPago?.[tipo];
+
+    if (!metodo) {
+      return false;
+    }
+
+    return Math.abs(Number(metodo?.total || 0)) > 0.01
+      || Math.abs(Number(metodo?.ingresos || 0)) > 0.01
+      || Math.abs(Number(metodo?.egresos || 0)) > 0.01
+      || Number(metodo?.cantidad || 0) > 0
+      || this.getDestinosMetodo(tipo).length > 0;
+  }
+
+  private sincronizarTabCierreActivo(): void {
+    if (this.tabActivoCierre === 'punto' && this.tieneMovimientosMetodoCierre('punto')) {
+      return;
+    }
+
+    if (this.tabActivoCierre === 'transferencias' && this.tieneMovimientosMetodoCierre('transferencia')) {
+      return;
+    }
+
+    if (this.tabActivoCierre === 'pagomovil' && this.tieneMovimientosMetodoCierre('pagomovil')) {
+      return;
+    }
+
+    if (this.tabActivoCierre === 'zelle' && this.tieneMovimientosMetodoCierre('zelle')) {
+      return;
+    }
+
+    this.tabActivoCierre = 'efectivo';
   }
 
   private limpiarTextoDestino(valor: unknown): string | null {
@@ -1325,6 +1357,64 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return item?.destinoLabel || item?.banco || 'Destino sin identificar';
   }
 
+  private obtenerEtiquetaControlMontoCierre(controlName: string): string {
+    const etiquetasFijas: Record<string, string> = {
+      efectivoRealUSD: 'Efectivo USD',
+      efectivoRealEUR: 'Efectivo EUR',
+      efectivoRealVES: 'Efectivo VES',
+      transferenciaRealTotal: 'Transferencias',
+      pagomovilRealTotal: 'Pago Móvil',
+      zelleReal: 'Zelle'
+    };
+
+    if (etiquetasFijas[controlName]) {
+      return etiquetasFijas[controlName];
+    }
+
+    const prefijos: Array<{ prefijo: string; tipo: 'punto' | 'transferencia' | 'pagomovil' | 'zelle'; etiqueta: string }> = [
+      { prefijo: 'puntoReal_', tipo: 'punto', etiqueta: 'Punto' },
+      { prefijo: 'transferenciaReal_', tipo: 'transferencia', etiqueta: 'Transferencia' },
+      { prefijo: 'pagomovilReal_', tipo: 'pagomovil', etiqueta: 'Pago Móvil' },
+      { prefijo: 'zelleReal_', tipo: 'zelle', etiqueta: 'Zelle' }
+    ];
+
+    const coincidencia = prefijos.find((item) => controlName.startsWith(item.prefijo));
+    if (!coincidencia) {
+      return controlName;
+    }
+
+    const destino = this.getDestinosMetodo(coincidencia.tipo).find((item) => this.getNombreControlMetodo(coincidencia.tipo, item) === controlName);
+    return destino ? `${coincidencia.etiqueta}: ${this.getTituloDestino(destino)}` : coincidencia.etiqueta;
+  }
+
+  private obtenerNombreControlEfectivoMoneda(moneda: 'USD' | 'EUR' | 'VES'): string {
+    switch (moneda) {
+      case 'USD':
+        return 'efectivoRealUSD';
+      case 'EUR':
+        return 'efectivoRealEUR';
+      default:
+        return 'efectivoRealVES';
+    }
+  }
+
+  private controlMontoPermiteNegativos(controlName: string): boolean {
+    return !['efectivoRealUSD', 'efectivoRealEUR', 'efectivoRealVES'].includes(controlName);
+  }
+
+  tieneMovimientoEfectivoMoneda(moneda: 'USD' | 'EUR' | 'VES'): boolean {
+    return Math.abs(this.getMovimientoNetoEfectivoPorMoneda(moneda)) > 0.01;
+  }
+
+  tieneActividadEfectivoMoneda(moneda: 'USD' | 'EUR' | 'VES'): boolean {
+    const inicial = Math.abs(Number(this.getEfectivoInicialPorMoneda(moneda) || 0)) > 0.01;
+    const movimiento = this.tieneMovimientoEfectivoMoneda(moneda);
+    const controlName = this.obtenerNombreControlEfectivoMoneda(moneda);
+    const valorReal = Math.abs(Number(this.cierreForm?.get(controlName)?.value || 0)) > 0.01;
+
+    return inicial || movimiento || valorReal;
+  }
+
   getDetalleDestino(item: any): string | null {
     if (item?.destinoLabel && item?.detalleCuenta) {
       return null;
@@ -1435,7 +1525,9 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   private obtenerControlesMontoRequeridosCierre(): string[] {
-    const controles = ['efectivoRealUSD', 'efectivoRealEUR', 'efectivoRealVES'];
+    const controles = (['USD', 'EUR', 'VES'] as const)
+      .filter((moneda) => this.tieneActividadEfectivoMoneda(moneda))
+      .map((moneda) => this.obtenerNombreControlEfectivoMoneda(moneda));
 
     if (this.getDestinosMetodo('punto').length) {
       controles.push(...this.getDestinosMetodo('punto').map((item) => this.getNombreControlMetodo('punto', item)));
@@ -1443,29 +1535,123 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     if (this.getDestinosMetodo('transferencia').length) {
       controles.push(...this.getDestinosMetodo('transferencia').map((item) => this.getNombreControlMetodo('transferencia', item)));
-    } else if ((this.analisisMetodosPago?.transferencia?.total || 0) > 0) {
+    } else if (this.tieneMovimientosMetodoCierre('transferencia')) {
       controles.push('transferenciaRealTotal');
     }
 
     if (this.getDestinosMetodo('pagomovil').length) {
       controles.push(...this.getDestinosMetodo('pagomovil').map((item) => this.getNombreControlMetodo('pagomovil', item)));
-    } else if ((this.analisisMetodosPago?.pagomovil?.total || 0) > 0) {
+    } else if (this.tieneMovimientosMetodoCierre('pagomovil')) {
       controles.push('pagomovilRealTotal');
     }
 
     if (this.getDestinosMetodo('zelle').length) {
       controles.push(...this.getDestinosMetodo('zelle').map((item) => this.getNombreControlMetodo('zelle', item)));
-    } else if ((this.analisisMetodosPago?.zelle?.total || 0) > 0) {
+    } else if (this.tieneMovimientosMetodoCierre('zelle')) {
       controles.push('zelleReal');
     }
 
     return controles.filter((controlName) => this.cierreForm.contains(controlName));
   }
 
+  private obtenerControlesMontoFaltantesCierre(): string[] {
+    return this.obtenerControlesMontoRequeridosCierre().filter((controlName) => {
+      const valor = this.cierreForm.get(controlName)?.value;
+      return valor === null || valor === undefined || valor === '';
+    });
+  }
+
+  private inicializarMontosFormularioCierre(): void {
+    const controlesRequeridos = new Set(this.obtenerControlesMontoRequeridosCierre());
+    const controlesNoMonetarios = new Set(['notasCierre', 'imprimirResumen', 'enviarEmail', 'adjuntarComprobantes']);
+
+    Object.keys(this.cierreForm.controls).forEach((controlName) => {
+      if (controlesNoMonetarios.has(controlName)) {
+        return;
+      }
+
+      const control = this.cierreForm.get(controlName);
+      if (!control) {
+        return;
+      }
+
+      control.setValue(controlesRequeridos.has(controlName) ? null : 0, { emitEvent: false });
+      control.markAsPristine();
+      control.markAsUntouched();
+    });
+
+    this.cierreForm.patchValue({
+      notasCierre: '',
+      imprimirResumen: false
+    }, { emitEvent: false });
+
+    this.configurarValidadoresFormularioCierre();
+  }
+
+  private normalizarValorMonetarioCierre(valor: any): number | null {
+    if (valor === null || valor === undefined || valor === '') {
+      return null;
+    }
+
+    if (typeof valor === 'number') {
+      return Number.isFinite(valor) ? this.redondearMonto(valor) : null;
+    }
+
+    if (typeof valor === 'string') {
+      const texto = valor.trim().replace(',', '.');
+      if (!texto) {
+        return null;
+      }
+
+      const numero = Number(texto);
+      return Number.isFinite(numero) ? this.redondearMonto(numero) : null;
+    }
+
+    if (typeof valor === 'object') {
+      const candidato = valor.montoReal ?? valor.total ?? valor.monto ?? valor.valor;
+      return this.normalizarValorMonetarioCierre(candidato);
+    }
+
+    return null;
+  }
+
+  private obtenerControlesMontoInvalidosCierre(): string[] {
+    return this.obtenerControlesMontoRequeridosCierre().filter((controlName) => {
+      const valorNormalizado = this.normalizarValorMonetarioCierre(this.cierreForm.get(controlName)?.value);
+      return valorNormalizado === null || (!this.controlMontoPermiteNegativos(controlName) && valorNormalizado < 0);
+    });
+  }
+
+  private sanitizarValoresMonetariosFormularioCierre(): void {
+    if (!this.cierreForm) {
+      return;
+    }
+
+    const controlesNoMonetarios = new Set(['notasCierre', 'imprimirResumen', 'enviarEmail', 'adjuntarComprobantes']);
+
+    Object.keys(this.cierreForm.controls).forEach((controlName) => {
+      if (controlesNoMonetarios.has(controlName)) {
+        return;
+      }
+
+      const control = this.cierreForm.get(controlName);
+      if (!control) {
+        return;
+      }
+
+      const valorNormalizado = this.normalizarValorMonetarioCierre(control.value);
+      if (valorNormalizado !== null && control.value !== valorNormalizado) {
+        control.setValue(valorNormalizado, { emitEvent: false });
+      }
+    });
+  }
+
   private configurarValidadoresFormularioCierre(): void {
     if (!this.cierreForm) {
       return;
     }
+
+    this.sanitizarValoresMonetariosFormularioCierre();
 
     const controlesRequeridos = new Set(this.obtenerControlesMontoRequeridosCierre());
     const controlesNoMonetarios = new Set(['notasCierre', 'imprimirResumen', 'enviarEmail', 'adjuntarComprobantes']);
@@ -1481,7 +1667,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       }
 
       if (controlesRequeridos.has(controlName)) {
-        control.setValidators([Validators.required, Validators.min(0)]);
+        control.setValidators(
+          this.controlMontoPermiteNegativos(controlName)
+            ? [Validators.required]
+            : [Validators.required, Validators.min(0)]
+        );
       } else {
         control.clearValidators();
 
@@ -1496,23 +1686,42 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   private tieneCamposMontosCierreCompletos(): boolean {
     return this.obtenerControlesMontoRequeridosCierre().every((controlName) => {
-      const valor = this.cierreForm.get(controlName)?.value;
-      return valor !== null && valor !== undefined && valor !== '';
+      return this.normalizarValorMonetarioCierre(this.cierreForm.get(controlName)?.value) !== null;
     });
   }
 
+  private tieneMontosCierreValidos(): boolean {
+    return this.obtenerControlesMontoRequeridosCierre().every((controlName) => {
+      const monto = this.normalizarValorMonetarioCierre(this.cierreForm.get(controlName)?.value);
+      return monto !== null && (this.controlMontoPermiteNegativos(controlName) || monto >= 0);
+    });
+  }
+
+  private requiereComentarioCierre(): boolean {
+    return this.tieneMontosCierreValidos() && Math.abs(this.getDiferenciaTotal()) > 0.01;
+  }
+
+  private puedeGestionarEstadoCierreActual(): boolean {
+    if (!this.cierreActual) {
+      return false;
+    }
+
+    const estadoVisual = this.normalizarEstadoVisual(this.cierreActual.estado || '', this.cierreActual.fecha);
+    return estadoVisual === 'abierto' || estadoVisual === 'pendiente-cierre';
+  }
+
   puedeCerrarCaja(): boolean {
+    if (!this.puedeGestionarEstadoCierreActual() || this.guardandoCierre) {
+      return false;
+    }
+
     const comentario = this.cierreForm.get('notasCierre')?.value?.trim() || '';
 
-    if (!this.tieneCamposMontosCierreCompletos()) {
+    if (!this.tieneMontosCierreValidos()) {
       return false;
     }
 
-    if (this.cierreForm.invalid) {
-      return false;
-    }
-
-    if (this.comentarioRequerido && comentario.length < 10) {
+    if (this.requiereComentarioCierre() && !comentario.length) {
       return false;
     }
 
@@ -1922,7 +2131,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     }
 
     const texto = String(fecha || '').trim();
-    const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (match) {
       return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0, 0);
     }
@@ -2068,12 +2277,10 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     // 2. Cargar cierre existente si hay (SOLO para días pasados)
     if (resumen.cierreExistente) {
       this.cierreActual = resumen.cierreExistente;
-      console.log('📦 Cierre existente cargado para historial');
     } else {
       // Para el día actual SIN cierre, dejar cierreActual como null
       // NO crear cierre automáticamente
       this.cierreActual = null;
-      console.log('📭 No hay cierre para este día');
     }
 
     if (resumen.transaccionesManuales && Array.isArray(resumen.transaccionesManuales) && resumen.transaccionesManuales.length) {
@@ -2133,9 +2340,9 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     // Cargar efectivo por moneda
     if (real.efectivo) {
       this.cierreForm.patchValue({
-        efectivoRealUSD: real.efectivo.usd || 0,
-        efectivoRealEUR: real.efectivo.eur || 0,
-        efectivoRealVES: real.efectivo.ves || 0
+        efectivoRealUSD: this.normalizarValorMonetarioCierre(real.efectivo.usd) ?? 0,
+        efectivoRealEUR: this.normalizarValorMonetarioCierre(real.efectivo.eur) ?? 0,
+        efectivoRealVES: this.normalizarValorMonetarioCierre(real.efectivo.ves) ?? 0
       });
     }
 
@@ -2144,7 +2351,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       real.punto.forEach((item: any) => {
         const controlName = this.getNombreControlMetodo('punto', item);
         if (this.cierreForm.contains(controlName)) {
-          this.cierreForm.get(controlName)?.setValue(item.montoReal || 0);
+          this.cierreForm.get(controlName)?.setValue(this.normalizarValorMonetarioCierre(item.montoReal) ?? 0);
         }
       });
     }
@@ -2159,11 +2366,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       transferenciasReales.forEach((item: any) => {
         const controlName = this.getNombreControlMetodo('transferencia', item);
         if (this.cierreForm.contains(controlName)) {
-          this.cierreForm.get(controlName)?.setValue(item.montoReal || 0);
+          this.cierreForm.get(controlName)?.setValue(this.normalizarValorMonetarioCierre(item.montoReal) ?? 0);
         }
       });
     } else if ((real as any).transferencia !== undefined && !Array.isArray(real.transferencia)) {
-      this.cierreForm.patchValue({ transferenciaRealTotal: (real as any).transferencia || 0 });
+      this.cierreForm.patchValue({ transferenciaRealTotal: this.normalizarValorMonetarioCierre((real as any).transferencia) ?? 0 });
     }
 
     // Cargar pago móvil por banco
@@ -2176,11 +2383,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       pagosMovilesReales.forEach((item: any) => {
         const controlName = this.getNombreControlMetodo('pagomovil', item);
         if (this.cierreForm.contains(controlName)) {
-          this.cierreForm.get(controlName)?.setValue(item.montoReal || 0);
+          this.cierreForm.get(controlName)?.setValue(this.normalizarValorMonetarioCierre(item.montoReal) ?? 0);
         }
       });
     } else if ((real as any).pagomovil !== undefined && !Array.isArray(real.pagomovil)) {
-      this.cierreForm.patchValue({ pagomovilRealTotal: (real as any).pagomovil || 0 });
+      this.cierreForm.patchValue({ pagomovilRealTotal: this.normalizarValorMonetarioCierre((real as any).pagomovil) ?? 0 });
     }
 
     // Cargar Zelle
@@ -2189,11 +2396,11 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       zelleReal.forEach((item: any) => {
         const controlName = this.getNombreControlMetodo('zelle', item);
         if (this.cierreForm.contains(controlName)) {
-          this.cierreForm.get(controlName)?.setValue(item.montoReal || 0);
+          this.cierreForm.get(controlName)?.setValue(this.normalizarValorMonetarioCierre(item.montoReal) ?? 0);
         }
       });
     } else if (real.zelle !== undefined) {
-      this.cierreForm.patchValue({ zelleReal: real.zelle });
+      this.cierreForm.patchValue({ zelleReal: this.normalizarValorMonetarioCierre(real.zelle) ?? 0 });
     }
 
     // Cargar notas de cierre
@@ -3052,6 +3259,46 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return formaPago || metodo || 'Sin método identificado';
   }
 
+  private esVentaPendientePorPagoHistorial(transaccion: Transaccion): boolean {
+    if (!transaccion.numeroVenta || transaccion.tipo !== 'venta') {
+      return false;
+    }
+
+    const formaPago = String(transaccion.formaPago || '').trim().toLowerCase();
+    const estadoPago = String(transaccion.estatusPago || '').trim().toLowerCase();
+    const deudaPendiente = Number(transaccion.deudaPendiente || 0);
+
+    return formaPago === 'de_contado-pendiente' && (
+      estadoPago === 'pendiente'
+      || estadoPago === 'por_pagar'
+      || deudaPendiente > 0.009
+    );
+  }
+
+  private getMontoEsperadoTransaccion(transaccion: Transaccion): number {
+    const montoTotal = Number(transaccion.montoTotal ?? NaN);
+
+    if (Number.isFinite(montoTotal) && montoTotal > 0) {
+      return this.redondearMonto(montoTotal);
+    }
+
+    const montoCobrado = this.getMontoTransaccionSistema(transaccion);
+    const deudaPendiente = Number(transaccion.deudaPendiente || 0);
+
+    return this.redondearMonto(Math.max(0, montoCobrado + (Number.isFinite(deudaPendiente) ? deudaPendiente : 0)));
+  }
+
+  getTextoMontoHistorialTransaccion(transaccion: Transaccion): string {
+    const montoSistema = this.redondearMonto(this.getMontoTransaccionSistema(transaccion));
+
+    if (this.esVentaPendientePorPagoHistorial(transaccion)) {
+      return `${this.formatCurrency(montoSistema)}${this.simboloMonedaSistema} / ${this.formatCurrency(this.getMontoEsperadoTransaccion(transaccion))}${this.simboloMonedaSistema}`;
+    }
+
+    const signo = transaccion.tipo === 'egreso' ? '-' : '+';
+    return `${signo}${this.formatCurrency(montoSistema)}${this.simboloMonedaSistema}`;
+  }
+
   getTextoEstadoPagoHistorial(transaccion: Transaccion): string {
     if (!transaccion.numeroVenta) {
       return '';
@@ -3212,8 +3459,33 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       : `Cierre del ${fechaTexto}`;
   }
 
+  puedeEmitirReporteActual(): boolean {
+    if (!this.cierreActual?.detalleCierreReal) {
+      return false;
+    }
+
+    const estadoVisual = this.normalizarEstadoVisual(this.cierreActual?.estado || '', this.cierreActual?.fecha);
+    return ['cerrado', 'conciliado', 'revisado'].includes(estadoVisual);
+  }
+
+  private validarAccionReporteActual(accion: string): boolean {
+    if (this.puedeEmitirReporteActual()) {
+      return true;
+    }
+
+    this.swalService.showWarning(
+      'Cierre no disponible',
+      `Solo puedes ${accion} cuando la caja esté cerrada y el cierre haya sido registrado. Puede estar conciliado o con descuadre, pero no seguir abierto.`
+    );
+    return false;
+  }
+
   exportarReporte(): void {
     this.mostrarMenuExport = false;
+
+    if (!this.validarAccionReporteActual('exportar el reporte')) {
+      return;
+    }
 
     if (!this.cierreActual && this.transaccionesFiltradas.length === 0) {
       this.swalService.showWarning('Sin datos', 'No hay datos para exportar');
@@ -3253,6 +3525,10 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   }
 
   imprimirResumen(): void {
+    if (!this.validarAccionReporteActual('imprimir el cierre')) {
+      return;
+    }
+
     this.abrirVentanaReporte(true);
   }
 
@@ -3629,6 +3905,16 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       .slice(0, 3);
   }
 
+  private getTotalMetodosNetosCierre(cierre: CierreDiario): number {
+    return this.redondearMonto(
+      Number(cierre?.metodosPago?.efectivo?.total || 0)
+      + Number(cierre?.metodosPago?.punto?.total || 0)
+      + Number(cierre?.metodosPago?.transferencia?.total || 0)
+      + Number(cierre?.metodosPago?.pagomovil?.total || 0)
+      + Number(cierre?.metodosPago?.zelle?.total || 0)
+    );
+  }
+
   private getEstadoTecnicoHistorialClave(cierre: CierreDiario): 'conciliado' | 'descuadre' | 'auditado' | 'cerrado' | 'pendiente' {
     const estado = String(cierre?.estado || '').trim().toLowerCase();
     const estadoConciliacion = String(cierre?.estadoConciliacion || cierre?.detalleCierreReal?.estadoConciliacion || '').trim().toLowerCase();
@@ -3815,21 +4101,17 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Resetear valores del formulario (sin emitir eventos)
-    this.cierreForm.patchValue({
-      efectivoRealUSD: 0,
-      efectivoRealEUR: 0,
-      efectivoRealVES: 0,
-      transferenciaRealTotal: 0,
-      pagomovilRealTotal: 0,
-      zelleReal: 0,
-      notasCierre: '',
-      imprimirResumen: false
-    }, { emitEvent: false });
-
     // Limpiar y reconstruir controles de bancos
     this.limpiarControlesBancos();
     this.agregarControlesBancos();
+
+    if (this.cierreActual?.detalleCierreReal) {
+      this.precargarValoresReales();
+    } else {
+      this.inicializarMontosFormularioCierre();
+    }
+
+    this.sincronizarTabCierreActivo();
 
     // Suscribirse a cambios en el formulario (solo una vez)
     if (!this._suscripcionFormulario) {
@@ -4917,30 +5199,20 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   async exportarReportePDF(): Promise<void> {
     this.mostrarMenuExport = false;
 
+    if (!this.validarAccionReporteActual('exportar el PDF')) {
+      return;
+    }
+
     if (!this.hayDatosParaExportar()) {
       this.swalService.showWarning('Sin datos', 'No hay datos para exportar a PDF');
       return;
     }
 
     const reporte = this.construirReporteEstructurado();
-    const contenedor = this.crearContenedorTemporalReporte(reporte);
 
     this.swalService.showLoadingAlert('Generando PDF...');
 
     try {
-      document.body.appendChild(contenedor);
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-      const canvas = await html2canvas(contenedor, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        width: Math.ceil(contenedor.scrollWidth),
-        height: Math.ceil(contenedor.scrollHeight),
-        windowWidth: Math.ceil(contenedor.scrollWidth),
-        windowHeight: Math.ceil(contenedor.scrollHeight)
-      });
-
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -4950,21 +5222,228 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const marginX = 12;
+      const usableWidth = pageWidth - (marginX * 2);
+      let cursorY = 14;
 
-      let remainingHeight = imgHeight;
-      let offsetY = 0;
+      const addSectionTitle = (title: string): void => {
+        if (cursorY > pageHeight - 24) {
+          pdf.addPage();
+          cursorY = 16;
+        }
 
-      pdf.addImage(imgData, 'PNG', 0, offsetY, imgWidth, imgHeight, undefined, 'FAST');
-      remainingHeight -= pageHeight;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11.5);
+        pdf.setTextColor(15, 23, 42);
+        pdf.text(title, marginX, cursorY);
+        cursorY += 4;
+      };
 
-      while (remainingHeight > 0.1) {
-        offsetY = remainingHeight - imgHeight;
+      const addTable = (
+        head: string[][],
+        body: Array<Array<string | number>>,
+        columnStyles?: Record<number, any>
+      ): void => {
+        autoTable(pdf, {
+          startY: cursorY,
+          margin: { left: marginX, right: marginX },
+          head,
+          body,
+          theme: 'grid',
+          styles: {
+            font: 'helvetica',
+            fontSize: 8.2,
+            cellPadding: 2.4,
+            lineColor: [226, 232, 240],
+            lineWidth: 0.1,
+            textColor: [15, 23, 42],
+            overflow: 'linebreak',
+            valign: 'top'
+          },
+          headStyles: {
+            fillColor: [248, 250, 252],
+            textColor: [51, 65, 85],
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: {
+            fillColor: [250, 250, 250]
+          },
+          columnStyles
+        });
+
+        cursorY = ((pdf as any).lastAutoTable?.finalY || cursorY) + 6;
+      };
+
+      const addCompactKeyValueSection = (title: string, items: any[], forzarMoneda: boolean = false): void => {
+        addSectionTitle(title);
+
+        autoTable(pdf, {
+          startY: cursorY,
+          margin: { left: marginX, right: marginX },
+          body: this.construirFilasCompactasReporte(items, forzarMoneda),
+          theme: 'grid',
+          styles: {
+            font: 'helvetica',
+            fontSize: 8.1,
+            cellPadding: 2.3,
+            lineColor: [226, 232, 240],
+            lineWidth: 0.1,
+            textColor: [15, 23, 42],
+            overflow: 'linebreak',
+            valign: 'middle'
+          },
+          alternateRowStyles: {
+            fillColor: [250, 250, 250]
+          },
+          columnStyles: {
+            0: { cellWidth: 36, fontStyle: 'bold', textColor: [100, 116, 139], fillColor: [248, 250, 252] },
+            1: { cellWidth: 57, fontStyle: 'bold' },
+            2: { cellWidth: 36, fontStyle: 'bold', textColor: [100, 116, 139], fillColor: [248, 250, 252] },
+            3: { cellWidth: 57, fontStyle: 'bold' }
+          }
+        });
+
+        cursorY = ((pdf as any).lastAutoTable?.finalY || cursorY) + 6;
+      };
+
+      pdf.setFillColor(15, 76, 129);
+      pdf.roundedRect(marginX, cursorY, usableWidth, 24, 3, 3, 'F');
+
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(15);
+      pdf.text('Cierre de Caja Diario', marginX + 4, cursorY + 7);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      const meta = [
+        this.obtenerTextoSedeReporte(reporte.sede, reporte.direccion),
+        `Fecha: ${reporte.fecha}`,
+        `Generado: ${reporte.generadoEn}`
+      ];
+      pdf.text(meta, marginX + 4, cursorY + 12.5);
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(9.5);
+      const estadoWidth = pdf.getTextWidth(reporte.estado) + 8;
+      pdf.setFillColor(255, 255, 255);
+      pdf.setTextColor(15, 76, 129);
+      pdf.roundedRect(pageWidth - marginX - estadoWidth, cursorY + 4, estadoWidth, 7, 3, 3, 'F');
+      pdf.text(reporte.estado, pageWidth - marginX - estadoWidth + 4, cursorY + 8.8);
+
+      cursorY += 31;
+
+      addCompactKeyValueSection('Indicadores clave', reporte.kpis, true);
+      addCompactKeyValueSection('Resumen operativo', reporte.resumenOperativo);
+      addCompactKeyValueSection('Conciliación del cierre', reporte.conciliacion);
+
+      addSectionTitle('Caja fisica por moneda');
+      addTable(
+        [[
+          'Moneda',
+          'Inicial de caja',
+          'Esperado final',
+          ...(reporte.mostrarConciliacion ? ['Real contado'] : [])
+        ]],
+        reporte.efectivoPorMoneda.map((fila: any) => ([
+          fila.moneda,
+          `${this.formatCurrency(Number(fila.inicial || 0))}`,
+          `${this.formatCurrency(Number(fila.esperado || 0))}`,
+          ...(reporte.mostrarConciliacion ? [`${this.formatCurrency(Number(fila.real || 0))}`] : [])
+        ]))
+      );
+
+      addSectionTitle('Formas de pago');
+      addTable(
+        [['Forma', 'Total', 'Deuda pendiente', 'Cantidad']],
+        reporte.formasPago.map((fila: any) => ([
+          fila.forma,
+          `${this.formatCurrency(Number(fila.total || 0))}${this.simboloMonedaSistema}`,
+          `${this.formatCurrency(Number(fila.deudaPendiente || 0))}${this.simboloMonedaSistema}`,
+          Number(fila.cantidad || 0)
+        ]))
+      );
+
+      reporte.metodos.forEach((seccion: any) => {
+        const mostrarConciliacionMetodo = seccion.mostrarConciliacion ?? reporte.mostrarConciliacion;
+        addSectionTitle(`${seccion.titulo} · ${this.formatCurrency(Number(seccion.total || 0))}${this.simboloMonedaSistema}`);
+        addTable(
+          [[
+            'Destino',
+            'Monto original',
+            'Sistema',
+            ...(mostrarConciliacionMetodo ? ['Real', 'Diferencia'] : []),
+            'Ops'
+          ]],
+          seccion.filas.map((fila: any) => ([
+            [fila.destino, fila.detalle, fila.referencia].filter(Boolean).join('\n'),
+            fila.montoOriginal || 'N/A',
+            `${this.formatCurrency(Number(fila.sistema || 0))}${this.simboloMonedaSistema}`,
+            ...(mostrarConciliacionMetodo ? [
+              fila.real !== null ? `${this.formatCurrency(Number(fila.real || 0))}${this.simboloMonedaSistema}` : 'N/A',
+              fila.real !== null ? `${this.formatCurrency(Number(fila.diferencia || 0))}${this.simboloMonedaSistema}` : 'N/A'
+            ] : []),
+            Number(fila.operaciones || 0)
+          ])),
+          { 0: { cellWidth: 55 } }
+        );
+      });
+
+      if (reporte.metodos.length) {
+        addSectionTitle(`Suma neta por metodos · ${this.formatCurrency(Number(reporte.totalMetodos || 0))}${this.simboloMonedaSistema}`);
+        addTable(
+          [['Concepto', 'Valor']],
+          [
+            ['Suma neta por metodos del dia', `${this.formatCurrency(Number(reporte.totalMetodos || 0))}${this.simboloMonedaSistema}`],
+            ['Alcance', reporte.notaMetodos || 'Incluye efectivo cobrado del dia y metodos electronicos. No incluye efectivo inicial de apertura.']
+          ]
+        );
+      }
+
+      addSectionTitle(`Transacciones del día · ${reporte.transacciones.length} registros`);
+      addTable(
+        [['Hora', 'Descripción', 'Tipo', 'Método', 'Monto', 'Usuario']],
+        (reporte.transacciones.length
+          ? reporte.transacciones.map((fila: any) => ([
+            fila.hora,
+            [
+              fila.descripcion,
+              fila.numeroVenta ? `Venta #${fila.numeroVenta}${fila.cliente ? ` · ${fila.cliente}` : ''}` : ''
+            ].filter(Boolean).join('\n'),
+            fila.tipo,
+            fila.metodo,
+            fila.montoTexto || `${this.formatCurrency(Number(fila.monto || 0))}${this.simboloMonedaSistema}`,
+            fila.usuario
+          ]))
+          : [['-', 'No hay transacciones registradas para este cierre.', '-', '-', '-', '-']]),
+        {
+          0: { cellWidth: 16 },
+          1: { cellWidth: 58 },
+          2: { cellWidth: 19 },
+          3: { cellWidth: 36 },
+          4: { cellWidth: 28 },
+          5: { cellWidth: 'auto' }
+        }
+      );
+
+      if (cursorY > pageHeight - 20) {
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, offsetY, imgWidth, imgHeight, undefined, 'FAST');
-        remainingHeight -= pageHeight;
+        cursorY = 16;
+      }
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8.2);
+      pdf.setTextColor(100, 116, 139);
+      const notaFinal = pdf.splitTextToSize(reporte.notaFinal, usableWidth);
+      pdf.text(notaFinal, marginX, cursorY);
+
+      const totalPages = pdf.getNumberOfPages();
+      for (let page = 1; page <= totalPages; page++) {
+        pdf.setPage(page);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text(`Página ${page} de ${totalPages}`, pageWidth - marginX, pageHeight - 6, { align: 'right' });
       }
 
       pdf.save(`${this.obtenerNombreBaseReporte()}.pdf`);
@@ -4973,9 +5452,6 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       console.error('Error al exportar reporte a PDF:', error);
       this.swalService.showError('Error', 'No se pudo exportar el reporte a PDF.');
     } finally {
-      if (contenedor.parentNode) {
-        contenedor.parentNode.removeChild(contenedor);
-      }
       this.swalService.closeLoading();
     }
   }
@@ -5121,24 +5597,93 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     };
   }
 
+  private construirTextoDesgloseEfectivoVentas(montos: { USD: number; EUR: number; VES: number }): string {
+    const partes = [
+      { moneda: 'USD', monto: Number(montos?.USD || 0) },
+      { moneda: 'EUR', monto: Number(montos?.EUR || 0) },
+      { moneda: 'VES', monto: Number(montos?.VES || 0) }
+    ]
+      .filter((item) => Math.abs(item.monto) > 0.01)
+      .map((item) => `${item.moneda} ${this.formatCurrency(item.monto)}`);
+
+    return partes.join(' · ') || 'Sin movimiento en efectivo';
+  }
+
+  private construirSeccionEfectivoVentasReporte(
+    montosOriginales: { USD: number; EUR: number; VES: number },
+    totalMetodo: number,
+    operaciones: number
+  ): any | null {
+    const total = this.redondearMonto(Number(totalMetodo || 0));
+    const desgloseOriginal = this.construirTextoDesgloseEfectivoVentas(montosOriginales);
+
+    if (Math.abs(total) <= 0.01 && desgloseOriginal === 'Sin movimiento en efectivo') {
+      return null;
+    }
+
+    return {
+      tipo: 'efectivo',
+      titulo: 'Efectivo por ventas',
+      total,
+      mostrarConciliacion: false,
+      filas: [{
+        destino: 'Cobros en caja del dia',
+        detalle: 'No incluye el efectivo inicial de apertura.',
+        referencia: desgloseOriginal,
+        montoOriginal: desgloseOriginal,
+        sistema: total,
+        real: null,
+        diferencia: null,
+        operaciones: Number(operaciones || 0)
+      }]
+    };
+  }
+
+  private getTotalMetodosNetosActual(): number {
+    return this.redondearMonto(
+      Number(this.analisisMetodosPago?.efectivo?.total || 0)
+      + Number(this.analisisMetodosPago?.punto?.total || 0)
+      + Number(this.analisisMetodosPago?.transferencia?.total || 0)
+      + Number(this.analisisMetodosPago?.pagomovil?.total || 0)
+      + Number(this.analisisMetodosPago?.zelle?.total || 0)
+    );
+  }
+
+  private getNotaTotalMetodosReporte(): string {
+    return 'Incluye efectivo cobrado en ventas/cobros del dia y metodos electronicos. No incluye el efectivo inicial de apertura.';
+  }
+
   private construirReporteEstructurado(): any {
     const detalleInicial = this.cierreActual?.efectivoInicialDetalle;
     const mostrarConciliacion = !!this.cierreActual?.detalleCierreReal;
     const diferenciaTotal = this.getDiferenciaTotal();
     const diferenciaEfectivo = this.getDiferenciaEfectivo();
-    const diferenciaOtrosMetodos = this.getDiferenciaOtrosMetodos();
-    const transacciones = this.obtenerTransaccionesReporte().map((transaccion) => ({
+    const desgloseDiferencias = this.getDesgloseDiferenciasActual();
+    const transaccionesBase = this.obtenerTransaccionesReporte();
+    const transacciones = transaccionesBase.map((transaccion) => ({
       hora: this.datePipe.transform(transaccion.fecha, 'HH:mm') || '',
       descripcion: transaccion.descripcion,
       tipo: transaccion.tipo,
       metodo: this.getTextoFormaPagoMetodoHistorial(transaccion),
       monto: Number(transaccion.monto || 0),
+      montoTexto: this.getTextoMontoHistorialTransaccion(transaccion),
       usuario: transaccion.usuario || '',
       numeroVenta: transaccion.numeroVenta || '',
       cliente: transaccion.cliente?.nombre || ''
     }));
 
+    const efectivoVentasOriginal = {
+      USD: Number(this.analisisMetodosPago?.efectivo?.porMoneda?.dolar || 0),
+      EUR: Number(this.analisisMetodosPago?.efectivo?.porMoneda?.euro || 0),
+      VES: Number(this.analisisMetodosPago?.efectivo?.porMoneda?.bolivar || 0)
+    };
+
     const metodos = [
+      this.construirSeccionEfectivoVentasReporte(
+        efectivoVentasOriginal,
+        Number(this.analisisMetodosPago?.efectivo?.total || 0),
+        Number(this.analisisMetodosPago?.efectivo?.cantidad || 0)
+      ),
       this.construirSeccionMetodoReporte('punto', 'Punto de venta'),
       this.construirSeccionMetodoReporte('transferencia', 'Transferencias'),
       this.construirSeccionMetodoReporte('pagomovil', 'Pago móvil'),
@@ -5166,22 +5711,29 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         { label: 'Transacciones del día', value: transacciones.length },
         { label: 'Ventas pendientes', value: this.analisisVentasPendientes.length },
         { label: 'Egresos registrados', value: this.getTotalEgresos(), format: 'currency' },
-        { label: 'Cobrado e ingresos netos', value: this.netoDiaKPI, format: 'currency' },
+        { label: 'Cobrado e ingresos netos del dia', value: this.netoDiaKPI, format: 'currency' },
         { label: 'Notas de cierre', value: this.cierreActual?.notasCierre || this.cierreActual?.detalleCierreReal?.notasCierre || 'Sin observaciones', format: 'text' }
       ],
       conciliacion: [
         { label: 'Efectivo teórico final', value: this.getEfectivoFinalTeorico(), format: 'currency' },
         { label: 'Efectivo real contado', value: this.getEfectivoRealTotal(), format: 'currency' },
         { label: 'Diferencia de efectivo', value: diferenciaEfectivo, format: 'currency', clase: diferenciaEfectivo > 0 ? 'positive' : diferenciaEfectivo < 0 ? 'negative' : '' },
-        ...(Math.abs(diferenciaOtrosMetodos) > 0.01 ? [{ label: 'Ajuste por otros métodos', value: diferenciaOtrosMetodos, format: 'currency', clase: diferenciaOtrosMetodos > 0 ? 'positive' : diferenciaOtrosMetodos < 0 ? 'negative' : '' }] : []),
+        ...desgloseDiferencias
+          .filter((item) => item.clave !== 'efectivo')
+          .map((item) => ({
+            label: `Diferencia en ${item.label.toLowerCase()}`,
+            value: item.valor,
+            format: 'currency',
+            clase: item.valor > 0 ? 'positive' : item.valor < 0 ? 'negative' : ''
+          })),
         { label: 'Diferencia total conciliada', value: diferenciaTotal, format: 'currency', clase: diferenciaTotal > 0 ? 'positive' : diferenciaTotal < 0 ? 'negative' : '' },
         { label: 'Usuario apertura', value: this.cierreActual?.usuarioApertura || 'N/A', format: 'text' },
         { label: 'Usuario cierre', value: this.cierreActual?.usuarioCierre || 'N/A', format: 'text' }
       ],
       efectivoPorMoneda: [
-        { moneda: 'USD', inicial: Number(detalleInicial?.USD || 0), ventas: Number(this.analisisMetodosPago.efectivo.porMoneda.dolar || 0), real: Number(this.cierreActual?.detalleCierreReal?.efectivo?.usd || 0) },
-        { moneda: 'EUR', inicial: Number(detalleInicial?.EUR || 0), ventas: Number(this.analisisMetodosPago.efectivo.porMoneda.euro || 0), real: Number(this.cierreActual?.detalleCierreReal?.efectivo?.eur || 0) },
-        { moneda: 'VES', inicial: Number(detalleInicial?.Bs || 0), ventas: Number(this.analisisMetodosPago.efectivo.porMoneda.bolivar || 0), real: Number(this.cierreActual?.detalleCierreReal?.efectivo?.ves || 0) }
+        { moneda: 'USD', inicial: Number(detalleInicial?.USD || 0), esperado: this.getTotalEfectivoEsperadoPorMoneda('USD'), real: Number(this.cierreActual?.detalleCierreReal?.efectivo?.usd || 0) },
+        { moneda: 'EUR', inicial: Number(detalleInicial?.EUR || 0), esperado: this.getTotalEfectivoEsperadoPorMoneda('EUR'), real: Number(this.cierreActual?.detalleCierreReal?.efectivo?.eur || 0) },
+        { moneda: 'VES', inicial: Number(detalleInicial?.Bs || 0), esperado: this.getTotalEfectivoEsperadoPorMoneda('VES'), real: Number(this.cierreActual?.detalleCierreReal?.efectivo?.ves || 0) }
       ],
       formasPago: [
         { forma: 'Contado', total: Number(this.analisisFormasPago.contado.total || 0), deudaPendiente: 0, cantidad: Number(this.analisisFormasPago.contado.cantidad || 0) },
@@ -5190,6 +5742,8 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         { forma: 'De contado pendiente por pago', total: Number(this.analisisFormasPago.deContadoPendiente.total || 0), deudaPendiente: Number(this.analisisFormasPago.deContadoPendiente.deudaPendiente || 0), cantidad: Number(this.analisisFormasPago.deContadoPendiente.cantidad || 0) }
       ],
       metodos,
+      totalMetodos: this.getTotalMetodosNetosActual(),
+      notaMetodos: this.getNotaTotalMetodosReporte(),
       transacciones
     };
   }
@@ -5218,6 +5772,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       tipo: transaccion.tipo,
       metodo: this.getTextoFormaPagoMetodoHistorial(transaccion),
       monto: Number(transaccion.montoSistema ?? transaccion.monto ?? 0),
+      montoTexto: this.getTextoMontoHistorialTransaccion(transaccion),
       usuario: transaccion.usuario || '',
       numeroVenta: transaccion.numeroVenta || '',
       cliente: transaccion.cliente?.nombre || ''
@@ -5252,15 +5807,15 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         { label: 'Efectivo teórico final', value: this.getEfectivoFinalTeoricoCierre(cierre), format: 'currency' },
         { label: 'Efectivo real contado', value: this.getEfectivoFinalRealCierre(cierre), format: 'currency' },
         { label: 'Diferencia de efectivo', value: diferenciaEfectivo, format: 'currency', clase: diferenciaEfectivo > 0 ? 'positive' : diferenciaEfectivo < 0 ? 'negative' : '' },
-        ...(Math.abs(diferenciaOtrosMetodos) > 0.01 ? [{ label: 'Ajuste por otros métodos', value: diferenciaOtrosMetodos, format: 'currency', clase: diferenciaOtrosMetodos > 0 ? 'positive' : diferenciaOtrosMetodos < 0 ? 'negative' : '' }] : []),
+        ...(Math.abs(diferenciaOtrosMetodos) > 0.01 ? [{ label: 'Diferencia por otros métodos', value: diferenciaOtrosMetodos, format: 'currency', clase: diferenciaOtrosMetodos > 0 ? 'positive' : diferenciaOtrosMetodos < 0 ? 'negative' : '' }] : []),
         { label: 'Diferencia total conciliada', value: diferenciaTotal, format: 'currency', clase: diferenciaTotal > 0 ? 'positive' : diferenciaTotal < 0 ? 'negative' : '' },
         { label: 'Usuario apertura', value: cierre?.usuarioApertura || 'N/A', format: 'text' },
         { label: 'Usuario cierre', value: cierre?.usuarioCierre || 'N/A', format: 'text' }
       ],
       efectivoPorMoneda: [
-        { moneda: 'USD', inicial: Number(cierre?.efectivoInicialDetalle?.USD || 0), ventas: Number(cierre?.metodosPago?.efectivo?.porMoneda?.dolar || 0), real: Number(cierre?.detalleCierreReal?.efectivo?.usd || 0) },
-        { moneda: 'EUR', inicial: Number(cierre?.efectivoInicialDetalle?.EUR || 0), ventas: Number(cierre?.metodosPago?.efectivo?.porMoneda?.euro || 0), real: Number(cierre?.detalleCierreReal?.efectivo?.eur || 0) },
-        { moneda: 'VES', inicial: Number(cierre?.efectivoInicialDetalle?.Bs || 0), ventas: Number(cierre?.metodosPago?.efectivo?.porMoneda?.bolivar || 0), real: Number(cierre?.detalleCierreReal?.efectivo?.ves || 0) }
+        { moneda: 'USD', inicial: Number(cierre?.efectivoInicialDetalle?.USD || 0), esperado: Number(cierre?.efectivoInicialDetalle?.USD || 0) + Number(cierre?.metodosPago?.efectivo?.porMoneda?.dolar || 0), real: Number(cierre?.detalleCierreReal?.efectivo?.usd || 0) },
+        { moneda: 'EUR', inicial: Number(cierre?.efectivoInicialDetalle?.EUR || 0), esperado: Number(cierre?.efectivoInicialDetalle?.EUR || 0) + Number(cierre?.metodosPago?.efectivo?.porMoneda?.euro || 0), real: Number(cierre?.detalleCierreReal?.efectivo?.eur || 0) },
+        { moneda: 'VES', inicial: Number(cierre?.efectivoInicialDetalle?.Bs || 0), esperado: Number(cierre?.efectivoInicialDetalle?.Bs || 0) + Number(cierre?.metodosPago?.efectivo?.porMoneda?.bolivar || 0), real: Number(cierre?.detalleCierreReal?.efectivo?.ves || 0) }
       ],
       formasPago: [
         { forma: 'Contado', total: Number(cierre?.totales?.ventasContado || 0), deudaPendiente: 0, cantidad: 0 },
@@ -5268,12 +5823,25 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         { forma: 'Pendiente por liquidar', total: Number(cierre?.totales?.ventasPendientes || 0), deudaPendiente: Number(cierre?.totales?.ventasPendientes || 0), cantidad: 0 }
       ].filter((item) => item.total > 0 || item.deudaPendiente > 0),
       metodos: this.construirSeccionesMetodoHistorial(cierre),
+      totalMetodos: this.getTotalMetodosNetosCierre(cierre),
+      notaMetodos: this.getNotaTotalMetodosReporte(),
       transacciones
     }, cierre);
   }
 
   private construirSeccionesMetodoHistorial(cierre: CierreDiario): any[] {
+    const efectivoVentas = this.construirSeccionEfectivoVentasReporte(
+      {
+        USD: Number(cierre?.metodosPago?.efectivo?.porMoneda?.dolar || 0),
+        EUR: Number(cierre?.metodosPago?.efectivo?.porMoneda?.euro || 0),
+        VES: Number(cierre?.metodosPago?.efectivo?.porMoneda?.bolivar || 0)
+      },
+      Number(cierre?.metodosPago?.efectivo?.total || 0),
+      Number(cierre?.metodosPago?.efectivo?.cantidad || 0)
+    );
+
     const secciones = [
+      efectivoVentas,
       { tipo: 'punto', titulo: 'Punto de venta', total: Number(cierre?.metodosPago?.punto?.total || 0), filas: cierre?.metodosPago?.punto?.porBanco || [] },
       { tipo: 'transferencia', titulo: 'Transferencias', total: Number(cierre?.metodosPago?.transferencia?.total || 0), filas: cierre?.metodosPago?.transferencia?.porBanco || [] },
       { tipo: 'pagomovil', titulo: 'Pago móvil', total: Number(cierre?.metodosPago?.pagomovil?.total || 0), filas: cierre?.metodosPago?.pagomovil?.porBanco || [] },
@@ -5281,12 +5849,17 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     ];
 
     return secciones
-      .filter((seccion) => seccion.total > 0)
+      .filter((seccion: any) => seccion && Math.abs(Number(seccion.total || 0)) > 0.01)
       .map((seccion) => ({
         tipo: seccion.tipo,
         titulo: seccion.titulo,
         total: seccion.total,
+        mostrarConciliacion: seccion.mostrarConciliacion,
         filas: (Array.isArray(seccion.filas) ? seccion.filas : []).map((fila: any) => {
+          if (seccion.tipo === 'efectivo') {
+            return fila;
+          }
+
           const detalleReal = this.obtenerDetalleRealMetodoHistorial(cierre, seccion.tipo, fila);
           return {
             destino: fila?.destinoLabel || fila?.banco || 'Destino no identificado',
@@ -5324,42 +5897,112 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   private obtenerEstilosReporte(): string {
     return `
       :root { color-scheme: light; }
+      html, body { margin: 0; padding: 0; background: #ffffff; }
       .report-root, .report-root * { box-sizing: border-box; }
-      .report-root { font-family: 'Segoe UI', Arial, sans-serif; margin: 24px; color: #1f2937; }
+      .report-root { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 24px; color: #1f2937; background: #ffffff; }
       .report-root h1, .report-root h2, .report-root h3, .report-root p { margin: 0; }
-      .report-root .header { background: linear-gradient(135deg, #0f4c81, #2b7a78); color: #fff; padding: 24px; border-radius: 14px; margin-bottom: 18px; }
+      .report-root .header {
+        background: linear-gradient(135deg, #eff6ff 0%, #ecfeff 100%);
+        color: #0f172a;
+        padding: 22px 24px;
+        border-radius: 16px;
+        margin-bottom: 18px;
+        border: 1px solid #bfdbfe;
+        border-left: 8px solid #0f4c81;
+        box-shadow: 0 12px 28px rgba(15, 76, 129, 0.08);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
       .report-root .header-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
-      .report-root .header-title { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
-      .report-root .header-meta { font-size: 13px; opacity: 0.92; line-height: 1.5; }
-      .report-root .badge { display: inline-block; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.24); padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-      .report-root .kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
+      .report-root .header-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; color: #0f4c81; letter-spacing: -0.02em; }
+      .report-root .header-meta { font-size: 13px; color: #475569; line-height: 1.65; }
+      .report-root .badge {
+        display: inline-block;
+        background: #0f4c81;
+        color: #ffffff;
+        border: 1px solid #0b3b63;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        box-shadow: 0 6px 16px rgba(15, 76, 129, 0.18);
+      }
+      .report-root .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 18px 0; }
       .report-root .kpi-card { background: #f8fafc; border: 1px solid #e5e7eb; padding: 14px; border-radius: 12px; }
       .report-root .kpi-label { display: block; color: #64748b; font-size: 12px; margin-bottom: 6px; }
       .report-root .kpi-value { font-size: 22px; font-weight: 700; color: #0f172a; }
       .report-root .layout-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; margin-bottom: 18px; }
-      .report-root .panel { border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px; background: #fff; }
+      .report-root .panel { border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px; background: #fff; }
       .report-root .panel h2 { font-size: 16px; margin-bottom: 14px; color: #0f172a; }
-      .report-root .summary-list { display: grid; gap: 10px; }
-      .report-root .summary-item { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed #e5e7eb; padding-bottom: 8px; }
-      .report-root .summary-item:last-child { border-bottom: 0; padding-bottom: 0; }
-      .report-root .summary-label { color: #475569; }
-      .report-root .summary-value { font-weight: 700; text-align: right; }
+      .report-root .summary-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .report-root .summary-item { display: grid; gap: 0.3rem; padding: 0.75rem 0.8rem; border: 1px solid #e5e7eb; border-radius: 12px; background: #f8fafc; }
+      .report-root .summary-label { color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+      .report-root .summary-value { font-weight: 700; text-align: left; color: #0f172a; line-height: 1.35; }
       .report-root .section-block { margin-bottom: 18px; }
+      .report-root .two-col + .section-block { margin-top: 14px; }
       .report-root .section-title-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 10px; }
       .report-root .section-title-row h3 { font-size: 15px; color: #0f172a; }
       .report-root .section-total { font-size: 13px; font-weight: 700; color: #0f4c81; }
-      .report-root table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-      .report-root th, .report-root td { border: 1px solid #e5e7eb; padding: 9px 10px; text-align: left; vertical-align: top; font-size: 12px; }
+      .report-root .table-wrap { width: 100%; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; margin-bottom: 14px; }
+      .report-root .table-wrap table { width: 100%; border-collapse: collapse; margin-bottom: 0; table-layout: auto; min-width: 100%; }
+      .report-root .table-wrap--wide table { min-width: 720px; }
+      .report-root .table-wrap--medium table { min-width: 560px; }
+      .report-root th, .report-root td { border: 1px solid #e5e7eb; padding: 9px 10px; text-align: left; vertical-align: top; font-size: 12px; word-break: normal; overflow-wrap: break-word; white-space: normal; }
       .report-root th { background: #f8fafc; color: #334155; font-weight: 700; }
+      .report-root thead { display: table-header-group; }
+      .report-root tr { break-inside: avoid; page-break-inside: avoid; }
       .report-root .muted { color: #64748b; font-size: 11px; margin-top: 3px; }
       .report-root .positive { color: #047857; font-weight: 700; }
       .report-root .negative { color: #b91c1c; font-weight: 700; }
       .report-root .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
       .report-root .note-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; font-size: 12px; color: #475569; }
       .report-root .footer-note { margin-top: 16px; color: #64748b; font-size: 11px; }
+      @media (max-width: 768px) {
+        .report-root { padding: 14px; }
+        .report-root .header { padding: 18px; border-radius: 16px; }
+        .report-root .header-top,
+        .report-root .section-title-row { flex-direction: column; align-items: flex-start; }
+        .report-root .header-title { font-size: 22px; }
+        .report-root .header-meta { font-size: 12px; }
+        .report-root .badge { align-self: flex-start; }
+        .report-root .kpi-grid,
+        .report-root .layout-grid,
+        .report-root .two-col { grid-template-columns: 1fr; }
+        .report-root .panel,
+        .report-root .kpi-card { padding: 14px; }
+        .report-root .summary-list { grid-template-columns: 1fr; }
+        .report-root .table-wrap { margin-inline: -2px; padding: 0 2px 4px; }
+        .report-root .table-wrap--wide table { min-width: 680px; }
+        .report-root .table-wrap--medium table { min-width: 480px; }
+        .report-root th,
+        .report-root td { font-size: 11px; padding: 8px; }
+      }
+      @media (max-width: 480px) {
+        .report-root { padding: 12px; }
+        .report-root .header { padding: 16px; }
+        .report-root .header-title { font-size: 20px; }
+        .report-root .kpi-value { font-size: 18px; }
+        .report-root .panel h2,
+        .report-root .section-title-row h3 { font-size: 14px; }
+        .report-root .table-wrap--wide table { min-width: 620px; }
+        .report-root .table-wrap--medium table { min-width: 440px; }
+      }
       @media print {
         body { margin: 12px; }
-        .report-root .panel, .report-root .kpi-card, .report-root .header { break-inside: avoid; }
+        .report-root { padding: 0; }
+        .report-root .panel, .report-root .kpi-card, .report-root .header, .report-root table, .report-root tr { break-inside: avoid; page-break-inside: avoid; }
+        .report-root .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px; }
+        .report-root .layout-grid { grid-template-columns: 1fr 1fr !important; gap: 12px; }
+        .report-root .summary-list { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px; }
+        .report-root .panel,
+        .report-root .kpi-card { padding: 12px; }
+        .report-root .kpi-label,
+        .report-root .summary-label { font-size: 10px; }
+        .report-root .kpi-value { font-size: 18px; }
+        .report-root .summary-item { padding: 0.65rem 0.7rem; }
+        .report-root .table-wrap { overflow: visible; }
+        .report-root .table-wrap table { min-width: 100% !important; }
       }
     `;
   }
@@ -5372,6 +6015,27 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     return this.escapeHtml(item?.value ?? '');
   }
 
+  private construirFilasCompactasReporte(items: any[], forzarMoneda: boolean = false): Array<Array<string>> {
+    const normalizados = items.map((item: any) => (
+      forzarMoneda ? { ...item, format: item?.format || 'currency' } : item
+    ));
+    const filas: Array<Array<string>> = [];
+
+    for (let index = 0; index < normalizados.length; index += 2) {
+      const izquierda = normalizados[index];
+      const derecha = normalizados[index + 1];
+
+      filas.push([
+        this.escapeHtml(izquierda?.label || ''),
+        this.formatearValorReporte(izquierda, true),
+        this.escapeHtml(derecha?.label || ''),
+        derecha ? this.formatearValorReporte(derecha, true) : ''
+      ]);
+    }
+
+    return filas;
+  }
+
   private generarBloqueMetodoReporte(seccion: any, mostrarConciliacion: boolean): string {
     return `
       <section class="section-block">
@@ -5379,6 +6043,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
           <h3>${this.escapeHtml(seccion.titulo)}</h3>
           <span class="section-total">${this.formatCurrency(seccion.total)} ${this.escapeHtml(this.monedaSistema)}</span>
         </div>
+        <div class="table-wrap table-wrap--wide">
         <table>
           <thead>
             <tr>
@@ -5406,6 +6071,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
             `).join('')}
           </tbody>
         </table>
+        </div>
       </section>
     `;
   }
@@ -5449,7 +6115,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
             </div>
           </div>
           <div class="panel">
-            <h2>Conciliación de efectivo</h2>
+            <h2>Conciliación del cierre</h2>
             <div class="summary-list">
               ${reporte.conciliacion.map((item: any) => `
                 <div class="summary-item">
@@ -5463,13 +6129,14 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
         <div class="two-col">
           <div class="panel">
-            <h2>Efectivo por moneda</h2>
+            <h2>Caja fisica por moneda</h2>
+            <div class="table-wrap table-wrap--medium">
             <table>
               <thead>
                 <tr>
                   <th>Moneda</th>
-                  <th>Inicial</th>
-                  <th>Ventas</th>
+                  <th>Inicial de caja</th>
+                  <th>Esperado final</th>
                   ${reporte.mostrarConciliacion ? '<th>Real contado</th>' : ''}
                 </tr>
               </thead>
@@ -5478,15 +6145,17 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
                   <tr>
                     <td>${this.escapeHtml(fila.moneda)}</td>
                     <td>${this.formatCurrency(fila.inicial)}</td>
-                    <td>${this.formatCurrency(fila.ventas)}</td>
+                    <td>${this.formatCurrency(fila.esperado)}</td>
                     ${reporte.mostrarConciliacion ? `<td>${this.formatCurrency(fila.real)}</td>` : ''}
                   </tr>
                 `).join('')}
               </tbody>
             </table>
+            </div>
           </div>
           <div class="panel">
             <h2>Formas de pago</h2>
+            <div class="table-wrap table-wrap--medium">
             <table>
               <thead>
                 <tr>
@@ -5507,18 +6176,33 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
                 `).join('')}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 
         ${reporte.metodos.length
-          ? reporte.metodos.map((seccion: any) => this.generarBloqueMetodoReporte(seccion, reporte.mostrarConciliacion)).join('')
+          ? reporte.metodos.map((seccion: any) => this.generarBloqueMetodoReporte(seccion, seccion.mostrarConciliacion ?? reporte.mostrarConciliacion)).join('')
           : ''}
+
+        ${reporte.metodos.length ? `
+          <section class="section-block">
+            <div class="section-title-row">
+              <h3>Suma neta por metodos del dia</h3>
+              <span class="section-total">${this.formatCurrency(Number(reporte.totalMetodos || 0))} ${this.escapeHtml(this.monedaSistema)}</span>
+            </div>
+            <div class="note-box">
+              <strong>${this.formatCurrency(Number(reporte.totalMetodos || 0))} ${this.escapeHtml(this.monedaSistema)}</strong><br>
+              ${this.escapeHtml(reporte.notaMetodos || 'Incluye efectivo cobrado del dia y metodos electronicos. No incluye efectivo inicial de apertura.')}
+            </div>
+          </section>
+        ` : ''}
 
         <section class="section-block">
           <div class="section-title-row">
             <h3>Transacciones del día</h3>
             <span class="section-total">${reporte.transacciones.length} registros</span>
           </div>
+          <div class="table-wrap table-wrap--wide">
           <table>
             <thead>
               <tr>
@@ -5540,12 +6224,13 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
                   </td>
                   <td>${this.escapeHtml(fila.tipo)}</td>
                   <td>${this.escapeHtml(fila.metodo)}</td>
-                  <td>${this.formatCurrency(fila.monto)} ${this.escapeHtml(reporte.monedaSistema)}</td>
+                  <td>${this.escapeHtml(fila.montoTexto || `${this.formatCurrency(fila.monto)} ${reporte.monedaSistema}`)}</td>
                   <td>${this.escapeHtml(fila.usuario)}</td>
                 </tr>
               `).join('') : `<tr><td colspan="6" class="muted">No hay transacciones registradas para este cierre.</td></tr>`}
             </tbody>
           </table>
+          </div>
         </section>
 
         <div class="footer-note">${this.escapeHtml(reporte.notaFinal)}</div>
@@ -5561,6 +6246,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       <html>
       <head>
         <title>Cierre de Caja - ${this.escapeHtml(reporte.fecha)}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <style>${this.obtenerEstilosReporte()}</style>
       </head>
       <body>
@@ -5572,12 +6258,15 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   private crearContenedorTemporalReporte(reporte: any): HTMLDivElement {
     const contenedor = document.createElement('div');
-    contenedor.style.position = 'fixed';
-    contenedor.style.left = '-10000px';
+    contenedor.style.position = 'absolute';
+    contenedor.style.left = '-20000px';
     contenedor.style.top = '0';
-    contenedor.style.width = '1120px';
+    contenedor.style.width = '1040px';
+    contenedor.style.maxWidth = '1040px';
     contenedor.style.background = '#ffffff';
-    contenedor.style.zIndex = '-1';
+    contenedor.style.opacity = '1';
+    contenedor.style.pointerEvents = 'none';
+    contenedor.style.overflow = 'visible';
     contenedor.innerHTML = `<style>${this.obtenerEstilosReporte()}</style>${this.generarCuerpoReporte(reporte)}`;
     return contenedor;
   }
@@ -5616,6 +6305,10 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
   exportarExcel(): void {
     this.mostrarMenuExport = false;
 
+    if (!this.validarAccionReporteActual('exportar a Excel')) {
+      return;
+    }
+
     if (!this.hayDatosParaExportar()) {
       this.swalService.showWarning('Sin datos', 'No hay datos para exportar a Excel');
       return;
@@ -5627,7 +6320,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
         data: [
           ...reporte.kpis.map((item: any) => ({ Seccion: 'KPI', Indicador: item.label, Valor: item.value, Moneda: reporte.monedaSistema })),
           ...reporte.resumenOperativo.map((item: any) => ({ Seccion: 'Resumen operativo', Indicador: item.label, Valor: item.value, Moneda: item.format === 'currency' ? reporte.monedaSistema : '' })),
-          ...reporte.conciliacion.map((item: any) => ({ Seccion: 'Conciliación de efectivo', Indicador: item.label, Valor: item.value, Moneda: item.format === 'currency' ? reporte.monedaSistema : '' }))
+          ...reporte.conciliacion.map((item: any) => ({ Seccion: 'Conciliación del cierre', Indicador: item.label, Valor: item.value, Moneda: item.format === 'currency' ? reporte.monedaSistema : '' }))
         ],
         sheetName: 'Resumen',
         columnWidths: { A: 24, B: 30, C: 18, D: 12 }
@@ -5772,6 +6465,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
     const valorCrudo = `${input.value ?? ''}`.trim().replace(',', '.');
     const esFormularioCierre = formulario === this.cierreForm;
+    const permiteNegativos = esFormularioCierre ? this.controlMontoPermiteNegativos(controlName) : false;
 
     if (valorCrudo === '' && esFormularioCierre) {
       input.value = '';
@@ -5782,7 +6476,8 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     }
 
     const valorNumerico = valorCrudo === '' ? 0 : Number(valorCrudo);
-    const valorFinal = Number.isFinite(valorNumerico) && valorNumerico >= 0 ? this.redondearMonto(valorNumerico) : 0;
+  const valorEsValido = Number.isFinite(valorNumerico) && (permiteNegativos || valorNumerico >= 0);
+  const valorFinal = valorEsValido ? this.redondearMonto(valorNumerico) : 0;
 
     input.value = valorFinal.toFixed(2);
     formulario.get(controlName)?.setValue(valorFinal, { emitEvent: false });
@@ -5815,8 +6510,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       this.configurarValidadoresFormularioCierre();
 
       const montosCompletos = this.tieneCamposMontosCierreCompletos();
-      const diferenciaTotal = montosCompletos ? Math.abs(this.getDiferenciaTotal()) : 0;
-      const hayDiferenciaNueva = montosCompletos && diferenciaTotal > 0.01;
+      const hayDiferenciaNueva = this.requiereComentarioCierre();
 
       // Solo actualizar si cambió el estado
       this.hayDiferencia = hayDiferenciaNueva;
@@ -5825,7 +6519,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
       const notasControl = this.cierreForm.get('notasCierre');
 
       if (this.comentarioRequerido) {
-        notasControl?.setValidators([Validators.required, Validators.minLength(10)]);
+        notasControl?.setValidators([Validators.required]);
       } else {
         notasControl?.clearValidators();
       }
@@ -5834,22 +6528,13 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     } finally {
       this.actualizandoValidaciones = false;
     }
+
   }
 
   // Método para actualizar si el botón de cierre debe estar habilitado
   actualizarBotonCierre(): void {
-    const tieneComentarioValido = this.comentarioRequerido
-      ? (this.cierreForm.get('notasCierre')?.value?.trim().length >= 10)
-      : true;
-
-    const tieneValoresValidos = this.cierreForm.valid;
-    const botonHabilitado = tieneValoresValidos && tieneComentarioValido;
-
-    // Puedes usar esto en el template o guardarlo en una propiedad
-    // Por ahora, solo actualizamos el estado del formulario
-    if (!botonHabilitado) {
-      this.cierreForm.markAsPending();
-    }
+    this.verificarDiferenciaYComentario();
+    this.cdr.detectChanges();
   }
 
   // Método para obtener la clase del botón de cierre
@@ -5917,22 +6602,28 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
 
   // Modificar el método realizarCierre existente
   realizarCierre(): void {
-    if (!this.tieneCamposMontosCierreCompletos()) {
+    const controlesFaltantes = this.obtenerControlesMontoFaltantesCierre();
+
+    if (controlesFaltantes.length) {
+      const detalle = controlesFaltantes
+        .map((controlName) => `• ${this.obtenerEtiquetaControlMontoCierre(controlName)}`)
+        .join('<br>');
+
       this.swalService.showWarning(
         'Conciliación incompleta',
-        'Debes completar todos los montos de la conciliación antes de cerrar la caja.'
+        `Debes completar los montos pendientes antes de cerrar la caja.<br><br>${detalle}`,
+        true
       );
       return;
     }
 
     // Validar comentario si hay diferencia
-    const diferenciaTotal = Math.abs(this.getDiferenciaTotal());
     const comentario = this.cierreForm.get('notasCierre')?.value?.trim();
 
-    if (diferenciaTotal > 0.01 && (!comentario || comentario.length < 10)) {
+    if (this.requiereComentarioCierre() && !comentario) {
       this.swalService.showWarning(
         'Comentario requerido',
-        'Debes explicar la diferencia en el campo "Notas de Cierre" (mínimo 10 caracteres)'
+        'Debes explicar la diferencia en el campo "Notas de Cierre" antes de cerrar la caja.'
       );
       return;
     }
@@ -5974,7 +6665,7 @@ export class CierreCajaComponent implements OnInit, OnDestroy {
     this.cierreActual.fechaCierre = new Date();
 
     // Mostrar confirmación si hay diferencia
-    if (diferenciaTotal > 0.01) {
+    if (this.requiereComentarioCierre()) {
       this.swalService.showConfirm(
         '¿Cerrar caja con diferencia?',
         `La caja presenta una diferencia de ${this.getDiferenciaTotalFormateada()}.<br>

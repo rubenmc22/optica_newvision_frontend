@@ -131,7 +131,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
           event.restoredState === null &&
           this.esPrimeraCarga()) {
           this.fromLogin = true;
-          console.log('🔍 fromLogin por navegación:', this.fromLogin);
         }
       });
   }

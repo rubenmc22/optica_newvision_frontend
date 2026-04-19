@@ -110,8 +110,6 @@ export class PacientesService {
     const rifNormalizado = this.formatearRifParaAPI(rif);
     const sedeNormalizada = sede.trim().toLowerCase();
 
-    console.log(`🔍 Buscando empresa - RIF: ${rifNormalizado}, Sede: ${sedeNormalizada}`);
-
     // Parámetros para GET según la documentación de Postman
     const params = {
       rif: rifNormalizado,
@@ -121,18 +119,14 @@ export class PacientesService {
     return this.http.get<any>(`${environment.apiUrl}/empresas-get`, { params }).pipe(
       timeout(this.REQUEST_TIMEOUT),
       map(response => {
-        console.log('✅ Respuesta completa de API empresas:', response);
-
         // Verificar si la respuesta es válida según tu API
         // Tu API retorna: { "message": "ok", "empresas": [...] }
         if (response && response.message === 'ok' &&
           response.empresas && Array.isArray(response.empresas)) {
 
           if (response.empresas.length > 0) {
-            console.log('✅ Empresa encontrada:', response.empresas[0]);
             return response; // ← Retornar exactamente como la API responde
           } else {
-            console.log('⚠️ Array de empresas está vacío');
             return {
               message: 'not_found',
               empresas: [],

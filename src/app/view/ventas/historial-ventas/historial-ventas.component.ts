@@ -1306,7 +1306,6 @@ export class HistorialVentasComponent implements OnInit {
           this.limpiarSeleccionCancelacion();
 
         } else {
-          console.log('error', response.message);
           this.swalService.showError('Error', response.message || 'No se pudo cancelar la venta.');
         }
 
@@ -1518,7 +1517,6 @@ export class HistorialVentasComponent implements OnInit {
         montoEnMonedaVenta: this.redondear(montoEnMonedaVenta)
       };
 
-      console.log('Método preparado:', metodoFormateado);
       metodosPagoParaAPI.push(metodoFormateado);
     });
 
@@ -2488,9 +2486,6 @@ export class HistorialVentasComponent implements OnInit {
     const origenNormalizado = this.normalizarMoneda(origen);
     const destinoNormalizado = this.normalizarMoneda(destino);
 
-    console.log(`🔄 Convirtiendo: ${monto} ${origen} → ${destino}`);
-    console.log(`📝 Normalizado: ${origenNormalizado} → ${destinoNormalizado}`);
-
     if (origenNormalizado === destinoNormalizado) return this.redondear(monto);
 
     const tasas = {
@@ -2498,8 +2493,6 @@ export class HistorialVentasComponent implements OnInit {
       dolar: this.tasasPorId['dolar'] ?? 0,
       euro: this.tasasPorId['euro'] ?? 0
     };
-
-    console.log(`📊 Tasas: dolar=${tasas.dolar}, euro=${tasas.euro}, bolivar=${tasas.bolivar}`);
 
     let montoEnBs: number;
 
@@ -2517,8 +2510,6 @@ export class HistorialVentasComponent implements OnInit {
         montoEnBs = monto;
     }
 
-    console.log(`📌 Monto en Bs: ${montoEnBs}`);
-
     let resultado: number;
 
     switch (destinoNormalizado) {
@@ -2535,7 +2526,6 @@ export class HistorialVentasComponent implements OnInit {
         resultado = montoEnBs;
     }
 
-    console.log(`✅ Resultado: ${resultado}`);
     return this.redondear(resultado);
   }
 

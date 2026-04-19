@@ -96,8 +96,6 @@ export class OrdenesTrabajoService {
       fecha_entrega_estimada: fechaEntregaEstimada
     };
 
-    console.log('DEBUG - Service - Request al API:', requestBody);
-
     return this.http.put<{ message: string }>(
       `${this.baseUrl}/orden-trabajo-update-fecha-entrega-estimada`,
       requestBody

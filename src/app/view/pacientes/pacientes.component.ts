@@ -677,8 +677,6 @@ export class VerPacientesComponent implements OnInit {
     // Obtener valores del formulario
     const formValues = this.formPaciente.value;
 
-    console.log('formValues', formValues);
-
     // Procesar uso de dispositivos electrónicos
     const usoDispositivoValue = formValues.usoDispositivo === 'Sí'
       ? `Sí, ${formValues.intervaloUso}`
@@ -719,13 +717,9 @@ export class VerPacientesComponent implements OnInit {
       }
     };
 
-    console.log('nuevoPaciente', nuevoPaciente);
-
     this.pacientesService.createPaciente(nuevoPaciente).subscribe({
       next: (response) => {
         this.cargando = false;
-
-        console.log('response', response);
 
         const pacienteData = response.paciente;
 
@@ -745,8 +739,6 @@ export class VerPacientesComponent implements OnInit {
               pacienteData.informacionPersonal.genero === 'f' ? 'Femenino' : 'Otro'
           }
         };
-
-        console.log('pacienteTransformado', pacienteTransformado);
 
         // Encontrar la posición correcta para insertar (orden descendente por fecha de creación)
         const fechaCreacion = new Date(pacienteTransformado.fechaRegistroRaw).getTime();
@@ -1157,9 +1149,6 @@ export class VerPacientesComponent implements OnInit {
     const redes = paciente?.redesSociales ?? [];
     const historia = paciente?.historiaClinica ?? {};
 
-    console.log('info', info);
-    console.log('historia', historia);
-
     // Manejar el caso cuando informacionEmpresa es null
     const empresa = paciente?.informacionEmpresa;
 
@@ -1222,7 +1211,6 @@ export class VerPacientesComponent implements OnInit {
     };
 
     this.pacienteSeleccionado = pacienteTransformado;
-    console.log('Paciente seleccionado:', pacienteTransformado); // Para debug
 
     const modalElement = document.getElementById('verPacienteModal');
     if (modalElement) {

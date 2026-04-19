@@ -243,7 +243,7 @@
                         'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
                         'text-danger': trans.tipo === 'egreso'
                       }">
-                      {{ (trans.tipo === 'egreso' ? '-' : '+') + (trans.monto | currency) }}
+                      {{ getTextoMontoHistorialTransaccion(trans) }}
                     </span>
                   </div>
 
@@ -305,7 +305,7 @@
                           'text-success': trans.tipo === 'venta' || trans.tipo === 'ingreso',
                           'text-danger': trans.tipo === 'egreso'
                         }">
-                        {{ (trans.tipo === 'egreso' ? '-' : '+') + (trans.monto | currency) }}
+                        {{ getTextoMontoHistorialTransaccion(trans) }}
                       </span>
                     </div>
 
@@ -741,24 +741,24 @@
                 <span class="seccion-total">{{ analisisMetodosPago.efectivo.total | currency }}</span>
               </h4>
               <div class="monedas-grid">
-                <div class="moneda-card"><span class="moneda-simbolo">$</span><span class="moneda-monto">{{
+                <div class="moneda-card" *ngIf="tieneMovimientoEfectivoMoneda('USD')"><span class="moneda-simbolo">$</span><span class="moneda-monto">{{
                     analisisMetodosPago.efectivo.porMoneda.dolar
                     | currency:'USD':'symbol':'1.2-2' }}</span><span class="moneda-label">Dólares</span></div>
-                <div class="moneda-card"><span class="moneda-simbolo">€</span><span class="moneda-monto">{{
+                <div class="moneda-card" *ngIf="tieneMovimientoEfectivoMoneda('EUR')"><span class="moneda-simbolo">€</span><span class="moneda-monto">{{
                     analisisMetodosPago.efectivo.porMoneda.euro |
                     currency:'EUR':'symbol':'1.2-2' }}</span><span class="moneda-label">Euros</span></div>
-                <div class="moneda-card"><span class="moneda-simbolo">Bs.</span><span class="moneda-monto">{{
+                <div class="moneda-card" *ngIf="tieneMovimientoEfectivoMoneda('VES')"><span class="moneda-simbolo">Bs.</span><span class="moneda-monto">{{
                     analisisMetodosPago.efectivo.porMoneda.bolivar | currency:'VES':'symbol':'1.2-2' }}</span><span
                     class="moneda-label">Bolívares</span>
                 </div>
               </div>
             </div>
 
-            <div class="metodo-seccion" *ngIf="analisisMetodosPago.punto.porBanco.length > 0">
+            <div class="metodo-seccion" *ngIf="tieneMovimientosMetodoCierre('punto')">
               <h4 class="seccion-titulo"><i class="bi bi-credit-card"></i> Punto de Venta <span class="seccion-total">{{
                   analisisMetodosPago.punto.total | currency }}</span></h4>
               <div class="bancos-grid">
-                <div class="banco-card" *ngFor="let banco of analisisMetodosPago.punto.porBanco">
+                <div class="banco-card" *ngFor="let banco of getDestinosMetodo('punto')">
                   <div class="banco-header">
                     <i class="bi bi-bank"></i>
                     <div class="banco-titulos">
@@ -773,11 +773,11 @@
               </div>
             </div>
 
-            <div class="metodo-seccion" *ngIf="analisisMetodosPago.pagomovil.porBanco.length > 0">
+            <div class="metodo-seccion" *ngIf="tieneMovimientosMetodoCierre('pagomovil')">
               <h4 class="seccion-titulo"><i class="bi bi-phone"></i> Pago Móvil <span class="seccion-total">{{
                   analisisMetodosPago.pagomovil.total | currency }}</span></h4>
               <div class="bancos-grid">
-                <div class="banco-card" *ngFor="let banco of analisisMetodosPago.pagomovil.porBanco">
+                <div class="banco-card" *ngFor="let banco of getDestinosMetodo('pagomovil')">
                   <div class="banco-header">
                     <i class="bi bi-bank"></i>
                     <div class="banco-titulos">
@@ -792,11 +792,11 @@
               </div>
             </div>
 
-            <div class="metodo-seccion" *ngIf="analisisMetodosPago.transferencia.porBanco.length > 0">
+            <div class="metodo-seccion" *ngIf="tieneMovimientosMetodoCierre('transferencia')">
               <h4 class="seccion-titulo"><i class="bi bi-bank2"></i> Transferencias <span class="seccion-total">{{
                   analisisMetodosPago.transferencia.total | currency }}</span></h4>
               <div class="bancos-grid">
-                <div class="banco-card" *ngFor="let banco of analisisMetodosPago.transferencia.porBanco">
+                <div class="banco-card" *ngFor="let banco of getDestinosMetodo('transferencia')">
                   <div class="banco-header">
                     <i class="bi bi-bank"></i>
                     <div class="banco-titulos">
@@ -811,11 +811,11 @@
               </div>
             </div>
 
-            <div class="metodo-seccion" *ngIf="analisisMetodosPago.zelle.total > 0">
+            <div class="metodo-seccion" *ngIf="tieneMovimientosMetodoCierre('zelle')">
               <h4 class="seccion-titulo"><i class="bi bi-globe2"></i> Zelle <span class="seccion-total">{{
                   analisisMetodosPago.zelle.total | currency }}</span></h4>
-              <div class="bancos-grid" *ngIf="analisisMetodosPago.zelle.porBanco.length > 0">
-                <div class="banco-card" *ngFor="let banco of analisisMetodosPago.zelle.porBanco">
+              <div class="bancos-grid" *ngIf="getDestinosMetodo('zelle').length > 0">
+                <div class="banco-card" *ngFor="let banco of getDestinosMetodo('zelle')">
                   <div class="banco-header">
                     <i class="bi bi-globe2"></i>
                     <div class="banco-titulos">
@@ -910,7 +910,7 @@
     </div>
 
     <div class="footer-actions">
-      <button class="btn-outline" (click)="imprimirResumen()">
+      <button class="btn-outline" (click)="imprimirResumen()" [disabled]="!puedeEmitirReporteActual()">
         <i class="bi bi-printer"></i> Imprimir
       </button>
 
@@ -933,7 +933,7 @@
             Exportar datos
           </div>
           
-          <button class="dropdown-item" (click)="exportarReportePDF()">
+          <button class="dropdown-item" (click)="exportarReportePDF()" [disabled]="!puedeEmitirReporteActual()">
             <i class="bi bi-filetype-pdf text-danger"></i>
             <div class="item-content">
               <span class="item-title">Exportar a PDF</span>
@@ -941,7 +941,7 @@
             </div>
           </button>
           
-          <button class="dropdown-item" (click)="exportarExcel()">
+          <button class="dropdown-item" (click)="exportarExcel()" [disabled]="!puedeEmitirReporteActual()">
             <i class="bi bi-filetype-xlsx text-success"></i>
             <div class="item-content">
               <span class="item-title">Exportar a Excel</span>
@@ -949,7 +949,7 @@
             </div>
           </button>
           
-          <button class="dropdown-item" (click)="exportarReporteJSON()">
+          <button class="dropdown-item" (click)="exportarReporteJSON()" [disabled]="!puedeEmitirReporteActual()">
             <i class="bi bi-filetype-json text-warning"></i>
             <div class="item-content">
               <span class="item-title">Exportar a JSON</span>
@@ -1192,23 +1192,25 @@
               <span>Efectivo</span>
             </button>
             <button type="button" class="tab-btn" [class.active]="tabActivoCierre === 'punto'" 
-                    *ngIf="analisisMetodosPago.punto.porBanco.length > 0"
+                  *ngIf="tieneMovimientosMetodoCierre('punto')"
                     (click)="tabActivoCierre = 'punto'">
               <i class="bi bi-credit-card"></i>
               <span>Punto</span>
             </button>
             <button type="button" class="tab-btn" [class.active]="tabActivoCierre === 'transferencias'" 
+                  *ngIf="tieneMovimientosMetodoCierre('transferencia')"
                     (click)="tabActivoCierre = 'transferencias'">
               <i class="bi bi-bank2"></i>
               <span>Transferencias</span>
             </button>
             <button type="button" class="tab-btn" [class.active]="tabActivoCierre === 'pagomovil'" 
+                  *ngIf="tieneMovimientosMetodoCierre('pagomovil')"
                     (click)="tabActivoCierre = 'pagomovil'">
               <i class="bi bi-phone"></i>
               <span>Pago Móvil</span>
             </button>
             <button type="button" class="tab-btn" [class.active]="tabActivoCierre === 'zelle'" 
-                    *ngIf="analisisMetodosPago.zelle.total > 0"
+                  *ngIf="tieneMovimientosMetodoCierre('zelle')"
                     (click)="tabActivoCierre = 'zelle'">
               <i class="bi bi-globe2"></i>
               <span>Zelle</span>
@@ -1222,7 +1224,7 @@
             <div *ngIf="tabActivoCierre === 'efectivo'">
               <div class="efectivo-grid">
                 <!-- Dólares -->
-                <div class="moneda-card-cierre">
+                <div class="moneda-card-cierre" *ngIf="tieneActividadEfectivoMoneda('USD')">
                   <div class="moneda-header bg-primary-light">
                     <i class="bi bi-currency-dollar"></i>
                     <span>Dólares (USD)</span>
@@ -1277,7 +1279,7 @@
                 </div>
 
                 <!-- Euros -->
-                <div class="moneda-card-cierre">
+                <div class="moneda-card-cierre" *ngIf="tieneActividadEfectivoMoneda('EUR')">
                   <div class="moneda-header bg-info-light">
                     <i class="bi bi-currency-euro"></i>
                     <span>Euros (EUR)</span>
@@ -1332,7 +1334,7 @@
                 </div>
 
                 <!-- Bolívares -->
-                <div class="moneda-card-cierre">
+                <div class="moneda-card-cierre" *ngIf="tieneActividadEfectivoMoneda('VES')">
                   <div class="moneda-header bg-warning-light">
                     <i class="bi bi-currency-exchange"></i>
                     <span>Bolívares (VES)</span>
@@ -1389,9 +1391,9 @@
             </div>
 
             <!-- TAB PUNTO DE VENTA -->
-            <div *ngIf="tabActivoCierre === 'punto'">
+            <div *ngIf="tabActivoCierre === 'punto' && tieneMovimientosMetodoCierre('punto')">
               <div class="bancos-grid-cierre">
-                <div class="banco-card-cierre" *ngFor="let banco of analisisMetodosPago.punto.porBanco">
+                <div class="banco-card-cierre" *ngFor="let banco of getDestinosMetodo('punto')">
                   <div class="banco-header">
                     <i class="bi bi-bank"></i>
                     <div class="banco-titulos">
@@ -1458,7 +1460,7 @@
             </div>
 
             <!-- TAB TRANSFERENCIAS -->
-            <div *ngIf="tabActivoCierre === 'transferencias'">
+            <div *ngIf="tabActivoCierre === 'transferencias' && tieneMovimientosMetodoCierre('transferencia')">
               <div class="bancos-grid-cierre" *ngIf="getDestinosMetodo('transferencia').length; else transferenciaGeneral">
                 <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('transferencia')">
                   <div class="banco-header">
@@ -1585,7 +1587,7 @@
             </div>
 
             <!-- TAB PAGO MÓVIL -->
-            <div *ngIf="tabActivoCierre === 'pagomovil'">
+            <div *ngIf="tabActivoCierre === 'pagomovil' && tieneMovimientosMetodoCierre('pagomovil')">
 
               <div class="bancos-grid-cierre" *ngIf="getDestinosMetodo('pagomovil').length; else pagomovilGeneral">
                 <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('pagomovil')">
@@ -1713,7 +1715,7 @@
             </div>
 
             <!-- TAB ZELLE -->
-            <div *ngIf="tabActivoCierre === 'zelle'">
+            <div *ngIf="tabActivoCierre === 'zelle' && tieneMovimientosMetodoCierre('zelle')">
               <div class="bancos-grid-cierre" *ngIf="getDestinosMetodo('zelle').length; else zelleGeneral">
                 <div class="banco-card-cierre" *ngFor="let destino of getDestinosMetodo('zelle')">
                   <div class="banco-header">
@@ -1942,17 +1944,17 @@
               <i class="bi bi-chat-text"></i>
               <span>Notas de Cierre</span>
               <span class="opcional" [class.text-danger]="comentarioRequerido">
-                {{ comentarioRequerido ? '(requerido - mínimo 10 caracteres)' : '(opcional)' }}
+                {{ comentarioRequerido ? '(requerido)' : '(opcional)' }}
               </span>
             </div>
             <textarea class="form-control" 
                       formControlName="notasCierre" 
                       rows="3"
                       [class.is-invalid]="comentarioRequerido && cierreForm.get('notasCierre')?.invalid && cierreForm.get('notasCierre')?.touched"
-                      placeholder="{{ comentarioRequerido ? 'Explica la diferencia detectada (mínimo 10 caracteres)' : 'Observaciones del cierre (opcional)' }}"
+                      placeholder="{{ comentarioRequerido ? 'Explica la diferencia detectada' : 'Observaciones del cierre (opcional)' }}"
                       (keyup)="actualizarBotonCierre()"></textarea>
             <div class="invalid-feedback" *ngIf="comentarioRequerido && cierreForm.get('notasCierre')?.invalid && cierreForm.get('notasCierre')?.touched">
-              Debes explicar la diferencia (mínimo 10 caracteres)
+              Debes explicar la diferencia antes de cerrar la caja.
             </div>
             <div class="checkbox-option mt-2">
               <input type="checkbox" formControlName="imprimirResumen" id="imprimirResumen">
@@ -2182,7 +2184,7 @@
   <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable historial-cierres-modal__dialog">
     <div class="modal-content historial-cierres-shell">
       <div class="modal-header historial-cierres-shell__header border-0">
-        <div>
+        <div class="historial-cierres-shell__intro">
           <div class="historial-cierres-shell__eyebrow">Control histórico</div>
           <h5 class="modal-title historial-cierres-shell__title">
             <i class="bi bi-clock-history me-2"></i>
@@ -2201,7 +2203,7 @@
               <h6>Semana actual por defecto</h6>
               <p>Puedes cambiar el período según la necesidad operativa o administrativa.</p>
             </div>
-            <div class="historial-toolbar-card__actions">
+            <div class="historial-toolbar-card__actions historial-toolbar-card__actions--presets">
               <button class="btn btn-outline-secondary btn-sm" (click)="aplicarPresetHistorial('semana')">Semana actual</button>
               <button class="btn btn-outline-secondary btn-sm" (click)="aplicarPresetHistorial('mes')">Mes actual</button>
               <button class="btn btn-outline-secondary btn-sm" (click)="aplicarPresetHistorial('30dias')">Últimos 30 días</button>
@@ -2279,7 +2281,16 @@
                 <div class="historial-cierre-card__title-block">
                   <span class="historial-cierre-card__date">Jornada {{ cierre.fecha | date:'dd/MM/yyyy' }}</span>
                   <h6>Cierre {{ getFechaOperativaCierre(cierre) }}</h6>
-                  <p>{{ getUsuarioResponsableCierre(cierre) }}</p>
+                  <div class="historial-cierre-card__title-meta">
+                    <span>
+                      <i class="bi bi-person"></i>
+                      {{ getUsuarioResponsableCierre(cierre) }}
+                    </span>
+                    <span>
+                      <i class="bi bi-collection"></i>
+                      {{ getTotalTransaccionesCierre(cierre) }} movimientos
+                    </span>
+                  </div>
                 </div>
 
                 <div class="historial-cierre-card__header-side">
@@ -2327,10 +2338,13 @@
               </div>
 
               <div class="historial-cierre-card__meta">
-                <div class="historial-cierre-card__chips" *ngIf="getResumenMetodosHistorial(cierre).length > 0">
-                  <span class="historial-chip" *ngFor="let metodo of getResumenMetodosHistorial(cierre)">
-                    {{ metodo.label }} · {{ formatCurrency(metodo.total) }} {{ monedaSistema }}
-                  </span>
+                <div class="historial-cierre-card__chips-wrap" *ngIf="getResumenMetodosHistorial(cierre).length > 0">
+                  <span class="historial-cierre-card__section-label">Métodos registrados</span>
+                  <div class="historial-cierre-card__chips">
+                    <span class="historial-chip" *ngFor="let metodo of getResumenMetodosHistorial(cierre)">
+                      {{ metodo.label }} · {{ formatCurrency(metodo.total) }} {{ monedaSistema }}
+                    </span>
+                  </div>
                 </div>
 
                 <div class="historial-cierre-card__note">
@@ -2362,11 +2376,14 @@
   <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
     <div class="modal-content historial-detalle-shell">
       <div class="modal-header historial-detalle-shell__header border-0">
-        <div class="historial-detalle-shell__headline">
+        <div class="historial-detalle-shell__intro historial-detalle-shell__headline">
           <span class="historial-detalle-shell__eyebrow">Reporte del cierre</span>
           <h5 class="modal-title historial-detalle-shell__title">
             {{ historialDetalleSeleccionado ? ('Jornada ' + getFechaJornadaHistorial(historialDetalleSeleccionado)) : 'Vista previa del reporte' }}
           </h5>
+          <p class="historial-detalle-shell__subtitle" *ngIf="historialDetalleSeleccionado">
+            {{ getEstadoTecnicoHistorialTexto(historialDetalleSeleccionado) }} · {{ getUsuarioResponsableCierre(historialDetalleSeleccionado) }}
+          </p>
         </div>
         <div class="historial-detalle-shell__actions">
           <button type="button" class="btn btn-outline-secondary btn-sm" (click)="imprimirDetalleHistorial()" [disabled]="historialDetalleCargando || !historialDetallePreviewUrl">
@@ -2384,6 +2401,12 @@
         </div>
 
         <div class="historial-detalle-shell__frame-wrap" *ngIf="!historialDetalleCargando && historialDetallePreviewUrl; else historialDetalleSinVista">
+          <div class="historial-detalle-shell__preview-bar" *ngIf="historialDetalleSeleccionado">
+            <span class="historial-detalle-shell__preview-badge" [ngClass]="getEstadoTecnicoHistorialClase(historialDetalleSeleccionado)">
+              <i class="bi" [ngClass]="getEstadoTecnicoHistorialIcono(historialDetalleSeleccionado)"></i>
+              {{ getEstadoTecnicoHistorialTexto(historialDetalleSeleccionado) }}
+            </span>
+          </div>
           <iframe class="historial-detalle-shell__frame" [src]="historialDetallePreviewUrl" title="Reporte del cierre histórico"></iframe>
         </div>
 

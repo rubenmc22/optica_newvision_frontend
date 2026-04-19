@@ -45,25 +45,14 @@ export class HistorialVentaService {
   anularVenta(ventaKey: string, motivo: string): Observable<any> {
     const url = `${this.apiUrl}/ventas-anular/${ventaKey}`;
 
-    console.log('🔍 DEBUG - URL:', url);
-    console.log('🔍 DEBUG - Motivo:', motivo);
-
     const body = {
       motivo_cancelacion: motivo
     };
-
-    console.log('🔍 DEBUG - Body:', JSON.stringify(body));
 
     return this.http.put<any>(url, body, {
       observe: 'response' // Esto nos da toda la respuesta HTTP
     }).pipe(
       tap(response => {
-        console.log('✅ Respuesta completa:', {
-          status: response.status,
-          statusText: response.statusText,
-          headers: response.headers,
-          body: response.body
-        });
       }),
       map(response => response.body), // Extraer solo el body para compatibilidad
       catchError(error => {
@@ -127,8 +116,6 @@ export class HistorialVentaService {
       }
     });
 
-    console.log('🔍 Parámetros enviados al backend:', params.toString());
-
     return this.http.get(`${this.apiUrl}/ventas-get`, { params });
   }
 
@@ -167,7 +154,6 @@ export class HistorialVentaService {
       }
     });
 
-    console.log('📊 Parámetros para conteo:', params.toString());
     return this.http.get(`${this.apiUrl}/ventas-get-total`, { params });
   }
 
@@ -201,7 +187,6 @@ export class HistorialVentaService {
     // Limitar a una cantidad razonable para cálculo
     params = params.set('itemsPorPagina', '100');
 
-    console.log('💰 Parámetros para cálculo de montos:', params.toString());
     return this.http.get(`${this.apiUrl}/ventas-get`, { params });
   }
 
