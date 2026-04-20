@@ -146,29 +146,32 @@
 
         <form class="notification-form notification-form--compact" *ngIf="estaSeccionGeneralExpandida('correos') && !isNotificationsLoading" [formGroup]="notificationForm" (ngSubmit)="guardarCorreosNotificacion()">
           <div class="notification-toolbar">
-            <label class="notification-toggle">
-              <input type="checkbox" formControlName="habilitado">
-              <span class="notification-toggle__track">
-                <span class="notification-toggle__thumb"></span>
-              </span>
-              <span class="notification-toggle__label">{{ getEstadoNotificaciones() }}</span>
-            </label>
+            <div class="notification-inline-summary">
+              <div class="status-row status-row--compact">
+                <span>Estado</span>
+                <strong>{{ getEstadoCorreos() }}</strong>
+              </div>
+              <div class="status-row status-row--compact">
+                <span>Destino de envío</span>
+                <strong>{{ getTextoEnvioSimultaneo() }}</strong>
+              </div>
+            </div>
           </div>
 
           <div class="notification-compact-grid">
-            <div class="notification-compact-card"
-                 [class.notification-compact-card--active]="notificationForm.get('correoSeleccionado')?.value === 'principal'"
-                 (click)="seleccionarCanalActivo('principal')">
+            <div
+              class="notification-compact-card notification-compact-card--selectable"
+              [class.notification-compact-card--active]="getModoEntregaActual() === 'individual' && getDestinoIndividualActual() === 'principal'"
+              [class.notification-compact-card--muted]="getEnvioSimultaneoActivo()"
+              role="button"
+              tabindex="0"
+              (click)="seleccionarDestinoIndividual('principal')"
+              (keydown)="manejarTecladoSeleccionDestino($event, 'principal')">
               <div class="notification-compact-card__header">
                 <div>
                   <span class="slot-badge slot-badge--primary">Principal</span>
                   <h4>Correo principal</h4>
                 </div>
-
-                <label class="slot-selector" (click)="$event.stopPropagation()">
-                  <input type="radio" formControlName="correoSeleccionado" value="principal">
-                  <span>Activo</span>
-                </label>
               </div>
 
               <div class="input-shell" [class.input-shell--invalid]="esCorreoInvalido('correoPrincipal')">
@@ -176,26 +179,27 @@
                 <input type="email" formControlName="correoPrincipal" placeholder="notificaciones@empresa.com">
               </div>
 
-              <small class="slot-helper">Canal principal para avisos del sistema.</small>
+              <small class="slot-helper slot-helper--status" *ngIf="getTextoEstadoCardCorreo('principal')">{{ getTextoEstadoCardCorreo('principal') }}</small>
 
               <div class="field-error" *ngIf="esCorreoInvalido('correoPrincipal')">
                 Ingresa un correo principal válido.
               </div>
             </div>
 
-            <div class="notification-compact-card"
-                 [class.notification-compact-card--active]="notificationForm.get('correoSeleccionado')?.value === 'secundario'"
-                 (click)="seleccionarCanalActivo('secundario')">
+            <div
+              class="notification-compact-card notification-compact-card--selectable"
+              [class.notification-compact-card--active]="getModoEntregaActual() === 'individual' && getDestinoIndividualActual() === 'secundario'"
+              [class.notification-compact-card--disabled]="!getPuedeUsarCorreoSecundario()"
+              [class.notification-compact-card--muted]="getEnvioSimultaneoActivo()"
+              role="button"
+              tabindex="0"
+              (click)="seleccionarDestinoIndividual('secundario')"
+              (keydown)="manejarTecladoSeleccionDestino($event, 'secundario')">
               <div class="notification-compact-card__header">
                 <div>
                   <span class="slot-badge slot-badge--secondary">Secundario</span>
                   <h4>Correo secundario</h4>
                 </div>
-
-                <label class="slot-selector" (click)="$event.stopPropagation()">
-                  <input type="radio" formControlName="correoSeleccionado" value="secundario">
-                  <span>Activo</span>
-                </label>
               </div>
 
               <div class="input-shell" [class.input-shell--invalid]="esCorreoInvalido('correoSecundario')">
@@ -203,23 +207,31 @@
                 <input type="email" formControlName="correoSecundario" placeholder="respaldo@empresa.com">
               </div>
 
-              <small class="slot-helper">Canal alterno para continuidad operativa.</small>
+              <small class="slot-helper">Opcional.</small>
+              <small class="slot-helper slot-helper--status" *ngIf="getTextoEstadoCardCorreo('secundario')">{{ getTextoEstadoCardCorreo('secundario') }}</small>
 
               <div class="field-error" *ngIf="esCorreoInvalido('correoSecundario')">
-                Ingresa un correo secundario válido.
+                Si lo indicas, debe ser un correo secundario válido.
               </div>
             </div>
           </div>
 
+          <div class="notification-switch-row">
+            <label class="notification-switch" [class.notification-switch--disabled]="!getPuedeUsarCorreoSecundario()">
+              <input type="checkbox" [checked]="getEnvioSimultaneoActivo()" [disabled]="!getPuedeUsarCorreoSecundario()" (change)="alternarEnvioSimultaneo($event)">
+              <span class="notification-switch__track"></span>
+              <span class="notification-switch__content">
+                <strong>Enviar a ambos correos</strong>
+                <small>{{ getTextoAyudaEnvioSimultaneo() }}</small>
+              </span>
+            </label>
+          </div>
+
           <div class="notification-inline-row">
-            <div class="notification-inline-summary">
+            <div class="notification-inline-summary notification-inline-summary--single">
               <div class="status-row status-row--compact">
-                <span>Estado</span>
-                <strong>{{ getEstadoNotificaciones() }}</strong>
-              </div>
-              <div class="status-row status-row--compact">
-                <span>Correo activo</span>
-                <strong>{{ getCorreoActivoPreview() || 'Sin definir' }}</strong>
+                <span>Correo seleccionado</span>
+                <strong>{{ getResumenCorreoSeleccionado() }}</strong>
               </div>
             </div>
 
@@ -239,6 +251,11 @@
           <div class="notification-alert" *ngIf="getHayCorreosDuplicados()">
             <i class="bi bi-exclamation-triangle-fill"></i>
             <span>El correo principal y el secundario deben ser diferentes.</span>
+          </div>
+
+          <div class="notification-alert" *ngIf="getHayConfiguracionDestinoInvalida()">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <span>Para usar el secundario o activar el envío simultáneo, primero debes registrar un correo secundario válido.</span>
           </div>
         </form>
       </div>

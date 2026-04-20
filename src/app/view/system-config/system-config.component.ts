@@ -3,8 +3,9 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { SystemConfigService } from './system-config.service';
 import {
+  NotificationEmailDeliveryMode,
+  NotificationEmailDestination,
   MonedaBaseResponse,
-  NotificationEmailChannel,
   NotificationEmailSettings,
   NotificationEmailUpsertRequest,
   PaymentMethodAccount,
@@ -27,6 +28,22 @@ function correosDebenSerDistintos(control: AbstractControl): ValidationErrors | 
   }
 
   return correoPrincipal === correoSecundario ? { correosDuplicados: true } : null;
+}
+
+function configuracionDestinoCorreosValida(control: AbstractControl): ValidationErrors | null {
+  const correoSecundario = `${control.get('correoSecundario')?.value || ''}`.trim();
+  const modoEntrega = control.get('modoEntrega')?.value as NotificationEmailDeliveryMode | null;
+  const destinoIndividual = control.get('destinoIndividual')?.value as NotificationEmailDestination | null;
+
+  if (modoEntrega === 'simultaneo' && !correoSecundario) {
+    return { requiereCorreoSecundario: true };
+  }
+
+  if (modoEntrega === 'individual' && destinoIndividual === 'secundario' && !correoSecundario) {
+    return { requiereCorreoSecundario: true };
+  }
+
+  return null;
 }
 
 type GeneralSectionKey = 'monedaPrincipal' | 'metodosPago' | 'correos';
@@ -102,15 +119,15 @@ export class SystemConfigComponent implements OnInit, OnDestroy {
     this.config = this.configService.getConfig();
     this.notificationForm = this.formBuilder.group(
       {
-        habilitado: [true],
         correoPrincipal: ['', [Validators.required, Validators.email]],
-        correoSecundario: ['', [Validators.required, Validators.email]],
-        correoSeleccionado: ['principal' as NotificationEmailChannel, Validators.required]
+        correoSecundario: ['', [Validators.email]],
+        modoEntrega: ['individual' as NotificationEmailDeliveryMode],
+        destinoIndividual: ['principal' as NotificationEmailDestination]
       },
-      { validators: correosDebenSerDistintos }
+      { validators: [correosDebenSerDistintos, configuracionDestinoCorreosValida] }
     );
 
-    this.configurarValidadoresNotificaciones(true);
+    this.configurarValidadoresNotificaciones();
   }
 
   ngOnInit(): void {
@@ -128,10 +145,6 @@ export class SystemConfigComponent implements OnInit, OnDestroy {
     this.configService.obtenerConfigDesdeBackend();
     this.cargarCorreosNotificacion();
     this.cargarMetodosPagoConfigurables();
-
-    this.notificationForm.get('habilitado')?.valueChanges.subscribe(habilitado => {
-      this.configurarValidadoresNotificaciones(!!habilitado);
-    });
   }
 
   ngOnDestroy(): void {
@@ -156,11 +169,12 @@ export class SystemConfigComponent implements OnInit, OnDestroy {
 
   cargarCorreosNotificacion(): void {
     this.isNotificationsLoading = true;
-    this.tieneCorreosPersistidos = this.configService.tieneCorreosNotificacionPersistidos();
+    this.tieneCorreosPersistidos = false;
 
     this.configService.obtenerCorreosNotificacion().subscribe({
       next: ({ correos }) => {
         this.correosConfig = correos;
+        this.tieneCorreosPersistidos = this.hayCorreosConfigurados(correos);
         this.aplicarCorreosEnFormulario(correos);
         this.isNotificationsLoading = false;
       },
@@ -180,7 +194,7 @@ export class SystemConfigComponent implements OnInit, OnDestroy {
       this.notificationForm.markAllAsTouched();
       this.swalService.showWarning(
         'Formulario incompleto',
-        'Debes ingresar dos correos válidos y seleccionar cuál será el canal activo.'
+        'Debes ingresar un correo principal válido. El secundario es opcional, pero si lo indicas también debe ser válido y diferente.'
       );
       return;
     }
@@ -201,9 +215,7 @@ export class SystemConfigComponent implements OnInit, OnDestroy {
 
         this.swalService.showSuccess(
           'Correos actualizados',
-          correos.habilitado
-            ? `El ${this.getEtiquetaCanal(correos.correoSeleccionado).toLowerCase()} quedó activo para las notificaciones del sistema.`
-            : 'Las notificaciones por correo quedaron desactivadas.'
+          this.getMensajeExitoCorreos(correos)
         );
       },
       error: (error) => {
@@ -225,10 +237,6 @@ export class SystemConfigComponent implements OnInit, OnDestroy {
     this.aplicarCorreosEnFormulario(this.correosConfig);
   }
 
-  seleccionarCanalActivo(canal: NotificationEmailChannel): void {
-    this.notificationForm.patchValue({ correoSeleccionado: canal });
-  }
-
   esCorreoInvalido(controlName: 'correoPrincipal' | 'correoSecundario'): boolean {
     const control = this.notificationForm.get(controlName);
     return !!control && control.invalid && (control.touched || control.dirty);
@@ -239,29 +247,124 @@ export class SystemConfigComponent implements OnInit, OnDestroy {
       (this.notificationForm.touched || this.notificationForm.dirty);
   }
 
-  getCorreoActivoPreview(): string {
-    if (!this.notificationForm.get('habilitado')?.value) {
-      return 'Notificaciones desactivadas';
+  getEstadoCorreos(): string {
+    const cantidad = this.getCantidadCorreosConfigurados();
+
+    if (cantidad === 0) {
+      return 'Sin correos configurados';
     }
 
-    const correoSeleccionado = this.notificationForm.get('correoSeleccionado')?.value as NotificationEmailChannel;
-    return correoSeleccionado === 'secundario'
-      ? (this.notificationForm.get('correoSecundario')?.value || '')
-      : (this.notificationForm.get('correoPrincipal')?.value || '');
+    return cantidad === 1 ? 'Un correo configurado' : 'Dos correos configurados';
   }
 
-  getEstadoNotificaciones(): string {
-    return this.notificationForm.get('habilitado')?.value
-      ? 'Notificaciones activas'
-      : 'Notificaciones desactivadas';
+  getTextoEnvioSimultaneo(): string {
+    const modoEntrega = this.getModoEntregaActual();
+
+    if (modoEntrega === 'simultaneo') {
+      return 'Ambos correos al mismo tiempo';
+    }
+
+    return this.notificationForm.get('destinoIndividual')?.value === 'secundario'
+      ? 'Solo correo secundario'
+      : 'Solo correo principal';
   }
 
-  getEtiquetaCanal(canal: NotificationEmailChannel): string {
-    return canal === 'secundario' ? 'Correo secundario' : 'Correo principal';
+  getResumenCorreoSeleccionado(): string {
+    const correoPrincipal = `${this.notificationForm.get('correoPrincipal')?.value || ''}`.trim();
+    const correoSecundario = `${this.notificationForm.get('correoSecundario')?.value || ''}`.trim();
+
+    if (this.getModoEntregaActual() === 'simultaneo') {
+      return correoSecundario ? 'Ambos correos' : correoPrincipal || 'Sin definir';
+    }
+
+    if (this.getDestinoIndividualActual() === 'secundario') {
+      return correoSecundario || 'Sin definir';
+    }
+
+    return correoPrincipal || 'Sin definir';
   }
 
   getTextoBotonCorreos(): string {
     return this.tieneCorreosPersistidos ? 'Actualizar correos' : 'Guardar correos';
+  }
+
+  getPuedeUsarCorreoSecundario(): boolean {
+    return !!`${this.notificationForm.get('correoSecundario')?.value || ''}`.trim();
+  }
+
+  getModoEntregaActual(): NotificationEmailDeliveryMode {
+    return (this.notificationForm.get('modoEntrega')?.value as NotificationEmailDeliveryMode) || 'individual';
+  }
+
+  getDestinoIndividualActual(): NotificationEmailDestination {
+    return (this.notificationForm.get('destinoIndividual')?.value as NotificationEmailDestination) || 'principal';
+  }
+
+  getEnvioSimultaneoActivo(): boolean {
+    return this.getModoEntregaActual() === 'simultaneo';
+  }
+
+  seleccionarDestinoIndividual(destino: NotificationEmailDestination): void {
+    if (destino === 'secundario' && !this.getPuedeUsarCorreoSecundario()) {
+      return;
+    }
+
+    this.notificationForm.patchValue({
+      modoEntrega: 'individual',
+      destinoIndividual: destino
+    });
+    this.notificationForm.markAsDirty();
+    this.notificationForm.markAsTouched();
+  }
+
+  alternarEnvioSimultaneo(event: Event): void {
+    const input = event.target as HTMLInputElement | null;
+    const activo = !!input?.checked;
+
+    if (activo && !this.getPuedeUsarCorreoSecundario()) {
+      this.notificationForm.patchValue({ modoEntrega: 'individual' }, { emitEvent: false });
+      return;
+    }
+
+    this.notificationForm.patchValue({
+      modoEntrega: activo ? 'simultaneo' : 'individual'
+    });
+    this.notificationForm.markAsDirty();
+    this.notificationForm.markAsTouched();
+  }
+
+  manejarTecladoSeleccionDestino(event: KeyboardEvent, destino: NotificationEmailDestination): void {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    this.seleccionarDestinoIndividual(destino);
+  }
+
+  getHayConfiguracionDestinoInvalida(): boolean {
+    return !!this.notificationForm.errors?.['requiereCorreoSecundario'] &&
+      (this.notificationForm.touched || this.notificationForm.dirty);
+  }
+
+  getTextoAyudaEnvioSimultaneo(): string {
+    return this.getPuedeUsarCorreoSecundario()
+      ? 'Los avisos se enviarán en paralelo al principal y al secundario.'
+      : 'Agrega un correo secundario para habilitar el envío simultáneo.';
+  }
+
+  getTextoEstadoCardCorreo(destino: NotificationEmailDestination): string {
+    if (destino === 'secundario' && !this.getPuedeUsarCorreoSecundario()) {
+      return 'Completa este correo para poder seleccionarlo.';
+    }
+
+    if (this.getModoEntregaActual() === 'simultaneo') {
+      return '';
+    }
+
+    return this.getDestinoIndividualActual() === destino
+      ? 'Seleccionado para el envío individual.'
+      : '';
   }
 
   cargarMetodosPagoConfigurables(): void {
@@ -822,12 +925,12 @@ export class SystemConfigComponent implements OnInit, OnDestroy {
 
   private aplicarCorreosEnFormulario(correos: NotificationEmailSettings): void {
     this.notificationForm.reset({
-      habilitado: correos.habilitado,
       correoPrincipal: correos.correoPrincipal,
       correoSecundario: correos.correoSecundario,
-      correoSeleccionado: correos.correoSeleccionado
+      modoEntrega: correos.destinoEnvio === 'ambos' ? 'simultaneo' : 'individual',
+      destinoIndividual: correos.destinoEnvio === 'secundario' ? 'secundario' : 'principal'
     }, { emitEvent: false });
-    this.configurarValidadoresNotificaciones(correos.habilitado);
+    this.configurarValidadoresNotificaciones();
     this.notificationForm.markAsPristine();
     this.notificationForm.markAsUntouched();
   }
@@ -1298,38 +1401,54 @@ export class SystemConfigComponent implements OnInit, OnDestroy {
     this.methodSaveInFlight.clear();
   }
 
-  private configurarValidadoresNotificaciones(habilitado: boolean): void {
+  private configurarValidadoresNotificaciones(): void {
     const correoPrincipal = this.notificationForm.get('correoPrincipal');
     const correoSecundario = this.notificationForm.get('correoSecundario');
-    const correoSeleccionado = this.notificationForm.get('correoSeleccionado');
-
-    if (habilitado) {
-      correoPrincipal?.setValidators([Validators.required, Validators.email]);
-      correoSecundario?.setValidators([Validators.required, Validators.email]);
-      correoSeleccionado?.setValidators([Validators.required]);
-      this.notificationForm.setValidators(correosDebenSerDistintos);
-    } else {
-      correoPrincipal?.clearValidators();
-      correoSecundario?.clearValidators();
-      correoSeleccionado?.clearValidators();
-      this.notificationForm.clearValidators();
-    }
+    correoPrincipal?.setValidators([Validators.required, Validators.email]);
+    correoSecundario?.setValidators([Validators.email]);
+    this.notificationForm.setValidators([correosDebenSerDistintos, configuracionDestinoCorreosValida]);
 
     correoPrincipal?.updateValueAndValidity({ emitEvent: false });
     correoSecundario?.updateValueAndValidity({ emitEvent: false });
-    correoSeleccionado?.updateValueAndValidity({ emitEvent: false });
     this.notificationForm.updateValueAndValidity({ emitEvent: false });
   }
 
   private construirPayloadCorreos(): NotificationEmailUpsertRequest {
     const formValue = this.notificationForm.getRawValue();
+    const destino = formValue.modoEntrega === 'simultaneo'
+      ? 'ambos'
+      : formValue.destinoIndividual === 'secundario'
+        ? 'secundario'
+        : 'principal';
 
     return {
-      habilitado: !!formValue.habilitado,
-      correoPrincipal: formValue.correoPrincipal?.trim() || '',
-      correoSecundario: formValue.correoSecundario?.trim() || '',
-      correoSeleccionado: formValue.correoSeleccionado || 'principal'
+      correo_notificacion_1: formValue.correoPrincipal?.trim() || '',
+      correo_notificacion_2: formValue.correoSecundario?.trim() || '',
+      correo_notificacion_destino: destino
     };
+  }
+
+  private getCantidadCorreosConfigurados(): number {
+    return [
+      this.notificationForm.get('correoPrincipal')?.value,
+      this.notificationForm.get('correoSecundario')?.value
+    ].filter((correo) => `${correo || ''}`.trim()).length;
+  }
+
+  private hayCorreosConfigurados(correos: NotificationEmailSettings): boolean {
+    return !!(`${correos.correoPrincipal || ''}`.trim() || `${correos.correoSecundario || ''}`.trim());
+  }
+
+  private getMensajeExitoCorreos(correos: NotificationEmailSettings): string {
+    if (correos.destinoEnvio === 'ambos') {
+      return 'Se actualizaron los correos de notificación. Los avisos quedarán saliendo al principal y al secundario al mismo tiempo.';
+    }
+
+    if (correos.destinoEnvio === 'secundario') {
+      return 'Se actualizaron los correos de notificación. El envío individual quedó apuntando al correo secundario.';
+    }
+
+    return 'Se actualizaron los correos de notificación. El envío individual quedó apuntando al correo principal.';
   }
 
   /**

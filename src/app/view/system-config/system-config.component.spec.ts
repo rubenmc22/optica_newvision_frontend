@@ -32,10 +32,9 @@ describe('SystemConfigComponent', () => {
     obtenerCorreosNotificacion: () => of({
       message: 'ok',
       correos: {
-        habilitado: true,
         correoPrincipal: 'notificaciones@opticanewvision.com',
         correoSecundario: 'respaldo.notificaciones@opticanewvision.com',
-        correoSeleccionado: 'principal',
+        destinoEnvio: 'principal',
         ultimaActualizacion: '2026-04-11T10:00:00.000Z'
       }
     }),
@@ -76,10 +75,9 @@ describe('SystemConfigComponent', () => {
     guardarCorreosNotificacion: () => of({
       message: 'ok',
       correos: {
-        habilitado: true,
         correoPrincipal: 'notificaciones@opticanewvision.com',
         correoSecundario: 'respaldo.notificaciones@opticanewvision.com',
-        correoSeleccionado: 'principal',
+        destinoEnvio: 'principal',
         ultimaActualizacion: '2026-04-11T10:00:00.000Z'
       }
     }),
@@ -108,10 +106,9 @@ describe('SystemConfigComponent', () => {
     actualizarCorreosNotificacion: () => of({
       message: 'ok',
       correos: {
-        habilitado: true,
         correoPrincipal: 'notificaciones@opticanewvision.com',
         correoSecundario: 'respaldo.notificaciones@opticanewvision.com',
-        correoSeleccionado: 'principal',
+        destinoEnvio: 'principal',
         ultimaActualizacion: '2026-04-11T10:00:00.000Z'
       }
     }),

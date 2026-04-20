@@ -4,6 +4,9 @@ import { HttpClient } from '@angular/common/http';
 import {
   MonedaBaseRequest,
   MonedaBaseResponse,
+  NotificationEmailBackendConfig,
+  NotificationEmailBackendResponse,
+  NotificationEmailDestination,
   NotificationEmailGetResponse,
   NotificationEmailSettings,
   NotificationEmailUpsertRequest,
@@ -35,7 +38,6 @@ import { TasaCambiariaService } from './../../core/services/tasaCambiaria/tasaCa
 
 export class SystemConfigService {
   private readonly CONFIG_KEY = 'opticlass_system_config';
-  private readonly NOTIFICATION_EMAILS_KEY = 'opticlass_notification_emails';
 
   // Configuración por defecto
   private defaultConfig: SystemConfig = {
@@ -46,10 +48,9 @@ export class SystemConfigService {
   };
 
   private readonly defaultNotificationEmails: NotificationEmailSettings = {
-    habilitado: true,
-    correoPrincipal: 'notificaciones@opticanewvision.com',
-    correoSecundario: 'respaldo.notificaciones@opticanewvision.com',
-    correoSeleccionado: 'principal',
+    correoPrincipal: '',
+    correoSecundario: '',
+    destinoEnvio: 'principal',
     ultimaActualizacion: new Date().toISOString()
   };
 
@@ -114,10 +115,11 @@ export class SystemConfigService {
   }
 
   /**
-   * Indica si la configuración de correos ya fue persistida localmente
+   * Indica si la configuración de correos ya fue persistida.
+   * El estado real se determina cuando responde el backend.
    */
   tieneCorreosNotificacionPersistidos(): boolean {
-    return !!localStorage.getItem(this.NOTIFICATION_EMAILS_KEY);
+    return false;
   }
 
   /**
@@ -136,38 +138,15 @@ export class SystemConfigService {
   }
 
   /**
-   * Obtiene la configuración local de correos de notificación
-   */
-  private getNotificationEmails(): NotificationEmailSettings {
-    const saved = localStorage.getItem(this.NOTIFICATION_EMAILS_KEY);
-    if (!saved) {
-      return { ...this.defaultNotificationEmails };
-    }
-
-    try {
-      return JSON.parse(saved) as NotificationEmailSettings;
-    } catch (error) {
-      console.warn('No se pudo leer la configuración local de correos de notificación:', error);
-      return { ...this.defaultNotificationEmails };
-    }
-  }
-
-  /**
-   * Guarda la configuración local de correos de notificación
-   */
-  private saveNotificationEmails(config: NotificationEmailSettings): NotificationEmailSettings {
-    localStorage.setItem(this.NOTIFICATION_EMAILS_KEY, JSON.stringify(config));
-    return config;
-  }
-
-  /**
-   * Obtiene los correos de notificación persistidos localmente
+   * Obtiene los correos de notificación desde el backend
    */
   obtenerCorreosNotificacion(): Observable<NotificationEmailGetResponse> {
-    return of({
-      message: 'ok',
-      correos: this.getNotificationEmails()
-    }).pipe(delay(250));
+    return this.http.get<NotificationEmailBackendResponse>(`${environment.apiUrl}/configuracion/correos_notificacion-get`).pipe(
+      map((response) => ({
+        message: response.message,
+        correos: this.adaptarCorreosNotificacionDesdeBackend(response.configuracion)
+      }))
+    );
   }
 
   /**
@@ -306,18 +285,15 @@ export class SystemConfigService {
     payload: NotificationEmailUpsertRequest,
     message: string
   ): Observable<NotificationEmailUpsertResponse> {
-    const config = this.saveNotificationEmails({
-      habilitado: payload.habilitado,
-      correoPrincipal: this.normalizarCorreo(payload.correoPrincipal),
-      correoSecundario: this.normalizarCorreo(payload.correoSecundario),
-      correoSeleccionado: payload.correoSeleccionado,
-      ultimaActualizacion: new Date().toISOString()
-    });
-
-    return of({
-      message,
-      correos: config
-    }).pipe(delay(350));
+    return this.http.put<NotificationEmailBackendResponse>(
+      `${environment.apiUrl}/configuracion/correos_notificacion-update`,
+      payload
+    ).pipe(
+      map((response) => ({
+        message: response.message || message,
+        correos: this.adaptarCorreosNotificacionDesdeBackend(response.configuracion)
+      }))
+    );
   }
 
   /**
@@ -807,6 +783,42 @@ export class SystemConfigService {
    */
   private normalizarCorreo(correo: string): string {
     return correo.trim().toLowerCase();
+  }
+
+  private adaptarCorreosNotificacionDesdeBackend(
+    configuracion?: NotificationEmailBackendConfig
+  ): NotificationEmailSettings {
+    if (!configuracion) {
+      return { ...this.defaultNotificationEmails };
+    }
+
+    const correoPrincipal = this.normalizarCorreo(configuracion.correo_notificacion_1 || '');
+    const correoSecundario = this.normalizarCorreo(configuracion.correo_notificacion_2 || '');
+
+    return {
+      correoPrincipal,
+      correoSecundario,
+      destinoEnvio: this.normalizarDestinoCorreoNotificacion(
+        configuracion.correo_notificacion_destino,
+        correoSecundario
+      ),
+      ultimaActualizacion: new Date().toISOString()
+    };
+  }
+
+  private normalizarDestinoCorreoNotificacion(
+    destino: string | undefined,
+    correoSecundario: string
+  ): NotificationEmailDestination {
+    if (destino === 'ambos' && correoSecundario) {
+      return 'ambos';
+    }
+
+    if (destino === 'secundario' && correoSecundario) {
+      return 'secundario';
+    }
+
+    return 'principal';
   }
 
   /**

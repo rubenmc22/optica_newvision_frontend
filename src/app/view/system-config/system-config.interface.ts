@@ -29,21 +29,28 @@ export interface MonedaBaseResponse {
   moneda_base: string;
 }
 
-export type NotificationEmailChannel = 'principal' | 'secundario';
+export type NotificationEmailDestination = 'principal' | 'secundario' | 'ambos';
+export type NotificationEmailDeliveryMode = 'individual' | 'simultaneo';
+
+export interface NotificationEmailBackendConfig {
+  correo_notificacion_1: string;
+  correo_notificacion_2: string;
+  correo_notificacion_destino: NotificationEmailDestination;
+}
 
 export interface NotificationEmailSettings {
-  habilitado: boolean;
   correoPrincipal: string;
   correoSecundario: string;
-  correoSeleccionado: NotificationEmailChannel;
+  destinoEnvio: NotificationEmailDestination;
   ultimaActualizacion: string;
 }
 
-export interface NotificationEmailUpsertRequest {
-  habilitado: boolean;
-  correoPrincipal: string;
-  correoSecundario: string;
-  correoSeleccionado: NotificationEmailChannel;
+export interface NotificationEmailBackendResponse {
+  message: string;
+  configuracion: NotificationEmailBackendConfig;
+}
+
+export interface NotificationEmailUpsertRequest extends NotificationEmailBackendConfig {
 }
 
 export interface NotificationEmailGetResponse {
