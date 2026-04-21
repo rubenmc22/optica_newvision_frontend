@@ -403,6 +403,7 @@ export const MOTIVOS_CONSULTA: string[] = [
 
 // ===== TIPOS DE CRISTALES =====
 export const TIPOS_CRISTALES: any[] = [
+    { value: 'PLANO', label: 'Plano' },
   { value: 'MONOFOCAL', label: 'Monofocal visión sencilla' },
   { value: 'MONOFOCAL_DIGITAL', label: 'Monofocal Visión sencilla digital' },
   { value: 'BIFOCAL', label: 'Bifocal' },
@@ -418,8 +419,8 @@ export const TIPOS_LENTES_CONTACTO: any[] = [
   { value: 'DESECHABLES_EVOLUTION', label: 'Desechables evolution' },
   { value: 'TORICOS', label: 'Toricos' },
   { value: 'CONTAFLEX', label: 'Contaflex' },
-  { value: 'COSMETICOS', label: 'Cosmeticos' },
-  { value: 'COSMETICOS_FORMULADOS', label: 'Cosmeticos formulados' }
+    { value: 'COSMETICOS', label: 'Cosméticos' },
+    { value: 'COSMETICOS_FORMULADOS', label: 'Cosméticos formulados' }
 ];
 // ===== MATERIALES =====
 export const MATERIALES: OpcionSelect[] = [

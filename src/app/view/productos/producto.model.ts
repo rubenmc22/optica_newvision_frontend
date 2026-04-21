@@ -4,6 +4,63 @@ export type ProductoOrigenClasificacion = 'catalogo' | 'inferido' | 'manual';
 
 export type ProductoEstadoOperativo = 'listo_comercial' | 'listo_clinico' | 'dependencia_tecnica' | 'requiere_revision';
 
+export type ProductoEstadoDisponibilidad = 'disponible' | 'bajo_pedido' | 'agotado' | 'catalogo_tecnico';
+
+export type ProductoPrecioCristal = 'par' | 'ojo';
+
+export interface ProductoCristalConfig {
+  tipoCristal?: string;
+  presentacion?: string;
+  material?: string;
+  proveedor?: string;
+  tratamientos: string[];
+  rangoFormula: string;
+  precioPor?: ProductoPrecioCristal;
+  costoLaboratorio?: number | null;
+  materialOtro?: string;
+}
+
+export interface ProductoMonturaConfig {
+  marca: string;
+  modelo: string;
+  color: string;
+  material: string;
+  proveedor: string;
+}
+
+export interface ProductoLenteContactoConfig {
+  marca: string;
+  tipoLenteContacto: string;
+  color: string;
+  proveedor: string;
+}
+
+export interface ProductoLiquidoConfig {
+  marca: string;
+  modelo: string;
+  proveedor: string;
+}
+
+export interface ProductoEstucheConfig {
+  marca: string;
+  modelo: string;
+  material: string;
+  proveedor: string;
+}
+
+export interface ProductoAccesorioConfig {
+  marca: string;
+  modelo: string;
+  color: string;
+  material: string;
+  proveedor: string;
+}
+
+export interface ProductoInventarioMeta {
+  controlaStock?: boolean;
+  disponibilidadInventario?: ProductoEstadoDisponibilidad;
+}
+
 export interface ProductoClasificacion {
   tipoItem?: ProductoTipoItem;
   requiereFormula?: boolean;
@@ -18,7 +75,7 @@ export interface ProductoClasificacion {
   estadoOperativo?: ProductoEstadoOperativo;
 }
 
-export interface Producto extends ProductoClasificacion {
+export interface Producto extends ProductoClasificacion, ProductoInventarioMeta {
   id: string;
   sede: string;
   nombre: string;
@@ -36,6 +93,12 @@ export interface Producto extends ProductoClasificacion {
   precio: number;
   activo: boolean;
   descripcion?: string;
+  cristalConfig?: ProductoCristalConfig;
+  monturaConfig?: ProductoMonturaConfig;
+  lenteContactoConfig?: ProductoLenteContactoConfig;
+  liquidoConfig?: ProductoLiquidoConfig;
+  estucheConfig?: ProductoEstucheConfig;
+  accesorioConfig?: ProductoAccesorioConfig;
   imagenUrl?: string;
   fechaIngreso: string;
   precioOriginal?: number;
@@ -62,6 +125,12 @@ export interface ProductoDto {
   precio: number;
   activo: boolean;
   descripcion?: string;
+  cristalConfig?: ProductoCristalConfig;
+  monturaConfig?: ProductoMonturaConfig;
+  lenteContactoConfig?: ProductoLenteContactoConfig;
+  liquidoConfig?: ProductoLiquidoConfig;
+  estucheConfig?: ProductoEstucheConfig;
+  accesorioConfig?: ProductoAccesorioConfig;
   imagen_url?: string;
   created_at: string;
   precioOriginal?: number;

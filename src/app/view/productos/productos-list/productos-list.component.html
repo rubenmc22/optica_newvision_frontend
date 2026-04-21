@@ -9,8 +9,8 @@
           </div>
           <div class="header-text">
             <span class="header-badge">Inventario</span>
-            <h4 class="header-title">Catálogo de Productos</h4>
-            <div class="header-subtitle">Controla referencias, stock y precios con la misma línea visual del sistema.</div>
+            <h4 class="header-title">Inventario y Configuración</h4>
+            <div class="header-subtitle">Controla referencias físicas y configura cristales completos desde una sola ficha de producto.</div>
           </div>
         </div>
         <button class="btn btn-agregar-producto" (click)="abrirModal('agregar')">
@@ -21,26 +21,6 @@
 
       <!-- Cuerpo modernizado -->
       <div class="card-body-moderno">
-        <section class="inventory-insights">
-          <article class="insight-card">
-            <span class="insight-label">Referencias registradas</span>
-            <strong class="insight-value">{{ totalProductosRegistrados }}</strong>
-            <span class="insight-meta">Productos cargados en el inventario actual.</span>
-          </article>
-
-          <article class="insight-card">
-            <span class="insight-label">Productos activos</span>
-            <strong class="insight-value">{{ totalProductosActivos }}</strong>
-            <span class="insight-meta">Disponibles para operar y mostrar en venta.</span>
-          </article>
-
-          <article class="insight-card">
-            <span class="insight-label">Alertas de stock</span>
-            <strong class="insight-value">{{ totalProductosConAlerta }}</strong>
-            <span class="insight-meta">Incluye {{ totalProductosAgotados }} agotados y referencias con stock bajo.</span>
-          </article>
-        </section>
-
         <!-- Filtros modernos mejorados -->
         <div class="filtros-modernos">
           <div class="filtro-item">
@@ -56,7 +36,7 @@
             </select>
           </div>
 
-          <div class="filtro-item">
+          <div class="filtro-item filtro-item--busqueda">
             <label class="form-label-moderno">
               <i class="bi bi-search"></i>
               Buscar producto
@@ -83,6 +63,19 @@
 
           <div class="filtro-item">
             <label class="form-label-moderno">
+              <i class="bi bi-box-seam"></i>
+              Disponibilidad
+            </label>
+            <select class="form-select modern-select" [(ngModel)]="disponibilidadSeleccionada">
+              <option value="">Todas</option>
+              <option *ngFor="let disponibilidad of disponibilidadesDisponibles" [value]="disponibilidad.value">
+                {{ disponibilidad.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filtro-item">
+            <label class="form-label-moderno">
               <i class="bi bi-circle"></i>
               Estado
             </label>
@@ -93,7 +86,7 @@
             </select>
           </div>
 
-          <div class="filtro-item">
+          <div class="filtro-item filtro-item--accion">
             <button class="btn btn-limpiar-filtros" (click)="limpiarFiltros()">
               <i class="bi bi-arrow-clockwise"></i>
               Limpiar Filtros
@@ -169,12 +162,6 @@
               </div>
 
               <div class="producto-badges">
-                <span class="badge estado-badge" [ngClass]="{
-          'estado-activo': producto.activo,
-          'estado-inactivo': !producto.activo
-        }">
-                  {{ producto.activo ? 'Activo' : 'Inactivo' }}
-                </span>
                 <span class="badge codigo-badge">
                   {{ producto.codigo }}
                 </span>
@@ -182,15 +169,22 @@
             </div>
 
             <div class="producto-content">
-              <h6 class="producto-nombre">
+              <div class="producto-categoria-row">
+                <span class="meta-pill">{{ producto.categoria }}</span>
+                <span class="meta-pill meta-pill--estado" [ngClass]="producto.activo ? 'meta-pill--estado-activo' : 'meta-pill--estado-inactivo'">
+                  {{ producto.activo ? 'Activo' : 'Inactivo' }}
+                </span>
+              </div>
+
+              <h6 class="producto-nombre" [title]="getNombreProductoDisplay(producto)">
                 {{ getNombreProductoDisplay(producto) }}
               </h6>
 
-              <div class="producto-meta-row">
-                <span class="meta-pill">{{ producto.categoria }}</span>
+              <div class="producto-proveedor-resumen">
+                <i class="bi" [ngClass]="getTipoItemProducto(producto) === 'base_formulado' ? 'bi-buildings' : 'bi-truck'"></i>
+                <span>{{ getTipoItemProducto(producto) === 'base_formulado' ? 'Laboratorio' : 'Proveedor' }}: {{ getProveedorResumen(producto) }}</span>
               </div>
 
-              <!-- SECCIÓN DE PRECIOS  -->
               <div class="producto-precio">
                 <div class="precio-principal">
                   <span class="precio-moneda">{{ getSimboloMonedaActual() }}</span>
@@ -199,38 +193,19 @@
                   </span>
                 </div>
 
-                <div class="precio-conversion" *ngIf="!esMonedaBolivar(monedaSistema)">
-                  <i class="bi bi-arrow-left-right"></i>
+                <div class="precio-conversion">
                   <span>
                     Bs {{ getPrecioBs(producto) | number:'1.2-2' }}
                   </span>
                 </div>
-
               </div>
 
-              <div class="producto-stock" *ngIf="controlaStockProducto(producto); else sinControlStockTpl">
-                <i class="bi bi-box"></i>
-                <span class="stock-cantidad" [ngClass]="{
-          'stock-alto': producto.stock > 5,
-          'stock-bajo': producto.stock <= 5 && producto.stock > 0,
-          'stock-agotado': producto.stock === 0
-        }">
-                  {{ producto.stock }} unidades
-                </span>
-                <span *ngIf="producto.stock <= 5 && producto.stock > 0" class="badge stock-alerta">
-                  ¡Stock bajo!
-                </span>
-                <span *ngIf="producto.stock === 0" class="badge stock-agotado">
-                  Agotado
+              <div class="producto-stock">
+                <span class="stock-label">Stock</span>
+                <span class="stock-cantidad" [ngClass]="getStockTextoClase(producto)">
+                  {{ producto.stock ?? 0 }} unidad(es)
                 </span>
               </div>
-
-              <ng-template #sinControlStockTpl>
-                <div class="producto-stock producto-stock--informativo">
-                  <i class="bi bi-box-seam"></i>
-                  <span class="stock-cantidad">Sin control de stock</span>
-                </div>
-              </ng-template>
 
               <div class="producto-actions" *ngIf="producto.sede === sedeActiva">
                 <button class="btn btn-editar" (click)="abrirModal('editar', producto); $event.stopPropagation()">
@@ -330,7 +305,7 @@
         </div>
 
         <!-- Body moderno -->
-        <div class="modal-body-moderno">
+        <div class="modal-body-moderno" #modalBodyRef>
           <div class="container-fluid">
             <!-- Sección: Imagen y Datos Principales -->
             <!-- Sección: Imagen y Datos Principales -->
@@ -355,9 +330,18 @@
                     </div>
 
                     <div class="seccion-imagen">
-                      <div class="avatar-widget">
+                      <div class="avatar-widget" [class.avatar-widget--zoomable]="modoModal === 'ver'"
+                        [attr.role]="modoModal === 'ver' ? 'button' : null"
+                        [attr.tabindex]="modoModal === 'ver' ? 0 : null"
+                        (click)="modoModal === 'ver' ? abrirVistaAmpliadaImagen($event) : null"
+                        (keydown.enter)="modoModal === 'ver' ? abrirVistaAmpliadaImagen($event) : null"
+                        (keydown.space)="modoModal === 'ver' ? abrirVistaAmpliadaImagen($event) : null">
                         <img [src]="getProfileImage()" (error)="handleImageError($event)" class="avatar-img"
                           alt="Imagen del producto" />
+                        <div class="avatar-zoom-hint" *ngIf="modoModal === 'ver'">
+                          <i class="bi bi-arrows-fullscreen"></i>
+                          <span>Click para ampliar</span>
+                        </div>
                         <div class="avatar-overlay show-on-hover" *ngIf="modoModal !== 'ver'">
                           <label for="avatarUpload" class="btn-imagen">
                             <i class="bi bi-camera"></i>
@@ -377,85 +361,94 @@
                   <div class="seccion-campos-principales">
                     <div class="seccion-campos-principales__header">
                       <h6 class="seccion-campos-principales__title">Datos principales</h6>
-                      <p class="seccion-campos-principales__subtitle">Nombre generado, disponibilidad y precio base del producto</p>
+                      <p class="seccion-campos-principales__subtitle">Nombre editable, disponibilidad y precio final cargado manualmente por el asesor</p>
                     </div>
 
-                    <!-- Fila 1: Nombre autogenerado y stock condicional -->
-                    <div class="fila-nombre-stock" [class.fila-nombre-stock--solo]="!mostrarCampoStock">
-                      <div class="form-group-moderno">
+                    <div class="bloque-nombre-principal-ancho">
+                      <div class="form-group-moderno form-group-moderno--nombre-principal campo-resumen-card campo-resumen-card--nombre">
                         <label class="form-label-moderno">
                           <i class="bi bi-tag"></i>
                           Nombre del producto
                         </label>
-                        <input type="text" class="form-control-moderno" [ngModel]="producto.nombre || ''" name="nombre"
-                          [disabled]="true" [placeholder]="placeholderNombreProducto" readonly>
-                      </div>
-
-                      <div class="form-group-moderno" *ngIf="mostrarCampoStock">
-                        <label class="form-label-moderno">
-                          <i class="bi bi-box"></i>
-                          Stock disponible <span class="required" *ngIf="stockEsObligatorio">*</span>
-                        </label>
-                        <input type="text" class="form-control-moderno" [(ngModel)]="producto.stock" name="stock"
-                          [required]="stockEsObligatorio" min="0" [disabled]="esSoloLectura" [placeholder]="placeholderStockCategoria" (input)="soloNumerosStock($event)"
-                          (blur)="formatearStock($event)">
+                        <input type="text" class="form-control-moderno form-control-moderno--nombre-linea"
+                          [(ngModel)]="producto.nombre" name="nombre" [disabled]="esSoloLectura"
+                          [placeholder]="placeholderNombreProducto" (ngModelChange)="onNombreProductoModelChange($event)">
+                        <div class="nombre-producto-tools" *ngIf="!esSoloLectura">
+                          <span class="campo-ayuda mb-0">
+                            {{ nombreProductoPersonalizado ? 'Nombre manual activo.' : 'Usando nombre sugerido automáticamente.' }}
+                          </span>
+                          <button type="button" class="btn btn-link btn-accion-secundaria" (click)="usarNombreSugerido()">
+                            Usar sugerencia
+                          </button>
+                        </div>
+                        <div class="campo-ayuda" *ngIf="nombreProductoSugeridoActual">
+                          Sugerido: {{ nombreProductoSugeridoActual }}
+                        </div>
                       </div>
                     </div>
 
-                    <!-- Fila 2: IVA y Precio en línea - MEJORADO -->
-                    <div class="fila-iva-precio">
-
-                      <!-- IVA Switch - MÁS ANCHO -->
-                      <div class="grupo-iva" *ngIf="modoModal !== 'ver'">
-                        <div class="switch-iva-container">
-                          <label class="modern-switch">
-                            <input type="checkbox" [(ngModel)]="producto.aplicaIva" name="aplicaIva"
-                              (change)="sincronizarPrecio()">
-                            <span class="switch-slider"></span>
-                          </label>
-                          <span class="switch-label">¿Aplica IVA?</span>
-                        </div>
+                    <div class="fila-datos-principales-superior">
+                      <div class="form-group-moderno form-group-moderno--dato-corto datos-principales-item">
+                        <label class="form-label-moderno">
+                          <i class="bi bi-box"></i>
+                          {{ categoriaProductoActual === 'cristales' ? 'Stock / referencia' : 'Stock' }} <span class="required" *ngIf="stockEsObligatorio">*</span>
+                        </label>
+                        <input type="text" class="form-control-moderno form-control-moderno--dato-corto" [(ngModel)]="producto.stock" name="stock"
+                          [required]="stockEsObligatorio" min="0" [disabled]="esSoloLectura" [placeholder]="placeholderStockCategoria" (input)="soloNumerosStock($event)"
+                          (blur)="formatearStock($event)">
                       </div>
 
-                      <!-- Precio con Selector de Moneda - MÁS COMPACTO -->
-                      <div class="form-group-moderno grupo-precio">
+                      <div class="form-group-moderno form-group-moderno--dato-corto datos-principales-item" [class.datos-principales-item--inactivo]="!costoLaboratorioEditableEnFormulario">
+                        <label class="form-label-moderno">
+                          <i class="bi bi-cash-stack"></i>
+                          Costo laboratorio
+                        </label>
+                        <div class="monto-field">
+                          <span class="monto-field__symbol">{{ getSimboloMonedaActual() }}</span>
+                          <input type="text" class="form-control-moderno precio-input-innovador form-control-moderno--dato-corto monto-field__input"
+                            [value]="getCostoLaboratorioDisplay()" (input)="onCostoLaboratorioCristalInput($event)"
+                            (focus)="onCostoLaboratorioCristalFocus()" (blur)="onCostoLaboratorioCristalBlur()"
+                            name="costoLaboratorioCristal" [disabled]="esSoloLectura || !costoLaboratorioEditableEnFormulario"
+                            placeholder="0,00" inputmode="decimal">
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="fila-datos-principales-inferior">
+                      <div class="form-group-moderno form-group-moderno--dato-corto datos-principales-item grupo-precio-resumen">
                         <label class="form-label-moderno">
                           <i class="bi bi-currency-dollar"></i>
-                          {{ producto.aplicaIva ? 'Precio en ' + getSimboloMonedaActual() + ' + IVA' : 'Precio en ' +
-                          getSimboloMonedaActual() }} <span class="required">*</span>
+                          Precio de venta <span class="required">*</span>
                         </label>
-
-                        <div class="selector-moneda-innovador">
-                          <!-- Campo de precio  -->
-                          <div class="campo-precio">
-                            <input type="text" class="form-control-moderno precio-input-innovador"
-                              [value]="getPrecioDisplay()" (input)="onPrecioInput($event)" (blur)="onPrecioBlur()"
-                              (focus)="onPrecioFocus()" name="precioActual" required placeholder="0,00"
-                              [disabled]="esSoloLectura">
-                          </div>
-
-                          <!-- Selector de moneda tipo cards - MÁS COMPACTO -->
-                          <!-- <div class="selector-monedas-cards" [class.disabled]="esSoloLectura">
-                            <div class="moneda-card" *ngFor="let monedaItem of moneda"
-                              [class.selected]="producto.moneda === monedaItem.id" [class.disabled]="esSoloLectura"
-                              (click)="!esSoloLectura && seleccionarMoneda(monedaItem.id)">
-
-                              <div class="moneda-icono">
-                                <i class="bi" [ngClass]="getMonedaIcon(monedaItem.alias)"></i>
-                              </div>
-
-                              <div class="moneda-info">
-                                <span class="moneda-nombre">{{ monedaItem.alias }}</span>
-                              </div>
-
-                              <div class="moneda-seleccionado" *ngIf="producto.moneda === monedaItem.id">
-                                <i class="bi bi-check-circle-fill"></i>
-                              </div>
-                            </div>
-                          </div>-->
+                        <div class="monto-field">
+                          <span class="monto-field__symbol">{{ getSimboloMonedaActual() }}</span>
+                          <input type="text" class="form-control-moderno precio-input-innovador form-control-moderno--dato-corto monto-field__input"
+                            [value]="getPrecioDisplay()" (input)="onPrecioInput($event)" (blur)="onPrecioBlur()"
+                            (focus)="onPrecioFocus()" name="precioActual" required placeholder="0,00"
+                            [disabled]="esSoloLectura">
                         </div>
                       </div>
 
+                      <div class="form-group-moderno form-group-moderno--dato-corto datos-principales-item datos-principales-item--iva">
+                        <label class="form-label-moderno">
+                          <i class="bi bi-percent"></i>
+                          IVA precio venta
+                        </label>
+                        <div class="iva-field-shell">
+                          <div class="switch-iva-container">
+                            <label class="modern-switch">
+                              <input type="checkbox" [(ngModel)]="producto.aplicaIva" name="aplicaIva"
+                                (change)="sincronizarPrecio()" [disabled]="esSoloLectura">
+                              <span class="switch-slider"></span>
+                            </label>
+                            <span class="switch-label">Aplicar IVA al precio de venta</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="campo-ayuda campo-ayuda--principal" *ngIf="mostrarAvisoStockReferenciaCristal">
+                      Los cristales se manejan como inventario normal. Si no hay existencia, registra 0 y el sistema lo marcará como agotado.
                     </div>
                   </div>
                 </div>
@@ -463,30 +456,37 @@
             </div>
 
             <!-- Sección: Características del Producto -->
-            <div class="form-section">
+            <div class="form-section" #seccionCategoriaRef>
               <div class="section-header">
                 <div class="section-icon">
-                  <i class="bi bi-gear"></i>
+                  <i class="bi bi-grid"></i>
                 </div>
-                <h6 class="section-title">Características del Producto</h6>
+                <h6 class="section-title">Categoría del Producto</h6>
               </div>
 
               <div class="section-content">
                 <div class="row g-3">
-                  <!-- Categoría -->
-                  <div class="col-md-4">
+                  <div class="col-md-4" #categoriaSelectRef>
                     <div class="form-group-moderno">
                       <label class="form-label-moderno">
                         <i class="bi bi-grid"></i>
                         Categoría <span class="required">*</span>
                       </label>
                       <ng-select [items]="categoriasProducto" [ngModel]="producto.categoria || null" name="categoria"
-                        (ngModelChange)="onCategoriaProductoModelChange($event)" [searchable]="true"
+                        (ngModelChange)="onCategoriaProductoModelChange($event)" (open)="onCategoriaProductoOpen()" [searchable]="true"
                         [disabled]="esSoloLectura" [placeholder]="placeholderCategoriaProducto"
                         class="ng-select-moderno">
                       </ng-select>
                     </div>
                   </div>
+
+                  <div class="col-12" *ngIf="!hayCategoriaSeleccionada">
+                    <div class="campo-ayuda campo-ayuda--destacada">
+                      Selecciona primero la categoría para mostrar solo los campos que realmente aplican a ese producto.
+                    </div>
+                  </div>
+
+                  <ng-container *ngIf="hayCategoriaSeleccionada">
 
                   <!-- Tipo dinámico por categoría -->
                   <div class="col-md-4" *ngIf="usaSelectorTipoCategoria">
@@ -497,7 +497,7 @@
                       </label>
                       <ng-select [items]="opcionesTipoCategoria" bindLabel="label" bindValue="label"
                         [ngModel]="producto.modelo || null" name="modelo"
-                        (ngModelChange)="onModeloProductoModelChange($event)" [searchable]="true" [clearable]="false"
+                        (ngModelChange)="onModeloProductoModelChange($event)" [searchable]="true" [clearable]="true"
                         [disabled]="esSoloLectura" [placeholder]="placeholderTipoCategoria"
                         class="ng-select-moderno">
                       </ng-select>
@@ -509,10 +509,17 @@
                     <div class="form-group-moderno">
                       <label class="form-label-moderno">
                         <i class="bi bi-building"></i>
-                        Marca <span class="required" *ngIf="marcaEsObligatoria">*</span>
+                        {{ etiquetaMarcaCategoria }} <span class="required" *ngIf="marcaEsObligatoria">*</span>
                       </label>
-                      <input type="text" class="form-control-moderno" [(ngModel)]="producto.marca" name="marca"
-                        [disabled]="esSoloLectura" [required]="marcaEsObligatoria" [placeholder]="placeholderMarcaCategoria">
+                      <ng-select *ngIf="usaSelectorMarcaCategoria" [items]="opcionesMarcaCategoria" bindLabel="label"
+                        bindValue="label" [ngModel]="producto.marca || null" name="marca"
+                        (ngModelChange)="onMarcaProductoModelChange($event)" [searchable]="false" [clearable]="true"
+                        [disabled]="esSoloLectura" [placeholder]="placeholderMarcaCategoria" class="ng-select-moderno">
+                      </ng-select>
+                      <input *ngIf="!usaSelectorMarcaCategoria" type="text" class="form-control-moderno"
+                        [(ngModel)]="producto.marca" name="marca" [disabled]="esSoloLectura"
+                        [required]="marcaEsObligatoria" [placeholder]="placeholderMarcaCategoria"
+                        (ngModelChange)="onMarcaProductoModelChange($event)">
                     </div>
                   </div>
 
@@ -529,9 +536,18 @@
 
                       <ng-select *ngIf="usaSelectorMaterialCategoria" [items]="opcionesMaterialCategoria" bindLabel="label"
                         bindValue="label" [ngModel]="producto.material || null" name="material"
-                        (ngModelChange)="onMaterialProductoModelChange($event)" [searchable]="true" [clearable]="false" [disabled]="esSoloLectura"
+                        (ngModelChange)="onMaterialProductoModelChange($event)" [searchable]="true" [clearable]="true" [disabled]="esSoloLectura"
                         [placeholder]="placeholderMaterialCategoria" class="ng-select-moderno">
                       </ng-select>
+
+                      <div *ngIf="mostrarCampoMaterialOtroCristal" class="mt-3">
+                        <label class="form-label-moderno form-label-moderno--subcampo">
+                          Especificar material <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-control-moderno" [ngModel]="producto.cristalConfig?.materialOtro || ''"
+                          name="materialOtroCristal" [disabled]="esSoloLectura" [required]="mostrarCampoMaterialOtroCristal"
+                          (ngModelChange)="onMaterialOtroCristalChange($event)" [placeholder]="placeholderMaterialOtroCristal">
+                      </div>
                     </div>
                   </div>
 
@@ -539,11 +555,15 @@
                   <div class="col-md-4">
                     <div class="form-group-moderno">
                       <label class="form-label-moderno">
-                        <i class="bi bi-truck"></i>
-                        Proveedor
+                        <i class="bi" [ngClass]="iconoProveedorCategoria"></i>
+                        {{ etiquetaProveedorCategoria }}
                       </label>
                       <input type="text" class="form-control-moderno" [(ngModel)]="producto.proveedor" name="proveedor"
                         [disabled]="esSoloLectura" [placeholder]="placeholderProveedorCategoria">
+                      <div class="campo-ayuda" *ngIf="esCristalConfigurableActual">
+                        <div>• Registra el laboratorio que fabrica o despacha la referencia.</div>
+                      </div>
+                      <div class="campo-ayuda" *ngIf="!esCristalConfigurableActual">{{ ayudaProveedorCategoria }}</div>
                     </div>
                   </div>
 
@@ -572,18 +592,49 @@
                     </div>
                   </div>
 
+                  <div class="col-md-4" *ngIf="esCristalConfigurableActual">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-stars"></i>
+                        Tratamientos integrados <span class="required">*</span>
+                      </label>
+                      <ng-select [items]="tratamientosDisponibles" bindLabel="label" bindValue="label"
+                        [multiple]="true" [closeOnSelect]="false" [ngModel]="producto.cristalConfig?.tratamientos"
+                        name="tratamientosCristal" (ngModelChange)="onTratamientosCristalModelChange($event)"
+                        [searchable]="true" [disabled]="esSoloLectura" placeholder="Selecciona uno o varios tratamientos"
+                        class="ng-select-moderno">
+                      </ng-select>
+                    </div>
+                  </div>
+
+                  <div class="col-md-4" *ngIf="esCristalConfigurableActual">
+                    <div class="form-group-moderno">
+                      <label class="form-label-moderno">
+                        <i class="bi bi-sliders2"></i>
+                        Rango de fórmula
+                      </label>
+                      <input type="text" class="form-control-moderno"
+                        [ngModel]="producto.cristalConfig?.rangoFormula || ''" name="rangoFormulaCristal"
+                        (ngModelChange)="onRangoFormulaCristalChange($event)" [disabled]="esSoloLectura"
+                        [placeholder]="placeholderRangoFormulaCristal">
+                      <div class="campo-ayuda">• Registra el rango o nota comercial tal como lo trabaja tu laboratorio.</div>
+                    </div>
+                  </div>
+
                   <!-- Descripción -->
-                  <div class="col-12">
+                  <div [class.col-md-8]="esCristalConfigurableActual" [class.col-12]="!esCristalConfigurableActual">
                     <div class="form-group-moderno">
                       <label class="form-label-moderno">
                         <i class="bi bi-text-paragraph"></i>
                         Descripción
                       </label>
-                      <textarea class="form-control-moderno" rows="3" [(ngModel)]="producto.descripcion"
+                      <textarea #descripcionTextareaRef class="form-control-moderno form-control-moderno--descripcion-corta" rows="1" [ngModel]="producto.descripcion"
+                        (ngModelChange)="onDescripcionProductoModelChange($event)"
                         name="descripcion" [disabled]="esSoloLectura"
                         [placeholder]="placeholderDescripcionCategoria"></textarea>
                     </div>
                   </div>
+                  </ng-container>
                 </div>
               </div>
             </div>
@@ -629,5 +680,14 @@
 
       </form>
     </div>
+  </div>
+</div>
+
+<div class="imagen-preview-backdrop" *ngIf="imagenPreviewAmplia" (click)="cerrarVistaAmpliadaImagen()">
+  <div class="imagen-preview-dialog" (click)="$event.stopPropagation()">
+    <button type="button" class="imagen-preview-close" (click)="cerrarVistaAmpliadaImagen($event)" aria-label="Cerrar vista ampliada">
+      <i class="bi bi-x-lg"></i>
+    </button>
+    <img [src]="imagenPreviewAmplia" class="imagen-preview-img" alt="Vista ampliada del producto" />
   </div>
 </div>

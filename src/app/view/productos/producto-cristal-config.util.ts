@@ -23,10 +23,29 @@ export function normalizarTratamientosCristal(valor: unknown): string[] {
 
 export function normalizarProductoCristalConfig(config: Partial<ProductoCristalConfig> | null | undefined): ProductoCristalConfig {
   return {
+    tipoCristal: String(config?.tipoCristal ?? '').trim(),
+    presentacion: String(config?.presentacion ?? '').trim(),
+    material: String(config?.material ?? '').trim(),
+    proveedor: String(config?.proveedor ?? '').trim(),
     tratamientos: normalizarTratamientosCristal(config?.tratamientos),
     rangoFormula: String(config?.rangoFormula ?? '').trim(),
-    precioPor: normalizarPrecioPorCristal(config?.precioPor)
+    precioPor: normalizarPrecioPorCristal(config?.precioPor),
+    costoLaboratorio: normalizarCostoLaboratorioCristal(config?.costoLaboratorio),
+    materialOtro: String(config?.materialOtro ?? '').trim()
   };
+}
+
+export function normalizarCostoLaboratorioCristal(valor: unknown): number | null {
+  if (valor === null || valor === undefined || String(valor).trim() === '') {
+    return null;
+  }
+
+  const numero = Number(valor);
+  if (!Number.isFinite(numero) || numero < 0) {
+    return null;
+  }
+
+  return Number(numero.toFixed(2));
 }
 
 export function normalizarPrecioPorCristal(valor: unknown): ProductoPrecioCristal {

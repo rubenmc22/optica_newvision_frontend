@@ -30,6 +30,7 @@ type ProductoClasificable = Partial<Pick<Producto,
   'categoria'
   | 'nombre'
   | 'descripcion'
+  | 'modelo'
   | 'material'
   | 'codigo'
   | 'tipoItem'
@@ -193,7 +194,33 @@ export function contieneAlgunTermino(texto: string, terminos: string[]): boolean
   return terminos.some((termino) => texto.includes(termino));
 }
 
-export function resolverClasificacionMaestra(textoPlano: string, categoria: string): ProductoClassificationRuleMatch {
+export function resolverClasificacionMaestra(textoPlano: string, categoria: string, subtipo: string = ''): ProductoClassificationRuleMatch {
+  if (categoria === 'cristales') {
+    if (subtipo.includes('plano')) {
+      return {
+        tipoItem: 'inventariable',
+        requiereFormula: false,
+        requierePaciente: false,
+        requiereHistoriaMedica: false,
+        permiteFormulaExterna: false,
+        requiereItemPadre: false,
+        requiereProcesoTecnico: false,
+        esClasificacionConfiable: true
+      };
+    }
+
+    return {
+      tipoItem: 'base_formulado',
+      requiereFormula: true,
+      requierePaciente: true,
+      requiereHistoriaMedica: false,
+      permiteFormulaExterna: true,
+      requiereItemPadre: false,
+      requiereProcesoTecnico: true,
+      esClasificacionConfiable: true
+    };
+  }
+
   if (contieneAlgunTermino(textoPlano, [...TRATAMIENTOS_NORMALIZADOS, ...MATERIALES_NORMALIZADOS, ...PALABRAS_ADDON_TECNICO])) {
     return {
       tipoItem: 'addon_tecnico',
@@ -220,8 +247,21 @@ export function resolverClasificacionMaestra(textoPlano: string, categoria: stri
     };
   }
 
-  if (contieneAlgunTermino(textoPlano, TIPOS_CONTACTO_NORMALIZADOS)) {
-    if (contieneAlgunTermino(textoPlano, PALABRAS_CONTACTO_FORMULADO)) {
+  if (contieneAlgunTermino(textoPlano, TIPOS_CONTACTO_NORMALIZADOS) || categoria === 'lentes de contacto') {
+    if (subtipo.includes('cosmetico') && !subtipo.includes('formulado')) {
+      return {
+        tipoItem: 'inventariable',
+        requiereFormula: false,
+        requierePaciente: false,
+        requiereHistoriaMedica: false,
+        permiteFormulaExterna: false,
+        requiereItemPadre: false,
+        requiereProcesoTecnico: false,
+        esClasificacionConfiable: true
+      };
+    }
+
+    if (contieneAlgunTermino(textoPlano, PALABRAS_CONTACTO_FORMULADO) || categoria === 'lentes de contacto') {
       return {
         tipoItem: 'base_formulado',
         requiereFormula: true,
@@ -300,16 +340,19 @@ export function resolverClasificacionMaestra(textoPlano: string, categoria: stri
 export function construirTextoClasificacionProducto(producto: ProductoClasificable | null | undefined): {
   textoPlano: string;
   categoria: string;
+  subtipo: string;
 } {
   const categoria = normalizarTextoClasificacion(producto?.categoria);
   const nombre = normalizarTextoClasificacion(producto?.nombre);
   const descripcion = normalizarTextoClasificacion(producto?.descripcion);
+  const subtipo = normalizarTextoClasificacion(producto?.modelo);
   const material = normalizarTextoClasificacion(producto?.material);
   const codigo = normalizarTextoClasificacion(producto?.codigo);
 
   return {
     categoria,
-    textoPlano: [categoria, nombre, descripcion, material, codigo].filter(Boolean).join(' | ')
+    subtipo,
+    textoPlano: [categoria, subtipo, nombre, descripcion, material, codigo].filter(Boolean).join(' | ')
   };
 }
 
@@ -335,8 +378,8 @@ export function resolverEstadoOperativoProducto(clasificacion: Pick<ProductoClas
 }
 
 export function normalizarClasificacionProducto(producto: ProductoClasificable | null | undefined): ProductoClasificacionNormalizada {
-  const { textoPlano, categoria } = construirTextoClasificacionProducto(producto);
-  const clasificacionInferida = resolverClasificacionMaestra(textoPlano, categoria);
+  const { textoPlano, categoria, subtipo } = construirTextoClasificacionProducto(producto);
+  const clasificacionInferida = resolverClasificacionMaestra(textoPlano, categoria, subtipo);
   const tieneTipoExplicito = Boolean(producto?.tipoItem);
   const clasificacionManual = Boolean(producto?.clasificacionManual || producto?.origenClasificacion === 'manual');
 

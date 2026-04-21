@@ -1,10 +1,20 @@
 import { Injectable } from '@angular/core';
-import { Producto, ProductoDto } from './producto.model';
+import {
+  Producto,
+  ProductoAccesorioConfig,
+  ProductoCristalConfig,
+  ProductoDto,
+  ProductoEstucheConfig,
+  ProductoLenteContactoConfig,
+  ProductoLiquidoConfig,
+  ProductoMonturaConfig
+} from './producto.model';
 import { HttpClient } from '@angular/common/http';
 import { Observable, timeout, catchError, map } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { ErrorHandlerService } from './../../core/services/errorHandlerService';
 import { normalizarClasificacionProducto } from './producto-classification.catalog';
+import { parseDescripcionProductoCristal } from './producto-cristal-config.util';
 
 @Injectable({ providedIn: 'root' })
 export class ProductoService {
@@ -76,24 +86,60 @@ export class ProductoService {
    * Utilidades
    ======================== */
   private mapProductoDtoToProducto(dto: ProductoDto): Producto {
+    const descripcionCristal = parseDescripcionProductoCristal(dto.descripcion);
+    const categoriaNormalizada = this.normalizarCategoria(dto.categoria);
+    const descripcionVisible = descripcionCristal.descripcionUsuario || String(dto.descripcion ?? '').trim();
+    const cristalConfig = categoriaNormalizada === 'cristales'
+      ? this.mapCristalConfig(dto, descripcionCristal.crystalConfig)
+      : undefined;
+    const monturaConfig = categoriaNormalizada === 'monturas'
+      ? this.mapMonturaConfig(dto)
+      : undefined;
+    const lenteContactoConfig = categoriaNormalizada === 'lentes de contacto'
+      ? this.mapLenteContactoConfig(dto)
+      : undefined;
+    const liquidoConfig = categoriaNormalizada === 'liquidos'
+      ? this.mapLiquidoConfig(dto)
+      : undefined;
+    const estucheConfig = categoriaNormalizada === 'estuches'
+      ? this.mapEstucheConfig(dto)
+      : undefined;
+    const accesorioConfig = categoriaNormalizada === 'accesorios'
+      ? this.mapAccesorioConfig(dto)
+      : undefined;
+    const camposCategoria = this.mapCamposCategoria(dto, {
+      cristalConfig,
+      monturaConfig,
+      lenteContactoConfig,
+      liquidoConfig,
+      estucheConfig,
+      accesorioConfig
+    });
+
     const productoBase: Producto = {
       id: dto.id.toString(),
       sede: dto.sede_id,
       nombre: dto.nombre,
       codigo: dto.codigo,
-      marca: dto.marca,
-      modelo: dto.modelo,
-      color: dto.color,
-      material: dto.material,
+      marca: camposCategoria.marca,
+      modelo: camposCategoria.modelo,
+      color: camposCategoria.color,
+      material: camposCategoria.material,
       moneda: this.normalizarMoneda(dto.moneda),
       stock: dto.stock,
       categoria: dto.categoria,
-      proveedor: dto.proveedor,
+      proveedor: camposCategoria.proveedor,
       aplicaIva: dto.aplicaIva,
       precioConIva: dto.precioConIva ?? undefined,
       precio: dto.precio,
       activo: dto.activo,
-      descripcion: dto.descripcion,
+      descripcion: descripcionVisible,
+      cristalConfig,
+      monturaConfig,
+      lenteContactoConfig,
+      liquidoConfig,
+      estucheConfig,
+      accesorioConfig,
       precioOriginal: dto.precioOriginal,
       monedaOriginal: dto.monedaOriginal,
       tasaConversion: dto.tasaConversion,
@@ -159,6 +205,143 @@ export class ProductoService {
         return 'bs';
       default:
         return 'bs'; // fallback seguro
+    }
+  }
+
+  private normalizarCategoria(categoria: string | null | undefined): string {
+    return String(categoria ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase();
+  }
+
+  private mapCristalConfig(dto: ProductoDto, legacyConfig?: ProductoCristalConfig): ProductoCristalConfig {
+    return {
+      ...parseDescripcionProductoCristal(dto.descripcion).crystalConfig,
+      ...legacyConfig,
+      ...dto.cristalConfig,
+      tipoCristal: dto.cristalConfig?.tipoCristal ?? dto.modelo ?? '',
+      presentacion: dto.cristalConfig?.presentacion ?? dto.marca ?? '',
+      material: dto.cristalConfig?.material ?? dto.material ?? '',
+      proveedor: dto.cristalConfig?.proveedor ?? dto.proveedor ?? ''
+    };
+  }
+
+  private mapMonturaConfig(dto: ProductoDto): ProductoMonturaConfig {
+    return {
+      marca: dto.monturaConfig?.marca ?? dto.marca ?? '',
+      modelo: dto.monturaConfig?.modelo ?? dto.modelo ?? '',
+      color: dto.monturaConfig?.color ?? dto.color ?? '',
+      material: dto.monturaConfig?.material ?? dto.material ?? '',
+      proveedor: dto.monturaConfig?.proveedor ?? dto.proveedor ?? ''
+    };
+  }
+
+  private mapLenteContactoConfig(dto: ProductoDto): ProductoLenteContactoConfig {
+    return {
+      marca: dto.lenteContactoConfig?.marca ?? dto.marca ?? '',
+      tipoLenteContacto: dto.lenteContactoConfig?.tipoLenteContacto ?? dto.modelo ?? '',
+      color: dto.lenteContactoConfig?.color ?? dto.color ?? '',
+      proveedor: dto.lenteContactoConfig?.proveedor ?? dto.proveedor ?? ''
+    };
+  }
+
+  private mapLiquidoConfig(dto: ProductoDto): ProductoLiquidoConfig {
+    return {
+      marca: dto.liquidoConfig?.marca ?? dto.marca ?? '',
+      modelo: dto.liquidoConfig?.modelo ?? dto.modelo ?? '',
+      proveedor: dto.liquidoConfig?.proveedor ?? dto.proveedor ?? ''
+    };
+  }
+
+  private mapEstucheConfig(dto: ProductoDto): ProductoEstucheConfig {
+    return {
+      marca: dto.estucheConfig?.marca ?? dto.marca ?? '',
+      modelo: dto.estucheConfig?.modelo ?? dto.modelo ?? '',
+      material: dto.estucheConfig?.material ?? dto.material ?? '',
+      proveedor: dto.estucheConfig?.proveedor ?? dto.proveedor ?? ''
+    };
+  }
+
+  private mapAccesorioConfig(dto: ProductoDto): ProductoAccesorioConfig {
+    return {
+      marca: dto.accesorioConfig?.marca ?? dto.marca ?? '',
+      modelo: dto.accesorioConfig?.modelo ?? dto.modelo ?? '',
+      color: dto.accesorioConfig?.color ?? dto.color ?? '',
+      material: dto.accesorioConfig?.material ?? dto.material ?? '',
+      proveedor: dto.accesorioConfig?.proveedor ?? dto.proveedor ?? ''
+    };
+  }
+
+  private mapCamposCategoria(
+    dto: ProductoDto,
+    configs: {
+      cristalConfig?: ProductoCristalConfig;
+      monturaConfig?: ProductoMonturaConfig;
+      lenteContactoConfig?: ProductoLenteContactoConfig;
+      liquidoConfig?: ProductoLiquidoConfig;
+      estucheConfig?: ProductoEstucheConfig;
+      accesorioConfig?: ProductoAccesorioConfig;
+    }
+  ): Pick<Producto, 'marca' | 'modelo' | 'color' | 'material' | 'proveedor'> {
+    switch (this.normalizarCategoria(dto.categoria)) {
+      case 'cristales':
+        return {
+          marca: configs.cristalConfig?.presentacion ?? dto.marca ?? '',
+          modelo: configs.cristalConfig?.tipoCristal ?? dto.modelo ?? '',
+          color: dto.color ?? '',
+          material: configs.cristalConfig?.material ?? dto.material ?? '',
+          proveedor: configs.cristalConfig?.proveedor ?? dto.proveedor ?? ''
+        };
+      case 'monturas':
+        return {
+          marca: configs.monturaConfig?.marca ?? dto.marca ?? '',
+          modelo: configs.monturaConfig?.modelo ?? dto.modelo ?? '',
+          color: configs.monturaConfig?.color ?? dto.color ?? '',
+          material: configs.monturaConfig?.material ?? dto.material ?? '',
+          proveedor: configs.monturaConfig?.proveedor ?? dto.proveedor ?? ''
+        };
+      case 'lentes de contacto':
+        return {
+          marca: configs.lenteContactoConfig?.marca ?? dto.marca ?? '',
+          modelo: configs.lenteContactoConfig?.tipoLenteContacto ?? dto.modelo ?? '',
+          color: configs.lenteContactoConfig?.color ?? dto.color ?? '',
+          material: dto.material ?? '',
+          proveedor: configs.lenteContactoConfig?.proveedor ?? dto.proveedor ?? ''
+        };
+      case 'liquidos':
+        return {
+          marca: configs.liquidoConfig?.marca ?? dto.marca ?? '',
+          modelo: configs.liquidoConfig?.modelo ?? dto.modelo ?? '',
+          color: dto.color ?? '',
+          material: dto.material ?? '',
+          proveedor: configs.liquidoConfig?.proveedor ?? dto.proveedor ?? ''
+        };
+      case 'estuches':
+        return {
+          marca: configs.estucheConfig?.marca ?? dto.marca ?? '',
+          modelo: configs.estucheConfig?.modelo ?? dto.modelo ?? '',
+          color: dto.color ?? '',
+          material: configs.estucheConfig?.material ?? dto.material ?? '',
+          proveedor: configs.estucheConfig?.proveedor ?? dto.proveedor ?? ''
+        };
+      case 'accesorios':
+        return {
+          marca: configs.accesorioConfig?.marca ?? dto.marca ?? '',
+          modelo: configs.accesorioConfig?.modelo ?? dto.modelo ?? '',
+          color: configs.accesorioConfig?.color ?? dto.color ?? '',
+          material: configs.accesorioConfig?.material ?? dto.material ?? '',
+          proveedor: configs.accesorioConfig?.proveedor ?? dto.proveedor ?? ''
+        };
+      default:
+        return {
+          marca: dto.marca ?? '',
+          modelo: dto.modelo ?? '',
+          color: dto.color ?? '',
+          material: dto.material ?? '',
+          proveedor: dto.proveedor ?? ''
+        };
     }
   }
 }

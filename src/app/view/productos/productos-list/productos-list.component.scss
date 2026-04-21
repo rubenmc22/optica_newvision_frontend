@@ -17,7 +17,7 @@
 
 .inventory-insights {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 1rem;
     margin-bottom: 1.35rem;
 }
@@ -174,6 +174,25 @@
         flex-direction: column;
         gap: 0.25rem;
     }
+    .nombre-producto-tools {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-top: 0.45rem;
+    }
+    .btn-accion-secundaria {
+        padding: 0;
+        color: var(--primary-color);
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-decoration: none;
+
+        &:hover {
+            color: var(--secondary-color);
+            text-decoration: underline;
+        }
+    }
 
     .header-title {
         margin: 0;
@@ -253,6 +272,15 @@
     }
 }
 
+.filtro-item--busqueda {
+    grid-column: span 2;
+}
+
+.filtro-item--accion {
+    justify-content: flex-end;
+    align-items: flex-start;
+}
+
 /* Mejoras para los campos del formulario */
 .form-control-moderno {
     border: 2px solid #e9ecef;
@@ -283,6 +311,14 @@
         border-color: #ced4da;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
     }
+}
+
+.form-control-moderno--nombre-generado {
+    min-height: 4.5rem;
+    resize: none;
+    overflow: hidden;
+    white-space: pre-line;
+    line-height: 1.35;
 }
 
 /* Mejoras para los inputs de búsqueda */
@@ -362,7 +398,7 @@
     background: #eef3f9;
     border: none;
     color: #244567;
-    padding: 0.75rem 1.25rem;
+    padding: 0.75rem 0.95rem;
     border-radius: 12px;
     font-weight: 600;
     display: flex;
@@ -371,6 +407,8 @@
     transition: all 0.3s ease;
     margin-top: 2rem;
     font-size: 0.85rem;
+    width: fit-content;
+    white-space: nowrap;
 
     &:hover {
         background: #dfe9f5;
@@ -496,8 +534,8 @@
 
 .productos-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
     margin-bottom: 2rem;
 }
 
@@ -523,7 +561,7 @@
 
 .producto-imagen-container {
     position: relative;
-    height: 160px;
+    height: 112px;
     overflow: hidden;
 
     .producto-imagen {
@@ -562,18 +600,35 @@
         left: 0.6rem;
         right: 0.6rem;
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-end;
     }
 }
 
 .producto-content {
-    padding: 1.25rem;
+    padding: 0.95rem 1rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
 
-    .producto-meta-row {
+    .producto-categoria-row {
         display: flex;
+        align-items: center;
         flex-wrap: wrap;
         gap: 0.45rem;
-        margin-bottom: 0.8rem;
+    }
+
+    .producto-proveedor-resumen {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-size: 0.78rem;
+        line-height: 1.4;
+        color: #55687f;
+        min-height: 1.1rem;
+
+        i {
+            color: #355c85;
+        }
     }
 
     .meta-pill {
@@ -586,6 +641,65 @@
         font-size: 0.72rem;
         font-weight: 700;
         letter-spacing: 0.03em;
+
+        &.meta-pill--inventariable {
+            background: rgba(46, 125, 50, 0.14);
+            color: #256a2a;
+        }
+
+        &.meta-pill--formulado {
+            background: rgba(26, 115, 232, 0.14);
+            color: #1a5bbd;
+        }
+
+        &.meta-pill--addon {
+            background: rgba(245, 124, 0, 0.14);
+            color: #b56200;
+        }
+
+        &.meta-pill--revision {
+            background: rgba(198, 40, 40, 0.12);
+            color: #b13a3a;
+        }
+
+        &.meta-pill--estado-comercial {
+            background: rgba(27, 94, 32, 0.1);
+            color: #246c29;
+        }
+
+        &.meta-pill--estado-clinico {
+            background: rgba(13, 71, 161, 0.12);
+            color: #1f56a6;
+        }
+
+        &.meta-pill--estado-tecnico {
+            background: rgba(123, 31, 162, 0.12);
+            color: #7a2799;
+        }
+
+        &.meta-pill--naturaleza-principal {
+            background: rgba(26, 115, 232, 0.12);
+            color: #1c5ab8;
+        }
+
+        &.meta-pill--naturaleza-tecnica {
+            background: rgba(245, 124, 0, 0.14);
+            color: #b56200;
+        }
+
+        &.meta-pill--estado {
+            margin-left: 0;
+        }
+
+        &.meta-pill--estado-activo {
+            background: rgba(46, 125, 50, 0.12);
+            color: #256a2a;
+        }
+
+        &.meta-pill--estado-inactivo {
+            background: rgba(120, 129, 140, 0.14);
+            color: #5d6774;
+        }
     }
 
     .meta-pill--soft {
@@ -596,24 +710,34 @@
     .producto-nombre {
         font-weight: 600;
         color: #2c3e50;
-        margin-bottom: 0rem;
+        margin: 0;
         line-height: 1.3;
-        font-size: 0.95rem;
+        font-size: 1rem;
+        overflow: hidden;
+        min-height: 2.55rem;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
+    }
+
+    .producto-nombre-linea {
+        display: block;
         overflow: hidden;
-        min-height: 2.6rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .producto-precio {
-        margin-bottom: 0.875rem;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 0.85rem;
 
         .precio-principal {
             display: flex;
             align-items: center;
             gap: 0.4rem;
-            margin-bottom: 0.4rem;
+            margin-bottom: 0;
 
             .precio-moneda {
                 font-weight: 600;
@@ -630,8 +754,9 @@
 
         .precio-conversion {
             display: flex;
-            align-items: center;
-            gap: 0.4rem;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.15rem;
             font-size: 0.8rem;
             color: #6c757d;
         }
@@ -641,12 +766,23 @@
     .producto-stock {
         display: flex;
         align-items: center;
-        gap: 0.4rem;
-        margin-bottom: 1rem;
+        justify-content: space-between;
+        gap: 0.7rem;
+        padding-top: 0.15rem;
+        border-top: 1px solid rgba(44, 62, 80, 0.08);
+
+        .stock-label {
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #7c8da1;
+        }
 
         .stock-cantidad {
-            font-weight: 500;
-            font-size: 0.85rem;
+            font-weight: 700;
+            font-size: 0.84rem;
+            margin-left: auto;
 
             &.stock-alto {
                 color: #2e7d32;
@@ -659,24 +795,16 @@
             &.stock-agotado {
                 color: #c62828;
             }
-        }
 
-        .stock-alerta {
-            background: #fff3e0;
-            color: #f57c00;
-            font-size: 0.7rem;
-            padding: 0.25rem 0.5rem;
-        }
-
-        .stock-agotado {
-            background: #ffebee;
-            color: #c62828;
-            font-size: 0.7rem;
-            padding: 0.25rem 0.5rem;
+            &.stock-informativo {
+                color: #6c757d;
+            }
         }
     }
 
     .producto-actions {
+        margin-top: 0.15rem;
+
         .btn-editar {
             background: var(--degradado-color) !important;
             border: 1px solid var(--degradado-color) !important;
@@ -1057,7 +1185,7 @@
     margin: 0;
     font-size: 1.1rem;
     font-weight: 600;
-    color: #2c3e50;
+    color: #2f4358;
 }
 
 .section-content {
@@ -1094,6 +1222,15 @@
     }
 }
 
+.form-label-moderno--subcampo {
+    margin-bottom: 0.5rem;
+    font-size: 0.76rem;
+}
+
+.form-label-moderno--subcampo-titulo {
+    margin-bottom: 0.6rem;
+}
+
 /* Mejoras para textarea */
 textarea.form-control-moderno {
     resize: vertical;
@@ -1104,6 +1241,12 @@ textarea.form-control-moderno {
         border-color: var(--primary-color) !important;
         box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.15) !important;
     }
+}
+
+textarea.form-control-moderno.form-control-moderno--descripcion-corta {
+    min-height: 48px;
+    resize: none;
+    overflow: hidden;
 }
 
 /* Mejoras para todos los ng-select */
@@ -1368,6 +1511,10 @@ textarea.form-control-moderno {
         transform: scale(1.03);
         border-color: var(--primary-color);
     }
+
+    &.avatar-widget--zoomable {
+        cursor: zoom-in;
+    }
 }
 
 .avatar-img {
@@ -1375,6 +1522,22 @@ textarea.form-control-moderno {
     height: 100%;
     object-fit: cover;
     display: block;
+}
+
+.avatar-zoom-hint {
+    position: absolute;
+    right: 0.7rem;
+    bottom: 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.72);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 600;
+    backdrop-filter: blur(8px);
 }
 
 .avatar-overlay {
@@ -1427,6 +1590,58 @@ textarea.form-control-moderno {
     color: #718096;
 }
 
+.imagen-preview-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(9, 18, 31, 0.82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    backdrop-filter: blur(6px);
+}
+
+.imagen-preview-dialog {
+    position: relative;
+    max-width: min(92vw, 1100px);
+    max-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.imagen-preview-img {
+    display: block;
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 18px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
+    background: #fff;
+}
+
+.imagen-preview-close {
+    position: absolute;
+    top: -0.9rem;
+    right: -0.9rem;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #17324d;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+        transform: scale(1.04);
+        box-shadow: 0 14px 28px rgba(0, 0, 0, 0.26);
+    }
+}
+
 /* Sección de campos principales - NUEVA ESTRUCTURA */
 .seccion-campos-principales {
     display: flex;
@@ -1461,16 +1676,50 @@ textarea.form-control-moderno {
     color: #718096;
 }
 
-/* Fila 1: Nombre y Stock en línea */
-.fila-nombre-stock {
-    display: grid;
-    grid-template-columns: minmax(320px, 1fr) minmax(220px, 280px);
-    gap: 1rem;
-    align-items: start;
+.form-group-moderno--nombre-principal {
+    margin-bottom: 0;
+}
 
-    &--solo {
-        grid-template-columns: minmax(320px, 1fr);
-    }
+.bloque-nombre-principal-ancho {
+    display: block;
+}
+
+.fila-datos-principales-superior {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    align-items: start;
+}
+
+.fila-datos-principales-inferior {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    align-items: start;
+}
+
+.campo-resumen-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0.85rem 0.9rem 0.9rem;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(247, 250, 253, 0.98) 100%);
+    border: 1px solid rgba(193, 205, 219, 0.55);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+}
+
+.datos-principales-item {
+    margin-bottom: 0;
+}
+
+.datos-principales-item--inactivo {
+    opacity: 0.78;
+}
+
+.datos-principales-item--iva {
+    min-width: 0;
 }
 
 /* =============================================
@@ -1478,81 +1727,92 @@ textarea.form-control-moderno {
    ============================================= */
 
 /* Fila para IVA y Precio en línea - DISTRIBUCIÓN MEJORADA */
-.fila-iva-precio {
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    gap: 1.5rem;
-    align-items: start;
-    margin-top: 0;
+.iva-field-shell {
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+    padding: 0.75rem 0.95rem;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    background: white;
 }
 
-/* Grupo IVA compacto - MÁS ANCHO */
-.grupo-iva {
+.switch-iva-container {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 10px;
-    border: 1px solid #e9ecef;
-    margin-top: 1.45rem;
-    min-width: 220px;
-    height: fit-content;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    justify-content: flex-start;
 
-    .switch-iva-container {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin: 0;
-        padding: 0;
-        background: none;
-        border: none;
-        width: 100%;
-        justify-content: center;
-
-        .switch-label {
-            font-weight: 600;
-            color: #2c3e50;
-            font-size: 0.9rem;
-            white-space: nowrap;
-        }
+    .switch-label {
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.88rem;
+        white-space: normal;
+        line-height: 1.35;
     }
 }
 
-/* Grupo precio expandido - MÁS COMPACTO */
-.grupo-precio {
-    flex: 1;
+.grupo-precio-resumen {
+    min-width: 0;
 }
 
-/* Selector de moneda mejorado - MÁS COMPACTO */
-.selector-moneda-innovador {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+.form-control-moderno--dato-corto {
+    min-height: 52px;
+    padding: 0.75rem 0.95rem;
+    line-height: 1.2;
 }
 
-.campo-precio {
-    .precio-input-innovador {
-        border: 2px solid #e9ecef;
-        border-radius: 10px;
-        padding: 0.875rem 1rem;
-        font-size: 1rem;
-        font-weight: 600;
-        background: white;
-        transition: all 0.3s ease;
-        text-align: right;
-        width: 100%;
+.monto-field {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.55rem;
+}
 
-        &:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.15);
-            transform: translateY(-1px);
-        }
+.monto-field__symbol {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.12) 0%, rgba(52, 152, 219, 0.18) 100%);
+    color: var(--primary-color);
+    font-size: 1rem;
+    font-weight: 800;
+    border: 1px solid rgba(52, 152, 219, 0.18);
+}
 
-        &:hover:not(:disabled) {
-            border-color: #ced4da;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-        }
+.monto-field__input {
+    min-width: 0;
+}
+
+.campo-ayuda--principal {
+    margin-top: 0.2rem;
+}
+
+.precio-input-innovador {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 0.75rem 0.95rem;
+    font-size: 0.98rem;
+    font-weight: 600;
+    background: white;
+    transition: all 0.3s ease;
+    text-align: right;
+    width: 100%;
+
+    &:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.15);
+        transform: translateY(-1px);
+    }
+
+    &:hover:not(:disabled) {
+        border-color: #ced4da;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
     }
 }
 
@@ -1853,7 +2113,7 @@ textarea.form-control-moderno {
    ============================================= */
 @media (max-width: 1200px) {
     .productos-grid {
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         gap: 1rem;
     }
 }
@@ -1866,6 +2126,10 @@ textarea.form-control-moderno {
 }
 
 @media (max-width: 768px) {
+    .productos-grid {
+        grid-template-columns: 1fr;
+    }
+
     .card-header-moderno {
         flex-direction: column;
         align-items: flex-start;
@@ -1880,6 +2144,11 @@ textarea.form-control-moderno {
     .filtros-modernos {
         grid-template-columns: 1fr;
         gap: 1rem;
+    }
+
+
+    .filtro-item--busqueda {
+        grid-column: auto;
     }
 
     .seccion-header-moderno {
@@ -1927,20 +2196,19 @@ textarea.form-control-moderno {
         margin: 0 auto;
     }
 
-    .fila-nombre-stock {
+    .fila-datos-principales-superior,
+    .fila-datos-principales-inferior {
         grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-
-    .fila-iva-precio {
-        grid-template-columns: 1fr;
-        gap: 1rem;
+        gap: 0.9rem;
     }
 
     .grupo-iva {
         margin-top: 0;
-        justify-content: center;
         min-width: auto;
+    }
+
+    .monto-field {
+        grid-template-columns: 44px minmax(0, 1fr);
     }
 
     .selector-monedas-cards {
@@ -2177,4 +2445,94 @@ textarea.form-control-moderno {
         color: #545252 !important;
         font-weight: 700;
     }
+}
+
+.badge-disponibilidad {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+
+    &.badge-disponibilidad--disponible {
+        background: rgba(46, 125, 50, 0.12);
+        color: #256a2a;
+    }
+
+    &.badge-disponibilidad--pedido {
+        background: rgba(245, 124, 0, 0.14);
+        color: #b56200;
+    }
+
+    &.badge-disponibilidad--agotado {
+        background: rgba(198, 40, 40, 0.12);
+        color: #b13a3a;
+    }
+
+    &.badge-disponibilidad--catalogo {
+        background: rgba(88, 110, 128, 0.12);
+        color: #5f7287;
+    }
+}
+
+.campo-ayuda {
+    margin-top: 0.45rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: #66788f;
+}
+
+.campo-ayuda--destacada {
+    margin-top: 0;
+    padding: 0.85rem 1rem;
+    border-radius: 12px;
+    background: rgba(26, 115, 232, 0.08);
+    border: 1px solid rgba(26, 115, 232, 0.14);
+    color: #355c85;
+}
+
+.operativa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.operativa-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 1rem 1.05rem;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(44, 62, 80, 0.08);
+    box-shadow: 0 12px 24px rgba(15, 39, 68, 0.05);
+
+    p {
+        margin: 0;
+        font-size: 0.84rem;
+        line-height: 1.45;
+        color: #627488;
+    }
+}
+
+.operativa-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #607489;
+}
+
+.campo-resumen-card--nombre {
+    min-width: 0;
+}
+
+.form-control-moderno--nombre-linea {
+    min-height: 52px;
+    height: 52px;
+    padding: 0.75rem 0.95rem;
+    line-height: 1.2;
 }
