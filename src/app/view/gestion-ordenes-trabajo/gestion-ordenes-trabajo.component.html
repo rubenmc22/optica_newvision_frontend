@@ -935,27 +935,26 @@
                       <span class="item-label">Material</span>
                       <span class="item-value">{{ getMaterialesRecomendados(rec.material) }}</span>
                     </div>
-                    <div class="indicacion-item" *ngIf="rec.montura">
+                    <div class="indicacion-item" *ngIf="getMonturaRecomendadaTexto(rec)">
                       <span class="item-label">Montura</span>
-                      <span class="item-value">{{ rec.montura }}</span>
+                      <span class="item-value">{{ getMonturaRecomendadaTexto(rec) }}</span>
                     </div>
-                    <div class="indicacion-item" *ngIf="rec.tipoLentesContacto">
+                    <div class="indicacion-item" *ngIf="getTipoLenteContactoRecomendacionDetalle(rec) as tipoLenteContacto">
                       <span class="item-label">Modelo Contacto</span>
-                      <span class="item-value highlight">{{ getTipoLenteContactoLabel(rec.tipoLentesContacto) }}</span>
+                      <span class="item-value highlight">{{ getTipoLenteContactoLabel(tipoLenteContacto) }}</span>
                     </div>
                   </div>
                   
-                  <!-- Medidas (si existen) -->
-                  <div class="medidas-detalle" *ngIf="rec.medidaHorizontal || rec.medidaVertical || rec.medidaDiagonal || rec.medidaPuente">
+                  <div class="medidas-detalle" *ngIf="getMedidasRecomendacionDetalle(rec) as medidas">
                     <div class="medidas-titulo">
                       <i class="bi bi-rulers"></i>
                       <span>Medidas:</span>
                     </div>
                     <div class="medidas-chips">
-                      <span *ngIf="rec.medidaHorizontal" class="medida-chip">H: {{ rec.medidaHorizontal }} cm</span>
-                      <span *ngIf="rec.medidaVertical" class="medida-chip">V: {{ rec.medidaVertical }} cm</span>
-                      <span *ngIf="rec.medidaDiagonal" class="medida-chip">D: {{ rec.medidaDiagonal }} cm</span>
-                      <span *ngIf="rec.medidaPuente" class="medida-chip">P: {{ rec.medidaPuente }} cm</span>
+                      <span *ngIf="medidas.horizontal" class="medida-chip">H: {{ medidas.horizontal }} cm</span>
+                      <span *ngIf="medidas.vertical" class="medida-chip">V: {{ medidas.vertical }} cm</span>
+                      <span *ngIf="medidas.diagonal" class="medida-chip">D: {{ medidas.diagonal }} cm</span>
+                      <span *ngIf="medidas.puente" class="medida-chip">P: {{ medidas.puente }} cm</span>
                     </div>
                   </div>
                   

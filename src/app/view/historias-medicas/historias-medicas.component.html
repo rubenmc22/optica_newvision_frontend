@@ -615,53 +615,41 @@
                         </div>
                         <div class="recomendacion-body">
                           <div class="recomendacion-item">
+                            <label>Categorías recomendadas</label>
+                            <div class="dato-valor">{{ getCategoriasRecomendadasLabel(rec) }}</div>
+                          </div>
+
+                          <div class="recomendacion-item" *ngIf="getCristalRecomendadoLabel(rec) !== 'No aplica'">
                             <label>Tipo de cristal</label>
                             <div class="dato-valor">{{ getCristalRecomendadoLabel(rec) }}</div>
                           </div>
 
-                          <!-- AGREGAR TIPO DE LENTES DE CONTACTO -->
-                          <div class="recomendacion-item" *ngIf="rec.tipoLentesContacto">
+                          <div class="recomendacion-item" *ngIf="getTipoLenteContactoRecomendado(rec) as tipoLenteContacto">
                             <label>Tipo de lentes de contacto</label>
-                            <div class="dato-valor">{{ getTipoLenteContactoLabel(rec.tipoLentesContacto) }}</div>
+                            <div class="dato-valor">{{ getTipoLenteContactoLabel(tipoLenteContacto) }}</div>
                           </div>
 
-                          <div class="recomendacion-item">
-                            <label>Material</label>
-                            <div class="dato-valor">{{ getMaterialesRecomendadosLabel(rec) }}</div>
-                          </div>
-                          <div class="recomendacion-item">
-                            <label>Montura sugerida</label>
-                            <div class="dato-valor">{{ getMonturaRecomendadaLabel(rec) }}</div>
-                          </div>
-                          <div class="recomendacion-item"
-                            *ngIf="rec.seleccionProductos?.filtrosAditivos && rec.seleccionProductos?.filtrosAditivos?.length">
-                            <label>Filtros/Aditivos</label>
-                            <div class="dato-valor">{{ getFiltrosAditivosRecomendadosLabel(rec) }}</div>
-                          </div>
-
-                          <!-- AGREGAR CAMPOS DE MEDIDAS SI EXISTEN -->
-                          <div class="medidas-section"
-                            *ngIf="rec.medidaHorizontal || rec.medidaVertical || rec.medidaDiagonal || rec.medidaPuente">
+                          <div class="medidas-section" *ngIf="getMedidasRecomendacion(rec) as medidas">
                             <div class="medidas-header">
                               <i class="bi bi-rulers"></i>
                               <label>Medidas del lente</label>
                             </div>
                             <div class="medidas-grid">
-                              <div class="medida-item" *ngIf="rec.medidaHorizontal">
+                              <div class="medida-item" *ngIf="medidas.horizontal">
                                 <label>Horizontal:</label>
-                                <span>{{ rec.medidaHorizontal }} cm</span>
+                                <span>{{ medidas.horizontal }} cm</span>
                               </div>
-                              <div class="medida-item" *ngIf="rec.medidaVertical">
+                              <div class="medida-item" *ngIf="medidas.vertical">
                                 <label>Vertical:</label>
-                                <span>{{ rec.medidaVertical }} cm</span>
+                                <span>{{ medidas.vertical }} cm</span>
                               </div>
-                              <div class="medida-item" *ngIf="rec.medidaDiagonal">
+                              <div class="medida-item" *ngIf="medidas.diagonal">
                                 <label>Diagonal:</label>
-                                <span>{{ rec.medidaDiagonal }} cm</span>
+                                <span>{{ medidas.diagonal }} cm</span>
                               </div>
-                              <div class="medida-item" *ngIf="rec.medidaPuente">
+                              <div class="medida-item" *ngIf="medidas.puente">
                                 <label>Puente:</label>
-                                <span>{{ rec?.medidaPuente || '' }} cm</span>
+                                <span>{{ medidas.puente }} cm</span>
                               </div>
                             </div>
                           </div>
@@ -1604,62 +1592,119 @@
 
                   <div class="recomendacion-body">
                     <div class="row g-3">
-                      <div class="col-md-6">
-                        <div class="form-group-moderno">
-                          <label class="form-label-moderno">Tipo de cristal <span class="required">*</span></label>
-                          <ng-select [items]="tiposCristales" bindLabel="label" bindValue="value"
-                            formControlName="cristal" placeholder="Seleccione el cristal..." [searchable]="true"
-                            (change)="onCristalChange($event, i)"
-                            class="ng-select-moderno">
-                          </ng-select>
-                        </div>
-                      </div>
-
-                      <div class="col-md-6" *ngIf="mostrarTipoLentesContacto[i]">
-                        <div class="form-group-moderno">
-                          <label class="form-label-moderno">Tipo de lentes de contacto <span class="required">*</span></label>
-                          <ng-select [items]="tiposLentesContacto" bindLabel="label" bindValue="value"
-                            formControlName="tipoLentesContacto" placeholder="Seleccione el tipo..." [searchable]="true"
-                            class="ng-select-moderno">
-                          </ng-select>
-                        </div>
-                      </div>
-
-                      <ng-container *ngIf="!mostrarTipoLentesContacto[i]">
-                        <div class="col-md-6">
-                          <div class="form-group-moderno">
-                            <label class="form-label-moderno">Montura sugerida</label>
-                            <input type="text" class="form-control-moderno" formControlName="montura"
-                              placeholder="Ej: Completa, semi al aire, acetato liviano..." />
+                      <div class="col-12">
+                        <div class="categorias-recomendadas-builder" formArrayName="categorias">
+                          <div class="recomendacion-contexto recomendacion-contexto--espera"
+                            *ngIf="getCategoriasRecomendadas(i).length === 0">
+                            <i class="bi bi-grid"></i>
+                            <div>
+                              <strong>Arma la recomendación por categorías</strong>
+                              <span>Agrega solo las categorías que realmente necesite el paciente. Cristal no obliga a incluir montura.</span>
+                            </div>
                           </div>
-                        </div>
 
-                        <div class="col-md-6">
-                          <div class="form-group-moderno">
-                            <label class="form-label-moderno">Materiales</label>
-                            <ng-select [items]="materiales" bindLabel="label" bindValue="value" [multiple]="true"
-                              formControlName="material" [searchable]="true" [closeOnSelect]="false"
-                              placeholder="Seleccione materiales sugeridos..." (change)="verificarMaterialOtro(i)"
-                              class="ng-select-moderno">
-                            </ng-select>
+                          <div *ngFor="let categoriaControl of getCategoriasRecomendadas(i).controls; let j = index"
+                            [formGroupName]="j" class="categoria-recomendada-card">
+                            <div class="categoria-recomendada-card__header">
+                              <span class="categoria-recomendada-card__badge">
+                                Categoría #{{ j + 1 }}
+                              </span>
+                              <button type="button" class="btn-eliminar-categoria-recomendada"
+                                (click)="eliminarCategoriaRecomendada(i, j)">
+                                <i class="bi bi-x-lg"></i>
+                              </button>
+                            </div>
+
+                            <div class="row g-3 align-items-start">
+                              <div class="col-md-4">
+                                <div class="form-group-moderno">
+                                  <label class="form-label-moderno">Categoría <span class="required">*</span></label>
+                                  <ng-select [items]="getOpcionesCategoriasRecomendables(i, j)" bindLabel="label"
+                                    bindValue="value" formControlName="categoria" [searchable]="true"
+                                    placeholder="Seleccione la categoría..."
+                                    (change)="onCategoriaRecomendadaChange(i, j, $event)" class="ng-select-moderno">
+                                  </ng-select>
+                                </div>
+                              </div>
+
+                              <div class="col-md-8" *ngIf="categoriaControl.get('categoria')?.value">
+                                <div class="form-group-moderno">
+                                  <label class="form-label-moderno">
+                                    Producto de {{ getLabelCategoriaRecomendable(categoriaControl.get('categoria')?.value) }}
+                                  </label>
+                                  <ng-select [items]="getProductosPorCategoriaRecomendada(i, j)" bindLabel="nombre"
+                                    [ngOptionDisabled]="'disabled'" formControlName="producto" [searchable]="true"
+                                    [clearable]="true" [compareWith]="compararProductoRecomendado"
+                                    class="ng-select-moderno"
+                                    placeholder="Seleccione el producto del inventario..."
+                                    (change)="onProductoCategoriaChange(i)">
+                                    <ng-template ng-option-tmp let-item="item">
+                                      <div class="producto-recomendado-option"
+                                        [class.producto-recomendado-option--agotado]="esProductoRecomendadoSinStock(item)">
+                                        <strong>{{ getEtiquetaProductoRecomendado(item) }}</strong>
+                                        <span class="producto-recomendado-option__estado"
+                                          [class.agotado]="esProductoRecomendadoSinStock(item)">
+                                          {{ getMensajeStockProductoRecomendado(item) }}
+                                        </span>
+                                      </div>
+                                    </ng-template>
+                                  </ng-select>
+                                  <small class="recomendacion-stock-help">
+                                    {{ getMensajeDisponibilidadCategoria(i, j) }}
+                                  </small>
+                                </div>
+                              </div>
+
+                              <div class="col-md-6" *ngIf="esCategoriaRecomendacionLentesContacto(i, j)">
+                                <div class="form-group-moderno">
+                                  <label class="form-label-moderno">Tipo de lentes de contacto <span class="required">*</span></label>
+                                  <ng-select [items]="tiposLentesContacto" bindLabel="label" bindValue="value"
+                                    [formControl]="$any(grupo).get('tipoLentesContacto')" [searchable]="true" class="ng-select-moderno"
+                                    placeholder="Seleccione el tipo..." (change)="onTipoLenteContactoRecomendadoChange(i, j)">
+                                  </ng-select>
+                                </div>
+                              </div>
+
+                              <div class="col-12" *ngIf="esCategoriaRecomendacionLentesContacto(i, j)">
+                                <div class="recomendacion-contexto recomendacion-contexto--contacto">
+                                  <i class="bi bi-droplet-half"></i>
+                                  <div>
+                                    <strong>Recomendación para lente de contacto</strong>
+                                    <span>Esta categoría se maneja independiente. No obliga a agregar montura.</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div class="col-12 categoria-recomendada-card__actions"
+                                *ngIf="j === getCategoriasRecomendadas(i).length - 1 && puedeAgregarOtraCategoria(i)">
+                                <button type="button" class="btn-agregar-categoria-recomendada"
+                                  (click)="agregarCategoriaRecomendada(i)">
+                                  <i class="bi bi-plus-circle"></i>
+                                  Agregar categoría
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
 
-                        <div class="col-12" *ngIf="mostrarMaterialPersonalizado[i]">
-                          <div class="form-group-moderno">
-                            <label class="form-label-moderno">Material personalizado</label>
-                            <input type="text" class="form-control-moderno" formControlName="materialPersonalizado"
-                              placeholder="Describe el material sugerido..." />
-                          </div>
-                        </div>
-                      </ng-container>
+                          <button type="button" class="btn-agregar-categoria-recomendada btn-agregar-categoria-recomendada--empty"
+                            *ngIf="getCategoriasRecomendadas(i).length === 0"
+                            (click)="agregarCategoriaRecomendada(i)">
+                            <i class="bi bi-plus-circle"></i>
+                            Agregar categoría
+                          </button>
 
-                      <div class="col-12" *ngIf="esRecomendacionLentesContacto(i)">
-                        <div class="recomendacion-contexto recomendacion-contexto--contacto">
-                          <i class="bi bi-droplet-half"></i>
-                          <div>
-                            <strong>Recomendación para lente de contacto</strong>
-                            <span>Registra el tipo recomendado. Montura y materiales no aplican en este caso.</span>
+                          <div class="resumen-categorias-recomendadas" *ngIf="getResumenCategoriasSeleccionadasFormulario(i).length > 0">
+                            <div class="resumen-categorias-recomendadas__header">
+                              <i class="bi bi-check2-circle"></i>
+                              <span>Selección actual</span>
+                            </div>
+
+                            <div class="resumen-categorias-recomendadas__grid">
+                              <div class="resumen-categoria-item" *ngFor="let item of getResumenCategoriasSeleccionadasFormulario(i)">
+                                <label>{{ item.categoria }} seleccionado:</label>
+                                <strong>{{ item.producto }}</strong>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

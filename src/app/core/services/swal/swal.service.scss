@@ -308,6 +308,56 @@
   }
 }
 
+.swal-modern-deny {
+  background: #ffffff !important;
+  color: var(--swal-primary) !important;
+  border: 2px solid rgba(0, 123, 255, 0.22) !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  margin: 0.5rem !important;
+  transition: all 0.2s ease !important;
+  min-width: 120px;
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04) !important;
+  position: relative;
+  z-index: 2;
+
+  &:hover:not(:disabled) {
+    background: #f6fbff !important;
+    border-color: rgba(0, 123, 255, 0.42) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 14px rgba(0, 123, 255, 0.08) !important;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow:
+      0 0 0 3px rgba(0, 123, 255, 0.12),
+      0 2px 4px rgba(15, 23, 42, 0.04) !important;
+  }
+}
+
+.swal-modern-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem !important;
+  width: min(100%, 380px) !important;
+  margin: 1.5rem auto 0 !important;
+  padding: 0 !important;
+
+  .swal-modern-confirm {
+    grid-column: 1 / -1;
+  }
+
+  .swal-modern-confirm,
+  .swal-modern-deny,
+  .swal-modern-cancel {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+}
+
 /* ==================== */
 /* BOTÓN CERRAR - MÁS DEFINIDO */
 /* ==================== */
@@ -711,7 +761,8 @@
   }
 
   .swal-modern-confirm,
-  .swal-modern-cancel {
+  .swal-modern-cancel,
+  .swal-modern-deny {
     padding: 0.625rem 1.25rem !important;
     font-size: 0.9rem !important;
     min-width: 100px;
@@ -723,7 +774,8 @@
     gap: 0.5rem !important;
 
     .swal-modern-confirm,
-    .swal-modern-cancel {
+    .swal-modern-cancel,
+    .swal-modern-deny {
       width: 100% !important;
       margin: 0.25rem 0 !important;
     }

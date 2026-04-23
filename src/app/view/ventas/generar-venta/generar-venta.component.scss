@@ -2343,6 +2343,223 @@
     line-height: 1.45;
 }
 
+.recomendaciones-precargadas {
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(244, 248, 252, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.recomendaciones-precargadas__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+
+    h6 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #203244;
+    }
+
+    p {
+        margin: 0.25rem 0 0;
+        font-size: 0.82rem;
+        color: #5c7280;
+        line-height: 1.45;
+    }
+}
+
+.recomendaciones-precargadas__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.32rem 0.7rem;
+    border-radius: 999px;
+    background: rgba(58, 123, 213, 0.12);
+    color: #244567;
+    font-size: 0.74rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.recomendaciones-precargadas__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 0.85rem;
+}
+
+.recomendacion-venta-card {
+    padding: 0.95rem;
+    border-radius: 16px;
+    background: white;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.recomendacion-venta-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin-bottom: 0.85rem;
+
+    strong {
+        display: block;
+        color: #1f3347;
+        font-size: 0.9rem;
+    }
+
+    span {
+        display: block;
+        margin-top: 0.22rem;
+        font-size: 0.78rem;
+        line-height: 1.45;
+        color: #64748b;
+    }
+}
+
+.btn-agregar-recomendacion-venta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.48rem 0.78rem;
+    border-radius: 12px;
+    border: 1px solid rgba(47, 125, 199, 0.18);
+    background: linear-gradient(135deg, #244567 0%, #2f7dc7 100%);
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 700;
+
+    &:hover {
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none;
+    }
+}
+
+.recomendacion-venta-card__principal,
+.recomendacion-venta-card__complemento {
+    margin-top: 0.7rem;
+}
+
+.recomendacion-venta-card__tag {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 0.45rem;
+    padding: 0.22rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+}
+
+.recomendacion-venta-card__tag--principal {
+    background: rgba(36, 69, 103, 0.12);
+    color: #244567;
+}
+
+.recomendacion-venta-card__tag--complemento {
+    background: rgba(120, 53, 15, 0.12);
+    color: #92400e;
+}
+
+.recomendacion-venta-card__items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.recomendacion-venta-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.7rem 0.75rem;
+    border-radius: 14px;
+    background: #f8fafc;
+
+    strong {
+        display: block;
+        color: #23384d;
+        font-size: 0.82rem;
+        line-height: 1.35;
+    }
+
+    span {
+        display: block;
+        margin-top: 0.18rem;
+        color: #718096;
+        font-size: 0.74rem;
+    }
+
+    small {
+        display: block;
+        margin-top: 0.24rem;
+        color: #5c7280;
+        font-size: 0.72rem;
+        line-height: 1.4;
+    }
+
+    &.recomendacion-venta-item--agotado {
+        background: rgba(254, 242, 242, 0.95);
+
+        strong,
+        small {
+            color: #b42334;
+        }
+    }
+}
+
+.recomendacion-venta-item--principal {
+    padding: 0.85rem 0.85rem;
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.92) 0%, rgba(248, 250, 252, 0.98) 100%);
+    border: 1px solid rgba(191, 219, 254, 0.9);
+}
+
+.recomendacion-venta-item__meta {
+    text-align: right;
+    flex-shrink: 0;
+
+    span {
+        margin: 0;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #244567;
+    }
+
+    small {
+        display: block;
+        margin-top: 0.2rem;
+        font-size: 0.72rem;
+        color: #64748b;
+    }
+}
+
+.recomendacion-venta-card__alert {
+    margin-top: 0.8rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    padding: 0.7rem 0.8rem;
+    border-radius: 12px;
+    background: rgba(254, 242, 242, 0.95);
+    color: #b42334;
+    font-size: 0.76rem;
+    line-height: 1.45;
+
+    i {
+        margin-top: 0.05rem;
+    }
+}
+
 .producto-transfer-chip {
     display: inline-flex;
     align-items: center;

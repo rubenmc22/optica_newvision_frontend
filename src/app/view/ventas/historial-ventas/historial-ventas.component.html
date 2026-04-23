@@ -804,15 +804,15 @@
             <div class="recomendaciones-grid">
               <div class="recomendacion-item">
                 <span class="rec-label">Montura</span>
-                <span class="rec-value">{{selectedVenta?.historiaMedica?.recomendaciones?.montura || '—'}}</span>
+                <span class="rec-value">{{ getValorRecomendacionVenta(selectedVenta?.historiaMedica?.recomendaciones, 'montura') }}</span>
               </div>
               <div class="recomendacion-item">
                 <span class="rec-label">Material</span>
-                <span class="rec-value">{{selectedVenta?.historiaMedica?.recomendaciones?.material || '—'}}</span>
+                <span class="rec-value">{{ getValorRecomendacionVenta(selectedVenta?.historiaMedica?.recomendaciones, 'material') }}</span>
               </div>
               <div class="recomendacion-item">
                 <span class="rec-label">Cristal</span>
-                <span class="rec-value">{{selectedVenta?.historiaMedica?.recomendaciones?.cristal || '—'}}</span>
+                <span class="rec-value">{{ getValorRecomendacionVenta(selectedVenta?.historiaMedica?.recomendaciones, 'cristal') }}</span>
               </div>
             </div>
           </div>

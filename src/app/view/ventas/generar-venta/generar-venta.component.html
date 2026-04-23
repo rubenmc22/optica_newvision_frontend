@@ -531,6 +531,87 @@
                     <i class="bi bi-info-circle"></i>
                     <span>La búsqueda global muestra la sede del producto. Si eliges uno de otra sede, se agregará como solicitud de traslado hacia {{ nombreSedeActivaVisible }}.</span>
                 </div>
+
+                <div class="recomendaciones-precargadas" *ngIf="tipoVenta === 'consulta_productos' && historiaMedicaSeleccionada">
+                    <div class="recomendaciones-precargadas__header">
+                        <div>
+                            <h6>Recomendaciones de la historia seleccionada</h6>
+                            <p *ngIf="recomendacionesHistoriaPrecargadas.length > 0">Agrega al carrito una recomendación completa y luego ajústala si el paciente quiere cambios.</p>
+                            <p *ngIf="historiaTieneRecomendacionesClinicasSinProductos">La historia tiene recomendaciones clínicas, pero todavía no hay productos concretos del inventario vinculados.</p>
+                        </div>
+                        <span class="recomendaciones-precargadas__badge" *ngIf="recomendacionesHistoriaPrecargadas.length > 0">
+                            {{ recomendacionesHistoriaPrecargadas.length }} recomendación(es)
+                        </span>
+                    </div>
+
+                    <div class="recomendaciones-precargadas__grid" *ngIf="recomendacionesHistoriaPrecargadas.length > 0">
+                        <article class="recomendacion-venta-card" *ngFor="let recomendacion of recomendacionesHistoriaPrecargadas; let i = index">
+                            <div class="recomendacion-venta-card__header">
+                                <div>
+                                    <strong>{{ getTituloRecomendacionPrecargada(recomendacion, i) }}</strong>
+                                    <span>{{ getResumenRecomendacionPrecargada(recomendacion) }}</span>
+                                </div>
+                                <button type="button" class="btn btn-agregar-recomendacion-venta"
+                                    [disabled]="!puedeAgregarRecomendacionPrecargada(recomendacion)"
+                                    (click)="agregarRecomendacionPrecargadaAlCarrito(recomendacion, i)">
+                                    <i class="bi bi-cart-plus"></i>
+                                    Agregar
+                                </button>
+                            </div>
+
+                            <div class="recomendacion-venta-card__principal"
+                                *ngIf="getProductoPrincipalRecomendacion(recomendacion) as productoPrincipal"
+                                [class.recomendacion-venta-card__principal--agotado]="(productoPrincipal.stock ?? 0) <= 0">
+                                <span class="recomendacion-venta-card__tag recomendacion-venta-card__tag--principal">
+                                    {{ getEtiquetaRolProductoPreseleccionado(productoPrincipal, 'principal') }}
+                                </span>
+
+                                <div class="recomendacion-venta-item recomendacion-venta-item--principal"
+                                    [class.recomendacion-venta-item--agotado]="(productoPrincipal.stock ?? 0) <= 0">
+                                    <div>
+                                        <strong>{{ getEtiquetaProductoPreseleccionado(productoPrincipal) }}</strong>
+                                        <span>{{ productoPrincipal.categoria }}</span>
+                                        <small *ngIf="esCristalCompletoRecomendado(productoPrincipal)">
+                                            Incluye material, aditivos y rango de fórmula.
+                                        </small>
+                                    </div>
+                                    <div class="recomendacion-venta-item__meta">
+                                        <span>{{ formatearMoneda(productoPrincipal.precioConIva ?? productoPrincipal.precio, productoPrincipal.moneda) }}</span>
+                                        <small>{{ getMensajeStockProductoPreseleccionado(productoPrincipal) }}</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="recomendacion-venta-card__complemento"
+                                *ngIf="getProductosComplementariosRecomendacion(recomendacion).length > 0">
+                                <span class="recomendacion-venta-card__tag recomendacion-venta-card__tag--complemento">
+                                    Productos complementarios
+                                </span>
+
+                                <div class="recomendacion-venta-card__items">
+                                    <div class="recomendacion-venta-item"
+                                        *ngFor="let productoComplementario of getProductosComplementariosRecomendacion(recomendacion)"
+                                        [class.recomendacion-venta-item--agotado]="(productoComplementario.stock ?? 0) <= 0">
+                                        <div>
+                                            <strong>{{ getEtiquetaProductoPreseleccionado(productoComplementario) }}</strong>
+                                            <span>{{ productoComplementario.categoria }}</span>
+                                        </div>
+                                        <div class="recomendacion-venta-item__meta">
+                                            <span>{{ formatearMoneda(productoComplementario.precioConIva ?? productoComplementario.precio, productoComplementario.moneda) }}</span>
+                                            <small>{{ getMensajeStockProductoPreseleccionado(productoComplementario) }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="recomendacion-venta-card__alert"
+                                *ngIf="!puedeAgregarRecomendacionPrecargada(recomendacion)">
+                                <i class="bi bi-exclamation-circle"></i>
+                                <span>{{ getMensajeBloqueoRecomendacionPrecargada(recomendacion) }}</span>
+                            </div>
+                        </article>
+                    </div>
+                </div>
                 </div>
 
                 <!-- Mensaje para solo consulta -->

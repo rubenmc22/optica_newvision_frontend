@@ -1491,10 +1491,11 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
     const historia = orden.cliente?.historia_medica;
     const refraccion = historia?.examen_ocular_refraccion_final;
     const recomendaciones = historia?.recomendaciones?.[0];
+    const productoClinico = this.obtenerProductoClinicoRecomendacion(recomendaciones);
 
     return {
-      material: recomendaciones?.material?.[0] || 'CRISTALES-SERVILENTES-',
-      tipoVision: recomendaciones?.cristal?.label || 'Monofocal visión sencilla',
+      material: productoClinico?.material || recomendaciones?.material?.[0] || 'CRISTALES-SERVILENTES-',
+      tipoVision: this.obtenerTextoClinicoRecomendacion(recomendaciones) || 'Monofocal visión sencilla',
       esferaOD: refraccion?.esf_od || '',
       esferaOI: refraccion?.esf_oi || '',
       cilindroOD: refraccion?.cil_od || '',
@@ -2432,12 +2433,72 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
 
   private getCristalRecomendadoReporte(orden: OrdenTrabajo): string {
     const recomendacion = orden.cliente?.historia_medica?.recomendaciones?.[0];
-    return recomendacion?.cristal ? this.getTipoCristalRecomendado(recomendacion.cristal) : '';
+    return this.obtenerTextoClinicoRecomendacion(recomendacion);
   }
 
   private getMaterialRecomendadoReporte(orden: OrdenTrabajo): string {
     const recomendacion = orden.cliente?.historia_medica?.recomendaciones?.[0];
-    return recomendacion?.material ? this.getMaterialesRecomendados(recomendacion.material) : '';
+    const productoClinico = this.obtenerProductoClinicoRecomendacion(recomendacion);
+    return productoClinico?.material || (recomendacion?.material ? this.getMaterialesRecomendados(recomendacion.material) : '');
+  }
+
+  private obtenerCategoriasRecomendacion(rec: any): any[] {
+    return Array.isArray(rec?.seleccionProductos?.categorias) ? rec.seleccionProductos.categorias : [];
+  }
+
+  private obtenerProductoClinicoRecomendacion(rec: any): any {
+    return this.obtenerCategoriasRecomendacion(rec)
+      .find(categoria => {
+        const valor = String(categoria?.categoria || '').trim().toLowerCase();
+        return valor === 'cristales' || valor === 'lentes de contacto';
+      })?.producto || rec?.seleccionProductos?.cristal || null;
+  }
+
+  private obtenerMonturaRecomendada(rec: any): any {
+    return this.obtenerCategoriasRecomendacion(rec)
+      .find(categoria => String(categoria?.categoria || '').trim().toLowerCase() === 'monturas')?.producto || rec?.seleccionProductos?.montura || null;
+  }
+
+  private obtenerTextoClinicoRecomendacion(rec: any): string {
+    const productoClinico = this.obtenerProductoClinicoRecomendacion(rec);
+    const tipoCristal = String(productoClinico?.tipoCristal || '').trim();
+    if (tipoCristal) {
+      return this.getTipoCristalRecomendado(tipoCristal);
+    }
+
+    if (String(productoClinico?.categoria || '').trim().toLowerCase() === 'lentes de contacto') {
+      return 'Lentes de contacto';
+    }
+
+    if (productoClinico?.nombre) {
+      return String(productoClinico.nombre).trim();
+    }
+
+    return rec?.cristal ? this.getTipoCristalRecomendado(rec.cristal) : '';
+  }
+
+  getTipoLenteContactoRecomendacionDetalle(rec: any): string | null {
+    const productoClinico = this.obtenerProductoClinicoRecomendacion(rec);
+    return String(productoClinico?.tipoLenteContacto || rec?.tipoLentesContacto || '').trim() || null;
+  }
+
+  getMonturaRecomendadaTexto(rec: any): string {
+    return String(this.obtenerMonturaRecomendada(rec)?.nombre || rec?.montura || '').trim();
+  }
+
+  getMedidasRecomendacionDetalle(rec: any): { horizontal?: string; vertical?: string; diagonal?: string; puente?: string } | null {
+    const medidasProducto = rec?.seleccionProductos?.categorias
+      ? this.obtenerProductoClinicoRecomendacion(rec)?.medidas
+      : null;
+
+    const medidas = {
+      horizontal: String(medidasProducto?.horizontal || rec?.medidaHorizontal || '').trim() || undefined,
+      vertical: String(medidasProducto?.vertical || rec?.medidaVertical || '').trim() || undefined,
+      diagonal: String(medidasProducto?.diagonal || rec?.medidaDiagonal || '').trim() || undefined,
+      puente: String(medidasProducto?.puente || rec?.medidaPuente || '').trim() || undefined
+    };
+
+    return medidas.horizontal || medidas.vertical || medidas.diagonal || medidas.puente ? medidas : null;
   }
 
   // Agrega este método al componente para manejar mejor el responsive
@@ -2537,6 +2598,16 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
   }
 
   esLenteContactoRecomendacion(rec: any): boolean {
+    const productoClinico = this.obtenerProductoClinicoRecomendacion(rec);
+    if (String(productoClinico?.categoria || '').trim().toLowerCase() === 'lentes de contacto') {
+      return true;
+    }
+
+    const tipoLente = String(productoClinico?.tipoLenteContacto || '').trim();
+    if (tipoLente) {
+      return true;
+    }
+
     if (!rec || !rec.cristal) return false;
 
     let cristalValue = '';
@@ -2640,12 +2711,7 @@ export class GestionOrdenesTrabajoComponent implements OnInit, OnDestroy {
   getTipoCristal(producto: any): string {
     const historia = this.ordenSeleccionada?.cliente?.historia_medica;
     const recomendaciones = historia?.recomendaciones?.[0];
-
-    if (recomendaciones?.cristal) {
-      return this.getTipoCristalRecomendado(recomendaciones.cristal);
-    }
-
-    return 'Cristal estándar';
+    return this.obtenerTextoClinicoRecomendacion(recomendaciones) || 'Cristal estándar';
   }
 
 }

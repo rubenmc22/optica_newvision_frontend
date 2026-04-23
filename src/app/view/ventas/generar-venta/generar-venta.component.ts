@@ -1,5 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef, OnDestroy, ViewChild, HostListener } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Producto } from '../../productos/producto.model';
 import { ProductoService } from '../../productos/producto.service';
 import { SystemConfigService } from '../../system-config/system-config.service';
@@ -15,7 +16,7 @@ import { Sede, SedeCompleta } from '../../../view/login/login-interface';
 import { PacientesService } from '../../../core/services/pacientes/pacientes.service';
 import { HistoriaMedicaService } from '../../../core/services/historias-medicas/historias-medicas.service';
 import { Paciente } from '../../pacientes/paciente-interface';
-import { HistoriaMedica } from './../../historias-medicas/historias_medicas-interface';
+import { CategoriaProductoRecomendado, HistoriaMedica, ProductoRecomendadoHistoria, Recomendaciones } from './../../historias-medicas/historias_medicas-interface';
 import { VentaDto, ProductoVentaCalculado, CuotaCashea, ItemCarrito, ProductoVentaDto, MetodoPago, FormaPagoDetalle } from '../venta-interfaz';
 import { Empleado, User } from '../../../Interfaces/models-interface';
 import { EmpleadosService } from './../../../core/services/empleados/empleados.service';
@@ -37,6 +38,10 @@ import {
     VentaReceiverAccountOption
 } from '../shared/payment-catalog.util';
 import { PRESUPUESTO_VENTA_STORAGE_KEY, PresupuestoVentaDraft } from '../shared/presupuesto-venta-handoff.util';
+import {
+    HISTORIA_VENTA_HANDOFF_STORAGE_KEY,
+    HistoriaVentaHandoff
+} from '../shared/historia-venta-handoff.util';
 
 // Constantes
 import {
@@ -84,7 +89,9 @@ type ProductoBusquedaOption = Producto & {
 export class GenerarVentaComponent implements OnInit, OnDestroy {
     private readonly FILTRO_TODAS_SEDES = 'todas';
     private readonly presupuestoVentaStorageKey = PRESUPUESTO_VENTA_STORAGE_KEY;
+    private readonly historiaVentaHandoffStorageKey = HISTORIA_VENTA_HANDOFF_STORAGE_KEY;
     private paymentCatalogSubscription?: Subscription;
+    private historiaVentaHandoffPendiente: HistoriaVentaHandoff | null = null;
 
     @ViewChild('productoSelect', { static: false }) productoSelect!: NgSelectComponent;
     @ViewChild('selectorPaciente', { static: false }) selectorPaciente!: NgSelectComponent;
@@ -105,7 +112,9 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         private systemConfigService: SystemConfigService,
         private productoConversionService: ProductoConversionService,
         private clienteService: ClienteService,
-        private sanitizer: DomSanitizer
+        private sanitizer: DomSanitizer,
+        private route: ActivatedRoute,
+        private router: Router
     ) {
     }
 
@@ -220,6 +229,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
     // === PROPIEDADES PARA ASESOR ===
     historiaMedica: HistoriaMedica | null = null;
     productosConDetalle: ProductoVentaCalculado[] = [];
+    productosOcultosTemporalmente: ItemCarrito[] = [];
     totalProductos: number = 0;
     cuotasCashea: CuotaCashea[] = [];
     valorInicialTemporal = '';
@@ -323,6 +333,8 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         window.addEventListener('focus', () => {
             //this.recargarPacientes();
         });
+
+        this.inicializarHandoffHistoriaVenta();
     }
 
     ngOnDestroy(): void {
@@ -459,8 +471,83 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
             this.tasasPorId = Object.fromEntries(tasas.map(t => [t.id, t.valor]));
 
             this.actualizarProductosConDetalle();
-            this.cargarPresupuestoPendienteSiExiste();
+            if (this.historiaVentaHandoffPendiente) {
+                this.cargarVentaDesdeHistoriaPendienteSiExiste();
+            } else {
+                this.cargarPresupuestoPendienteSiExiste();
+            }
             this.completarTarea();
+        });
+    }
+
+    private inicializarHandoffHistoriaVenta(): void {
+        const handoff = this.leerHistoriaVentaHandoff();
+        if (!handoff) {
+            return;
+        }
+
+        this.historiaVentaHandoffPendiente = handoff;
+    }
+
+    private leerHistoriaVentaHandoff(): HistoriaVentaHandoff | null {
+        const handoffRaw = sessionStorage.getItem(this.historiaVentaHandoffStorageKey);
+        if (!handoffRaw) {
+            return null;
+        }
+
+        try {
+            const handoff = JSON.parse(handoffRaw) as HistoriaVentaHandoff;
+            if (
+                !handoff?.pacienteKey
+                || !handoff?.historiaId
+                || (handoff.tipoVenta !== 'consulta_productos' && handoff.tipoVenta !== 'solo_consulta')
+            ) {
+                sessionStorage.removeItem(this.historiaVentaHandoffStorageKey);
+                return null;
+            }
+
+            return handoff;
+        } catch {
+            sessionStorage.removeItem(this.historiaVentaHandoffStorageKey);
+            return null;
+        }
+    }
+
+    private cargarVentaDesdeHistoriaPendienteSiExiste(): void {
+        const handoff = this.historiaVentaHandoffPendiente;
+        if (!handoff) {
+            return;
+        }
+
+        const paciente = this.todosLosPacientes.find((item) =>
+            String(item.key || '') === String(handoff.pacienteKey)
+            || (handoff.pacienteId ? String(item.id || '') === String(handoff.pacienteId) : false)
+        );
+
+        if (!paciente) {
+            this.limpiarHistoriaVentaHandoff();
+            this.snackBar.open('No se encontró el paciente de la historia para iniciar la venta.', 'Cerrar', {
+                duration: 4000,
+                panelClass: ['snackbar-warning']
+            });
+            return;
+        }
+
+        this.seleccionarTipoVenta(handoff.tipoVenta);
+        this.seleccionarPaciente(paciente);
+    }
+
+    private limpiarHistoriaVentaHandoff(): void {
+        this.historiaVentaHandoffPendiente = null;
+        sessionStorage.removeItem(this.historiaVentaHandoffStorageKey);
+
+        this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: {
+                vista: 'generacion-de-ventas'
+            },
+            queryParamsHandling: 'merge',
+            replaceUrl: true
         });
     }
 
@@ -678,6 +765,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                         key: historia.id.toString(),
                         id: historia.id,
                         nHistoria: historia.nHistoria,
+                        recomendaciones: Array.isArray(historia.recomendaciones) ? historia.recomendaciones : [],
                         fechaFormateada: fecha.toLocaleDateString('es-VE', {
                             day: '2-digit',
                             month: 'long',
@@ -715,8 +803,7 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
                     };
                 });
 
-
-
+                this.aplicarHistoriaVentaHandoffSiExiste();
                 this.completarTarea();
             },
             error: (error) => {
@@ -855,6 +942,17 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
 
     // Método para determinar si es una recomendación de lentes de contacto
     esLenteContactoRecomendacion(rec: any): boolean {
+        const productoClinico = this.obtenerProductoClinicoRecomendacion(rec);
+        const categoriaClinica = String(productoClinico?.categoria || '').trim().toLowerCase();
+        if (categoriaClinica === 'lentes de contacto') {
+            return true;
+        }
+
+        const tipoClinico = String(productoClinico?.tipoLenteContacto || productoClinico?.tipoCristal || '').trim().toLowerCase();
+        if (tipoClinico.includes('contacto')) {
+            return true;
+        }
+
         if (!rec || !rec.cristal) return false;
 
         const cristalStr = typeof rec.cristal === 'string'
@@ -1070,6 +1168,384 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         const eliminado = this.venta.productos.find(p => p.id === id)?.nombre;
         this.venta.productos = this.venta.productos.filter(p => p.id !== id);
         this.actualizarProductosConDetalle();
+    }
+
+    get recomendacionesHistoriaPrecargadas(): Recomendaciones[] {
+        if (this.tipoVenta !== 'consulta_productos' || !Array.isArray(this.historiaMedicaSeleccionada?.recomendaciones)) {
+            return [];
+        }
+
+        return this.historiaMedicaSeleccionada.recomendaciones.filter(recomendacion =>
+            this.obtenerProductosPreseleccionadosDeRecomendacion(recomendacion).length > 0
+        );
+    }
+
+    get historiaTieneRecomendacionesClinicasSinProductos(): boolean {
+        const recomendaciones = this.historiaMedicaSeleccionada?.recomendaciones;
+        return Array.isArray(recomendaciones) && recomendaciones.length > 0 && this.recomendacionesHistoriaPrecargadas.length === 0;
+    }
+
+    obtenerProductosPreseleccionadosDeRecomendacion(recomendacion: Recomendaciones | null | undefined): ProductoRecomendadoHistoria[] {
+        const productos = this.obtenerCategoriasPreseleccionadasDeRecomendacion(recomendacion)
+            .map(categoria => categoria.producto)
+            .filter((producto): producto is ProductoRecomendadoHistoria => !!producto?.id)
+            .map(producto => this.sincronizarProductoPreseleccionadoConInventarioActual(producto));
+
+        return productos.filter((producto, index, lista) =>
+            lista.findIndex(item => String(item.id) === String(producto.id)) === index
+        );
+    }
+
+    getProductoPrincipalRecomendacion(recomendacion: Recomendaciones | null | undefined): ProductoRecomendadoHistoria | null {
+        return this.obtenerProductosPreseleccionadosDeRecomendacion(recomendacion)[0] ?? null;
+    }
+
+    getProductoComplementarioRecomendacion(recomendacion: Recomendaciones | null | undefined): ProductoRecomendadoHistoria | null {
+        const productos = this.obtenerProductosPreseleccionadosDeRecomendacion(recomendacion);
+        return productos.length > 1 ? productos[1] : null;
+    }
+
+    getProductosComplementariosRecomendacion(recomendacion: Recomendaciones | null | undefined): ProductoRecomendadoHistoria[] {
+        const productos = this.obtenerProductosPreseleccionadosDeRecomendacion(recomendacion);
+        return productos.slice(1);
+    }
+
+    getTituloRecomendacionPrecargada(recomendacion: Recomendaciones, index: number): string {
+        const productos = this.obtenerProductosPreseleccionadosDeRecomendacion(recomendacion);
+        if (productos.length === 0) {
+            return `Recomendación #${index + 1}`;
+        }
+
+        const tipos = new Set(productos.map(producto => String(producto.categoria || '').trim().toLowerCase()));
+
+        if (tipos.has('lentes de contacto')) {
+            return `Recomendación #${index + 1}: lente de contacto`;
+        }
+
+        if (tipos.has('cristales') && tipos.has('monturas')) {
+            return `Recomendación #${index + 1}: cristal + montura`;
+        }
+
+        return `Recomendación #${index + 1}`;
+    }
+
+    getResumenRecomendacionPrecargada(recomendacion: Recomendaciones): string {
+        const observaciones = String(recomendacion?.observaciones || '').trim();
+        if (observaciones) {
+            return observaciones;
+        }
+
+        const productoClinico = this.obtenerProductoClinicoRecomendacion(recomendacion);
+        const tipoContacto = String(productoClinico?.tipoLenteContacto || recomendacion?.tipoLentesContacto || '').trim();
+        if (tipoContacto) {
+            return `Tipo sugerido: ${tipoContacto}`;
+        }
+
+        const cristal = String(productoClinico?.tipoCristal || '').trim() || (typeof recomendacion?.cristal === 'string'
+            ? String(recomendacion.cristal).trim()
+            : String(recomendacion?.cristal?.label || recomendacion?.cristal?.value || '').trim());
+
+        return cristal
+            ? cristal
+            : 'Selección preparada desde historia médica.';
+    }
+
+    getEtiquetaProductoPreseleccionado(producto: ProductoRecomendadoHistoria | null | undefined): string {
+        if (!producto) {
+            return 'Producto no disponible';
+        }
+
+        const codigo = String(producto.codigo || '').trim();
+        return codigo ? `${producto.nombre} (${codigo})` : producto.nombre;
+    }
+
+    getEtiquetaRolProductoPreseleccionado(
+        producto: ProductoRecomendadoHistoria | null | undefined,
+        rol: 'principal' | 'complementario'
+    ): string {
+        const categoria = String(producto?.categoria || '').trim().toLowerCase();
+
+        if (categoria === 'lentes de contacto') {
+            return 'Lente de contacto principal';
+        }
+
+        if (categoria === 'cristales') {
+            return rol === 'principal' ? 'Cristal completo recomendado' : 'Cristal recomendado';
+        }
+
+        if (categoria === 'monturas') {
+            return rol === 'complementario' ? 'Montura complementaria' : 'Montura recomendada';
+        }
+
+        return rol === 'principal' ? 'Producto principal' : 'Producto complementario';
+    }
+
+    getMensajeStockProductoPreseleccionado(producto: ProductoRecomendadoHistoria | null | undefined): string {
+        const stock = Number(producto?.stock ?? 0);
+        return stock > 0 ? `Stock actual: ${stock}` : 'Sin stock actual';
+    }
+
+    esCristalCompletoRecomendado(producto: ProductoRecomendadoHistoria | null | undefined): boolean {
+        const categoria = `${producto?.categoria ?? ''}`.trim().toLowerCase();
+        return categoria === 'cristales';
+    }
+
+    puedeAgregarRecomendacionPrecargada(recomendacion: Recomendaciones): boolean {
+        const productos = this.obtenerProductosPreseleccionadosDeRecomendacion(recomendacion);
+        return productos.length > 0 && productos.every(producto => this.esProductoPreseleccionadoVendible(producto));
+    }
+
+    getMensajeBloqueoRecomendacionPrecargada(recomendacion: Recomendaciones): string {
+        const productos = this.obtenerProductosPreseleccionadosDeRecomendacion(recomendacion);
+        if (productos.length === 0) {
+            return 'Esta recomendación todavía no tiene productos concretos del inventario.';
+        }
+
+        const productosSinStock = productos.filter(producto => Number(producto.stock ?? 0) <= 0);
+        if (productosSinStock.length > 0) {
+            return 'No se puede pasar a venta completa porque uno o más productos no tienen stock actual.';
+        }
+
+        const productosSinPrecio = productos.filter(producto => !this.esProductoPreseleccionadoVendible(producto));
+        if (productosSinPrecio.length > 0) {
+            return 'La recomendación requiere revisar precios antes de llevarla al carrito.';
+        }
+
+        return '';
+    }
+
+    agregarRecomendacionPrecargadaAlCarrito(recomendacion: Recomendaciones, index: number): void {
+        const productos = this.obtenerProductosPreseleccionadosDeRecomendacion(recomendacion);
+
+        if (productos.length === 0) {
+            this.swalService.showInfo('Sin productos vinculados', 'Esta recomendación todavía no tiene productos concretos del inventario.');
+            return;
+        }
+
+        const noAgregados: string[] = [];
+        let agregados = 0;
+
+        productos.forEach(producto => {
+            if (!this.esProductoPreseleccionadoVendible(producto)) {
+                noAgregados.push(this.getEtiquetaProductoPreseleccionado(producto));
+                return;
+            }
+
+            this.agregarProductoAlCarrito(this.mapearProductoPreseleccionadoAVenta(producto));
+            agregados++;
+        });
+
+        if (agregados > 0 && noAgregados.length === 0) {
+            this.snackBar.open(`${this.getTituloRecomendacionPrecargada(recomendacion, index)} agregada al carrito.`, 'Cerrar', { duration: 2500 });
+            return;
+        }
+
+        if (agregados > 0) {
+            this.snackBar.open(`Se agregaron ${agregados} producto(s). Algunos no entraron por stock o precio pendiente.`, 'Cerrar', { duration: 3500 });
+            return;
+        }
+
+        this.swalService.showWarning('No se pudo agregar', 'Los productos vinculados no están disponibles para la venta en este momento.');
+    }
+
+    private aplicarHistoriaVentaHandoffSiExiste(): void {
+        const handoff = this.historiaVentaHandoffPendiente;
+        if (!handoff || this.tipoVenta !== handoff.tipoVenta) {
+            return;
+        }
+
+        const historia = this.historiasMedicas.find((item) =>
+            String(item.id || '') === String(handoff.historiaId)
+            || String(item.key || '') === String(handoff.historiaId)
+            || (handoff.historiaNumero ? String(item.nHistoria || '') === String(handoff.historiaNumero) : false)
+        );
+
+        if (!historia) {
+            this.limpiarHistoriaVentaHandoff();
+            this.snackBar.open('La historia recién creada no aparece disponible para iniciar la venta.', 'Cerrar', {
+                duration: 4500,
+                panelClass: ['snackbar-warning']
+            });
+            return;
+        }
+
+        this.seleccionarHistoria(historia);
+
+        if (handoff.autoAgregarRecomendaciones) {
+            setTimeout(() => {
+                this.agregarRecomendacionesDeHistoriaSeleccionadaAlCarrito();
+                this.limpiarHistoriaVentaHandoff();
+            }, 150);
+            return;
+        }
+
+        this.limpiarHistoriaVentaHandoff();
+    }
+
+    private agregarRecomendacionesDeHistoriaSeleccionadaAlCarrito(): void {
+        const recomendaciones = this.recomendacionesHistoriaPrecargadas;
+        if (recomendaciones.length === 0) {
+            this.snackBar.open('Historia cargada en ventas. No hay recomendaciones con productos concretos para precargar.', 'Cerrar', {
+                duration: 4000,
+                panelClass: ['snackbar-info']
+            });
+            return;
+        }
+
+        const productosProcesados = new Set<string>();
+        let agregados = 0;
+        let omitidos = 0;
+
+        recomendaciones.forEach((recomendacion) => {
+            this.obtenerProductosPreseleccionadosDeRecomendacion(recomendacion).forEach((producto) => {
+                const productoId = String(producto.id || '').trim();
+                if (!productoId || productosProcesados.has(productoId)) {
+                    return;
+                }
+
+                productosProcesados.add(productoId);
+
+                if (!this.esProductoPreseleccionadoVendible(producto)) {
+                    omitidos++;
+                    return;
+                }
+
+                this.agregarProductoAlCarrito(this.mapearProductoPreseleccionadoAVenta(producto));
+                agregados++;
+            });
+        });
+
+        if (agregados === 0) {
+            this.snackBar.open('La historia se cargó, pero los productos recomendados no están disponibles para venta.', 'Cerrar', {
+                duration: 4500,
+                panelClass: ['snackbar-warning']
+            });
+            return;
+        }
+
+        const mensaje = omitidos > 0
+            ? `Historia cargada en ventas con ${agregados} producto(s). ${omitidos} recomendación(es) no pudieron agregarse por stock o precio.`
+            : `Historia cargada en ventas con ${agregados} producto(s) recomendados listos en el carrito.`;
+
+        this.snackBar.open(mensaje, 'Cerrar', {
+            duration: 4500,
+            panelClass: ['snackbar-success']
+        });
+    }
+
+    private esProductoPreseleccionadoVendible(producto: ProductoRecomendadoHistoria): boolean {
+        const stock = Number(producto.stock ?? 0);
+        const precio = Number(producto.precio ?? 0);
+        const precioConIva = Number(producto.precioConIva ?? producto.precio ?? 0);
+
+        if (stock <= 0 || precio <= 0) {
+            return false;
+        }
+
+        if (producto.aplicaIva && precioConIva <= 0) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private obtenerCategoriasPreseleccionadasDeRecomendacion(
+        recomendacion: Recomendaciones | null | undefined
+    ): CategoriaProductoRecomendado[] {
+        const categoriasPersistidas = recomendacion?.seleccionProductos?.categorias;
+        if (Array.isArray(categoriasPersistidas) && categoriasPersistidas.length > 0) {
+            return categoriasPersistidas
+                .filter(categoria => !!categoria?.categoria && !!categoria?.producto?.id)
+                .sort((categoriaA, categoriaB) => this.getPrioridadCategoriaRecomendacion(categoriaA.categoria) - this.getPrioridadCategoriaRecomendacion(categoriaB.categoria));
+        }
+
+        const categoriasLegacy: CategoriaProductoRecomendado[] = [];
+
+        if (recomendacion?.seleccionProductos?.cristal) {
+            categoriasLegacy.push({
+                categoria: String(recomendacion.seleccionProductos.cristal.categoria || (recomendacion?.tipoLentesContacto ? 'lentes de contacto' : 'cristales')).trim().toLowerCase(),
+                producto: recomendacion.seleccionProductos.cristal
+            });
+        }
+
+        if (recomendacion?.seleccionProductos?.montura) {
+            categoriasLegacy.push({ categoria: 'monturas', producto: recomendacion.seleccionProductos.montura });
+        }
+
+        return categoriasLegacy.sort((categoriaA, categoriaB) => this.getPrioridadCategoriaRecomendacion(categoriaA.categoria) - this.getPrioridadCategoriaRecomendacion(categoriaB.categoria));
+    }
+
+    private obtenerProductoClinicoRecomendacion(
+        recomendacion: Recomendaciones | null | undefined
+    ): ProductoRecomendadoHistoria | null {
+        return this.obtenerCategoriasPreseleccionadasDeRecomendacion(recomendacion)
+            .find(categoria => {
+                const valor = String(categoria.categoria || '').trim().toLowerCase();
+                return valor === 'cristales' || valor === 'lentes de contacto';
+            })?.producto || null;
+    }
+
+    private getPrioridadCategoriaRecomendacion(categoria: string | null | undefined): number {
+        const valor = String(categoria || '').trim().toLowerCase();
+        const prioridades: { [key: string]: number } = {
+            'cristales': 1,
+            'lentes de contacto': 1,
+            'monturas': 2,
+            'liquidos': 3,
+            'estuches': 4,
+            'accesorios': 5,
+        };
+
+        return prioridades[valor] ?? 10;
+    }
+
+    private sincronizarProductoPreseleccionadoConInventarioActual(producto: ProductoRecomendadoHistoria): ProductoRecomendadoHistoria {
+        const productoActual = this.productos.find(item => String(item.id) === String(producto.id));
+
+        if (!productoActual) {
+            return producto;
+        }
+
+        return {
+            ...producto,
+            nombre: String(productoActual.nombre || producto.nombre || '').trim(),
+            codigo: String(productoActual.codigo || producto.codigo || '').trim(),
+            categoria: String(productoActual.categoria || producto.categoria || '').trim(),
+            modelo: String(productoActual.modelo || producto.modelo || '').trim() || undefined,
+            marca: String(productoActual.marca || producto.marca || '').trim() || undefined,
+            material: String(productoActual.material || producto.material || '').trim() || undefined,
+            color: String(productoActual.color || producto.color || '').trim() || undefined,
+            moneda: String(productoActual.moneda || producto.moneda || 'dolar').trim().toLowerCase(),
+            precio: Number(productoActual.precio ?? producto.precio ?? 0),
+            precioConIva: Number(productoActual.precioConIva ?? productoActual.precio ?? producto.precioConIva ?? producto.precio ?? 0),
+            aplicaIva: Boolean(productoActual.aplicaIva ?? producto.aplicaIva),
+            sede: String(productoActual.sede || producto.sede || '').trim() || undefined,
+            stock: Number(productoActual.stock ?? producto.stock ?? 0),
+            descripcion: String(productoActual.descripcion || producto.descripcion || '').trim() || undefined
+        };
+    }
+
+    private mapearProductoPreseleccionadoAVenta(producto: ProductoRecomendadoHistoria): Producto {
+        return {
+            id: String(producto.id),
+            sede: String(producto.sede || this.sedeActiva || ''),
+            nombre: String(producto.nombre || '').trim(),
+            codigo: String(producto.codigo || '').trim(),
+            marca: String(producto.marca || '').trim(),
+            modelo: String(producto.modelo || '').trim() || undefined,
+            color: String(producto.color || '').trim() || undefined,
+            material: String(producto.material || '').trim() || undefined,
+            moneda: String(producto.moneda || 'dolar').trim().toLowerCase(),
+            stock: Number(producto.stock ?? 0),
+            categoria: String(producto.categoria || '').trim(),
+            proveedor: '',
+            aplicaIva: Boolean(producto.aplicaIva),
+            precioConIva: Number(producto.precioConIva ?? producto.precio ?? 0),
+            precio: Number(producto.precio ?? 0),
+            activo: true,
+            descripcion: String(producto.descripcion || '').trim() || undefined,
+            fechaIngreso: '',
+        };
     }
 
     filtrarProductoPorNombreOCodigo(term: string, item: Producto): boolean {
@@ -6954,7 +7430,66 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         return this.venta.productos.length > 0;
     }
 
+    private esTipoVentaConHistoria(tipo: 'solo_consulta' | 'consulta_productos' | 'solo_productos'): boolean {
+        return tipo === 'solo_consulta' || tipo === 'consulta_productos';
+    }
+
+    private esCambioEntreVentasConHistoria(
+        tipoAnterior: 'solo_consulta' | 'consulta_productos' | 'solo_productos',
+        tipoNuevo: 'solo_consulta' | 'consulta_productos' | 'solo_productos'
+    ): boolean {
+        return this.esTipoVentaConHistoria(tipoAnterior)
+            && this.esTipoVentaConHistoria(tipoNuevo)
+            && tipoAnterior !== tipoNuevo;
+    }
+
+    private sincronizarProductosOcultosSegunTipo(tipo: 'solo_consulta' | 'consulta_productos' | 'solo_productos'): void {
+        if (tipo === 'solo_consulta') {
+            this.productosOcultosTemporalmente = [...this.venta.productos];
+            this.venta.productos = [];
+            return;
+        }
+
+        if (tipo === 'consulta_productos' && this.venta.productos.length === 0 && this.productosOcultosTemporalmente.length > 0) {
+            this.venta.productos = [...this.productosOcultosTemporalmente];
+        }
+    }
+
+    private recalcularConsultaSegunTipoActual(): void {
+        if (!this.consultaEnCarrito) {
+            return;
+        }
+
+        if (this.tipoVenta === 'solo_consulta') {
+            this.pagoOptica = Math.max(0, this.montoConsultaOriginal - this.pagoMedico);
+            this.montoConsulta = this.montoConsultaOriginal;
+            return;
+        }
+
+        if (this.tipoVenta === 'consulta_productos') {
+            this.pagoOptica = 0;
+            this.montoConsulta = this.pagoMedico;
+        }
+    }
+
     seleccionarTipoVenta(tipo: 'solo_consulta' | 'consulta_productos' | 'solo_productos'): void {
+        const tipoAnterior = this.tipoVenta;
+
+        if (tipoAnterior === tipo) {
+            return;
+        }
+
+        if (this.esCambioEntreVentasConHistoria(tipoAnterior, tipo)) {
+            this.resetearEstadoModal();
+            this.tipoVenta = tipo;
+            this.intentoGenerar = false;
+            this.sincronizarProductosOcultosSegunTipo(tipo);
+            this.recalcularConsultaSegunTipoActual();
+            this.actualizarProductosConDetalle();
+            this.cdr.detectChanges();
+            return;
+        }
+
         const pacienteActual = this.pacienteSeleccionado;
 
         // RESETEAR TODO EL ESTADO DEL MODAL
@@ -6963,6 +7498,10 @@ export class GenerarVentaComponent implements OnInit, OnDestroy {
         // Actualizar tipo
         this.tipoVenta = tipo;
         this.intentoGenerar = false;
+
+        if (tipo !== 'solo_consulta') {
+            this.productosOcultosTemporalmente = [];
+        }
 
         // LIMPIAR CARRITO Y SELECCIÓN DE HISTORIA
         this.limpiarCarritoCompleto();

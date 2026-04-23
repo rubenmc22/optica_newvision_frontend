@@ -130,7 +130,10 @@ export class SwalService {
         popup: 'swal-modern-popup info-popup',
         title: 'swal-modern-title',
         htmlContainer: 'swal-modern-content',
+        actions: 'swal-modern-actions',
         confirmButton: 'swal-modern-confirm info-btn',
+        denyButton: 'swal-modern-deny',
+        cancelButton: 'swal-modern-cancel',
         closeButton: 'swal-modern-close'
       },
       buttonsStyling: false,

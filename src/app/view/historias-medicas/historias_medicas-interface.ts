@@ -190,6 +190,7 @@ export interface ProductoRecomendadoHistoria {
   nombre: string;
   codigo: string;
   categoria: string;
+  stock?: number;
   modelo?: string;
   marca?: string;
   material?: string;
@@ -199,6 +200,20 @@ export interface ProductoRecomendadoHistoria {
   precioConIva?: number;
   aplicaIva?: boolean;
   sede?: string;
+  descripcion?: string;
+  tipoCristal?: string;
+  tipoLenteContacto?: string;
+  medidas?: {
+    horizontal?: string;
+    vertical?: string;
+    diagonal?: string;
+    puente?: string;
+  };
+}
+
+export interface CategoriaProductoRecomendado {
+  categoria: string;
+  producto?: ProductoRecomendadoHistoria | null;
 }
 
 export interface SeleccionProductosRecomendacion {
@@ -206,15 +221,16 @@ export interface SeleccionProductosRecomendacion {
   materiales?: ProductoRecomendadoHistoria[];
   montura?: ProductoRecomendadoHistoria | null;
   filtrosAditivos?: ProductoRecomendadoHistoria[];
+  categorias?: CategoriaProductoRecomendado[];
 }
 
 
 // Interfaz para recomendaciones
 export interface Recomendaciones {
-  cristal: typeof TIPOS_CRISTALES[0] | string | null;
-  material: TipoMaterial | TipoMaterial[] | string | string[];
+  cristal?: typeof TIPOS_CRISTALES[0] | string | null;
+  material?: TipoMaterial | TipoMaterial[] | string | string[];
   tipoLentesContacto?: string;
-  montura: string;
+  montura?: string;
   cristalSugerido?: string;
   observaciones?: string;
   seleccionProductos?: SeleccionProductosRecomendacion;

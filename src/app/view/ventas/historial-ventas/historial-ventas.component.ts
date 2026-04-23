@@ -3802,6 +3802,66 @@ export class HistorialVentasComponent implements OnInit {
     return `Item ${index + 1}`;
   }
 
+  private obtenerPrimeraRecomendacion(recomendaciones: any): any {
+    if (Array.isArray(recomendaciones)) {
+      return recomendaciones[0] || null;
+    }
+
+    return recomendaciones || null;
+  }
+
+  getValorRecomendacionVenta(recomendaciones: any, campo: 'montura' | 'material' | 'cristal'): string {
+    const recomendacion = this.obtenerPrimeraRecomendacion(recomendaciones);
+    if (!recomendacion) {
+      return '—';
+    }
+
+    const categorias = Array.isArray(recomendacion?.seleccionProductos?.categorias)
+      ? recomendacion.seleccionProductos.categorias
+      : [];
+
+    const productoClinico = categorias.find((categoria: any) => {
+      const valor = String(categoria?.categoria || '').trim().toLowerCase();
+      return valor === 'cristales' || valor === 'lentes de contacto';
+    })?.producto;
+
+    const productoMontura = categorias.find((categoria: any) => String(categoria?.categoria || '').trim().toLowerCase() === 'monturas')?.producto;
+
+    if (campo === 'montura') {
+      return String(productoMontura?.nombre || recomendacion?.montura || '').trim() || '—';
+    }
+
+    if (campo === 'material') {
+      if (productoClinico?.material) {
+        return String(productoClinico.material).trim();
+      }
+
+      if (Array.isArray(recomendacion?.material)) {
+        return recomendacion.material.filter(Boolean).join(', ') || '—';
+      }
+
+      return String(recomendacion?.material || '').trim() || '—';
+    }
+
+    if (productoClinico?.tipoCristal) {
+      return String(productoClinico.tipoCristal).trim();
+    }
+
+    if (productoClinico?.tipoLenteContacto) {
+      return String(productoClinico.tipoLenteContacto).trim();
+    }
+
+    if (productoClinico?.nombre) {
+      return String(productoClinico.nombre).trim();
+    }
+
+    if (typeof recomendacion?.cristal === 'string') {
+      return String(recomendacion.cristal).trim() || '—';
+    }
+
+    return String(recomendacion?.cristal?.label || recomendacion?.cristal?.value || '').trim() || '—';
+  }
+
   private normalizarProductoParaRecibo(producto: any, index: number): any {
     const cantidad = Math.max(1, Number(producto?.cantidad || 1));
     const impuesto = Number(this.ventaParaRecibo?.impuesto || 16);

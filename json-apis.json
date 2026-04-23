@@ -16,9 +16,11 @@
         }
     ],
     "cliente": {
+
         "tipoCliente": "cliente_general",
         "tipoPersona": "natural",
         "nombre": "Ruben dario Martinez castro",
+
         "cedula": "24367965",
         "telefono": "04123920817",
         "email": "rubemm@gmail.com"
@@ -581,8 +583,392 @@
 - Los montos que se envian sobre las consultas, deben guardarse/actualizarse al generar la venta
 - El historial de venta debe retornar lo mismo que al crear la venta, es decir, el monto de la consulta y con la tasa del moment para poder calcular el monto pagado en bs
 - Quitar de las apis de "pacientes" patologiaOcular, solo dejar patologias
-- En el api de get historia medica no me esta retornando el tipo de lente de contacto (campo: tipoLentesContacto). Debe retornar lo mismo que se envia al crear la historia medica
-
+- Historias medicas: documentar CRUD nuevo con recomendaciones.seleccionProductos.categorias y revisar que update persista tambien formulaExterna/pagoPendiente si se requiere simetria completa con add
+// #region HISTORIAS_MEDICAS_CRUD_NUEVO
+{
+    "modulo": "historias_medicas",
+    "baseObservaciones": [
+        "Todos los endpoints requieren autenticacion.",
+        "El backend ya persiste recomendaciones como JSON completo, por lo que acepta la nueva estructura seleccionProductos.categorias sin migracion adicional de columnas.",
+        "Las rutas usan nHistoria en update/delete/get por id. Ejemplo: H-20260422-001.",
+        "GET historial-medico-all y GET historial-medico-paciente retornan recomendaciones tal como se guardaron.",
+        "La forma canonica nueva mantiene solo seleccionProductos.categorias como fuente persistida de detalle para las recomendaciones.",
+        "El producto clinico recomendado debe incluir dentro de su propio objeto el tipo clinico (por ejemplo tipoCristal o tipoLenteContacto) y, cuando aplique, las medidas requeridas.",
+        "En frontend las medidas siguen siendo obligatorias para tipos PROGRESIVO_* y MONOFOCAL_DIGITAL, pero ahora deben viajar dentro del producto de cristal que las necesita.",
+        "Los campos recomendacion.cristal, recomendacion.montura, recomendacion.tipoLentesContacto y medida* quedan solo como compatibilidad legacy de lectura mientras existan historias antiguas.",
+        "Los campos seleccionProductos.cristal y seleccionProductos.montura tambien quedan como fallback legacy de lectura; los nuevos guardados no deberian persistirlos.",
+        "Detalle a vigilar en backend: el update actual no reasigna formulaExterna ni pagoPendiente antes de guardar."
+    ],
+    "endpoints": [
+        {
+            "nombre": "Obtener todas las historias medicas o una historia por numero",
+            "method": "GET",
+            "url": "/historial-medico-all/:id?",
+            "params": {
+                "id": "H-20260422-001"
+            },
+            "request": null,
+            "response200": {
+                "message": "ok",
+                "historiales_medicos": [
+                    {
+                        "id": 91,
+                        "nHistoria": "H-20260422-001",
+                        "pacienteId": "28acbaf873ad2772e216895c44281940",
+                        "ventaKey": null,
+                        "pagoPendiente": false,
+                        "sedeId": "guatire",
+                        "datosConsulta": {
+                            "motivo": [
+                                "Fatiga visual"
+                            ],
+                            "otroMotivo": "",
+                            "tipoCristalActual": "MONOFOCAL_DIGITAL",
+                            "tipoLentesContacto": "",
+                            "fechaUltimaGraduacion": null,
+                            "especialista": {
+                                "tipo": "OPTOMETRISTA",
+                                "cedula": "10092901",
+                                "nombre": "Nombre especialista",
+                                "cargo": "Optometrista",
+                                "externo": {
+                                    "nombre": null,
+                                    "lugarConsultorio": null
+                                }
+                            },
+                            "formulaOriginal": {
+                                "medicoOrigen": {
+                                    "tipo": null,
+                                    "nombre": null,
+                                    "lugarConsultorio": null
+                                }
+                            },
+                            "formulaExterna": false
+                        },
+                        "examenOcular": {
+                            "lensometria": {},
+                            "refraccion": {},
+                            "refraccionFinal": {},
+                            "avsc_avae_otros": {}
+                        },
+                        "diagnosticoTratamiento": {
+                            "diagnostico": "Presbicia",
+                            "tratamiento": "Uso de lente formulado"
+                        },
+                        "recomendaciones": [
+                            {
+                                "observaciones": "Entrega segun disponibilidad",
+                                "seleccionProductos": {
+                                    "categorias": [
+                                        {
+                                            "categoria": "cristales",
+                                            "producto": {
+                                                "id": "28",
+                                                "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+                                                "codigo": "PR-000028",
+                                                "categoria": "Cristales",
+                                                "tipoCristal": "MONOFOCAL_DIGITAL",
+                                                "material": "Policarbonato",
+                                                "medidas": {
+                                                    "horizontal": "5.2",
+                                                    "vertical": "4.8",
+                                                    "diagonal": "7.1",
+                                                    "puente": "1.8"
+                                                },
+                                                "stock": 10,
+                                                "precio": 25.86,
+                                                "precioConIva": 30,
+                                                "descripcion": "Cristal monofocal vision sencilla en material policarbonato, con blue block."
+                                            }
+                                        },
+                                        {
+                                            "categoria": "monturas",
+                                            "producto": {
+                                                "id": "31",
+                                                "nombre": "Montura TR90 Negra",
+                                                "codigo": "PR-000031",
+                                                "categoria": "Monturas",
+                                                "stock": 4,
+                                                "precio": 18,
+                                                "precioConIva": 20.88,
+                                                "descripcion": "Montura TR90 ligera color negro."
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ],
+                        "conformidad": {
+                            "notaConformidad": "Paciente conforme con la informacion suministrada."
+                        },
+                        "auditoria": {
+                            "fechaCreacion": "2026-04-22T14:10:00.000Z",
+                            "fechaActualizacion": "2026-04-22T14:10:00.000Z",
+                            "creadoPor": {
+                                "cedula": "10092901",
+                                "nombre": "Usuario creador",
+                                "cargo": "Optometrista"
+                            },
+                            "actualizadoPor": {
+                                "cedula": "10092901",
+                                "nombre": "Usuario creador",
+                                "cargo": "Optometrista"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "nombre": "Obtener historias medicas de un paciente",
+            "method": "GET",
+            "url": "/historial-medico-paciente/:paciente_id",
+            "params": {
+                "paciente_id": "28acbaf873ad2772e216895c44281940"
+            },
+            "request": null,
+            "response200": {
+                "message": "ok",
+                "historiales_medicos": [
+                    {
+                        "id": 91,
+                        "nHistoria": "H-20260422-001",
+                        "pacienteId": "28acbaf873ad2772e216895c44281940",
+                        "ventaKey": null,
+                        "datosConsulta": {
+                            "pagoPendiente": false,
+                            "motivo": [
+                                "Fatiga visual"
+                            ],
+                            "tipoCristalActual": "MONOFOCAL_DIGITAL",
+                            "tipoLentesContacto": "",
+                            "formulaExterna": false
+                        },
+                        "recomendaciones": [
+                            {
+                                "observaciones": "Entrega segun disponibilidad",
+                                "seleccionProductos": {
+                                    "categorias": [
+                                        {
+                                            "categoria": "cristales",
+                                            "producto": {
+                                                "id": "28",
+                                                "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+                                                "codigo": "PR-000028",
+                                                "categoria": "Cristales",
+                                                "tipoCristal": "MONOFOCAL_DIGITAL",
+                                                "medidas": {
+                                                    "horizontal": "5.2",
+                                                    "vertical": "4.8",
+                                                    "diagonal": "7.1",
+                                                    "puente": "1.8"
+                                                },
+                                                "stock": 10
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "nombre": "Crear historia medica con productos recomendados por categoria",
+            "method": "POST",
+            "url": "/historial-medico-add/",
+            "params": null,
+            "request": {
+                "pacienteId": "28acbaf873ad2772e216895c44281940",
+                "datosConsulta": {
+                    "motivo": [
+                        "Fatiga visual"
+                    ],
+                    "otroMotivo": "",
+                    "tipoCristalActual": "MONOFOCAL_DIGITAL",
+                    "tipoLentesContacto": "",
+                    "fechaUltimaGraduacion": null,
+                    "especialista": {
+                        "tipo": "OPTOMETRISTA",
+                        "cedula": "10092901"
+                    },
+                    "formulaOriginal": null,
+                    "formulaExterna": false,
+                    "pagoPendiente": false
+                },
+                "examenOcular": {
+                    "lensometria": {},
+                    "refraccion": {},
+                    "refraccionFinal": {
+                        "esf_od": "+0.50",
+                        "cil_od": "-0.50",
+                        "eje_od": 3,
+                        "add_od": "+1.25",
+                        "alt_od": "2",
+                        "dp_od": "2",
+                        "esf_oi": "+0.50",
+                        "cil_oi": "-0.50",
+                        "eje_oi": 3,
+                        "add_oi": "+1.25",
+                        "alt_oi": "2",
+                        "dp_oi": "2"
+                    },
+                    "avsc_avae_otros": {}
+                },
+                "diagnosticoTratamiento": {
+                    "diagnostico": "Presbicia",
+                    "tratamiento": "Uso de lente formulado"
+                },
+                "recomendaciones": [
+                    {
+                        "observaciones": "Entrega segun disponibilidad",
+                        "seleccionProductos": {
+                            "categorias": [
+                                {
+                                    "categoria": "cristales",
+                                    "producto": {
+                                        "id": "28",
+                                        "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+                                        "codigo": "PR-000028",
+                                        "categoria": "Cristales",
+                                        "tipoCristal": "MONOFOCAL_DIGITAL",
+                                        "material": "Policarbonato",
+                                        "medidas": {
+                                            "horizontal": "5.2",
+                                            "vertical": "4.8",
+                                            "diagonal": "7.1",
+                                            "puente": "1.8"
+                                        },
+                                        "stock": 10,
+                                        "precio": 25.86,
+                                        "precioConIva": 30,
+                                        "descripcion": "Cristal monofocal vision sencilla en material policarbonato, con blue block."
+                                    }
+                                },
+                                {
+                                    "categoria": "monturas",
+                                    "producto": {
+                                        "id": "31",
+                                        "nombre": "Montura TR90 Negra",
+                                        "codigo": "PR-000031",
+                                        "categoria": "Monturas",
+                                        "stock": 4,
+                                        "precio": 18,
+                                        "precioConIva": 20.88,
+                                        "descripcion": "Montura TR90 ligera color negro."
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "conformidad": {
+                    "notaConformidad": "PACIENTE CONFORME CON LA EXPLICACION REALIZADA POR EL ASESOR."
+                }
+            },
+            "response200": {
+                "message": "ok",
+                "historial_medico": {
+                    "id": 91,
+                    "nHistoria": "H-20260422-001",
+                    "pacienteId": "28acbaf873ad2772e216895c44281940",
+                    "ventaKey": null,
+                    "datosConsulta": {
+                        "pagoPendiente": false,
+                        "motivo": [
+                            "Fatiga visual"
+                        ],
+                        "otroMotivo": "",
+                        "tipoCristalActual": "MONOFOCAL_DIGITAL",
+                        "tipoLentesContacto": "",
+                        "fechaUltimaGraduacion": null,
+                        "formulaExterna": false
+                    },
+                    "recomendaciones": [
+                        {
+                            "seleccionProductos": {
+                                "categorias": [
+                                    {
+                                        "categoria": "cristales",
+                                        "producto": {
+                                            "id": "28",
+                                            "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+                                            "codigo": "PR-000028",
+                                            "categoria": "Cristales",
+                                            "tipoCristal": "MONOFOCAL_DIGITAL",
+                                            "medidas": {
+                                                "horizontal": "5.2",
+                                                "vertical": "4.8",
+                                                "diagonal": "7.1",
+                                                "puente": "1.8"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "nombre": "Actualizar historia medica por numero",
+            "method": "PUT",
+            "url": "/historial-medico-update/:id?",
+            "params": {
+                "id": "H-20260422-001"
+            },
+            "request": "Misma estructura que POST /historial-medico-add/",
+            "response200": {
+                "message": "ok",
+                "historial_medico": {
+                    "id": 91,
+                    "nHistoria": "H-20260422-001",
+                    "recomendaciones": [
+                        {
+                            "observaciones": "Entrega urgente",
+                            "seleccionProductos": {
+                                "categorias": [
+                                    {
+                                        "categoria": "cristales",
+                                        "producto": {
+                                            "id": "28",
+                                            "nombre": "VISION SENCILLA POLI BLUE BLOCK",
+                                            "codigo": "PR-000028",
+                                            "categoria": "Cristales",
+                                            "tipoCristal": "MONOFOCAL_DIGITAL",
+                                            "medidas": {
+                                                "horizontal": "5.4",
+                                                "vertical": "4.9",
+                                                "diagonal": "7.2",
+                                                "puente": "1.8"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            "observacion": "La ruta ya actualiza recomendaciones completas, pero hoy no reasigna formulaExterna ni pagoPendiente en el controlador antes del save."
+        },
+        {
+            "nombre": "Eliminar historia medica por numero",
+            "method": "DELETE",
+            "url": "/historial-medico-delete/:id?",
+            "params": {
+                "id": "H-20260422-001"
+            },
+            "request": null,
+            "response200": {
+                "message": "ok"
+            }
+        }
+    ]
+}
+// #endregion
 
 
 
